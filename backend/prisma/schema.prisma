@@ -1,0 +1,239 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Preferences and goals
+  preferences UserPreferences?
+  macroGoals  MacroGoals?
+  physicalProfile UserPhysicalProfile?
+  
+  // Relationships
+  savedRecipes SavedRecipe[]
+  feedback      RecipeFeedback[]
+  mealHistory   MealHistory[]
+  // NEW: User-created recipes
+  createdRecipes Recipe[]
+
+  @@map("users")
+}
+
+model UserPreferences {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Banned ingredients and preferences
+  bannedIngredients     BannedIngredient[]
+  likedCuisines        LikedCuisine[]
+  dietaryRestrictions  DietaryRestriction[]
+  cookTimePreference   Int      // in minutes
+  spiceLevel           String?  // mild, medium, spicy
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+// Separate tables for array-like fields
+model BannedIngredient {
+  id         String           @id @default(cuid())
+  preference UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  preferenceId String?
+  name       String
+  
+  @@map("banned_ingredients")
+}
+
+model LikedCuisine {
+  id         String           @id @default(cuid())
+  preference UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  preferenceId String?
+  name       String
+  
+  @@map("liked_cuisines")
+}
+
+model DietaryRestriction {
+  id         String           @id @default(cuid())
+  preference UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  preferenceId String?
+  name       String
+  
+  @@map("dietary_restrictions")
+}
+
+model MacroGoals {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  calories  Int
+  protein   Int
+  carbs     Int
+  fat       Int
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("macro_goals")
+}
+
+model UserPhysicalProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Physical measurements
+  gender           String   // male, female, other
+  age              Int
+  heightCm         Float    // Height in centimeters
+  weightKg         Float    // Weight in kilograms
+  
+  // Activity and goals
+  activityLevel    String   // sedentary, lightly_active, moderately_active, very_active, extra_active
+  fitnessGoal      String   // lose_weight, maintain, gain_muscle, gain_weight
+  
+  // Calculated metrics (stored for tracking changes over time)
+  bmr              Float?   // Basal Metabolic Rate
+  tdee             Float?   // Total Daily Energy Expenditure
+  targetWeightKg   Float?   // Target weight if applicable
+  
+  // Additional optional data for future metabolism tracking
+  bodyFatPercentage Float?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_physical_profiles")
+}
+
+model Recipe {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  cookTime    Int      // in minutes
+  cuisine     String
+  imageUrl    String?
+  
+  // Macro nutrients
+  calories Int
+  protein  Int
+  carbs    Int
+  fat      Int
+  fiber    Int?
+  sugar    Int?
+  
+  // NEW: Recipe ownership
+  userId      String?  // Null for system recipes, set for user-created recipes
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isUserCreated Boolean @default(false)
+  
+  // Recipe content
+  ingredients RecipeIngredient[]
+  instructions RecipeInstruction[]
+  
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  feedback     RecipeFeedback[]
+  savedRecipes SavedRecipe[]
+  mealHistory  MealHistory[]
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id       String  @id @default(cuid())
+  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+  text     String
+  order    Int
+  
+  @@map("recipe_ingredients")
+}
+
+model RecipeInstruction {
+  id       String  @id @default(cuid())
+  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+  text     String
+  step     Int
+  
+  @@map("recipe_instructions")
+}
+
+model RecipeFeedback {
+  id       String   @id @default(cuid())
+  recipeId String
+  userId   String
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  liked    Boolean  @default(false)
+  disliked Boolean  @default(false)
+  saved    Boolean  @default(false)
+  consumed Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+
+  @@unique([recipeId, userId])
+  @@map("recipe_feedback")
+}
+
+model SavedRecipe {
+  id       String   @id @default(cuid())
+  recipeId String
+  userId   String
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  savedDate DateTime @default(now())
+
+  @@unique([recipeId, userId])
+  @@map("saved_recipes")
+}
+
+model MealHistory {
+  id       String   @id @default(cuid())
+  recipeId String
+  userId   String
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date     DateTime @default(now())
+  consumed Boolean  @default(false)
+  feedback String?  // liked, disliked, null
+
+  @@map("meal_history")
+}
+
+model ScoringWeights {
+  id          String   @id @default(cuid())
+  
+  // Scoring weights (70% macros, 30% taste by default)
+  macroWeight          Float    @default(0.7)
+  tasteWeight          Float    @default(0.3)
+  cookTimeWeight       Float    @default(0.1)
+  ingredientMatchWeight Float   @default(0.1)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("scoring_weights")
+}
