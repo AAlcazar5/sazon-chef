@@ -213,7 +213,7 @@ export default function RecipeFormScreen() {
       {/* Header */}
       <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
         <TouchableOpacity onPress={() => router.back()} className="p-2">
-          <Ionicons name="close" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-gray-900">
           {isEditMode ? 'Edit Recipe' : 'Create Recipe'}

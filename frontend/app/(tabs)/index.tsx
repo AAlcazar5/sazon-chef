@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal } from 'react-native';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApi } from '../../hooks/useApi';
 import { recipeApi } from '../../lib/api';
+import { filterStorage, type FilterState } from '../../lib/filterStorage';
 import type { SuggestedRecipe } from '../../types';
 import * as Haptics from 'expo-haptics';
 
@@ -14,18 +15,84 @@ interface UserFeedback {
   disliked: boolean;
 }
 
+// Filter types are now imported from filterStorage
+
+const CUISINE_OPTIONS = [
+  'Mediterranean', 'Asian', 'Mexican', 'Italian', 'American', 
+  'Indian', 'Thai', 'French', 'Japanese', 'Chinese'
+];
+
+const DIETARY_OPTIONS = [
+  'Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free', 
+  'Keto', 'Paleo', 'Low-Carb', 'High-Protein'
+];
+
+const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard'];
+
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
   const [feedbackLoading, setFeedbackLoading] = useState<string | null>(null);
   const [userFeedback, setUserFeedback] = useState<Record<string, UserFeedback>>({});
+  
+  // Filter state
+  const [filters, setFilters] = useState<FilterState>(filterStorage.getDefaultFilters());
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
 
   // Use the useApi hook for fetching suggested recipes
   const { data: recipesData, loading, error, refetch } = useApi('/recipes/suggested');
 
-  // Update local state when API data loads
+  // Load saved filters on component mount
   useEffect(() => {
-    if (recipesData) {
+    const loadSavedFilters = async () => {
+      try {
+        const savedFilters = await filterStorage.loadFilters();
+        if (savedFilters) {
+          setFilters(savedFilters);
+          
+          // Update active filters display
+          const active: string[] = [];
+          if (savedFilters.cuisines.length > 0) active.push(`${savedFilters.cuisines.length} cuisines`);
+          if (savedFilters.dietaryRestrictions.length > 0) active.push(`${savedFilters.dietaryRestrictions.length} dietary`);
+          if (savedFilters.maxCookTime) active.push(`≤${savedFilters.maxCookTime}min`);
+          if (savedFilters.difficulty.length > 0) active.push(`${savedFilters.difficulty.length} difficulty`);
+          
+          setActiveFilters(active);
+          
+          // Apply saved filters to get filtered recipes
+          if (active.length > 0) {
+            const response = await recipeApi.getSuggestedRecipes({
+              cuisines: savedFilters.cuisines.length > 0 ? savedFilters.cuisines : undefined,
+              dietaryRestrictions: savedFilters.dietaryRestrictions.length > 0 ? savedFilters.dietaryRestrictions : undefined,
+              maxCookTime: savedFilters.maxCookTime || undefined,
+              difficulty: savedFilters.difficulty.length > 0 ? savedFilters.difficulty : undefined
+            });
+            
+            setSuggestedRecipes(response.data);
+            
+            // Initialize feedback state
+            const initialFeedback: Record<string, UserFeedback> = {};
+            response.data.forEach((recipe: SuggestedRecipe) => {
+              initialFeedback[recipe.id] = { liked: false, disliked: false };
+            });
+            setUserFeedback(initialFeedback);
+          }
+        }
+        setFiltersLoaded(true);
+      } catch (error) {
+        console.error('❌ Error loading saved filters:', error);
+        setFiltersLoaded(true);
+      }
+    };
+
+    loadSavedFilters();
+  }, []);
+
+  // Update local state when API data loads (only if no saved filters)
+  useEffect(() => {
+    if (recipesData && filtersLoaded && activeFilters.length === 0) {
       console.log('📱 HomeScreen: Received recipes data', recipesData.length);
       setSuggestedRecipes(recipesData);
       
@@ -36,7 +103,7 @@ export default function HomeScreen() {
       });
       setUserFeedback(initialFeedback);
     }
-  }, [recipesData]);
+  }, [recipesData, filtersLoaded, activeFilters.length]);
 
   // Handle errors
   useEffect(() => {
@@ -55,6 +122,147 @@ export default function HomeScreen() {
   const handleRecipePress = (recipeId: string) => {
     console.log('📱 HomeScreen: Recipe pressed', recipeId);
     router.push(`../modal?id=${recipeId}`);
+  };
+
+  const handleRandomRecipe = async () => {
+    try {
+      console.log('🎲 HomeScreen: Getting random recipe');
+      
+      // Haptic feedback
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      const response = await recipeApi.getRandomRecipe();
+      const randomRecipe = response.data;
+      
+      console.log('🎲 HomeScreen: Random recipe received', randomRecipe.title);
+      
+      // Navigate to the recipe modal
+      router.push(`../modal?id=${randomRecipe.id}&source=random`);
+      
+    } catch (error: any) {
+      console.error('❌ HomeScreen: Error getting random recipe', error);
+      
+      if (error.response?.status === 404) {
+        Alert.alert(
+          'No Random Recipe Found',
+          'No recipes match your current preferences. Try adjusting your preferences in the Profile tab.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to get a random recipe. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    }
+  };
+
+  // Filter functions
+  const handleFilterPress = () => {
+    setShowFilterModal(true);
+  };
+
+  const handleFilterChange = (type: keyof FilterState, value: string | number) => {
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      
+      if (type === 'maxCookTime') {
+        newFilters.maxCookTime = value as number;
+      } else {
+        const arrayType = type as 'cuisines' | 'dietaryRestrictions' | 'difficulty';
+        const currentArray = newFilters[arrayType];
+        const valueStr = value as string;
+        
+        if (currentArray.includes(valueStr)) {
+          newFilters[arrayType] = currentArray.filter(item => item !== valueStr);
+        } else {
+          newFilters[arrayType] = [...currentArray, valueStr];
+        }
+      }
+      
+      return newFilters;
+    });
+  };
+
+  const applyFilters = async () => {
+    // Update active filters display
+    const active: string[] = [];
+    if (filters.cuisines.length > 0) active.push(`${filters.cuisines.length} cuisines`);
+    if (filters.dietaryRestrictions.length > 0) active.push(`${filters.dietaryRestrictions.length} dietary`);
+    if (filters.maxCookTime) active.push(`≤${filters.maxCookTime}min`);
+    if (filters.difficulty.length > 0) active.push(`${filters.difficulty.length} difficulty`);
+    
+    setActiveFilters(active);
+    setShowFilterModal(false);
+    
+    // Save filters to storage
+    try {
+      await filterStorage.saveFilters(filters);
+      console.log('💾 Filters saved to storage');
+    } catch (error) {
+      console.error('❌ Error saving filters:', error);
+    }
+    
+    // Apply filters to API call
+    console.log('🔍 Filters applied:', filters);
+    
+    try {
+      // Convert filters to API format
+      const apiFilters = {
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        maxCookTime: filters.maxCookTime || undefined,
+        difficulty: filters.difficulty.length > 0 ? filters.difficulty : undefined
+      };
+      
+      const response = await recipeApi.getSuggestedRecipes(apiFilters);
+      setSuggestedRecipes(response.data);
+      
+      // Initialize feedback state for new recipes
+      const initialFeedback: Record<string, UserFeedback> = {};
+      response.data.forEach((recipe: SuggestedRecipe) => {
+        initialFeedback[recipe.id] = { liked: false, disliked: false };
+      });
+      setUserFeedback(initialFeedback);
+      
+      console.log('✅ Filtered recipes loaded:', response.data.length);
+    } catch (error: any) {
+      console.error('❌ Error applying filters:', error);
+      Alert.alert('Error', 'Failed to apply filters. Please try again.');
+    }
+  };
+
+  const clearFilters = async () => {
+    const defaultFilters = filterStorage.getDefaultFilters();
+    setFilters(defaultFilters);
+    setActiveFilters([]);
+    
+    // Clear filters from storage
+    try {
+      await filterStorage.clearFilters();
+      console.log('🗑️ Filters cleared from storage');
+    } catch (error) {
+      console.error('❌ Error clearing filters from storage:', error);
+    }
+    
+    // Reload original recipes without filters
+    try {
+      const response = await recipeApi.getSuggestedRecipes();
+      setSuggestedRecipes(response.data);
+      
+      // Initialize feedback state for new recipes
+      const initialFeedback: Record<string, UserFeedback> = {};
+      response.data.forEach((recipe: SuggestedRecipe) => {
+        initialFeedback[recipe.id] = { liked: false, disliked: false };
+      });
+      setUserFeedback(initialFeedback);
+      
+      console.log('✅ Filters cleared, original recipes loaded:', response.data.length);
+    } catch (error: any) {
+      console.error('❌ Error clearing filters:', error);
+      Alert.alert('Error', 'Failed to clear filters. Please try again.');
+    }
   };
 
   const handleLike = async (recipeId: string) => {
@@ -230,10 +438,47 @@ export default function HomeScreen() {
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       {/* Header - Fixed height */}
       <View className="bg-white px-4 pt-4 pb-4 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-gray-900">Sazon Chef</Text>
-        <Text className="text-gray-500 mt-1">
-          {suggestedRecipes.length} recipe suggestions
-        </Text>
+        <View className="flex-row justify-between items-center">
+          <View className="flex-1">
+            <Text className="text-2xl font-bold text-gray-900">Sazon Chef</Text>
+            <Text className="text-gray-500 mt-1">
+              {suggestedRecipes.length} recipe suggestions
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleRandomRecipe}
+            className="bg-orange-500 px-4 py-2 rounded-lg flex-row items-center"
+          >
+            <Ionicons name="shuffle" size={16} color="white" />
+            <Text className="text-white font-semibold ml-2">Random</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Filter Chips */}
+      <View className="bg-white px-4 py-3 border-b border-gray-200">
+        <View className="flex-row items-center justify-between mb-2">
+          <Text className="text-sm font-medium text-gray-700">Filters</Text>
+          <TouchableOpacity onPress={handleFilterPress} className="flex-row items-center">
+            <Ionicons name="options-outline" size={16} color="#6B7280" />
+            <Text className="text-sm text-gray-600 ml-1">Filter</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {activeFilters.length > 0 ? (
+          <View className="flex-row flex-wrap">
+            {activeFilters.map((filter, index) => (
+              <View key={index} className="bg-orange-100 px-3 py-1 rounded-full mr-2 mb-2">
+                <Text className="text-orange-800 text-xs font-medium">{filter}</Text>
+              </View>
+            ))}
+            <TouchableOpacity onPress={clearFilters} className="bg-gray-100 px-3 py-1 rounded-full mb-2">
+              <Text className="text-gray-600 text-xs font-medium">Clear All</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <Text className="text-gray-400 text-sm">No filters applied</Text>
+        )}
       </View>
 
       {/* Main content area - FIXED SCROLLING ISSUE */}
@@ -416,6 +661,124 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView className="flex-1 bg-gray-50">
+          {/* Modal Header */}
+          <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
+            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+              <Text className="text-blue-500 font-medium">Cancel</Text>
+            </TouchableOpacity>
+            <Text className="text-lg font-semibold text-gray-900">Filter Recipes</Text>
+            <TouchableOpacity onPress={applyFilters}>
+              <Text className="text-blue-500 font-medium">Apply</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView className="flex-1 px-4 py-4">
+            {/* Cuisine Filter */}
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-900 mb-3">Cuisine</Text>
+              <View className="flex-row flex-wrap">
+                {CUISINE_OPTIONS.map((cuisine) => (
+                  <TouchableOpacity
+                    key={cuisine}
+                    onPress={() => handleFilterChange('cuisines', cuisine)}
+                    className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+                      filters.cuisines.includes(cuisine)
+                        ? 'bg-orange-500 border-orange-500'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <Text className={`text-sm font-medium ${
+                      filters.cuisines.includes(cuisine) ? 'text-white' : 'text-gray-700'
+                    }`}>
+                      {cuisine}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Dietary Restrictions Filter */}
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-900 mb-3">Dietary</Text>
+              <View className="flex-row flex-wrap">
+                {DIETARY_OPTIONS.map((dietary) => (
+                  <TouchableOpacity
+                    key={dietary}
+                    onPress={() => handleFilterChange('dietaryRestrictions', dietary)}
+                    className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+                      filters.dietaryRestrictions.includes(dietary)
+                        ? 'bg-green-500 border-green-500'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <Text className={`text-sm font-medium ${
+                      filters.dietaryRestrictions.includes(dietary) ? 'text-white' : 'text-gray-700'
+                    }`}>
+                      {dietary}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Cook Time Filter */}
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-900 mb-3">Max Cook Time</Text>
+              <View className="flex-row flex-wrap">
+                {[15, 30, 45, 60, 90].map((time) => (
+                  <TouchableOpacity
+                    key={time}
+                    onPress={() => handleFilterChange('maxCookTime', time)}
+                    className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+                      filters.maxCookTime === time
+                        ? 'bg-blue-500 border-blue-500'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <Text className={`text-sm font-medium ${
+                      filters.maxCookTime === time ? 'text-white' : 'text-gray-700'
+                    }`}>
+                      ≤{time} min
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Difficulty Filter */}
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-900 mb-3">Difficulty</Text>
+              <View className="flex-row flex-wrap">
+                {DIFFICULTY_OPTIONS.map((difficulty) => (
+                  <TouchableOpacity
+                    key={difficulty}
+                    onPress={() => handleFilterChange('difficulty', difficulty)}
+                    className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+                      filters.difficulty.includes(difficulty)
+                        ? 'bg-purple-500 border-purple-500'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <Text className={`text-sm font-medium ${
+                      filters.difficulty.includes(difficulty) ? 'text-white' : 'text-gray-700'
+                    }`}>
+                      {difficulty}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

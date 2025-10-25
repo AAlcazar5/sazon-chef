@@ -66,7 +66,9 @@ interface MacroGoalsBasic {
 export function calculateRecipeScore(
   recipe: RecipeBasic,
   userPreferences?: UserPreferencesBasic | null,
-  macroGoals?: MacroGoalsBasic | null
+  macroGoals?: MacroGoalsBasic | null,
+  behavioralScore?: number | null,
+  temporalScore?: number | null
 ): RecipeScore {
   if (!userPreferences || !macroGoals) {
     return {
@@ -89,10 +91,33 @@ export function calculateRecipeScore(
     ingredientMatch * DEFAULT_WEIGHTS.ingredientMatchWeight
   ) * 100;
 
-  const total = Math.round(
-    macroScore * DEFAULT_WEIGHTS.macroWeight +
-    tasteScore * DEFAULT_WEIGHTS.tasteWeight
-  );
+  // Calculate weights for different scoring components
+  const behavioralWeight = 0.15; // 15% weight for behavioral learning
+  const temporalWeight = 0.1; // 10% weight for temporal intelligence
+  const baseWeight = 1 - behavioralWeight - temporalWeight;
+  
+  let total: number;
+  const baseScore = macroScore * DEFAULT_WEIGHTS.macroWeight + tasteScore * DEFAULT_WEIGHTS.tasteWeight;
+  
+  if (behavioralScore !== null && behavioralScore !== undefined && temporalScore !== null && temporalScore !== undefined) {
+    total = Math.round(
+      baseScore * baseWeight +
+      behavioralScore * behavioralWeight +
+      temporalScore * temporalWeight
+    );
+  } else if (behavioralScore !== null && behavioralScore !== undefined) {
+    total = Math.round(
+      baseScore * (baseWeight + temporalWeight) +
+      behavioralScore * behavioralWeight
+    );
+  } else if (temporalScore !== null && temporalScore !== undefined) {
+    total = Math.round(
+      baseScore * (baseWeight + behavioralWeight) +
+      temporalScore * temporalWeight
+    );
+  } else {
+    total = Math.round(baseScore);
+  }
 
   const matchPercentage = Math.round(total);
 

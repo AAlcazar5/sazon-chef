@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Share } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ const getTextContent = (item: any): string => {
 };
 
 export default function Modal() {
-  const { id } = useLocalSearchParams();
+  const { id, source } = useLocalSearchParams();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +70,103 @@ export default function Modal() {
   const handleNotInterested = () => {
     console.log('📱 Modal: Not interested in recipe');
     router.back();
+  };
+
+  const handleRemoveFromCookbook = async () => {
+    if (!recipe) return;
+    
+    Alert.alert(
+      'Remove from Cookbook',
+      'Are you sure you want to remove this recipe from your cookbook?',
+      [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            console.log('📱 Modal: Removing recipe from cookbook', recipe.id);
+            await recipeApi.unsaveRecipe(recipe.id);
+            console.log('📱 Modal: Recipe removed from cookbook');
+            
+            Alert.alert('Removed', 'Recipe removed from your cookbook');
+            router.back();
+          } catch (error) {
+            console.error('📱 Modal: Error removing recipe', error);
+            Alert.alert('Error', 'Failed to remove recipe from cookbook');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleRateRecipe = async () => {
+    if (!recipe) return;
+    
+    Alert.alert(
+      'Rate Recipe',
+      'How would you rate this recipe?',
+      [
+      {
+        text: 'Like',
+        onPress: async () => {
+          try {
+            await recipeApi.likeRecipe(recipe.id);
+            Alert.alert('Thanks!', 'Your feedback helps us improve recommendations');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to submit rating');
+          }
+        },
+      },
+      {
+        text: 'Dislike',
+        onPress: async () => {
+          try {
+            await recipeApi.dislikeRecipe(recipe.id);
+            Alert.alert('Thanks!', 'Your feedback helps us improve recommendations');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to submit rating');
+          }
+        },
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
+  };
+
+  const handleShareRecipe = async () => {
+    if (!recipe) return;
+    
+    try {
+      const shareContent = {
+        title: `Check out this recipe: ${recipe.title}`,
+        message: `🍽️ ${recipe.title}\n\n${recipe.description}\n\n⏱️ Cook Time: ${recipe.cookTime} minutes\n🔥 Calories: ${recipe.calories}\n🥩 Protein: ${recipe.protein}g\n🍞 Carbs: ${recipe.carbs}g\n🥑 Fat: ${recipe.fat}g\n\nDownload Sazon Chef to discover more amazing recipes!`,
+        url: `https://sazonchef.app/recipe/${recipe.id}`, // Future deep link
+      };
+
+      const result = await Share.share(shareContent);
+      
+      if (result.action === Share.sharedAction) {
+        console.log('📱 Recipe shared successfully');
+      } else if (result.action === Share.dismissedAction) {
+        console.log('📱 Share dismissed');
+      }
+    } catch (error) {
+      console.error('📱 Error sharing recipe:', error);
+      Alert.alert('Error', 'Failed to share recipe');
+    }
+  };
+
+  const handleAddToMealPlan = () => {
+    if (!recipe) return;
+    
+    // Navigate to meal plan tab with recipe context
+    router.push(`/(tabs)/meal-plan?recipeId=${recipe.id}&recipeTitle=${encodeURIComponent(recipe.title)}`);
   };
 
   const handleEditRecipe = () => {
@@ -279,8 +376,69 @@ export default function Modal() {
               <Text className="text-red-500 font-semibold">Delete Recipe</Text>
             </TouchableOpacity>
           </>
+        ) : source === 'cookbook' ? (
+          // System recipe actions (in cookbook context)
+          <>
+            <TouchableOpacity 
+              onPress={handleRemoveFromCookbook}
+              className="bg-red-500 py-3 px-6 rounded-lg items-center mb-2"
+            >
+              <Text className="text-white font-semibold text-lg">Remove from Cookbook</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleRateRecipe}
+              className="border border-orange-500 py-3 px-6 rounded-lg items-center mb-2"
+            >
+              <Text className="text-orange-500 font-semibold">Rate Recipe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleShareRecipe}
+              className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
+            >
+              <Text className="text-gray-700 font-semibold">Share Recipe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleAddToMealPlan}
+              className="border border-blue-500 py-3 px-6 rounded-lg items-center"
+            >
+              <Text className="text-blue-500 font-semibold">Add to Meal Plan</Text>
+            </TouchableOpacity>
+          </>
+        ) : source === 'random' ? (
+          // System recipe actions (from random button)
+          <>
+            <TouchableOpacity 
+              onPress={handleSaveRecipe}
+              disabled={isSaving}
+              className={`py-3 px-6 rounded-lg items-center mb-2 ${
+                isSaving ? 'bg-orange-300' : 'bg-orange-500'
+              }`}
+            >
+              <Text className="text-white font-semibold text-lg">
+                {isSaving ? 'Saving...' : 'Save to Cookbook'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleNotInterested}
+              className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
+            >
+              <Text className="text-gray-700 font-semibold">Not Interested</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleShareRecipe}
+              className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
+            >
+              <Text className="text-gray-700 font-semibold">Share Recipe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleAddToMealPlan}
+              className="border border-blue-500 py-3 px-6 rounded-lg items-center"
+            >
+              <Text className="text-blue-500 font-semibold">Add to Meal Plan</Text>
+            </TouchableOpacity>
+          </>
         ) : (
-          // System recipe actions
+          // System recipe actions (from home screen)
           <>
             <TouchableOpacity 
               onPress={handleSaveRecipe}

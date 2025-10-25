@@ -30,6 +30,12 @@ describe('RecipeCard', () => {
     protein: 25,
     carbs: 50,
     fat: 20,
+    macros: {
+      calories: 500,
+      protein: 25,
+      carbs: 50,
+      fat: 20
+    },
     imageUrl: 'https://example.com/image.jpg',
     score: {
       total: 85,
@@ -39,10 +45,8 @@ describe('RecipeCard', () => {
     }
   };
 
-  const mockOnPress = jest.fn();
   const mockOnLike = jest.fn();
   const mockOnDislike = jest.fn();
-  const mockOnSave = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -52,10 +56,8 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={mockRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -70,10 +72,8 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={mockRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -86,41 +86,21 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={mockRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
     expect(screen.getByText('85%')).toBeTruthy(); // Match percentage
   });
 
-  test('should handle card press', () => {
-    render(
-      <RecipeCard
-        recipe={mockRecipe}
-        onPress={mockOnPress}
-        onLike={mockOnLike}
-        onDislike={mockOnDislike}
-        onSave={mockOnSave}
-      />
-    );
-
-    const card = screen.getByText('Test Recipe').parent;
-    fireEvent.press(card);
-
-    expect(mockOnPress).toHaveBeenCalledWith(mockRecipe);
-  });
 
   test('should handle like button press', () => {
     render(
       <RecipeCard
         recipe={mockRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -134,10 +114,8 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={mockRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -147,36 +125,18 @@ describe('RecipeCard', () => {
     expect(mockOnDislike).toHaveBeenCalledWith(mockRecipe.id);
   });
 
-  test('should handle save button press', () => {
-    render(
-      <RecipeCard
-        recipe={mockRecipe}
-        onPress={mockOnPress}
-        onLike={mockOnLike}
-        onDislike={mockOnDislike}
-        onSave={mockOnSave}
-      />
-    );
-
-    const saveButton = screen.getByTestId('save-button');
-    fireEvent.press(saveButton);
-
-    expect(mockOnSave).toHaveBeenCalledWith(mockRecipe.id);
-  });
 
   test('should handle recipe without image', () => {
     const recipeWithoutImage = {
       ...mockRecipe,
-      imageUrl: null
+      imageUrl: undefined
     };
 
     render(
       <RecipeCard
         recipe={recipeWithoutImage}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -187,16 +147,14 @@ describe('RecipeCard', () => {
   test('should handle recipe without score', () => {
     const recipeWithoutScore = {
       ...mockRecipe,
-      score: null
+      score: undefined
     };
 
     render(
       <RecipeCard
         recipe={recipeWithoutScore}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -213,10 +171,8 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={longTitleRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -232,10 +188,8 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={longDescRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -255,10 +209,8 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={zeroValuesRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -279,10 +231,8 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={highValuesRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
@@ -300,16 +250,20 @@ describe('RecipeCard', () => {
       calories: 500,
       protein: 25,
       carbs: 50,
-      fat: 20
+      fat: 20,
+      macros: {
+        calories: 500,
+        protein: 25,
+        carbs: 50,
+        fat: 20
+      }
     };
 
     render(
       <RecipeCard
         recipe={minimalRecipe}
-        onPress={mockOnPress}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
-        onSave={mockOnSave}
       />
     );
 
