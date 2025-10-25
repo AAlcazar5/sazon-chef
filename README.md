@@ -277,7 +277,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For support, email support@sazonchef.com or create an issue in the repository.
+For support, create an issue in the repository.
 
 ---
 
