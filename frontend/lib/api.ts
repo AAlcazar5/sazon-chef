@@ -171,8 +171,32 @@ export const recipeApi = {
     return apiClient.get(`/recipes/${id}`);
   },
 
-  getSuggestedRecipes: () => {
-    return apiClient.get('/recipes/suggested');
+  getSuggestedRecipes: (filters?: {
+    cuisines?: string[];
+    dietaryRestrictions?: string[];
+    maxCookTime?: number;
+    difficulty?: string[];
+  }) => {
+    const params: any = {};
+    
+    if (filters?.cuisines && filters.cuisines.length > 0) {
+      params.cuisines = filters.cuisines.join(',');
+    }
+    if (filters?.dietaryRestrictions && filters.dietaryRestrictions.length > 0) {
+      params.dietaryRestrictions = filters.dietaryRestrictions.join(',');
+    }
+    if (filters?.maxCookTime) {
+      params.maxCookTime = filters.maxCookTime;
+    }
+    if (filters?.difficulty && filters.difficulty.length > 0) {
+      params.difficulty = filters.difficulty.join(',');
+    }
+    
+    return apiClient.get('/recipes/suggested', { params });
+  },
+
+  getRandomRecipe: () => {
+    return apiClient.get('/recipes/random');
   },
 
   getSavedRecipes: () => {
@@ -211,12 +235,82 @@ export const recipeApi = {
 
   deleteRecipe: (id: string) => {
     return apiClient.delete(`/recipes/${id}`);
+  }
+};
+
+// Meal History API
+export const mealHistoryApi = {
+  // Get meal history
+  getMealHistory: (params?: {
+    startDate?: string;
+    endDate?: string;
+    mealType?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    return apiClient.get('/meal-history', { params });
+  },
+
+  // Add meal to history
+  addMealToHistory: (data: {
+    recipeId: string;
+    mealType: string;
+    date?: string;
+    consumed?: boolean;
+    feedback?: string;
+    notes?: string;
+    rating?: number;
+  }) => {
+    return apiClient.post('/meal-history', data);
+  },
+
+  // Update meal history entry
+  updateMealHistory: (id: string, data: {
+    mealType?: string;
+    consumed?: boolean;
+    feedback?: string;
+    notes?: string;
+    rating?: number;
+  }) => {
+    return apiClient.put(`/meal-history/${id}`, data);
+  },
+
+  // Delete meal history entry
+  deleteMealHistory: (id: string) => {
+    return apiClient.delete(`/meal-history/${id}`);
+  },
+
+  // Get meal history analytics
+  getMealHistoryAnalytics: (params?: {
+    period?: number;
+    groupBy?: 'day' | 'week' | 'month';
+  }) => {
+    return apiClient.get('/meal-history/analytics', { params });
+  },
+
+  // Get meal history insights
+  getMealHistoryInsights: () => {
+    return apiClient.get('/meal-history/insights');
+  }
+};
+
+// Daily Suggestions API
+export const dailySuggestionsApi = {
+  // Get daily meal suggestions
+  getDailySuggestions: () => {
+    return apiClient.get('/daily-suggestions');
+  },
+
+  // Get meal-specific suggestions
+  getMealSuggestions: (mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
+    return apiClient.get(`/daily-suggestions/meal/${mealType}`);
   },
 
   getUserRecipes: () => {
     return apiClient.get('/recipes/my-recipes');
   },
 };
+
 
 export const userApi = {
   // User preferences

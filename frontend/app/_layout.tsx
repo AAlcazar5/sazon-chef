@@ -14,6 +14,36 @@ export default function RootLayout() {
             headerShown: false
           }} 
         />
+        <Stack.Screen 
+          name="edit-physical-profile" 
+          options={{ 
+            headerShown: false
+          }} 
+        />
+        <Stack.Screen 
+          name="edit-macro-goals" 
+          options={{ 
+            headerShown: false
+          }} 
+        />
+        <Stack.Screen 
+          name="edit-preferences" 
+          options={{ 
+            headerShown: false
+          }} 
+        />
+        <Stack.Screen 
+          name="recipe-form" 
+          options={{ 
+            headerShown: false
+          }} 
+        />
+        <Stack.Screen 
+          name="onboarding" 
+          options={{ 
+            headerShown: false
+          }} 
+        />
       </Stack>
     </SafeAreaProvider>
   );

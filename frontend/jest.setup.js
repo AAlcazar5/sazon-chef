@@ -1,57 +1,93 @@
-import '@testing-library/jest-native/extend-expect';
+// frontend/jest.setup.js
+import 'react-native-gesture-handler/jestSetup';
 
-// Mock Expo Router
+// Mock react-native-reanimated
+jest.mock('react-native-reanimated', () => {
+  const Reanimated = require('react-native-reanimated/mock');
+  Reanimated.default.call = () => {};
+  return Reanimated;
+});
+
+// Mock @react-native-async-storage/async-storage
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
+// Mock expo-router
 jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
+    replace: jest.fn(),
     back: jest.fn(),
-    replace: jest.fn()
+    canGoBack: jest.fn(() => true),
   },
-  useRouter: () => ({
+  useLocalSearchParams: jest.fn(() => ({})),
+  useRouter: jest.fn(() => ({
     push: jest.fn(),
+    replace: jest.fn(),
     back: jest.fn(),
-    replace: jest.fn()
-  }),
-  useLocalSearchParams: () => ({}),
-  useGlobalSearchParams: () => ({})
+  })),
+  Stack: {
+    Screen: ({ children }) => children,
+  },
+  Tabs: {
+    Screen: ({ children }) => children,
+  },
 }));
 
-// Mock Expo Vector Icons
-jest.mock('@expo/vector-icons', () => ({
-  Ionicons: 'Ionicons'
+// Mock expo-constants
+jest.mock('expo-constants', () => ({
+  expoConfig: {
+    extra: {
+      apiUrl: 'http://localhost:3001',
+    },
+  },
 }));
 
-// Mock React Native Safe Area Context
+// Mock react-native-safe-area-context
 jest.mock('react-native-safe-area-context', () => ({
-  SafeAreaView: 'SafeAreaView',
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 })
+  SafeAreaView: ({ children }) => children,
+  useSafeAreaInsets: jest.fn(() => ({ top: 0, bottom: 0, left: 0, right: 0 })),
 }));
 
-// Mock Expo Haptics
-jest.mock('expo-haptics', () => ({
-  impactAsync: jest.fn(),
-  notificationAsync: jest.fn(),
-  selectionAsync: jest.fn()
+// Mock @expo/vector-icons
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+  MaterialIcons: 'MaterialIcons',
+  FontAwesome: 'FontAwesome',
 }));
 
-// Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn()
+// Mock react-native-haptic-feedback
+jest.mock('react-native-haptic-feedback', () => ({
+  trigger: jest.fn(),
 }));
 
-// Mock Alert
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Alert: {
-      alert: jest.fn()
-    }
-  };
-});
+// Mock react-native-share
+jest.mock('react-native-share', () => ({
+  open: jest.fn(),
+}));
 
-// Global test timeout
-jest.setTimeout(10000);
+// Silence the warning: Animated: `useNativeDriver` is not supported
+jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+
+// Mock Dimensions
+jest.mock('react-native/Libraries/Utilities/Dimensions', () => ({
+  get: jest.fn(() => ({ width: 375, height: 812 })),
+}));
+
+// Mock Platform
+jest.mock('react-native/Libraries/Utilities/Platform', () => ({
+  OS: 'ios',
+  select: jest.fn((obj) => obj.ios),
+}));
+
+// Global test setup
+global.console = {
+  ...console,
+  // Uncomment to ignore a specific log level
+  // log: jest.fn(),
+  // debug: jest.fn(),
+  // info: jest.fn(),
+  // warn: jest.fn(),
+  // error: jest.fn(),
+};

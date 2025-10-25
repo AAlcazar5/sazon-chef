@@ -28,6 +28,16 @@ interface RecipeCardProps {
     cuisine: string;
     score?: RecipeScore;
     imageUrl?: string;
+    enhancedScore?: {
+      total: number;
+      cookTimeScore: number;
+      convenienceScore: number;
+      breakdown: {
+        cookTimeMatch: number;
+        convenienceFactor: number;
+        timeEfficiency: number;
+      };
+    };
   };
   variant?: 'default' | 'compact' | 'featured';
   showFeedback?: boolean;
@@ -51,6 +61,7 @@ export default function RecipeCard({
     if (score >= 60) return 'text-yellow-600 bg-yellow-100';
     return 'text-red-600 bg-red-100';
   };
+
 
   const getMatchColor = (percentage: number) => {
     if (percentage >= 90) return 'bg-green-500';
@@ -173,6 +184,7 @@ export default function RecipeCard({
           </Text>
         </View>
       </View>
+
 
       {/* Score Breakdown for featured variant */}
       {variant === 'featured' && recipe.score && (

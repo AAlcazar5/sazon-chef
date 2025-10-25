@@ -4,6 +4,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { recipeRoutes } from '@modules/recipe/recipeRoutes';
 import { userRoutes } from '@modules/user/userRoutes';
+import mealPlanRoutes from '@modules/mealPlan/mealPlanRoutes';
+import { dailySuggestionsRoutes } from '@modules/dailySuggestions/dailySuggestionsRoutes';
+import { mealHistoryRoutes } from '@modules/mealHistory/mealHistoryRoutes';
 
 // Import types for Express
 import type { Request, Response, NextFunction } from 'express';
@@ -42,6 +45,9 @@ app.get('/health', (req: Request, res: Response) => {
 // API routes
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/meal-plan', mealPlanRoutes);
+app.use('/api/daily-suggestions', dailySuggestionsRoutes);
+app.use('/api/meal-history', mealHistoryRoutes);
 
 // 404 handler for undefined routes
 app.use('*', (req: Request, res: Response) => {

@@ -52,7 +52,7 @@ export default function CookbookScreen() {
 
   const handleRecipePress = (recipeId: string) => {
     console.log('📱 Cookbook: Recipe pressed', recipeId);
-    router.push(`../modal?id=${recipeId}`);
+    router.push(`../modal?id=${recipeId}&source=cookbook`);
   };
 
   const handleRemoveRecipe = async (recipeId: string) => {
