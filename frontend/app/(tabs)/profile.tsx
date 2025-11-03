@@ -86,7 +86,7 @@ export default function ProfileScreen() {
   };
 
   const handleEditPreferences = () => {
-    router.push('/edit-preferences');
+    router.push('/onboarding?edit=true');
   };
 
   const handleExportData = () => {
@@ -278,7 +278,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Actions Section */}
+        {/* Data & Privacy Section */}
         <View className="bg-white rounded-xl p-4 m-4 shadow-sm border border-gray-100">
           <Text className="text-lg font-semibold text-gray-900 mb-3">Data & Privacy</Text>
           

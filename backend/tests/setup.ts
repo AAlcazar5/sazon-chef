@@ -1,8 +1,8 @@
 // Test setup file
 import { PrismaClient } from '@prisma/client';
 
-// Mock Prisma for unit tests
-jest.mock('../src/lib/prisma', () => ({
+// Shared Prisma mock object
+const createPrismaMock = () => ({
   prisma: {
     user: {
       findUnique: jest.fn(),
@@ -41,12 +41,16 @@ jest.mock('../src/lib/prisma', () => ({
       findMany: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
-      delete: jest.fn()
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+      findFirst: jest.fn()
     },
     recipeFeedback: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
-      update: jest.fn()
+      update: jest.fn(),
+      upsert: jest.fn()
     },
     bannedIngredient: {
       deleteMany: jest.fn()
@@ -56,8 +60,60 @@ jest.mock('../src/lib/prisma', () => ({
     },
     dietaryRestriction: {
       deleteMany: jest.fn()
+    },
+    collection: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn()
+    },
+    recipeCollection: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      createMany: jest.fn(),
+      deleteMany: jest.fn()
+    },
+    recipeIngredient: {
+      create: jest.fn(),
+      deleteMany: jest.fn()
+    },
+    recipeInstruction: {
+      create: jest.fn(),
+      deleteMany: jest.fn()
     }
   }
+});
+
+// Mock Prisma for all path alias variations
+jest.mock('../src/lib/prisma', () => createPrismaMock());
+jest.mock('@lib/prisma', () => createPrismaMock());
+jest.mock('@/lib/prisma', () => createPrismaMock());
+
+// Don't mock utils - tests need the real implementations
+
+// Mock modules - return Express Router instances
+// Use actual Express Router for mocks
+const express = require('express');
+const mockRouter = express.Router();
+
+jest.mock('@modules/recipe/recipeRoutes', () => ({
+  recipeRoutes: mockRouter
+}));
+jest.mock('@modules/user/userRoutes', () => ({
+  userRoutes: mockRouter
+}));
+jest.mock('@modules/mealPlan/mealPlanRoutes', () => ({
+  default: mockRouter
+}));
+jest.mock('@modules/dailySuggestions/dailySuggestionsRoutes', () => ({
+  dailySuggestionsRoutes: mockRouter
+}));
+jest.mock('@modules/mealHistory/mealHistoryRoutes', () => ({
+  mealHistoryRoutes: mockRouter
+}));
+jest.mock('@modules/aiRecipe/aiRecipeRoutes', () => ({
+  default: mockRouter
 }));
 
 // Global test timeout

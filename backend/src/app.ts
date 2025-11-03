@@ -7,6 +7,7 @@ import { userRoutes } from '@modules/user/userRoutes';
 import mealPlanRoutes from '@modules/mealPlan/mealPlanRoutes';
 import { dailySuggestionsRoutes } from '@modules/dailySuggestions/dailySuggestionsRoutes';
 import { mealHistoryRoutes } from '@modules/mealHistory/mealHistoryRoutes';
+import aiRecipeRoutes from '@modules/aiRecipe/aiRecipeRoutes';
 
 // Import types for Express
 import type { Request, Response, NextFunction } from 'express';
@@ -48,6 +49,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/meal-plan', mealPlanRoutes);
 app.use('/api/daily-suggestions', dailySuggestionsRoutes);
 app.use('/api/meal-history', mealHistoryRoutes);
+app.use('/api/ai-recipes', aiRecipeRoutes);
 
 // 404 handler for undefined routes
 app.use('*', (req: Request, res: Response) => {

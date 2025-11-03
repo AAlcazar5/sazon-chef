@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal, Linking, TextInput, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApi } from '../../hooks/useApi';
-import { recipeApi } from '../../lib/api';
+import { recipeApi, aiRecipeApi, collectionsApi } from '../../lib/api';
 import { filterStorage, type FilterState } from '../../lib/filterStorage';
 import type { SuggestedRecipe } from '../../types';
 import * as Haptics from 'expo-haptics';
@@ -31,15 +32,25 @@ const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard'];
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
+  const [reloadLoading, setReloadLoading] = useState(false);
   const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
   const [feedbackLoading, setFeedbackLoading] = useState<string | null>(null);
   const [userFeedback, setUserFeedback] = useState<Record<string, UserFeedback>>({});
+  const [reloadOffset, setReloadOffset] = useState(0);
   
   // Filter state
   const [filters, setFilters] = useState<FilterState>(filterStorage.getDefaultFilters());
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
+  
+  // Collections state for save to collection
+  const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
+  const [savePickerVisible, setSavePickerVisible] = useState(false);
+  const [savePickerRecipeId, setSavePickerRecipeId] = useState<string | null>(null);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [creatingCollection, setCreatingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
 
   // Use the useApi hook for fetching suggested recipes
   const { data: recipesData, loading, error, refetch } = useApi('/recipes/suggested');
@@ -102,6 +113,15 @@ export default function HomeScreen() {
         initialFeedback[recipe.id] = { liked: false, disliked: false };
       });
       setUserFeedback(initialFeedback);
+      
+      // Preload images for the next few recipes (improves perceived performance)
+      recipesData.slice(0, 5).forEach((recipe: SuggestedRecipe) => {
+        if (recipe.imageUrl) {
+          Image.prefetch(recipe.imageUrl).catch(() => {
+            // Silently fail - prefetch is just an optimization
+          });
+        }
+      });
     }
   }, [recipesData, filtersLoaded, activeFilters.length]);
 
@@ -119,42 +139,223 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  const handleReload = async () => {
+    // Haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    setReloadLoading(true);
+    try {
+      // Increment offset to get different recipes (rotate through batches)
+      const newOffset = (reloadOffset + 1) % 10; // Cycle through 10 batches
+      setReloadOffset(newOffset);
+      
+      // Fetch fresh recipe suggestions with offset for variety
+      const response = await recipeApi.getSuggestedRecipes({
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        maxCookTime: filters.maxCookTime || undefined,
+        difficulty: filters.difficulty.length > 0 ? filters.difficulty : undefined,
+        offset: newOffset
+      });
+      
+      setSuggestedRecipes(response.data);
+      
+      // Initialize feedback state
+      const initialFeedback: Record<string, UserFeedback> = {};
+      response.data.forEach((recipe: SuggestedRecipe) => {
+        initialFeedback[recipe.id] = { liked: false, disliked: false };
+      });
+      setUserFeedback(initialFeedback);
+      
+      // Preload images for the next few recipes (improves perceived performance)
+      response.data.slice(0, 5).forEach((recipe: SuggestedRecipe) => {
+        if (recipe.imageUrl) {
+          Image.prefetch(recipe.imageUrl).catch(() => {
+            // Silently fail - prefetch is just an optimization
+          });
+        }
+      });
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('❌ Error reloading recipes:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setReloadLoading(false);
+    }
+  };
+
   const handleRecipePress = (recipeId: string) => {
     console.log('📱 HomeScreen: Recipe pressed', recipeId);
     router.push(`../modal?id=${recipeId}`);
   };
 
+  const openSavePicker = async (recipeId: string) => {
+    try {
+      const res = await collectionsApi.list();
+      const cols = (Array.isArray(res.data) ? res.data : (res.data?.data || [])) as Array<{ id: string; name: string; isDefault?: boolean }>;
+      setCollections(cols);
+      setSavePickerRecipeId(recipeId);
+      setSelectedCollectionIds([]);
+      setSavePickerVisible(true);
+    } catch (e) {
+      console.log('⚠️  Failed to load collections');
+    }
+  };
+
+  const handleSaveToCollections = async () => {
+    if (!savePickerRecipeId) return;
+    
+    try {
+      // Save to cookbook with selected collections (multi-collection support)
+      await recipeApi.saveRecipe(savePickerRecipeId, selectedCollectionIds.length > 0 ? { collectionIds: selectedCollectionIds } : undefined);
+      
+      setSavePickerVisible(false);
+      setSavePickerRecipeId(null);
+      setSelectedCollectionIds([]);
+      Alert.alert('Saved', 'Recipe saved to cookbook!');
+    } catch (error: any) {
+      if (error.code === 'HTTP_409' || /already\s*saved/i.test(error.message)) {
+        // Already saved, try to move to collections
+        if (selectedCollectionIds.length > 0) {
+          try {
+            await collectionsApi.moveSavedRecipe(savePickerRecipeId, selectedCollectionIds);
+            Alert.alert('Moved', 'Recipe moved to collections!');
+          } catch (e) {
+            Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
+          }
+        } else {
+          Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
+        }
+      } else {
+        Alert.alert('Error', error.message || 'Failed to save recipe');
+      }
+      setSavePickerVisible(false);
+      setSavePickerRecipeId(null);
+      setSelectedCollectionIds([]);
+    }
+  };
+
+  const handleCreateCollection = async () => {
+    const name = newCollectionName.trim();
+    if (!name) return;
+    try {
+      const res = await collectionsApi.create(name);
+      const created = (Array.isArray(res.data) ? null : (res.data?.data || res.data)) as { id: string; name: string; isDefault?: boolean } | null;
+      if (created) {
+        setCollections(prev => [created, ...prev]);
+        setSelectedCollectionIds(prev => [...prev, created.id]);
+        setNewCollectionName('');
+        setCreatingCollection(false);
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to create collection');
+    }
+  };
+
   const handleRandomRecipe = async () => {
     try {
-      console.log('🎲 HomeScreen: Getting random recipe');
+      console.log('🤖 HomeScreen: Generating AI recipe with filters:', filters);
       
       // Haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      const response = await recipeApi.getRandomRecipe();
-      const randomRecipe = response.data;
+      // Show loading indicator with estimated time
+      Alert.alert(
+        '🤖 Generating Recipe...',
+        'Creating a personalized recipe for you (10-15 seconds)',
+        [],
+        { cancelable: false }
+      );
       
-      console.log('🎲 HomeScreen: Random recipe received', randomRecipe.title);
+      // Pass active filters to AI generation for more targeted recipes
+      const params: any = {};
       
-      // Navigate to the recipe modal
-      router.push(`../modal?id=${randomRecipe.id}&source=random`);
+      // If user has filtered to specific cuisines, pick one randomly from the filtered list
+      if (filters.cuisines.length > 0) {
+        const randomCuisine = filters.cuisines[Math.floor(Math.random() * filters.cuisines.length)];
+        params.cuisine = randomCuisine;
+        console.log('🎲 Using filtered cuisine:', randomCuisine);
+      }
+      
+      // If user has filtered by max cook time, respect that
+      if (filters.maxCookTime) {
+        params.maxCookTime = filters.maxCookTime;
+        console.log('⏱️ Respecting max cook time:', filters.maxCookTime);
+      }
+      
+      // Note: Dietary restrictions are handled by the backend via saved user preferences
+      // The AI will automatically respect the user's dietary restrictions from onboarding
+      
+      const response = await aiRecipeApi.generateRecipe(params);
+      const aiRecipe = response.data.recipe;
+      
+      console.log('✅ HomeScreen: AI recipe generated', aiRecipe.title);
+      
+      // Success haptic feedback to let user know it's ready
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Auto-navigate after 2 seconds (no need to click OK)
+      setTimeout(() => {
+        router.push(`../modal?id=${aiRecipe.id}`);
+      }, 2000);
       
     } catch (error: any) {
-      console.error('❌ HomeScreen: Error getting random recipe', error);
+      console.error('❌ HomeScreen: Error generating AI recipe', error);
       
-      if (error.response?.status === 404) {
-        Alert.alert(
-          'No Random Recipe Found',
-          'No recipes match your current preferences. Try adjusting your preferences in the Profile tab.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert(
-          'Error',
-          'Failed to get a random recipe. Please try again.',
-          [{ text: 'OK' }]
-        );
+      // Check if it's a quota/billing error
+      const isQuotaError = error.code === 'insufficient_quota' || 
+                          error.message?.includes('quota') || 
+                          error.message?.includes('429');
+      
+      // Fallback to existing random recipe from database if AI fails
+      if (isQuotaError) {
+        try {
+          console.log('🔄 Falling back to random recipe from database...');
+          const fallbackResponse = await recipeApi.getRandomRecipe();
+          const fallbackRecipe = fallbackResponse.data;
+          
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          
+          // Show info alert and navigate to the recipe
+          Alert.alert(
+            'Using Existing Recipe',
+            'AI generation is temporarily unavailable. Here\'s a great recipe from our collection!',
+            [],
+            { cancelable: false }
+          );
+          
+          setTimeout(() => {
+            router.push(`../modal?id=${fallbackRecipe.id}`);
+          }, 1500);
+          
+          return; // Exit early, we got a fallback recipe
+        } catch (fallbackError: any) {
+          console.error('❌ Fallback also failed:', fallbackError);
+          // Continue to show error below
+        }
       }
+      
+      const isTimeout = error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR';
+      const message = isQuotaError
+        ? 'AI recipe generation is temporarily unavailable due to quota limits. Try again later or browse our existing recipes!'
+        : isTimeout 
+        ? 'The recipe took too long to generate. This is usually temporary - try again!' 
+        : 'Unable to generate a recipe right now. Please check your connection and try again.';
+      
+      Alert.alert(
+        'Generation Failed',
+        message,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: () => handleRandomRecipe() },
+          // Add option to browse existing recipes
+          { text: 'Browse Recipes', onPress: () => {
+            // Refresh suggestions to show existing recipes
+            onRefresh();
+          }}
+        ]
+      );
     }
   };
 
@@ -361,6 +562,29 @@ export default function HomeScreen() {
     return 'text-red-600';
   };
 
+  // Truncate description to approximately 2-3 lines (100-120 characters)
+  const truncateDescription = (text: string, maxLength: number = 120): string => {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
+
+  const getRecipePlaceholder = (cuisine: string) => {
+    const placeholders: Record<string, { icon: string; color: string; bg: string }> = {
+      'Mediterranean': { icon: 'fish-outline', color: '#3B82F6', bg: '#DBEAFE' },
+      'Asian': { icon: 'restaurant-outline', color: '#EF4444', bg: '#FEE2E2' },
+      'Mexican': { icon: 'flame-outline', color: '#F59E0B', bg: '#FEF3C7' },
+      'Italian': { icon: 'pizza-outline', color: '#10B981', bg: '#D1FAE5' },
+      'American': { icon: 'fast-food-outline', color: '#6366F1', bg: '#E0E7FF' },
+      'Indian': { icon: 'restaurant-outline', color: '#F97316', bg: '#FFEDD5' },
+      'Thai': { icon: 'leaf-outline', color: '#14B8A6', bg: '#CCFBF1' },
+      'French': { icon: 'wine-outline', color: '#8B5CF6', bg: '#EDE9FE' },
+      'Japanese': { icon: 'fish-outline', color: '#EC4899', bg: '#FCE7F3' },
+      'Chinese': { icon: 'restaurant-outline', color: '#DC2626', bg: '#FEE2E2' },
+    };
+
+    return placeholders[cuisine] || { icon: 'restaurant-outline', color: '#9CA3AF', bg: '#F3F4F6' };
+  };
+
   // Loading state
   if (loading && suggestedRecipes.length === 0) {
     return (
@@ -445,13 +669,30 @@ export default function HomeScreen() {
               {suggestedRecipes.length} recipe suggestions
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleRandomRecipe}
-            className="bg-orange-500 px-4 py-2 rounded-lg flex-row items-center"
-          >
-            <Ionicons name="shuffle" size={16} color="white" />
-            <Text className="text-white font-semibold ml-2">Random</Text>
-          </TouchableOpacity>
+          <View className="flex-row items-center">
+            <TouchableOpacity
+              onPress={handleReload}
+              activeOpacity={1}
+              className="bg-gray-100 px-3 py-2 rounded-lg flex-row items-center border border-gray-300 mr-2"
+              style={{ opacity: 1 }}
+            >
+              {reloadLoading ? (
+                <ActivityIndicator size="small" color="#6B7280" style={{ marginRight: 6 }} />
+              ) : (
+                <Ionicons name="reload" size={16} color="#6B7280" style={{ marginRight: 4 }} />
+              )}
+              <Text className="text-gray-700 font-semibold">
+                {reloadLoading ? 'Loading...' : 'Reload'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleRandomRecipe}
+              className="bg-orange-500 px-4 py-2 rounded-lg flex-row items-center"
+            >
+              <Ionicons name="shuffle" size={16} color="white" />
+              <Text className="text-white font-semibold ml-2">Random</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -503,22 +744,55 @@ export default function HomeScreen() {
             return (
               <TouchableOpacity
                 onPress={() => handleRecipePress(recipe.id)}
-                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4"
+                className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 mb-4"
               >
-                <View className="flex-row justify-between items-start mb-2">
-                  <Text className="text-xl font-bold text-gray-900 flex-1">
-                    {recipe.title}
-                  </Text>
-                  <View className={`bg-green-100 px-2 py-1 rounded-full ml-2`}>
-                    <Text className={`text-green-800 text-sm font-semibold`}>
-                      {recipe.score?.matchPercentage || 0}% Match
-                    </Text>
+                {/* Recipe Image with Unsplash Attribution */}
+                {recipe.imageUrl && (
+                  <View>
+                    <Image 
+                      source={{ uri: recipe.imageUrl }}
+                      style={{ width: '100%', height: 192 }}
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                      placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                      priority="high"
+                    />
+                    {/* Unsplash Attribution Overlay - Link to photographer profile per Unsplash guidelines */}
+                    {(recipe as any).unsplashPhotographerName && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          const username = (recipe as any).unsplashPhotographerUsername;
+                          if (username) {
+                            const profileUrl = `https://unsplash.com/@${username}?utm_source=Sazon%20Chef&utm_medium=referral`;
+                            Linking.openURL(profileUrl);
+                          }
+                        }}
+                        className="absolute bottom-2 right-2 bg-black/60 px-2 py-1 rounded"
+                      >
+                        <Text className="text-white text-xs">
+                          Photo by {(recipe as any).unsplashPhotographerName} on Unsplash
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                </View>
+                )}
                 
-                <Text className="text-gray-600 mb-3">
-                  {recipe.description}
-                </Text>
+                <View className="p-4">
+                  <View className="flex-row justify-between items-start mb-2">
+                    <Text className="text-xl font-bold text-gray-900 flex-1">
+                      {recipe.title}
+                    </Text>
+                    <View className={`bg-green-100 px-2 py-1 rounded-full ml-2`}>
+                      <Text className={`text-green-800 text-sm font-semibold`}>
+                        {recipe.score?.matchPercentage || 0}% Match
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <Text className="text-gray-600 mb-3" numberOfLines={3}>
+                    {truncateDescription(recipe.description)}
+                  </Text>
 
                 <View className="flex-row justify-between items-center">
                   <View className="flex-row items-center space-x-4">
@@ -535,8 +809,20 @@ export default function HomeScreen() {
                     </View>
                   </View>
 
-                  {/* Feedback Buttons */}
+                  {/* Feedback Buttons and Save */}
                   <View className="flex-row space-x-2">
+                    {/* Save to Collection Button */}
+                    <TouchableOpacity
+                      onPress={() => openSavePicker(recipe.id)}
+                      className="p-2 rounded-full bg-orange-100 border border-orange-200"
+                    >
+                      <Ionicons 
+                        name="bookmark-outline" 
+                        size={18} 
+                        color="#F97316" 
+                      />
+                    </TouchableOpacity>
+                    
                     {/* Dislike Button */}
                     <TouchableOpacity
                       onPress={() => handleDislike(recipe.id)}
@@ -572,6 +858,7 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
+                </View>
               </TouchableOpacity>
             );
           })()}
@@ -591,20 +878,52 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   key={recipe.id}
                   onPress={() => handleRecipePress(recipe.id)}
-                  className="bg-white rounded-lg p-4 mb-3 shadow-sm border border-gray-100"
+                  className="bg-white rounded-lg overflow-hidden mb-3 shadow-sm border border-gray-100"
                 >
-                  <View className="flex-row justify-between items-start mb-2">
-                    <Text className="text-lg font-semibold text-gray-900 flex-1">
-                      {recipe.title}
-                    </Text>
-                    <Text className={`text-base font-semibold ${getScoreColor(recipe.score?.total || 0)} ml-2`}>
-                      {recipe.score?.total || 0}
-                    </Text>
-                  </View>
+                  {/* Recipe Image with Unsplash Attribution */}
+                  {recipe.imageUrl && (
+                    <View>
+                      <Image 
+                        source={{ uri: recipe.imageUrl }}
+                        style={{ width: '100%', height: 160 }}
+                        contentFit="cover"
+                        transition={200}
+                        cachePolicy="memory-disk"
+                        placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                      />
+                      {/* Unsplash Attribution Overlay - Link to photographer profile per Unsplash guidelines */}
+                      {(recipe as any).unsplashPhotographerName && (
+                        <TouchableOpacity
+                          onPress={() => {
+                            const username = (recipe as any).unsplashPhotographerUsername;
+                            if (username) {
+                              const profileUrl = `https://unsplash.com/@${username}?utm_source=Sazon%20Chef&utm_medium=referral`;
+                              Linking.openURL(profileUrl);
+                            }
+                          }}
+                          className="absolute bottom-2 right-2 bg-black/60 px-2 py-1 rounded"
+                        >
+                          <Text className="text-white text-xs">
+                            Photo by {(recipe as any).unsplashPhotographerName} on Unsplash
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
                   
-                  <Text className="text-gray-600 text-sm mb-2">
-                    {recipe.description}
-                  </Text>
+                  <View className="p-4">
+                    <View className="flex-row justify-between items-start mb-2">
+                      <Text className="text-lg font-semibold text-gray-900 flex-1">
+                        {recipe.title}
+                      </Text>
+                      <Text className={`text-base font-semibold ${getScoreColor(recipe.score?.total || 0)} ml-2`}>
+                        {recipe.score?.total || 0}
+                      </Text>
+                    </View>
+                    
+                    <Text className="text-gray-600 text-sm mb-2" numberOfLines={2}>
+                      {truncateDescription(recipe.description, 100)}
+                    </Text>
 
                   <View className="flex-row justify-between items-center">
                     <View className="flex-row items-center space-x-3">
@@ -621,12 +940,24 @@ export default function HomeScreen() {
                       </View>
                     </View>
 
-                    {/* Feedback Buttons - FIXED: No stray text strings */}
-                    <View className="flex-row space-x-2">
+                    {/* Feedback Buttons and Save */}
+                    <View className="flex-row">
+                      {/* Save to Collection Button */}
+                      <TouchableOpacity
+                        onPress={() => openSavePicker(recipe.id)}
+                        className="p-2 rounded-full bg-orange-100 border border-orange-200 mr-2"
+                      >
+                        <Ionicons 
+                          name="bookmark-outline" 
+                          size={18} 
+                          color="#F97316" 
+                        />
+                      </TouchableOpacity>
+                      
                       <TouchableOpacity
                         onPress={() => handleDislike(recipe.id)}
                         disabled={isFeedbackLoading}
-                        className={`p-2 rounded-full ${
+                        className={`p-2 rounded-full mr-2 ${
                           feedback.disliked 
                             ? 'bg-red-100 border border-red-200' 
                             : 'bg-gray-100 border border-gray-200'
@@ -654,6 +985,7 @@ export default function HomeScreen() {
                         />
                       </TouchableOpacity>
                     </View>
+                  </View>
                   </View>
                 </TouchableOpacity>
               );
@@ -778,6 +1110,68 @@ export default function HomeScreen() {
             </View>
           </ScrollView>
         </SafeAreaView>
+      </Modal>
+
+      {/* Collection Save Picker Modal */}
+      <Modal
+        visible={savePickerVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSavePickerVisible(false)}
+      >
+        <View className="flex-1 bg-black/40 justify-end">
+          <View className="bg-white rounded-t-2xl p-4 max-h-[70%]">
+            <Text className="text-lg font-semibold mb-3">Save to Collection</Text>
+            <ScrollView className="mb-3">
+              {collections.map((c) => (
+                <TouchableOpacity
+                  key={c.id}
+                  onPress={() => {
+                    setSelectedCollectionIds(prev => 
+                      prev.includes(c.id) 
+                        ? prev.filter(id => id !== c.id)
+                        : [...prev, c.id]
+                    );
+                  }}
+                  className="flex-row items-center py-3 border-b border-gray-100"
+                >
+                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-orange-500 border-orange-500' : 'border-gray-300'}`}>
+                    {selectedCollectionIds.includes(c.id) && (
+                      <Ionicons name="checkmark" size={14} color="white" style={{ position: 'absolute', top: 1, left: 1 }} />
+                    )}
+                  </View>
+                  <Text className="text-gray-900 flex-1">{c.name}</Text>
+                </TouchableOpacity>
+              ))}
+              {creatingCollection ? (
+                <View className="flex-row items-center py-3">
+                  <TextInput
+                    value={newCollectionName}
+                    onChangeText={setNewCollectionName}
+                    placeholder="New collection name"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <TouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
+                    <Text className="text-white font-semibold">Create</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
+                  <Text className="text-orange-600 font-medium">+ Create new collection</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+            <View className="flex-row justify-end space-x-3">
+              <TouchableOpacity onPress={() => setSavePickerVisible(false)} className="px-4 py-3">
+                <Text className="text-gray-700">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveToCollections} className="bg-orange-500 px-4 py-3 rounded-lg">
+                <Text className="text-white font-semibold">Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );

@@ -2,24 +2,26 @@
 import { Request, Response } from 'express';
 import { mealHistoryController } from '../src/modules/mealHistory/mealHistoryController';
 
-// Mock Prisma
-const mockPrisma = {
-  mealHistory: {
-    findMany: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    findFirst: jest.fn(),
-    count: jest.fn()
-  },
-  recipe: {
-    findUnique: jest.fn()
-  }
-};
-
+// Mock Prisma - use factory function to avoid hoisting issues
 jest.mock('../src/lib/prisma', () => ({
-  prisma: mockPrisma
+  prisma: {
+    mealHistory: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn()
+    },
+    recipe: {
+      findUnique: jest.fn()
+    }
+  }
 }));
+
+// Import after mock
+import { prisma } from '../src/lib/prisma';
+const mockPrisma = prisma as any;
 
 describe('Meal History Controller', () => {
   let mockReq: Partial<Request>;

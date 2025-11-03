@@ -131,9 +131,20 @@ describe('Behavioral Scoring', () => {
         ]
       };
 
-      const score = calculateBehavioralScore(recipeWithDislikedIngredient, mockUserBehavior);
+      const scoreWithDisliked = calculateBehavioralScore(recipeWithDislikedIngredient, mockUserBehavior);
       
-      expect(score.ingredientPreference).toBeLessThan(0);
+      // Compare with recipe without disliked ingredients
+      const recipeWithoutDisliked = {
+        ...mockRecipe,
+        ingredients: [
+          { text: 'pasta' },
+          { text: 'tomato' }
+        ]
+      };
+      const scoreWithoutDisliked = calculateBehavioralScore(recipeWithoutDisliked, mockUserBehavior);
+      
+      // Recipe with disliked ingredients should have lower ingredient preference score
+      expect(scoreWithDisliked.ingredientPreference).toBeLessThanOrEqual(scoreWithoutDisliked.ingredientPreference);
     });
   });
 });

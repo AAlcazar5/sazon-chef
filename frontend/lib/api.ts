@@ -16,7 +16,7 @@ interface ApiError {
 // Create axios instance with default configuration
 const api: AxiosInstance = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api',
-  timeout: 10000,
+  timeout: 60000, // 60s timeout - allows for sequential meal generation with retries
   headers: {
     'Content-Type': 'application/json',
   },
@@ -56,18 +56,32 @@ api.interceptors.response.use(
 
     // If the response follows our ApiResponse structure, return the data directly
     if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-      return {
-        ...response,
-        data: response.data.data,
-        message: response.data.message
-      };
+      // If there's a 'data' property, unwrap it. Otherwise, keep the original response.data
+      if ('data' in response.data) {
+        return {
+          ...response,
+          data: response.data.data,
+          message: response.data.message
+        };
+      }
+      // For responses like { success: true, recipe: {...} }, keep as-is
+      return response;
     }
 
     return response;
   },
   (error) => {
     if (__DEV__) {
-      console.error('❌ Response Error:', error.response?.data || error.message);
+      // Don't surface noisy errors for benign conflicts (already saved)
+      const statusCode = error.response?.status;
+      const raw = error.response?.data;
+      const rawMessage: string | undefined = raw?.message || raw?.error || raw?.msg;
+      const isAlreadySaved = statusCode === 409 || /already\s*saved/i.test(String(rawMessage || ''));
+      if (!isAlreadySaved) {
+        console.error('❌ Response Error:', raw || error.message);
+      } else {
+        console.log('ℹ️  Response Conflict (already saved)');
+      }
     }
 
     // Handle different error types
@@ -79,9 +93,36 @@ api.interceptors.response.use(
     if (error.response) {
       // Server responded with error status
       const serverError = error.response.data;
-      apiError.message = serverError.message || getErrorMessage(error.response.status);
-      apiError.code = serverError.code || `HTTP_${error.response.status}`;
-      apiError.details = serverError.details;
+      const statusCode = error.response.status;
+
+      // Normalize common patterns
+      const rawMessage: string | undefined = serverError?.message || serverError?.error || serverError?.msg;
+      const normalizedMessage = rawMessage ? String(rawMessage) : getErrorMessage(statusCode);
+
+      apiError.message = normalizedMessage;
+      apiError.code = serverError?.code || `HTTP_${statusCode}`;
+      apiError.details = serverError?.details;
+
+      // Special-case: recipe already saved (some backends return 400 with message only)
+      if (statusCode === 409) {
+        // Map common 409 cases to friendly messages
+        if (/already\s*saved/i.test(normalizedMessage)) {
+          apiError.message = 'Recipe already saved';
+        } else if (/collection.*exists/i.test(normalizedMessage)) {
+          apiError.message = 'Collection already exists';
+        }
+        apiError.code = 'HTTP_409';
+      }
+      
+      // Special-case: quota/billing errors (429 or message contains quota info)
+      const isQuotaError = statusCode === 429 || 
+                          serverError?.code === 'insufficient_quota' ||
+                          /quota|billing|429.*exceeded/i.test(normalizedMessage);
+      
+      if (isQuotaError) {
+        apiError.code = 'insufficient_quota';
+        apiError.message = 'API quota exceeded. Please try again later.';
+      }
     } else if (error.request) {
       // Request was made but no response received
       apiError.message = 'Unable to connect to server. Please check your internet connection.';
@@ -176,6 +217,7 @@ export const recipeApi = {
     dietaryRestrictions?: string[];
     maxCookTime?: number;
     difficulty?: string[];
+    offset?: number;
   }) => {
     const params: any = {};
     
@@ -191,6 +233,9 @@ export const recipeApi = {
     if (filters?.difficulty && filters.difficulty.length > 0) {
       params.difficulty = filters.difficulty.join(',');
     }
+    if (filters?.offset !== undefined) {
+      params.offset = filters.offset;
+    }
     
     return apiClient.get('/recipes/suggested', { params });
   },
@@ -203,6 +248,14 @@ export const recipeApi = {
     return apiClient.get('/recipes/saved');
   },
 
+  getLikedRecipes: () => {
+    return apiClient.get('/recipes/liked');
+  },
+
+  getDislikedRecipes: () => {
+    return apiClient.get('/recipes/disliked');
+  },
+
   likeRecipe: (id: string) => {
     return apiClient.post(`/recipes/${id}/like`);
   },
@@ -211,8 +264,8 @@ export const recipeApi = {
     return apiClient.post(`/recipes/${id}/dislike`);
   },
 
-  saveRecipe: (id: string) => {
-    return apiClient.post(`/recipes/${id}/save`);
+  saveRecipe: (id: string, data?: { collectionIds?: string[] }) => {
+    return apiClient.post(`/recipes/${id}/save`, data);
   },
 
   unsaveRecipe: (id: string) => {
@@ -237,6 +290,16 @@ export const recipeApi = {
     return apiClient.delete(`/recipes/${id}`);
   }
 };
+// Collections API
+export const collectionsApi = {
+  list: () => apiClient.get('/recipes/collections'),
+  create: (name: string) => apiClient.post('/recipes/collections', { name }),
+  update: (id: string, name: string) => apiClient.put(`/recipes/collections/${id}`, { name }),
+  remove: (id: string) => apiClient.delete(`/recipes/collections/${id}`),
+  moveSavedRecipe: (recipeId: string, collectionIds: string[]) =>
+    apiClient.patch(`/recipes/${recipeId}/move-to-collection`, { collectionIds }),
+};
+
 
 // Meal History API
 export const mealHistoryApi = {
@@ -384,6 +447,44 @@ export const mealPlanApi = {
 
   getMealHistory: (params?: { startDate?: string; endDate?: string }) => {
     return apiClient.get('/meal-plan/history', { params });
+  },
+};
+
+// AI Recipe API
+export const aiRecipeApi = {
+  // Generate a single AI recipe
+  generateRecipe: (params?: { cuisine?: string; mealType?: string }) => {
+    return apiClient.get('/ai-recipes/generate', { params });
+  },
+
+  // Generate daily meal plan with AI
+  generateDailyPlan: (params?: { 
+    meals?: string; // Comma-separated: breakfast,lunch,dinner,snack
+    mealCount?: number; 
+    cuisine?: string;
+    useRemainingMacros?: boolean;
+    remainingMacros?: { calories: number; protein: number; carbs: number; fat: number };
+  }) => {
+    // Convert remainingMacros object to query params if present
+    const queryParams: any = { ...params };
+    if (params?.remainingMacros) {
+      queryParams.remainingCalories = params.remainingMacros.calories;
+      queryParams.remainingProtein = params.remainingMacros.protein;
+      queryParams.remainingCarbs = params.remainingMacros.carbs;
+      queryParams.remainingFat = params.remainingMacros.fat;
+      delete queryParams.remainingMacros; // Remove the nested object
+    }
+    return apiClient.get('/ai-recipes/daily-plan', { params: queryParams });
+  },
+
+  // Calculate remaining macros from existing meals
+  calculateRemainingMacros: (existingMeals: Array<{ calories: number; protein: number; carbs: number; fat: number }>) => {
+    return apiClient.post('/ai-recipes/remaining-macros', { existingMeals });
+  },
+
+  // Get AI-generated recipes from database
+  getAIRecipes: (limit?: number) => {
+    return apiClient.get('/ai-recipes', { params: { limit } });
   },
 };
 
