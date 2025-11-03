@@ -260,5 +260,8 @@ backend/.env
 backend/prisma/dev.db
 
 # Personal roadmap (for development use only)
-COMPLETE_ROADMAP.md
 ROADMAP.md
+
+# Security documentation
+Security.md
+verify-security.sh

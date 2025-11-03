@@ -159,9 +159,6 @@ DATABASE_URL="file:./dev.db"
 PORT=3001
 NODE_ENV=development
 
-# API Keys (when implemented)
-# JWT_SECRET=your-secret-key
-# OPENAI_API_KEY=your-openai-key
 ```
 
 ### Database Configuration
@@ -212,10 +209,6 @@ The recommendation algorithm uses multiple factors:
 - Database files excluded from version control
 - API keys and secrets protected
 
-### Authentication (Future)
-- JWT token-based authentication ready for implementation
-- User session management
-- Role-based access control
 
 ## 🚀 Deployment
 
@@ -246,21 +239,9 @@ The recommendation algorithm uses multiple factors:
 - [x] Recipe CRUD operations
 - [x] User preference system
 
-### Phase 2: Enhanced Features 🚧
-- [ ] Authentication system
-- [ ] Advanced recipe filtering
-- [ ] Meal planning features
-- [ ] Shopping list generation
-
-### Phase 3: AI Integration 🔮
-- [ ] Machine learning recommendations
-- [ ] Natural language recipe search
-- [ ] Image recognition for ingredients
-- [ ] Personalized nutrition insights
 
 ## 🐛 Known Issues
 
-- Authentication placeholder (ready for implementation)
 - Database migrations need production setup
 - Image upload functionality pending
 - Push notifications not implemented
@@ -277,7 +258,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For support, email support@sazonchef.com or create an issue in the repository.
+For support, create an issue in the repository.
 
 ---
 
