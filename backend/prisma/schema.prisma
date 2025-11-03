@@ -22,6 +22,7 @@ model User {
   
   // Relationships
   savedRecipes SavedRecipe[]
+  collections  Collection[]
   feedback      RecipeFeedback[]
   mealHistory   MealHistory[]
   mealPlans     MealPlan[]
@@ -128,7 +129,17 @@ model Recipe {
   description String
   cookTime    Int      // in minutes
   cuisine     String
+  difficulty  String   @default("medium") // "easy", "medium", "hard"
+  servings    Int      @default(1)
   imageUrl    String?
+  
+  // Unsplash attribution (required for production API compliance)
+  unsplashPhotoId         String? // Unsplash photo ID
+  unsplashDownloadLocation String? // For triggering download events
+  unsplashPhotographerName String? // Photographer's name
+  unsplashPhotographerUsername String? // Photographer's username
+  unsplashAttributionText String? // "Photo by {name} on Unsplash"
+  unsplashUrl             String? // Link to photo on Unsplash (hotlinked per guidelines)
   
   // Macro nutrients
   calories Int
@@ -142,6 +153,22 @@ model Recipe {
   userId      String?  // Null for system recipes, set for user-created recipes
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   isUserCreated Boolean @default(false)
+  
+  // Recipe source tracking
+  source      String  @default("database") // "database", "user-created", "ai-generated", "external"
+  
+  // External data integration (Phase 5)
+  externalId       String?   // ID from external source (e.g., Spoonacular)
+  externalSource   String?   // Source name (e.g., "spoonacular", "edamam")
+  qualityScore     Float?    // Quality rating from external source (0-100)
+  popularityScore  Float?    // Popularity metric from external source (0-100)
+  healthScore      Float?    // Health score from external API
+  aggregateLikes   Int?      // Total likes/favorites from external source
+  spoonacularScore Float?    // Spoonacular-specific score
+  pricePerServing  Float?    // Cost per serving from external API
+  sourceUrl        String?   // Original recipe URL
+  sourceName       String?   // Original source attribution
+  lastEnriched     DateTime? // Last time external data was fetched
   
   // Recipe content
   ingredients RecipeIngredient[]
@@ -206,9 +233,41 @@ model SavedRecipe {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   savedDate DateTime @default(now())
+  
+  // Many-to-many relationship with collections via RecipeCollection
+  recipeCollections RecipeCollection[]
 
   @@unique([recipeId, userId])
   @@map("saved_recipes")
+}
+
+model Collection {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Many-to-many relationship with recipes via RecipeCollection
+  recipeCollections RecipeCollection[]
+
+  @@unique([userId, name])
+  @@map("collections")
+}
+
+// Join table for many-to-many relationship between recipes and collections
+model RecipeCollection {
+  id         String   @id @default(cuid())
+  savedRecipeId String
+  collectionId String
+  savedRecipe SavedRecipe @relation(fields: [savedRecipeId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  addedAt    DateTime @default(now())
+  
+  @@unique([savedRecipeId, collectionId])
+  @@map("recipe_collections")
 }
 
 model MealHistory {

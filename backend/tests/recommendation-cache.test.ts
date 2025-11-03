@@ -109,11 +109,11 @@ describe('Recommendation Cache', () => {
       const userId = 'user-1';
 
       // First call should fetch from source
-      const result1 = await recommendationCache.getUserBehavioralData(userId, mockFetcher);
+      const result1 = await recommendationCache.getBehavioralData(userId, mockFetcher);
       expect(mockFetcher).toHaveBeenCalledTimes(1);
 
       // Second call should use cache
-      const result2 = await recommendationCache.getUserBehavioralData(userId, mockFetcher);
+      const result2 = await recommendationCache.getBehavioralData(userId, mockFetcher);
       expect(mockFetcher).toHaveBeenCalledTimes(1); // Still only called once
       expect(result1).toEqual(result2);
     });
@@ -133,11 +133,11 @@ describe('Recommendation Cache', () => {
       const date = '2024-01-01';
 
       // First call should fetch from source
-      const result1 = await recommendationCache.getDailySuggestions(userId, date, mockFetcher);
+      const result1 = await recommendationCache.getDailySuggestions({ userId, date }, mockFetcher);
       expect(mockFetcher).toHaveBeenCalledTimes(1);
 
       // Second call should use cache
-      const result2 = await recommendationCache.getDailySuggestions(userId, date, mockFetcher);
+      const result2 = await recommendationCache.getDailySuggestions({ userId, date }, mockFetcher);
       expect(mockFetcher).toHaveBeenCalledTimes(1); // Still only called once
       expect(result1).toEqual(result2);
     });
@@ -178,16 +178,14 @@ describe('Recommendation Cache', () => {
       const stats = recommendationCache.getCacheStats();
       
       expect(stats).toHaveProperty('size');
-      expect(stats).toHaveProperty('activeSize');
       expect(stats).toHaveProperty('maxSize');
-      expect(stats).toHaveProperty('expiredEntries');
-      expect(stats).toHaveProperty('keys');
+      expect(stats).toHaveProperty('hitRate');
+      expect(stats).toHaveProperty('entries');
       
       expect(typeof stats.size).toBe('number');
-      expect(typeof stats.activeSize).toBe('number');
       expect(typeof stats.maxSize).toBe('number');
-      expect(typeof stats.expiredEntries).toBe('number');
-      expect(Array.isArray(stats.keys)).toBe(true);
+      expect(typeof stats.hitRate).toBe('number');
+      expect(Array.isArray(stats.entries)).toBe(true);
     });
   });
 

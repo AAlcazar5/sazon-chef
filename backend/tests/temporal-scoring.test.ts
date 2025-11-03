@@ -23,16 +23,25 @@ describe('Temporal Scoring', () => {
   };
 
   const mockUserTemporalPatterns = {
-    preferredBreakfastTime: 7,
-    preferredLunchTime: 12,
-    preferredDinnerTime: 18,
+    preferredBreakfastTimes: [7],
+    preferredLunchTimes: [12],
+    preferredDinnerTimes: [18],
+    weekdayPreferences: {
+      breakfast: [],
+      lunch: [],
+      dinner: [],
+      snack: []
+    },
     weekendPreferences: {
-      breakfast: 'later',
-      lunch: 'casual',
-      dinner: 'elaborate'
+      breakfast: [],
+      lunch: [],
+      dinner: [],
+      snack: []
     },
     seasonalPreferences: {
+      spring: [],
       summer: ['grilled', 'cold'],
+      fall: [],
       winter: ['soup', 'hot']
     }
   };
@@ -58,9 +67,11 @@ describe('Temporal Scoring', () => {
       const morningContext = {
         currentHour: 8,
         currentDay: 1, // Monday
-        mealPeriod: 'breakfast',
-        season: 'spring',
-        isWeekend: false
+        currentMonth: 3, // April
+        isWeekend: false,
+        isWeekday: true,
+        mealPeriod: 'breakfast' as const,
+        season: 'spring' as const
       };
 
       const score = calculateTemporalScore(mockRecipe, morningContext, mockUserTemporalPatterns);
@@ -74,9 +85,11 @@ describe('Temporal Scoring', () => {
       const eveningContext = {
         currentHour: 19,
         currentDay: 1, // Monday
-        mealPeriod: 'dinner',
-        season: 'spring',
-        isWeekend: false
+        currentMonth: 3, // April
+        isWeekend: false,
+        isWeekday: true,
+        mealPeriod: 'dinner' as const,
+        season: 'spring' as const
       };
 
       const score = calculateTemporalScore(mockRecipe, eveningContext, mockUserTemporalPatterns);
@@ -88,9 +101,11 @@ describe('Temporal Scoring', () => {
       const weekendContext = {
         currentHour: 10,
         currentDay: 0, // Sunday
-        mealPeriod: 'breakfast',
-        season: 'spring',
-        isWeekend: true
+        currentMonth: 3, // April
+        isWeekend: true,
+        isWeekday: false,
+        mealPeriod: 'breakfast' as const,
+        season: 'spring' as const
       };
 
       const score = calculateTemporalScore(mockRecipe, weekendContext, mockUserTemporalPatterns);
@@ -102,9 +117,11 @@ describe('Temporal Scoring', () => {
       const summerContext = {
         currentHour: 12,
         currentDay: 1,
-        mealPeriod: 'lunch',
-        season: 'summer',
-        isWeekend: false
+        currentMonth: 7, // August
+        isWeekend: false,
+        isWeekday: true,
+        mealPeriod: 'lunch' as const,
+        season: 'summer' as const
       };
 
       const score = calculateTemporalScore(mockRecipe, summerContext, mockUserTemporalPatterns);
@@ -142,9 +159,9 @@ describe('Temporal Scoring', () => {
 
       const patterns = analyzeUserTemporalPatterns(consumedRecipes);
       
-      expect(patterns).toHaveProperty('preferredBreakfastTime');
-      expect(patterns).toHaveProperty('preferredLunchTime');
-      expect(patterns).toHaveProperty('preferredDinnerTime');
+      expect(patterns).toHaveProperty('preferredBreakfastTimes');
+      expect(patterns).toHaveProperty('preferredLunchTimes');
+      expect(patterns).toHaveProperty('preferredDinnerTimes');
       expect(patterns).toHaveProperty('weekendPreferences');
       expect(patterns).toHaveProperty('seasonalPreferences');
     });
@@ -152,9 +169,9 @@ describe('Temporal Scoring', () => {
     it('should handle empty meal history', () => {
       const patterns = analyzeUserTemporalPatterns([]);
       
-      expect(patterns.preferredBreakfastTime).toBe(7); // Default
-      expect(patterns.preferredLunchTime).toBe(12); // Default
-      expect(patterns.preferredDinnerTime).toBe(18); // Default
+      expect(patterns.preferredBreakfastTimes).toBeInstanceOf(Array);
+      expect(patterns.preferredLunchTimes).toBeInstanceOf(Array);
+      expect(patterns.preferredDinnerTimes).toBeInstanceOf(Array);
     });
   });
 });

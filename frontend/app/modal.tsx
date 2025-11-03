@@ -1,10 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert, Share } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Share, Platform, Modal, TextInput } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useApi } from '../hooks/useApi';
-import { recipeApi } from '../lib/api';
+import { recipeApi, collectionsApi } from '../lib/api';
 import type { Recipe } from '../types';
 
 // Helper function to extract text from ingredients/instructions
@@ -14,12 +14,17 @@ const getTextContent = (item: any): string => {
   return String(item);
 };
 
-export default function Modal() {
+export default function RecipeModal() {
   const { id, source } = useLocalSearchParams();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [creatingCollection, setCreatingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
 
   // Fetch recipe data when modal opens
   useEffect(() => {
@@ -45,25 +50,84 @@ export default function Modal() {
     fetchRecipe();
   }, [id]);
 
-  const handleSaveRecipe = async () => {
+  const openCollectionPicker = async () => {
+    try {
+      const res = await collectionsApi.list();
+      const cols = (Array.isArray(res.data) ? res.data : (res.data?.data || [])) as Array<{ id: string; name: string; isDefault?: boolean }>;
+      setCollections(cols);
+      // Start with no collections selected (will save to "All")
+      setSelectedCollectionIds([]);
+      setPickerVisible(true);
+    } catch (e) {
+      // If collections fail to load, fallback to default save
+      setPickerVisible(false);
+      await performSave();
+    }
+  };
+
+  const performSave = async (collectionIds?: string[]) => {
     if (!recipe) return;
     
     try {
       setIsSaving(true);
       console.log('📱 Modal: Saving recipe', recipe.id);
-      await recipeApi.saveRecipe(recipe.id);
-      Alert.alert('Success', 'Recipe saved to cookbook!', [
-        { text: 'OK', onPress: () => console.log('Recipe saved successfully') }
+      await recipeApi.saveRecipe(recipe.id, collectionIds && collectionIds.length > 0 ? { collectionIds } : undefined);
+      console.log('📱 Modal: Recipe saved successfully');
+      // Show confirmation, then close modal
+      Alert.alert('Saved', 'Recipe saved to your cookbook!', [
+        { text: 'OK', onPress: () => router.back() }
       ]);
     } catch (error: any) {
-      console.error('📱 Modal: Save error', error);
-      if (error.message?.includes('already saved') || error.code === 'HTTP_409') {
-        Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
+      if (error.code === 'HTTP_409' || /already\s*saved/i.test(error.message)) {
+        // If already saved, try to add to collections
+        if (collectionIds && collectionIds.length > 0) {
+          try {
+            await collectionsApi.moveSavedRecipe(recipe.id, collectionIds);
+            Alert.alert('Moved', 'Recipe moved to collections!', [
+              { text: 'OK', onPress: () => router.back() }
+            ]);
+          } catch (e) {
+            Alert.alert('Already Saved', 'This recipe is already in your cookbook!', [
+              { text: 'OK', onPress: () => router.back() }
+            ]);
+          }
+        } else {
+          Alert.alert('Already Saved', 'This recipe is already in your cookbook!', [
+            { text: 'OK', onPress: () => router.back() }
+          ]);
+        }
       } else {
+        console.error('📱 Modal: Save error', error);
         Alert.alert('Error', error.message || 'Failed to save recipe');
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveRecipe = async () => {
+    await openCollectionPicker();
+  };
+
+  const handleConfirmPicker = async () => {
+    setPickerVisible(false);
+    await performSave(selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined);
+  };
+
+  const handleCreateCollection = async () => {
+    const name = newCollectionName.trim();
+    if (!name) return;
+    try {
+      const res = await collectionsApi.create(name);
+      const created = (Array.isArray(res.data) ? null : (res.data?.data || res.data)) as { id: string; name: string; isDefault?: boolean } | null;
+      if (created) {
+        setCollections(prev => [created, ...prev]);
+        setSelectedCollectionIds(prev => [...prev, created.id]);
+      }
+      setNewCollectionName('');
+      setCreatingCollection(false);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to create collection');
     }
   };
 
@@ -263,6 +327,7 @@ export default function Modal() {
   }
 
   return (
+    <>
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       {/* Header - Single title with close button */}
       <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
@@ -461,5 +526,68 @@ export default function Modal() {
         )}
       </View>
     </SafeAreaView>
+    
+    {/* Collection Picker Modal */}
+    <Modal
+      visible={pickerVisible}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setPickerVisible(false)}
+    >
+      <View className="flex-1 bg-black/40 justify-end">
+        <View className="bg-white rounded-t-2xl p-4 max-h-[70%]">
+          <Text className="text-lg font-semibold mb-3">Save to Collection</Text>
+          <ScrollView className="mb-3">
+              {collections.map((c) => (
+                <TouchableOpacity
+                  key={c.id}
+                  onPress={() => {
+                    setSelectedCollectionIds(prev => 
+                      prev.includes(c.id) 
+                        ? prev.filter(id => id !== c.id)
+                        : [...prev, c.id]
+                    );
+                  }}
+                  className="flex-row items-center py-3 border-b border-gray-100"
+                >
+                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-orange-500 border-orange-500' : 'border-gray-300'}`}>
+                    {selectedCollectionIds.includes(c.id) && (
+                      <Ionicons name="checkmark" size={14} color="white" style={{ position: 'absolute', top: 1, left: 1 }} />
+                    )}
+                  </View>
+                  <Text className="text-gray-900 flex-1">{c.name}</Text>
+                </TouchableOpacity>
+              ))}
+            {creatingCollection ? (
+              <View className="flex-row items-center py-3">
+                <TextInput
+                  value={newCollectionName}
+                  onChangeText={setNewCollectionName}
+                  placeholder="New collection name"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
+                  placeholderTextColor="#9CA3AF"
+                />
+                <TouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
+                  <Text className="text-white font-semibold">Create</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
+                <Text className="text-orange-600 font-medium">+ Create new collection</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+          <View className="flex-row justify-end space-x-3">
+            <TouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
+              <Text className="text-gray-700">Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleConfirmPicker} className="bg-orange-500 px-4 py-3 rounded-lg">
+              <Text className="text-white font-semibold">Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }

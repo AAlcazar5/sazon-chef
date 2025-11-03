@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import FeedbackButtons from './FeedbackButtons';
@@ -67,6 +67,23 @@ export default function RecipeCard({
     if (percentage >= 90) return 'bg-green-500';
     if (percentage >= 75) return 'bg-yellow-500';
     return 'bg-red-500';
+  };
+
+  const getRecipePlaceholder = (cuisine: string) => {
+    const placeholders: Record<string, { icon: string; color: string; bg: string }> = {
+      'Mediterranean': { icon: 'fish-outline', color: '#3B82F6', bg: '#DBEAFE' },
+      'Asian': { icon: 'restaurant-outline', color: '#EF4444', bg: '#FEE2E2' },
+      'Mexican': { icon: 'flame-outline', color: '#F59E0B', bg: '#FEF3C7' },
+      'Italian': { icon: 'pizza-outline', color: '#10B981', bg: '#D1FAE5' },
+      'American': { icon: 'fast-food-outline', color: '#6366F1', bg: '#E0E7FF' },
+      'Indian': { icon: 'restaurant-outline', color: '#F97316', bg: '#FFEDD5' },
+      'Thai': { icon: 'leaf-outline', color: '#14B8A6', bg: '#CCFBF1' },
+      'French': { icon: 'wine-outline', color: '#8B5CF6', bg: '#EDE9FE' },
+      'Japanese': { icon: 'fish-outline', color: '#EC4899', bg: '#FCE7F3' },
+      'Chinese': { icon: 'restaurant-outline', color: '#DC2626', bg: '#FEE2E2' },
+    };
+
+    return placeholders[cuisine] || { icon: 'restaurant-outline', color: '#9CA3AF', bg: '#F3F4F6' };
   };
 
   // Variant styles
