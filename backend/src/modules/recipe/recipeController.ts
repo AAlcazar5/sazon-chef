@@ -1,6 +1,7 @@
 // backend/src/modules/recipe/recipeController.simple.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { healthifyService } from '@/services/healthifyService';
 
 // Extend Express Request type to include user
 declare global {
@@ -1089,8 +1090,13 @@ export const recipeController = {
 
       // Auto-save user-created recipe to cookbook (uncategorized)
       const savedRecipe = await prisma.savedRecipe.create({
-        data: { userId, recipeId: created.id }
+        data: { 
+          userId, 
+          recipeId: created.id,
+          savedDate: new Date() // Explicitly set savedDate
+        }
       });
+      console.log('✅ Auto-saved user-created recipe to cookbook:', savedRecipe.id);
 
       // Add to selected collections (multi-collection support)
       const { collectionIds } = data as { collectionIds?: string[] };
@@ -1530,5 +1536,98 @@ export const recipeController = {
       console.error('❌ Error getting enrichment status:', error);
       res.status(500).json({ error: 'Failed to get enrichment status' });
     }
-  }
+  },
+
+  // Healthify recipe - transform to healthier version
+  async healthifyRecipe(req: Request, res: Response) {
+    try {
+      console.log('💚 POST /api/recipes/:id/healthify called');
+      const { id } = req.params;
+      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      
+      // Fetch the original recipe
+      const recipe = await prisma.recipe.findUnique({ 
+        where: { id },
+        include: {
+          ingredients: { orderBy: { order: 'asc' } },
+          instructions: { orderBy: { step: 'asc' } },
+        },
+      });
+      
+      if (!recipe) {
+        return res.status(404).json({ error: 'Recipe not found' });
+      }
+      
+      // Fetch user preferences for healthify optimization
+      const [preferences, macroGoals, physicalProfile] = await Promise.all([
+        prisma.userPreferences.findUnique({
+          where: { userId },
+          include: {
+            dietaryRestrictions: true,
+            bannedIngredients: true,
+          },
+        }),
+        prisma.macroGoals.findUnique({
+          where: { userId },
+        }),
+        prisma.userPhysicalProfile.findUnique({
+          where: { userId },
+        }),
+      ]);
+
+      // Prepare healthify parameters
+      const healthifyParams = {
+        originalRecipe: {
+          title: recipe.title,
+          description: recipe.description || '',
+          ingredients: recipe.ingredients.map(ing => ({ text: ing.text })),
+          instructions: recipe.instructions.map(inst => ({ text: inst.text })),
+          calories: recipe.calories,
+          protein: recipe.protein,
+          carbs: recipe.carbs,
+          fat: recipe.fat,
+          cookTime: recipe.cookTime,
+          cuisine: recipe.cuisine,
+        },
+        userMacroGoals: macroGoals
+          ? {
+              calories: macroGoals.calories,
+              protein: macroGoals.protein,
+              carbs: macroGoals.carbs,
+              fat: macroGoals.fat,
+            }
+          : undefined,
+        dietaryRestrictions: preferences?.dietaryRestrictions?.map((dr: any) => dr.name) || [],
+        bannedIngredients: preferences?.bannedIngredients?.map((bi: any) => bi.name) || [],
+        fitnessGoal: physicalProfile?.fitnessGoal || undefined,
+      };
+
+      // Generate healthified recipe
+      const healthifiedRecipe = await healthifyService.healthifyRecipe(healthifyParams);
+
+      console.log('✅ Recipe healthified successfully:', healthifiedRecipe.title);
+
+      res.json({
+        success: true,
+        recipe: healthifiedRecipe,
+      });
+    } catch (error: any) {
+      console.error('❌ Healthify recipe error:', error);
+      
+      // Check if it's a quota/billing error
+      const isQuotaError = error.code === 'insufficient_quota' || 
+                          error.status === 429 ||
+                          error.message?.includes('quota') ||
+                          error.message?.includes('billing');
+      
+      const statusCode = isQuotaError ? 429 : 500;
+      
+      res.status(statusCode).json({
+        success: false,
+        error: isQuotaError ? 'Quota exceeded' : 'Failed to healthify recipe',
+        message: error.message,
+        code: error.code || (isQuotaError ? 'insufficient_quota' : 'HEALTHIFY_ERROR'),
+      });
+    }
+  },
 };

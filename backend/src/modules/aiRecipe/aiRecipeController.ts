@@ -74,12 +74,57 @@ export class AIRecipeController {
           cookTime: f.recipe.cookTime,
         }));
 
-      // RANDOMIZATION: Pick a random meal type if not specified
+      // Check if recipe title is provided (for recipe form generation)
+      const recipeTitle = req.query.recipeTitle as string | undefined;
+
+      // RANDOMIZATION: Pick a random meal type if not specified (unless recipe title is provided)
       const mealTypes: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> = ['breakfast', 'lunch', 'dinner', 'snack'];
-      const randomMealType = mealType || mealTypes[Math.floor(Math.random() * mealTypes.length)];
+      let randomMealType = mealType || mealTypes[Math.floor(Math.random() * mealTypes.length)];
+      
+      // If recipe title is provided, try to infer meal type from title
+      if (recipeTitle && !mealType) {
+        const titleLower = recipeTitle.toLowerCase();
+        if (titleLower.includes('breakfast') || titleLower.includes('pancake') || titleLower.includes('waffle') || titleLower.includes('omelet')) {
+          randomMealType = 'breakfast';
+        } else if (titleLower.includes('snack') || titleLower.includes('appetizer')) {
+          randomMealType = 'snack';
+        } else {
+          randomMealType = 'dinner'; // Default to dinner for most recipes
+        }
+      }
 
       // RANDOMIZATION: Pick a random cuisine from user preferences (or all cuisines)
+      // If recipe title is provided, try to infer cuisine from title
       let randomCuisine = cuisine as string;
+      if (recipeTitle && !randomCuisine) {
+        const titleLower = recipeTitle.toLowerCase();
+        const cuisineKeywords: Record<string, string> = {
+          'italian': 'Italian',
+          'fettuccini': 'Italian',
+          'alfredo': 'Italian',
+          'pasta': 'Italian',
+          'pizza': 'Italian',
+          'chinese': 'Chinese',
+          'japanese': 'Japanese',
+          'sushi': 'Japanese',
+          'mexican': 'Mexican',
+          'taco': 'Mexican',
+          'indian': 'Indian',
+          'curry': 'Indian',
+          'thai': 'Thai',
+          'french': 'French',
+          'mediterranean': 'Mediterranean',
+          'greek': 'Mediterranean',
+        };
+        
+        for (const [keyword, cuisineType] of Object.entries(cuisineKeywords)) {
+          if (titleLower.includes(keyword)) {
+            randomCuisine = cuisineType;
+            break;
+          }
+        }
+      }
+      
       if (!randomCuisine && preferences?.likedCuisines && preferences.likedCuisines.length > 0) {
         const likedCuisines = preferences.likedCuisines.map((c) => c.name);
         randomCuisine = likedCuisines[Math.floor(Math.random() * likedCuisines.length)];
@@ -104,6 +149,7 @@ export class AIRecipeController {
       // Generate recipe with AI
       const recipe = await aiRecipeService.generateRecipe({
         userId,
+        recipeTitle: recipeTitle, // Pass recipe title if provided
         userPreferences: preferences
           ? {
               likedCuisines: preferences.likedCuisines.map((c) => c.name),

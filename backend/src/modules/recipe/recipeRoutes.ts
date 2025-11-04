@@ -41,6 +41,7 @@ router.put('/:id', recipeController.updateRecipe);
 router.delete('/:id', recipeController.deleteRecipe);
 router.patch('/:id/move-to-collection', recipeController.moveSavedRecipe);
 router.post('/:id/enrich', recipeController.enrichRecipe);
+router.post('/:id/healthify', recipeController.healthifyRecipe);
 router.post('/:id/save', recipeController.saveRecipe);
 router.delete('/:id/save', recipeController.unsaveRecipe);
 router.post('/:id/like', recipeController.likeRecipe);

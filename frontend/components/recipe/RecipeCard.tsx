@@ -28,6 +28,8 @@ interface RecipeCardProps {
     cuisine: string;
     score?: RecipeScore;
     imageUrl?: string;
+    source?: 'database' | 'user-created' | 'ai-generated' | 'external';
+    isUserCreated?: boolean;
     enhancedScore?: {
       total: number;
       cookTimeScore: number;
@@ -117,9 +119,21 @@ export default function RecipeCard({
     >
       {/* Header with Title and Score */}
       <View className="flex-row justify-between items-start mb-2">
-        <Text className={`${styles.title} flex-1 mr-2`}>
-          {recipe.title}
-        </Text>
+        <View className="flex-1 mr-2">
+          <Text className={styles.title}>
+            {recipe.title}
+          </Text>
+          {/* Source Attribution */}
+          {recipe.source === 'ai-generated' && (
+            <View className="flex-row items-center mt-1">
+              <View className="bg-purple-100 px-2 py-0.5 rounded-full">
+                <Text className="text-purple-700 text-xs font-medium">
+                  🤖 AI Generated
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
         
         {recipe.score && (
           <View className="flex-row items-center space-x-2">

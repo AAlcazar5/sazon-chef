@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Modal, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
-import { recipeApi, collectionsApi } from '../lib/api';
+import { recipeApi, collectionsApi, aiRecipeApi } from '../lib/api';
 import type { Recipe } from '../types';
+import * as Haptics from 'expo-haptics';
 
 export default function RecipeFormScreen() {
   const params = useLocalSearchParams();
@@ -13,6 +14,7 @@ export default function RecipeFormScreen() {
 
   const [loading, setLoading] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(isEditMode);
+  const [generatingAI, setGeneratingAI] = useState(false);
   
   // Form state
   const [title, setTitle] = useState('');
@@ -155,6 +157,104 @@ export default function RecipeFormScreen() {
     setInstructions(updated);
   };
 
+  const handleGenerateRandomRecipe = async () => {
+    try {
+      setGeneratingAI(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const recipeTitle = title.trim();
+      const hasTitle = recipeTitle.length > 0;
+
+      Alert.alert(
+        '🤖 Generating Recipe...',
+        hasTitle 
+          ? `Creating "${recipeTitle}" recipe with AI (15-20 seconds)`
+          : 'Creating a random recipe with AI (15-20 seconds)',
+        [],
+        { cancelable: false }
+      );
+
+      // Generate recipe using AI - with title if provided, random otherwise
+      const response = await aiRecipeApi.generateRecipe({
+        mealType: 'any',
+        cuisine: cuisine.trim() || undefined,
+        recipeTitle: hasTitle ? recipeTitle : undefined, // Pass title if provided
+      });
+
+      if (response.data && response.data.recipe) {
+        const generatedRecipe = response.data.recipe;
+
+        // Pre-fill form with generated recipe
+        // Only update title if it was empty (to preserve user's custom title if they typed one)
+        if (!recipeTitle) {
+          setTitle(generatedRecipe.title || '');
+        }
+        setDescription(generatedRecipe.description || '');
+        setCookTime(generatedRecipe.cookTime?.toString() || '');
+        setCuisine(generatedRecipe.cuisine || '');
+        setCalories(generatedRecipe.calories?.toString() || '');
+        setProtein(generatedRecipe.protein?.toString() || '');
+        setCarbs(generatedRecipe.carbs?.toString() || '');
+        setFat(generatedRecipe.fat?.toString() || '');
+        setFiber(generatedRecipe.fiber?.toString() || '');
+
+        // Handle ingredients - convert to string array
+        if (generatedRecipe.ingredients && Array.isArray(generatedRecipe.ingredients)) {
+          const ingredientTexts = generatedRecipe.ingredients.map((ing: any) => {
+            if (typeof ing === 'string') return ing;
+            if (ing.text) return ing.text;
+            if (ing.name) {
+              // Handle name/amount/unit format
+              const amount = ing.amount || '';
+              const unit = ing.unit || '';
+              return `${amount} ${unit} ${ing.name}`.trim();
+            }
+            return String(ing);
+          });
+          setIngredients(ingredientTexts.length > 0 ? ingredientTexts : ['']);
+        }
+
+        // Handle instructions - convert to string array
+        if (generatedRecipe.instructions && Array.isArray(generatedRecipe.instructions)) {
+          const instructionTexts = generatedRecipe.instructions.map((inst: any) => {
+            if (typeof inst === 'string') return inst;
+            if (inst.text) return inst.text;
+            if (inst.instruction) return inst.instruction;
+            return String(inst);
+          });
+          setInstructions(instructionTexts.length > 0 ? instructionTexts : ['']);
+        }
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          '✅ Recipe Generated!',
+          hasTitle 
+            ? `"${recipeTitle}" recipe has been generated. Review and edit as needed before saving.`
+            : 'A random recipe has been generated. Review and edit as needed before saving.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        throw new Error('Failed to generate recipe');
+      }
+    } catch (error: any) {
+      console.error('❌ AI Generate error:', error);
+      
+      const isQuotaError = error.code === 'insufficient_quota' || 
+                          error.message?.includes('quota') ||
+                          error.message?.includes('429');
+      
+      Alert.alert(
+        'Generation Failed',
+        isQuotaError
+          ? 'AI recipe generation is temporarily unavailable due to quota limits. Please try again later.'
+          : error.message || 'Failed to generate recipe. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
   const validateForm = (): boolean => {
     if (!title.trim()) {
       Alert.alert('Validation Error', 'Please enter a recipe title');
@@ -239,8 +339,19 @@ export default function RecipeFormScreen() {
         // Backend already saves to collections if collectionIds are provided in recipeData
         // No additional API call needed
         
-        Alert.alert('Success', 'Recipe created successfully!');
-        router.back();
+        Alert.alert(
+          'Success', 
+          'Recipe created and saved to your cookbook!',
+          [
+            { 
+              text: 'OK', 
+              onPress: () => {
+                // Navigate to cookbook to see the new recipe
+                router.replace('/(tabs)/cookbook');
+              }
+            }
+          ]
+        );
       }
     } catch (error: any) {
       console.error('Failed to save recipe:', error);
@@ -282,6 +393,31 @@ export default function RecipeFormScreen() {
       </View>
 
       <ScrollView className="flex-1 p-4">
+        {/* Generate Recipe Button (only in create mode) */}
+        {!isEditMode && (
+          <TouchableOpacity
+            onPress={handleGenerateRandomRecipe}
+            disabled={generatingAI}
+            className={`flex-row items-center justify-center px-4 py-3 rounded-lg mb-4 ${generatingAI ? 'bg-gray-300' : 'bg-blue-500'}`}
+          >
+            {generatingAI ? (
+              <>
+                <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                <Text className="text-white font-semibold">
+                  {title.trim() ? `Generating "${title.trim()}" Recipe...` : 'Generating Random Recipe...'}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="sparkles" size={20} color="white" style={{ marginRight: 8 }} />
+                <Text className="text-white font-semibold">
+                  {title.trim() ? `🤖 Generate "${title.trim()}" Recipe` : '🎲 Generate Random Recipe'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
         {/* Basic Information */}
         <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
           <Text className="text-lg font-semibold text-gray-900 mb-3">Basic Information</Text>

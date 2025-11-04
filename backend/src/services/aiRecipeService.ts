@@ -5,6 +5,7 @@ import { AIProviderManager } from './aiProviders/AIProviderManager';
 
 interface RecipeGenerationParams {
   userId: string | null;
+  recipeTitle?: string; // Optional: specific recipe title to generate
   userPreferences?: {
     likedCuisines: string[];
     dietaryRestrictions: string[];
@@ -286,10 +287,24 @@ export class AIRecipeService {
   private buildRecipePrompt(params: RecipeGenerationParams): string {
     const parts: string[] = [];
 
+    // If recipe title is provided, use it as the primary instruction
+    if (params.recipeTitle) {
+      parts.push(
+        `Create a recipe for: "${params.recipeTitle}"`,
+        ``,
+        `Generate a complete, detailed recipe for this dish. Include all ingredients, step-by-step instructions, and accurate nutrition information.`,
+        ``
+      );
+    }
+
     // Meal type
     if (params.mealType && params.mealType !== 'any') {
-      parts.push(`Generate a ${params.mealType} recipe.`);
-    } else {
+      if (params.recipeTitle) {
+        parts.push(`This is a ${params.mealType} recipe.`);
+      } else {
+        parts.push(`Generate a ${params.mealType} recipe.`);
+      }
+    } else if (!params.recipeTitle) {
       parts.push('Generate a delicious recipe.');
     }
 

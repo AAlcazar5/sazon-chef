@@ -288,6 +288,10 @@ export const recipeApi = {
 
   deleteRecipe: (id: string) => {
     return apiClient.delete(`/recipes/${id}`);
+  },
+
+  healthifyRecipe: (id: string) => {
+    return apiClient.post(`/recipes/${id}/healthify`);
   }
 };
 // Collections API
@@ -453,7 +457,7 @@ export const mealPlanApi = {
 // AI Recipe API
 export const aiRecipeApi = {
   // Generate a single AI recipe
-  generateRecipe: (params?: { cuisine?: string; mealType?: string }) => {
+  generateRecipe: (params?: { cuisine?: string; mealType?: string; recipeTitle?: string }) => {
     return apiClient.get('/ai-recipes/generate', { params });
   },
 

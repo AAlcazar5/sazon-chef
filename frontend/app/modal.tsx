@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useApi } from '../hooks/useApi';
 import { recipeApi, collectionsApi } from '../lib/api';
 import type { Recipe } from '../types';
+import * as Haptics from 'expo-haptics';
 
 // Helper function to extract text from ingredients/instructions
 const getTextContent = (item: any): string => {
@@ -25,6 +26,9 @@ export default function RecipeModal() {
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
+  const [healthifying, setHealthifying] = useState(false);
+  const [healthifiedRecipe, setHealthifiedRecipe] = useState<any>(null);
+  const [showHealthifyModal, setShowHealthifyModal] = useState(false);
 
   // Fetch recipe data when modal opens
   useEffect(() => {
@@ -134,6 +138,48 @@ export default function RecipeModal() {
   const handleNotInterested = () => {
     console.log('📱 Modal: Not interested in recipe');
     router.back();
+  };
+
+  const handleHealthify = async () => {
+    if (!recipe) return;
+    
+    try {
+      setHealthifying(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      Alert.alert(
+        '💚 Healthifying Recipe...',
+        'Creating a healthier version of this recipe (15-20 seconds)',
+        [],
+        { cancelable: false }
+      );
+
+      const response = await recipeApi.healthifyRecipe(recipe.id);
+      
+      if (response.data.success && response.data.recipe) {
+        setHealthifiedRecipe(response.data.recipe);
+        setShowHealthifyModal(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        throw new Error('Failed to healthify recipe');
+      }
+    } catch (error: any) {
+      console.error('❌ Healthify error:', error);
+      
+      const isQuotaError = error.code === 'insufficient_quota' || 
+                          error.message?.includes('quota') ||
+                          error.message?.includes('429');
+      
+      Alert.alert(
+        'Healthify Failed',
+        isQuotaError
+          ? 'AI healthify is temporarily unavailable due to quota limits. Please try again later.'
+          : error.message || 'Failed to healthify recipe. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setHealthifying(false);
+    }
   };
 
   const handleRemoveFromCookbook = async () => {
@@ -425,6 +471,18 @@ export default function RecipeModal() {
 
       {/* Action Buttons */}
       <View className="p-4 border-t border-gray-200">
+        {/* Healthify Button - Available for all recipes */}
+        <TouchableOpacity 
+          onPress={handleHealthify}
+          disabled={healthifying}
+          className={`${healthifying ? 'opacity-50' : ''} bg-green-500 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
+        >
+          <Ionicons name="leaf" size={20} color="white" style={{ marginRight: 8 }} />
+          <Text className="text-white font-semibold text-lg">
+            {healthifying ? 'Healthifying...' : '💚 Healthify Recipe'}
+          </Text>
+        </TouchableOpacity>
+
         {isUserRecipe ? (
           // User-created recipe actions
           <>
@@ -587,7 +645,211 @@ export default function RecipeModal() {
           </View>
         </View>
       </View>
-    </Modal>
+      </Modal>
+
+      {/* Healthify Results Modal */}
+      <Modal
+        visible={showHealthifyModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowHealthifyModal(false)}
+      >
+        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+          {/* Header */}
+          <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+            <TouchableOpacity 
+              onPress={() => setShowHealthifyModal(false)}
+              className="p-2"
+            >
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+            <Text className="text-lg font-semibold text-gray-900">Healthified Recipe</Text>
+            <View className="w-8" />
+          </View>
+
+          {healthifiedRecipe && (
+            <ScrollView className="flex-1">
+              <View className="p-4">
+                {/* Title */}
+                <Text className="text-2xl font-bold text-gray-900 mb-2">
+                  {healthifiedRecipe.title}
+                </Text>
+                
+                {/* Description */}
+                <Text className="text-gray-600 mb-6">
+                  {healthifiedRecipe.description}
+                </Text>
+
+                {/* Nutrition Comparison */}
+                <View className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <Text className="text-lg font-semibold text-gray-900 mb-4">Nutrition Comparison</Text>
+                  
+                  {healthifiedRecipe.nutritionComparison && (
+                    <View>
+                      {/* Calories */}
+                      <View className="flex-row justify-between items-center mb-3">
+                        <Text className="text-gray-700 font-medium">Calories</Text>
+                        <View className="flex-row items-center">
+                          <Text className="text-gray-500 mr-2">{healthifiedRecipe.nutritionComparison.before.calories}</Text>
+                          <Ionicons name="arrow-forward" size={16} color="#6B7280" />
+                          <Text className="text-green-600 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.calories}</Text>
+                        </View>
+                      </View>
+                      
+                      {/* Protein */}
+                      <View className="flex-row justify-between items-center mb-3">
+                        <Text className="text-gray-700 font-medium">Protein</Text>
+                        <View className="flex-row items-center">
+                          <Text className="text-gray-500 mr-2">{healthifiedRecipe.nutritionComparison.before.protein}g</Text>
+                          <Ionicons name="arrow-forward" size={16} color="#6B7280" />
+                          <Text className="text-green-600 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.protein}g</Text>
+                        </View>
+                      </View>
+                      
+                      {/* Carbs */}
+                      <View className="flex-row justify-between items-center mb-3">
+                        <Text className="text-gray-700 font-medium">Carbs</Text>
+                        <View className="flex-row items-center">
+                          <Text className="text-gray-500 mr-2">{healthifiedRecipe.nutritionComparison.before.carbs}g</Text>
+                          <Ionicons name="arrow-forward" size={16} color="#6B7280" />
+                          <Text className="text-green-600 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.carbs}g</Text>
+                        </View>
+                      </View>
+                      
+                      {/* Fat */}
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-gray-700 font-medium">Fat</Text>
+                        <View className="flex-row items-center">
+                          <Text className="text-gray-500 mr-2">{healthifiedRecipe.nutritionComparison.before.fat}g</Text>
+                          <Ionicons name="arrow-forward" size={16} color="#6B7280" />
+                          <Text className="text-green-600 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.fat}g</Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Substitutions */}
+                {healthifiedRecipe.substitutions && healthifiedRecipe.substitutions.length > 0 && (
+                  <View className="mb-6">
+                    <Text className="text-xl font-semibold text-gray-900 mb-3">Smart Substitutions</Text>
+                    {healthifiedRecipe.substitutions.map((sub: any, index: number) => (
+                      <View key={index} className="mb-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <View className="flex-row items-start mb-2">
+                          <Ionicons name="swap-horizontal" size={20} color="#10B981" style={{ marginRight: 8, marginTop: 2 }} />
+                          <View className="flex-1">
+                            <Text className="text-gray-900 font-medium">
+                              <Text className="text-red-600 line-through">{sub.original}</Text>
+                              {' → '}
+                              <Text className="text-green-600">{sub.replacement}</Text>
+                            </Text>
+                            <Text className="text-gray-600 text-sm mt-1">{sub.reason}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Improvements */}
+                {healthifiedRecipe.improvements && healthifiedRecipe.improvements.length > 0 && (
+                  <View className="mb-6">
+                    <Text className="text-xl font-semibold text-gray-900 mb-3">Health Improvements</Text>
+                    {healthifiedRecipe.improvements.map((improvement: any, index: number) => (
+                      <View key={index} className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <Text className="text-gray-900 font-medium mb-1">{improvement.aspect}</Text>
+                        <View className="flex-row items-center mb-1">
+                          <Text className="text-gray-500 text-sm">Before: {improvement.before}</Text>
+                        </View>
+                        <View className="flex-row items-center mb-1">
+                          <Text className="text-green-600 text-sm font-semibold">After: {improvement.after}</Text>
+                        </View>
+                        <Text className="text-gray-600 text-sm mt-1">💡 {improvement.benefit}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Ingredients */}
+                <View className="mb-6">
+                  <Text className="text-xl font-semibold text-gray-900 mb-3">Ingredients</Text>
+                  {healthifiedRecipe.ingredients && healthifiedRecipe.ingredients.map((ingredient: any, index: number) => (
+                    <View key={index} className="flex-row items-center mb-2">
+                      <View className="w-2 h-2 bg-green-500 rounded-full mr-3" />
+                      <Text className="text-gray-700 flex-1">{getTextContent(ingredient)}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Instructions */}
+                <View className="mb-6">
+                  <Text className="text-xl font-semibold text-gray-900 mb-3">Instructions</Text>
+                  {healthifiedRecipe.instructions && healthifiedRecipe.instructions.map((instruction: any, index: number) => (
+                    <View key={index} className="flex-row mb-3">
+                      <Text className="font-bold text-green-500 mr-3">{index + 1}.</Text>
+                      <Text className="flex-1 text-gray-700">{getTextContent(instruction)}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+          )}
+
+          {/* Action Buttons */}
+          <View className="p-4 border-t border-gray-200">
+            <TouchableOpacity 
+              onPress={async () => {
+                if (!healthifiedRecipe) return;
+                
+                try {
+                  // Save the healthified recipe as a new recipe
+                  const recipeData = {
+                    title: healthifiedRecipe.title,
+                    description: healthifiedRecipe.description,
+                    cuisine: healthifiedRecipe.cuisine,
+                    cookTime: healthifiedRecipe.cookTime,
+                    calories: healthifiedRecipe.calories,
+                    protein: healthifiedRecipe.protein,
+                    carbs: healthifiedRecipe.carbs,
+                    fat: healthifiedRecipe.fat,
+                    ingredients: healthifiedRecipe.ingredients.map((ing: any) => 
+                      typeof ing === 'string' ? ing : ing.text
+                    ),
+                    instructions: healthifiedRecipe.instructions.map((inst: any) => 
+                      typeof inst === 'string' ? inst : inst.text
+                    ),
+                  };
+                  
+                  await recipeApi.createRecipe(recipeData);
+                  
+                  Alert.alert(
+                    'Recipe Saved',
+                    'Your healthified recipe has been saved to your cookbook!',
+                    [
+                      { text: 'OK', onPress: () => {
+                        setShowHealthifyModal(false);
+                        router.back();
+                      }}
+                    ]
+                  );
+                } catch (error: any) {
+                  Alert.alert('Error', error.message || 'Failed to save recipe');
+                }
+              }}
+              className="bg-green-500 py-3 px-6 rounded-lg items-center mb-2"
+            >
+              <Text className="text-white font-semibold text-lg">Save Healthified Recipe</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => setShowHealthifyModal(false)}
+              className="border border-gray-300 py-3 px-6 rounded-lg items-center"
+            >
+              <Text className="text-gray-700 font-semibold text-lg">Close</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </>
   );
 }
