@@ -780,9 +780,21 @@ export default function HomeScreen() {
                 
                 <View className="p-4">
                   <View className="flex-row justify-between items-start mb-2">
-                    <Text className="text-xl font-bold text-gray-900 flex-1">
-                      {recipe.title}
-                    </Text>
+                    <View className="flex-1 mr-2">
+                      <Text className="text-xl font-bold text-gray-900">
+                        {recipe.title}
+                      </Text>
+                      {/* Source Attribution */}
+                      {(recipe as any).source === 'ai-generated' && (
+                        <View className="flex-row items-center mt-1">
+                          <View className="bg-purple-100 px-2 py-0.5 rounded-full">
+                            <Text className="text-purple-700 text-xs font-medium">
+                              🤖 AI Generated
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
                     <View className={`bg-green-100 px-2 py-1 rounded-full ml-2`}>
                       <Text className={`text-green-800 text-sm font-semibold`}>
                         {recipe.score?.matchPercentage || 0}% Match

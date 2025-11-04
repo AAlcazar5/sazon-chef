@@ -39,6 +39,9 @@ export interface Recipe {
   // Recipe content - handle both string[] and object formats
   ingredients: string[] | Array<{ id: string; text: string; order: number }>;
   instructions: string[] | Array<{ id: string; text: string; step: number }>;
+  // Recipe source tracking
+  source?: 'database' | 'user-created' | 'ai-generated' | 'external';
+  isUserCreated?: boolean;
   // Optional timestamps
   createdAt?: string;
   updatedAt?: string;

@@ -706,9 +706,21 @@ export default function CookbookScreen() {
             >
               <View className="flex-1">
                 <View className="flex-row items-center mb-1">
-                  <Text className="text-lg font-semibold text-gray-900 flex-1">
-                    {recipe.title}
-                  </Text>
+                  <View className="flex-1">
+                    <Text className="text-lg font-semibold text-gray-900">
+                      {recipe.title}
+                    </Text>
+                    {/* Source Attribution */}
+                    {(recipe as any).source === 'ai-generated' && (
+                      <View className="flex-row items-center mt-1">
+                        <View className="bg-purple-100 px-2 py-0.5 rounded-full">
+                          <Text className="text-purple-700 text-xs font-medium">
+                            🤖 AI Generated
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
                   {(recipe as any).isUserCreated && (
                     <View className="bg-green-100 px-2 py-1 rounded-full ml-2">
                       <Text className="text-green-800 text-xs font-medium">My Recipe</Text>
@@ -719,19 +731,14 @@ export default function CookbookScreen() {
                   {truncateDescription(recipe.description)}
                 </Text>
                 
-                <View className="flex-row items-center space-x-4 mb-2">
-                  <View className="flex-row items-center">
-                    <Ionicons name="time-outline" size={14} color="#6B7280" />
-                    <Text className="text-gray-500 text-xs ml-1">
-                      {recipe.cookTime} min
-                    </Text>
-                  </View>
-                  <View className="bg-orange-100 px-2 py-1 rounded-full">
-                    <Text className="text-orange-800 text-xs">
-                      {recipe.cuisine}
-                    </Text>
-                  </View>
-                </View>
+                {/* Date label - Moved here to match spacing */}
+                {(recipe.savedDate || (recipe as any).likedDate || (recipe as any).dislikedDate) && (
+                  <Text className="text-gray-400 text-xs mb-2">
+                    {viewMode === 'liked' && (recipe as any).likedDate && `Liked on ${(recipe as any).likedDate}`}
+                    {viewMode === 'disliked' && (recipe as any).dislikedDate && `Disliked on ${(recipe as any).dislikedDate}`}
+                    {viewMode === 'saved' && recipe.savedDate && ((recipe as any).isUserCreated ? 'Created on' : 'Saved on') + ' ' + recipe.savedDate}
+                  </Text>
+                )}
 
                 {/* Macro Pills */}
                 <View className="flex-row space-x-2 mb-2">
@@ -759,15 +766,19 @@ export default function CookbookScreen() {
 
                 {/* Actions: Like/Dislike and Delete/Remove - Bottom-right like home screen */}
                 <View className="flex-row justify-between items-center">
-                  <View className="flex-1">
-                    {/* Date label - Left side */}
-                    {(recipe.savedDate || (recipe as any).likedDate || (recipe as any).dislikedDate) && (
-                      <Text className="text-gray-400 text-xs">
-                        {viewMode === 'liked' && (recipe as any).likedDate && `Liked on ${(recipe as any).likedDate}`}
-                        {viewMode === 'disliked' && (recipe as any).dislikedDate && `Disliked on ${(recipe as any).dislikedDate}`}
-                        {viewMode === 'saved' && recipe.savedDate && ((recipe as any).isUserCreated ? 'Created on' : 'Saved on') + ' ' + recipe.savedDate}
+                  {/* Cook time and cuisine - Bottom left like home screen */}
+                  <View className="flex-row items-center space-x-4">
+                    <View className="flex-row items-center">
+                      <Ionicons name="time-outline" size={16} color="#6B7280" />
+                      <Text className="text-gray-500 text-sm ml-1">
+                        {recipe.cookTime} min
                       </Text>
-                    )}
+                    </View>
+                    <View className="bg-orange-100 px-2 py-1 rounded-full">
+                      <Text className="text-orange-800 text-xs font-medium">
+                        {recipe.cuisine}
+                      </Text>
+                    </View>
                   </View>
                   
                   {/* Buttons on the right */}
