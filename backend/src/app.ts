@@ -4,10 +4,17 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { recipeRoutes } from '@modules/recipe/recipeRoutes';
 import { userRoutes } from '@modules/user/userRoutes';
+import { healthMetricsRoutes } from '@modules/healthMetrics/healthMetricsRoutes';
+import { weightGoalRoutes } from '@modules/weightGoal/weightGoalRoutes';
 import mealPlanRoutes from '@modules/mealPlan/mealPlanRoutes';
 import { dailySuggestionsRoutes } from '@modules/dailySuggestions/dailySuggestionsRoutes';
 import { mealHistoryRoutes } from '@modules/mealHistory/mealHistoryRoutes';
 import aiRecipeRoutes from '@modules/aiRecipe/aiRecipeRoutes';
+import { scannerRoutes } from '@modules/scanner/scannerRoutes';
+import shoppingListRoutes from '@modules/shoppingList/shoppingListRoutes';
+import shoppingAppRoutes from '@modules/shoppingList/shoppingAppRoutes';
+import costTrackingRoutes from '@modules/costTracking/costTrackingRoutes';
+import ingredientAvailabilityRoutes from '@modules/ingredientAvailability/ingredientAvailabilityRoutes';
 
 // Import types for Express
 import type { Request, Response, NextFunction } from 'express';
@@ -46,10 +53,17 @@ app.get('/health', (req: Request, res: Response) => {
 // API routes
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/health-metrics', healthMetricsRoutes);
+app.use('/api/weight-goal', weightGoalRoutes);
 app.use('/api/meal-plan', mealPlanRoutes);
 app.use('/api/daily-suggestions', dailySuggestionsRoutes);
 app.use('/api/meal-history', mealHistoryRoutes);
 app.use('/api/ai-recipes', aiRecipeRoutes);
+app.use('/api/scanner', scannerRoutes);
+app.use('/api/shopping-lists', shoppingListRoutes);
+app.use('/api/shopping-apps', shoppingAppRoutes);
+app.use('/api/cost-tracking', costTrackingRoutes);
+app.use('/api/ingredient-availability', ingredientAvailabilityRoutes);
 
 // 404 handler for undefined routes
 app.use('*', (req: Request, res: Response) => {

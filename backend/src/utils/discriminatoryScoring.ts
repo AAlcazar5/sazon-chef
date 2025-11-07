@@ -113,9 +113,15 @@ function calculateDietaryMatch(recipe: any, userPreferences: UserPreferences): n
     return 50; // Neutral if no dietary restrictions
   }
   
-  // This would need to be expanded based on recipe data
-  // For now, return neutral score
-  return 50;
+  // Use expanded dietary compliance checking
+  const { checkDietaryCompliance } = require('./advancedScoring');
+  const compliance = checkDietaryCompliance(recipe, dietaryRestrictions);
+  
+  if (!compliance.isCompliant) {
+    return Math.max(0, compliance.complianceScore - 50); // Penalize violations significantly
+  }
+  
+  return compliance.complianceScore; // Return full score if compliant
 }
 
 function calculateSpiceMatch(recipe: any, userPreferences: UserPreferences): number {
@@ -125,9 +131,9 @@ function calculateSpiceMatch(recipe: any, userPreferences: UserPreferences): num
     return 50; // Neutral if no preference
   }
   
-  // This would need recipe spice level data
-  // For now, return neutral score
-  return 50;
+  // Use enhanced spice level detection
+  const { calculateSpiceLevelMatch } = require('./advancedScoring');
+  return calculateSpiceLevelMatch(recipe, spiceLevel);
 }
 
 // Helper function to get user preferences from database

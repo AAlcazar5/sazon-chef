@@ -89,6 +89,10 @@ export default function ProfileScreen() {
     router.push('/onboarding?edit=true');
   };
 
+  const handleEditBudget = () => {
+    router.push('/edit-budget');
+  };
+
   const handleExportData = () => {
     // TODO: Implement data export
     console.log('Export data');
@@ -228,6 +232,43 @@ export default function ProfileScreen() {
             <View className="flex-row justify-between items-center">
               <Text className="text-gray-600">Max Cook Time</Text>
               <Text className="font-semibold text-gray-900">{profile.preferences.cookTimePreference} min</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Budget Settings Section */}
+        <View className="bg-white rounded-xl p-4 m-4 shadow-sm border border-gray-100">
+          <View className="flex-row justify-between items-center mb-3">
+            <Text className="text-lg font-semibold text-gray-900">Budget Settings</Text>
+            <TouchableOpacity onPress={handleEditBudget}>
+              <Ionicons name="create-outline" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          
+          <View className="space-y-2">
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">Max Recipe Cost</Text>
+              <Text className="font-semibold text-gray-900">
+                {profile.preferences?.maxRecipeCost ? `$${profile.preferences.maxRecipeCost.toFixed(2)}` : 'No limit'}
+              </Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">Max Meal Cost</Text>
+              <Text className="font-semibold text-gray-900">
+                {profile.preferences?.maxMealCost ? `$${profile.preferences.maxMealCost.toFixed(2)}` : 'No limit'}
+              </Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">Daily Food Budget</Text>
+              <Text className="font-semibold text-gray-900">
+                {profile.preferences?.maxDailyFoodBudget ? `$${profile.preferences.maxDailyFoodBudget.toFixed(2)}` : 'No limit'}
+              </Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">Currency</Text>
+              <Text className="font-semibold text-gray-900">
+                {profile.preferences?.currency || 'USD'}
+              </Text>
             </View>
           </View>
         </View>

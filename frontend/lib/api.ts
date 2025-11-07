@@ -72,15 +72,23 @@ api.interceptors.response.use(
   },
   (error) => {
     if (__DEV__) {
-      // Don't surface noisy errors for benign conflicts (already saved)
+      // Don't surface noisy errors for benign conflicts (already saved) or expected 404s
       const statusCode = error.response?.status;
       const raw = error.response?.data;
       const rawMessage: string | undefined = raw?.message || raw?.error || raw?.msg;
       const isAlreadySaved = statusCode === 409 || /already\s*saved/i.test(String(rawMessage || ''));
-      if (!isAlreadySaved) {
+      const isExpected404 = statusCode === 404 && (
+        /no price data found/i.test(String(rawMessage || '')) ||
+        /meal plan not found/i.test(String(rawMessage || '')) ||
+        /No active meal plan/i.test(String(rawMessage || ''))
+      );
+      
+      if (!isAlreadySaved && !isExpected404) {
         console.error('❌ Response Error:', raw || error.message);
-      } else {
+      } else if (isAlreadySaved) {
         console.log('ℹ️  Response Conflict (already saved)');
+      } else if (isExpected404) {
+        // Silently handle expected 404s (no price data, no meal plan, etc.)
       }
     }
 
@@ -496,4 +504,150 @@ export const aiRecipeApi = {
 export { api };
 
 // Export types for use in other files
+// Ingredient Availability API
+export const ingredientAvailabilityApi = {
+  checkIngredient: (ingredientName: string, location?: string) => {
+    return apiClient.get(`/ingredient-availability/${encodeURIComponent(ingredientName)}`, {
+      params: location ? { location } : {},
+    });
+  },
+
+  analyzeRecipe: (recipeId: string, location?: string) => {
+    return apiClient.get(`/ingredient-availability/recipes/${recipeId}`, {
+      params: location ? { location } : {},
+    });
+  },
+
+  filterRecipes: (recipeIds: string[], minAvailabilityScore?: number) => {
+    return apiClient.post('/ingredient-availability/filter-recipes', {
+      recipeIds,
+      minAvailabilityScore,
+    });
+  },
+};
+
+// Shopping List API
+export const shoppingListApi = {
+  getShoppingLists: () => {
+    return apiClient.get('/shopping-lists');
+  },
+
+  getShoppingList: (id: string) => {
+    return apiClient.get(`/shopping-lists/${id}`);
+  },
+
+  createShoppingList: (data?: { name?: string }) => {
+    return apiClient.post('/shopping-lists', data);
+  },
+
+  updateShoppingList: (id: string, data: { name?: string; isActive?: boolean }) => {
+    return apiClient.put(`/shopping-lists/${id}`, data);
+  },
+
+  deleteShoppingList: (id: string) => {
+    return apiClient.delete(`/shopping-lists/${id}`);
+  },
+
+  addItem: (listId: string, data: { name: string; quantity?: string; category?: string; isCompleted?: boolean }) => {
+    return apiClient.post(`/shopping-lists/${listId}/items`, data);
+  },
+
+  updateItem: (listId: string, itemId: string, data: { name?: string; quantity?: string; category?: string; isCompleted?: boolean }) => {
+    return apiClient.put(`/shopping-lists/${listId}/items/${itemId}`, data);
+  },
+
+  deleteItem: (listId: string, itemId: string) => {
+    return apiClient.delete(`/shopping-lists/${listId}/items/${itemId}`);
+  },
+
+  generateFromRecipes: (recipeIds: string[]) => {
+    return apiClient.post('/shopping-lists/generate-from-recipes', { recipeIds });
+  },
+
+  generateFromMealPlan: (data: { startDate?: string; endDate?: string; recipeIds?: string[] }) => {
+    return apiClient.post('/shopping-lists/generate-from-meal-plan', data);
+  },
+};
+
+// Shopping App Integration API
+export const shoppingAppApi = {
+  getSupportedApps: () => {
+    return apiClient.get('/shopping-apps/supported');
+  },
+
+  getIntegrations: () => {
+    return apiClient.get('/shopping-apps/integrations');
+  },
+
+  connectApp: (appName: string, credentials?: any) => {
+    return apiClient.post('/shopping-apps/connect', { appName, credentials });
+  },
+
+  disconnectApp: (appName: string) => {
+    return apiClient.delete(`/shopping-apps/connect/${appName}`);
+  },
+
+  syncToExternalApp: (appName: string, listId: string) => {
+    return apiClient.post(`/shopping-apps/sync/${appName}`, { listId });
+  },
+
+  syncBidirectional: (appName: string, listId: string) => {
+    return apiClient.post(`/shopping-apps/sync-bidirectional/${appName}`, { listId });
+  },
+
+  syncRecipe: (appName: string, recipeId: string) => {
+    return apiClient.post(`/shopping-apps/sync-recipe/${appName}`, { recipeId });
+  },
+};
+
+// Cost Tracking API
+export const costTrackingApi = {
+  getRecipeCost: (recipeId: string) => {
+    return apiClient.get(`/cost-tracking/recipes/${recipeId}/cost`);
+  },
+
+  updateRecipeCost: (recipeId: string, data: { estimatedCost?: number; estimatedCostPerServing?: number; costSource?: string }) => {
+    return apiClient.put(`/cost-tracking/recipes/${recipeId}/cost`, data);
+  },
+
+  getIngredientCosts: (params?: { ingredientName?: string; store?: string }) => {
+    return apiClient.get('/cost-tracking/ingredients', { params });
+  },
+
+  upsertIngredientCost: (data: { ingredientName: string; unitCost: number; unit: string; store: string; location?: string }) => {
+    return apiClient.post('/cost-tracking/ingredients', data);
+  },
+
+  deleteIngredientCost: (id: string) => {
+    return apiClient.delete(`/cost-tracking/ingredients/${id}`);
+  },
+
+  getBudget: () => {
+    return apiClient.get('/cost-tracking/budget');
+  },
+
+  updateBudget: (data: { maxRecipeCost?: number; maxMealCost?: number; maxDailyFoodBudget?: number; currency?: string }) => {
+    return apiClient.put('/cost-tracking/budget', data);
+  },
+
+  getRecipeSavings: (recipeId: string) => {
+    return apiClient.get(`/cost-tracking/recipes/${recipeId}/savings`);
+  },
+
+  compareIngredient: (ingredientName: string) => {
+    return apiClient.get(`/cost-tracking/ingredients/${encodeURIComponent(ingredientName)}/compare`);
+  },
+
+  compareMultipleIngredients: (ingredientNames: string[]) => {
+    return apiClient.post('/cost-tracking/ingredients/compare', { ingredientNames });
+  },
+
+  getBestStoreForShoppingList: (ingredientNames: string[], options?: { zipCode?: string; latitude?: number; longitude?: number; radiusMiles?: number }) => {
+    return apiClient.post('/cost-tracking/shopping-list/best-store', {
+      ingredientNames,
+      ...options,
+    });
+  },
+};
+
 export type { ApiResponse, ApiError };

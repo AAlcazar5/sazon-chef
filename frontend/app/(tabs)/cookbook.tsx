@@ -400,15 +400,6 @@ export default function CookbookScreen() {
           </TouchableOpacity>
         </View>
         
-        {/* Create Recipe Button */}
-        <TouchableOpacity 
-          onPress={() => router.push('/recipe-form')}
-          className="bg-orange-500 px-4 py-3 rounded-lg flex-row items-center justify-center mb-4"
-        >
-          <Ionicons name="add" size={20} color="white" />
-          <Text className="text-white font-semibold ml-2">Create Recipe</Text>
-        </TouchableOpacity>
-
         {/* View Mode Tabs: Saved, Liked, Disliked */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="h-10 mb-3">
           <View className="flex-row items-center">

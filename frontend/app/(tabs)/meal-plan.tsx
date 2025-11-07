@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useApi } from '../../hooks/useApi';
-import { mealPlanApi, aiRecipeApi } from '../../lib/api';
+import { mealPlanApi, aiRecipeApi, shoppingListApi, userApi, costTrackingApi } from '../../lib/api';
 import type { WeeklyPlan, DailySuggestion } from '../../types';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +47,15 @@ export default function MealPlanScreen() {
   
   // AI Generation state
   const [generatingPlan, setGeneratingPlan] = useState(false);
+  
+  // Shopping list generation state
+  const [generatingShoppingList, setGeneratingShoppingList] = useState(false);
+  
+  // Cost analysis state
+  const [costAnalysis, setCostAnalysis] = useState<any>(null);
+  const [loadingCostAnalysis, setLoadingCostAnalysis] = useState(false);
+  const [shoppingListSavings, setShoppingListSavings] = useState<any>(null);
+  const [loadingSavings, setLoadingSavings] = useState(false);
   
   // Daily macros tracking
   const [dailyMacros, setDailyMacros] = useState({
@@ -107,12 +117,311 @@ export default function MealPlanScreen() {
       const dailyResponse = await mealPlanApi.getDailySuggestion();
       setDailySuggestion(dailyResponse.data);
       
+      // Cost analysis will be loaded when meals are available
+      
       console.log('📱 MealPlan: Meal plan loaded successfully');
     } catch (error) {
       console.error('📱 MealPlan: Error loading meal plan', error);
       Alert.alert('Error', 'Failed to load meal plan');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load cost analysis for current meal plan
+  const loadCostAnalysis = async () => {
+    try {
+      setLoadingCostAnalysis(true);
+      
+      // Get user preferences for budget
+      const prefsResponse = await userApi.getPreferences();
+      const preferences = prefsResponse.data;
+      
+      const maxDailyBudget = preferences?.maxDailyFoodBudget 
+        ? preferences.maxDailyFoodBudget / 7 // Convert weekly to daily
+        : undefined;
+      const maxWeeklyBudget = preferences?.maxDailyFoodBudget;
+      const maxMealCost = preferences?.maxMealCost;
+
+      // Calculate cost from current recipes in view
+      // Since we don't have a saved meal plan, we'll calculate from recipe IDs
+      const recipeIds: string[] = [];
+      Object.values(hourlyMeals).forEach((meals) => {
+        meals.forEach((meal) => {
+          if (meal.id && !recipeIds.includes(meal.id)) {
+            recipeIds.push(meal.id);
+          }
+        });
+      });
+
+      if (recipeIds.length === 0) {
+        setCostAnalysis(null);
+        return;
+      }
+
+      // Calculate estimated cost from shopping list generation
+      try {
+        const shoppingListResponse = await shoppingListApi.generateFromMealPlan({
+          recipeIds,
+        });
+        const estimatedCost = shoppingListResponse.data.estimatedCost;
+        
+        if (estimatedCost) {
+          // Create a simple cost analysis object
+          const daysCount = 7; // Assume weekly
+          const mealsCount = recipeIds.length;
+          
+          setCostAnalysis({
+            totalCost: estimatedCost,
+            costPerDay: estimatedCost / daysCount,
+            costPerMeal: estimatedCost / mealsCount,
+            mealsCount,
+            daysCount,
+            isWithinBudget: maxWeeklyBudget ? estimatedCost <= maxWeeklyBudget : true,
+            budgetRemaining: maxWeeklyBudget ? Math.max(0, maxWeeklyBudget - estimatedCost) : undefined,
+            budgetExceeded: maxWeeklyBudget && estimatedCost > maxWeeklyBudget 
+              ? estimatedCost - maxWeeklyBudget 
+              : undefined,
+            recommendations: maxWeeklyBudget && estimatedCost > maxWeeklyBudget
+              ? [`Meal plan exceeds weekly budget by $${(estimatedCost - maxWeeklyBudget).toFixed(2)}. Consider cheaper recipe alternatives.`]
+              : maxWeeklyBudget
+              ? [`You have $${(maxWeeklyBudget - estimatedCost).toFixed(2)} remaining in your weekly budget.`]
+              : undefined,
+          });
+
+          // Load savings suggestions for shopping list
+          if (shoppingListResponse.data.items) {
+            try {
+              setLoadingSavings(true);
+              const ingredientNames = shoppingListResponse.data.items
+                .map((item: any) => item.name.toLowerCase())
+                .filter((name: string) => name.length > 0);
+              
+              if (ingredientNames.length > 0) {
+                const bestStoreResponse = await costTrackingApi.getBestStoreForShoppingList(ingredientNames);
+                setShoppingListSavings(bestStoreResponse.data);
+              }
+            } catch (error) {
+              console.log('Savings not available:', error);
+            } finally {
+              setLoadingSavings(false);
+            }
+          }
+        } else {
+          setCostAnalysis(null);
+        }
+      } catch (error) {
+        // Cost calculation is optional
+        console.log('Cost analysis not available:', error);
+        setCostAnalysis(null);
+      }
+    } catch (error: any) {
+      // Cost analysis is optional, don't show errors
+      console.log('Cost analysis not available:', error.message);
+      setCostAnalysis(null);
+    } finally {
+      setLoadingCostAnalysis(false);
+    }
+  };
+
+  // Generate weekly meal plan
+  const handleGenerateWeeklyPlan = async () => {
+    if (generatingPlan) return;
+
+    try {
+      setGeneratingPlan(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      Alert.alert(
+        '📅 Generate Weekly Meal Plan',
+        'Generate AI-powered meal plan for the entire week? This will create breakfast, lunch, dinner, and snacks for all 7 days. (2-3 minutes)',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => setGeneratingPlan(false) },
+          {
+            text: 'Generate',
+            onPress: async () => {
+              try {
+                // Generate meal plan for each day of the week
+                const weekStart = weekDates[0];
+                
+                for (let i = 0; i < 7; i++) {
+                  const currentDate = new Date(weekStart);
+                  currentDate.setDate(weekStart.getDate() + i);
+                  
+                  // Generate daily plan for this day
+                  const response = await aiRecipeApi.generateDailyPlan();
+                  const mealPlan = response.data.mealPlan;
+
+                  // Add meals to hourly meals if this is the selected date
+                  if (isSelected(currentDate)) {
+                    const newHourlyMeals = { ...hourlyMeals };
+
+                    if (mealPlan.breakfast) {
+                      const hour = mealTypeToHour.breakfast;
+                      newHourlyMeals[hour] = [
+                        ...(newHourlyMeals[hour] || []),
+                        {
+                          id: mealPlan.breakfast.id,
+                          name: mealPlan.breakfast.title,
+                          description: mealPlan.breakfast.description,
+                          calories: mealPlan.breakfast.calories,
+                          protein: mealPlan.breakfast.protein,
+                          carbs: mealPlan.breakfast.carbs,
+                          fat: mealPlan.breakfast.fat,
+                          cookTime: mealPlan.breakfast.cookTime,
+                          difficulty: mealPlan.breakfast.difficulty,
+                          imageUrl: mealPlan.breakfast.imageUrl,
+                        },
+                      ];
+                    }
+
+                    if (mealPlan.lunch) {
+                      const hour = mealTypeToHour.lunch;
+                      newHourlyMeals[hour] = [
+                        ...(newHourlyMeals[hour] || []),
+                        {
+                          id: mealPlan.lunch.id,
+                          name: mealPlan.lunch.title,
+                          description: mealPlan.lunch.description,
+                          calories: mealPlan.lunch.calories,
+                          protein: mealPlan.lunch.protein,
+                          carbs: mealPlan.lunch.carbs,
+                          fat: mealPlan.lunch.fat,
+                          cookTime: mealPlan.lunch.cookTime,
+                          difficulty: mealPlan.lunch.difficulty,
+                          imageUrl: mealPlan.lunch.imageUrl,
+                        },
+                      ];
+                    }
+
+                    if (mealPlan.dinner) {
+                      const hour = mealTypeToHour.dinner;
+                      newHourlyMeals[hour] = [
+                        ...(newHourlyMeals[hour] || []),
+                        {
+                          id: mealPlan.dinner.id,
+                          name: mealPlan.dinner.title,
+                          description: mealPlan.dinner.description,
+                          calories: mealPlan.dinner.calories,
+                          protein: mealPlan.dinner.protein,
+                          carbs: mealPlan.dinner.carbs,
+                          fat: mealPlan.dinner.fat,
+                          cookTime: mealPlan.dinner.cookTime,
+                          difficulty: mealPlan.dinner.difficulty,
+                          imageUrl: mealPlan.dinner.imageUrl,
+                        },
+                      ];
+                    }
+
+                    if (mealPlan.snack) {
+                      const hour = mealTypeToHour.snack;
+                      newHourlyMeals[hour] = [
+                        ...(newHourlyMeals[hour] || []),
+                        {
+                          id: mealPlan.snack.id,
+                          name: mealPlan.snack.title,
+                          description: mealPlan.snack.description,
+                          calories: mealPlan.snack.calories,
+                          protein: mealPlan.snack.protein,
+                          carbs: mealPlan.snack.carbs,
+                          fat: mealPlan.snack.fat,
+                          cookTime: mealPlan.snack.cookTime,
+                          difficulty: mealPlan.snack.difficulty,
+                          imageUrl: mealPlan.snack.imageUrl,
+                        },
+                      ];
+                    }
+
+                    setHourlyMeals(newHourlyMeals);
+
+                    // Update daily macros
+                    const total = response.data.totalNutrition;
+                    setDailyMacros(prev => ({
+                      calories: prev.calories + total.calories,
+                      protein: prev.protein + total.protein,
+                      carbs: prev.carbs + total.carbs,
+                      fat: prev.fat + total.fat,
+                    }));
+                  }
+
+                  // Small delay between days to avoid rate limiting
+                  if (i < 6) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                }
+
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert('✅ Success', 'Weekly meal plan generated! All 7 days have been planned.');
+                
+                // Reload meal plan to refresh weekly view
+                await loadMealPlan();
+              } catch (error: any) {
+                console.error('❌ Error generating weekly plan:', error);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                
+                const isQuotaError = error.code === 'insufficient_quota' || 
+                                    error.code === 'HTTP_429' ||
+                                    error.message?.includes('quota') ||
+                                    error.message?.includes('429');
+                
+                const message = isQuotaError
+                  ? 'AI generation quota exceeded. Please try again later or generate meals day by day.'
+                  : 'Failed to generate weekly meal plan. Please try again.';
+                Alert.alert('Generation Failed', message);
+              } finally {
+                setGeneratingPlan(false);
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      setGeneratingPlan(false);
+      Alert.alert('Error', 'Failed to prepare weekly meal plan generation');
+    }
+  };
+
+  // Optimize meal plan cost
+  const handleOptimizeCost = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // Get user preferences for budget
+      const prefsResponse = await userApi.getPreferences();
+      const preferences = prefsResponse.data;
+      
+      const maxWeeklyBudget = preferences?.maxDailyFoodBudget;
+      const maxMealCost = preferences?.maxMealCost;
+
+      // For now, show an alert with optimization suggestions
+      // In the future, we can implement actual recipe substitutions
+      let message = '';
+      if (maxWeeklyBudget && costAnalysis && costAnalysis.totalCost > maxWeeklyBudget) {
+        const exceeded = costAnalysis.budgetExceeded?.toFixed(2) || '0.00';
+        message = `Your meal plan costs $${costAnalysis.totalCost.toFixed(2)}, which exceeds your weekly budget of $${maxWeeklyBudget.toFixed(2)} by $${exceeded}.\n\nConsider:\n• Choosing cheaper recipe alternatives\n• Reducing portion sizes\n• Substituting expensive ingredients`;
+      } else if (costAnalysis) {
+        message = `Your meal plan costs $${costAnalysis.totalCost.toFixed(2)} per week ($${costAnalysis.costPerDay.toFixed(2)} per day).\n\nTo optimize further, we can suggest cheaper alternatives for expensive meals.`;
+      } else {
+        message = 'Cost optimization requires recipes to be added to your meal plan first.';
+      }
+
+      Alert.alert(
+        '💰 Cost Optimization',
+        message,
+        [
+          { text: 'OK' },
+          ...(costAnalysis && costAnalysis.budgetExceeded ? [{
+            text: 'Find Alternatives',
+            onPress: () => {
+              // TODO: Navigate to recipe alternatives screen
+              Alert.alert('Coming Soon', 'Recipe alternatives feature coming soon!');
+            },
+          }] : []),
+        ]
+      );
+    } catch (error: any) {
+      console.error('Error optimizing cost:', error);
+      Alert.alert('Error', 'Failed to optimize meal plan cost');
     }
   };
 
@@ -701,6 +1010,131 @@ export default function MealPlanScreen() {
     }
   };
 
+  // Generate shopping list from meal plan
+  const handleGenerateShoppingList = async () => {
+    if (generatingShoppingList) return;
+
+    try {
+      setGeneratingShoppingList(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Get current week dates
+      const startDate = weekDates[0].toISOString().split('T')[0];
+      const endDate = weekDates[6].toISOString().split('T')[0];
+
+      // Collect all recipe IDs from hourly meals (frontend state)
+      const recipeIds: string[] = [];
+      Object.values(hourlyMeals).forEach((meals) => {
+        meals.forEach((meal) => {
+          if (meal.id && !recipeIds.includes(meal.id)) {
+            recipeIds.push(meal.id);
+          }
+        });
+      });
+
+      // Check if there are any recipes to generate from
+      if (recipeIds.length === 0) {
+        Alert.alert(
+          'No Recipes Found',
+          'Please add some recipes to your meal plan first before generating a shopping list.',
+          [{ text: 'OK' }]
+        );
+        setGeneratingShoppingList(false);
+        return;
+      }
+
+      // Try to generate from meal plan first, fallback to recipe IDs if no meal plan exists
+      let response;
+      try {
+        response = await shoppingListApi.generateFromMealPlan({
+          startDate,
+          endDate,
+        });
+      } catch (error: any) {
+        console.log('🔍 Error caught, checking for fallback:', {
+          status: error.response?.status,
+          code: error.code,
+          message: error.message,
+          errorData: error.response?.data,
+          recipeIdsCount: recipeIds.length,
+          fullError: JSON.stringify(error, null, 2),
+        });
+
+        // If no meal plan found, try using recipe IDs from frontend state
+        // Check multiple possible error indicators (API interceptor transforms errors)
+        const statusCode = error.response?.status;
+        const errorCode = error.code;
+        const errorMessage = String(error.message || '');
+        const errorData = error.response?.data || error.details || {};
+        const errorText = String(errorData.error || errorData.message || errorMessage || '');
+        
+        // Check if this is a 404 or "no meal plan" error
+        const is404 = statusCode === 404 || 
+                     errorCode === 'HTTP_404' ||
+                     errorMessage.includes('404') ||
+                     errorMessage.includes('No active meal plan') ||
+                     errorMessage.includes('meal plan not found') ||
+                     errorText.includes('No active meal plan') ||
+                     errorText.includes('meal plan not found') ||
+                     errorText.includes('404');
+        
+        console.log('🔍 404 Check:', { 
+          statusCode, 
+          errorCode, 
+          is404, 
+          hasRecipeIds: recipeIds.length > 0,
+          errorText 
+        });
+        
+        if (is404 && recipeIds.length > 0) {
+          console.log('📝 No meal plan found, using recipes from current view:', recipeIds);
+          try {
+            response = await shoppingListApi.generateFromMealPlan({
+              recipeIds,
+            });
+            console.log('✅ Fallback successful, shopping list generated from recipes');
+          } catch (fallbackError: any) {
+            console.error('❌ Fallback also failed:', fallbackError);
+            throw fallbackError;
+          }
+        } else {
+          console.log('❌ Not using fallback:', { 
+            is404, 
+            hasRecipeIds: recipeIds.length > 0,
+            reason: !is404 ? 'Not a 404 error' : 'No recipe IDs available'
+          });
+          throw error;
+        }
+      }
+
+      const { shoppingList, itemsAdded, estimatedCost } = response.data;
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      let message = `Shopping list created with ${itemsAdded} new items!`;
+      if (estimatedCost) {
+        message += `\nEstimated cost: $${estimatedCost.toFixed(2)}`;
+      }
+
+      Alert.alert(
+        '✅ Shopping List Generated',
+        message,
+        [
+          { text: 'View List', onPress: () => router.push('/(tabs)/shopping-list') },
+          { text: 'OK' },
+        ]
+      );
+    } catch (error: any) {
+      console.error('❌ Error generating shopping list:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      
+      const message = error.response?.data?.error || error.message || 'Failed to generate shopping list';
+      Alert.alert('Error', message);
+    } finally {
+      setGeneratingShoppingList(false);
+    }
+  };
+
   useEffect(() => {
     loadMealPlan();
     
@@ -709,6 +1143,15 @@ export default function MealPlanScreen() {
       setShowTimePickerModal(true);
     }
   }, [recipeId, recipeTitle]);
+
+  // Reload cost analysis when meals change
+  useEffect(() => {
+    if (Object.keys(hourlyMeals).length > 0) {
+      loadCostAnalysis();
+    } else {
+      setCostAnalysis(null);
+    }
+  }, [hourlyMeals]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', { 
@@ -758,6 +1201,213 @@ export default function MealPlanScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
+        {/* Weekly Calendar View */}
+        <View className="px-4 mb-4">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-semibold text-gray-900">Weekly Meal Plan</Text>
+            <View className="flex-row items-center space-x-2">
+              <TouchableOpacity
+                onPress={() => {
+                  const newDate = new Date(selectedDate);
+                  newDate.setDate(newDate.getDate() - 7);
+                  setSelectedDate(newDate);
+                }}
+                className="p-2"
+              >
+                <Ionicons name="chevron-back" size={20} color="#6B7280" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  const newDate = new Date(selectedDate);
+                  newDate.setDate(newDate.getDate() + 7);
+                  setSelectedDate(newDate);
+                }}
+                className="p-2"
+              >
+                <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Week Dates */}
+          <View className="flex-row mb-2">
+            {weekDates.map((date, index) => {
+              const dateIsSelected = isSelected(date);
+              const isTodayDate = isToday(date);
+              const dayMeals = weeklyPlan?.weeklyPlan?.[date.toISOString().split('T')[0]]?.meals || {};
+              const mealsCount = Object.values(dayMeals).filter(m => m !== null).length + (dayMeals.snacks?.length || 0);
+              
+              return (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setSelectedDate(date)}
+                  className={`flex-1 mx-1 rounded-lg p-3 ${
+                    dateIsSelected ? 'bg-orange-500' : 'bg-white'
+                  } ${isTodayDate ? 'border-2 border-blue-500' : ''}`}
+                >
+                  <Text className={`text-xs text-center font-medium ${
+                    dateIsSelected ? 'text-white' : 'text-gray-500'
+                  }`}>
+                    {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                  </Text>
+                  <Text className={`text-lg text-center font-bold mt-1 ${
+                    dateIsSelected ? 'text-white' : isTodayDate ? 'text-blue-600' : 'text-gray-900'
+                  }`}>
+                    {date.getDate()}
+                  </Text>
+                  {mealsCount > 0 && (
+                    <View className={`mt-1 rounded-full px-2 py-0.5 ${
+                      dateIsSelected ? 'bg-white bg-opacity-30' : 'bg-orange-100'
+                    }`}>
+                      <Text className={`text-xs text-center font-semibold ${
+                        dateIsSelected ? 'text-white' : 'text-orange-600'
+                      }`}>
+                        {mealsCount} meal{mealsCount > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Weekly Summary */}
+          {weeklyPlan && (
+            <View className="bg-white rounded-lg p-4 shadow-sm mb-4">
+              <Text className="text-sm font-semibold text-gray-900 mb-3">Weekly Summary</Text>
+              <View className="flex-row justify-between">
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500">Total Meals</Text>
+                  <Text className="text-lg font-bold text-gray-900">
+                    {weeklyPlan.totalPlannedMeals || 0}
+                  </Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500">Days Planned</Text>
+                  <Text className="text-lg font-bold text-gray-900">
+                    {Object.keys(weeklyPlan.weeklyPlan || {}).filter(date => {
+                      const dayMeals = weeklyPlan.weeklyPlan[date]?.meals || {};
+                      return Object.values(dayMeals).some(m => m !== null) || (dayMeals.snacks?.length > 0);
+                    }).length}
+                  </Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500">Week</Text>
+                  <Text className="text-lg font-bold text-gray-900">
+                    {weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Cost Analysis */}
+        {costAnalysis && (
+          <View className="px-4 mb-4">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-lg font-semibold text-gray-900">
+                💰 Weekly Cost Analysis
+              </Text>
+              {costAnalysis.budgetExceeded && (
+                <TouchableOpacity
+                  onPress={handleOptimizeCost}
+                  className="bg-blue-500 px-4 py-2 rounded-lg"
+                >
+                  <Text className="text-white font-semibold text-sm">Optimize</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            <View className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-blue-500">
+              <View className="flex-row justify-between items-center mb-3">
+                <View>
+                  <Text className="text-sm text-gray-500">Total Weekly Cost</Text>
+                  <Text className={`text-2xl font-bold ${costAnalysis.budgetExceeded ? 'text-red-500' : 'text-green-600'}`}>
+                    ${costAnalysis.totalCost.toFixed(2)}
+                  </Text>
+                </View>
+                <View className="items-end">
+                  <Text className="text-sm text-gray-500">Per Day</Text>
+                  <Text className="text-lg font-semibold text-gray-900">
+                    ${costAnalysis.costPerDay.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+
+              {costAnalysis.budgetExceeded && (
+                <View className="bg-red-50 rounded-lg p-3 mb-3 border border-red-200">
+                  <View className="flex-row items-center mb-1">
+                    <Ionicons name="warning-outline" size={16} color="#EF4444" />
+                    <Text className="text-red-600 font-semibold ml-2">
+                      Over Budget by ${costAnalysis.budgetExceeded.toFixed(2)}
+                    </Text>
+                  </View>
+                  <Text className="text-sm text-red-600">
+                    Consider cheaper recipe alternatives to stay within budget.
+                  </Text>
+                </View>
+              )}
+
+              {costAnalysis.budgetRemaining && costAnalysis.budgetRemaining > 0 && (
+                <View className="bg-green-50 rounded-lg p-3 mb-3 border border-green-200">
+                  <View className="flex-row items-center">
+                    <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
+                    <Text className="text-green-700 font-semibold ml-2">
+                      ${costAnalysis.budgetRemaining.toFixed(2)} remaining in budget
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {costAnalysis.recommendations && costAnalysis.recommendations.length > 0 && (
+                <View className="mt-2">
+                  {costAnalysis.recommendations.map((rec: string, idx: number) => (
+                    <Text key={idx} className="text-sm text-gray-600 mb-1">
+                      • {rec}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              <View className="mt-3 pt-3 border-t border-gray-200">
+                <View className="flex-row justify-between">
+                  <Text className="text-sm text-gray-500">Cost per meal</Text>
+                  <Text className="text-sm font-semibold text-gray-900">
+                    ${costAnalysis.costPerMeal.toFixed(2)}
+                  </Text>
+                </View>
+                <View className="flex-row justify-between mt-1">
+                  <Text className="text-sm text-gray-500">Meals planned</Text>
+                  <Text className="text-sm font-semibold text-gray-900">
+                    {costAnalysis.mealsCount} meals
+                  </Text>
+                </View>
+              </View>
+
+              {/* Savings Suggestions */}
+              {shoppingListSavings && shoppingListSavings.savings > 0 && (
+                <View className="mt-3 pt-3 border-t border-gray-200">
+                  <View className="flex-row items-center justify-between mb-2">
+                    <View className="flex-row items-center">
+                      <Ionicons name="storefront-outline" size={16} color="#10B981" />
+                      <Text className="text-sm font-semibold text-gray-900 ml-2">Best Store</Text>
+                    </View>
+                    <View className="bg-green-100 px-2 py-1 rounded">
+                      <Text className="text-green-700 font-semibold text-xs">
+                        Save ${shoppingListSavings.savings.toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-sm text-gray-700">
+                    Shop at <Text className="font-semibold">{shoppingListSavings.store}</Text>
+                    {shoppingListSavings.location && ` (${shoppingListSavings.location})`} to save {shoppingListSavings.savingsPercent.toFixed(0)}%
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Daily Macros */}
         <View className="px-4 mb-4">
@@ -857,6 +1507,30 @@ export default function MealPlanScreen() {
             <Ionicons name="add-circle-outline" size={20} color="#F97316" style={{ marginRight: 8 }} />
             <Text className="text-orange-500 font-semibold text-lg">
               Generate Remaining Meals
+            </Text>
+          </TouchableOpacity>
+
+          {/* Generate Weekly Meal Plan Button */}
+          <TouchableOpacity 
+            onPress={handleGenerateWeeklyPlan}
+            disabled={generatingPlan}
+            className={`${generatingPlan ? 'opacity-50' : ''} bg-purple-500 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
+          >
+            <Ionicons name="calendar-outline" size={20} color="white" style={{ marginRight: 8 }} />
+            <Text className="text-white font-semibold text-lg">
+              {generatingPlan ? 'Generating...' : '📅 Generate Weekly Plan'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Generate Shopping List Button */}
+          <TouchableOpacity 
+            onPress={handleGenerateShoppingList}
+            disabled={generatingShoppingList}
+            className={`${generatingShoppingList ? 'opacity-50' : ''} bg-emerald-500 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
+          >
+            <Ionicons name="cart-outline" size={20} color="white" style={{ marginRight: 8 }} />
+            <Text className="text-white font-semibold text-lg">
+              {generatingShoppingList ? 'Generating...' : '🛒 Generate Shopping List'}
             </Text>
           </TouchableOpacity>
 
