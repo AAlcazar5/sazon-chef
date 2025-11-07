@@ -80,6 +80,18 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
+          name="scanner-results" 
+          options={{ 
+            headerShown: false
+          }} 
+        />
+        <Stack.Screen 
+          name="edit-budget" 
+          options={{ 
+            headerShown: false
+          }} 
+        />
+        <Stack.Screen 
           name="onboarding" 
           options={{ 
             headerShown: false

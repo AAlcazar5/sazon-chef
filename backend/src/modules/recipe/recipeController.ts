@@ -233,8 +233,29 @@ export const recipeController = {
         });
       }
       
+      // Calculate health grade for the recipe
+      const { calculateHealthGrade } = require('@/utils/healthGrade');
+      const healthGrade = calculateHealthGrade(recipe);
+      
+      // Calculate nutritional analysis (Phase 6, Group 12)
+      const { performNutritionalAnalysis } = require('@/utils/nutritionalAnalysis');
+      const nutritionalAnalysis = performNutritionalAnalysis(recipe);
+      
       console.log('✅ Recipe found:', recipe.title);
-      res.json(recipe);
+      res.json({
+        ...recipe,
+        healthGrade: healthGrade.grade,
+        healthGradeScore: healthGrade.score,
+        healthGradeBreakdown: healthGrade.breakdown,
+        nutritionalAnalysis: {
+          micronutrients: nutritionalAnalysis.micronutrients,
+          omega3: nutritionalAnalysis.omega3,
+          antioxidants: nutritionalAnalysis.antioxidants,
+          nutritionalDensityScore: nutritionalAnalysis.nutritionalDensityScore,
+          keyNutrients: nutritionalAnalysis.keyNutrients,
+          nutrientGaps: nutritionalAnalysis.nutrientGaps,
+        }
+      });
     } catch (error: any) {
       console.error('❌ Get recipe error:', error);
       res.status(500).json({ error: 'Failed to fetch recipe' });
@@ -253,13 +274,14 @@ export const recipeController = {
         dietaryRestrictions, 
         maxCookTime, 
         difficulty,
-        includeAI
+        includeAI,
+        maxCost
       } = req.query;
       
       console.log('🔍 Filter parameters:', { cuisines, dietaryRestrictions, maxCookTime, difficulty });
 
-      // Get user preferences and macro goals for scoring
-      const [userPreferences, macroGoals] = await Promise.all([
+      // Get user preferences, macro goals, and physical profile for scoring
+      const [userPreferences, macroGoals, physicalProfile] = await Promise.all([
         prisma.userPreferences.findFirst({
           where: { userId },
           include: {
@@ -270,8 +292,14 @@ export const recipeController = {
         }),
         prisma.macroGoals.findFirst({
           where: { userId }
+        }),
+        prisma.userPhysicalProfile.findFirst({
+          where: { userId }
         })
       ]);
+      
+      // Import cost calculator
+      const { calculateRecipeCost, isWithinBudget, calculateCostScore } = await import('../../utils/costCalculator');
       
       console.log('👤 User preferences found:', !!userPreferences);
       console.log('🎯 Macro goals found:', !!macroGoals);
@@ -359,8 +387,13 @@ export const recipeController = {
       const { calculateRecipeScore } = require('@/utils/scoring');
       const { calculateBehavioralScore } = require('@/utils/behavioralScoring');
       const { calculateEnhancedScore } = require('@/utils/enhancedScoring');
+      const { calculatePredictiveScore } = require('@/utils/predictiveScoring');
+      const { calculateCollaborativeScore } = require('@/utils/collaborativeFiltering');
+      const { calculateHealthMetricsScore } = require('@/utils/healthMetricsScoring');
       const { calculateDiscriminatoryScore, getUserPreferencesForScoring } = require('../../utils/discriminatoryScoring');
       const { calculateExternalScore, calculateHybridScore } = require('@/utils/externalScoring');
+      const { calculateHealthGoalMatch } = require('@/utils/healthGoalScoring');
+      const { calculateHealthGrade } = require('@/utils/healthGrade');
       
       // Create enhanced scoring context
       const cookTimeContext = {
@@ -389,9 +422,76 @@ export const recipeController = {
       console.log('🔍 User preferences for scoring:', userPrefsForScoring);
       const likedCuisineSet = new Set((userPreferences?.likedCuisines || []).map((c: any) => (c.name || '').toLowerCase()));
       
-      // Calculate scores for each recipe
-      const recipesWithScores = allRecipes.map((recipe: any) => {
+      // Calculate optimal weights based on user behavior (Phase 6 - dynamic weight adjustment)
+      const { getOptimalWeights, calculateHistoricalScores } = require('@/utils/dynamicWeightAdjustment');
+      let optimalWeights = null;
+      try {
+        const historicalScores = await calculateHistoricalScores(userBehavior, {
+          userPreferences,
+          macroGoals,
+          physicalProfile,
+          temporalContext,
+          userTemporalPatterns,
+          cookTimeContext,
+          userKitchenProfile,
+          userPrefsForScoring
+        });
+        
+        if (historicalScores.length > 0) {
+          optimalWeights = getOptimalWeights(userBehavior, historicalScores);
+          console.log('🎯 Optimal weights calculated:', optimalWeights);
+        }
+      } catch (error) {
+        console.error('⚠️ Error calculating optimal weights, using defaults:', error);
+      }
+      
+      // Use optimal weights if available, otherwise use defaults
+      const weights = optimalWeights || {
+        discriminatoryWeight: 0.60,
+        baseScoreWeight: 0.25,
+        healthGoalWeight: 0.15,
+        behavioralWeight: 0.15,
+        temporalWeight: 0.10,
+        enhancedWeight: 0.10,
+        externalWeight: 0.05,
+      };
+      
+      // Calculate scores for each recipe (using Promise.all for async operations)
+      const recipesWithScores = await Promise.all(allRecipes.map(async (recipe: any) => {
         try {
+          // Calculate recipe cost
+          let recipeCost = recipe.estimatedCost || recipe.pricePerServing * recipe.servings || null;
+          let costScore = 50; // Default neutral score
+          
+          if (!recipeCost) {
+            try {
+              const costResult = await calculateRecipeCost(recipe.id, userId);
+              recipeCost = costResult.estimatedCost;
+              recipe.estimatedCost = costResult.estimatedCost;
+              recipe.estimatedCostPerServing = costResult.estimatedCostPerServing;
+              recipe.costSource = costResult.costSource;
+            } catch (error) {
+              console.warn('⚠️ Could not calculate cost for recipe:', recipe.title);
+            }
+          }
+          
+          // Check if within budget
+          const budgetConstraints = {
+            maxRecipeCost: userPreferences?.maxRecipeCost || (maxCost ? parseFloat(maxCost as string) : null),
+            maxMealCost: userPreferences?.maxMealCost || null,
+            maxDailyFoodBudget: userPreferences?.maxDailyFoodBudget || null,
+          };
+          
+          // Filter by cost if budget is set
+          if (recipeCost && budgetConstraints.maxRecipeCost && recipeCost > budgetConstraints.maxRecipeCost) {
+            return null; // Filter out recipes that exceed budget
+          }
+          
+          // Calculate cost score for scoring
+          if (recipeCost) {
+            costScore = calculateCostScore(recipeCost, recipe.calories, budgetConstraints);
+          }
+          
           // Calculate behavioral score
           const behavioralScore = calculateBehavioralScore(recipe, userBehavior);
           
@@ -416,18 +516,110 @@ export const recipeController = {
           // Calculate external score (Phase 5 - quality and popularity from Spoonacular)
           const externalScore = calculateExternalScore(recipe);
           
+          // Calculate health goal match score (Phase 6 - sophisticated health goal matching)
+          const healthGoalScore = calculateHealthGoalMatch(
+            recipe,
+            physicalProfile?.fitnessGoal as any || null,
+            macroGoals ? {
+              calories: macroGoals.calories,
+              protein: macroGoals.protein,
+              carbs: macroGoals.carbs,
+              fat: macroGoals.fat
+            } : null
+          );
+          
+          // Calculate health grade (Phase 6 - nutritional density scoring)
+          const healthGrade = calculateHealthGrade(recipe);
+          
+          // Calculate predictive score (Phase 6 - predictive scoring based on historical data)
+          const predictiveScore = calculatePredictiveScore(recipe, userBehavior, {
+            userPreferences,
+            macroGoals,
+            temporalContext
+          });
+          
+          // Calculate collaborative filtering score (Phase 6 - advanced collaborative filtering)
+          let collaborativeScore = { total: 0, breakdown: { userBasedScore: 0, itemBasedScore: 0 }, details: { similarUsersCount: 0, similarRecipesCount: 0, userSimilarityStrength: 0, itemSimilarityStrength: 0 } };
+          try {
+            collaborativeScore = await calculateCollaborativeScore(recipe, userId, userBehavior);
+          } catch (error) {
+            console.warn('⚠️ Collaborative filtering failed, continuing without it:', error);
+          }
+          
+          // Calculate health metrics score (Phase 6 - health app data integration - fitness goal based)
+          // Step count is NOT used for recipe recommendations, only for expenditure calculation in weight goals
+          let healthMetricsScore = { total: 50, breakdown: { expenditureAdjustment: 0 }, details: { steps: 0, calculatedExpenditure: 0, recommendedCalorieRange: { min: 0, max: 0 }, fitnessGoalBased: false } };
+          try {
+            // Check if user has an active weight goal
+            const activeWeightGoal = await prisma.$queryRaw`
+              SELECT requiredCaloriesPerDay FROM weight_goals
+              WHERE userId = ${userId} AND isActive = 1
+              ORDER BY createdAt DESC
+              LIMIT 1
+            ` as any[];
+            
+            // Use weight goal calories if available, otherwise use macro goals or fitness goal
+            // Focus on daily totals, not strict per-meal limits
+            let calorieTarget = null;
+            if (activeWeightGoal && activeWeightGoal.length > 0) {
+              // Use weight goal's required calories per day
+              // Very lenient range: 10-50% of daily calories per meal (allows big lunches, small dinners)
+              const dailyCalories = activeWeightGoal[0].requiredCaloriesPerDay;
+              calorieTarget = {
+                calories: dailyCalories, // Store daily total for reference
+                min: Math.round(dailyCalories * 0.10), // 10% of daily (very small meal)
+                max: Math.round(dailyCalories * 0.50), // 50% of daily (very large meal)
+              };
+            }
+            
+            if (physicalProfile || macroGoals || calorieTarget) {
+              healthMetricsScore = calculateHealthMetricsScore(
+                recipe,
+                null, // Step count not used for recipe scoring
+                physicalProfile ? {
+                  weightKg: physicalProfile.weightKg,
+                  heightCm: physicalProfile.heightCm,
+                  age: physicalProfile.age,
+                  gender: physicalProfile.gender,
+                  activityLevel: physicalProfile.activityLevel,
+                  fitnessGoal: physicalProfile.fitnessGoal,
+                } : null,
+                calorieTarget ? { calories: calorieTarget.calories } : (macroGoals ? { calories: macroGoals.calories } : null)
+              );
+              
+              // Override range if weight goal is active (use lenient range)
+              if (calorieTarget) {
+                healthMetricsScore.details.recommendedCalorieRange = {
+                  min: calorieTarget.min,
+                  max: calorieTarget.max,
+                };
+                // Use the lenient scoring from calculateHealthMetricsScore
+                // No need to recalculate - it already handles wide ranges leniently
+              }
+            }
+          } catch (error) {
+            console.warn('⚠️ Health metrics scoring failed, continuing without it:', error);
+          }
+          
           // Calculate overall score with all factors
           const baseScore = calculateRecipeScore(recipe, userPreferences, macroGoals, behavioralScore.total, temporalScore.total);
           
-          // Internal score combines all internal algorithms
+          // Internal score combines all internal algorithms with dynamic weights
           const internalScore = Math.round(
-            discriminatoryScore.total * 0.7 + 
-            baseScore.total * 0.3
+            discriminatoryScore.total * weights.discriminatoryWeight + 
+            baseScore.total * weights.baseScoreWeight +
+            healthGoalScore.total * weights.healthGoalWeight
           );
+          
+          // Add predictive, collaborative, and health metrics scores (8% each) to internal score
+          const predictiveBoost = predictiveScore.total * 0.08;
+          const collaborativeBoost = collaborativeScore.total * 0.08;
+          const healthMetricsBoost = healthMetricsScore.total * 0.08;
+          const internalScoreWithPredictive = Math.round(Math.min(100, internalScore + predictiveBoost + collaborativeBoost + healthMetricsBoost));
           
           // Final hybrid score blends internal and external data
           const finalScore = calculateHybridScore(
-            internalScore,
+            internalScoreWithPredictive,
             externalScore.total,
             externalScore.hasExternalData
           );
@@ -440,15 +632,23 @@ export const recipeController = {
           if (hasImage) qualityBoost += 2;
           if (ingredientCount >= 5) qualityBoost += 1;
           if (instructionCount >= 4) qualityBoost += 2;
-          const finalScoreWeighted = Math.min(100, finalScore + cuisineBoost + qualityBoost);
+          
+          // Add cost score boost (5% weight) - lower cost = higher boost
+          const costBoost = Math.round((costScore - 50) * 0.05); // Convert cost score to -2.5 to +2.5 boost
+          
+          const finalScoreWeighted = Math.round(Math.min(100, finalScore + cuisineBoost + qualityBoost + costBoost));
           
           return {
         ...recipe,
+        estimatedCost: recipeCost,
+        estimatedCostPerServing: recipeCost ? recipeCost / recipe.servings : null,
+        costSource: recipe.costSource || null,
         score: {
               total: finalScoreWeighted,
               matchPercentage: finalScoreWeighted,
               macroScore: baseScore.macroScore,
               tasteScore: baseScore.tasteScore,
+              costScore: costScore,
               behavioralScore: behavioralScore.total,
               behavioralBreakdown: {
                 cuisinePreference: behavioralScore.cuisinePreference,
@@ -472,6 +672,17 @@ export const recipeController = {
               },
               discriminatoryScore: discriminatoryScore.total,
               discriminatoryBreakdown: discriminatoryScore.breakdown,
+              healthGoalScore: healthGoalScore.total,
+              healthGoalBreakdown: healthGoalScore.breakdown,
+              healthGrade: healthGrade.grade,
+              healthGradeScore: healthGrade.score,
+              healthGradeBreakdown: healthGrade.breakdown,
+              predictiveScore: predictiveScore.total,
+              predictiveBreakdown: predictiveScore.breakdown,
+              collaborativeScore: collaborativeScore.total,
+              collaborativeBreakdown: collaborativeScore.breakdown,
+              healthMetricsScore: healthMetricsScore.total,
+              healthMetricsBreakdown: healthMetricsScore.breakdown,
               externalScore: externalScore.total,
               externalBreakdown: externalScore.breakdown,
               hasExternalData: externalScore.hasExternalData,
@@ -502,9 +713,31 @@ export const recipeController = {
             }
           };
         }
-      });
+      }));
 
-        recipesWithScores.sort((a: any, b: any) => b.score.total - a.score.total);
+      // Filter out null recipes (those that exceeded budget)
+      let filteredRecipes = recipesWithScores.filter((r: any) => r !== null);
+      
+      // Optional: Filter by ingredient availability if requested
+      const { minAvailabilityScore } = req.query;
+      if (minAvailabilityScore && !isNaN(Number(minAvailabilityScore))) {
+        try {
+          const { filterRecipesByAvailability } = require('../../utils/ingredientAvailability');
+          const recipeIds = filteredRecipes.map((r: any) => r.id);
+          const availableRecipeIds = await filterRecipesByAvailability(
+            recipeIds,
+            userId,
+            Number(minAvailabilityScore)
+          );
+          const availableIdsSet = new Set(availableRecipeIds);
+          filteredRecipes = filteredRecipes.filter((r: any) => availableIdsSet.has(r.id));
+        } catch (error) {
+          console.warn('⚠️ Ingredient availability filtering failed, continuing without it:', error);
+        }
+      }
+      
+      // Sort by score
+      filteredRecipes.sort((a: any, b: any) => b.score.total - a.score.total);
         const limit = 10;
         const perCuisineCap = 3;
         const selected: any[] = [];
@@ -513,7 +746,7 @@ export const recipeController = {
         
         // Add some randomization: shuffle the top 30 scored recipes before selecting
         // This ensures variety on reload while still prioritizing high-scored recipes
-        const shuffledRecipes = [...recipesWithScores]
+        const shuffledRecipes = [...filteredRecipes]
           .sort((a, b) => (b.score?.total || 0) - (a.score?.total || 0))
           .slice(0, 30) // Take top 30
           .sort(() => Math.random() - 0.5); // Shuffle them

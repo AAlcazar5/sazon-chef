@@ -455,3 +455,4 @@ function getMostCommonCuisines(meals: any[]): string[] {
     .slice(0, 3)
     .map(([cuisine]) => cuisine);
 }
+

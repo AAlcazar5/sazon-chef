@@ -797,7 +797,7 @@ export default function HomeScreen() {
                     </View>
                     <View className={`bg-green-100 px-2 py-1 rounded-full ml-2`}>
                       <Text className={`text-green-800 text-sm font-semibold`}>
-                        {recipe.score?.matchPercentage || 0}% Match
+                        {Math.round(recipe.score?.matchPercentage || 0)}% Match
                       </Text>
                     </View>
                   </View>
@@ -929,7 +929,7 @@ export default function HomeScreen() {
                         {recipe.title}
                       </Text>
                       <Text className={`text-base font-semibold ${getScoreColor(recipe.score?.total || 0)} ml-2`}>
-                        {recipe.score?.total || 0}
+                        {Math.round(recipe.score?.total || 0)}
                       </Text>
                     </View>
                     

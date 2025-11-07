@@ -30,6 +30,8 @@ interface RecipeCardProps {
     imageUrl?: string;
     source?: 'database' | 'user-created' | 'ai-generated' | 'external';
     isUserCreated?: boolean;
+    healthGrade?: 'A' | 'B' | 'C' | 'D' | 'F';
+    healthGradeScore?: number;
     enhancedScore?: {
       total: number;
       cookTimeScore: number;
@@ -62,6 +64,24 @@ export default function RecipeCard({
     if (score >= 80) return 'text-green-600 bg-green-100';
     if (score >= 60) return 'text-yellow-600 bg-yellow-100';
     return 'text-red-600 bg-red-100';
+  };
+
+  const getHealthGradeColor = (grade: 'A' | 'B' | 'C' | 'D' | 'F' | undefined) => {
+    if (!grade) return 'text-gray-600 bg-gray-100';
+    switch (grade) {
+      case 'A':
+        return 'text-green-700 bg-green-100 border-green-300';
+      case 'B':
+        return 'text-blue-700 bg-blue-100 border-blue-300';
+      case 'C':
+        return 'text-yellow-700 bg-yellow-100 border-yellow-300';
+      case 'D':
+        return 'text-orange-700 bg-orange-100 border-orange-300';
+      case 'F':
+        return 'text-red-700 bg-red-100 border-red-300';
+      default:
+        return 'text-gray-600 bg-gray-100 border-gray-300';
+    }
   };
 
 
@@ -135,17 +155,25 @@ export default function RecipeCard({
           )}
         </View>
         
-        {recipe.score && (
-          <View className="flex-row items-center space-x-2">
-            {recipe.score.matchPercentage && (
-              <View className={`px-2 py-1 rounded-full ${getScoreColor(recipe.score.total)}`}>
-                <Text className="font-semibold text-xs">
-                  {recipe.score.total}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
+        <View className="flex-row items-center space-x-2">
+          {/* Health Grade Badge */}
+          {(recipe.healthGrade || recipe.score?.healthGrade) && (
+            <View className={`px-2 py-1 rounded-full border ${getHealthGradeColor(recipe.healthGrade || recipe.score?.healthGrade)}`}>
+              <Text className="font-bold text-sm">
+                {recipe.healthGrade || recipe.score?.healthGrade}
+              </Text>
+            </View>
+          )}
+          
+          {/* Match Score */}
+          {recipe.score && recipe.score.matchPercentage && (
+            <View className={`px-2 py-1 rounded-full ${getScoreColor(recipe.score.total)}`}>
+              <Text className="font-semibold text-xs">
+                {Math.round(recipe.score.total)}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Description */}
@@ -175,7 +203,7 @@ export default function RecipeCard({
           {variant === 'featured' && recipe.score?.matchPercentage && (
             <View className={`px-2 py-1 rounded-full ${getMatchColor(recipe.score.matchPercentage)}`}>
               <Text className="text-white text-xs font-semibold">
-                {recipe.score.matchPercentage}% Match
+                {Math.round(recipe.score.matchPercentage)}% Match
               </Text>
             </View>
           )}
@@ -193,7 +221,7 @@ export default function RecipeCard({
       </View>
 
       {/* Macro Nutrients */}
-      <View className="flex-row space-x-2 mt-3">
+      <View className="flex-row space-x-2 mt-3 flex-wrap">
         <View className="bg-blue-100 px-2 py-1 rounded-full">
           <Text className="text-blue-800 text-xs">
             {recipe.macros.calories} cal
@@ -214,6 +242,14 @@ export default function RecipeCard({
             F: {recipe.macros.fat}g
           </Text>
         </View>
+        {/* Cost Display */}
+        {(recipe.estimatedCostPerServing || recipe.pricePerServing) && (
+          <View className="bg-emerald-100 px-2 py-1 rounded-full">
+            <Text className="text-emerald-800 text-xs font-semibold">
+              ${Math.round((recipe.estimatedCostPerServing || recipe.pricePerServing || 0) * 100) / 100}/serving
+            </Text>
+          </View>
+        )}
       </View>
 
 
@@ -227,20 +263,20 @@ export default function RecipeCard({
               <View className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                 <View 
                   className="bg-green-500 h-1.5 rounded-full" 
-                  style={{ width: `${recipe.score.macroScore}%` }}
+                  style={{ width: `${Math.round(recipe.score.macroScore)}%` }}
                 />
               </View>
-              <Text className="text-gray-500 text-xs mt-1">{recipe.score.macroScore}%</Text>
+              <Text className="text-gray-500 text-xs mt-1">{Math.round(recipe.score.macroScore)}%</Text>
             </View>
             <View className="flex-1">
               <Text className="text-gray-600 text-xs">Taste</Text>
               <View className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                 <View 
                   className="bg-orange-500 h-1.5 rounded-full" 
-                  style={{ width: `${recipe.score.tasteScore}%` }}
+                  style={{ width: `${Math.round(recipe.score.tasteScore)}%` }}
                 />
               </View>
-              <Text className="text-gray-500 text-xs mt-1">{recipe.score.tasteScore}%</Text>
+              <Text className="text-gray-500 text-xs mt-1">{Math.round(recipe.score.tasteScore)}%</Text>
             </View>
           </View>
         </View>

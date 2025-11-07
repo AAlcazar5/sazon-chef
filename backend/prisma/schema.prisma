@@ -26,6 +26,9 @@ model User {
   feedback      RecipeFeedback[]
   mealHistory   MealHistory[]
   mealPlans     MealPlan[]
+  shoppingLists ShoppingList[]
+  shoppingAppIntegrations ShoppingAppIntegration[]
+  ingredientCosts IngredientCost[]
   // NEW: User-created recipes
   createdRecipes Recipe[]
 
@@ -43,6 +46,18 @@ model UserPreferences {
   dietaryRestrictions  DietaryRestriction[]
   cookTimePreference   Int      // in minutes
   spiceLevel           String?  // mild, medium, spicy
+  
+  // Cost tracking & budget preferences (Phase 6, Group 13)
+  maxRecipeCost        Float?   // Maximum cost per recipe
+  maxMealCost          Float?   // Maximum cost per meal
+  maxDailyFoodBudget   Float?   // Maximum daily food budget
+  currency             String?  @default("USD")
+  
+  // Location preferences for store lookup
+  zipCode              String?  // User's zip code
+  latitude             Float?   // GPS latitude
+  longitude            Float?   // GPS longitude
+  useLocationServices  Boolean? @default(false) // Whether to use GPS location
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -170,6 +185,11 @@ model Recipe {
   sourceName       String?   // Original source attribution
   lastEnriched     DateTime? // Last time external data was fetched
   
+  // Cost tracking (Phase 6, Group 13)
+  estimatedCost        Float?   // Estimated total cost of recipe
+  estimatedCostPerServing Float? // Estimated cost per serving
+  costSource          String?  // "user", "api", "calculated", "estimated"
+  
   // Recipe content
   ingredients RecipeIngredient[]
   instructions RecipeInstruction[]
@@ -193,6 +213,10 @@ model RecipeIngredient {
   recipeId String
   text     String
   order    Int
+  
+  // Cost tracking (Phase 6, Group 13)
+  estimatedCost Float? // Estimated cost for this ingredient
+  unitCost      Float? // Cost per unit (e.g., per lb, per cup)
   
   @@map("recipe_ingredients")
 }
@@ -345,4 +369,64 @@ model ScoringWeights {
   updatedAt DateTime @updatedAt
 
   @@map("scoring_weights")
+}
+
+model ShoppingList {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   @default("My Shopping List")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  items     ShoppingListItem[]
+  
+  @@map("shopping_lists")
+}
+
+model ShoppingListItem {
+  id            String       @id @default(cuid())
+  shoppingListId String
+  shoppingList  ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  name          String
+  quantity      String
+  category      String?
+  purchased     Boolean      @default(false)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  @@map("shopping_list_items")
+}
+
+model ShoppingAppIntegration {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appName      String   // e.g., "instacart", "walmart", "kroger"
+  apiKey       String?
+  accessToken  String?
+  refreshToken String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([userId, appName])
+  @@map("shopping_app_integrations")
+}
+
+model IngredientCost {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredientName String
+  unitCost      Float
+  unit          String   @default("lb") // lb, oz, cup, piece, etc.
+  store         String?
+  location      String?
+  lastUpdated   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  
+  @@map("ingredient_costs")
 }

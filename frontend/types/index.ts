@@ -14,11 +14,21 @@ export interface RecipeScore {
   macroScore: number;
   tasteScore: number;
   matchPercentage: number;
+  costScore?: number;
   breakdown?: {
     macroMatch: number;
     tasteMatch: number;
     cookTimeMatch: number;
     ingredientMatch: number;
+  };
+  healthGrade?: 'A' | 'B' | 'C' | 'D' | 'F';
+  healthGradeScore?: number;
+  healthGradeBreakdown?: {
+    macronutrientBalance: number;
+    calorieDensity: number;
+    nutrientDensity: number;
+    ingredientQuality: number;
+    sugarAndSodium: number;
   };
 }
 
@@ -36,12 +46,76 @@ export interface Recipe {
   fat: number;
   fiber?: number;
   sugar?: number;
+  // Cost tracking (Phase 6, Group 13)
+  estimatedCost?: number;
+  estimatedCostPerServing?: number;
+  costSource?: 'user' | 'api' | 'calculated' | 'estimated';
+  pricePerServing?: number; // From external APIs
   // Recipe content - handle both string[] and object formats
   ingredients: string[] | Array<{ id: string; text: string; order: number }>;
   instructions: string[] | Array<{ id: string; text: string; step: number }>;
   // Recipe source tracking
   source?: 'database' | 'user-created' | 'ai-generated' | 'external';
   isUserCreated?: boolean;
+  // Health grade (Phase 6)
+  healthGrade?: 'A' | 'B' | 'C' | 'D' | 'F';
+  healthGradeScore?: number;
+  healthGradeBreakdown?: {
+    macronutrientBalance: number;
+    calorieDensity: number;
+    nutrientDensity: number;
+    ingredientQuality: number;
+    sugarAndSodium: number;
+  };
+  // Nutritional analysis (Phase 6, Group 12)
+  nutritionalAnalysis?: {
+    micronutrients: {
+      vitamins: {
+        vitaminA: number;
+        vitaminC: number;
+        vitaminD: number;
+        vitaminE: number;
+        vitaminK: number;
+        thiamine: number;
+        riboflavin: number;
+        niacin: number;
+        vitaminB6: number;
+        folate: number;
+        vitaminB12: number;
+      };
+      minerals: {
+        calcium: number;
+        iron: number;
+        magnesium: number;
+        phosphorus: number;
+        potassium: number;
+        zinc: number;
+        copper: number;
+        manganese: number;
+        selenium: number;
+      };
+    };
+    omega3: {
+      totalOmega3: number;
+      epa: number;
+      dha: number;
+      ala: number;
+      omega3Score: number;
+    };
+    antioxidants: {
+      totalAntioxidants: number;
+      oracValue: number;
+      polyphenols: number;
+      flavonoids: number;
+      carotenoids: number;
+      vitaminC: number;
+      vitaminE: number;
+      antioxidantScore: number;
+    };
+    nutritionalDensityScore: number;
+    keyNutrients: string[];
+    nutrientGaps: string[];
+  };
   // Optional timestamps
   createdAt?: string;
   updatedAt?: string;
@@ -214,8 +288,55 @@ export interface ShoppingListItem {
   id: string;
   name: string;
   quantity: string;
-  category: string;
+  category?: string;
   purchased: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShoppingList {
+  id: string;
+  userId: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  items: ShoppingListItem[];
+}
+
+export interface ShoppingAppIntegration {
+  id: string;
+  userId: string;
+  appName: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportedShoppingApp {
+  name: string;
+  displayName: string;
+  requiresAuth: boolean;
+}
+
+export interface IngredientCost {
+  id: string;
+  userId: string;
+  ingredientName: string;
+  unitCost: number;
+  unit: string;
+  store?: string;
+  location?: string;
+  lastUpdated: string;
+  createdAt: string;
+}
+
+export interface BudgetSettings {
+  maxRecipeCost?: number;
+  maxMealCost?: number;
+  maxDailyFoodBudget?: number;
+  currency: string;
 }
 
 // Recipe Feedback & Scoring Types

@@ -100,18 +100,13 @@ function calculateConvenienceScore(
 ): number {
   let score = 100;
 
-  // Skill level matching
-  if (userProfile.cookingSkill === 'beginner') {
-    if (recipe.cookTime > 45 || recipe.ingredients?.length > 10) {
-      score -= 20; // Penalize complex recipes for beginners
-    } else if (recipe.cookTime < 20 && recipe.ingredients?.length < 6) {
-      score += 10; // Bonus for very easy recipes for beginners
-    }
-  } else if (userProfile.cookingSkill === 'advanced') {
-    if (recipe.cookTime < 15 && recipe.ingredients?.length < 5) {
-      score -= 5; // Slightly penalize overly simple recipes for advanced cooks
-    }
-  }
+  // Enhanced skill level matching using advanced scoring
+  const { calculateSkillLevelMatch } = require('./advancedScoring');
+  const skillMatch = calculateSkillLevelMatch(recipe, userProfile.cookingSkill);
+  
+  // Convert skill match (0-100) to convenience score adjustment
+  // Skill match is already a good indicator, so we use it directly
+  score = (score * 0.7) + (skillMatch * 0.3); // Blend with base score
 
   // Equipment availability (simplified: check for basic equipment)
   const requiredEquipment = ['oven', 'stovetop', 'knife', 'cutting board']; // Example basic equipment
