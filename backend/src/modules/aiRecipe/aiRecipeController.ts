@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { aiRecipeService } from '../../services/aiRecipeService';
 import { prisma } from '../../lib/prisma';
+import { getUserId } from '../../utils/authHelper';
 
 export class AIRecipeController {
   /**
@@ -16,7 +17,7 @@ export class AIRecipeController {
   async generateRecipe(req: Request, res: Response) {
     const startTime = Date.now();
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { cuisine, mealType, maxCookTime } = req.query;
 
       console.log('⏱️  AI Recipe Generation: Request started at', new Date().toISOString());
@@ -249,7 +250,7 @@ export class AIRecipeController {
    */
   async generateDailyPlan(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat } = req.query;
 
       console.log('🍽️ Generate AI Daily Plan Request:', { userId, meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat });
@@ -468,7 +469,7 @@ export class AIRecipeController {
    */
   async calculateRemainingMacros(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { existingMeals } = req.body;
 
       console.log('📊 Calculate Remaining Macros Request:', { userId, mealCount: existingMeals?.length });
@@ -537,7 +538,7 @@ export class AIRecipeController {
    */
   async getAIRecipes(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const limit = parseInt(req.query.limit as string) || 20;
 
       const recipes = await prisma.recipe.findMany({

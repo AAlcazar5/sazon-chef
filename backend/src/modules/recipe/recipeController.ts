@@ -2,17 +2,10 @@
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { healthifyService } from '@/services/healthifyService';
+import { getUserId } from '@/utils/authHelper';
 
-// Extend Express Request type to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-      };
-    }
-  }
-}
+// Note: Request.user type is declared in authMiddleware.ts
+// This ensures consistency across the application
 
 // Helper function to get user behavioral data
 export async function getUserBehaviorData(userId: string) {
@@ -1776,7 +1769,7 @@ export const recipeController = {
     try {
       console.log('💚 POST /api/recipes/:id/healthify called');
       const { id } = req.params;
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       
       // Fetch the original recipe
       const recipe = await prisma.recipe.findUnique({ 

@@ -12,6 +12,14 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String
+  password  String?  // Hashed password (nullable for social login users)
+  // Social login fields
+  provider        String?  // 'google', 'apple', or null for email/password
+  providerId      String?  // OAuth provider's user ID
+  providerEmail   String?  // Email from OAuth provider (may differ from email field)
+  // Encryption metadata
+  emailEncrypted  Boolean @default(false) // Whether email is encrypted
+  nameEncrypted   Boolean @default(false) // Whether name is encrypted
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

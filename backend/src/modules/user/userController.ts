@@ -1,16 +1,27 @@
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { authenticateToken } from '../auth/authMiddleware';
+import { decrypt } from '@/utils/encryption';
+import { getUserId } from '@/utils/authHelper';
 
 export const userController = {
   // Get user profile
   async getProfile(req: Request, res: Response) {
     try {
-      // TODO: Get user ID from authentication
-      const userId = 'temp-user-id'; // Placeholder until auth is implemented
+      // Get user ID from authentication
+      const userId = getUserId(req);
       
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        include: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          emailEncrypted: true,
+          nameEncrypted: true,
+          provider: true,
+          createdAt: true,
+          updatedAt: true,
           preferences: {
             include: {
               bannedIngredients: true,
@@ -26,8 +37,15 @@ export const userController = {
         return res.status(404).json({ error: 'User not found' });
       }
       
-      // Remove sensitive data if needed
-      const { ...userData } = user;
+      // Decrypt user data
+      const decryptedUser = {
+        ...user,
+        email: user.emailEncrypted ? decrypt(user.email) : user.email,
+        name: user.nameEncrypted ? decrypt(user.name) : user.name
+      };
+
+      // Remove encryption flags
+      const { emailEncrypted: _, nameEncrypted: __, ...userData } = decryptedUser;
       
       res.json(userData);
     } catch (error) {
@@ -39,29 +57,52 @@ export const userController = {
   // Update user profile
   async updateProfile(req: Request, res: Response) {
     try {
-      // TODO: Get user ID from authentication
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       const { name, email } = req.body;
+      
+      const updateData: any = {};
+      
+      // Encrypt name and email if provided
+      const { encrypt } = await import('@/utils/encryption');
+      
+      if (name) {
+        updateData.name = encrypt(name);
+        updateData.nameEncrypted = true;
+      }
+      
+      if (email) {
+        updateData.email = encrypt(email);
+        updateData.emailEncrypted = true;
+      }
+      
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
       
       const user = await prisma.user.update({
         where: { id: userId },
-        data: {
-          ...(name && { name }),
-          ...(email && { email })
-        },
-        include: {
-          preferences: {
-            include: {
-              bannedIngredients: true,
-              likedCuisines: true,
-              dietaryRestrictions: true
-            }
-          },
-          macroGoals: true
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          emailEncrypted: true,
+          nameEncrypted: true,
+          createdAt: true,
+          updatedAt: true
         }
       });
       
-      res.json({ message: 'Profile updated successfully', user });
+      // Decrypt for response
+      const decryptedUser = {
+        ...user,
+        email: user.emailEncrypted ? decrypt(user.email) : user.email,
+        name: user.nameEncrypted ? decrypt(user.name) : user.name
+      };
+      
+      const { emailEncrypted: _, nameEncrypted: __, ...userResponse } = decryptedUser;
+      
+      res.json({ message: 'Profile updated successfully', user: userResponse });
     } catch (error) {
       console.error('Update profile error:', error);
       res.status(500).json({ error: 'Failed to update profile' });

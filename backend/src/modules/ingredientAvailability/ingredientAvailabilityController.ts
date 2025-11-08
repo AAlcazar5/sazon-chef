@@ -2,6 +2,7 @@
 // Ingredient availability endpoints
 
 import { Request, Response } from 'express';
+import { getUserId } from '../../utils/authHelper';
 import {
   checkIngredientAvailability,
   analyzeRecipeAvailability,
@@ -14,7 +15,7 @@ import {
  */
 export const checkIngredient = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { ingredientName } = req.params;
     const { location } = req.query;
 
@@ -37,7 +38,7 @@ export const checkIngredient = async (req: Request, res: Response) => {
  */
 export const analyzeRecipe = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { recipeId } = req.params;
     const { location } = req.query;
 
@@ -64,7 +65,7 @@ export const analyzeRecipe = async (req: Request, res: Response) => {
  */
 export const filterRecipes = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { recipeIds, minAvailabilityScore } = req.body;
 
     if (!Array.isArray(recipeIds) || recipeIds.length === 0) {

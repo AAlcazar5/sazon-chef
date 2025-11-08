@@ -1,13 +1,16 @@
 // backend/src/modules/recipe/recipeController.simple.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { getUserId } from '@/utils/authHelper';
 
 // Extend Express Request type to include user
+// Note: This should match the type in authMiddleware.ts
 declare global {
   namespace Express {
     interface Request {
       user?: {
         id: string;
+        email: string;
       };
     }
   }
@@ -136,7 +139,7 @@ export const recipeController = {
   async getSavedRecipes(req: Request, res: Response) {
     try {
       console.log('📚 GET /api/recipes/saved called');
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       const savedRecipes = await prisma.savedRecipe.findMany({
         where: { userId },
@@ -166,7 +169,7 @@ export const recipeController = {
   async saveRecipe(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       const existingSaved = await prisma.savedRecipe.findFirst({
         where: { userId, recipeId: id }
@@ -192,7 +195,7 @@ export const recipeController = {
   async unsaveRecipe(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       await prisma.savedRecipe.deleteMany({
         where: { userId, recipeId: id }
@@ -210,10 +213,10 @@ export const recipeController = {
   async likeRecipe(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       await prisma.recipeFeedback.upsert({
-        where: { userId_recipeId: { userId, recipeId: id } },
+        where: { recipeId_userId: { recipeId: id, userId } },
         update: { liked: true, disliked: false },
         create: { userId, recipeId: id, liked: true, disliked: false }
       });
@@ -230,10 +233,10 @@ export const recipeController = {
   async dislikeRecipe(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       await prisma.recipeFeedback.upsert({
-        where: { userId_recipeId: { userId, recipeId: id } },
+        where: { recipeId_userId: { recipeId: id, userId } },
         update: { liked: false, disliked: true },
         create: { userId, recipeId: id, liked: false, disliked: true }
       });

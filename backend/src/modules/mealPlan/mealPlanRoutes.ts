@@ -27,3 +27,4 @@ router.get('/:id/cost-analysis', getMealPlanCostAnalysis);
 router.post('/:id/optimize-cost', optimizeMealPlan);
 
 export default router;
+export { router as mealPlanRoutes };

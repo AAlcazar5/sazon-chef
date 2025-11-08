@@ -1,13 +1,14 @@
 // backend/src/modules/mealHistory/mealHistoryController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { getUserId } from '@/utils/authHelper';
 
 export const mealHistoryController = {
   // Get user's meal history
   async getMealHistory(req: Request, res: Response) {
     try {
       console.log('📊 GET /api/meal-history - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       const { 
         startDate, 
@@ -74,7 +75,7 @@ export const mealHistoryController = {
   async addMealToHistory(req: Request, res: Response) {
     try {
       console.log('📝 POST /api/meal-history - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       const {
         recipeId,
@@ -143,7 +144,7 @@ export const mealHistoryController = {
     try {
       console.log('📝 PUT /api/meal-history/:id - METHOD CALLED');
       const { id } = req.params;
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       const {
         consumed,
@@ -203,7 +204,7 @@ export const mealHistoryController = {
     try {
       console.log('🗑️ DELETE /api/meal-history/:id - METHOD CALLED');
       const { id } = req.params;
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       // Verify the meal history entry exists and belongs to user
       const existingEntry = await prisma.mealHistory.findFirst({
@@ -244,7 +245,7 @@ export const mealHistoryController = {
   async getMealHistoryAnalytics(req: Request, res: Response) {
     try {
       console.log('📈 GET /api/meal-history/analytics - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       const { 
         period = '30', // days
@@ -294,7 +295,7 @@ export const mealHistoryController = {
   async getMealHistoryInsights(req: Request, res: Response) {
     try {
       console.log('🔍 GET /api/meal-history/insights - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       // Get recent meal history (last 30 days)
       const thirtyDaysAgo = new Date();

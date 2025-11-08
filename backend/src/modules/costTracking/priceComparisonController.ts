@@ -2,6 +2,7 @@
 // Price comparison and savings suggestions endpoints
 
 import { Request, Response } from 'express';
+import { getUserId } from '../../utils/authHelper';
 import {
   compareIngredientPrices,
   findRecipeSavings,
@@ -17,7 +18,7 @@ import { prisma } from '../../lib/prisma';
  */
 export const compareIngredient = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { ingredientName } = req.params;
 
     const comparison = await compareIngredientPrices(ingredientName, userId);
@@ -39,7 +40,7 @@ export const compareIngredient = async (req: Request, res: Response) => {
  */
 export const getRecipeSavings = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { id } = req.params;
 
     const savings = await findRecipeSavings(id, userId);
@@ -61,7 +62,7 @@ export const getRecipeSavings = async (req: Request, res: Response) => {
  */
 export const compareMultiple = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { ingredientNames } = req.body;
 
     if (!Array.isArray(ingredientNames) || ingredientNames.length === 0) {
@@ -84,7 +85,7 @@ export const compareMultiple = async (req: Request, res: Response) => {
  */
 export const getBestStore = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { ingredientNames, zipCode, latitude, longitude, radiusMiles = 10 } = req.body;
 
     if (!Array.isArray(ingredientNames) || ingredientNames.length === 0) {

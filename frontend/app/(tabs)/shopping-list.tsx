@@ -2,7 +2,7 @@
 // Shopping list screen
 
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Modal } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -28,6 +28,14 @@ export default function ShoppingListScreen() {
   const [zipCode, setZipCode] = useState('');
   const [useGPS, setUseGPS] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [showListPicker, setShowListPicker] = useState(false);
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [editingListName, setEditingListName] = useState('');
+  const [updatingName, setUpdatingName] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [selectedListsForMerge, setSelectedListsForMerge] = useState<Set<string>>(new Set());
+  const [mergingLists, setMergingLists] = useState(false);
+  const [mergeName, setMergeName] = useState('Weekly Shopping');
 
   useEffect(() => {
     loadShoppingLists();
@@ -64,6 +72,212 @@ export default function ShoppingListScreen() {
     }
   };
 
+  const handleSelectList = async (listId: string) => {
+    setShowListPicker(false);
+    await loadShoppingListDetails(listId);
+  };
+
+  // Helper function to parse quantity string (e.g., "1 lb", "2 cups", "1.5 oz")
+  const parseQuantity = (quantityStr: string): { amount: number; unit: string } | null => {
+    if (!quantityStr) return null;
+    
+    // Handle already combined quantities (e.g., "1 lb + 1 lb")
+    if (quantityStr.includes(' + ')) {
+      // Split and parse each part
+      const parts = quantityStr.split(' + ').map(p => parseQuantity(p.trim())).filter(Boolean);
+      if (parts.length === 0) return null;
+      
+      // Sum amounts if same unit
+      const unitCounts = new Map<string, number>();
+      parts.forEach(p => {
+        if (p) {
+          unitCounts.set(p.unit, (unitCounts.get(p.unit) || 0) + p.amount);
+        }
+      });
+      
+      // Use the most common unit
+      const mostCommonUnit = Array.from(unitCounts.entries())
+        .sort((a, b) => b[1] - a[1])[0][0];
+      const totalAmount = unitCounts.get(mostCommonUnit) || 0;
+      
+      return { amount: totalAmount, unit: mostCommonUnit };
+    }
+    
+    // Parse simple quantity: "1 lb", "2 cups", "1.5 oz", etc.
+    const match = quantityStr.match(/^([\d.]+(?:\s*\/\s*\d+)?)\s*(.*)$/);
+    if (match) {
+      let amount: number;
+      const amountStr = match[1].trim();
+      
+      // Handle fractions
+      if (amountStr.includes('/')) {
+        const [num, den] = amountStr.split('/').map(n => parseFloat(n.trim()));
+        amount = num / den;
+      } else {
+        amount = parseFloat(amountStr);
+      }
+      
+      const unit = match[2].trim().toLowerCase() || 'piece';
+      return { amount, unit };
+    }
+    
+    // Try to extract just a number
+    const numMatch = quantityStr.match(/^([\d.]+)/);
+    if (numMatch) {
+      return { amount: parseFloat(numMatch[1]), unit: 'piece' };
+    }
+    
+    return null;
+  };
+
+  // Helper function to format quantity
+  const formatQuantity = (amount: number, unit: string): string => {
+    if (amount % 1 === 0) {
+      return `${amount} ${unit}`;
+    } else if (amount < 1 && amount > 0) {
+      // Convert to fraction for small amounts
+      const fraction = amount === 0.5 ? '1/2' : amount === 0.25 ? '1/4' : amount === 0.75 ? '3/4' : amount.toFixed(2);
+      return `${fraction} ${unit}`;
+    } else {
+      return `${amount.toFixed(2)} ${unit}`;
+    }
+  };
+
+  const handleMergeLists = () => {
+    if (selectedListsForMerge.size < 2) {
+      Alert.alert('Error', 'Please select at least 2 lists to merge');
+      return;
+    }
+    setShowMergeModal(true);
+  };
+
+  const handleConfirmMerge = async () => {
+    const finalName = mergeName.trim() || 'Weekly Shopping';
+    
+    setMergingLists(true);
+    try {
+      // Get all items from selected lists
+      const selectedLists = shoppingLists.filter(list => selectedListsForMerge.has(list.id));
+      const allItems: ShoppingListItem[] = [];
+      
+      selectedLists.forEach(list => {
+        list.items?.forEach(item => {
+          allItems.push(item);
+        });
+      });
+
+      if (allItems.length === 0) {
+        Alert.alert('Error', 'Selected lists have no items to merge');
+        setMergingLists(false);
+        return;
+      }
+
+      // Create new list with merged name
+      const response = await shoppingListApi.createShoppingList({ name: finalName });
+      const newListId = response.data.id;
+
+      // Add all items to the new list (aggregate duplicates with proper quantity math)
+      const itemMap = new Map<string, { 
+        name: string; 
+        quantities: Array<{ amount: number; unit: string }>; 
+        category?: string 
+      }>();
+      
+      allItems.forEach(item => {
+        const key = item.name.toLowerCase().trim();
+        const parsed = parseQuantity(item.quantity);
+        const existing = itemMap.get(key);
+        
+        if (existing) {
+          // Add quantity to existing item
+          if (parsed) {
+            existing.quantities.push(parsed);
+          }
+        } else {
+          // Create new entry
+          itemMap.set(key, {
+            name: item.name,
+            quantities: parsed ? [parsed] : [],
+            category: item.category,
+          });
+        }
+      });
+
+      // Aggregate quantities and add items to new list
+      for (const [key, itemData] of itemMap.entries()) {
+        if (itemData.quantities.length === 0) {
+          // Can't parse quantity, use original
+          const originalItem = allItems.find(item => item.name.toLowerCase().trim() === key);
+          if (originalItem) {
+            await shoppingListApi.addItem(newListId, {
+              name: itemData.name,
+              quantity: originalItem.quantity,
+              category: itemData.category,
+            });
+          }
+        } else {
+          // Group by unit and sum
+          const unitMap = new Map<string, number>();
+          itemData.quantities.forEach(qty => {
+            unitMap.set(qty.unit, (unitMap.get(qty.unit) || 0) + qty.amount);
+          });
+          
+          // Use the most common unit (or first if tied)
+          const sortedUnits = Array.from(unitMap.entries()).sort((a, b) => b[1] - a[1]);
+          const [primaryUnit, totalAmount] = sortedUnits[0];
+          
+          await shoppingListApi.addItem(newListId, {
+            name: itemData.name,
+            quantity: formatQuantity(totalAmount, primaryUnit),
+            category: itemData.category,
+          });
+        }
+      }
+
+      await loadShoppingLists();
+      await loadShoppingListDetails(newListId);
+      setShowMergeModal(false);
+      setSelectedListsForMerge(new Set());
+      setMergeName('Weekly Shopping');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Success', 'Lists merged successfully!');
+    } catch (error: any) {
+      console.error('Error merging lists:', error);
+      Alert.alert('Error', 'Failed to merge lists');
+    } finally {
+      setMergingLists(false);
+    }
+  };
+
+  const handleEditName = () => {
+    if (!selectedList) return;
+    setEditingListName(selectedList.name);
+    setShowEditNameModal(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!selectedList || !editingListName.trim()) {
+      Alert.alert('Error', 'Please enter a name');
+      return;
+    }
+
+    setUpdatingName(true);
+    try {
+      await shoppingListApi.updateShoppingList(selectedList.id, {
+        name: editingListName.trim(),
+      });
+      await loadShoppingLists();
+      await loadShoppingListDetails(selectedList.id);
+      setShowEditNameModal(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      console.error('Error updating list name:', error);
+      Alert.alert('Error', 'Failed to update list name');
+    } finally {
+      setUpdatingName(false);
+    }
+  };
+
   const loadSupportedApps = async () => {
     try {
       const response = await shoppingAppApi.getSupportedApps();
@@ -80,16 +294,6 @@ export default function ShoppingListScreen() {
     } catch (error: any) {
       console.error('Error loading integrations:', error);
     }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadShoppingLists();
-    await loadIntegrations();
-    if (selectedList) {
-      await findBestStore();
-    }
-    setRefreshing(false);
   };
 
   const requestLocationPermission = async () => {
@@ -112,8 +316,9 @@ export default function ShoppingListScreen() {
     }
   };
 
-  const findBestStore = async () => {
-    if (!selectedList || selectedList.items.length === 0) return;
+  const findBestStore = useCallback(async () => {
+    const itemsToUse = selectedList?.items || [];
+    if (!itemsToUse || itemsToUse.length === 0) return;
 
     // If no location set, show modal to get location
     if (!zipCode && !location) {
@@ -123,7 +328,9 @@ export default function ShoppingListScreen() {
 
     try {
       setLoadingBestStore(true);
-      const ingredientNames = selectedList.items.map(item => item.name.toLowerCase());
+      const ingredientNames = itemsToUse
+        .filter(item => item && item.name)
+        .map(item => item.name.toLowerCase());
       
       const locationOptions: any = {};
       if (zipCode) {
@@ -140,11 +347,22 @@ export default function ShoppingListScreen() {
     } catch (error: any) {
       // Silently handle - no price data available yet
       // User can try again later when they have cost information
+      console.error('Error finding best store:', error);
       setBestStore(null);
     } finally {
       setLoadingBestStore(false);
     }
-  };
+  }, [selectedList?.items, zipCode, location]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadShoppingLists();
+    await loadIntegrations();
+    if (selectedList) {
+      await findBestStore();
+    }
+    setRefreshing(false);
+  }, [selectedList, findBestStore, loadShoppingLists, loadIntegrations]);
 
   const handleUseGPS = async () => {
     const loc = await requestLocationPermission();
@@ -293,12 +511,26 @@ export default function ShoppingListScreen() {
     }
   };
 
-  const itemsByCategory = selectedList?.items.reduce((acc, item) => {
-    const category = item.category || 'Other';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(item);
-    return acc;
-  }, {} as Record<string, ShoppingListItem[]>) || {};
+  // Get items from selected list - memoized to prevent re-computation
+  const currentItems = useMemo(() => {
+    return selectedList?.items || [];
+  }, [selectedList?.items]);
+  
+  const itemsByCategory = useMemo(() => {
+    try {
+      return currentItems.reduce((acc, item) => {
+        if (item && item.name) {
+          const category = item.category || 'Other';
+          if (!acc[category]) acc[category] = [];
+          acc[category].push(item);
+        }
+        return acc;
+      }, {} as Record<string, ShoppingListItem[]>);
+    } catch (error) {
+      console.error('Error in itemsByCategory:', error);
+      return {};
+    }
+  }, [currentItems]);
 
   if (loading) {
     return (
@@ -333,36 +565,46 @@ export default function ShoppingListScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* List Selector */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-          <View className="flex-row" style={{ gap: 8 }}>
-            {shoppingLists.map((list) => (
-              <TouchableOpacity
-                key={list.id}
-                onPress={() => loadShoppingListDetails(list.id)}
-                className={`px-4 py-2 rounded-lg ${
-                  selectedList?.id === list.id
-                    ? 'bg-orange-500'
-                    : 'bg-gray-100'
-                }`}
-              >
-                <Text
-                  className={`font-semibold ${
-                    selectedList?.id === list.id ? 'text-white' : 'text-gray-700'
-                  }`}
-                >
-                  {list.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* List Selector - Dropdown */}
+        <View className="flex-row items-center" style={{ gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => setShowListPicker(true)}
+            className="flex-1 flex-row items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3"
+          >
+            <View className="flex-1 flex-row items-center">
+              <Ionicons name="list-outline" size={20} color="#6B7280" style={{ marginRight: 8 }} />
+              <Text className="text-gray-900 font-semibold flex-1" numberOfLines={1}>
+                {selectedList?.name || 'Select a list'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-down" size={20} color="#6B7280" />
+          </TouchableOpacity>
+          
+          {selectedList && (
             <TouchableOpacity
-              onPress={handleCreateList}
-              className="px-4 py-2 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300"
+              onPress={handleEditName}
+              className="p-3 bg-gray-100 rounded-lg"
             >
-              <Text className="text-gray-600 font-semibold">+ New List</Text>
+              <Ionicons name="create-outline" size={20} color="#6B7280" />
             </TouchableOpacity>
-          </View>
-        </ScrollView>
+          )}
+          
+          {shoppingLists.length > 1 && (
+            <TouchableOpacity
+              onPress={() => setShowMergeModal(true)}
+              className="p-3 bg-purple-100 rounded-lg"
+            >
+              <Ionicons name="git-merge-outline" size={20} color="#9333EA" />
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity
+            onPress={handleCreateList}
+            className="p-3 bg-orange-500 rounded-lg"
+          >
+            <Ionicons name="add" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {selectedList && (
@@ -385,7 +627,7 @@ export default function ShoppingListScreen() {
                 Shop at <Text className="font-semibold">{bestStore.store}</Text>
                 {bestStore.location && ` (${bestStore.location})`} to save {bestStore.savingsPercent.toFixed(0)}%
               </Text>
-              <Text className="text-sm text-gray-600">
+              <Text className="text-sm text-gray-600 mb-3">
                 Total cost: ${bestStore.totalCost.toFixed(2)}
               </Text>
               {bestStore.location && (
@@ -397,7 +639,7 @@ export default function ShoppingListScreen() {
           )}
 
           {/* Find Best Store Button */}
-          {selectedList.items.length > 0 && (
+          {currentItems.length > 0 && (
             <View className="mx-4 mt-4">
               <TouchableOpacity
                 onPress={findBestStore}
@@ -416,7 +658,7 @@ export default function ShoppingListScreen() {
 
           {/* Items List */}
           <ScrollView className="flex-1">
-            {selectedList.items.length === 0 ? (
+            {currentItems.length === 0 ? (
               <View className="flex-1 items-center justify-center p-8 mt-20">
                 <Ionicons name="cart-outline" size={64} color="#9CA3AF" />
                 <Text className="text-xl font-semibold text-gray-900 mt-4 mb-2">
@@ -584,6 +826,237 @@ export default function ShoppingListScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* List Picker Modal */}
+      <Modal
+        visible={showListPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowListPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowListPicker(false)}
+          className="flex-1 bg-black/50 justify-center items-center px-4"
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            className="bg-white rounded-lg w-full max-w-sm shadow-lg"
+          >
+            <View className="p-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-900">Select Shopping List</Text>
+            </View>
+            
+            <ScrollView className="max-h-80">
+              {shoppingLists.map((list) => (
+                <TouchableOpacity
+                  key={list.id}
+                  onPress={() => handleSelectList(list.id)}
+                  className={`px-4 py-3 flex-row items-center border-b border-gray-100 ${
+                    selectedList?.id === list.id ? 'bg-orange-50' : 'bg-white'
+                  }`}
+                >
+                  <Ionicons 
+                    name={selectedList?.id === list.id ? "checkmark-circle" : "ellipse-outline"} 
+                    size={20} 
+                    color={selectedList?.id === list.id ? "#F97316" : "#9CA3AF"} 
+                    style={{ marginRight: 12 }}
+                  />
+                  <View className="flex-1">
+                    <Text className={`text-base ${selectedList?.id === list.id ? 'text-orange-600 font-semibold' : 'text-gray-900'}`}>
+                      {list.name}
+                    </Text>
+                    <Text className="text-xs text-gray-500 mt-1">
+                      {list.items?.length || 0} items
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              
+              {shoppingLists.length === 0 && (
+                <View className="px-4 py-8 items-center">
+                  <Ionicons name="cart-outline" size={48} color="#9CA3AF" />
+                  <Text className="text-gray-500 mt-4 text-center">No shopping lists yet</Text>
+                </View>
+              )}
+            </ScrollView>
+            
+            <TouchableOpacity
+              onPress={() => {
+                setShowListPicker(false);
+                handleCreateList();
+              }}
+              className="px-4 py-3 border-t border-gray-200 flex-row items-center justify-center bg-orange-50"
+            >
+              <Ionicons name="add-circle-outline" size={20} color="#F97316" style={{ marginRight: 8 }} />
+              <Text className="text-orange-600 font-semibold">Create New List</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Edit Name Modal */}
+      <Modal
+        visible={showEditNameModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEditNameModal(false)}
+      >
+        <View className="flex-1 bg-black/50 items-center justify-center px-4">
+          <View className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <Text className="text-lg font-semibold text-gray-900 mb-2">
+              Edit List Name
+            </Text>
+            
+            <TextInput
+              value={editingListName}
+              onChangeText={setEditingListName}
+              placeholder="Enter list name"
+              className="border border-gray-300 rounded-lg px-4 py-3 mb-4 text-gray-900"
+              autoFocus={true}
+              maxLength={100}
+            />
+            
+            <View className="flex-row space-x-3">
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowEditNameModal(false);
+                  setEditingListName('');
+                }}
+                disabled={updatingName}
+                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg"
+              >
+                <Text className="text-gray-700 font-medium text-center">Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={handleSaveName}
+                disabled={updatingName}
+                className={`flex-1 py-3 px-4 bg-orange-500 rounded-lg ${updatingName ? 'opacity-50' : ''}`}
+              >
+                <Text className="text-white font-medium text-center">
+                  {updatingName ? 'Saving...' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Merge Lists Modal */}
+      <Modal
+        visible={showMergeModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowMergeModal(false);
+          setSelectedListsForMerge(new Set());
+          setMergeName('Weekly Shopping');
+        }}
+      >
+        <View className="flex-1 bg-black/50 items-center justify-center px-4">
+          <View className="bg-white rounded-lg p-6 w-full max-w-sm max-h-[80%]">
+            <Text className="text-lg font-semibold text-gray-900 mb-2">
+              Merge Shopping Lists
+            </Text>
+            <Text className="text-gray-600 mb-2 text-sm">
+              Select at least 2 lists to combine into a new weekly shopping list
+            </Text>
+            {selectedListsForMerge.size > 0 && (
+              <Text className="text-orange-600 mb-4 text-sm font-medium">
+                {selectedListsForMerge.size} list{selectedListsForMerge.size !== 1 ? 's' : ''} selected
+              </Text>
+            )}
+            
+            <ScrollView className="max-h-64 mb-4">
+              {shoppingLists.map((list) => {
+                const isSelected = selectedListsForMerge.has(list.id);
+                return (
+                  <TouchableOpacity
+                    key={list.id}
+                    onPress={() => {
+                      const newSet = new Set(selectedListsForMerge);
+                      if (isSelected) {
+                        newSet.delete(list.id);
+                      } else {
+                        newSet.add(list.id);
+                      }
+                      setSelectedListsForMerge(newSet);
+                    }}
+                    className={`px-4 py-3 flex-row items-center border-b border-gray-100 ${
+                      isSelected ? 'bg-orange-50' : 'bg-white'
+                    }`}
+                  >
+                    <Ionicons 
+                      name={isSelected ? "checkmark-circle" : "ellipse-outline"} 
+                      size={20} 
+                      color={isSelected ? "#F97316" : "#9CA3AF"} 
+                      style={{ marginRight: 12 }}
+                    />
+                    <View className="flex-1">
+                      <Text className={`text-base ${isSelected ? 'text-orange-600 font-semibold' : 'text-gray-900'}`}>
+                        {list.name}
+                      </Text>
+                      <Text className="text-xs text-gray-500 mt-1">
+                        {list.items?.length || 0} items
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {selectedListsForMerge.size >= 2 && (
+              <View className="mb-4">
+                <Text className="text-sm font-medium text-gray-700 mb-2">Name for merged list:</Text>
+                <TextInput
+                  value={mergeName}
+                  onChangeText={setMergeName}
+                  placeholder="e.g., Weekly Shopping, Grocery Run"
+                  className="border border-gray-300 rounded-lg px-4 py-3 text-gray-900"
+                />
+              </View>
+            )}
+            
+            <View className="flex-row space-x-3">
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowMergeModal(false);
+                  setSelectedListsForMerge(new Set());
+                  setMergeName('Weekly Shopping');
+                }}
+                disabled={mergingLists}
+                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg"
+              >
+                <Text className="text-gray-700 font-medium text-center">Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={handleConfirmMerge}
+                disabled={mergingLists || selectedListsForMerge.size < 2}
+                className={`flex-1 py-3 px-4 rounded-lg ${
+                  (mergingLists || selectedListsForMerge.size < 2) 
+                    ? 'bg-gray-300' 
+                    : 'bg-purple-500'
+                }`}
+              >
+                <Text className={`font-medium text-center ${
+                  (mergingLists || selectedListsForMerge.size < 2)
+                    ? 'text-gray-500'
+                    : 'text-white'
+                }`}>
+                  {mergingLists 
+                    ? 'Merging...' 
+                    : selectedListsForMerge.size < 2
+                    ? `Select ${2 - selectedListsForMerge.size} more list${2 - selectedListsForMerge.size !== 1 ? 's' : ''}`
+                    : 'Merge Lists'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Location Modal */}
       <Modal

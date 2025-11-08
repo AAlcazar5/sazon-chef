@@ -3,6 +3,7 @@
 
 import { Request, Response } from 'express';
 import { foodRecognitionService } from '@/services/foodRecognitionService';
+import { getUserId } from '@/utils/authHelper';
 import multer from 'multer';
 
 // Configure multer for memory storage (we'll process images in memory)
@@ -27,7 +28,7 @@ export const scannerController = {
    */
   async recognizeFood(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       console.log('📸 POST /api/scanner/recognize-food called');
 
       if (!req.file) {
@@ -62,7 +63,7 @@ export const scannerController = {
    */
   async scanBarcode(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { barcode } = req.body;
 
       console.log('📱 POST /api/scanner/scan-barcode called:', barcode);

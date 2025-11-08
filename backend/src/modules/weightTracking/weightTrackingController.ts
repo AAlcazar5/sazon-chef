@@ -3,19 +3,23 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { getUserId } from '@/utils/authHelper';
 import {
   calculateWeightGoal,
-  calculateStepRequirement,
   calculateWeightProgress,
-  adjustCaloriesForProgress,
+  calculateStepsForCalories,
+  calculateCaloriesFromSteps,
 } from '@/utils/weightGoalCalculator';
+import type { PhysicalProfile } from '@/utils/nutritionCalculator';
 
 // Extend Express Request type to include user
+// Note: This should match the type in authMiddleware.ts
 declare global {
   namespace Express {
     interface Request {
       user?: {
         id: string;
+        email: string;
       };
     }
   }
@@ -25,7 +29,7 @@ export const weightTrackingController = {
   // Log weight
   async logWeight(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       const { date, weightKg, notes } = req.body;
 
       console.log('⚖️ POST /api/weight-tracking/log called');
@@ -83,7 +87,7 @@ export const weightTrackingController = {
   // Get weight history
   async getWeightHistory(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       const days = parseInt(req.query.days as string) || 30;
 
       console.log(`⚖️ GET /api/weight-tracking/history called (${days} days)`);
@@ -114,7 +118,7 @@ export const weightTrackingController = {
   // Get latest weight
   async getLatestWeight(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
 
       console.log('⚖️ GET /api/weight-tracking/latest called');
 
@@ -143,7 +147,7 @@ export const weightTrackingController = {
   // Create or update weight goal
   async setWeightGoal(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       const { targetWeightKg, weeksToGoal, goalType } = req.body;
 
       console.log('⚖️ POST /api/weight-tracking/goal called');
@@ -176,28 +180,41 @@ export const weightTrackingController = {
         });
       }
 
+      // Calculate target date from weeks
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + (weeksToGoal * 7));
+
+      // Get user physical profile for calculations
+      const physicalProfileData = await prisma.userPhysicalProfile.findFirst({
+        where: { userId }
+      });
+
+      const userProfileForCalc: PhysicalProfile = physicalProfileData ? {
+        weightKg: physicalProfileData.weightKg,
+        heightCm: physicalProfileData.heightCm,
+        age: physicalProfileData.age,
+        gender: physicalProfileData.gender,
+        activityLevel: physicalProfileData.activityLevel,
+        fitnessGoal: physicalProfileData.fitnessGoal,
+      } : {
+        weightKg: currentWeightKg,
+        heightCm: 170,
+        age: 30,
+        gender: 'male',
+        activityLevel: 'sedentary',
+        fitnessGoal: 'maintain',
+      };
+
       // Calculate weight goal
       const weightGoal = calculateWeightGoal(
         currentWeightKg,
         targetWeightKg,
-        weeksToGoal,
-        goalType || (targetWeightKg < currentWeightKg ? 'lose_weight' : 'gain_weight')
+        targetDate,
+        userProfileForCalc
       );
 
-      // Get user profile for step calculation
-      const userProfile = physicalProfile ? {
-        weightKg: physicalProfile.weightKg,
-        heightCm: physicalProfile.heightCm,
-        age: physicalProfile.age,
-        gender: physicalProfile.gender,
-        tdee: physicalProfile.tdee || undefined,
-      } : null;
-
-      // Calculate step requirements
-      let stepRequirement = null;
-      if (userProfile) {
-        stepRequirement = calculateStepRequirement(weightGoal, userProfile);
-      }
+      // Calculate step requirements from weightGoal
+      let stepRequirement = weightGoal.requiredStepsPerDay || null;
 
       // Store weight goal
       const { randomUUID } = require('crypto');
@@ -211,6 +228,8 @@ export const weightTrackingController = {
       `;
 
       // Insert new goal
+      // Note: Using raw SQL because the Prisma schema may not match the database structure
+      // The WeightGoal type from weightGoalCalculator has different fields
       await prisma.$executeRaw`
         INSERT INTO weight_goals (
           id, userId, targetWeightKg, startWeightKg, startDate, targetDate,
@@ -219,10 +238,11 @@ export const weightTrackingController = {
           createdAt, updatedAt
         )
         VALUES (
-          ${goalId}, ${userId}, ${weightGoal.targetWeightKg}, ${weightGoal.startWeightKg},
-          ${weightGoal.startDate}, ${weightGoal.targetDate},
-          ${weightGoal.goalType}, ${weightGoal.targetWeightChangeKg}, ${weightGoal.weeksToGoal},
-          ${weightGoal.weeklyWeightChangeKg}, ${weightGoal.dailyCalorieDeficit}, 1,
+          ${goalId}, ${userId}, ${weightGoal.targetWeightKg}, ${currentWeightKg},
+          datetime('now'), ${weightGoal.targetDate.toISOString()},
+          ${goalType || (weightGoal.targetWeightKg < currentWeightKg ? 'lose_weight' : 'gain_weight')}, 
+          ${weightGoal.totalWeightChangeKg}, ${weightGoal.weeksToGoal},
+          ${weightGoal.totalWeightChangeKg / weightGoal.weeksToGoal}, ${weightGoal.dailyCalorieDeficit}, 1,
           datetime('now'), datetime('now')
         )
       `;
@@ -249,7 +269,7 @@ export const weightTrackingController = {
   // Get active weight goal
   async getActiveWeightGoal(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
 
       console.log('⚖️ GET /api/weight-tracking/goal called');
 
@@ -295,21 +315,39 @@ export const weightTrackingController = {
         dailyCalorieDeficit: goal.dailyCalorieDeficit,
       };
 
-      const progress = calculateWeightProgress(currentWeightKg, weightGoal);
+      // Get weight history for progress calculation
+      const weightHistoryData = await prisma.$queryRaw`
+        SELECT weightKg, date
+        FROM weight_logs
+        WHERE userId = ${userId}
+        ORDER BY date DESC
+        LIMIT 30
+      ` as Array<{ weightKg: number; date: Date }>;
+      
+      const progress = calculateWeightProgress(
+        currentWeightKg,
+        goal.targetWeightKg,
+        new Date(goal.targetDate),
+        weightHistoryData.map(w => ({ weightKg: w.weightKg, date: new Date(w.date) }))
+      );
 
       // Get user profile for step calculation
       const physicalProfile = await prisma.userPhysicalProfile.findFirst({
         where: { userId },
       });
 
+      // Calculate step requirement from goal's daily calorie deficit
+      // Estimate that 30% of deficit can come from steps
       let stepRequirement = null;
       if (physicalProfile) {
-        stepRequirement = calculateStepRequirement(weightGoal, {
+        const caloriesFromSteps = Math.abs(goal.dailyCalorieDeficit) * 0.3;
+        stepRequirement = calculateStepsForCalories(caloriesFromSteps, {
           weightKg: physicalProfile.weightKg,
           heightCm: physicalProfile.heightCm,
           age: physicalProfile.age,
           gender: physicalProfile.gender,
-          tdee: physicalProfile.tdee || undefined,
+          activityLevel: physicalProfile.activityLevel,
+          fitnessGoal: physicalProfile.fitnessGoal,
         });
       }
 
@@ -333,7 +371,7 @@ export const weightTrackingController = {
   // Get weight progress
   async getWeightProgress(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
 
       console.log('⚖️ GET /api/weight-tracking/progress called');
 
@@ -379,7 +417,21 @@ export const weightTrackingController = {
         dailyCalorieDeficit: goal.dailyCalorieDeficit,
       };
 
-      const progress = calculateWeightProgress(currentWeightKg, weightGoal);
+      // Get weight history for progress calculation
+      const weightHistoryData = await prisma.$queryRaw`
+        SELECT weightKg, date
+        FROM weight_logs
+        WHERE userId = ${userId}
+        ORDER BY date DESC
+        LIMIT 30
+      ` as Array<{ weightKg: number; date: Date }>;
+      
+      const progress = calculateWeightProgress(
+        currentWeightKg,
+        goal.targetWeightKg,
+        new Date(goal.targetDate),
+        weightHistoryData.map(w => ({ weightKg: w.weightKg, date: new Date(w.date) }))
+      );
 
       // Calculate adjusted calories based on progress
       const physicalProfile = await prisma.userPhysicalProfile.findFirst({
@@ -389,7 +441,15 @@ export const weightTrackingController = {
       let adjustedCalories = null;
       if (physicalProfile && physicalProfile.tdee) {
         const baseCalorieTarget = physicalProfile.tdee + goal.dailyCalorieDeficit;
-        adjustedCalories = adjustCaloriesForProgress(baseCalorieTarget, progress, weightGoal);
+        // Simple adjustment based on progress
+        // If ahead of schedule, reduce deficit; if behind, increase deficit
+        const progressFactor = progress.progressPercentage / 100;
+        const startDate = new Date(goal.startDate);
+        const targetDate = new Date(goal.targetDate);
+        const expectedProgress = (Date.now() - startDate.getTime()) / 
+                                 (targetDate.getTime() - startDate.getTime());
+        const adjustment = (progressFactor - expectedProgress) * 100; // Adjust by up to 100 calories
+        adjustedCalories = baseCalorieTarget + adjustment;
       }
 
       res.json({

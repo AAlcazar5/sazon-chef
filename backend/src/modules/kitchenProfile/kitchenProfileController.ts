@@ -1,13 +1,14 @@
 // backend/src/modules/kitchenProfile/kitchenProfileController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { getUserId } from '@/utils/authHelper';
 
 export const kitchenProfileController = {
   // Get user's kitchen profile
   async getKitchenProfile(req: Request, res: Response) {
     try {
       console.log('🏠 GET /api/kitchen-profile - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       // Get user's kitchen profile (we'll store this in user preferences for now)
       const userPreferences = await prisma.userPreferences.findFirst({
@@ -48,7 +49,7 @@ export const kitchenProfileController = {
   async updateKitchenProfile(req: Request, res: Response) {
     try {
       console.log('🏠 PUT /api/kitchen-profile - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       const {
         availableIngredients,
@@ -105,7 +106,7 @@ export const kitchenProfileController = {
   async addIngredient(req: Request, res: Response) {
     try {
       console.log('🥕 POST /api/kitchen-profile/ingredients - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       const {
         ingredient,
@@ -152,7 +153,7 @@ export const kitchenProfileController = {
     try {
       console.log('🗑️ DELETE /api/kitchen-profile/ingredients/:ingredient - METHOD CALLED');
       const { ingredient } = req.params;
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       // For now, return success
       // TODO: Implement actual ingredient removal
@@ -178,7 +179,7 @@ export const kitchenProfileController = {
     try {
       console.log('💡 GET /api/kitchen-profile/suggestions/:recipeId - METHOD CALLED');
       const { recipeId } = req.params;
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       // Get recipe details
       const recipe = await prisma.recipe.findUnique({
@@ -215,8 +216,9 @@ export const kitchenProfileController = {
       };
       
       // Generate ingredient suggestions
-      const { generateIngredientSuggestions } = await import('@/utils/enhancedScoring');
-      const suggestions = generateIngredientSuggestions(recipe, userKitchenProfile);
+      // TODO: Implement generateIngredientSuggestions in enhancedScoring
+      // For now, return empty suggestions
+      const suggestions: string[] = [];
       
       console.log(`✅ Generated ingredient suggestions for recipe: ${recipe.title}`);
       
@@ -239,7 +241,7 @@ export const kitchenProfileController = {
   async getOptimalRecipes(req: Request, res: Response) {
     try {
       console.log('🎯 GET /api/kitchen-profile/optimal-recipes - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       const {
         availableTime = '30',
@@ -282,13 +284,12 @@ export const kitchenProfileController = {
       });
       
       // Calculate optimal recipes using enhanced scoring
-      const { getOptimalRecipes } = await import('@/utils/enhancedScoring');
-      const optimalRecipes = getOptimalRecipes(
-        recipes,
-        cookTimeContext,
-        userKitchenProfile,
-        parseInt(limit as string)
-      );
+      // TODO: Implement getOptimalRecipes in enhancedScoring
+      // For now, return recipes sorted by cook time
+      const optimalRecipes = recipes
+        .filter(r => r.cookTime <= cookTimeContext.availableTime)
+        .sort((a, b) => (a.cookTime || 0) - (b.cookTime || 0))
+        .slice(0, parseInt(limit as string));
       
       console.log(`✅ Found ${optimalRecipes.length} optimal recipes`);
       

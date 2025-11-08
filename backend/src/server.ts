@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { app } from './app';
+import { initializeAutoBackup } from './utils/autoBackup';
 import { prisma } from '@/lib/prisma';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -49,6 +50,9 @@ const server = app.listen(PORT, HOST, async () => {
     // Test database connection
     await prisma.$connect();
     console.log('✅ Database connected successfully');
+    
+    // Initialize automatic recipe backups
+    await initializeAutoBackup();
     
     console.log(`🚀 Sazon Chef API server running on http://${HOST}:${PORT}`);
     console.log(`📊 Health check available at http://${HOST}:${PORT}/health`);

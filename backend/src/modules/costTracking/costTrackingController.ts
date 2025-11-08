@@ -3,6 +3,7 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
+import { getUserId } from '../../utils/authHelper';
 import { calculateRecipeCost, isWithinBudget, calculateCostScore } from '../../utils/costCalculator';
 
 export const costTrackingController = {
@@ -12,7 +13,7 @@ export const costTrackingController = {
    */
   async getRecipeCost(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { id } = req.params;
 
       const result = await calculateRecipeCost(id, userId);
@@ -30,7 +31,7 @@ export const costTrackingController = {
    */
   async updateRecipeCost(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { id } = req.params;
       const { estimatedCost, estimatedCostPerServing } = req.body;
 
@@ -76,7 +77,7 @@ export const costTrackingController = {
    */
   async getIngredientCosts(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
 
       const costs = await prisma.ingredientCost.findMany({
         where: { userId },
@@ -96,7 +97,7 @@ export const costTrackingController = {
    */
   async upsertIngredientCost(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { ingredientName, unitCost, unit, store, location } = req.body;
 
       if (!ingredientName || unitCost === undefined) {
@@ -148,7 +149,7 @@ export const costTrackingController = {
    */
   async deleteIngredientCost(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { id } = req.params;
 
       const cost = await prisma.ingredientCost.findFirst({
@@ -176,7 +177,7 @@ export const costTrackingController = {
    */
   async getBudget(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
 
       const preferences = await prisma.userPreferences.findUnique({
         where: { userId },
@@ -206,7 +207,7 @@ export const costTrackingController = {
    */
   async updateBudget(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { maxRecipeCost, maxMealCost, maxDailyFoodBudget, currency } = req.body;
 
       // Get or create preferences

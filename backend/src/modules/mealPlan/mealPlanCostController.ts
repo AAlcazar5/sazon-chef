@@ -2,6 +2,7 @@
 // Cost optimization endpoints for meal plans
 
 import { Request, Response } from 'express';
+import { getUserId } from '../../utils/authHelper';
 import { analyzeMealPlanCost, optimizeMealPlanCost, findCheaperAlternatives } from '../../utils/mealPlanCostOptimizer';
 
 /**
@@ -10,7 +11,7 @@ import { analyzeMealPlanCost, optimizeMealPlanCost, findCheaperAlternatives } fr
  */
 export const getMealPlanCostAnalysis = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { id } = req.params;
     const { maxDailyBudget, maxWeeklyBudget, maxMealCost } = req.query;
 
@@ -35,7 +36,7 @@ export const getMealPlanCostAnalysis = async (req: Request, res: Response) => {
  */
 export const optimizeMealPlan = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { id } = req.params;
     const { maxDailyBudget, maxWeeklyBudget, maxMealCost, prioritizeCost, allowSubstitutions } = req.body;
 
@@ -62,7 +63,7 @@ export const optimizeMealPlan = async (req: Request, res: Response) => {
  */
 export const getCheaperAlternatives = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
     const { recipeId } = req.params;
     const { maxCost } = req.query;
 

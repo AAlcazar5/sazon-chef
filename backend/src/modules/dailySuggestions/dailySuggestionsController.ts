@@ -1,6 +1,7 @@
 // backend/src/modules/dailySuggestions/dailySuggestionsController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { getUserId } from '@/utils/authHelper';
 import { generateDailySuggestions, getDailySuggestionInsights } from '@/utils/dailySuggestions';
 import { getCurrentTemporalContext, analyzeUserTemporalPatterns } from '@/utils/temporalScoring';
 import { getUserBehaviorData } from '../recipe/recipeController';
@@ -10,7 +11,7 @@ export const dailySuggestionsController = {
   async getDailySuggestions(req: Request, res: Response) {
     try {
       console.log('📅 GET /api/daily-suggestions - METHOD CALLED');
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       
       // Get user data
       const [userPreferences, macroGoals] = await Promise.all([
@@ -121,7 +122,7 @@ export const dailySuggestionsController = {
   async getMealSuggestions(req: Request, res: Response) {
     try {
       const { mealType } = req.params;
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       if (!['breakfast', 'lunch', 'dinner', 'snack'].includes(mealType)) {
         return res.status(400).json({ error: 'Invalid meal type' });

@@ -3,23 +3,15 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { getUserId } from '@/utils/authHelper';
 
-// Extend Express Request type to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-      };
-    }
-  }
-}
+// Note: Request.user type is declared in authMiddleware.ts
 
 export const healthMetricsController = {
   // Store health metrics data
   async storeHealthMetrics(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       const {
         date,
         steps,
@@ -76,7 +68,7 @@ export const healthMetricsController = {
   // Get recent health metrics
   async getRecentHealthMetrics(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       const days = parseInt(req.query.days as string) || 7;
 
       console.log(`💓 GET /api/health-metrics/recent called (${days} days)`);
@@ -107,7 +99,7 @@ export const healthMetricsController = {
   // Get today's health metrics
   async getTodaysHealthMetrics(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
 
       console.log('💓 GET /api/health-metrics/today called');
 

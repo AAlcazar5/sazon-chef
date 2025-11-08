@@ -2,12 +2,14 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import '../global.css';
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
   const router = useRouter();
   const segments = useSegments();
+  const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     checkOnboarding();
@@ -24,12 +26,28 @@ export default function RootLayout() {
   };
 
   useEffect(() => {
-    if (isOnboardingComplete === null) return; // Still loading
+    if (isOnboardingComplete === null || isLoading) return; // Still loading
 
+    const inAuth = segments[0] === 'login' || segments[0] === 'register';
     const inOnboarding = segments[0] === 'onboarding';
+    const inTabs = segments[0] === '(tabs)';
 
-    if (!isOnboardingComplete && !inOnboarding) {
-      // User hasn't completed onboarding, redirect to onboarding
+    // Check authentication first
+    if (!isAuthenticated && !inAuth && !inOnboarding) {
+      // User is not authenticated and not on auth/onboarding screens
+      router.replace('/login');
+      return;
+    }
+
+    if (isAuthenticated && inAuth) {
+      // User is authenticated but on auth screen, redirect to tabs
+      router.replace('/(tabs)');
+      return;
+    }
+
+    // Then check onboarding
+    if (isAuthenticated && !isOnboardingComplete && !inOnboarding) {
+      // User is authenticated but hasn't completed onboarding
       router.replace('/onboarding');
     } else if (isOnboardingComplete && inOnboarding && segments.length === 1) {
       // User has completed onboarding but is on onboarding screen (without edit param)
@@ -37,10 +55,10 @@ export default function RootLayout() {
       // router.replace('/(tabs)');
       // Actually, let's not redirect here - they might be intentionally redoing onboarding
     }
-  }, [isOnboardingComplete, segments]);
+  }, [isOnboardingComplete, segments, isAuthenticated, isLoading]);
 
-  if (isOnboardingComplete === null) {
-    // Show loading screen while checking onboarding status
+  if (isOnboardingComplete === null || isLoading) {
+    // Show loading screen while checking onboarding/authentication status
     return null;
   }
 
@@ -97,7 +115,29 @@ export default function RootLayout() {
             headerShown: false
           }} 
         />
+        <Stack.Screen 
+          name="login" 
+          options={{ 
+            headerShown: false,
+            presentation: 'modal'
+          }} 
+        />
+        <Stack.Screen 
+          name="register" 
+          options={{ 
+            headerShown: false,
+            presentation: 'modal'
+          }} 
+        />
       </Stack>
     </SafeAreaProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
   );
 }

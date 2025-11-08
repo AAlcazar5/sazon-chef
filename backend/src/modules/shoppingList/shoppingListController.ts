@@ -3,6 +3,7 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
+import { getUserId } from '../../utils/authHelper';
 
 export const shoppingListController = {
   /**
@@ -11,7 +12,7 @@ export const shoppingListController = {
    */
   async getShoppingLists(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
 
       const shoppingLists = await prisma.shoppingList.findMany({
         where: { userId },
@@ -36,7 +37,7 @@ export const shoppingListController = {
    */
   async getShoppingList(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { id } = req.params;
 
       const shoppingList = await prisma.shoppingList.findFirst({
@@ -65,13 +66,13 @@ export const shoppingListController = {
    */
   async createShoppingList(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { name } = req.body;
 
       const shoppingList = await prisma.shoppingList.create({
         data: {
           userId,
-          name: name || 'My Shopping List',
+          name: name || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         },
         include: {
           items: true,
@@ -91,7 +92,7 @@ export const shoppingListController = {
    */
   async updateShoppingList(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { id } = req.params;
       const { name, isActive } = req.body;
 
@@ -129,7 +130,7 @@ export const shoppingListController = {
    */
   async deleteShoppingList(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { id } = req.params;
 
       const shoppingList = await prisma.shoppingList.findFirst({
@@ -157,7 +158,7 @@ export const shoppingListController = {
    */
   async addItem(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { id } = req.params;
       const { name, quantity, category, notes } = req.body;
 
@@ -196,7 +197,7 @@ export const shoppingListController = {
    */
   async updateItem(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { listId, itemId } = req.params;
       const { name, quantity, category, purchased, notes } = req.body;
 
@@ -240,7 +241,7 @@ export const shoppingListController = {
    */
   async deleteItem(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { listId, itemId } = req.params;
 
       const shoppingList = await prisma.shoppingList.findFirst({
@@ -268,8 +269,8 @@ export const shoppingListController = {
    */
   async generateFromRecipes(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
-      const { recipeIds, shoppingListId } = req.body;
+      const userId = getUserId(req);
+      const { recipeIds, shoppingListId, name } = req.body;
 
       if (!recipeIds || !Array.isArray(recipeIds) || recipeIds.length === 0) {
         return res.status(400).json({ error: 'Recipe IDs are required' });
@@ -358,10 +359,12 @@ export const shoppingListController = {
           return res.status(404).json({ error: 'Shopping list not found' });
         }
       } else {
+        // Use provided name or default to date
+        const listName = name || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         shoppingList = await prisma.shoppingList.create({
           data: {
             userId,
-            name: `Shopping List - ${new Date().toLocaleDateString()}`,
+            name: listName,
           },
         });
       }
@@ -425,8 +428,8 @@ export const shoppingListController = {
    */
   async generateFromMealPlan(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
-      const { mealPlanId, shoppingListId, startDate, endDate, recipeIds } = req.body;
+      const userId = getUserId(req);
+      const { mealPlanId, shoppingListId, startDate, endDate, recipeIds, name } = req.body;
 
       // If recipe IDs are provided directly, use them instead of looking for meal plan
       if (recipeIds && Array.isArray(recipeIds) && recipeIds.length > 0) {
@@ -474,10 +477,12 @@ export const shoppingListController = {
             return res.status(404).json({ error: 'Shopping list not found' });
           }
         } else {
+          // Use provided name, meal plan name, or default to date
+          const listName = name || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           shoppingList = await prisma.shoppingList.create({
             data: {
               userId,
-              name: `Shopping List - ${new Date().toLocaleDateString()}`,
+              name: listName,
             },
           });
         }
@@ -700,10 +705,10 @@ export const shoppingListController = {
           return res.status(404).json({ error: 'Shopping list not found' });
         }
       } else {
-        // Create shopping list with meal plan name
-        const listName = mealPlan.name 
-          ? `Shopping List - ${mealPlan.name}`
-          : `Shopping List - ${new Date().toLocaleDateString()}`;
+        // Use provided name, meal plan name, or default to date
+        const listName = name || (mealPlan.name 
+          ? mealPlan.name
+          : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
 
         shoppingList = await prisma.shoppingList.create({
           data: {
