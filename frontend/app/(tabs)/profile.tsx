@@ -1,12 +1,14 @@
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import { userApi } from '../../lib/api';
+import { userApi, authApi } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 import type { UserProfile, UserNotifications } from '../../types';
 
 export default function ProfileScreen() {
+  const { logout, user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [notifications, setNotifications] = useState<UserNotifications>({
     mealReminders: true,
@@ -15,6 +17,11 @@ export default function ProfileScreen() {
   });
   const [loading, setLoading] = useState(true);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Load profile data
   const loadProfile = async () => {
@@ -103,6 +110,90 @@ export default function ProfileScreen() {
     console.log('Clear history');
   };
 
+  const handleChangePassword = () => {
+    // Only show password change for users with password (not social login)
+    if (user?.provider) {
+      Alert.alert(
+        'Social Login Account',
+        'Password changes are not available for social login accounts. Please change your password through your social provider.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowPasswordModal(true);
+  };
+
+  const handleConfirmPasswordChange = async () => {
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      Alert.alert('Error', 'New password must be at least 8 characters long');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      Alert.alert('Error', 'New password must be different from current password');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      Alert.alert('Success', 'Password changed successfully', [
+        {
+          text: 'OK',
+          onPress: () => {
+            setShowPasswordModal(false);
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+          },
+        },
+      ]);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to change password';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              router.replace('/login');
+            } catch (error: any) {
+              Alert.alert('Error', 'Failed to sign out');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Loading state
   if (loading || !profile) {
     return (
@@ -165,24 +256,41 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
           
-          <View className="space-y-2">
-            <View className="flex-row justify-between">
-              <Text className="text-gray-600">Calories</Text>
-              <Text className="font-semibold text-gray-900">{profile.macroGoals.calories} cal</Text>
+          {profile.macroGoals ? (
+            <View className="space-y-2">
+              <View className="flex-row justify-between">
+                <Text className="text-gray-600">Calories</Text>
+                <Text className="font-semibold text-gray-900">{profile.macroGoals.calories} cal</Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-gray-600">Protein</Text>
+                <Text className="font-semibold text-gray-900">{profile.macroGoals.protein}g</Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-gray-600">Carbs</Text>
+                <Text className="font-semibold text-gray-900">{profile.macroGoals.carbs}g</Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-gray-600">Fat</Text>
+                <Text className="font-semibold text-gray-900">{profile.macroGoals.fat}g</Text>
+              </View>
             </View>
-            <View className="flex-row justify-between">
-              <Text className="text-gray-600">Protein</Text>
-              <Text className="font-semibold text-gray-900">{profile.macroGoals.protein}g</Text>
-            </View>
-            <View className="flex-row justify-between">
-              <Text className="text-gray-600">Carbs</Text>
-              <Text className="font-semibold text-gray-900">{profile.macroGoals.carbs}g</Text>
-            </View>
-            <View className="flex-row justify-between">
-              <Text className="text-gray-600">Fat</Text>
-              <Text className="font-semibold text-gray-900">{profile.macroGoals.fat}g</Text>
-            </View>
-          </View>
+          ) : (
+            <TouchableOpacity 
+              onPress={handleEditGoals}
+              className="bg-gradient-to-r from-orange-50 to-red-50 p-3 rounded-lg border border-orange-200"
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="target" size={20} color="#F97316" />
+                <Text className="text-orange-900 font-medium ml-2">
+                  Set up your macro goals
+                </Text>
+              </View>
+              <Text className="text-orange-700 text-xs mt-1">
+                Get personalized recipe recommendations based on your nutrition goals
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Culinary Preferences Section */}
@@ -231,7 +339,9 @@ export default function ProfileScreen() {
             
             <View className="flex-row justify-between items-center">
               <Text className="text-gray-600">Max Cook Time</Text>
-              <Text className="font-semibold text-gray-900">{profile.preferences.cookTimePreference} min</Text>
+              <Text className="font-semibold text-gray-900">
+                {profile.preferences?.cookTimePreference ? `${profile.preferences.cookTimePreference} min` : 'Not set'}
+              </Text>
             </View>
           </View>
         </View>
@@ -347,6 +457,115 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Account Section */}
+        <View className="bg-white rounded-xl p-4 m-4 shadow-sm border border-gray-100">
+          <Text className="text-lg font-semibold text-gray-900 mb-3">Account</Text>
+          
+          {!user?.provider && (
+            <TouchableOpacity 
+              className="flex-row items-center justify-between py-3 border-b border-gray-100"
+              onPress={handleChangePassword}
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="lock-closed-outline" size={20} color="#6B7280" />
+                <Text className="text-gray-900 ml-3">Change Password</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity 
+            className="flex-row items-center justify-between py-3"
+            onPress={handleLogout}
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+              <Text className="text-red-600 ml-3 font-medium">Sign Out</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Password Change Modal */}
+        <Modal
+          visible={showPasswordModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowPasswordModal(false)}
+        >
+          <View className="flex-1 bg-black bg-opacity-50 items-center justify-center px-4">
+            <View className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <Text className="text-lg font-semibold text-gray-900 mb-2">
+                Change Password
+              </Text>
+              
+              <View className="mb-4">
+                <Text className="text-sm font-medium text-gray-700 mb-2">Current Password</Text>
+                <TextInput
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholder="Enter current password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  className="border border-gray-300 rounded-lg px-4 py-3 text-gray-900"
+                />
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-sm font-medium text-gray-700 mb-2">New Password</Text>
+                <TextInput
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Enter new password (min 8 characters)"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  className="border border-gray-300 rounded-lg px-4 py-3 text-gray-900"
+                />
+              </View>
+
+              <View className="mb-6">
+                <Text className="text-sm font-medium text-gray-700 mb-2">Confirm New Password</Text>
+                <TextInput
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirm new password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  className="border border-gray-300 rounded-lg px-4 py-3 text-gray-900"
+                />
+              </View>
+              
+              <View className="flex-row space-x-3">
+                <TouchableOpacity 
+                  onPress={() => {
+                    setShowPasswordModal(false);
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                  disabled={changingPassword}
+                  className="flex-1 py-3 px-4 border border-gray-300 rounded-lg"
+                >
+                  <Text className="text-gray-700 font-medium text-center">Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  onPress={handleConfirmPasswordChange}
+                  disabled={changingPassword}
+                  className={`flex-1 py-3 px-4 bg-orange-500 rounded-lg ${changingPassword ? 'opacity-50' : ''}`}
+                >
+                  <Text className="text-white font-medium text-center">
+                    {changingPassword ? 'Changing...' : 'Change Password'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );

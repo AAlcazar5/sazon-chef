@@ -145,11 +145,17 @@ api.interceptors.response.use(
   }
 );
 
-// Helper function to get auth token (to be implemented based on your auth system)
+// Helper function to get auth token from SecureStore
+// This is called synchronously in the interceptor, so we need to handle it carefully
+// For now, we'll use a module-level variable that gets updated by AuthContext
+let currentAuthToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  currentAuthToken = token;
+}
+
 function getAuthToken(): string | null {
-  // TODO: Implement based on your auth storage (AsyncStorage, SecureStore, etc.)
-  // Example: return await AsyncStorage.getItem('auth_token');
-  return null;
+  return currentAuthToken;
 }
 
 // Helper function to get user-friendly error messages based on HTTP status
@@ -387,6 +393,12 @@ export const dailySuggestionsApi = {
 };
 
 
+export const authApi = {
+  changePassword: (currentPassword: string, newPassword: string) => {
+    return apiClient.put('/auth/password', { currentPassword, newPassword });
+  },
+};
+
 export const userApi = {
   // User preferences
   getPreferences: () => {
@@ -560,11 +572,11 @@ export const shoppingListApi = {
     return apiClient.delete(`/shopping-lists/${listId}/items/${itemId}`);
   },
 
-  generateFromRecipes: (recipeIds: string[]) => {
-    return apiClient.post('/shopping-lists/generate-from-recipes', { recipeIds });
+  generateFromRecipes: (recipeIds: string[], name?: string) => {
+    return apiClient.post('/shopping-lists/generate-from-recipes', { recipeIds, name });
   },
 
-  generateFromMealPlan: (data: { startDate?: string; endDate?: string; recipeIds?: string[] }) => {
+  generateFromMealPlan: (data: { startDate?: string; endDate?: string; recipeIds?: string[]; name?: string }) => {
     return apiClient.post('/shopping-lists/generate-from-meal-plan', data);
   },
 };

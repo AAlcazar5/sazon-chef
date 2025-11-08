@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { userController } from './userController';
+import { authenticateToken } from '../auth/authMiddleware';
 
 const router = Router();
 
-// TODO: Add authentication middleware for all routes below
 // All user routes require authentication
+router.use(authenticateToken);
 
 // User profile routes
 router.get('/profile', userController.getProfile);

@@ -23,6 +23,10 @@ build/
 *.sqlite
 migrations/
 
+# Backups
+backups/
+*.backup
+
 # Logs
 logs/
 *.log

@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
+import { getUserId } from '../../utils/authHelper';
 
 // Get daily meal suggestions
 export const getDailySuggestion = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
     const { date } = req.query;
     
     const targetDate = date ? new Date(date as string) : new Date();
@@ -103,7 +104,7 @@ export const getDailySuggestion = async (req: Request, res: Response) => {
 // Get weekly meal plan
 export const getWeeklyPlan = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
     const { startDate, endDate } = req.query;
     
     const start = startDate ? new Date(startDate as string) : new Date();
@@ -173,7 +174,7 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
 // Generate new meal plan
 export const generateMealPlan = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
     const { preferences } = req.body;
     
     // For now, create an empty meal plan
@@ -209,7 +210,7 @@ export const generateMealPlan = async (req: Request, res: Response) => {
 // Get meal history
 export const getMealHistory = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
     const { startDate, endDate } = req.query;
     
     const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -246,7 +247,7 @@ export const getMealHistory = async (req: Request, res: Response) => {
 // Add recipe to meal plan
 export const addRecipeToMeal = async (req: Request, res: Response) => {
   try {
-    const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
     const { mealPlanId, recipeId, date, mealType } = req.body;
     
     // Get or create active meal plan

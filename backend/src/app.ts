@@ -15,6 +15,8 @@ import shoppingListRoutes from '@modules/shoppingList/shoppingListRoutes';
 import shoppingAppRoutes from '@modules/shoppingList/shoppingAppRoutes';
 import costTrackingRoutes from '@modules/costTracking/costTrackingRoutes';
 import ingredientAvailabilityRoutes from '@modules/ingredientAvailability/ingredientAvailabilityRoutes';
+import { authRoutes } from '@modules/auth/authRoutes';
+import { apiLimiter } from './middleware/rateLimiter';
 
 // Import types for Express
 import type { Request, Response, NextFunction } from 'express';
@@ -40,6 +42,9 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Rate limiting (applied to all routes)
+app.use('/api', apiLimiter);
+
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
@@ -51,6 +56,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // API routes
+app.use('/api/auth', authRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/health-metrics', healthMetricsRoutes);

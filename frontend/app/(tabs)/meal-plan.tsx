@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, RefreshControl, Dimensions, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, RefreshControl, Dimensions, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -50,6 +50,8 @@ export default function MealPlanScreen() {
   
   // Shopping list generation state
   const [generatingShoppingList, setGeneratingShoppingList] = useState(false);
+  const [showShoppingListNameModal, setShowShoppingListNameModal] = useState(false);
+  const [shoppingListName, setShoppingListName] = useState('');
   
   // Cost analysis state
   const [costAnalysis, setCostAnalysis] = useState<any>(null);
@@ -1014,8 +1016,17 @@ export default function MealPlanScreen() {
   const handleGenerateShoppingList = async () => {
     if (generatingShoppingList) return;
 
+    // Show modal to get shopping list name
+    setShoppingListName('');
+    setShowShoppingListNameModal(true);
+  };
+
+  const handleConfirmShoppingListName = async () => {
+    if (generatingShoppingList) return;
+
     try {
       setGeneratingShoppingList(true);
+      setShowShoppingListNameModal(false);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Get current week dates
@@ -1049,6 +1060,7 @@ export default function MealPlanScreen() {
         response = await shoppingListApi.generateFromMealPlan({
           startDate,
           endDate,
+          name: shoppingListName.trim() || undefined,
         });
       } catch (error: any) {
         console.log('🔍 Error caught, checking for fallback:', {
@@ -1091,6 +1103,7 @@ export default function MealPlanScreen() {
           try {
             response = await shoppingListApi.generateFromMealPlan({
               recipeIds,
+              name: shoppingListName.trim() || undefined,
             });
             console.log('✅ Fallback successful, shopping list generated from recipes');
           } catch (fallbackError: any) {
@@ -1206,28 +1219,28 @@ export default function MealPlanScreen() {
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-lg font-semibold text-gray-900">Weekly Meal Plan</Text>
             <View className="flex-row items-center space-x-2">
-              <TouchableOpacity
+        <TouchableOpacity 
                 onPress={() => {
                   const newDate = new Date(selectedDate);
                   newDate.setDate(newDate.getDate() - 7);
                   setSelectedDate(newDate);
                 }}
-                className="p-2"
-              >
+          className="p-2"
+        >
                 <Ionicons name="chevron-back" size={20} color="#6B7280" />
-              </TouchableOpacity>
-              <TouchableOpacity
+        </TouchableOpacity>
+        <TouchableOpacity 
                 onPress={() => {
                   const newDate = new Date(selectedDate);
                   newDate.setDate(newDate.getDate() + 7);
                   setSelectedDate(newDate);
                 }}
-                className="p-2"
-              >
+          className="p-2"
+        >
                 <Ionicons name="chevron-forward" size={20} color="#6B7280" />
-              </TouchableOpacity>
+        </TouchableOpacity>
             </View>
-          </View>
+      </View>
 
           {/* Week Dates */}
           <View className="flex-row mb-2">
@@ -1366,8 +1379,8 @@ export default function MealPlanScreen() {
                     <Text key={idx} className="text-sm text-gray-600 mb-1">
                       • {rec}
                     </Text>
-                  ))}
-                </View>
+              ))}
+            </View>
               )}
 
               <View className="mt-3 pt-3 border-t border-gray-200">
@@ -1383,7 +1396,7 @@ export default function MealPlanScreen() {
                     {costAnalysis.mealsCount} meals
                   </Text>
                 </View>
-              </View>
+        </View>
 
               {/* Savings Suggestions */}
               {shoppingListSavings && shoppingListSavings.savings > 0 && (
@@ -1900,7 +1913,55 @@ export default function MealPlanScreen() {
         </View>
       )}
 
-
+      {/* Shopping List Name Modal */}
+      <Modal
+        visible={showShoppingListNameModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowShoppingListNameModal(false)}
+      >
+        <View className="flex-1 bg-black bg-opacity-50 items-center justify-center px-4">
+          <View className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <Text className="text-lg font-semibold text-gray-900 mb-2">
+              Name Your Shopping List
+            </Text>
+            <Text className="text-gray-600 mb-4 text-sm">
+              Enter a name for your shopping list (or leave blank to use default)
+            </Text>
+            
+            <TextInput
+              value={shoppingListName}
+              onChangeText={setShoppingListName}
+              placeholder="e.g., Weekly Groceries, Thanksgiving Shopping"
+              className="border border-gray-300 rounded-lg px-4 py-3 mb-4 text-gray-900"
+              autoFocus={true}
+              maxLength={100}
+            />
+            
+            <View className="flex-row space-x-3">
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowShoppingListNameModal(false);
+                  setShoppingListName('');
+                }}
+                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg"
+              >
+                <Text className="text-gray-700 font-medium text-center">Cancel</Text>
+              </TouchableOpacity>
+            
+            <TouchableOpacity 
+                onPress={handleConfirmShoppingListName}
+                disabled={generatingShoppingList}
+                className={`flex-1 py-3 px-4 bg-emerald-500 rounded-lg ${generatingShoppingList ? 'opacity-50' : ''}`}
+            >
+                <Text className="text-white font-medium text-center">
+                  {generatingShoppingList ? 'Generating...' : 'Generate'}
+                </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

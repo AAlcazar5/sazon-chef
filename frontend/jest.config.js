@@ -1,32 +1,25 @@
 // frontend/jest.config.js
+// Jest configuration for React Native testing
+
 module.exports = {
-  preset: 'react-native',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testMatch: [
-    '**/__tests__/**/*.test.tsx',
-    '**/__tests__/**/*.test.ts',
-    '**/?(*.)+(spec|test).tsx',
-    '**/?(*.)+(spec|test).ts'
+  preset: 'jest-expo',
+  transformIgnorePatterns: [
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)',
   ],
-  transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
   },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   collectCoverageFrom: [
     'app/**/*.{ts,tsx}',
-    'components/**/*.{ts,tsx}',
-    'hooks/**/*.{ts,tsx}',
-    'utils/**/*.{ts,tsx}',
+    'contexts/**/*.{ts,tsx}',
     'lib/**/*.{ts,tsx}',
+    'hooks/**/*.{ts,tsx}',
     '!**/*.d.ts',
-    '!**/node_modules/**'
+    '!**/node_modules/**',
   ],
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
-  testEnvironment: 'jsdom',
-  moduleNameMapping: {
-    '^@/(.*)$': '<rootDir>/$1'
-  },
-  testTimeout: 10000,
-  verbose: true
+  testMatch: [
+    '**/__tests__/**/*.{ts,tsx}',
+    '**/*.test.{ts,tsx}',
+  ],
 };

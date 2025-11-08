@@ -4,6 +4,7 @@
 import { Request, Response } from 'express';
 import { shoppingAppIntegrationService } from '../../services/shoppingAppIntegrationService';
 import { syncShoppingListBidirectional, syncRecipeToShoppingApp } from '../../services/shoppingListSyncService';
+import { getUserId } from '../../utils/authHelper';
 
 export const shoppingAppController = {
   /**
@@ -12,7 +13,7 @@ export const shoppingAppController = {
    */
   async getIntegrations(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
 
       const integrations = await shoppingAppIntegrationService.getUserIntegrations(userId);
       res.json(integrations);
@@ -42,7 +43,7 @@ export const shoppingAppController = {
    */
   async connectApp(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { appName, apiKey, accessToken, refreshToken } = req.body;
 
       if (!appName) {
@@ -68,7 +69,7 @@ export const shoppingAppController = {
    */
   async disconnectApp(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { appName } = req.params;
 
       await shoppingAppIntegrationService.disconnectApp(userId, appName);
@@ -85,7 +86,7 @@ export const shoppingAppController = {
    */
   async syncToExternalApp(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { appName } = req.params;
       const { shoppingListId } = req.body;
 
@@ -140,7 +141,7 @@ export const shoppingAppController = {
    */
   async syncBidirectional(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { appName } = req.params;
       const { shoppingListId } = req.body;
 
@@ -167,7 +168,7 @@ export const shoppingAppController = {
    */
   async syncRecipe(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual auth
+      const userId = getUserId(req);
       const { appName } = req.params;
       const { recipeId } = req.body;
 

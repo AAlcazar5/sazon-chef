@@ -3,15 +3,18 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { getUserId } from '@/utils/authHelper';
 import { calculateWeightGoal, calculateWeightProgress, calculateCaloriesFromSteps } from '@/utils/weightGoalCalculator';
 import { calculateBMR, calculateTDEE } from '@/utils/nutritionCalculator';
 
 // Extend Express Request type to include user
+// Note: This should match the type in authMiddleware.ts
 declare global {
   namespace Express {
     interface Request {
       user?: {
         id: string;
+        email: string;
       };
     }
   }
@@ -21,7 +24,7 @@ export const weightGoalController = {
   // Create or update weight goal
   async setWeightGoal(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       const {
         targetWeightKg,
         targetDate, // ISO date string
@@ -111,7 +114,7 @@ export const weightGoalController = {
   // Get current weight goal
   async getWeightGoal(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
 
       console.log('🎯 GET /api/weight-goal called');
 
@@ -176,7 +179,7 @@ export const weightGoalController = {
   // Log weight
   async logWeight(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       const {
         weightKg,
         date, // ISO date string, optional (defaults to today)
@@ -232,7 +235,7 @@ export const weightGoalController = {
   // Get weight history
   async getWeightHistory(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
       const days = parseInt(req.query.days as string) || 30;
 
       console.log(`⚖️ GET /api/weight-log called (${days} days)`);
@@ -263,7 +266,7 @@ export const weightGoalController = {
   // Calculate calories from today's steps
   async getCaloriesFromSteps(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Replace with actual user ID from auth
+      const userId = getUserId(req);
 
       console.log('💓 GET /api/weight-goal/calories-from-steps called');
 

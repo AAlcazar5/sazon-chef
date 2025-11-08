@@ -6,22 +6,37 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seed...');
 
-  // Clear existing data
-  console.log('🧹 Clearing existing data...');
-  await prisma.recipeIngredient.deleteMany();
-  await prisma.recipeInstruction.deleteMany();
-  await prisma.savedRecipe.deleteMany();
-  await prisma.recipeFeedback.deleteMany();
-  await prisma.mealHistory.deleteMany();
-  await prisma.recipe.deleteMany();
+  // Check if we should clear existing data (only if CLEAR_DB=true env var is set)
+  const shouldClear = process.env.CLEAR_DB === 'true';
   
-  // Clear user data
-  await prisma.bannedIngredient.deleteMany();
-  await prisma.likedCuisine.deleteMany();
-  await prisma.dietaryRestriction.deleteMany();
-  await prisma.userPreferences.deleteMany();
-  await prisma.macroGoals.deleteMany();
-  await prisma.user.deleteMany();
+  if (shouldClear) {
+    console.log('⚠️  CLEAR_DB=true detected - Clearing existing data...');
+    await prisma.recipeIngredient.deleteMany();
+    await prisma.recipeInstruction.deleteMany();
+    await prisma.savedRecipe.deleteMany();
+    await prisma.recipeFeedback.deleteMany();
+    await prisma.mealHistory.deleteMany();
+    await prisma.recipe.deleteMany();
+    
+    // Clear user data
+    await prisma.bannedIngredient.deleteMany();
+    await prisma.likedCuisine.deleteMany();
+    await prisma.dietaryRestriction.deleteMany();
+    await prisma.userPreferences.deleteMany();
+    await prisma.macroGoals.deleteMany();
+    await prisma.user.deleteMany();
+  } else {
+    console.log('ℹ️  Preserving existing data (set CLEAR_DB=true to clear)');
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: 'temp-user-id' }
+    });
+    
+    if (existingUser) {
+      console.log('ℹ️  Test user already exists, skipping user creation');
+      return;
+    }
+  }
 
   // Create test user with preferences
   console.log('👤 Creating test user...');

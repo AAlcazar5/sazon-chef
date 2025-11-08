@@ -22,14 +22,14 @@ router.get('/', recipeController.getRecipes);
 router.get('/suggested', recipeController.getSuggestedRecipes);
 router.get('/random', recipeController.getRandomRecipe);
 router.get('/saved', recipeController.getSavedRecipes);
-router.get('/my-recipes', recipeController.getUserRecipes);
+// router.get('/my-recipes', recipeController.getUserRecipes); // TODO: Implement getUserRecipes
 
 // Recipe CRUD operations (must come before parameterized routes)
 router.post('/', recipeController.createRecipe);
 
 // Parameterized routes come AFTER specific routes
 router.get('/:id', recipeController.getRecipe);
-router.get('/:id/score', recipeController.getRecipeScore);
+// router.get('/:id/score', recipeController.getRecipeScore); // TODO: Implement getRecipeScore
 router.put('/:id', recipeController.updateRecipe);
 router.delete('/:id', recipeController.deleteRecipe);
 
@@ -40,7 +40,7 @@ router.post('/:id/like', recipeController.likeRecipe);
 router.post('/:id/dislike', recipeController.dislikeRecipe);
 
 // Cache management routes
-router.post('/clear-cache', recipeController.clearCache);
-router.get('/cache-stats', recipeController.getCacheStats);
+// router.post('/clear-cache', recipeController.clearCache); // TODO: Implement clearCache
+// router.get('/cache-stats', recipeController.getCacheStats); // TODO: Implement getCacheStats
 
 export const recipeRoutes = router;
