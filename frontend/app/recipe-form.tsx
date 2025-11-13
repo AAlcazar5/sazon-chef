@@ -1,8 +1,10 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Animated } from 'react-native';
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import PulsingLoader from '../components/ui/PulsingLoader';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { recipeApi, collectionsApi, aiRecipeApi } from '../lib/api';
 import type { Recipe } from '../types';
 import * as Haptics from 'expo-haptics';
@@ -36,6 +38,48 @@ export default function RecipeFormScreen() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
+
+  // Animation values for collection picker modal
+  const pickerScale = useRef(new Animated.Value(0)).current;
+  const pickerOpacity = useRef(new Animated.Value(0)).current;
+
+  // Animation values for AI generation button
+  const generateButtonScale = useRef(new Animated.Value(1)).current;
+  const generateButtonOpacity = useRef(new Animated.Value(1)).current;
+
+  // Animate collection picker modal
+  useEffect(() => {
+    if (pickerVisible) {
+      pickerScale.setValue(0);
+      pickerOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(pickerScale, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pickerOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(pickerScale, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pickerOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [pickerVisible]);
 
   // Load collections on mount (for create mode)
   useEffect(() => {
@@ -79,6 +123,7 @@ export default function RecipeFormScreen() {
         setCreatingCollection(false);
       }
     } catch (e: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', e?.message || 'Failed to create collection');
     }
   };
@@ -119,6 +164,7 @@ export default function RecipeFormScreen() {
       setLoadingRecipe(false);
     } catch (error: any) {
       console.error('Failed to load recipe:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to load recipe');
       setLoadingRecipe(false);
       router.back();
@@ -157,10 +203,50 @@ export default function RecipeFormScreen() {
     setInstructions(updated);
   };
 
+  // Animate AI generation button
+  useEffect(() => {
+    if (generatingAI) {
+      // Expanding pulse effect when generating
+      Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.spring(generateButtonScale, {
+              toValue: 1.02,
+              friction: 4,
+              tension: 50,
+              useNativeDriver: true,
+            }),
+            Animated.timing(generateButtonOpacity, {
+              toValue: 0.9,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.spring(generateButtonScale, {
+              toValue: 1,
+              friction: 4,
+              tension: 50,
+              useNativeDriver: true,
+            }),
+            Animated.timing(generateButtonOpacity, {
+              toValue: 1,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    } else {
+      // Reset to normal state
+      generateButtonScale.setValue(1);
+      generateButtonOpacity.setValue(1);
+    }
+  }, [generatingAI]);
+
   const handleGenerateRandomRecipe = async () => {
     try {
       setGeneratingAI(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       const recipeTitle = title.trim();
       const hasTitle = recipeTitle.length > 0;
@@ -257,46 +343,56 @@ export default function RecipeFormScreen() {
 
   const validateForm = (): boolean => {
     if (!title.trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter a recipe title');
       return false;
     }
     if (!description.trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter a description');
       return false;
     }
     if (!cookTime || isNaN(parseInt(cookTime))) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter a valid cook time');
       return false;
     }
     if (!cuisine.trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter a cuisine type');
       return false;
     }
     if (!calories || isNaN(parseInt(calories))) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter valid calorie amount');
       return false;
     }
     if (!protein || isNaN(parseInt(protein))) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter valid protein amount');
       return false;
     }
     if (!carbs || isNaN(parseInt(carbs))) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter valid carbs amount');
       return false;
     }
     if (!fat || isNaN(parseInt(fat))) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter valid fat amount');
       return false;
     }
 
     const validIngredients = ingredients.filter(ing => ing.trim());
     if (validIngredients.length === 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please add at least one ingredient');
       return false;
     }
 
     const validInstructions = instructions.filter(inst => inst.trim());
     if (validInstructions.length === 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please add at least one instruction');
       return false;
     }
@@ -330,6 +426,7 @@ export default function RecipeFormScreen() {
 
       if (isEditMode && recipeId) {
         await recipeApi.updateRecipe(recipeId, recipeData);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Recipe updated successfully!');
         router.back();
       } else {
@@ -339,6 +436,7 @@ export default function RecipeFormScreen() {
         // Backend already saves to collections if collectionIds are provided in recipeData
         // No additional API call needed
         
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(
           'Success', 
           'Recipe created and saved to your cookbook!',
@@ -355,6 +453,7 @@ export default function RecipeFormScreen() {
       }
     } catch (error: any) {
       console.error('Failed to save recipe:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to save recipe');
     } finally {
       setLoading(false);
@@ -375,13 +474,13 @@ export default function RecipeFormScreen() {
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       {/* Header */}
       <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="p-2">
+        <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
         <Text className="text-xl font-bold text-gray-900">
           {isEditMode ? 'Edit Recipe' : 'Create Recipe'}
         </Text>
-        <TouchableOpacity 
+        <HapticTouchableOpacity 
           onPress={handleSubmit}
           disabled={loading}
           className="p-2"
@@ -389,33 +488,41 @@ export default function RecipeFormScreen() {
           <Text className={`text-lg font-semibold ${loading ? 'text-gray-400' : 'text-orange-500'}`}>
             {loading ? 'Saving...' : 'Save'}
           </Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </View>
 
       <ScrollView className="flex-1 p-4">
         {/* Generate Recipe Button (only in create mode) */}
         {!isEditMode && (
-          <TouchableOpacity
-            onPress={handleGenerateRandomRecipe}
-            disabled={generatingAI}
-            className={`flex-row items-center justify-center px-4 py-3 rounded-lg mb-4 ${generatingAI ? 'bg-gray-300' : 'bg-blue-500'}`}
+          <Animated.View
+            style={{
+              transform: [{ scale: generateButtonScale }],
+              opacity: generateButtonOpacity,
+            }}
           >
-            {generatingAI ? (
-              <>
-                <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
-                <Text className="text-white font-semibold">
-                  {title.trim() ? `Generating "${title.trim()}" Recipe...` : 'Generating Random Recipe...'}
-                </Text>
-              </>
-            ) : (
-              <>
-                <Ionicons name="sparkles" size={20} color="white" style={{ marginRight: 8 }} />
-                <Text className="text-white font-semibold">
-                  {title.trim() ? `🤖 Generate "${title.trim()}" Recipe` : '🎲 Generate Random Recipe'}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+            <HapticTouchableOpacity
+              onPress={handleGenerateRandomRecipe}
+              disabled={generatingAI}
+              hapticStyle="medium"
+              className={`flex-row items-center justify-center px-4 py-3 rounded-lg mb-4 ${generatingAI ? 'bg-gray-300' : 'bg-blue-500'}`}
+            >
+              {generatingAI ? (
+                <>
+                  <PulsingLoader size={16} color="white" />
+                  <Text className="text-white font-semibold ml-3">
+                    {title.trim() ? `Generating "${title.trim()}" Recipe...` : 'Generating Random Recipe...'}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="sparkles" size={20} color="white" style={{ marginRight: 8 }} />
+                  <Text className="text-white font-semibold">
+                    {title.trim() ? `🤖 Generate "${title.trim()}" Recipe` : '🎲 Generate Random Recipe'}
+                  </Text>
+                </>
+              )}
+            </HapticTouchableOpacity>
+          </Animated.View>
         )}
 
         {/* Basic Information */}
@@ -552,9 +659,9 @@ export default function RecipeFormScreen() {
         <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
           <View className="flex-row justify-between items-center mb-3">
             <Text className="text-lg font-semibold text-gray-900">Ingredients *</Text>
-            <TouchableOpacity onPress={addIngredient} className="p-2">
+            <HapticTouchableOpacity onPress={addIngredient} className="p-2">
               <Ionicons name="add-circle" size={24} color="#F97316" />
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
 
           {ingredients.map((ingredient, index) => (
@@ -569,9 +676,9 @@ export default function RecipeFormScreen() {
                 />
               </View>
               {ingredients.length > 1 && (
-                <TouchableOpacity onPress={() => removeIngredient(index)} className="p-2">
+                <HapticTouchableOpacity onPress={() => removeIngredient(index)} className="p-2">
                   <Ionicons name="remove-circle" size={24} color="#EF4444" />
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               )}
             </View>
           ))}
@@ -581,9 +688,9 @@ export default function RecipeFormScreen() {
         <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
           <View className="flex-row justify-between items-center mb-3">
             <Text className="text-lg font-semibold text-gray-900">Instructions *</Text>
-            <TouchableOpacity onPress={addInstruction} className="p-2">
+            <HapticTouchableOpacity onPress={addInstruction} className="p-2">
               <Ionicons name="add-circle" size={24} color="#F97316" />
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
 
           {instructions.map((instruction, index) => (
@@ -603,9 +710,9 @@ export default function RecipeFormScreen() {
                   />
                 </View>
                 {instructions.length > 1 && (
-                  <TouchableOpacity onPress={() => removeInstruction(index)} className="p-2 mt-6">
+                  <HapticTouchableOpacity onPress={() => removeInstruction(index)} className="p-2 mt-6">
                     <Ionicons name="remove-circle" size={24} color="#EF4444" />
-                  </TouchableOpacity>
+                  </HapticTouchableOpacity>
                 )}
               </View>
             </View>
@@ -617,9 +724,9 @@ export default function RecipeFormScreen() {
           <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
             <View className="flex-row justify-between items-center mb-3">
               <Text className="text-lg font-semibold text-gray-900">Collections</Text>
-              <TouchableOpacity onPress={openCollectionPicker} className="p-2">
+              <HapticTouchableOpacity onPress={openCollectionPicker} className="p-2">
                 <Ionicons name="add-circle" size={24} color="#F97316" />
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
             
             {selectedCollectionIds.length > 0 ? (
@@ -627,14 +734,14 @@ export default function RecipeFormScreen() {
                 {selectedCollectionIds.map((id) => {
                   const collection = collections.find(c => c.id === id);
                   return collection ? (
-                    <TouchableOpacity
+                    <HapticTouchableOpacity
                       key={id}
                       onPress={() => setSelectedCollectionIds(prev => prev.filter(i => i !== id))}
                       className="bg-orange-100 px-3 py-1 rounded-full flex-row items-center"
                     >
                       <Text className="text-orange-800 font-medium mr-2">{collection.name}</Text>
                       <Ionicons name="close-circle" size={16} color="#F97316" />
-                    </TouchableOpacity>
+                    </HapticTouchableOpacity>
                   ) : null;
                 })}
               </View>
@@ -644,7 +751,7 @@ export default function RecipeFormScreen() {
               </Text>
             )}
             
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={openCollectionPicker}
               className="border border-orange-500 rounded-lg px-4 py-3 flex-row items-center justify-center"
             >
@@ -652,7 +759,7 @@ export default function RecipeFormScreen() {
               <Text className="text-orange-500 font-semibold ml-2">
                 {selectedCollectionIds.length > 0 ? 'Change Collections' : 'Select Collections'}
               </Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
         )}
 
@@ -663,16 +770,24 @@ export default function RecipeFormScreen() {
       {/* Collection Picker Modal */}
       <Modal
         visible={pickerVisible}
-        animationType="slide"
+        animationType="none"
         transparent
         onRequestClose={() => setPickerVisible(false)}
       >
-        <View className="flex-1 bg-black/40 justify-end">
-          <View className="bg-white rounded-t-2xl p-4 max-h-[70%]">
+        <Animated.View 
+          className="flex-1 bg-black/40 justify-center items-center px-4"
+          style={{ opacity: pickerOpacity }}
+        >
+          <Animated.View 
+            className="bg-white rounded-2xl p-4 w-full max-w-sm max-h-[70%]"
+            style={{
+              transform: [{ scale: pickerScale }],
+            }}
+          >
             <Text className="text-lg font-semibold mb-3">Select Collections</Text>
             <ScrollView className="mb-3">
               {collections.map((c) => (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   key={c.id}
                   onPress={() => {
                     setSelectedCollectionIds(prev => 
@@ -689,7 +804,7 @@ export default function RecipeFormScreen() {
                     )}
                   </View>
                   <Text className="text-gray-900 flex-1">{c.name}</Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               ))}
               {creatingCollection ? (
                 <View className="flex-row items-center py-3">
@@ -700,23 +815,23 @@ export default function RecipeFormScreen() {
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
                     placeholderTextColor="#9CA3AF"
                   />
-                  <TouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
+                  <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
                     <Text className="text-white font-semibold">Create</Text>
-                  </TouchableOpacity>
+                  </HapticTouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
+                <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
                   <Text className="text-orange-600 font-medium">+ Create new collection</Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               )}
             </ScrollView>
             <View className="flex-row justify-end space-x-3">
-              <TouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
+              <HapticTouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
                 <Text className="text-gray-700">Done</Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
     </SafeAreaView>
   );

@@ -543,29 +543,31 @@ export const recipeController = {
           // Step count is NOT used for recipe recommendations, only for expenditure calculation in weight goals
           let healthMetricsScore = { total: 50, breakdown: { expenditureAdjustment: 0 }, details: { steps: 0, calculatedExpenditure: 0, recommendedCalorieRange: { min: 0, max: 0 }, fitnessGoalBased: false } };
           try {
-            // Check if user has an active weight goal
-            const activeWeightGoal = await prisma.$queryRaw`
-              SELECT requiredCaloriesPerDay FROM weight_goals
-              WHERE userId = ${userId} AND isActive = 1
-              ORDER BY createdAt DESC
-              LIMIT 1
-            ` as any[];
+            // Note: Weight goals table doesn't exist yet, so we skip this for now
+            // When weight goals are implemented, uncomment this:
+            // const activeWeightGoal = await prisma.$queryRaw`
+            //   SELECT requiredCaloriesPerDay FROM weight_goals
+            //   WHERE userId = ${userId} AND isActive = 1
+            //   ORDER BY createdAt DESC
+            //   LIMIT 1
+            // ` as any[];
             
             // Use weight goal calories if available, otherwise use macro goals or fitness goal
             // Focus on daily totals, not strict per-meal limits
-            let calorieTarget = null;
-            if (activeWeightGoal && activeWeightGoal.length > 0) {
-              // Use weight goal's required calories per day
-              // Very lenient range: 10-50% of daily calories per meal (allows big lunches, small dinners)
-              const dailyCalories = activeWeightGoal[0].requiredCaloriesPerDay;
-              calorieTarget = {
-                calories: dailyCalories, // Store daily total for reference
-                min: Math.round(dailyCalories * 0.10), // 10% of daily (very small meal)
-                max: Math.round(dailyCalories * 0.50), // 50% of daily (very large meal)
-              };
-            }
+            // TODO: Re-enable when weight_goals table is created
+            // let calorieTarget: { calories: number; min: number; max: number } | null = null;
+            // if (activeWeightGoal && activeWeightGoal.length > 0) {
+            //   // Use weight goal's required calories per day
+            //   // Very lenient range: 10-50% of daily calories per meal (allows big lunches, small dinners)
+            //   const dailyCalories = activeWeightGoal[0].requiredCaloriesPerDay;
+            //   calorieTarget = {
+            //     calories: dailyCalories, // Store daily total for reference
+            //     min: Math.round(dailyCalories * 0.10), // 10% of daily (very small meal)
+            //     max: Math.round(dailyCalories * 0.50), // 50% of daily (very large meal)
+            //   };
+            // }
             
-            if (physicalProfile || macroGoals || calorieTarget) {
+            if (physicalProfile || macroGoals) {
               healthMetricsScore = calculateHealthMetricsScore(
                 recipe,
                 null, // Step count not used for recipe scoring
@@ -577,18 +579,18 @@ export const recipeController = {
                   activityLevel: physicalProfile.activityLevel,
                   fitnessGoal: physicalProfile.fitnessGoal,
                 } : null,
-                calorieTarget ? { calories: calorieTarget.calories } : (macroGoals ? { calories: macroGoals.calories } : null)
+                macroGoals ? { calories: macroGoals.calories } : null
               );
               
-              // Override range if weight goal is active (use lenient range)
-              if (calorieTarget) {
-                healthMetricsScore.details.recommendedCalorieRange = {
-                  min: calorieTarget.min,
-                  max: calorieTarget.max,
-                };
-                // Use the lenient scoring from calculateHealthMetricsScore
-                // No need to recalculate - it already handles wide ranges leniently
-              }
+              // TODO: Override range if weight goal is active (use lenient range)
+              // if (calorieTarget) {
+              //   healthMetricsScore.details.recommendedCalorieRange = {
+              //     min: calorieTarget.min,
+              //     max: calorieTarget.max,
+              //   };
+              //   // Use the lenient scoring from calculateHealthMetricsScore
+              //   // No need to recalculate - it already handles wide ranges leniently
+              // }
             }
           } catch (error) {
             console.warn('⚠️ Health metrics scoring failed, continuing without it:', error);
@@ -772,10 +774,22 @@ export const recipeController = {
         }
         const topRecipes = selected.slice(0, limit);
 
-        console.log(`✅ Returning ${topRecipes.length} recipes with real scores`);
-        console.log(`🏆 Top recipe: "${topRecipes[0]?.title}" (${topRecipes[0]?.score?.total}% match)`);
+        // Final deduplication check - ensure no duplicate IDs in response
+        const uniqueRecipes = Array.from(
+          new Map(topRecipes.map(r => [r.id, r])).values()
+        );
         
-        res.json(topRecipes);
+        if (uniqueRecipes.length !== topRecipes.length) {
+          console.warn(`⚠️ Removed ${topRecipes.length - uniqueRecipes.length} duplicate(s) from final response`);
+        }
+
+        console.log(`✅ Returning ${uniqueRecipes.length} recipes with real scores`);
+        console.log(`🏆 Top recipe: "${uniqueRecipes[0]?.title}" (${uniqueRecipes[0]?.score?.total}% match)`);
+        
+        // Log all recipe IDs for debugging
+        console.log('📋 Recipe IDs:', uniqueRecipes.map(r => r.id).join(', '));
+        
+        res.json(uniqueRecipes);
     } catch (error: any) {
       console.error('❌ Error in getSuggestedRecipes:', error);
       console.error('❌ Error details:', error.message);

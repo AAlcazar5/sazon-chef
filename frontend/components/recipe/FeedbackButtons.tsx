@@ -1,6 +1,8 @@
 import { View, TouchableOpacity } from 'react-native';
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import Icon from '../ui/Icon';
+import { Icons, IconSizes } from '../../constants/Icons';
 
 // Interfaces for this component
 interface FeedbackButtonsProps {
@@ -33,15 +35,15 @@ export default function FeedbackButtons({
   const sizeClasses = {
     sm: {
       container: 'p-1',
-      icon: 16
+      iconSize: IconSizes.SM
     },
     md: {
       container: 'p-2',
-      icon: 20
+      iconSize: IconSizes.MD
     },
     lg: {
       container: 'p-3',
-      icon: 24
+      iconSize: IconSizes.LG
     }
   };
 
@@ -50,8 +52,13 @@ export default function FeedbackButtons({
       liked: !feedback.liked,
       disliked: false // Can't like and dislike at the same time
     };
+    
+    // Haptic feedback on press - immediate tactile response
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
     setFeedback(newState);
     
+    // Call parent callback if provided
     if (newState.liked && onLike) {
       onLike(recipeId);
     }
@@ -62,8 +69,13 @@ export default function FeedbackButtons({
       liked: false, // Can't like and dislike at the same time
       disliked: !feedback.disliked
     };
+    
+    // Haptic feedback on press - immediate tactile response
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
     setFeedback(newState);
     
+    // Call parent callback if provided
     if (newState.disliked && onDislike) {
       onDislike(recipeId);
     }
@@ -80,15 +92,16 @@ export default function FeedbackButtons({
           ${currentSize.container} 
           rounded-full 
           ${feedback.disliked 
-            ? 'bg-red-100 border border-red-200' 
-            : 'bg-gray-100 border border-gray-200'
+            ? 'bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800' 
+            : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
           }
         `}
       >
-        <Ionicons 
-          name={feedback.disliked ? "thumbs-down" : "thumbs-down-outline"} 
-          size={currentSize.icon} 
-          color={feedback.disliked ? "#EF4444" : "#6B7280"} 
+        <Icon 
+          name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE} 
+          size={currentSize.iconSize} 
+          color={feedback.disliked ? "#EF4444" : "#6B7280"}
+          accessibilityLabel={feedback.disliked ? "Disliked" : "Dislike recipe"}
         />
       </TouchableOpacity>
 
@@ -99,15 +112,16 @@ export default function FeedbackButtons({
           ${currentSize.container} 
           rounded-full 
           ${feedback.liked 
-            ? 'bg-green-100 border border-green-200' 
-            : 'bg-gray-100 border border-gray-200'
+            ? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800' 
+            : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
           }
         `}
       >
-        <Ionicons 
-          name={feedback.liked ? "thumbs-up" : "thumbs-up-outline"} 
-          size={currentSize.icon} 
-          color={feedback.liked ? "#10B981" : "#6B7280"} 
+        <Icon 
+          name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} 
+          size={currentSize.iconSize} 
+          color={feedback.liked ? "#10B981" : "#6B7280"}
+          accessibilityLabel={feedback.liked ? "Liked" : "Like recipe"}
         />
       </TouchableOpacity>
     </View>

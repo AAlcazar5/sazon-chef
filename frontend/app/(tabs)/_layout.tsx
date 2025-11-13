@@ -1,18 +1,36 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { TouchableOpacity, View, Text, Modal } from 'react-native';
+import { View, Text, Modal, Animated, Dimensions } from 'react-native';
+import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import AnimatedBadge from '../../components/ui/AnimatedBadge';
 import { router } from 'expo-router';
 import ActionSheet, { ActionSheetItem } from '../../components/ui/ActionSheet';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { scannerApi } from '../../lib/api';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TabLayout() {
+  const { colors } = useTheme();
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  
+  // FAB (Floating Action Button) animations
+  const fabScale = useRef(new Animated.Value(0)).current;
+  const fabRotation = useRef(new Animated.Value(0)).current;
+  
+  // FAB bounce animation on mount
+  useEffect(() => {
+    Animated.spring(fabScale, {
+      toValue: 1,
+      friction: 4,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  }, [fabScale]);
 
   const actionItems: ActionSheetItem[] = [
     {
@@ -76,7 +94,6 @@ export default function TabLayout() {
 
   const handleTakePhoto = async (cameraRef: any) => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
@@ -115,12 +132,13 @@ export default function TabLayout() {
           tabBarActiveTintColor: '#F97316',
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.background,
             borderTopWidth: 1,
-            borderTopColor: '#e5e7eb',
+            borderTopColor: colors.border.light,
             height: 60,
             paddingBottom: 16,
             paddingTop: 8,
+            position: 'relative',
           },
           tabBarLabelStyle: {
             fontSize: 12,
@@ -149,20 +167,67 @@ export default function TabLayout() {
           name="add"
           options={{
             title: '',
-            tabBarButton: (props) => (
-              <TouchableOpacity
-                {...props}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setShowActionSheet(true);
-                }}
-                className="flex-1 items-center justify-center -mt-2"
-              >
-                <View className="w-14 h-14 bg-orange-500 rounded-full items-center justify-center shadow-lg">
-                  <Ionicons name="add" size={28} color="white" />
-                </View>
-              </TouchableOpacity>
-            ),
+            tabBarButton: (props) => {
+              const handlePress = () => {
+                // Rotate animation on press
+                Animated.sequence([
+                  Animated.timing(fabRotation, {
+                    toValue: 1,
+                    duration: 200,
+                    useNativeDriver: true,
+                  }),
+                  Animated.timing(fabRotation, {
+                    toValue: 0,
+                    duration: 200,
+                    useNativeDriver: true,
+                  }),
+                ]).start();
+                
+                // Bounce animation
+                Animated.sequence([
+                  Animated.spring(fabScale, {
+                    toValue: 0.9,
+                    friction: 3,
+                    tension: 40,
+                    useNativeDriver: true,
+                  }),
+                  Animated.spring(fabScale, {
+                    toValue: 1,
+                    friction: 4,
+                    tension: 40,
+                    useNativeDriver: true,
+                  }),
+                ]).start();
+                
+                setShowActionSheet(true);
+              };
+              
+              const rotation = fabRotation.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '45deg'],
+              });
+              
+              return (
+                <HapticTouchableOpacity
+                  {...props}
+                  onPress={handlePress}
+                  className="flex-1 items-center justify-center -mt-2"
+                >
+                  <Animated.View
+                    style={{
+                      transform: [
+                        { scale: fabScale },
+                        { rotate: rotation },
+                      ],
+                    }}
+                  >
+                    <View className="w-14 h-14 bg-orange-500 dark:bg-orange-600 rounded-full items-center justify-center shadow-lg">
+                      <Ionicons name="add" size={28} color="white" />
+                    </View>
+                  </Animated.View>
+                </HapticTouchableOpacity>
+              );
+            },
             tabBarLabel: () => null,
           }}
         />
@@ -242,19 +307,20 @@ function QuickCameraModal({
         />
         <View className="absolute inset-0 justify-end pb-8 items-center">
           <View className="flex-row" style={{ gap: 16 }}>
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={onClose}
-              className="w-16 h-16 rounded-full bg-gray-700 items-center justify-center"
+              className="w-16 h-16 rounded-full bg-gray-700 dark:bg-gray-600 items-center justify-center"
             >
               <Ionicons name="close" size={32} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity
               onPress={() => onTakePhoto(cameraRef)}
-              className="w-20 h-20 rounded-full bg-orange-500 items-center justify-center border-4 border-white"
+              hapticStyle="medium"
+              className="w-20 h-20 rounded-full bg-orange-500 dark:bg-orange-600 items-center justify-center border-4 border-white"
             >
               <View className="w-16 h-16 rounded-full bg-white" />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity
               onPress={async () => {
                 const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                 if (status !== 'granted') return;
@@ -283,10 +349,10 @@ function QuickCameraModal({
                   }
                 }
               }}
-              className="w-16 h-16 rounded-full bg-gray-700 items-center justify-center"
+              className="w-16 h-16 rounded-full bg-gray-700 dark:bg-gray-600 items-center justify-center"
             >
               <Ionicons name="images-outline" size={32} color="white" />
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
         </View>
       </View>

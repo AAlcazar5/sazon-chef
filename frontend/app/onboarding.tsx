@@ -1,4 +1,5 @@
 // frontend/app/onboarding.tsx
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -15,6 +16,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { userApi } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 
 // Step 1: Welcome
 // Step 2: Cuisines
@@ -179,6 +181,7 @@ export default function OnboardingScreen() {
       });
     } catch (error) {
       console.error('Error loading existing data:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to load existing preferences');
     } finally {
       setLoading(false);
@@ -285,6 +288,7 @@ export default function OnboardingScreen() {
       // Mark onboarding as complete
       await AsyncStorage.setItem('onboarding_complete', 'true');
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (isEditMode) {
         // If editing, just go back to profile
         Alert.alert(
@@ -312,6 +316,7 @@ export default function OnboardingScreen() {
       }
     } catch (error) {
       console.error('Error saving onboarding data:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to save your preferences. Please try again.');
     } finally {
       setSaving(false);
@@ -437,7 +442,7 @@ export default function OnboardingScreen() {
         {CUISINE_OPTIONS.map((cuisine, index) => {
           const isSelected = data.likedCuisines.includes(cuisine.name);
           return (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               key={cuisine.name}
               onPress={() => toggleSelection('likedCuisines', cuisine.name)}
               className={`w-[48%] ${index % 2 === 0 ? 'mr-[4%]' : ''} mb-4 p-4 rounded-2xl border-2 ${
@@ -460,7 +465,7 @@ export default function OnboardingScreen() {
                   </View>
                 )}
               </View>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           );
         })}
       </View>
@@ -479,7 +484,7 @@ export default function OnboardingScreen() {
       {DIETARY_RESTRICTIONS.map((restriction) => {
         const isSelected = data.dietaryRestrictions.includes(restriction.name);
         return (
-          <TouchableOpacity
+          <HapticTouchableOpacity
             key={restriction.name}
             onPress={() => toggleSelection('dietaryRestrictions', restriction.name)}
             className={`mb-3 p-4 rounded-xl border-2 flex-row items-center ${
@@ -505,7 +510,7 @@ export default function OnboardingScreen() {
                 <Ionicons name="checkmark" size={16} color="white" />
               </View>
             )}
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         );
       })}
     </ScrollView>
@@ -534,13 +539,13 @@ export default function OnboardingScreen() {
             returnKeyType="done"
             onSubmitEditing={addCustomIngredient}
           />
-          <TouchableOpacity
+          <HapticTouchableOpacity
             onPress={addCustomIngredient}
             className="ml-2 bg-orange-500 rounded-xl px-4 justify-center"
             activeOpacity={0.7}
           >
             <Ionicons name="add" size={24} color="white" />
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
       </View>
 
@@ -552,7 +557,7 @@ export default function OnboardingScreen() {
         {COMMON_INGREDIENTS.map((ingredient) => {
           const isSelected = data.bannedIngredients.includes(ingredient);
           return (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               key={ingredient}
               onPress={() => toggleSelection('bannedIngredients', ingredient)}
               className={`mb-3 mr-2 px-4 py-2 rounded-full border-2 ${
@@ -567,7 +572,7 @@ export default function OnboardingScreen() {
               }`}>
                 {ingredient}
               </Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           );
         })}
       </View>
@@ -582,7 +587,7 @@ export default function OnboardingScreen() {
             {data.bannedIngredients
               .filter(ing => !COMMON_INGREDIENTS.includes(ing))
               .map((ingredient) => (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   key={ingredient}
                   onPress={() => toggleSelection('bannedIngredients', ingredient)}
                   className="mb-3 mr-2 px-4 py-2 rounded-full border-2 border-red-500 bg-red-50"
@@ -591,7 +596,7 @@ export default function OnboardingScreen() {
                   <Text className="text-sm font-medium text-red-900">
                     {ingredient}
                   </Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               ))}
           </View>
         </>
@@ -626,7 +631,7 @@ export default function OnboardingScreen() {
         <Text className="text-sm font-semibold text-gray-700 mb-2">Gender</Text>
         <View className="flex-row">
           {['male', 'female', 'other'].map((gender) => (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               key={gender}
               onPress={() => setData({ ...data, gender: gender as any })}
               className={`flex-1 ${gender !== 'other' ? 'mr-2' : ''} py-3 rounded-xl border-2 ${
@@ -641,7 +646,7 @@ export default function OnboardingScreen() {
               }`}>
                 {gender}
               </Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           ))}
         </View>
       </View>
@@ -709,7 +714,7 @@ export default function OnboardingScreen() {
       <View className="mb-4">
         <Text className="text-sm font-semibold text-gray-700 mb-2">Activity Level</Text>
         {ACTIVITY_LEVELS.map((level) => (
-          <TouchableOpacity
+          <HapticTouchableOpacity
             key={level.value}
             onPress={() => setData({ ...data, activityLevel: level.value })}
             className={`mb-2 p-4 rounded-xl border-2 ${
@@ -727,7 +732,7 @@ export default function OnboardingScreen() {
             <Text className="text-sm text-gray-600">
               {level.description}
             </Text>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         ))}
       </View>
 
@@ -736,7 +741,7 @@ export default function OnboardingScreen() {
         <Text className="text-sm font-semibold text-gray-700 mb-2">Fitness Goal</Text>
         <View className="flex-row flex-wrap">
           {FITNESS_GOALS.map((goal) => (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               key={goal.value}
               onPress={() => setData({ ...data, fitnessGoal: goal.value })}
               className={`w-[48%] ${FITNESS_GOALS.indexOf(goal) % 2 === 0 ? 'mr-[4%]' : ''} mb-4 p-4 rounded-2xl border-2 ${
@@ -755,7 +760,7 @@ export default function OnboardingScreen() {
               <Text className="text-xs text-gray-600 text-center">
                 {goal.description}
               </Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           ))}
         </View>
       </View>
@@ -872,18 +877,18 @@ export default function OnboardingScreen() {
         <View className="bg-white px-6 py-4 border-b border-gray-200">
           <View className="flex-row items-center justify-between mb-3">
             {currentStep > 0 ? (
-              <TouchableOpacity onPress={prevStep} className="p-1">
+              <HapticTouchableOpacity onPress={prevStep} className="p-1">
                 <Ionicons name="arrow-back" size={24} color="#6B7280" />
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             ) : (
               <View style={{ width: 32 }} />
             )}
             <Text className="text-base font-medium text-gray-600">
               Step {currentStep + 1} of {totalSteps}
             </Text>
-            <TouchableOpacity onPress={skipOnboarding} className="p-1">
+            <HapticTouchableOpacity onPress={skipOnboarding} className="p-1">
               <Text className="text-base font-medium text-orange-500">Skip</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
           {/* Progress Bar */}
           <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -899,7 +904,7 @@ export default function OnboardingScreen() {
 
         {/* Bottom Bar */}
         <View className="bg-white px-6 py-4 border-t border-gray-200">
-          <TouchableOpacity
+          <HapticTouchableOpacity
             onPress={nextStep}
             disabled={!canProceed() || saving}
             className={`py-4 rounded-xl ${
@@ -919,7 +924,7 @@ export default function OnboardingScreen() {
                 {currentStep === totalSteps - 1 ? 'Finish' : 'Continue'}
               </Text>
             )}
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
       </View>
     </SafeAreaView>

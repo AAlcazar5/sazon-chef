@@ -1,15 +1,22 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert, RefreshControl, TextInput, Modal } from 'react-native';
+import { View, Text, ScrollView, Alert, TextInput, Modal, Animated } from 'react-native';
+import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
+import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
+import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useColorScheme } from 'nativewind';
 import { useApi } from '../../hooks/useApi';
 import { recipeApi, collectionsApi } from '../../lib/api';
 import type { SavedRecipe } from '../../types';
 import FeedbackButtons from '../../components/recipe/FeedbackButtons';
 import * as Haptics from 'expo-haptics';
+import Icon from '../../components/ui/Icon';
+import { Icons, IconSizes } from '../../constants/Icons';
 
 export default function CookbookScreen() {
+  const { colorScheme } = useColorScheme();
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
   const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
   // Multi-select: empty array => All
@@ -24,6 +31,44 @@ export default function CookbookScreen() {
   const [feedbackLoading, setFeedbackLoading] = useState<string | null>(null);
   const [showListPicker, setShowListPicker] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null); // null = "Saved" (All)
+  
+  // Animation values for list picker modal
+  const listPickerScale = useRef(new Animated.Value(0)).current;
+  const listPickerOpacity = useRef(new Animated.Value(0)).current;
+
+  // Animate list picker modal
+  useEffect(() => {
+    if (showListPicker) {
+      listPickerScale.setValue(0);
+      listPickerOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(listPickerScale, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(listPickerOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(listPickerScale, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(listPickerOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showListPicker]);
   
   // Determine API URL based on view mode and collection filter
   const getApiUrl = () => {
@@ -260,9 +305,6 @@ export default function CookbookScreen() {
       setFeedbackLoading(recipeId);
       console.log('📱 Cookbook: Liking recipe', recipeId);
       
-      // Haptic feedback
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
       // Update UI immediately
       setUserFeedback(prev => ({
         ...prev,
@@ -298,9 +340,6 @@ export default function CookbookScreen() {
       setFeedbackLoading(recipeId);
       console.log('📱 Cookbook: Disliking recipe', recipeId);
       
-      // Haptic feedback
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
       // Update UI immediately
       setUserFeedback(prev => ({
         ...prev,
@@ -334,14 +373,14 @@ export default function CookbookScreen() {
   // Loading state
   if (apiLoading && savedRecipes.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-        <View className="bg-white px-4 pt-4 pb-4 border-b border-gray-200">
-          <Text className="text-2xl font-bold text-gray-900">My Cookbook</Text>
-          <Text className="text-gray-500 mt-1">Loading saved recipes...</Text>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Cookbook</Text>
+          <Text className="text-gray-500 dark:text-gray-200 mt-1">Loading saved recipes...</Text>
         </View>
         <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="book-outline" size={64} color="#9CA3AF" />
-          <Text className="text-xl font-semibold text-gray-500 mt-4">Loading recipes...</Text>
+          <Icon name={Icons.EMPTY_RECIPES} size={64} color="#9CA3AF" accessibilityLabel="Loading recipes" />
+          <Text className="text-xl font-semibold text-gray-500 dark:text-gray-200 mt-4">Loading recipes...</Text>
         </View>
       </SafeAreaView>
     );
@@ -350,111 +389,114 @@ export default function CookbookScreen() {
   // Error state
   if (apiError && savedRecipes.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-        <View className="bg-white px-4 pt-4 pb-4 border-b border-gray-200">
-          <Text className="text-2xl font-bold text-gray-900">My Cookbook</Text>
-          <Text className="text-gray-500 mt-1">Failed to load recipes</Text>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Cookbook</Text>
+          <Text className="text-gray-500 dark:text-gray-200 mt-1">Failed to load recipes</Text>
         </View>
         <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
-          <Text className="text-xl font-semibold text-gray-900 mt-4 text-center">
+          <Icon name={Icons.RECIPE_ERROR} size={64} color="#EF4444" accessibilityLabel="Error loading recipes" />
+          <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
             Failed to load saved recipes
           </Text>
-          <Text className="text-gray-500 text-center mt-2">
+          <Text className="text-gray-500 dark:text-gray-200 text-center mt-2">
             {apiError}
           </Text>
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={refetch}
-            className="bg-orange-500 px-6 py-3 rounded-lg mt-4"
+            className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg mt-4"
           >
             <Text className="text-white font-semibold">Try Again</Text>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header */}
-      <View className="bg-white px-4 pt-4 pb-4 border-b border-gray-200">
+      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
         <View className="flex-row justify-between items-center mb-3">
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900">My Cookbook</Text>
-            <Text className="text-gray-500 mt-1">
+            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Cookbook</Text>
+            <Text className="text-gray-500 dark:text-gray-200 mt-1">
               {viewMode === 'saved' && `${savedRecipes.length} saved recipes`}
               {viewMode === 'liked' && `${savedRecipes.length} liked recipes`}
               {viewMode === 'disliked' && `${savedRecipes.length} disliked recipes`}
             </Text>
           </View>
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={handleRefresh}
             className="p-2"
             disabled={refreshing}
           >
-            <Ionicons 
-              name="refresh" 
-              size={24} 
+            <Icon 
+              name={Icons.RELOAD} 
+              size={IconSizes.LG} 
               color={refreshing ? "#9CA3AF" : "#6B7280"} 
+              accessibilityLabel="Refresh recipes"
             />
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
         
         {/* View Mode Tabs: Saved, Liked, Disliked */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="h-10 mb-3">
           <View className="flex-row items-center">
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={() => {
                 setViewMode('saved');
                 setNeedsRefresh(true);
               }}
-              className={`px-4 py-2 rounded-full mr-2 ${viewMode === 'saved' ? 'bg-orange-500' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded-full mr-2 ${viewMode === 'saved' ? 'bg-orange-500 dark:bg-orange-600' : 'bg-gray-200 dark:bg-gray-700'}`}
             >
-              <Text className={`${viewMode === 'saved' ? 'text-white' : 'text-gray-800'} font-medium`}>Saved</Text>
-            </TouchableOpacity>
+              <Text className={`${viewMode === 'saved' ? 'text-white' : 'text-gray-800 dark:text-gray-200'} font-medium`}>Saved</Text>
+            </HapticTouchableOpacity>
             
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={() => {
                 setViewMode('liked');
                 setNeedsRefresh(true);
               }}
-              className={`px-4 py-2 rounded-full mr-2 ${viewMode === 'liked' ? 'bg-green-500' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded-full mr-2 ${viewMode === 'liked' ? 'bg-green-500 dark:bg-green-600' : 'bg-gray-200 dark:bg-gray-700'}`}
             >
               <View className="flex-row items-center">
-                <Ionicons name="thumbs-up" size={16} color={viewMode === 'liked' ? 'white' : '#6B7280'} />
-                <Text className={`${viewMode === 'liked' ? 'text-white' : 'text-gray-800'} font-medium ml-1`}>Liked</Text>
+                <Icon name={Icons.LIKE} size={IconSizes.SM} color={viewMode === 'liked' ? 'white' : '#6B7280'} accessibilityLabel="Liked recipes" />
+                <Text className={`${viewMode === 'liked' ? 'text-white' : 'text-gray-800 dark:text-gray-200'} font-medium ml-1`}>Liked</Text>
               </View>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
             
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={() => {
                 setViewMode('disliked');
                 setNeedsRefresh(true);
               }}
-              className={`px-4 py-2 rounded-full mr-2 ${viewMode === 'disliked' ? 'bg-red-500' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded-full mr-2 ${viewMode === 'disliked' ? 'bg-red-500 dark:bg-red-600' : 'bg-gray-200 dark:bg-gray-700'}`}
             >
               <View className="flex-row items-center">
-                <Ionicons name="thumbs-down" size={16} color={viewMode === 'disliked' ? 'white' : '#6B7280'} />
-                <Text className={`${viewMode === 'disliked' ? 'text-white' : 'text-gray-800'} font-medium ml-1`}>Disliked</Text>
+                <Icon name={Icons.DISLIKE} size={IconSizes.SM} color={viewMode === 'disliked' ? 'white' : '#6B7280'} accessibilityLabel="Disliked recipes" />
+                <Text className={`${viewMode === 'disliked' ? 'text-white' : 'text-gray-800 dark:text-gray-200'} font-medium ml-1`}>Disliked</Text>
               </View>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
         </ScrollView>
 
         {/* List Dropdown Picker - visible in all views */}
         <View className="mb-3">
-          <TouchableOpacity
-            onPress={() => setShowListPicker(true)}
-            className="bg-white border border-gray-300 rounded-lg px-4 py-3 flex-row items-center justify-between"
+          <HapticTouchableOpacity
+            onPress={() => {
+              setShowListPicker(true);
+            }}
+            className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 flex-row items-center justify-between"
           >
             <View className="flex-row items-center flex-1">
-              <Ionicons name="list" size={20} color="#6B7280" style={{ marginRight: 8 }} />
-              <Text className="text-gray-900 font-medium text-base">
+              <Icon name={Icons.SHOPPING_LIST_OUTLINE} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Collection list" style={{ marginRight: 8 }} />
+              <Text className="text-gray-900 dark:text-gray-100 font-medium text-base">
                 {getCurrentListName()}
               </Text>
             </View>
-            <Ionicons name="chevron-down" size={20} color="#6B7280" />
-          </TouchableOpacity>
+            <Icon name={Icons.CHEVRON_DOWN} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Open dropdown" />
+          </HapticTouchableOpacity>
         </View>
       </View>
 
@@ -462,45 +504,55 @@ export default function CookbookScreen() {
       <Modal
         visible={showListPicker}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowListPicker(false)}
       >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setShowListPicker(false)}
+        <Animated.View 
           className="flex-1 bg-black/50 justify-center items-center px-4"
+          style={{ opacity: listPickerOpacity }}
         >
-          <TouchableOpacity
+          <HapticTouchableOpacity
             activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-            className="bg-white rounded-lg w-full max-w-sm shadow-lg"
+            onPress={() => setShowListPicker(false)}
+            className="flex-1 w-full justify-center items-center"
           >
-            <View className="p-4 border-b border-gray-200">
-              <Text className="text-lg font-semibold text-gray-900">Select List</Text>
-            </View>
+            <HapticTouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <Animated.View 
+                className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-sm shadow-lg"
+                style={{
+                  transform: [{ scale: listPickerScale }],
+                }}
+              >
+                <View className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Select List</Text>
+                </View>
             
             <ScrollView className="max-h-80">
               {/* "All" (default) option */}
-              <TouchableOpacity
+              <HapticTouchableOpacity
                 onPress={() => handleSelectList(null)}
                 className={`px-4 py-3 flex-row items-center border-b border-gray-100 ${
                   selectedListId === null ? 'bg-orange-50' : 'bg-white'
                 }`}
               >
-                <Ionicons 
-                  name={selectedListId === null ? "checkmark-circle" : "ellipse-outline"} 
-                  size={20} 
+                <Icon 
+                  name={selectedListId === null ? Icons.CHECKMARK_CIRCLE : Icons.ELLIPSE_OUTLINE} 
+                  size={IconSizes.MD} 
                   color={selectedListId === null ? "#F97316" : "#9CA3AF"} 
+                  accessibilityLabel={selectedListId === null ? "Selected" : "Not selected"}
                   style={{ marginRight: 12 }}
                 />
                 <Text className={`flex-1 text-base ${selectedListId === null ? 'text-orange-600 font-semibold' : 'text-gray-900'}`}>
                   All
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
               
               {/* User-created collections */}
               {collections.map((collection) => (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   key={collection.id}
                   onPress={() => handleSelectList(collection.id)}
                   onLongPress={() => {
@@ -524,8 +576,8 @@ export default function CookbookScreen() {
                       ]
                     );
                   }}
-                  className={`px-4 py-3 flex-row items-center border-b border-gray-100 ${
-                    selectedListId === collection.id ? 'bg-orange-50' : 'bg-white'
+                  className={`px-4 py-3 flex-row items-center border-b border-gray-100 dark:border-gray-700 ${
+                    selectedListId === collection.id ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white dark:bg-gray-800'
                   }`}
                 >
                   <Ionicons 
@@ -534,10 +586,10 @@ export default function CookbookScreen() {
                     color={selectedListId === collection.id ? "#F97316" : "#9CA3AF"} 
                     style={{ marginRight: 12 }}
                   />
-                  <Text className={`flex-1 text-base ${selectedListId === collection.id ? 'text-orange-600 font-semibold' : 'text-gray-900'}`}>
+                  <Text className={`flex-1 text-base ${selectedListId === collection.id ? 'text-orange-600 dark:text-orange-400 font-semibold' : 'text-gray-900 dark:text-gray-100'}`}>
                     {collection.name}
                   </Text>
-                  <TouchableOpacity
+                  <HapticTouchableOpacity
                     onPress={() => {
                       Alert.alert(
                         'Delete List',
@@ -561,274 +613,169 @@ export default function CookbookScreen() {
                     }}
                     className="p-2 ml-2"
                   >
-                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                  </TouchableOpacity>
-                </TouchableOpacity>
+                    <Icon name={Icons.DELETE_OUTLINE} size={IconSizes.SM} color="#EF4444" accessibilityLabel="Delete list" />
+                  </HapticTouchableOpacity>
+                </HapticTouchableOpacity>
               ))}
             </ScrollView>
             
             {/* Create New List Button */}
-            <View className="p-4 border-t border-gray-200">
-              <TouchableOpacity
+            <View className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <HapticTouchableOpacity
                 onPress={() => {
                   setShowListPicker(false);
                   setShowCreateCollection(true);
                 }}
-                className="bg-orange-500 px-4 py-3 rounded-lg flex-row items-center justify-center"
+                className="bg-orange-500 dark:bg-orange-600 px-4 py-3 rounded-lg flex-row items-center justify-center"
               >
-                <Ionicons name="add" size={20} color="white" />
+                <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Create new list" />
                 <Text className="text-white font-semibold ml-2">Create New List</Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
             
             {/* Close Button */}
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={() => setShowListPicker(false)}
-              className="px-4 py-3 border-t border-gray-200"
+              className="px-4 py-3 border-t border-gray-200 dark:border-gray-700"
             >
-              <Text className="text-gray-600 font-medium text-center">Close</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+              <Text className="text-gray-600 dark:text-gray-100 font-medium text-center">Close</Text>
+            </HapticTouchableOpacity>
+              </Animated.View>
+            </HapticTouchableOpacity>
+          </HapticTouchableOpacity>
+        </Animated.View>
       </Modal>
 
       {/* Inline create collection input */}
       {showCreateCollection && (
-        <View className="bg-white px-4 py-3 border-b border-gray-200">
+        <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <View className="flex-row items-center">
             <TextInput
               value={newCollectionName}
               onChangeText={setNewCollectionName}
               placeholder="List name"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
+              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mr-2 dark:bg-gray-700 dark:text-gray-100"
               placeholderTextColor="#9CA3AF"
             />
-            <TouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-4 py-2 rounded-lg">
+            <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 dark:bg-orange-600 px-4 py-2 rounded-lg">
               <Text className="text-white font-semibold">Create</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
         </View>
       )}
 
       {savedRecipes.length === 0 ? (
         // Empty state
-        <View className="flex-1 items-center justify-center p-8">
+        <>
           {viewMode === 'saved' && (
-            <>
-              <Ionicons name="book-outline" size={64} color="#9CA3AF" />
-              <Text className="text-xl font-semibold text-gray-500 mt-4 text-center">
-                No saved recipes yet
-              </Text>
-              <Text className="text-gray-400 text-center mt-2">
-                Save recipes you like to see them here
-              </Text>
-              <TouchableOpacity 
-                onPress={() => router.push('/')}
-                className="bg-orange-500 px-6 py-3 rounded-lg mt-4"
-              >
-                <Text className="text-white font-semibold">Browse Recipes</Text>
-              </TouchableOpacity>
-            </>
+            <AnimatedEmptyState
+              icon={Icons.EMPTY_RECIPES}
+              title="No saved recipes yet"
+              description="Save recipes you like to see them here"
+              actionLabel="Browse Recipes"
+              onAction={() => router.push('/')}
+            />
           )}
           {viewMode === 'liked' && (
-            <>
-              <Ionicons name="thumbs-up-outline" size={64} color="#9CA3AF" />
-              <Text className="text-xl font-semibold text-gray-500 mt-4 text-center">
-                No liked recipes yet
-              </Text>
-              <Text className="text-gray-400 text-center mt-2">
-                Like recipes to see them here
-              </Text>
-              <TouchableOpacity 
-                onPress={() => {
-                  setViewMode('saved');
-                  router.push('/');
-                }}
-                className="bg-orange-500 px-6 py-3 rounded-lg mt-4"
-              >
-                <Text className="text-white font-semibold">Browse Recipes</Text>
-              </TouchableOpacity>
-            </>
+            <AnimatedEmptyState
+              icon={Icons.LIKE_OUTLINE}
+              title="No liked recipes yet"
+              description="Like recipes to see them here"
+              actionLabel="Browse Recipes"
+              onAction={() => {
+                setViewMode('saved');
+                router.push('/');
+              }}
+            />
           )}
           {viewMode === 'disliked' && (
-            <>
-              <Ionicons name="thumbs-down-outline" size={64} color="#9CA3AF" />
-              <Text className="text-xl font-semibold text-gray-500 mt-4 text-center">
-                No disliked recipes yet
-              </Text>
-              <Text className="text-gray-400 text-center mt-2">
-                Dislike recipes to see them here
-              </Text>
-              <TouchableOpacity 
-                onPress={() => {
-                  setViewMode('saved');
-                  router.push('/');
-                }}
-                className="bg-orange-500 px-6 py-3 rounded-lg mt-4"
-              >
-                <Text className="text-white font-semibold">Browse Recipes</Text>
-              </TouchableOpacity>
-            </>
+            <AnimatedEmptyState
+              icon={Icons.DISLIKE_OUTLINE}
+              title="No disliked recipes yet"
+              description="Dislike recipes to see them here"
+              actionLabel="Browse Recipes"
+              onAction={() => {
+                setViewMode('saved');
+                router.push('/');
+              }}
+            />
           )}
-        </View>
+        </>
       ) : (
         // Recipes list
         <ScrollView 
           className="flex-1 p-4"
           contentContainerStyle={{ paddingTop: 0 }}
           refreshControl={
-            <RefreshControl 
+            <AnimatedRefreshControl 
               refreshing={refreshing} 
               onRefresh={handleRefresh}
               tintColor="#F97316"
               colors={['#F97316']}
               progressViewOffset={0}
-              style={{ backgroundColor: 'transparent' }}
             />
           }
         >
           {savedRecipes.map((recipe) => (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               key={recipe.id}
               onPress={() => handleRecipePress(recipe.id)}
-              className="bg-white rounded-lg p-4 mb-3 shadow-sm border border-gray-100"
+              className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-3 shadow-sm border border-gray-100 dark:border-gray-700"
               style={{ opacity: 1 }}
               activeOpacity={0.7}
             >
               <View className="flex-1">
-                <View className="flex-row items-center mb-1">
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-900">
-                      {recipe.title}
-                    </Text>
-                    {/* Source Attribution */}
-                    {(recipe as any).source === 'ai-generated' && (
-                      <View className="flex-row items-center mt-1">
-                        <View className="bg-purple-100 px-2 py-0.5 rounded-full">
-                          <Text className="text-purple-700 text-xs font-medium">
-                            🤖 AI Generated
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                  {(recipe as any).isUserCreated && (
-                    <View className="bg-green-100 px-2 py-1 rounded-full ml-2">
-                      <Text className="text-green-800 text-xs font-medium">My Recipe</Text>
-                    </View>
-                  )}
-                </View>
-                <Text className="text-gray-600 text-sm mb-2" numberOfLines={2}>
-                  {truncateDescription(recipe.description)}
+                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {recipe.title}
                 </Text>
-                
-                {/* Date label - Moved here to match spacing */}
-                {(recipe.savedDate || (recipe as any).likedDate || (recipe as any).dislikedDate) && (
-                  <Text className="text-gray-400 text-xs mb-2">
-                    {viewMode === 'liked' && (recipe as any).likedDate && `Liked on ${(recipe as any).likedDate}`}
-                    {viewMode === 'disliked' && (recipe as any).dislikedDate && `Disliked on ${(recipe as any).dislikedDate}`}
-                    {viewMode === 'saved' && recipe.savedDate && ((recipe as any).isUserCreated ? 'Created on' : 'Saved on') + ' ' + recipe.savedDate}
-                  </Text>
+                {/* Source Attribution */}
+                {(recipe as any).source === 'ai-generated' && (
+                  <View className="flex-row items-center mt-1">
+                    <View className="bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
+                      <Text className="text-purple-700 dark:text-purple-300 text-xs font-medium">
+                        🤖 AI Generated
+                      </Text>
+                    </View>
+                  </View>
                 )}
-
-                {/* Macro Pills */}
-                <View className="flex-row space-x-2 mb-2">
-                  <View className="bg-blue-100 px-2 py-1 rounded-full">
-                    <Text className="text-blue-800 text-xs">
-                      {recipe.calories} cal
-                    </Text>
-                  </View>
-                  <View className="bg-green-100 px-2 py-1 rounded-full">
-                    <Text className="text-green-800 text-xs">
-                      P: {recipe.protein}g
-                    </Text>
-                  </View>
-                  <View className="bg-yellow-100 px-2 py-1 rounded-full">
-                    <Text className="text-yellow-800 text-xs">
-                      C: {recipe.carbs}g
-                    </Text>
-                  </View>
-                  <View className="bg-purple-100 px-2 py-1 rounded-full">
-                    <Text className="text-purple-800 text-xs">
-                      F: {recipe.fat}g
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Actions: Like/Dislike and Delete/Remove - Bottom-right like home screen */}
-                <View className="flex-row justify-between items-center">
-                  {/* Cook time and cuisine - Bottom left like home screen */}
-                  <View className="flex-row items-center space-x-4">
-                    <View className="flex-row items-center">
-                      <Ionicons name="time-outline" size={16} color="#6B7280" />
-                      <Text className="text-gray-500 text-sm ml-1">
-                        {recipe.cookTime} min
-                      </Text>
-                    </View>
-                    <View className="bg-orange-100 px-2 py-1 rounded-full">
-                      <Text className="text-orange-800 text-xs font-medium">
-                        {recipe.cuisine}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  {/* Buttons on the right */}
-                  <View className="flex-row">
-                    {/* Delete/Remove button */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        if ((recipe as any).isUserCreated) {
-                          handleDeleteRecipe(recipe.id, recipe.title);
-                        } else {
-                          handleRemoveRecipe(recipe.id);
-                        }
-                      }}
-                      className="p-2 rounded-full bg-gray-100 border border-gray-200 mr-2"
-                      disabled={feedbackLoading === recipe.id}
-                    >
-                      <Ionicons 
-                        name="trash-outline" 
-                        size={18} 
-                        color={feedbackLoading === recipe.id ? "#9CA3AF" : "#EF4444"} 
-                      />
-                    </TouchableOpacity>
-                    
-                    {/* Like/Dislike buttons */}
-                    <TouchableOpacity
-                      onPress={() => handleDislike(recipe.id)}
-                      disabled={feedbackLoading === recipe.id}
-                      className={`p-2 rounded-full mr-2 ${
-                        userFeedback[recipe.id]?.disliked 
-                          ? 'bg-red-100 border border-red-200' 
-                          : 'bg-gray-100 border border-gray-200'
-                      } ${feedbackLoading === recipe.id ? 'opacity-50' : ''}`}
-                    >
-                      <Ionicons 
-                        name={userFeedback[recipe.id]?.disliked ? "thumbs-down" : "thumbs-down-outline"} 
-                        size={18} 
-                        color={userFeedback[recipe.id]?.disliked ? "#EF4444" : "#6B7280"} 
-                      />
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      onPress={() => handleLike(recipe.id)}
-                      disabled={feedbackLoading === recipe.id}
-                      className={`p-2 rounded-full ${
-                        userFeedback[recipe.id]?.liked 
-                          ? 'bg-green-100 border border-green-200' 
-                          : 'bg-gray-100 border border-gray-200'
-                      } ${feedbackLoading === recipe.id ? 'opacity-50' : ''}`}
-                    >
-                      <Ionicons 
-                        name={userFeedback[recipe.id]?.liked ? "thumbs-up" : "thumbs-up-outline"} 
-                        size={18} 
-                        color={userFeedback[recipe.id]?.liked ? "#10B981" : "#6B7280"} 
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
               </View>
-            </TouchableOpacity>
+              <Text className="text-gray-600 dark:text-gray-200 text-sm mt-2" numberOfLines={2}>
+                {truncateDescription(recipe.description)}
+              </Text>
+              
+              {/* Date label - Moved here to match spacing */}
+              {(recipe.savedDate || (recipe as any).likedDate || (recipe as any).dislikedDate) && (
+                <Text className="text-gray-400 dark:text-gray-200 text-xs mb-2">
+                  {viewMode === 'liked' && (recipe as any).likedDate && `Liked on ${(recipe as any).likedDate}`}
+                  {viewMode === 'disliked' && (recipe as any).dislikedDate && `Disliked on ${(recipe as any).dislikedDate}`}
+                  {viewMode === 'saved' && recipe.savedDate && `Saved on ${recipe.savedDate}`}
+                </Text>
+              )}
+              
+              <View className="flex-row items-center justify-between mt-2">
+                <View className="flex-row items-center space-x-3">
+                  <View className="flex-row items-center">
+                    <Icon name={Icons.TIME_OUTLINE} size={IconSizes.SM} color="#6B7280" accessibilityLabel="Cook time" />
+                    <Text className="text-gray-500 dark:text-gray-200 text-sm ml-1">
+                      {recipe.cookTime} min
+                    </Text>
+                  </View>
+                  <View className="bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-full">
+                    <Text className="text-orange-800 dark:text-orange-300 text-xs font-medium">
+                      {recipe.cuisine}
+                    </Text>
+                  </View>
+                </View>
+                <FeedbackButtons
+                  recipeId={recipe.id}
+                  onLike={handleLike}
+                  onDislike={handleDislike}
+                  initialLiked={userFeedback[recipe.id]?.liked || false}
+                  initialDisliked={userFeedback[recipe.id]?.disliked || false}
+                  size="sm"
+                />
+              </View>
+            </HapticTouchableOpacity>
           ))}
         </ScrollView>
       )}

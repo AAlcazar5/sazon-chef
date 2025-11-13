@@ -1,7 +1,8 @@
 // frontend/app/scanner.tsx
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 // Scanner screen for ingredient scanning and food recognition (Phase 6, Group 13)
 
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Image } from 'react-native';
+import { View, Text, Alert, ActivityIndicator, ScrollView, Image } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { CameraView, CameraType, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { router } from 'expo-router';
@@ -63,7 +64,6 @@ export default function ScannerScreen() {
 
     try {
       setScanning(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Take photo using camera
       const photo = await cameraRef.current.takePictureAsync({
@@ -77,6 +77,7 @@ export default function ScannerScreen() {
       }
     } catch (error: any) {
       console.error('❌ Camera error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to take photo. Please try again.');
     } finally {
       setScanning(false);
@@ -103,6 +104,7 @@ export default function ScannerScreen() {
       }
     } catch (error: any) {
       console.error('❌ Image picker error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -149,6 +151,7 @@ export default function ScannerScreen() {
       }
     } catch (error: any) {
       console.error('❌ Barcode scan error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Product Not Found',
         'This barcode was not found in our database. Please try another product.'
@@ -183,12 +186,12 @@ export default function ScannerScreen() {
         <Text className="text-gray-600 text-center mb-6">
           We need access to your camera to scan ingredients and barcodes.
         </Text>
-        <TouchableOpacity
+        <HapticTouchableOpacity
           onPress={requestPermission}
           className="bg-orange-500 px-6 py-3 rounded-lg"
         >
           <Text className="text-white font-semibold">Grant Permission</Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -197,7 +200,7 @@ export default function ScannerScreen() {
     <SafeAreaView className="flex-1 bg-black">
       {/* Mode Selector */}
       <View className="flex-row bg-gray-900 px-4 py-2">
-        <TouchableOpacity
+        <HapticTouchableOpacity
           onPress={() => {
             setMode('food');
             reset();
@@ -207,8 +210,8 @@ export default function ScannerScreen() {
           <Text className={`text-center font-semibold ${mode === 'food' ? 'text-white' : 'text-gray-300'}`}>
             📸 Food Photo
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </HapticTouchableOpacity>
+        <HapticTouchableOpacity
           onPress={() => {
             setMode('barcode');
             reset();
@@ -218,7 +221,7 @@ export default function ScannerScreen() {
           <Text className={`text-center font-semibold ${mode === 'barcode' ? 'text-white' : 'text-gray-300'}`}>
             📱 Barcode
           </Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </View>
 
       {/* Camera View */}
@@ -241,15 +244,16 @@ export default function ScannerScreen() {
           ) : (
             <View className="absolute inset-0 justify-end pb-8 items-center">
               <View className="flex-row" style={{ gap: 16 }}>
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   onPress={handlePickImage}
                   className="w-16 h-16 rounded-full bg-gray-700 items-center justify-center"
                 >
                   <Ionicons name="images-outline" size={32} color="white" />
-                </TouchableOpacity>
-                <TouchableOpacity
+                </HapticTouchableOpacity>
+                <HapticTouchableOpacity
                   onPress={handleTakePhoto}
                   disabled={scanning || processing}
+                  hapticStyle="medium"
                   className="w-20 h-20 rounded-full bg-orange-500 items-center justify-center border-4 border-white"
                 >
                   {scanning || processing ? (
@@ -257,13 +261,13 @@ export default function ScannerScreen() {
                   ) : (
                     <View className="w-16 h-16 rounded-full bg-white" />
                   )}
-                </TouchableOpacity>
-                <TouchableOpacity
+                </HapticTouchableOpacity>
+                <HapticTouchableOpacity
                   onPress={() => router.back()}
                   className="w-16 h-16 rounded-full bg-gray-700 items-center justify-center"
                 >
                   <Ionicons name="close" size={32} color="white" />
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               </View>
             </View>
           )}
@@ -277,9 +281,9 @@ export default function ScannerScreen() {
             {/* Header */}
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-2xl font-bold text-gray-900">Results</Text>
-              <TouchableOpacity onPress={reset}>
+              <HapticTouchableOpacity onPress={reset}>
                 <Ionicons name="close-circle" size={32} color="#9CA3AF" />
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
 
             {/* Image Preview */}
@@ -367,18 +371,18 @@ export default function ScannerScreen() {
 
             {/* Action Buttons */}
             <View className="mt-6 space-y-2">
-              <TouchableOpacity
+              <HapticTouchableOpacity
                 onPress={reset}
                 className="bg-orange-500 py-3 rounded-lg"
               >
                 <Text className="text-white text-center font-semibold">Scan Again</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </HapticTouchableOpacity>
+              <HapticTouchableOpacity
                 onPress={() => router.back()}
                 className="bg-gray-200 py-3 rounded-lg"
               >
                 <Text className="text-gray-700 text-center font-semibold">Done</Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
           </View>
         </ScrollView>

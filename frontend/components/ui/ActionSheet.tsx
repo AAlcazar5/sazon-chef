@@ -1,9 +1,10 @@
 // frontend/components/ui/ActionSheet.tsx
 // Action sheet modal for quick actions
 
-import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useEffect, useRef } from 'react';
 
 export interface ActionSheetItem {
   label: string;
@@ -21,6 +22,46 @@ interface ActionSheetProps {
 }
 
 export default function ActionSheet({ visible, onClose, items, title }: ActionSheetProps) {
+  // Animation for slide from bottom
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(100)).current;
+
+  useEffect(() => {
+    if (visible) {
+      // Reset and animate in from bottom
+      opacity.setValue(0);
+      translateY.setValue(100);
+      
+      Animated.parallel([
+        Animated.spring(translateY, {
+          toValue: 0,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Animate out to bottom
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: 100,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
   const handleItemPress = (item: ActionSheetItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     item.onPress();
@@ -31,13 +72,21 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={onClose}>
-        <View className="flex-1 bg-black/50">
+        <Animated.View 
+          className="flex-1 bg-black/50"
+          style={{ opacity }}
+        >
           <TouchableWithoutFeedback>
-            <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl overflow-hidden">
+            <Animated.View 
+              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl overflow-hidden"
+              style={{
+                transform: [{ translateY }],
+              }}
+            >
               {/* Handle */}
               <View className="items-center py-2">
                 <View className="w-12 h-1 bg-gray-300 rounded-full" />
@@ -85,14 +134,17 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
 
               {/* Cancel Button */}
               <TouchableOpacity
-                onPress={onClose}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onClose();
+                }}
                 className="mx-4 mb-4 py-4 bg-gray-100 rounded-lg items-center"
               >
                 <Text className="text-gray-700 font-semibold text-base">Cancel</Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </TouchableWithoutFeedback>
-        </View>
+        </Animated.View>
       </TouchableWithoutFeedback>
     </Modal>
   );

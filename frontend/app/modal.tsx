@@ -1,8 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert, Share, Platform, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated } from 'react-native';
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import AnimatedText from '../components/ui/AnimatedText';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApi } from '../hooks/useApi';
 import { recipeApi, collectionsApi, shoppingListApi, costTrackingApi, shoppingAppApi, ingredientAvailabilityApi } from '../lib/api';
 import type { Recipe } from '../types';
@@ -20,6 +22,15 @@ export default function RecipeModal() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Animation for modal expansion
+  const modalScale = useRef(new Animated.Value(0.8)).current;
+  const modalOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Animation for collection picker modal
+  const pickerScale = useRef(new Animated.Value(0)).current;
+  const pickerOpacity = useRef(new Animated.Value(0)).current;
+  
   const [isSaving, setIsSaving] = useState(false);
   const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -35,6 +46,57 @@ export default function RecipeModal() {
   const [recipeAvailability, setRecipeAvailability] = useState<any>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [integrations, setIntegrations] = useState<any[]>([]);
+
+  // Animate modal entrance
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(modalScale, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  // Animate collection picker modal
+  useEffect(() => {
+    if (pickerVisible) {
+      pickerScale.setValue(0);
+      pickerOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(pickerScale, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pickerOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(pickerScale, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pickerOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [pickerVisible]);
 
   // Fetch recipe data when modal opens
   useEffect(() => {
@@ -115,7 +177,6 @@ export default function RecipeModal() {
     if (!recipe) return;
 
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const response = await shoppingAppApi.syncRecipe(appName, recipe.id);
       
       if (response.data.success) {
@@ -182,6 +243,7 @@ export default function RecipeModal() {
         }
       } else {
         console.error('📱 Modal: Save error', error);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert('Error', error.message || 'Failed to save recipe');
       }
     } finally {
@@ -225,7 +287,6 @@ export default function RecipeModal() {
 
     try {
       setAddingToShoppingList(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Generate shopping list from recipe
       const response = await shoppingListApi.generateFromRecipes([recipe.id]);
@@ -251,6 +312,7 @@ export default function RecipeModal() {
       }
     } catch (error: any) {
       console.error('❌ Add to shopping list error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to add items to shopping list');
     } finally {
       setAddingToShoppingList(false);
@@ -287,6 +349,7 @@ export default function RecipeModal() {
                           error.message?.includes('quota') ||
                           error.message?.includes('429');
       
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Healthify Failed',
         isQuotaError
@@ -319,10 +382,12 @@ export default function RecipeModal() {
             await recipeApi.unsaveRecipe(recipe.id);
             console.log('📱 Modal: Recipe removed from cookbook');
             
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert('Removed', 'Recipe removed from your cookbook');
             router.back();
           } catch (error) {
             console.error('📱 Modal: Error removing recipe', error);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert('Error', 'Failed to remove recipe from cookbook');
           }
         },
@@ -342,8 +407,10 @@ export default function RecipeModal() {
         onPress: async () => {
           try {
             await recipeApi.likeRecipe(recipe.id);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert('Thanks!', 'Your feedback helps us improve recommendations');
           } catch (error) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert('Error', 'Failed to submit rating');
           }
         },
@@ -353,8 +420,10 @@ export default function RecipeModal() {
         onPress: async () => {
           try {
             await recipeApi.dislikeRecipe(recipe.id);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert('Thanks!', 'Your feedback helps us improve recommendations');
           } catch (error) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert('Error', 'Failed to submit rating');
           }
         },
@@ -385,6 +454,7 @@ export default function RecipeModal() {
       }
     } catch (error) {
       console.error('📱 Error sharing recipe:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to share recipe');
     }
   };
@@ -437,14 +507,21 @@ export default function RecipeModal() {
   // Loading state
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <Animated.View
+        style={{
+          flex: 1,
+          transform: [{ scale: modalScale }],
+          opacity: modalOpacity,
+        }}
+      >
+        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={() => router.back()}
             className="p-2"
           >
             <Ionicons name="close" size={24} color="#374151" />
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
           <Text className="text-lg font-semibold text-gray-900">Recipe Details</Text>
           <View className="w-8" />
         </View>
@@ -453,20 +530,28 @@ export default function RecipeModal() {
           <Text className="text-lg font-semibold text-gray-500 mt-4">Loading recipe...</Text>
         </View>
       </SafeAreaView>
+      </Animated.View>
     );
   }
 
   // Error state
   if (error || !recipe) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <Animated.View
+        style={{
+          flex: 1,
+          transform: [{ scale: modalScale }],
+          opacity: modalOpacity,
+        }}
+      >
+        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={() => router.back()}
             className="p-2"
           >
             <Ionicons name="close" size={24} color="#374151" />
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
           <Text className="text-lg font-semibold text-gray-900">Recipe Details</Text>
           <View className="w-8" />
         </View>
@@ -478,36 +563,44 @@ export default function RecipeModal() {
           <Text className="text-gray-500 text-center mt-2">
             {error || 'Recipe not found'}
           </Text>
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={() => router.back()}
             className="bg-orange-500 px-6 py-3 rounded-lg mt-4"
           >
             <Text className="text-white font-semibold">Go Back</Text>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
       </SafeAreaView>
+      </Animated.View>
     );
   }
 
   return (
     <>
+    <Animated.View
+      style={{
+        flex: 1,
+        transform: [{ scale: modalScale }],
+        opacity: modalOpacity,
+      }}
+    >
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       {/* Header - Single title with close button */}
       <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
-        <TouchableOpacity 
+        <HapticTouchableOpacity 
           onPress={() => router.back()}
           className="p-2"
         >
           <Ionicons name="close" size={24} color="#374151" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
         <Text className="text-lg font-semibold text-gray-900">Recipe Details</Text>
         {isUserRecipe ? (
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={handleEditRecipe}
             className="p-2"
           >
             <Ionicons name="create-outline" size={24} color="#F97316" />
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         ) : (
           <View className="w-8" />
         )}
@@ -516,14 +609,14 @@ export default function RecipeModal() {
       <ScrollView className="flex-1">
         <View className="p-4">
           {/* Recipe Title - Removed the duplicate title here */}
-          <Text className="text-2xl font-bold text-gray-900 mb-2">
+          <AnimatedText className="text-2xl font-bold text-gray-900 mb-2">
             {recipe.title}
-          </Text>
+          </AnimatedText>
           
           {/* Description */}
-          <Text className="text-gray-600 mb-4">
+          <AnimatedText className="text-gray-600 mb-4">
             {recipe.description}
-          </Text>
+          </AnimatedText>
 
           {/* Quick Stats */}
           <View className="flex-row justify-between mb-6 p-4 bg-gray-50 rounded-lg">
@@ -929,38 +1022,40 @@ export default function RecipeModal() {
       {/* Action Buttons */}
       <View className="p-4 border-t border-gray-200">
         {/* Add to Shopping List Button - Available for all recipes */}
-        <TouchableOpacity 
+        <HapticTouchableOpacity 
           onPress={handleAddToShoppingList}
           disabled={addingToShoppingList || !recipe}
+          hapticStyle="medium"
           className={`${addingToShoppingList ? 'opacity-50' : ''} bg-blue-500 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
         >
           <Ionicons name="cart" size={20} color="white" style={{ marginRight: 8 }} />
           <Text className="text-white font-semibold text-lg">
             {addingToShoppingList ? 'Adding...' : '🛒 Add to Shopping List'}
           </Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
 
         {/* Sync to Shopping Apps */}
         {integrations.length > 0 && (
           <View className="mb-2">
             <Text className="text-sm font-medium text-gray-700 mb-2 px-2">Sync Recipe to Shopping App:</Text>
             {integrations.map((integration) => (
-              <TouchableOpacity
+              <HapticTouchableOpacity
                 key={integration.id}
                 onPress={() => handleSyncRecipeToApp(integration.appName)}
+                hapticStyle="medium"
                 className="bg-blue-100 py-3 px-4 rounded-lg items-center mb-2 flex-row justify-center"
               >
                 <Ionicons name="link-outline" size={18} color="#3B82F6" style={{ marginRight: 8 }} />
                 <Text className="text-blue-700 font-semibold">
                   Sync to {integration.appName.charAt(0).toUpperCase() + integration.appName.slice(1)}
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             ))}
           </View>
         )}
 
         {/* Healthify Button - Available for all recipes */}
-        <TouchableOpacity 
+        <HapticTouchableOpacity 
           onPress={handleHealthify}
           disabled={healthifying}
           className={`${healthifying ? 'opacity-50' : ''} bg-green-500 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
@@ -969,56 +1064,56 @@ export default function RecipeModal() {
           <Text className="text-white font-semibold text-lg">
             {healthifying ? 'Healthifying...' : '💚 Healthify Recipe'}
           </Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
 
         {isUserRecipe ? (
           // User-created recipe actions
           <>
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={handleEditRecipe}
               className="bg-orange-500 py-3 px-6 rounded-lg items-center mb-2"
             >
               <Text className="text-white font-semibold text-lg">Edit Recipe</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity 
               onPress={handleDeleteRecipe}
               className="border border-red-500 py-3 px-6 rounded-lg items-center"
             >
               <Text className="text-red-500 font-semibold">Delete Recipe</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </>
         ) : source === 'cookbook' ? (
           // System recipe actions (in cookbook context)
           <>
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={handleRemoveFromCookbook}
               className="bg-red-500 py-3 px-6 rounded-lg items-center mb-2"
             >
               <Text className="text-white font-semibold text-lg">Remove from Cookbook</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity 
               onPress={handleRateRecipe}
               className="border border-orange-500 py-3 px-6 rounded-lg items-center mb-2"
             >
               <Text className="text-orange-500 font-semibold">Rate Recipe</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity 
               onPress={handleShareRecipe}
               className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
             >
               <Text className="text-gray-700 font-semibold">Share Recipe</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity 
               onPress={handleAddToMealPlan}
               className="border border-blue-500 py-3 px-6 rounded-lg items-center"
             >
               <Text className="text-blue-500 font-semibold">Add to Meal Plan</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </>
         ) : source === 'random' ? (
           // System recipe actions (from random button)
           <>
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={handleSaveRecipe}
               disabled={isSaving}
               className={`py-3 px-6 rounded-lg items-center mb-2 ${
@@ -1028,30 +1123,30 @@ export default function RecipeModal() {
               <Text className="text-white font-semibold text-lg">
                 {isSaving ? 'Saving...' : 'Save to Cookbook'}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity 
               onPress={handleNotInterested}
               className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
             >
               <Text className="text-gray-700 font-semibold">Not Interested</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity 
               onPress={handleShareRecipe}
               className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
             >
               <Text className="text-gray-700 font-semibold">Share Recipe</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity 
               onPress={handleAddToMealPlan}
               className="border border-blue-500 py-3 px-6 rounded-lg items-center"
             >
               <Text className="text-blue-500 font-semibold">Add to Meal Plan</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </>
         ) : (
           // System recipe actions (from home screen)
           <>
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={handleSaveRecipe}
               disabled={isSaving}
               className={`py-3 px-6 rounded-lg items-center mb-2 ${
@@ -1061,13 +1156,13 @@ export default function RecipeModal() {
               <Text className="text-white font-semibold text-lg">
                 {isSaving ? 'Saving...' : 'Save to Cookbook'}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity 
               onPress={handleNotInterested}
               className="border border-gray-300 py-3 px-6 rounded-lg items-center"
             >
               <Text className="text-gray-700 font-semibold">Not Interested</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </>
         )}
       </View>
@@ -1076,16 +1171,21 @@ export default function RecipeModal() {
     {/* Collection Picker Modal */}
     <Modal
       visible={pickerVisible}
-      animationType="slide"
+      animationType="none"
       transparent
       onRequestClose={() => setPickerVisible(false)}
     >
-      <View className="flex-1 bg-black/40 justify-end">
-        <View className="bg-white rounded-t-2xl p-4 max-h-[70%]">
+      <Animated.View className="flex-1 bg-black/40 justify-center items-center px-4" style={{ opacity: pickerOpacity }}>
+        <Animated.View 
+          className="bg-white rounded-2xl p-4 w-full max-h-[70%]"
+          style={{
+            transform: [{ scale: pickerScale }],
+          }}
+        >
           <Text className="text-lg font-semibold mb-3">Save to Collection</Text>
           <ScrollView className="mb-3">
               {collections.map((c) => (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   key={c.id}
                   onPress={() => {
                     setSelectedCollectionIds(prev => 
@@ -1102,7 +1202,7 @@ export default function RecipeModal() {
                     )}
                   </View>
                   <Text className="text-gray-900 flex-1">{c.name}</Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               ))}
             {creatingCollection ? (
               <View className="flex-row items-center py-3">
@@ -1113,26 +1213,26 @@ export default function RecipeModal() {
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
                   placeholderTextColor="#9CA3AF"
                 />
-                <TouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
+                <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
                   <Text className="text-white font-semibold">Create</Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
+              <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
                 <Text className="text-orange-600 font-medium">+ Create new collection</Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             )}
           </ScrollView>
           <View className="flex-row justify-end space-x-3">
-            <TouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
+            <HapticTouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
               <Text className="text-gray-700">Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleConfirmPicker} className="bg-orange-500 px-4 py-3 rounded-lg">
+            </HapticTouchableOpacity>
+            <HapticTouchableOpacity onPress={handleConfirmPicker} className="bg-orange-500 px-4 py-3 rounded-lg">
               <Text className="text-white font-semibold">Save</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
       </Modal>
 
       {/* Healthify Results Modal */}
@@ -1145,12 +1245,12 @@ export default function RecipeModal() {
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
           {/* Header */}
           <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={() => setShowHealthifyModal(false)}
               className="p-2"
             >
               <Ionicons name="close" size={24} color="#374151" />
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
             <Text className="text-lg font-semibold text-gray-900">Healthified Recipe</Text>
             <View className="w-8" />
           </View>
@@ -1285,7 +1385,7 @@ export default function RecipeModal() {
 
           {/* Action Buttons */}
           <View className="p-4 border-t border-gray-200">
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={async () => {
                 if (!healthifiedRecipe) return;
                 
@@ -1327,17 +1427,18 @@ export default function RecipeModal() {
               className="bg-green-500 py-3 px-6 rounded-lg items-center mb-2"
             >
               <Text className="text-white font-semibold text-lg">Save Healthified Recipe</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
             
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={() => setShowHealthifyModal(false)}
               className="border border-gray-300 py-3 px-6 rounded-lg items-center"
             >
               <Text className="text-gray-700 font-semibold text-lg">Close</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
         </SafeAreaView>
       </Modal>
+    </Animated.View>
     </>
   );
 }

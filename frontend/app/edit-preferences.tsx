@@ -1,9 +1,11 @@
 import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { userApi } from '../lib/api';
+import * as Haptics from 'expo-haptics';
 
 // Predefined options
 const CUISINE_OPTIONS = ['Italian', 'Mexican', 'Asian', 'Mediterranean', 'American', 'Indian', 'Middle Eastern', 'Latin American'];
@@ -49,6 +51,7 @@ export default function EditPreferencesScreen() {
       setSpiceLevel(prefs.spiceLevel || 'medium');
     } catch (error: any) {
       console.error('📱 Edit Preferences: Load error', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to load preferences');
     } finally {
       setLoadingData(false);
@@ -86,12 +89,14 @@ export default function EditPreferencesScreen() {
   const handleSave = async () => {
     // Validation
     if (!cookTimePreference || isNaN(Number(cookTimePreference))) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter a valid cook time');
       return;
     }
 
     const cookTime = parseInt(cookTimePreference);
     if (cookTime < 5 || cookTime > 300) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Cook time must be between 5 and 300 minutes');
       return;
     }
@@ -107,10 +112,12 @@ export default function EditPreferencesScreen() {
       });
       
       console.log('📱 Edit Preferences: Preferences updated');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Preferences updated successfully!');
       router.back();
     } catch (error: any) {
       console.error('📱 Edit Preferences: Update error', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to update preferences');
     } finally {
       setLoading(false);
@@ -132,11 +139,11 @@ export default function EditPreferencesScreen() {
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       {/* Header */}
       <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="p-2">
+        <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
         <Text className="text-xl font-bold text-gray-900">Culinary Preferences</Text>
-        <TouchableOpacity 
+        <HapticTouchableOpacity 
           onPress={handleSave}
           disabled={loading}
           className="p-2"
@@ -144,7 +151,7 @@ export default function EditPreferencesScreen() {
           <Text className={`text-lg font-semibold ${loading ? 'text-gray-400' : 'text-orange-500'}`}>
             {loading ? 'Saving...' : 'Save'}
           </Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </View>
 
       <ScrollView className="flex-1 p-4">
@@ -164,25 +171,25 @@ export default function EditPreferencesScreen() {
               placeholderTextColor="#9CA3AF"
               onSubmitEditing={addBannedIngredient}
             />
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={addBannedIngredient}
               className="bg-orange-500 px-4 py-2 rounded-lg justify-center"
             >
               <Ionicons name="add" size={20} color="white" />
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
 
           <View className="flex-row flex-wrap">
             {bannedIngredients.length > 0 ? (
               bannedIngredients.map((ingredient, index) => (
-                <TouchableOpacity 
+                <HapticTouchableOpacity 
                   key={index}
                   onPress={() => removeBannedIngredient(ingredient)}
                   className="bg-red-100 px-3 py-1 rounded-full mr-2 mb-2 flex-row items-center"
                 >
                   <Text className="text-red-800 text-xs mr-1">{ingredient}</Text>
                   <Ionicons name="close-circle" size={14} color="#991B1B" />
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               ))
             ) : (
               <Text className="text-gray-400 text-xs">No banned ingredients</Text>
@@ -199,7 +206,7 @@ export default function EditPreferencesScreen() {
           
           <View className="flex-row flex-wrap">
             {CUISINE_OPTIONS.map((cuisine) => (
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 key={cuisine}
                 onPress={() => toggleCuisine(cuisine)}
                 className={`px-3 py-2 rounded-full mr-2 mb-2 ${
@@ -211,7 +218,7 @@ export default function EditPreferencesScreen() {
                 }`}>
                   {cuisine}
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             ))}
           </View>
         </View>
@@ -225,7 +232,7 @@ export default function EditPreferencesScreen() {
           
           <View className="flex-row flex-wrap">
             {DIETARY_OPTIONS.map((dietary) => (
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 key={dietary}
                 onPress={() => toggleDietary(dietary)}
                 className={`px-3 py-2 rounded-full mr-2 mb-2 ${
@@ -237,7 +244,7 @@ export default function EditPreferencesScreen() {
                 }`}>
                   {dietary}
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             ))}
           </View>
         </View>
@@ -267,7 +274,7 @@ export default function EditPreferencesScreen() {
             <Text className="text-gray-700 font-medium mb-2">Spice Level Preference</Text>
             <View className="flex-row gap-2">
               {SPICE_LEVELS.map((level) => (
-                <TouchableOpacity 
+                <HapticTouchableOpacity 
                   key={level}
                   onPress={() => setSpiceLevel(level)}
                   className={`flex-1 py-3 rounded-lg ${
@@ -279,7 +286,7 @@ export default function EditPreferencesScreen() {
                   }`}>
                     {level === 'mild' ? '🌶️ Mild' : level === 'medium' ? '🌶️🌶️ Medium' : '🌶️🌶️🌶️ Spicy'}
                   </Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               ))}
             </View>
           </View>

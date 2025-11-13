@@ -1,4 +1,5 @@
 // frontend/app/login.tsx
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 // Login screen
 
 import React, { useState } from 'react';
@@ -7,7 +8,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -16,20 +16,31 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import { Colors } from '../constants/Colors';
-import { authenticateWithGoogle, authenticateWithApple, createMockSocialAuth } from '../utils/socialAuth';
+import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAuth';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../contexts/ThemeContext';
+import ShakeAnimation from '../components/ui/ShakeAnimation';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+  const [shakeEmail, setShakeEmail] = useState(false);
+  const [shakePassword, setShakePassword] = useState(false);
   const { login, socialLogin } = useAuth();
   const router = useRouter();
+  const { theme } = useTheme();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
+      setShakeEmail(!email.trim());
+      setShakePassword(!password.trim());
+      setTimeout(() => {
+        setShakeEmail(false);
+        setShakePassword(false);
+      }, 500);
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
@@ -37,11 +48,17 @@ export default function LoginScreen() {
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      setShakeEmail(true);
+      setTimeout(() => setShakeEmail(false), 500);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
     if (password.length < 8) {
+      setShakePassword(true);
+      setTimeout(() => setShakePassword(false), 500);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Password must be at least 8 characters');
       return;
     }
@@ -49,8 +66,10 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim(), password);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/(tabs)');
     } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Login Failed', error.message || 'An error occurred during login');
     } finally {
       setLoading(false);
@@ -76,6 +95,7 @@ export default function LoginScreen() {
       } else {
         // For development/testing, use mock auth
         // In production, this would be handled by the OAuth flow
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
           'Google Sign-In',
           'For development, please use email/password login or configure Google OAuth credentials.',
@@ -83,6 +103,7 @@ export default function LoginScreen() {
         );
       }
     } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Google Sign-In Failed', error.message || 'An error occurred during Google sign-in');
     } finally {
       setSocialLoading(null);
@@ -105,6 +126,7 @@ export default function LoginScreen() {
         );
         router.replace('/(tabs)');
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
           'Apple Sign-In',
           'For development, please use email/password login or configure Apple Sign-In credentials.',
@@ -112,6 +134,7 @@ export default function LoginScreen() {
         );
       }
     } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Apple Sign-In Failed', error.message || 'An error occurred during Apple sign-in');
     } finally {
       setSocialLoading(null);
@@ -120,69 +143,77 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      className="flex-1 bg-white dark:bg-gray-900"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.content}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+        <View className="w-full max-w-md self-center">
+          <Text className="text-3xl font-bold text-orange-500 dark:text-orange-400 mb-2 text-center">
+            Welcome Back
+          </Text>
+          <Text className="text-base text-gray-600 dark:text-gray-200 mb-8 text-center">
+            Sign in to continue
+          </Text>
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor="#999"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                editable={!loading}
-              />
+          <View className="w-full">
+            <View className="mb-5">
+              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Email</Text>
+              <ShakeAnimation shake={shakeEmail}>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  placeholder="Enter your email"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  editable={!loading}
+                />
+              </ShakeAnimation>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password"
-                placeholderTextColor="#999"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password"
-                editable={!loading}
-              />
+            <View className="mb-5">
+              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Password</Text>
+              <ShakeAnimation shake={shakePassword}>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  placeholder="Enter your password"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  editable={!loading}
+                />
+              </ShakeAnimation>
             </View>
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+            <HapticTouchableOpacity
+              className={`bg-orange-500 dark:bg-orange-600 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
               onPress={handleLogin}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text className="text-white text-base font-semibold">Sign In</Text>
               )}
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
+            <View className="flex-row items-center my-6">
+              <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+              <Text className="mx-4 text-gray-600 dark:text-gray-200 text-sm">OR</Text>
+              <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
             </View>
 
-            <View style={styles.socialButtons}>
-              <TouchableOpacity
-                style={[styles.socialButton, styles.googleButton, socialLoading === 'google' && styles.buttonDisabled]}
+            <View style={{ gap: 12 }}>
+              <HapticTouchableOpacity
+                className={`flex-row items-center justify-center rounded-lg px-4 py-4 min-h-[50px] bg-blue-500 ${socialLoading === 'google' ? 'opacity-60' : ''}`}
                 onPress={handleGoogleLogin}
                 disabled={loading || socialLoading !== null}
               >
@@ -191,37 +222,37 @@ export default function LoginScreen() {
                 ) : (
                   <>
                     <Ionicons name="logo-google" size={20} color="#fff" />
-                    <Text style={styles.socialButtonText}>Continue with Google</Text>
+                    <Text className="text-white text-base font-semibold ml-2">Continue with Google</Text>
                   </>
                 )}
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
 
               {(Platform.OS === 'ios' || Platform.OS === 'web') && (
-                <TouchableOpacity
-                  style={[styles.socialButton, styles.appleButton, socialLoading === 'apple' && styles.buttonDisabled]}
+                <HapticTouchableOpacity
+                  className={`flex-row items-center justify-center rounded-lg px-4 py-4 min-h-[50px] bg-black dark:bg-gray-800 ${socialLoading === 'apple' ? 'opacity-60' : ''}`}
                   onPress={handleAppleLogin}
                   disabled={loading || socialLoading !== null}
                 >
                   {socialLoading === 'apple' ? (
-                    <ActivityIndicator color="#000" />
+                    <ActivityIndicator color="#fff" />
                   ) : (
                     <>
-                      <Ionicons name="logo-apple" size={20} color="#000" />
-                      <Text style={[styles.socialButtonText, styles.appleButtonText]}>Continue with Apple</Text>
+                      <Ionicons name="logo-apple" size={20} color="#fff" />
+                      <Text className="text-white text-base font-semibold ml-2">Continue with Apple</Text>
                     </>
                   )}
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               )}
             </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity
+            <View className="flex-row justify-center mt-6">
+              <Text className="text-gray-600 dark:text-gray-200 text-sm">Don't have an account? </Text>
+              <HapticTouchableOpacity
                 onPress={() => router.push('/register')}
                 disabled={loading}
               >
-                <Text style={styles.linkText}>Sign Up</Text>
-              </TouchableOpacity>
+                <Text className="text-orange-500 dark:text-orange-400 text-sm font-semibold">Sign Up</Text>
+              </HapticTouchableOpacity>
             </View>
           </View>
         </View>
@@ -229,126 +260,3 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  form: {
-    width: '100%',
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 50,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  footerText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  linkText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#666',
-    fontSize: 14,
-  },
-  socialButtons: {
-    gap: 12,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    padding: 16,
-    minHeight: 50,
-    gap: 8,
-  },
-  googleButton: {
-    backgroundColor: '#4285F4',
-  },
-  appleButton: {
-    backgroundColor: '#000',
-  },
-  socialButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  appleButtonText: {
-    color: '#fff',
-  },
-});
-

@@ -23,50 +23,50 @@ export default function MacroPill({
     calories: {
       label: 'Cal',
       icon: '🔥',
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-800',
-      borderColor: 'border-blue-200',
-      iconColor: 'text-blue-600'
+      bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+      textColor: 'text-blue-800 dark:text-blue-300',
+      borderColor: 'border-blue-200 dark:border-blue-800',
+      iconColor: 'text-blue-600 dark:text-blue-400'
     },
     protein: {
       label: 'P',
       icon: '💪',
-      bgColor: 'bg-green-100',
-      textColor: 'text-green-800',
-      borderColor: 'border-green-200',
-      iconColor: 'text-green-600'
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+      textColor: 'text-green-800 dark:text-green-300',
+      borderColor: 'border-green-200 dark:border-green-800',
+      iconColor: 'text-green-600 dark:text-green-400'
     },
     carbs: {
       label: 'C',
       icon: '🌾',
-      bgColor: 'bg-yellow-100',
-      textColor: 'text-yellow-800',
-      borderColor: 'border-yellow-200',
-      iconColor: 'text-yellow-600'
+      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+      textColor: 'text-yellow-800 dark:text-yellow-300',
+      borderColor: 'border-yellow-200 dark:border-yellow-800',
+      iconColor: 'text-yellow-600 dark:text-yellow-400'
     },
     fat: {
       label: 'F',
       icon: '🥑',
-      bgColor: 'bg-purple-100',
-      textColor: 'text-purple-800',
-      borderColor: 'border-purple-200',
-      iconColor: 'text-purple-600'
+      bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+      textColor: 'text-purple-800 dark:text-purple-300',
+      borderColor: 'border-purple-200 dark:border-purple-800',
+      iconColor: 'text-purple-600 dark:text-purple-400'
     },
     fiber: {
       label: 'Fib',
       icon: '🌿',
-      bgColor: 'bg-emerald-100',
-      textColor: 'text-emerald-800',
-      borderColor: 'border-emerald-200',
-      iconColor: 'text-emerald-600'
+      bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
+      textColor: 'text-emerald-800 dark:text-emerald-300',
+      borderColor: 'border-emerald-200 dark:border-emerald-800',
+      iconColor: 'text-emerald-600 dark:text-emerald-400'
     },
     sugar: {
       label: 'Sug',
       icon: '🍬',
-      bgColor: 'bg-pink-100',
-      textColor: 'text-pink-800',
-      borderColor: 'border-pink-200',
-      iconColor: 'text-pink-600'
+      bgColor: 'bg-pink-100 dark:bg-pink-900/30',
+      textColor: 'text-pink-800 dark:text-pink-300',
+      borderColor: 'border-pink-200 dark:border-pink-800',
+      iconColor: 'text-pink-600 dark:text-pink-400'
     }
   };
 
@@ -100,8 +100,8 @@ export default function MacroPill({
       text: typeConfig[type].textColor
     },
     subtle: {
-      container: `bg-gray-100 border border-gray-200`,
-      text: 'text-gray-700'
+      container: `bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600`,
+      text: 'text-gray-700 dark:text-gray-100'
     }
   };
 

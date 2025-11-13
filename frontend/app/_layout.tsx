@@ -2,7 +2,11 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { ToastProvider } from '../contexts/ToastContext';
 import '../global.css';
 
 function RootLayoutNav() {
@@ -63,81 +67,71 @@ function RootLayoutNav() {
   }
 
   return (
-    <SafeAreaProvider>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <View className="flex-1">
+          <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'default', // Smooth default transitions
+            animationDuration: 300,
+          }}
+        >
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen 
           name="modal" 
           options={{ 
             presentation: 'modal',
-            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="edit-physical-profile" 
-          options={{ 
-            headerShown: false
-          }} 
         />
         <Stack.Screen 
           name="edit-macro-goals" 
-          options={{ 
-            headerShown: false
-          }} 
         />
         <Stack.Screen 
           name="edit-preferences" 
-          options={{ 
-            headerShown: false
-          }} 
         />
         <Stack.Screen 
           name="recipe-form" 
-          options={{ 
-            headerShown: false
-          }} 
         />
         <Stack.Screen 
           name="scanner-results" 
-          options={{ 
-            headerShown: false
-          }} 
         />
         <Stack.Screen 
           name="edit-budget" 
-          options={{ 
-            headerShown: false
-          }} 
         />
         <Stack.Screen 
           name="onboarding" 
-          options={{ 
-            headerShown: false
-          }} 
         />
         <Stack.Screen 
           name="login" 
           options={{ 
-            headerShown: false,
-            presentation: 'modal'
+            presentation: 'modal',
           }} 
         />
         <Stack.Screen 
           name="register" 
           options={{ 
-            headerShown: false,
-            presentation: 'modal'
+            presentation: 'modal',
           }} 
         />
-      </Stack>
-    </SafeAreaProvider>
+        </Stack>
+        </View>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <RootLayoutNav />
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

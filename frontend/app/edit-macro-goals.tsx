@@ -1,10 +1,12 @@
 import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { userApi } from '../lib/api';
 import type { MacroCalculations } from '../types';
+import * as Haptics from 'expo-haptics';
 
 export default function EditMacroGoalsScreen() {
   const [loading, setLoading] = useState(false);
@@ -46,6 +48,7 @@ export default function EditMacroGoalsScreen() {
       }
     } catch (error: any) {
       console.error('📱 Edit Macro Goals: Load error', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to load macro goals');
     } finally {
       setLoadingData(false);
@@ -61,6 +64,7 @@ export default function EditMacroGoalsScreen() {
       console.log('📱 Edit Macro Goals: Calculated macros', calc);
       setCalculations(calc);
       
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // Show the calculated values
       Alert.alert(
         'Calculated Macros',
@@ -87,6 +91,7 @@ export default function EditMacroGoalsScreen() {
       );
     } catch (error: any) {
       console.error('📱 Edit Macro Goals: Calculate error', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       if (error.message?.includes('Physical profile') || error.message?.includes('profile required')) {
         Alert.alert(
           'Physical Profile Required',
@@ -113,12 +118,14 @@ export default function EditMacroGoalsScreen() {
   const handleSave = async () => {
     // Validation
     if (!calories || !protein || !carbs || !fat) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please fill in all fields');
       return;
     }
 
     if (isNaN(Number(calories)) || isNaN(Number(protein)) || 
         isNaN(Number(carbs)) || isNaN(Number(fat))) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please enter valid numbers');
       return;
     }
@@ -129,11 +136,13 @@ export default function EditMacroGoalsScreen() {
     const fatNum = parseInt(fat);
 
     if (caloriesNum < 500 || caloriesNum > 10000) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Calories must be between 500 and 10,000');
       return;
     }
 
     if (proteinNum < 0 || carbsNum < 0 || fatNum < 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Macro values must be positive');
       return;
     }
@@ -148,10 +157,12 @@ export default function EditMacroGoalsScreen() {
       });
       
       console.log('📱 Edit Macro Goals: Goals updated');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Macro goals updated successfully!');
       router.back();
     } catch (error: any) {
       console.error('📱 Edit Macro Goals: Update error', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to update macro goals');
     } finally {
       setLoading(false);
@@ -173,11 +184,11 @@ export default function EditMacroGoalsScreen() {
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       {/* Header */}
       <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="p-2">
+        <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
         <Text className="text-xl font-bold text-gray-900">Edit Macro Goals</Text>
-        <TouchableOpacity 
+        <HapticTouchableOpacity 
           onPress={handleSave}
           disabled={loading}
           className="p-2"
@@ -185,13 +196,13 @@ export default function EditMacroGoalsScreen() {
           <Text className={`text-lg font-semibold ${loading ? 'text-gray-400' : 'text-orange-500'}`}>
             {loading ? 'Saving...' : 'Save'}
           </Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </View>
 
       <ScrollView className="flex-1 p-4">
         {/* Calculate from Profile Button */}
         {hasPhysicalProfile && (
-          <TouchableOpacity
+          <HapticTouchableOpacity
             onPress={handleCalculateFromProfile}
             disabled={calculating}
             className="bg-gradient-to-r from-purple-500 to-blue-500 p-4 rounded-xl mb-4 flex-row items-center justify-center shadow-sm"
@@ -200,12 +211,12 @@ export default function EditMacroGoalsScreen() {
             <Text className="text-white font-bold text-lg ml-2">
               {calculating ? 'Calculating...' : 'Calculate from Profile'}
             </Text>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         )}
 
         {/* Info about physical profile */}
         {!hasPhysicalProfile && (
-          <TouchableOpacity
+          <HapticTouchableOpacity
             onPress={() => {
               router.back();
               setTimeout(() => router.push('/edit-physical-profile'), 100);
@@ -226,7 +237,7 @@ export default function EditMacroGoalsScreen() {
                 </Text>
               </View>
             </View>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         )}
 
         <View className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -294,7 +305,7 @@ export default function EditMacroGoalsScreen() {
           <View className="mt-4">
             <Text className="text-gray-600 text-sm mb-2">Quick Presets:</Text>
             <View className="flex-row flex-wrap gap-2">
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 onPress={() => {
                   setCalories('2000');
                   setProtein('150');
@@ -304,8 +315,8 @@ export default function EditMacroGoalsScreen() {
                 className="bg-blue-100 px-3 py-2 rounded-lg"
               >
                 <Text className="text-blue-800 text-xs font-medium">Standard</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
+              </HapticTouchableOpacity>
+              <HapticTouchableOpacity 
                 onPress={() => {
                   setCalories('1800');
                   setProtein('140');
@@ -315,8 +326,8 @@ export default function EditMacroGoalsScreen() {
                 className="bg-green-100 px-3 py-2 rounded-lg"
               >
                 <Text className="text-green-800 text-xs font-medium">Weight Loss</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
+              </HapticTouchableOpacity>
+              <HapticTouchableOpacity 
                 onPress={() => {
                   setCalories('2500');
                   setProtein('180');
@@ -326,7 +337,7 @@ export default function EditMacroGoalsScreen() {
                 className="bg-purple-100 px-3 py-2 rounded-lg"
               >
                 <Text className="text-purple-800 text-xs font-medium">Muscle Gain</Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
           </View>
         </View>
