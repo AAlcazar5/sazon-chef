@@ -57,7 +57,7 @@ interface ColorPalette {
   };
 }
 
-// Main color palette
+// Light theme color palette
 export const Colors: ColorPalette = {
   // Primary colors (Orange theme - Sazon means seasoning/flavor)
   primary: '#F97316', // orange-500
@@ -110,6 +110,66 @@ export const Colors: ColorPalette = {
   },
   
   // Score colors
+  score: {
+    high: '#10B981', // emerald-500 (80-100)
+    medium: '#F59E0B', // amber-500 (60-79)
+    low: '#EF4444' // red-500 (0-59)
+  }
+};
+
+// Dark theme color palette
+export const DarkColors: ColorPalette = {
+  // Primary colors (same as light theme for brand consistency)
+  primary: '#F97316', // orange-500
+  primaryLight: '#FDBA74', // orange-300
+  primaryDark: '#EA580C', // orange-600
+  
+  // Secondary colors
+  secondary: '#9CA3AF', // gray-400 (lighter for dark mode)
+  accent: '#A78BFA', // violet-400 (lighter for dark mode)
+  
+  // Semantic colors (same as light theme)
+  success: '#10B981', // emerald-500
+  warning: '#F59E0B', // amber-500
+  error: '#EF4444', // red-500
+  info: '#3B82F6', // blue-500
+  
+  // Neutral colors (dark mode inversions)
+  background: '#111827', // gray-900
+  surface: '#1F2937', // gray-800
+  
+  text: {
+    primary: '#F9FAFB', // gray-50 (inverse)
+    secondary: '#D1D5DB', // gray-300
+    tertiary: '#9CA3AF', // gray-400
+    inverse: '#111827' // gray-900 (inverse)
+  },
+  
+  // Border colors (dark mode)
+  border: {
+    light: '#374151', // gray-700
+    medium: '#4B5563', // gray-600
+    dark: '#6B7280' // gray-500
+  },
+  
+  // Macro-specific colors (same as light theme)
+  macros: {
+    calories: '#60A5FA', // blue-400 (lighter for dark mode)
+    protein: '#34D399', // emerald-400 (lighter for dark mode)
+    carbs: '#FBBF24', // amber-400 (lighter for dark mode)
+    fat: '#A78BFA', // violet-400 (lighter for dark mode)
+    fiber: '#34D399', // emerald-400
+    sugar: '#F472B6' // pink-400 (lighter for dark mode)
+  },
+  
+  // Feedback colors (same as light theme)
+  feedback: {
+    like: '#10B981', // emerald-500
+    dislike: '#EF4444', // red-500
+    neutral: '#9CA3AF' // gray-400
+  },
+  
+  // Score colors (same as light theme)
   score: {
     high: '#10B981', // emerald-500 (80-100)
     medium: '#F59E0B', // amber-500 (60-79)

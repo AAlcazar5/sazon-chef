@@ -1,4 +1,5 @@
 // frontend/app/register.tsx
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 // Registration screen
 
 import React, { useState } from 'react';
@@ -7,7 +8,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -17,9 +17,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import { Colors } from '../constants/Colors';
 import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAuth';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -30,6 +31,7 @@ export default function RegisterScreen() {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const { register, socialLogin } = useAuth();
   const router = useRouter();
+  const { theme } = useTheme();
 
   const handleRegister = async () => {
     // Validation
@@ -41,16 +43,19 @@ export default function RegisterScreen() {
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
     if (password.length < 8) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Password must be at least 8 characters');
       return;
     }
 
     if (password !== confirmPassword) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
@@ -58,8 +63,10 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await register(name.trim(), email.trim(), password);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/(tabs)');
     } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Registration Failed', error.message || 'An error occurred during registration');
     } finally {
       setLoading(false);
@@ -82,6 +89,7 @@ export default function RegisterScreen() {
         );
         router.replace('/(tabs)');
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
           'Google Sign-In',
           'For development, please use email/password registration or configure Google OAuth credentials.',
@@ -89,6 +97,7 @@ export default function RegisterScreen() {
         );
       }
     } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Google Sign-In Failed', error.message || 'An error occurred during Google sign-in');
     } finally {
       setSocialLoading(null);
@@ -111,6 +120,7 @@ export default function RegisterScreen() {
         );
         router.replace('/(tabs)');
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
           'Apple Sign-In',
           'For development, please use email/password registration or configure Apple Sign-In credentials.',
@@ -118,6 +128,7 @@ export default function RegisterScreen() {
         );
       }
     } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Apple Sign-In Failed', error.message || 'An error occurred during Apple sign-in');
     } finally {
       setSocialLoading(null);
@@ -125,276 +136,152 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
       <KeyboardAvoidingView
-        style={styles.container}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.content}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Sign up to get started</Text>
+          <View className="w-full max-w-md self-center">
+            <Text className="text-3xl font-bold text-orange-500 dark:text-orange-400 mb-2 text-center">
+              Create Account
+            </Text>
+            <Text className="text-base text-gray-600 dark:text-gray-200 mb-8 text-center">
+              Sign up to get started
+            </Text>
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your name"
-                placeholderTextColor="#999"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                autoComplete="name"
-                editable={!loading}
-              />
-            </View>
+            <View className="w-full">
+              <View className="mb-5">
+                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Name</Text>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  placeholder="Enter your name"
+                  placeholderTextColor="#9CA3AF"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  editable={!loading}
+                />
+              </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor="#999"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                editable={!loading}
-              />
-            </View>
+              <View className="mb-5">
+                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Email</Text>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  placeholder="Enter your email"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  editable={!loading}
+                />
+              </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password (min 8 characters)"
-                placeholderTextColor="#999"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="off"
-                {...(Platform.OS === 'ios' && { passwordRules: '' })}
-                editable={!loading}
-              />
-            </View>
+              <View className="mb-5">
+                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Password</Text>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  placeholder="Enter your password (min 8 characters)"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  {...(Platform.OS === 'ios' && { passwordRules: '' })}
+                  editable={!loading}
+                />
+              </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm your password"
-                placeholderTextColor="#999"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="off"
-                {...(Platform.OS === 'ios' && { passwordRules: '' })}
-                editable={!loading}
-              />
-            </View>
+              <View className="mb-5">
+                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Confirm Password</Text>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  placeholder="Confirm your password"
+                  placeholderTextColor="#9CA3AF"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  {...(Platform.OS === 'ios' && { passwordRules: '' })}
+                  editable={!loading}
+                />
+              </View>
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleRegister}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Sign Up</Text>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.socialButtons}>
-              <TouchableOpacity
-                style={[styles.socialButton, styles.googleButton, socialLoading === 'google' && styles.buttonDisabled]}
-                onPress={handleGoogleLogin}
-                disabled={loading || socialLoading !== null}
-              >
-                {socialLoading === 'google' ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="logo-google" size={20} color="#fff" />
-                    <Text style={styles.socialButtonText}>Continue with Google</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              {(Platform.OS === 'ios' || Platform.OS === 'web') && (
-                <TouchableOpacity
-                  style={[styles.socialButton, styles.appleButton, socialLoading === 'apple' && styles.buttonDisabled]}
-                  onPress={handleAppleLogin}
-                  disabled={loading || socialLoading !== null}
-                >
-                  {socialLoading === 'apple' ? (
-                    <ActivityIndicator color="#000" />
-                  ) : (
-                    <>
-                      <Ionicons name="logo-apple" size={20} color="#000" />
-                      <Text style={[styles.socialButtonText, styles.appleButtonText]}>Continue with Apple</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity
-                onPress={() => router.push('/login')}
+              <HapticTouchableOpacity
+                className={`bg-orange-500 dark:bg-orange-600 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
+                onPress={handleRegister}
                 disabled={loading}
               >
-                <Text style={styles.linkText}>Sign In</Text>
-              </TouchableOpacity>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="text-white text-base font-semibold">Sign Up</Text>
+                )}
+              </HapticTouchableOpacity>
+
+              <View className="flex-row items-center my-6">
+                <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+                <Text className="mx-4 text-gray-600 dark:text-gray-200 text-sm">OR</Text>
+                <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+              </View>
+
+              <View style={{ gap: 12 }}>
+                <HapticTouchableOpacity
+                  className={`flex-row items-center justify-center rounded-lg px-4 py-4 min-h-[50px] bg-blue-500 ${socialLoading === 'google' ? 'opacity-60' : ''}`}
+                  onPress={handleGoogleLogin}
+                  disabled={loading || socialLoading !== null}
+                >
+                  {socialLoading === 'google' ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="logo-google" size={20} color="#fff" />
+                      <Text className="text-white text-base font-semibold ml-2">Continue with Google</Text>
+                    </>
+                  )}
+                </HapticTouchableOpacity>
+
+                {(Platform.OS === 'ios' || Platform.OS === 'web') && (
+                  <HapticTouchableOpacity
+                    className={`flex-row items-center justify-center rounded-lg px-4 py-4 min-h-[50px] bg-black dark:bg-gray-800 ${socialLoading === 'apple' ? 'opacity-60' : ''}`}
+                    onPress={handleAppleLogin}
+                    disabled={loading || socialLoading !== null}
+                  >
+                    {socialLoading === 'apple' ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="logo-apple" size={20} color="#fff" />
+                        <Text className="text-white text-base font-semibold ml-2">Continue with Apple</Text>
+                      </>
+                    )}
+                  </HapticTouchableOpacity>
+                )}
+              </View>
+
+              <View className="flex-row justify-center mt-6">
+                <Text className="text-gray-600 dark:text-gray-200 text-sm">Already have an account? </Text>
+                <HapticTouchableOpacity
+                  onPress={() => router.push('/login')}
+                  disabled={loading}
+                >
+                  <Text className="text-orange-500 dark:text-orange-400 text-sm font-semibold">Sign In</Text>
+                </HapticTouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-    paddingBottom: 40,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  form: {
-    width: '100%',
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 50,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  footerText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  linkText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#666',
-    fontSize: 14,
-  },
-  socialButtons: {
-    gap: 12,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    padding: 16,
-    minHeight: 50,
-    gap: 8,
-  },
-  googleButton: {
-    backgroundColor: '#4285F4',
-  },
-  appleButton: {
-    backgroundColor: '#000',
-  },
-  socialButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  appleButtonText: {
-    color: '#fff',
-  },
-});
-

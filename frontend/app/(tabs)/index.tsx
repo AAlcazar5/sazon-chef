@@ -1,14 +1,23 @@
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal, Linking, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Alert, Modal, Linking, TextInput, Animated } from 'react-native';
+import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
+import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
+import RecipeCardSkeleton from '../../components/recipe/RecipeCardSkeleton';
+import AnimatedRecipeCard from '../../components/recipe/AnimatedRecipeCard';
+import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import CardStack from '../../components/ui/CardStack';
 import { Image } from 'expo-image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 import { useApi } from '../../hooks/useApi';
 import { recipeApi, aiRecipeApi, collectionsApi } from '../../lib/api';
 import { filterStorage, type FilterState } from '../../lib/filterStorage';
 import type { SuggestedRecipe } from '../../types';
 import * as Haptics from 'expo-haptics';
+import Icon from '../../components/ui/Icon';
+import { Icons, IconSizes } from '../../constants/Icons';
 
 // Track user feedback state
 interface UserFeedback {
@@ -30,10 +39,211 @@ const DIETARY_OPTIONS = [
 
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard'];
 
+// Filter Modal Component with Animation
+function FilterModal({
+  visible,
+  onClose,
+  onApply,
+  filters,
+  onFilterChange,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onApply: () => void;
+  filters: FilterState;
+  onFilterChange: (type: keyof FilterState, value: any) => void;
+}) {
+  const translateY = useRef(new Animated.Value(-300)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(-300);
+      opacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(translateY, {
+          toValue: 0,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: -300,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+    >
+      <Animated.View
+        className="flex-1 bg-black/50"
+        style={{ opacity }}
+      >
+        <Animated.View
+          className="flex-1 bg-gray-50 dark:bg-gray-900"
+          style={{
+            transform: [{ translateY }],
+          }}
+        >
+          <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+            {/* Modal Header */}
+            <View className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex-row items-center justify-between" style={{ minHeight: 60 }}>
+              <HapticTouchableOpacity 
+                onPress={onClose}
+                style={{ paddingVertical: 8, paddingHorizontal: 4, minWidth: 60 }}
+              >
+                <Text className="text-blue-500 dark:text-blue-400 font-medium">Cancel</Text>
+              </HapticTouchableOpacity>
+              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Filter Recipes</Text>
+              <HapticTouchableOpacity 
+                onPress={onApply}
+                style={{ paddingVertical: 8, paddingHorizontal: 4, minWidth: 60 }}
+              >
+                <Text className="text-blue-500 dark:text-blue-400 font-medium">Apply</Text>
+              </HapticTouchableOpacity>
+            </View>
+
+            <ScrollView 
+              className="flex-1 px-4 py-4"
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
+              {/* Cuisine Filter */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Cuisine</Text>
+                <View className="flex-row flex-wrap">
+                  {CUISINE_OPTIONS.map((cuisine) => (
+                    <HapticTouchableOpacity
+                      key={cuisine}
+                      onPress={() => onFilterChange('cuisines', cuisine)}
+                      className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+                        filters.cuisines.includes(cuisine)
+                          ? 'bg-orange-500 dark:bg-orange-600 border-orange-500 dark:border-orange-600'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      <Text className={`text-sm font-medium ${
+                        filters.cuisines.includes(cuisine) ? 'text-white' : 'text-gray-700 dark:text-gray-100'
+                      }`}>
+                        {cuisine}
+                      </Text>
+                    </HapticTouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Dietary Restrictions Filter */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Dietary</Text>
+                <View className="flex-row flex-wrap">
+                  {DIETARY_OPTIONS.map((dietary) => (
+                    <HapticTouchableOpacity
+                      key={dietary}
+                      onPress={() => onFilterChange('dietaryRestrictions', dietary)}
+                      className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+                        filters.dietaryRestrictions.includes(dietary)
+                          ? 'bg-green-500 dark:bg-green-600 border-green-500 dark:border-green-600'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      <Text className={`text-sm font-medium ${
+                        filters.dietaryRestrictions.includes(dietary) ? 'text-white' : 'text-gray-700 dark:text-gray-100'
+                      }`}>
+                        {dietary}
+                      </Text>
+                    </HapticTouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Cook Time Filter */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Max Cook Time</Text>
+                <View className="flex-row flex-wrap">
+                  {[15, 30, 45, 60, 90].map((time) => (
+                    <HapticTouchableOpacity
+                      key={time}
+                      onPress={() => onFilterChange('maxCookTime', time)}
+                      className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+                        filters.maxCookTime === time
+                          ? 'bg-blue-500 dark:bg-blue-600 border-blue-500 dark:border-blue-600'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      <Text className={`text-sm font-medium ${
+                        filters.maxCookTime === time ? 'text-white' : 'text-gray-700 dark:text-gray-100'
+                      }`}>
+                        ≤{time} min
+                      </Text>
+                    </HapticTouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Difficulty Filter */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Difficulty</Text>
+                <View className="flex-row flex-wrap">
+                  {DIFFICULTY_OPTIONS.map((difficulty) => (
+                    <HapticTouchableOpacity
+                      key={difficulty}
+                      onPress={() => onFilterChange('difficulty', difficulty)}
+                      className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+                        filters.difficulty.includes(difficulty)
+                          ? 'bg-purple-500 dark:bg-purple-600 border-purple-500 dark:border-purple-600'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      <Text className={`text-sm font-medium ${
+                        filters.difficulty.includes(difficulty) ? 'text-white' : 'text-gray-700 dark:text-gray-100'
+                      }`}>
+                        {difficulty}
+                      </Text>
+                    </HapticTouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+}
+
 export default function HomeScreen() {
+  const { colorScheme } = useColorScheme();
   const [refreshing, setRefreshing] = useState(false);
   const [reloadLoading, setReloadLoading] = useState(false);
+  
+  // Animation for random recipe button
+  const randomButtonScale = useRef(new Animated.Value(1)).current;
+  const randomButtonOpacity = useRef(new Animated.Value(1)).current;
+  
+  // Animation for recipe cards
+  const cardAnimations = useRef<Record<string, { scale: Animated.Value; opacity: Animated.Value }>>({}).current;
   const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
+  const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
   const [feedbackLoading, setFeedbackLoading] = useState<string | null>(null);
   const [userFeedback, setUserFeedback] = useState<Record<string, UserFeedback>>({});
   const [reloadOffset, setReloadOffset] = useState(0);
@@ -52,7 +262,10 @@ export default function HomeScreen() {
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
 
-  // Use the useApi hook for fetching suggested recipes
+  // Track if we're loading from filters to prevent useApi from interfering
+  const [loadingFromFilters, setLoadingFromFilters] = useState(false);
+
+  // Use the useApi hook for fetching suggested recipes (only when no filters)
   const { data: recipesData, loading, error, refetch } = useApi('/recipes/suggested');
 
   // Load saved filters on component mount
@@ -74,6 +287,7 @@ export default function HomeScreen() {
           
           // Apply saved filters to get filtered recipes
           if (active.length > 0) {
+            setLoadingFromFilters(true); // Prevent useApi from loading
             const response = await recipeApi.getSuggestedRecipes({
               cuisines: savedFilters.cuisines.length > 0 ? savedFilters.cuisines : undefined,
               dietaryRestrictions: savedFilters.dietaryRestrictions.length > 0 ? savedFilters.dietaryRestrictions : undefined,
@@ -81,68 +295,106 @@ export default function HomeScreen() {
               difficulty: savedFilters.difficulty.length > 0 ? savedFilters.difficulty : undefined
             });
             
-            setSuggestedRecipes(response.data);
+            const deduplicated = deduplicateRecipes(response.data);
+            console.log('📱 HomeScreen: Loaded filtered recipes', deduplicated.length);
+            setSuggestedRecipes(deduplicated);
+            setInitialRecipesLoaded(true); // Mark as loaded
             
             // Initialize feedback state
             const initialFeedback: Record<string, UserFeedback> = {};
-            response.data.forEach((recipe: SuggestedRecipe) => {
+            deduplicated.forEach((recipe: SuggestedRecipe) => {
               initialFeedback[recipe.id] = { liked: false, disliked: false };
             });
             setUserFeedback(initialFeedback);
+            setLoadingFromFilters(false);
           }
         }
         setFiltersLoaded(true);
       } catch (error) {
         console.error('❌ Error loading saved filters:', error);
         setFiltersLoaded(true);
+        setLoadingFromFilters(false);
       }
     };
 
     loadSavedFilters();
   }, []);
 
+  // Helper function to deduplicate recipes by ID
+  const deduplicateRecipes = (recipes: SuggestedRecipe[]): SuggestedRecipe[] => {
+    const seen = new Set<string>();
+    return recipes.filter(recipe => {
+      if (!recipe || !recipe.id) {
+        console.warn('⚠️ Found recipe without ID:', recipe);
+        return false;
+      }
+      if (seen.has(recipe.id)) {
+        console.warn('⚠️ Duplicate recipe found:', recipe.id, recipe.title);
+        return false;
+      }
+      seen.add(recipe.id);
+      return true;
+    });
+  };
+
+  // Track if we've loaded initial recipes to prevent duplicate loading
+  const [initialRecipesLoaded, setInitialRecipesLoaded] = useState(false);
+
   // Update local state when API data loads (only if no saved filters)
   useEffect(() => {
-    if (recipesData && filtersLoaded && activeFilters.length === 0) {
+    // Only load from useApi hook if:
+    // 1. We have recipe data
+    // 2. Filters are loaded
+    // 3. No active filters (filters would load recipes separately)
+    // 4. We haven't already loaded initial recipes (prevents duplicates on refresh)
+    // 5. We're not currently loading from filters (prevents race condition)
+    if (recipesData && filtersLoaded && activeFilters.length === 0 && !initialRecipesLoaded && !loadingFromFilters) {
       console.log('📱 HomeScreen: Received recipes data', recipesData.length);
-      setSuggestedRecipes(recipesData);
+      const deduplicated = deduplicateRecipes(recipesData);
+      console.log('📱 HomeScreen: After deduplication', deduplicated.length);
+      
+      if (deduplicated.length > 0) {
+        setSuggestedRecipes(deduplicated);
+        setInitialRecipesLoaded(true);
+        // Reset animated IDs when new recipes load
+        setAnimatedRecipeIds(new Set());
       
       // Initialize feedback state
       const initialFeedback: Record<string, UserFeedback> = {};
-      recipesData.forEach((recipe: SuggestedRecipe) => {
+        deduplicated.forEach((recipe: SuggestedRecipe) => {
         initialFeedback[recipe.id] = { liked: false, disliked: false };
       });
       setUserFeedback(initialFeedback);
-      
-      // Preload images for the next few recipes (improves perceived performance)
-      recipesData.slice(0, 5).forEach((recipe: SuggestedRecipe) => {
-        if (recipe.imageUrl) {
-          Image.prefetch(recipe.imageUrl).catch(() => {
-            // Silently fail - prefetch is just an optimization
-          });
-        }
-      });
+        
+        // Preload images for the next few recipes (improves perceived performance)
+        deduplicated.slice(0, 5).forEach((recipe: SuggestedRecipe) => {
+          if (recipe.imageUrl) {
+            Image.prefetch(recipe.imageUrl).catch(() => {
+              // Silently fail - prefetch is just an optimization
+            });
+          }
+        });
+      }
     }
-  }, [recipesData, filtersLoaded, activeFilters.length]);
+  }, [recipesData, filtersLoaded, activeFilters, loadingFromFilters, initialRecipesLoaded]);
 
   // Handle errors
   useEffect(() => {
     if (error) {
       console.error('📱 HomeScreen: API Error', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to load recipes. Please try again.');
     }
   }, [error]);
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setInitialRecipesLoaded(false); // Reset flag to allow reloading
     await refetch();
     setRefreshing(false);
   };
 
   const handleReload = async () => {
-    // Haptic feedback
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
     setReloadLoading(true);
     try {
       // Increment offset to get different recipes (rotate through batches)
@@ -158,17 +410,18 @@ export default function HomeScreen() {
         offset: newOffset
       });
       
-      setSuggestedRecipes(response.data);
+      const deduplicated = deduplicateRecipes(response.data);
+      setSuggestedRecipes(deduplicated);
       
       // Initialize feedback state
       const initialFeedback: Record<string, UserFeedback> = {};
-      response.data.forEach((recipe: SuggestedRecipe) => {
+      deduplicated.forEach((recipe: SuggestedRecipe) => {
         initialFeedback[recipe.id] = { liked: false, disliked: false };
       });
       setUserFeedback(initialFeedback);
       
       // Preload images for the next few recipes (improves perceived performance)
-      response.data.slice(0, 5).forEach((recipe: SuggestedRecipe) => {
+      deduplicated.slice(0, 5).forEach((recipe: SuggestedRecipe) => {
         if (recipe.imageUrl) {
           Image.prefetch(recipe.imageUrl).catch(() => {
             // Silently fail - prefetch is just an optimization
@@ -187,7 +440,39 @@ export default function HomeScreen() {
 
   const handleRecipePress = (recipeId: string) => {
     console.log('📱 HomeScreen: Recipe pressed', recipeId);
+    
+    // Initialize animation for this card if not exists
+    if (!cardAnimations[recipeId]) {
+      cardAnimations[recipeId] = {
+        scale: new Animated.Value(1),
+        opacity: new Animated.Value(1),
+      };
+    }
+    
+    const anim = cardAnimations[recipeId];
+    
+    // Animate card press - scale down slightly
+    Animated.parallel([
+      Animated.timing(anim.scale, {
+        toValue: 0.98,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(anim.opacity, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Navigate to modal
     router.push(`../modal?id=${recipeId}`);
+      
+      // Reset animation after navigation
+      setTimeout(() => {
+        anim.scale.setValue(1);
+        anim.opacity.setValue(1);
+      }, 300);
+    });
   };
 
   const openSavePicker = async (recipeId: string) => {
@@ -228,6 +513,7 @@ export default function HomeScreen() {
           Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
         }
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert('Error', error.message || 'Failed to save recipe');
       }
       setSavePickerVisible(false);
@@ -249,6 +535,7 @@ export default function HomeScreen() {
         setCreatingCollection(false);
       }
     } catch (e: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', e?.message || 'Failed to create collection');
     }
   };
@@ -257,8 +544,39 @@ export default function HomeScreen() {
     try {
       console.log('🤖 HomeScreen: Generating AI recipe with filters:', filters);
       
-      // Haptic feedback
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Animate button press - scale down then expand with fade
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(randomButtonScale, {
+            toValue: 0.95,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(randomButtonOpacity, {
+            toValue: 0.8,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.spring(randomButtonScale, {
+            toValue: 1.1,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true,
+          }),
+          Animated.timing(randomButtonOpacity, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(randomButtonScale, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
       
       // Show loading indicator with estimated time
       Alert.alert(
@@ -418,18 +736,20 @@ export default function HomeScreen() {
       };
       
       const response = await recipeApi.getSuggestedRecipes(apiFilters);
-      setSuggestedRecipes(response.data);
+      const deduplicated = deduplicateRecipes(response.data);
+      setSuggestedRecipes(deduplicated);
       
       // Initialize feedback state for new recipes
       const initialFeedback: Record<string, UserFeedback> = {};
-      response.data.forEach((recipe: SuggestedRecipe) => {
+      deduplicated.forEach((recipe: SuggestedRecipe) => {
         initialFeedback[recipe.id] = { liked: false, disliked: false };
       });
       setUserFeedback(initialFeedback);
       
-      console.log('✅ Filtered recipes loaded:', response.data.length);
+      console.log('✅ Filtered recipes loaded:', deduplicated.length);
     } catch (error: any) {
       console.error('❌ Error applying filters:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to apply filters. Please try again.');
     }
   };
@@ -450,18 +770,20 @@ export default function HomeScreen() {
     // Reload original recipes without filters
     try {
       const response = await recipeApi.getSuggestedRecipes();
-      setSuggestedRecipes(response.data);
+      const deduplicated = deduplicateRecipes(response.data);
+      setSuggestedRecipes(deduplicated);
       
       // Initialize feedback state for new recipes
       const initialFeedback: Record<string, UserFeedback> = {};
-      response.data.forEach((recipe: SuggestedRecipe) => {
+      deduplicated.forEach((recipe: SuggestedRecipe) => {
         initialFeedback[recipe.id] = { liked: false, disliked: false };
       });
       setUserFeedback(initialFeedback);
       
-      console.log('✅ Filters cleared, original recipes loaded:', response.data.length);
+      console.log('✅ Filters cleared, original recipes loaded:', deduplicated.length);
     } catch (error: any) {
       console.error('❌ Error clearing filters:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to clear filters. Please try again.');
     }
   };
@@ -470,9 +792,6 @@ export default function HomeScreen() {
     try {
       setFeedbackLoading(recipeId);
       console.log('📱 HomeScreen: Liking recipe', recipeId);
-      
-      // Haptic feedback
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       
       // Update UI immediately
       setUserFeedback(prev => ({
@@ -515,9 +834,6 @@ export default function HomeScreen() {
     try {
       setFeedbackLoading(recipeId);
       console.log('📱 HomeScreen: Disliking recipe', recipeId);
-      
-      // Haptic feedback
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       
       // Update UI immediately
       setUserFeedback(prev => ({
@@ -585,21 +901,20 @@ export default function HomeScreen() {
     return placeholders[cuisine] || { icon: 'restaurant-outline', color: '#9CA3AF', bg: '#F3F4F6' };
   };
 
-  // Loading state
+  // Loading state with skeleton loaders
   if (loading && suggestedRecipes.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-        <View className="bg-white px-4 pt-4 pb-4 border-b border-gray-200">
-          <Text className="text-2xl font-bold text-gray-900">Sazon Chef</Text>
-          <Text className="text-gray-500 mt-1">Personalized recipe suggestions</Text>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
+          <Text className="text-gray-500 dark:text-gray-200 mt-1">Personalized recipe suggestions</Text>
         </View>
-        <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="restaurant-outline" size={64} color="#9CA3AF" />
-          <Text className="text-xl font-semibold text-gray-500 mt-4">Loading recipes...</Text>
-          <Text className="text-gray-400 text-center mt-2">
-            Finding the perfect recipes for you
-          </Text>
-        </View>
+        <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+          {/* Show 3 skeleton cards */}
+          {[1, 2, 3].map((i) => (
+            <RecipeCardSkeleton key={i} />
+          ))}
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -608,24 +923,24 @@ export default function HomeScreen() {
   if (error && suggestedRecipes.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-        <View className="bg-white px-4 pt-4 pb-4 border-b border-gray-200">
-          <Text className="text-2xl font-bold text-gray-900">Sazon Chef</Text>
-          <Text className="text-gray-500 mt-1">Personalized recipe suggestions</Text>
+        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
+          <Text className="text-gray-500 dark:text-gray-200 mt-1">Personalized recipe suggestions</Text>
         </View>
         <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
-          <Text className="text-xl font-semibold text-gray-900 mt-4 text-center">
+          <Icon name={Icons.RECIPE_ERROR} size={64} color="#EF4444" accessibilityLabel="Error loading recipes" />
+          <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
             Failed to load recipes
           </Text>
-          <Text className="text-gray-500 text-center mt-2">
+          <Text className="text-gray-500 dark:text-gray-300 text-center mt-2">
             {error}
           </Text>
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={refetch}
-            className="bg-orange-500 px-6 py-3 rounded-lg mt-4"
+            className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg mt-4"
           >
             <Text className="text-white font-semibold">Try Again</Text>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -634,91 +949,106 @@ export default function HomeScreen() {
   // Empty state
   if (suggestedRecipes.length === 0 && !loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-        <View className="bg-white px-4 pt-4 pb-4 border-b border-gray-200">
-          <Text className="text-2xl font-bold text-gray-900">Sazon Chef</Text>
-          <Text className="text-gray-500 mt-1">Personalized recipe suggestions</Text>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
+          <Text className="text-gray-500 dark:text-gray-200 mt-1">Personalized recipe suggestions</Text>
         </View>
-        <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="search-outline" size={64} color="#9CA3AF" />
-          <Text className="text-xl font-semibold text-gray-500 mt-4 text-center">
-            No recipes found
-          </Text>
-          <Text className="text-gray-400 text-center mt-2">
-            We couldn't find any recipes to suggest at the moment
-          </Text>
-          <TouchableOpacity 
-            onPress={refetch}
-            className="bg-orange-500 px-6 py-3 rounded-lg mt-4"
-          >
-            <Text className="text-white font-semibold">Refresh</Text>
-          </TouchableOpacity>
-        </View>
+        <AnimatedEmptyState
+          icon={Icons.EMPTY_RECIPES}
+          title="No recipes found"
+          description="We couldn't find any recipes to suggest at the moment"
+          actionLabel="Refresh"
+          onAction={refetch}
+        />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header - Fixed height */}
-      <View className="bg-white px-4 pt-4 pb-4 border-b border-gray-200">
+      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
         <View className="flex-row justify-between items-center">
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900">Sazon Chef</Text>
-            <Text className="text-gray-500 mt-1">
-              {suggestedRecipes.length} recipe suggestions
-            </Text>
+            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
+            <Text className="text-gray-500 dark:text-gray-200 mt-1">
+          {suggestedRecipes.length} recipe suggestions
+        </Text>
           </View>
           <View className="flex-row items-center">
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={handleReload}
               activeOpacity={1}
-              className="bg-gray-100 px-3 py-2 rounded-lg flex-row items-center border border-gray-300 mr-2"
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg flex-row items-center border border-gray-300 dark:border-gray-600 mr-2"
               style={{ opacity: 1 }}
             >
               {reloadLoading ? (
-                <ActivityIndicator size="small" color="#6B7280" style={{ marginRight: 6 }} />
+                <AnimatedActivityIndicator size="small" color={colorScheme === 'dark' ? '#D1D5DB' : '#6B7280'} style={{ marginRight: 6 }} />
               ) : (
-                <Ionicons name="reload" size={16} color="#6B7280" style={{ marginRight: 4 }} />
+                <Icon name={Icons.RELOAD} size={IconSizes.SM} color={colorScheme === 'dark' ? '#D1D5DB' : '#6B7280'} accessibilityLabel="Reload recipes" style={{ marginRight: 4 }} />
               )}
-              <Text className="text-gray-700 font-semibold">
+              <Text className="text-gray-700 dark:text-gray-100 font-semibold">
                 {reloadLoading ? 'Loading...' : 'Reload'}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleRandomRecipe}
-              className="bg-orange-500 px-4 py-2 rounded-lg flex-row items-center"
+            </HapticTouchableOpacity>
+            <Animated.View
+              style={{
+                transform: [{ scale: randomButtonScale }],
+                opacity: randomButtonOpacity,
+              }}
             >
-              <Ionicons name="shuffle" size={16} color="white" />
-              <Text className="text-white font-semibold ml-2">Random</Text>
-            </TouchableOpacity>
+              <HapticTouchableOpacity
+                onPress={handleRandomRecipe}
+                hapticStyle="medium"
+                className="bg-orange-500 dark:bg-orange-600 px-4 py-2 rounded-lg flex-row items-center"
+              >
+                <Icon name={Icons.RANDOM_RECIPE} size={IconSizes.SM} color="white" accessibilityLabel="Random recipe" />
+                <Text className="text-white font-semibold ml-2">Random</Text>
+              </HapticTouchableOpacity>
+            </Animated.View>
           </View>
         </View>
       </View>
 
       {/* Filter Chips */}
-      <View className="bg-white px-4 py-3 border-b border-gray-200">
+      <View className="bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
         <View className="flex-row items-center justify-between mb-2">
-          <Text className="text-sm font-medium text-gray-700">Filters</Text>
-          <TouchableOpacity onPress={handleFilterPress} className="flex-row items-center">
-            <Ionicons name="options-outline" size={16} color="#6B7280" />
-            <Text className="text-sm text-gray-600 ml-1">Filter</Text>
-          </TouchableOpacity>
+          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Filters</Text>
+          <HapticTouchableOpacity 
+            onPress={handleFilterPress}
+            className="flex-row items-center"
+          >
+            <Icon name={Icons.RECIPE_FILTER} size={IconSizes.SM} color="#6B7280" accessibilityLabel="Filter recipes" />
+            <Text className="text-sm text-gray-600 dark:text-gray-200 ml-1">Filter</Text>
+          </HapticTouchableOpacity>
         </View>
         
         {activeFilters.length > 0 ? (
-          <View className="flex-row flex-wrap">
-            {activeFilters.map((filter, index) => (
-              <View key={index} className="bg-orange-100 px-3 py-1 rounded-full mr-2 mb-2">
-                <Text className="text-orange-800 text-xs font-medium">{filter}</Text>
+          <View className="flex-row items-center">
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              className="flex-1 mr-2"
+              contentContainerStyle={{ paddingRight: 8 }}
+            >
+              <View className="flex-row items-center">
+                {activeFilters.map((filter, index) => (
+                  <View key={index} className="bg-orange-100 dark:bg-orange-900/30 px-3 py-1 rounded-full mr-2">
+                    <Text className="text-orange-800 dark:text-orange-300 text-xs font-medium">{filter}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-            <TouchableOpacity onPress={clearFilters} className="bg-gray-100 px-3 py-1 rounded-full mb-2">
-              <Text className="text-gray-600 text-xs font-medium">Clear All</Text>
-            </TouchableOpacity>
+            </ScrollView>
+            <HapticTouchableOpacity 
+              onPress={clearFilters}
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full flex-shrink-0"
+            >
+              <Text className="text-gray-600 dark:text-gray-100 text-xs font-medium">Clear All</Text>
+            </HapticTouchableOpacity>
           </View>
         ) : (
-          <Text className="text-gray-400 text-sm">No filters applied</Text>
+          <Text className="text-gray-400 dark:text-gray-200 text-sm">No filters applied</Text>
         )}
       </View>
 
@@ -728,12 +1058,12 @@ export default function HomeScreen() {
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={true}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <AnimatedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {/* Today's Recommendation */}
-        <View className="mb-6 p-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">
+        <View className="px-4 mb-6 mt-6">
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
             Today's Recommendation
           </Text>
           {suggestedRecipes.length > 0 && (() => {
@@ -741,26 +1071,38 @@ export default function HomeScreen() {
             const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
             const isFeedbackLoading = feedbackLoading === recipe.id;
             
+            // Initialize animation for this card if not exists
+            if (!cardAnimations[recipe.id]) {
+              cardAnimations[recipe.id] = {
+                scale: new Animated.Value(1),
+                opacity: new Animated.Value(1),
+              };
+            }
+            const cardAnim = cardAnimations[recipe.id];
+            
             return (
-              <TouchableOpacity
-                onPress={() => handleRecipePress(recipe.id)}
-                className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 mb-4"
+              <CardStack
+                onSwipeRight={() => handleLike(recipe.id)}
+                onSwipeLeft={() => handleDislike(recipe.id)}
               >
+                <HapticTouchableOpacity
+                onPress={() => handleRecipePress(recipe.id)}
+                  className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden mb-3 shadow-sm border border-gray-100 dark:border-gray-700"
+                >
                 {/* Recipe Image with Unsplash Attribution */}
                 {recipe.imageUrl && (
                   <View>
                     <Image 
                       source={{ uri: recipe.imageUrl }}
-                      style={{ width: '100%', height: 192 }}
+                      style={{ width: '100%', height: 160 }}
                       contentFit="cover"
                       transition={200}
                       cachePolicy="memory-disk"
                       placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-                      priority="high"
                     />
                     {/* Unsplash Attribution Overlay - Link to photographer profile per Unsplash guidelines */}
                     {(recipe as any).unsplashPhotographerName && (
-                      <TouchableOpacity
+                      <HapticTouchableOpacity
                         onPress={() => {
                           const username = (recipe as any).unsplashPhotographerUsername;
                           if (username) {
@@ -773,105 +1115,97 @@ export default function HomeScreen() {
                         <Text className="text-white text-xs">
                           Photo by {(recipe as any).unsplashPhotographerName} on Unsplash
                         </Text>
-                      </TouchableOpacity>
+                      </HapticTouchableOpacity>
                     )}
                   </View>
                 )}
                 
                 <View className="p-4">
-                  <View className="flex-row justify-between items-start mb-2">
-                    <View className="flex-1 mr-2">
-                      <Text className="text-xl font-bold text-gray-900">
-                        {recipe.title}
-                      </Text>
-                      {/* Source Attribution */}
-                      {(recipe as any).source === 'ai-generated' && (
-                        <View className="flex-row items-center mt-1">
-                          <View className="bg-purple-100 px-2 py-0.5 rounded-full">
-                            <Text className="text-purple-700 text-xs font-medium">
-                              🤖 AI Generated
-                            </Text>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                    <View className={`bg-green-100 px-2 py-1 rounded-full ml-2`}>
-                      <Text className={`text-green-800 text-sm font-semibold`}>
-                        {Math.round(recipe.score?.matchPercentage || 0)}% Match
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <Text className="text-gray-600 mb-3" numberOfLines={3}>
-                    {truncateDescription(recipe.description)}
+                <View className="flex-row justify-between items-start mb-2">
+                    <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1">
+                    {recipe.title}
                   </Text>
+                    <Text className={`text-base font-semibold ${getScoreColor(recipe.score?.total || 0)} ml-2`}>
+                      {Math.round(recipe.score?.total || 0)}
+                    </Text>
+                </View>
+                
+                  <Text className="text-gray-600 dark:text-gray-100 text-sm mb-2" numberOfLines={2}>
+                    {truncateDescription(recipe.description, 100)}
+                </Text>
 
                 <View className="flex-row justify-between items-center">
-                  <View className="flex-row items-center space-x-4">
+                    <View className="flex-row items-center space-x-3">
                     <View className="flex-row items-center">
-                      <Ionicons name="time-outline" size={16} color="#6B7280" />
-                      <Text className="text-gray-500 text-sm ml-1">
+                        <Icon name={Icons.COOK_TIME} size={IconSizes.XS} color="#6B7280" accessibilityLabel="Cook time" />
+                        <Text className="text-gray-500 dark:text-gray-200 text-xs ml-1">
                         {recipe.cookTime} min
                       </Text>
                     </View>
-                    <View className="bg-orange-100 px-2 py-1 rounded-full">
-                      <Text className="text-orange-800 text-xs font-medium">
+                      <View className="bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-full">
+                        <Text className="text-orange-800 dark:text-orange-300 text-xs">
                         {recipe.cuisine}
                       </Text>
                     </View>
                   </View>
 
-                  {/* Feedback Buttons and Save */}
-                  <View className="flex-row space-x-2">
-                    {/* Save to Collection Button */}
-                    <TouchableOpacity
-                      onPress={() => openSavePicker(recipe.id)}
-                      className="p-2 rounded-full bg-orange-100 border border-orange-200"
-                    >
-                      <Ionicons 
-                        name="bookmark-outline" 
-                        size={18} 
-                        color="#F97316" 
-                      />
-                    </TouchableOpacity>
-                    
+                    {/* Feedback Buttons and Save */}
+                    <View className="flex-row">
+                      {/* Save to Collection Button */}
+                      <HapticTouchableOpacity
+                        onPress={() => openSavePicker(recipe.id)}
+                        className="p-2 rounded-full bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 mr-2"
+                      >
+                        <Icon 
+                          name={Icons.SAVE_RECIPE} 
+                          size={IconSizes.SM} 
+                          color="#F97316" 
+                          accessibilityLabel="Save recipe to collection"
+                        />
+                      </HapticTouchableOpacity>
+                      
                     {/* Dislike Button */}
-                    <TouchableOpacity
+                      <HapticTouchableOpacity
                       onPress={() => handleDislike(recipe.id)}
                       disabled={isFeedbackLoading}
-                      className={`p-2 rounded-full ${
+                        hapticDisabled={true}
+                        className={`p-2 rounded-full mr-2 ${
                         feedback.disliked 
-                          ? 'bg-red-100 border border-red-200' 
-                          : 'bg-gray-100 border border-gray-200'
+                            ? 'bg-red-500 dark:bg-red-600 border border-red-600 dark:border-red-700' 
+                            : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
                       } ${isFeedbackLoading ? 'opacity-50' : ''}`}
                     >
-                      <Ionicons 
-                        name={feedback.disliked ? "thumbs-down" : "thumbs-down-outline"} 
-                        size={18} 
-                        color={feedback.disliked ? "#EF4444" : "#6B7280"} 
-                      />
-                    </TouchableOpacity>
+                        <Icon 
+                          name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE} 
+                          size={IconSizes.MD} 
+                          color={feedback.disliked ? "#FFFFFF" : (colorScheme === 'dark' ? "#D1D5DB" : "#4B5563")} 
+                          accessibilityLabel={feedback.disliked ? "Disliked" : "Dislike"}
+                        />
+                      </HapticTouchableOpacity>
                     
                     {/* Like Button */}
-                    <TouchableOpacity
+                      <HapticTouchableOpacity
                       onPress={() => handleLike(recipe.id)}
                       disabled={isFeedbackLoading}
+                        hapticDisabled={true}
                       className={`p-2 rounded-full ${
                         feedback.liked 
-                          ? 'bg-green-100 border border-green-200' 
-                          : 'bg-gray-100 border border-gray-200'
+                            ? 'bg-green-500 dark:bg-green-600 border border-green-600 dark:border-green-700' 
+                            : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
                       } ${isFeedbackLoading ? 'opacity-50' : ''}`}
                     >
-                      <Ionicons 
-                        name={feedback.liked ? "thumbs-up" : "thumbs-up-outline"} 
-                        size={18} 
-                        color={feedback.liked ? "#10B981" : "#6B7280"} 
-                      />
-                    </TouchableOpacity>
+                        <Icon 
+                          name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} 
+                          size={IconSizes.MD} 
+                          color={feedback.liked ? "#FFFFFF" : (colorScheme === 'dark' ? "#D1D5DB" : "#4B5563")} 
+                          accessibilityLabel={feedback.liked ? "Liked" : "Like"}
+                        />
+                      </HapticTouchableOpacity>
                   </View>
                 </View>
                 </View>
-              </TouchableOpacity>
+                </HapticTouchableOpacity>
+              </CardStack>
             );
           })()}
         </View>
@@ -879,19 +1213,39 @@ export default function HomeScreen() {
         {/* More Suggestions */}
         {suggestedRecipes.length > 1 && (
           <View className="px-4 pb-8">
-            <Text className="text-lg font-semibold text-gray-900 mb-3">
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
               More Suggestions
             </Text>
-            {suggestedRecipes.slice(1).map((recipe) => {
+            {suggestedRecipes.slice(1).map((recipe, index) => {
               const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
               const isFeedbackLoading = feedbackLoading === recipe.id;
               
+              // Initialize animation for this card if not exists
+              if (!cardAnimations[recipe.id]) {
+                cardAnimations[recipe.id] = {
+                  scale: new Animated.Value(1),
+                  opacity: new Animated.Value(1),
+                };
+              }
+              const cardAnim = cardAnimations[recipe.id];
+              
               return (
-                <TouchableOpacity
+                <AnimatedRecipeCard
                   key={recipe.id}
-                  onPress={() => handleRecipePress(recipe.id)}
-                  className="bg-white rounded-lg overflow-hidden mb-3 shadow-sm border border-gray-100"
+                  index={index}
+                  recipeId={recipe.id}
+                  animatedIds={animatedRecipeIds}
+                  onAnimated={(id) => setAnimatedRecipeIds(prev => new Set(prev).add(id))}
                 >
+                <Animated.View
+                  style={{
+                    transform: [{ scale: cardAnim.scale }],
+                  }}
+                >
+                  <HapticTouchableOpacity
+                  onPress={() => handleRecipePress(recipe.id)}
+                    className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden mb-3 shadow-sm border border-gray-100 dark:border-gray-700"
+                  >
                   {/* Recipe Image with Unsplash Attribution */}
                   {recipe.imageUrl && (
                     <View>
@@ -905,7 +1259,7 @@ export default function HomeScreen() {
                       />
                       {/* Unsplash Attribution Overlay - Link to photographer profile per Unsplash guidelines */}
                       {(recipe as any).unsplashPhotographerName && (
-                        <TouchableOpacity
+                        <HapticTouchableOpacity
                           onPress={() => {
                             const username = (recipe as any).unsplashPhotographerUsername;
                             if (username) {
@@ -918,35 +1272,35 @@ export default function HomeScreen() {
                           <Text className="text-white text-xs">
                             Photo by {(recipe as any).unsplashPhotographerName} on Unsplash
                           </Text>
-                        </TouchableOpacity>
+                        </HapticTouchableOpacity>
                       )}
                     </View>
                   )}
                   
                   <View className="p-4">
-                    <View className="flex-row justify-between items-start mb-2">
-                      <Text className="text-lg font-semibold text-gray-900 flex-1">
-                        {recipe.title}
-                      </Text>
-                      <Text className={`text-base font-semibold ${getScoreColor(recipe.score?.total || 0)} ml-2`}>
-                        {Math.round(recipe.score?.total || 0)}
-                      </Text>
-                    </View>
-                    
-                    <Text className="text-gray-600 text-sm mb-2" numberOfLines={2}>
-                      {truncateDescription(recipe.description, 100)}
+                  <View className="flex-row justify-between items-start mb-2">
+                      <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1">
+                      {recipe.title}
                     </Text>
+                    <Text className={`text-base font-semibold ${getScoreColor(recipe.score?.total || 0)} ml-2`}>
+                        {Math.round(recipe.score?.total || 0)}
+                    </Text>
+                  </View>
+                  
+                    <Text className="text-gray-600 dark:text-gray-100 text-sm mb-2" numberOfLines={2}>
+                      {truncateDescription(recipe.description, 100)}
+                  </Text>
 
                   <View className="flex-row justify-between items-center">
                     <View className="flex-row items-center space-x-3">
                       <View className="flex-row items-center">
-                        <Ionicons name="time-outline" size={14} color="#6B7280" />
-                        <Text className="text-gray-500 text-xs ml-1">
+                        <Icon name={Icons.COOK_TIME} size={IconSizes.XS} color="#6B7280" accessibilityLabel="Cook time" />
+                        <Text className="text-gray-500 dark:text-gray-200 text-xs ml-1">
                           {recipe.cookTime} min
                         </Text>
                       </View>
-                      <View className="bg-orange-100 px-2 py-1 rounded-full">
-                        <Text className="text-orange-800 text-xs">
+                      <View className="bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-full">
+                        <Text className="text-orange-800 dark:text-orange-300 text-xs">
                           {recipe.cuisine}
                         </Text>
                       </View>
@@ -955,51 +1309,58 @@ export default function HomeScreen() {
                     {/* Feedback Buttons and Save */}
                     <View className="flex-row">
                       {/* Save to Collection Button */}
-                      <TouchableOpacity
+                      <HapticTouchableOpacity
                         onPress={() => openSavePicker(recipe.id)}
-                        className="p-2 rounded-full bg-orange-100 border border-orange-200 mr-2"
+                        className="p-2 rounded-full bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 mr-2"
                       >
-                        <Ionicons 
-                          name="bookmark-outline" 
-                          size={18} 
+                        <Icon 
+                          name={Icons.SAVE_RECIPE} 
+                          size={IconSizes.SM} 
                           color="#F97316" 
+                          accessibilityLabel="Save recipe to collection"
                         />
-                      </TouchableOpacity>
+                      </HapticTouchableOpacity>
                       
-                      <TouchableOpacity
+                      <HapticTouchableOpacity
                         onPress={() => handleDislike(recipe.id)}
                         disabled={isFeedbackLoading}
+                        hapticDisabled={true}
                         className={`p-2 rounded-full mr-2 ${
                           feedback.disliked 
-                            ? 'bg-red-100 border border-red-200' 
-                            : 'bg-gray-100 border border-gray-200'
+                            ? 'bg-red-500 dark:bg-red-600 border border-red-600 dark:border-red-700' 
+                            : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
                         } ${isFeedbackLoading ? 'opacity-50' : ''}`}
                       >
-                        <Ionicons 
-                          name={feedback.disliked ? "thumbs-down" : "thumbs-down-outline"} 
-                          size={18} 
-                          color={feedback.disliked ? "#EF4444" : "#6B7280"} 
+                        <Icon 
+                          name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE} 
+                          size={IconSizes.MD} 
+                          color={feedback.disliked ? "#FFFFFF" : (colorScheme === 'dark' ? "#D1D5DB" : "#4B5563")} 
+                          accessibilityLabel={feedback.disliked ? "Disliked" : "Dislike"}
                         />
-                      </TouchableOpacity>
-                      <TouchableOpacity
+                      </HapticTouchableOpacity>
+                      <HapticTouchableOpacity
                         onPress={() => handleLike(recipe.id)}
                         disabled={isFeedbackLoading}
+                        hapticDisabled={true}
                         className={`p-2 rounded-full ${
                           feedback.liked 
-                            ? 'bg-green-100 border border-green-200' 
-                            : 'bg-gray-100 border border-gray-200'
+                            ? 'bg-green-500 dark:bg-green-600 border border-green-600 dark:border-green-700' 
+                            : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
                         } ${isFeedbackLoading ? 'opacity-50' : ''}`}
                       >
-                        <Ionicons 
-                          name={feedback.liked ? "thumbs-up" : "thumbs-up-outline"} 
-                          size={18} 
-                          color={feedback.liked ? "#10B981" : "#6B7280"} 
+                        <Icon 
+                          name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} 
+                          size={IconSizes.MD} 
+                          color={feedback.liked ? "#FFFFFF" : (colorScheme === 'dark' ? "#D1D5DB" : "#4B5563")} 
+                          accessibilityLabel={feedback.liked ? "Liked" : "Like"}
                         />
-                      </TouchableOpacity>
+                      </HapticTouchableOpacity>
                     </View>
                   </View>
-                  </View>
-                </TouchableOpacity>
+                    </View>
+                </HapticTouchableOpacity>
+                </Animated.View>
+                </AnimatedRecipeCard>
               );
             })}
           </View>
@@ -1007,122 +1368,13 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* Filter Modal */}
-      <Modal
+      <FilterModal
         visible={showFilterModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <SafeAreaView className="flex-1 bg-gray-50">
-          {/* Modal Header */}
-          <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
-            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-              <Text className="text-blue-500 font-medium">Cancel</Text>
-            </TouchableOpacity>
-            <Text className="text-lg font-semibold text-gray-900">Filter Recipes</Text>
-            <TouchableOpacity onPress={applyFilters}>
-              <Text className="text-blue-500 font-medium">Apply</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView className="flex-1 px-4 py-4">
-            {/* Cuisine Filter */}
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-900 mb-3">Cuisine</Text>
-              <View className="flex-row flex-wrap">
-                {CUISINE_OPTIONS.map((cuisine) => (
-                  <TouchableOpacity
-                    key={cuisine}
-                    onPress={() => handleFilterChange('cuisines', cuisine)}
-                    className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
-                      filters.cuisines.includes(cuisine)
-                        ? 'bg-orange-500 border-orange-500'
-                        : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <Text className={`text-sm font-medium ${
-                      filters.cuisines.includes(cuisine) ? 'text-white' : 'text-gray-700'
-                    }`}>
-                      {cuisine}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Dietary Restrictions Filter */}
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-900 mb-3">Dietary</Text>
-              <View className="flex-row flex-wrap">
-                {DIETARY_OPTIONS.map((dietary) => (
-                  <TouchableOpacity
-                    key={dietary}
-                    onPress={() => handleFilterChange('dietaryRestrictions', dietary)}
-                    className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
-                      filters.dietaryRestrictions.includes(dietary)
-                        ? 'bg-green-500 border-green-500'
-                        : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <Text className={`text-sm font-medium ${
-                      filters.dietaryRestrictions.includes(dietary) ? 'text-white' : 'text-gray-700'
-                    }`}>
-                      {dietary}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Cook Time Filter */}
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-900 mb-3">Max Cook Time</Text>
-              <View className="flex-row flex-wrap">
-                {[15, 30, 45, 60, 90].map((time) => (
-                  <TouchableOpacity
-                    key={time}
-                    onPress={() => handleFilterChange('maxCookTime', time)}
-                    className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
-                      filters.maxCookTime === time
-                        ? 'bg-blue-500 border-blue-500'
-                        : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <Text className={`text-sm font-medium ${
-                      filters.maxCookTime === time ? 'text-white' : 'text-gray-700'
-                    }`}>
-                      ≤{time} min
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Difficulty Filter */}
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-900 mb-3">Difficulty</Text>
-              <View className="flex-row flex-wrap">
-                {DIFFICULTY_OPTIONS.map((difficulty) => (
-                  <TouchableOpacity
-                    key={difficulty}
-                    onPress={() => handleFilterChange('difficulty', difficulty)}
-                    className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
-                      filters.difficulty.includes(difficulty)
-                        ? 'bg-purple-500 border-purple-500'
-                        : 'bg-white border-gray-300'
-                    }`}
-                  >
-                    <Text className={`text-sm font-medium ${
-                      filters.difficulty.includes(difficulty) ? 'text-white' : 'text-gray-700'
-                    }`}>
-                      {difficulty}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+        onClose={() => setShowFilterModal(false)}
+        onApply={applyFilters}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+      />
 
       {/* Collection Save Picker Modal */}
       <Modal
@@ -1132,11 +1384,11 @@ export default function HomeScreen() {
         onRequestClose={() => setSavePickerVisible(false)}
       >
         <View className="flex-1 bg-black/40 justify-end">
-          <View className="bg-white rounded-t-2xl p-4 max-h-[70%]">
-            <Text className="text-lg font-semibold mb-3">Save to Collection</Text>
+          <View className="bg-white dark:bg-gray-800 rounded-t-2xl p-4 max-h-[70%]">
+            <Text className="text-lg font-semibold mb-3 dark:text-gray-100">Save to Collection</Text>
             <ScrollView className="mb-3">
               {collections.map((c) => (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   key={c.id}
                   onPress={() => {
                     setSelectedCollectionIds(prev => 
@@ -1145,15 +1397,15 @@ export default function HomeScreen() {
                         : [...prev, c.id]
                     );
                   }}
-                  className="flex-row items-center py-3 border-b border-gray-100"
+                  className="flex-row items-center py-3 border-b border-gray-100 dark:border-gray-700"
                 >
-                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-orange-500 border-orange-500' : 'border-gray-300'}`}>
+                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-orange-500 dark:bg-orange-600 border-orange-500 dark:border-orange-600' : 'border-gray-300 dark:border-gray-600'}`}>
                     {selectedCollectionIds.includes(c.id) && (
-                      <Ionicons name="checkmark" size={14} color="white" style={{ position: 'absolute', top: 1, left: 1 }} />
+                      <Icon name={Icons.CHECKMARK} size={IconSizes.XS} color="white" accessibilityLabel="Selected" style={{ position: 'absolute', top: 1, left: 1 }} />
                     )}
                   </View>
-                  <Text className="text-gray-900 flex-1">{c.name}</Text>
-                </TouchableOpacity>
+                  <Text className="text-gray-900 dark:text-gray-100 flex-1">{c.name}</Text>
+                </HapticTouchableOpacity>
               ))}
               {creatingCollection ? (
                 <View className="flex-row items-center py-3">
@@ -1161,26 +1413,26 @@ export default function HomeScreen() {
                     value={newCollectionName}
                     onChangeText={setNewCollectionName}
                     placeholder="New collection name"
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mr-2 dark:bg-gray-700 dark:text-gray-100"
                     placeholderTextColor="#9CA3AF"
                   />
-                  <TouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
+                  <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 dark:bg-orange-600 px-3 py-2 rounded-lg">
                     <Text className="text-white font-semibold">Create</Text>
-                  </TouchableOpacity>
+                  </HapticTouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
-                  <Text className="text-orange-600 font-medium">+ Create new collection</Text>
-                </TouchableOpacity>
+                <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
+                  <Text className="text-orange-600 dark:text-orange-400 font-medium">+ Create new collection</Text>
+                </HapticTouchableOpacity>
               )}
             </ScrollView>
             <View className="flex-row justify-end space-x-3">
-              <TouchableOpacity onPress={() => setSavePickerVisible(false)} className="px-4 py-3">
-                <Text className="text-gray-700">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveToCollections} className="bg-orange-500 px-4 py-3 rounded-lg">
+              <HapticTouchableOpacity onPress={() => setSavePickerVisible(false)} className="px-4 py-3">
+                <Text className="text-gray-700 dark:text-gray-100">Cancel</Text>
+              </HapticTouchableOpacity>
+              <HapticTouchableOpacity onPress={handleSaveToCollections} className="bg-orange-500 dark:bg-orange-600 px-4 py-3 rounded-lg">
                 <Text className="text-white font-semibold">Save</Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
           </View>
         </View>

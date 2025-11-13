@@ -1,7 +1,8 @@
 // frontend/app/edit-budget.tsx
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 // Budget settings screen
 
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,7 +41,6 @@ export default function EditBudgetScreen() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       await costTrackingApi.updateBudget(budget);
       
@@ -50,6 +50,7 @@ export default function EditBudgetScreen() {
       ]);
     } catch (error: any) {
       console.error('Error saving budget:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to save budget settings');
     } finally {
       setSaving(false);
@@ -70,9 +71,9 @@ export default function EditBudgetScreen() {
       {/* Header */}
       <View className="bg-white px-4 py-4 border-b border-gray-200">
         <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="mr-4">
+          <HapticTouchableOpacity onPress={() => router.back()} className="mr-4">
             <Ionicons name="arrow-back" size={24} color="#374151" />
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
           <Text className="text-2xl font-bold text-gray-900">Budget Settings</Text>
         </View>
       </View>
@@ -97,7 +98,7 @@ export default function EditBudgetScreen() {
             <Text className="text-lg font-semibold text-gray-900 mb-2">Currency</Text>
             <View className="flex-row space-x-2">
               {['USD', 'EUR', 'GBP', 'CAD'].map((currency) => (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   key={currency}
                   onPress={() => setBudget({ ...budget, currency })}
                   className={`px-4 py-2 rounded-lg border-2 ${
@@ -113,7 +114,7 @@ export default function EditBudgetScreen() {
                   >
                     {currency}
                   </Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               ))}
             </View>
           </View>
@@ -188,7 +189,7 @@ export default function EditBudgetScreen() {
           </View>
 
           {/* Save Button */}
-          <TouchableOpacity
+          <HapticTouchableOpacity
             onPress={handleSave}
             disabled={saving}
             className={`bg-orange-500 py-4 rounded-lg ${saving ? 'opacity-50' : ''}`}
@@ -198,7 +199,7 @@ export default function EditBudgetScreen() {
             ) : (
               <Text className="text-white text-center font-semibold text-lg">Save Budget Settings</Text>
             )}
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

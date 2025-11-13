@@ -1,4 +1,5 @@
 // frontend/app/scanner-results.tsx
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 // Results screen for food recognition
 
 import { View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
@@ -29,12 +30,12 @@ export default function ScannerResultsScreen() {
         <Text className="text-gray-600 text-center mb-6">
           Unable to process the food recognition results.
         </Text>
-        <TouchableOpacity
+        <HapticTouchableOpacity
           onPress={() => router.back()}
           className="bg-orange-500 px-6 py-3 rounded-lg"
         >
           <Text className="text-white font-semibold">Go Back</Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -43,9 +44,9 @@ export default function ScannerResultsScreen() {
     <SafeAreaView className="flex-1 bg-white">
       {/* Header */}
       <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center">
-        <TouchableOpacity onPress={() => router.back()} className="mr-4">
+        <HapticTouchableOpacity onPress={() => router.back()} className="mr-4">
           <Ionicons name="arrow-back" size={24} color="#374151" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
         <Text className="text-xl font-bold text-gray-900">Food Recognition</Text>
       </View>
 
@@ -86,12 +87,12 @@ export default function ScannerResultsScreen() {
 
           {/* Action Buttons */}
           <View className="mt-4 space-y-2">
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={() => router.back()}
               className="bg-orange-500 py-3 rounded-lg"
             >
               <Text className="text-white text-center font-semibold">Done</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
         </View>
       </ScrollView>

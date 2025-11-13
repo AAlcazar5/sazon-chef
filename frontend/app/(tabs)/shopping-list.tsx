@@ -1,11 +1,15 @@
 // frontend/app/(tabs)/shopping-list.tsx
+import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 // Shopping list screen
 
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Modal } from 'react-native';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, ScrollView, TextInput, Alert, Modal, Animated } from 'react-native';
+import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
+import SwipeableItem from '../../components/ui/SwipeableItem';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import Icon from '../../components/ui/Icon';
+import { Icons, IconSizes } from '../../constants/Icons';
 import * as Location from 'expo-location';
 import { shoppingListApi, shoppingAppApi, costTrackingApi } from '../../lib/api';
 import { ShoppingList, ShoppingListItem, ShoppingAppIntegration, SupportedShoppingApp } from '../../types';
@@ -37,11 +41,121 @@ export default function ShoppingListScreen() {
   const [mergingLists, setMergingLists] = useState(false);
   const [mergeName, setMergeName] = useState('Weekly Shopping');
 
+  // Animation values for modals
+  const listPickerScale = useRef(new Animated.Value(0)).current;
+  const listPickerOpacity = useRef(new Animated.Value(0)).current;
+  const editNameScale = useRef(new Animated.Value(0)).current;
+  const editNameOpacity = useRef(new Animated.Value(0)).current;
+  const mergeScale = useRef(new Animated.Value(0)).current;
+  const mergeOpacity = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     loadShoppingLists();
     loadSupportedApps();
     loadIntegrations();
   }, []);
+
+  // Animate list picker modal
+  useEffect(() => {
+    if (showListPicker) {
+      listPickerScale.setValue(0);
+      listPickerOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(listPickerScale, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(listPickerOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(listPickerScale, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(listPickerOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showListPicker]);
+
+  // Animate edit name modal
+  useEffect(() => {
+    if (showEditNameModal) {
+      editNameScale.setValue(0);
+      editNameOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(editNameScale, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(editNameOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(editNameScale, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(editNameOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showEditNameModal]);
+
+  // Animate merge modal
+  useEffect(() => {
+    if (showMergeModal) {
+      mergeScale.setValue(0);
+      mergeOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(mergeScale, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(mergeOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(mergeScale, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(mergeOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showMergeModal]);
 
   const loadShoppingLists = async () => {
     try {
@@ -432,7 +546,6 @@ export default function ShoppingListScreen() {
         purchased: !item.purchased,
       });
       await loadShoppingListDetails(selectedList.id);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error: any) {
       console.error('Error updating item:', error);
       Alert.alert('Error', 'Failed to update item');
@@ -534,76 +647,80 @@ export default function ShoppingListScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#F97316" />
-        <Text className="text-gray-600 mt-4">Loading shopping lists...</Text>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900 items-center justify-center">
+        <AnimatedActivityIndicator size="large" color="#F97316" />
+        <Text className="text-gray-600 dark:text-gray-100 mt-4">Loading shopping lists...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-200">
+      <View className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-200 dark:border-gray-700">
         <View className="flex-row justify-between items-center mb-3">
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900">Shopping Lists</Text>
-            <Text className="text-gray-500 mt-1">
+            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Shopping Lists</Text>
+            <Text className="text-gray-500 dark:text-gray-200 mt-1">
               {selectedList ? `${selectedList.items.length} items` : 'No list selected'}
             </Text>
           </View>
-          <TouchableOpacity
+          <HapticTouchableOpacity
             onPress={handleRefresh}
             className="p-2"
             disabled={refreshing}
           >
-            <Ionicons
-              name="refresh"
-              size={24}
+            <Icon
+              name={Icons.RELOAD}
+              size={IconSizes.LG}
               color={refreshing ? "#9CA3AF" : "#6B7280"}
+              accessibilityLabel="Refresh shopping lists"
             />
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
 
         {/* List Selector - Dropdown */}
         <View className="flex-row items-center" style={{ gap: 8 }}>
-          <TouchableOpacity
+          <HapticTouchableOpacity
             onPress={() => setShowListPicker(true)}
-            className="flex-1 flex-row items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3"
+            className="flex-1 flex-row items-center justify-between bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3"
           >
             <View className="flex-1 flex-row items-center">
-              <Ionicons name="list-outline" size={20} color="#6B7280" style={{ marginRight: 8 }} />
-              <Text className="text-gray-900 font-semibold flex-1" numberOfLines={1}>
+              <Icon name={Icons.SHOPPING_LIST_OUTLINE} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Shopping list" style={{ marginRight: 8 }} />
+              <Text className="text-gray-900 dark:text-gray-100 font-semibold flex-1" numberOfLines={1}>
                 {selectedList?.name || 'Select a list'}
               </Text>
             </View>
-            <Ionicons name="chevron-down" size={20} color="#6B7280" />
-          </TouchableOpacity>
+            <Icon name={Icons.CHEVRON_DOWN} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Open dropdown" />
+          </HapticTouchableOpacity>
           
           {selectedList && (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={handleEditName}
-              className="p-3 bg-gray-100 rounded-lg"
+              className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg"
             >
-              <Ionicons name="create-outline" size={20} color="#6B7280" />
-            </TouchableOpacity>
+              <Icon name={Icons.EDIT_OUTLINE} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Edit list name" />
+            </HapticTouchableOpacity>
           )}
           
           {shoppingLists.length > 1 && (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={() => setShowMergeModal(true)}
-              className="p-3 bg-purple-100 rounded-lg"
+              className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg"
             >
-              <Ionicons name="git-merge-outline" size={20} color="#9333EA" />
-            </TouchableOpacity>
+              <Icon name={Icons.MERGE_LISTS_OUTLINE} size={IconSizes.MD} color="#9333EA" accessibilityLabel="Merge lists" />
+            </HapticTouchableOpacity>
           )}
           
-          <TouchableOpacity
-            onPress={handleCreateList}
-            className="p-3 bg-orange-500 rounded-lg"
+          <HapticTouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              handleCreateList();
+            }}
+            className="p-3 bg-orange-500 dark:bg-orange-600 rounded-lg"
           >
-            <Ionicons name="add" size={20} color="white" />
-          </TouchableOpacity>
+            <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Create new list" />
+          </HapticTouchableOpacity>
         </View>
       </View>
 
@@ -611,14 +728,14 @@ export default function ShoppingListScreen() {
         <>
           {/* Best Store Recommendation */}
           {bestStore && bestStore.savings > 0 && (
-            <View className="mx-4 mt-4 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+            <View className="mx-4 mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-500 dark:border-green-600">
               <View className="flex-row items-center justify-between mb-2">
                 <View className="flex-row items-center">
-                  <Ionicons name="storefront-outline" size={20} color="#10B981" />
-                  <Text className="text-lg font-semibold text-gray-900 ml-2">Best Store</Text>
+                  <Icon name={Icons.STORE_OUTLINE} size={IconSizes.MD} color="#10B981" accessibilityLabel="Best store" />
+                  <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 ml-2">Best Store</Text>
                 </View>
-                <View className="bg-green-100 px-3 py-1 rounded-full">
-                  <Text className="text-green-700 font-bold">
+                <View className="bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full">
+                  <Text className="text-green-700 dark:text-green-300 font-bold">
                     Save ${bestStore.savings.toFixed(2)}
                   </Text>
                 </View>
@@ -641,80 +758,79 @@ export default function ShoppingListScreen() {
           {/* Find Best Store Button */}
           {currentItems.length > 0 && (
             <View className="mx-4 mt-4">
-              <TouchableOpacity
-                onPress={findBestStore}
+              <HapticTouchableOpacity
+                onPress={() => {
+                  if (!loadingBestStore) {
+                    findBestStore();
+                  }
+                }}
                 disabled={loadingBestStore}
-                className={`bg-blue-500 py-3 px-4 rounded-lg flex-row items-center justify-center ${
+                hapticStyle="medium"
+                className={`bg-blue-500 dark:bg-blue-600 py-3 px-4 rounded-lg flex-row items-center justify-center ${
                   loadingBestStore ? 'opacity-50' : ''
                 }`}
               >
-                <Ionicons name="storefront-outline" size={20} color="white" style={{ marginRight: 8 }} />
+                <Icon name={Icons.STORE_OUTLINE} size={IconSizes.MD} color="white" accessibilityLabel="Find best store" style={{ marginRight: 8 }} />
                 <Text className="text-white font-semibold">
                   {loadingBestStore ? 'Finding Best Store...' : '🔍 Find Best Store'}
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
           )}
 
           {/* Items List */}
           <ScrollView className="flex-1">
             {currentItems.length === 0 ? (
-              <View className="flex-1 items-center justify-center p-8 mt-20">
-                <Ionicons name="cart-outline" size={64} color="#9CA3AF" />
-                <Text className="text-xl font-semibold text-gray-900 mt-4 mb-2">
-                  Your list is empty
-                </Text>
-                <Text className="text-gray-600 text-center mb-6">
-                  Add items to get started with your shopping list
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setShowAddItem(true)}
-                  className="bg-orange-500 px-6 py-3 rounded-lg"
-                >
-                  <Text className="text-white font-semibold">Add First Item</Text>
-                </TouchableOpacity>
-              </View>
+              <AnimatedEmptyState
+                icon={Icons.CART_OUTLINE}
+                title="Your list is empty"
+                description="Add items to get started with your shopping list"
+                actionLabel="Add First Item"
+                onAction={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowAddItem(true);
+                }}
+              />
             ) : (
               <View className="p-4">
                 {Object.entries(itemsByCategory).map(([category, items]) => (
                   <View key={category} className="mb-6">
-                    <Text className="text-lg font-semibold text-gray-900 mb-2">
+                    <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       {category}
                     </Text>
                     {items.map((item) => (
-                      <TouchableOpacity
+                      <SwipeableItem
                         key={item.id}
-                        onPress={() => handleTogglePurchased(item)}
-                        className={`flex-row items-center justify-between p-3 rounded-lg mb-2 ${
-                          item.purchased ? 'bg-gray-100' : 'bg-white'
-                        }`}
+                        onDelete={() => handleDeleteItem(item)}
                       >
-                        <View className="flex-1 flex-row items-center">
-                          <Ionicons
-                            name={item.purchased ? 'checkmark-circle' : 'ellipse-outline'}
-                            size={24}
-                            color={item.purchased ? '#10B981' : '#9CA3AF'}
-                          />
-                          <View className="ml-3 flex-1">
-                            <Text
-                              className={`font-medium ${
-                                item.purchased
-                                  ? 'text-gray-400 line-through'
-                                  : 'text-gray-900'
-                              }`}
-                            >
-                              {item.name}
-                            </Text>
-                            <Text className="text-sm text-gray-500">{item.quantity}</Text>
-                          </View>
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => handleDeleteItem(item)}
-                          className="ml-2 p-2"
+                        <HapticTouchableOpacity
+                          onPress={() => handleTogglePurchased(item)}
+                          className={`flex-row items-center justify-between p-3 rounded-lg mb-2 ${
+                            item.purchased ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'
+                          }`}
                         >
-                          <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                        </TouchableOpacity>
-                      </TouchableOpacity>
+                          <View className="flex-1 flex-row items-center">
+                            <Icon
+                              name={item.purchased ? Icons.CHECKMARK_CIRCLE : Icons.ELLIPSE_OUTLINE}
+                              size={IconSizes.LG}
+                              color={item.purchased ? '#10B981' : '#9CA3AF'}
+                              accessibilityLabel={item.purchased ? 'Purchased' : 'Not purchased'}
+                            />
+                            <View className="ml-3 flex-1">
+                              <Text
+                                className={`font-medium ${
+                                  item.purchased
+                                    ? 'text-gray-400 dark:text-gray-200 line-through'
+                                    : 'text-gray-900 dark:text-gray-100'
+                                }`}
+                              >
+                                {item.name}
+                              </Text>
+                              <Text className="text-sm text-gray-500 dark:text-gray-200">{item.quantity}</Text>
+                            </View>
+                          </View>
+                        </HapticTouchableOpacity>
+                      </SwipeableItem>
                     ))}
                   </View>
                 ))}
@@ -745,7 +861,7 @@ export default function ShoppingListScreen() {
                 className="bg-gray-100 px-4 py-3 rounded-lg mb-3"
               />
               <View className="flex-row" style={{ gap: 8 }}>
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   onPress={() => {
                     setShowAddItem(false);
                     setNewItemName('');
@@ -755,53 +871,53 @@ export default function ShoppingListScreen() {
                   className="flex-1 bg-gray-200 py-3 rounded-lg"
                 >
                   <Text className="text-center font-semibold text-gray-700">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                </HapticTouchableOpacity>
+                <HapticTouchableOpacity
                   onPress={handleAddItem}
                   className="flex-1 bg-orange-500 py-3 rounded-lg"
                 >
                   <Text className="text-center font-semibold text-white">Add</Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               </View>
             </View>
           )}
 
           {/* Bottom Actions */}
           {!showAddItem && (
-            <View className="bg-white border-t border-gray-200 p-4">
-              <TouchableOpacity
+            <View className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+              <HapticTouchableOpacity
                 onPress={() => setShowAddItem(true)}
-                className="bg-orange-500 py-3 rounded-lg mb-3"
+                className="bg-orange-500 dark:bg-orange-600 py-3 rounded-lg mb-3"
               >
                 <Text className="text-center font-semibold text-white">Add Item</Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
 
               {/* Sync to External Apps */}
               {integrations.length > 0 && (
                 <View className="mb-3">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">Sync to:</Text>
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-100 mb-2">Sync to:</Text>
                   <View className="flex-row flex-wrap" style={{ gap: 8 }}>
                     {integrations.map((integration) => (
-                      <TouchableOpacity
+                      <HapticTouchableOpacity
                         key={integration.id}
                         onPress={() => handleSyncToApp(integration.appName)}
-                        className="bg-blue-100 px-4 py-2 rounded-lg"
+                        className="bg-blue-100 dark:bg-blue-900/30 px-4 py-2 rounded-lg"
                       >
-                        <Text className="text-blue-700 font-semibold text-sm">
+                        <Text className="text-blue-700 dark:text-blue-300 font-semibold text-sm">
                           {integration.appName.charAt(0).toUpperCase() + integration.appName.slice(1)}
                         </Text>
-                      </TouchableOpacity>
+                      </HapticTouchableOpacity>
                     ))}
                   </View>
-                  <TouchableOpacity
+                  <HapticTouchableOpacity
                     onPress={handleSyncBidirectional}
-                    className="bg-purple-100 px-4 py-2 rounded-lg mt-2 flex-row items-center justify-center"
+                    className="bg-purple-100 dark:bg-purple-900/30 px-4 py-2 rounded-lg mt-2 flex-row items-center justify-center"
                   >
-                    <Ionicons name="sync-outline" size={16} color="#9333EA" style={{ marginRight: 6 }} />
-                    <Text className="text-purple-700 font-semibold text-sm">
+                    <Icon name={Icons.SYNC_OUTLINE} size={IconSizes.XS} color="#9333EA" accessibilityLabel="Sync all bidirectional" style={{ marginRight: 6 }} />
+                    <Text className="text-purple-700 dark:text-purple-300 font-semibold text-sm">
                       Sync All (Bidirectional)
                     </Text>
-                  </TouchableOpacity>
+                  </HapticTouchableOpacity>
                 </View>
               )}
             </View>
@@ -811,19 +927,19 @@ export default function ShoppingListScreen() {
 
       {!selectedList && shoppingLists.length === 0 && (
         <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="cart-outline" size={64} color="#9CA3AF" />
-          <Text className="text-xl font-semibold text-gray-900 mt-4 mb-2">
+          <Icon name={Icons.CART_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="No shopping lists" />
+          <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-4 mb-2">
             No shopping lists yet
           </Text>
-          <Text className="text-gray-600 text-center mb-6">
+          <Text className="text-gray-600 dark:text-gray-100 text-center mb-6">
             Create your first shopping list to get started
           </Text>
-          <TouchableOpacity
+          <HapticTouchableOpacity
             onPress={handleCreateList}
-            className="bg-orange-500 px-6 py-3 rounded-lg"
+            className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg"
           >
             <Text className="text-white font-semibold">Create Shopping List</Text>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
         </View>
       )}
 
@@ -831,36 +947,46 @@ export default function ShoppingListScreen() {
       <Modal
         visible={showListPicker}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowListPicker(false)}
       >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setShowListPicker(false)}
+        <Animated.View 
           className="flex-1 bg-black/50 justify-center items-center px-4"
+          style={{ opacity: listPickerOpacity }}
         >
-          <TouchableOpacity
+          <HapticTouchableOpacity
             activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-            className="bg-white rounded-lg w-full max-w-sm shadow-lg"
+            onPress={() => setShowListPicker(false)}
+            className="flex-1 w-full justify-center items-center"
           >
-            <View className="p-4 border-b border-gray-200">
-              <Text className="text-lg font-semibold text-gray-900">Select Shopping List</Text>
+            <HapticTouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <Animated.View 
+                className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-sm shadow-lg"
+                style={{
+                  transform: [{ scale: listPickerScale }],
+                }}
+              >
+            <View className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Select Shopping List</Text>
             </View>
             
             <ScrollView className="max-h-80">
               {shoppingLists.map((list) => (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   key={list.id}
                   onPress={() => handleSelectList(list.id)}
                   className={`px-4 py-3 flex-row items-center border-b border-gray-100 ${
                     selectedList?.id === list.id ? 'bg-orange-50' : 'bg-white'
                   }`}
                 >
-                  <Ionicons 
-                    name={selectedList?.id === list.id ? "checkmark-circle" : "ellipse-outline"} 
-                    size={20} 
+                  <Icon 
+                    name={selectedList?.id === list.id ? Icons.CHECKMARK_CIRCLE : Icons.ELLIPSE_OUTLINE} 
+                    size={IconSizes.MD} 
                     color={selectedList?.id === list.id ? "#F97316" : "#9CA3AF"} 
+                    accessibilityLabel={selectedList?.id === list.id ? "Selected" : "Not selected"}
                     style={{ marginRight: 12 }}
                   />
                   <View className="flex-1">
@@ -871,41 +997,51 @@ export default function ShoppingListScreen() {
                       {list.items?.length || 0} items
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               ))}
               
               {shoppingLists.length === 0 && (
                 <View className="px-4 py-8 items-center">
-                  <Ionicons name="cart-outline" size={48} color="#9CA3AF" />
-                  <Text className="text-gray-500 mt-4 text-center">No shopping lists yet</Text>
+                  <Icon name={Icons.CART_OUTLINE} size={48} color="#9CA3AF" accessibilityLabel="No shopping lists" />
+                  <Text className="text-gray-500 dark:text-gray-200 mt-4 text-center">No shopping lists yet</Text>
                 </View>
               )}
             </ScrollView>
             
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={() => {
                 setShowListPicker(false);
                 handleCreateList();
               }}
-              className="px-4 py-3 border-t border-gray-200 flex-row items-center justify-center bg-orange-50"
+              className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex-row items-center justify-center bg-orange-50 dark:bg-orange-900/20"
             >
-              <Ionicons name="add-circle-outline" size={20} color="#F97316" style={{ marginRight: 8 }} />
-              <Text className="text-orange-600 font-semibold">Create New List</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+              <Icon name={Icons.ADD_CIRCLE_OUTLINE} size={IconSizes.MD} color="#F97316" accessibilityLabel="Create new list" style={{ marginRight: 8 }} />
+              <Text className="text-orange-600 dark:text-orange-400 font-semibold">Create New List</Text>
+            </HapticTouchableOpacity>
+              </Animated.View>
+            </HapticTouchableOpacity>
+          </HapticTouchableOpacity>
+        </Animated.View>
       </Modal>
 
       {/* Edit Name Modal */}
       <Modal
         visible={showEditNameModal}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowEditNameModal(false)}
       >
-        <View className="flex-1 bg-black/50 items-center justify-center px-4">
-          <View className="bg-white rounded-lg p-6 w-full max-w-sm">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">
+        <Animated.View 
+          className="flex-1 bg-black/50 items-center justify-center px-4"
+          style={{ opacity: editNameOpacity }}
+        >
+          <Animated.View 
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm"
+            style={{
+              transform: [{ scale: editNameScale }],
+            }}
+          >
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Edit List Name
             </Text>
             
@@ -913,58 +1049,67 @@ export default function ShoppingListScreen() {
               value={editingListName}
               onChangeText={setEditingListName}
               placeholder="Enter list name"
-              className="border border-gray-300 rounded-lg px-4 py-3 mb-4 text-gray-900"
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-gray-100 dark:bg-gray-700"
+              placeholderTextColor="#9CA3AF"
               autoFocus={true}
               maxLength={100}
             />
             
             <View className="flex-row space-x-3">
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 onPress={() => {
                   setShowEditNameModal(false);
                   setEditingListName('');
                 }}
                 disabled={updatingName}
-                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg"
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
               >
-                <Text className="text-gray-700 font-medium text-center">Cancel</Text>
-              </TouchableOpacity>
+                <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
+              </HapticTouchableOpacity>
               
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 onPress={handleSaveName}
                 disabled={updatingName}
-                className={`flex-1 py-3 px-4 bg-orange-500 rounded-lg ${updatingName ? 'opacity-50' : ''}`}
+                className={`flex-1 py-3 px-4 bg-orange-500 dark:bg-orange-600 rounded-lg ${updatingName ? 'opacity-50' : ''}`}
               >
                 <Text className="text-white font-medium text-center">
                   {updatingName ? 'Saving...' : 'Save'}
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
 
       {/* Merge Lists Modal */}
       <Modal
         visible={showMergeModal}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => {
           setShowMergeModal(false);
           setSelectedListsForMerge(new Set());
           setMergeName('Weekly Shopping');
         }}
       >
-        <View className="flex-1 bg-black/50 items-center justify-center px-4">
-          <View className="bg-white rounded-lg p-6 w-full max-w-sm max-h-[80%]">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">
+        <Animated.View 
+          className="flex-1 bg-black/50 items-center justify-center px-4"
+          style={{ opacity: mergeOpacity }}
+        >
+          <Animated.View 
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm max-h-[80%]"
+            style={{
+              transform: [{ scale: mergeScale }],
+            }}
+          >
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Merge Shopping Lists
             </Text>
-            <Text className="text-gray-600 mb-2 text-sm">
+            <Text className="text-gray-600 dark:text-gray-100 mb-2 text-sm">
               Select at least 2 lists to combine into a new weekly shopping list
             </Text>
             {selectedListsForMerge.size > 0 && (
-              <Text className="text-orange-600 mb-4 text-sm font-medium">
+              <Text className="text-orange-600 dark:text-orange-400 mb-4 text-sm font-medium">
                 {selectedListsForMerge.size} list{selectedListsForMerge.size !== 1 ? 's' : ''} selected
               </Text>
             )}
@@ -973,7 +1118,7 @@ export default function ShoppingListScreen() {
               {shoppingLists.map((list) => {
                 const isSelected = selectedListsForMerge.has(list.id);
                 return (
-                  <TouchableOpacity
+                  <HapticTouchableOpacity
                     key={list.id}
                     onPress={() => {
                       const newSet = new Set(selectedListsForMerge);
@@ -988,10 +1133,11 @@ export default function ShoppingListScreen() {
                       isSelected ? 'bg-orange-50' : 'bg-white'
                     }`}
                   >
-                    <Ionicons 
-                      name={isSelected ? "checkmark-circle" : "ellipse-outline"} 
-                      size={20} 
+                    <Icon 
+                      name={isSelected ? Icons.CHECKMARK_CIRCLE : Icons.ELLIPSE_OUTLINE} 
+                      size={IconSizes.MD} 
                       color={isSelected ? "#F97316" : "#9CA3AF"} 
+                      accessibilityLabel={isSelected ? "Selected" : "Not selected"}
                       style={{ marginRight: 12 }}
                     />
                     <View className="flex-1">
@@ -1002,48 +1148,49 @@ export default function ShoppingListScreen() {
                         {list.items?.length || 0} items
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </HapticTouchableOpacity>
                 );
               })}
             </ScrollView>
 
             {selectedListsForMerge.size >= 2 && (
               <View className="mb-4">
-                <Text className="text-sm font-medium text-gray-700 mb-2">Name for merged list:</Text>
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-100 mb-2">Name for merged list:</Text>
                 <TextInput
                   value={mergeName}
                   onChangeText={setMergeName}
                   placeholder="e.g., Weekly Shopping, Grocery Run"
-                  className="border border-gray-300 rounded-lg px-4 py-3 text-gray-900"
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 dark:bg-gray-700"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
             )}
             
             <View className="flex-row space-x-3">
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 onPress={() => {
                   setShowMergeModal(false);
                   setSelectedListsForMerge(new Set());
                   setMergeName('Weekly Shopping');
                 }}
                 disabled={mergingLists}
-                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg"
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
               >
-                <Text className="text-gray-700 font-medium text-center">Cancel</Text>
-              </TouchableOpacity>
+                <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
+              </HapticTouchableOpacity>
               
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 onPress={handleConfirmMerge}
                 disabled={mergingLists || selectedListsForMerge.size < 2}
                 className={`flex-1 py-3 px-4 rounded-lg ${
                   (mergingLists || selectedListsForMerge.size < 2) 
-                    ? 'bg-gray-300' 
-                    : 'bg-purple-500'
+                    ? 'bg-gray-300 dark:bg-gray-600' 
+                    : 'bg-purple-500 dark:bg-purple-600'
                 }`}
               >
                 <Text className={`font-medium text-center ${
                   (mergingLists || selectedListsForMerge.size < 2)
-                    ? 'text-gray-500'
+                    ? 'text-gray-500 dark:text-gray-200'
                     : 'text-white'
                 }`}>
                   {mergingLists 
@@ -1052,10 +1199,10 @@ export default function ShoppingListScreen() {
                     ? `Select ${2 - selectedListsForMerge.size} more list${2 - selectedListsForMerge.size !== 1 ? 's' : ''}`
                     : 'Merge Lists'}
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
 
       {/* Location Modal */}
@@ -1066,53 +1213,54 @@ export default function ShoppingListScreen() {
         onRequestClose={() => setShowLocationModal(false)}
       >
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 pb-8">
+          <View className="bg-white dark:bg-gray-800 rounded-t-3xl p-6 pb-8">
             <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-2xl font-bold text-gray-900">Find Nearby Stores</Text>
-              <TouchableOpacity onPress={() => setShowLocationModal(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
+              <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Find Nearby Stores</Text>
+              <HapticTouchableOpacity onPress={() => setShowLocationModal(false)}>
+                <Icon name={Icons.CLOSE} size={IconSizes.LG} color="#6B7280" accessibilityLabel="Close modal" />
+              </HapticTouchableOpacity>
             </View>
             
-            <Text className="text-gray-600 mb-6">
+            <Text className="text-gray-600 dark:text-gray-100 mb-6">
               To find the best store near you, please provide your location:
             </Text>
 
             {/* GPS Option */}
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={handleUseGPS}
-              className="bg-blue-500 py-4 px-4 rounded-lg flex-row items-center justify-center mb-4"
+              className="bg-blue-500 dark:bg-blue-600 py-4 px-4 rounded-lg flex-row items-center justify-center mb-4"
             >
-              <Ionicons name="location" size={20} color="white" style={{ marginRight: 8 }} />
+              <Icon name={Icons.LOCATION} size={IconSizes.MD} color="white" accessibilityLabel="Use GPS location" style={{ marginRight: 8 }} />
               <Text className="text-white font-semibold text-lg">Use My Location (GPS)</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
 
             {/* Divider */}
             <View className="flex-row items-center my-4">
-              <View className="flex-1 h-px bg-gray-300" />
-              <Text className="px-4 text-gray-500">OR</Text>
-              <View className="flex-1 h-px bg-gray-300" />
+              <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+              <Text className="px-4 text-gray-500 dark:text-gray-200">OR</Text>
+              <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
             </View>
 
             {/* Zip Code Option */}
-            <Text className="text-gray-700 font-semibold mb-2">Enter Zip Code</Text>
+            <Text className="text-gray-700 dark:text-gray-100 font-semibold mb-2">Enter Zip Code</Text>
             <TextInput
               value={zipCode}
               onChangeText={setZipCode}
               placeholder="12345"
               keyboardType="number-pad"
               maxLength={5}
-              className="border border-gray-300 rounded-lg px-4 py-3 mb-4 text-lg"
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-lg dark:bg-gray-700 dark:text-gray-100"
+              placeholderTextColor="#9CA3AF"
             />
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={handleUseZipCode}
-              className="bg-orange-500 py-4 px-4 rounded-lg"
+              className="bg-orange-500 dark:bg-orange-600 py-4 px-4 rounded-lg"
               disabled={!zipCode || zipCode.length < 5}
             >
               <Text className="text-white font-semibold text-center text-lg">
                 Use Zip Code
               </Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
         </View>
       </Modal>

@@ -1,4 +1,7 @@
-import { TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
+import { Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import AnimatedActivityIndicator from './AnimatedActivityIndicator';
+import RippleEffect from './RippleEffect';
 
 // Interfaces for this component
 interface ButtonProps {
@@ -33,10 +36,10 @@ export default function Button({
 
   // Variant styles
   const variantStyles = {
-    primary: 'bg-orange-500 border border-orange-500',
-    secondary: 'bg-gray-500 border border-gray-500',
-    outline: 'bg-transparent border border-gray-300',
-    danger: 'bg-red-500 border border-red-500'
+    primary: 'bg-orange-500 dark:bg-orange-600 border border-orange-500 dark:border-orange-600',
+    secondary: 'bg-gray-500 dark:bg-gray-600 border border-gray-500 dark:border-gray-600',
+    outline: 'bg-transparent border border-gray-300 dark:border-gray-600',
+    danger: 'bg-red-500 dark:bg-red-600 border border-red-500 dark:border-red-600'
   };
 
   // Size styles
@@ -50,7 +53,7 @@ export default function Button({
   const textColorStyles = {
     primary: 'text-white',
     secondary: 'text-white',
-    outline: 'text-gray-700',
+    outline: 'text-gray-700 dark:text-gray-100',
     danger: 'text-white'
   };
 
@@ -73,15 +76,32 @@ export default function Button({
     font-semibold
   `;
 
+  const handlePress = () => {
+    // Haptic feedback on button press
+    if (!disabled && !loading) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onPress();
+  };
+
+  // Ripple color based on variant
+  const rippleColors = {
+    primary: 'rgba(255, 255, 255, 0.5)',
+    secondary: 'rgba(255, 255, 255, 0.5)',
+    outline: 'rgba(0, 0, 0, 0.1)',
+    danger: 'rgba(255, 255, 255, 0.5)',
+  };
+
   return (
-    <TouchableOpacity
+    <RippleEffect
       className={containerClasses}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      rippleColor={rippleColors[variant]}
+      rippleOpacity={0.3}
     >
       {loading ? (
-        <ActivityIndicator 
+        <AnimatedActivityIndicator 
           size="small" 
           color={variant === 'outline' ? '#374151' : '#FFFFFF'} 
         />
@@ -104,6 +124,6 @@ export default function Button({
           )}
         </>
       )}
-    </TouchableOpacity>
+    </RippleEffect>
   );
 }

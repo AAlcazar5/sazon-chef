@@ -1,9 +1,11 @@
 import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { userApi } from '../lib/api';
+import * as Haptics from 'expo-haptics';
 
 const GENDERS = [
   { value: 'male', label: 'Male', icon: 'male' },
@@ -174,6 +176,7 @@ export default function EditPhysicalProfileScreen() {
   const handleSave = async () => {
     // Validation
     if (!gender || !age || !heightCm || !weightKg || !activityLevel || !fitnessGoal) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Please fill in all required fields');
       return;
     }
@@ -183,16 +186,19 @@ export default function EditPhysicalProfileScreen() {
     const weightNum = parseFloat(weightKg);
 
     if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Age must be between 13 and 120');
       return;
     }
 
     if (isNaN(heightNum) || heightNum < 100 || heightNum > 250) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
       return;
     }
 
     if (isNaN(weightNum) || weightNum < 30 || weightNum > 300) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Validation Error', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
       return;
     }
@@ -225,6 +231,7 @@ export default function EditPhysicalProfileScreen() {
         setTdee(response.data.profile.tdee);
       }
       
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Physical profile saved successfully!', [
         {
           text: 'OK',
@@ -233,6 +240,7 @@ export default function EditPhysicalProfileScreen() {
       ]);
     } catch (error: any) {
       console.error('📱 Edit Physical Profile: Save error', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to save physical profile');
     } finally {
       setLoading(false);
@@ -254,11 +262,11 @@ export default function EditPhysicalProfileScreen() {
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       {/* Header */}
       <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="p-2">
+        <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
         <Text className="text-xl font-bold text-gray-900">Physical Profile</Text>
-        <TouchableOpacity 
+        <HapticTouchableOpacity 
           onPress={handleSave}
           disabled={loading}
           className="p-2"
@@ -266,7 +274,7 @@ export default function EditPhysicalProfileScreen() {
           <Text className={`text-lg font-semibold ${loading ? 'text-gray-400' : 'text-orange-500'}`}>
             {loading ? 'Saving...' : 'Save'}
           </Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </View>
 
       <ScrollView className="flex-1 p-4">
@@ -275,7 +283,7 @@ export default function EditPhysicalProfileScreen() {
           <Text className="text-lg font-semibold text-gray-900 mb-3">Gender *</Text>
           <View className="flex-row gap-2">
             {GENDERS.map((g) => (
-              <TouchableOpacity
+              <HapticTouchableOpacity
                 key={g.value}
                 onPress={() => setGender(g.value)}
                 className={`flex-1 py-3 rounded-lg flex-row items-center justify-center ${
@@ -292,7 +300,7 @@ export default function EditPhysicalProfileScreen() {
                 }`}>
                   {g.label}
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             ))}
           </View>
         </View>
@@ -314,14 +322,14 @@ export default function EditPhysicalProfileScreen() {
         <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
           <View className="flex-row justify-between items-center mb-2">
             <Text className="text-lg font-semibold text-gray-900">Height *</Text>
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
               onPress={() => setUseMetric(!useMetric)}
               className="bg-gray-200 px-3 py-1 rounded-lg"
             >
               <Text className="text-gray-700 text-xs font-medium">
                 {useMetric ? 'Switch to ft/in' : 'Switch to cm'}
               </Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
           
           {useMetric ? (
@@ -411,7 +419,7 @@ export default function EditPhysicalProfileScreen() {
         <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
           <Text className="text-lg font-semibold text-gray-900 mb-3">Activity Level *</Text>
           {ACTIVITY_LEVELS.map((level) => (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               key={level.value}
               onPress={() => setActivityLevel(level.value)}
               className={`p-3 rounded-lg mb-2 ${
@@ -424,7 +432,7 @@ export default function EditPhysicalProfileScreen() {
                 {level.label}
               </Text>
               <Text className="text-gray-600 text-xs mt-1">{level.description}</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           ))}
         </View>
 
@@ -433,7 +441,7 @@ export default function EditPhysicalProfileScreen() {
           <Text className="text-lg font-semibold text-gray-900 mb-3">Fitness Goal *</Text>
           <View className="flex-row flex-wrap gap-2">
             {FITNESS_GOALS.map((goal) => (
-              <TouchableOpacity
+              <HapticTouchableOpacity
                 key={goal.value}
                 onPress={() => setFitnessGoal(goal.value)}
                 className={`flex-1 min-w-[45%] p-3 rounded-lg flex-row items-center ${
@@ -450,7 +458,7 @@ export default function EditPhysicalProfileScreen() {
                 }`}>
                   {goal.label}
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             ))}
           </View>
         </View>

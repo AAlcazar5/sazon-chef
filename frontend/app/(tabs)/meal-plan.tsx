@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, RefreshControl, Dimensions, TextInput, Modal } from 'react-native';
+import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import PulsingLoader from '../../components/ui/PulsingLoader';
+import { View, Text, ScrollView, Alert, Dimensions, TextInput, Modal } from 'react-native';
+import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
+import AnimatedProgressBar from '../../components/ui/AnimatedProgressBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import Icon from '../../components/ui/Icon';
+import { Icons, IconSizes } from '../../constants/Icons';
 import { useApi } from '../../hooks/useApi';
 import { mealPlanApi, aiRecipeApi, shoppingListApi, userApi, costTrackingApi } from '../../lib/api';
 import type { WeeklyPlan, DailySuggestion } from '../../types';
@@ -232,7 +237,6 @@ export default function MealPlanScreen() {
 
     try {
       setGeneratingPlan(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       Alert.alert(
         '📅 Generate Weekly Meal Plan',
@@ -386,7 +390,6 @@ export default function MealPlanScreen() {
   // Optimize meal plan cost
   const handleOptimizeCost = async () => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       // Get user preferences for budget
       const prefsResponse = await userApi.getPreferences();
@@ -683,7 +686,7 @@ export default function MealPlanScreen() {
           }}
         >
           {data.map((value, index) => (
-            <TouchableOpacity
+            <HapticTouchableOpacity
               key={index}
               onPress={() => {
                 onValueChange(value);
@@ -710,7 +713,7 @@ export default function MealPlanScreen() {
               >
                 {value.toString().padStart(2, '0')}
               </Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           ))}
         </ScrollView>
       </View>
@@ -1185,60 +1188,62 @@ export default function MealPlanScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-        <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+        <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <View className="w-8" />
-          <Text className="text-lg font-semibold text-gray-900">Meal Plan</Text>
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Meal Plan</Text>
           <View className="w-8" />
         </View>
         <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
-          <Text className="text-lg font-semibold text-gray-500 mt-4">Loading meal plan...</Text>
+          <Icon name={Icons.MEAL_PLAN_OUTLINE} size={48} color="#9CA3AF" accessibilityLabel="Loading meal plan" />
+          <Text className="text-lg font-semibold text-gray-500 dark:text-gray-200 mt-4">Loading meal plan...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between p-4 border-b border-gray-200 bg-white">
+      <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <View className="w-8" />
-        <Text className="text-lg font-semibold text-gray-900">Meal Plan</Text>
+        <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Meal Plan</Text>
         <View className="w-8" />
       </View>
 
       <ScrollView 
         className="flex-1"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <AnimatedRefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
         {/* Weekly Calendar View */}
         <View className="px-4 mb-4">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-semibold text-gray-900">Weekly Meal Plan</Text>
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Meal Plan</Text>
             <View className="flex-row items-center space-x-2">
-        <TouchableOpacity 
+        <HapticTouchableOpacity 
                 onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   const newDate = new Date(selectedDate);
                   newDate.setDate(newDate.getDate() - 7);
                   setSelectedDate(newDate);
                 }}
           className="p-2"
         >
-                <Ionicons name="chevron-back" size={20} color="#6B7280" />
-        </TouchableOpacity>
-        <TouchableOpacity 
+                <Icon name={Icons.CHEVRON_BACK} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Previous week" />
+        </HapticTouchableOpacity>
+        <HapticTouchableOpacity 
                 onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   const newDate = new Date(selectedDate);
                   newDate.setDate(newDate.getDate() + 7);
                   setSelectedDate(newDate);
                 }}
           className="p-2"
         >
-                <Ionicons name="chevron-forward" size={20} color="#6B7280" />
-        </TouchableOpacity>
+                <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Next week" />
+        </HapticTouchableOpacity>
             </View>
       </View>
 
@@ -1251,53 +1256,53 @@ export default function MealPlanScreen() {
               const mealsCount = Object.values(dayMeals).filter(m => m !== null).length + (dayMeals.snacks?.length || 0);
               
               return (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   key={index}
                   onPress={() => setSelectedDate(date)}
                   className={`flex-1 mx-1 rounded-lg p-3 ${
-                    dateIsSelected ? 'bg-orange-500' : 'bg-white'
-                  } ${isTodayDate ? 'border-2 border-blue-500' : ''}`}
+                    dateIsSelected ? 'bg-orange-500 dark:bg-orange-600' : 'bg-white dark:bg-gray-800'
+                  } ${isTodayDate ? 'border-2 border-blue-500 dark:border-blue-600' : ''}`}
                 >
                   <Text className={`text-xs text-center font-medium ${
-                    dateIsSelected ? 'text-white' : 'text-gray-500'
+                    dateIsSelected ? 'text-white' : 'text-gray-500 dark:text-gray-200'
                   }`}>
                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
                   </Text>
                   <Text className={`text-lg text-center font-bold mt-1 ${
-                    dateIsSelected ? 'text-white' : isTodayDate ? 'text-blue-600' : 'text-gray-900'
+                    dateIsSelected ? 'text-white' : isTodayDate ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'
                   }`}>
                     {date.getDate()}
                   </Text>
                   {mealsCount > 0 && (
                     <View className={`mt-1 rounded-full px-2 py-0.5 ${
-                      dateIsSelected ? 'bg-white bg-opacity-30' : 'bg-orange-100'
+                      dateIsSelected ? 'bg-white bg-opacity-30' : 'bg-orange-100 dark:bg-orange-900/30'
                     }`}>
                       <Text className={`text-xs text-center font-semibold ${
-                        dateIsSelected ? 'text-white' : 'text-orange-600'
+                        dateIsSelected ? 'text-white' : 'text-orange-600 dark:text-orange-400'
                       }`}>
                         {mealsCount} meal{mealsCount > 1 ? 's' : ''}
                       </Text>
                     </View>
                   )}
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               );
             })}
           </View>
 
           {/* Weekly Summary */}
           {weeklyPlan && (
-            <View className="bg-white rounded-lg p-4 shadow-sm mb-4">
-              <Text className="text-sm font-semibold text-gray-900 mb-3">Weekly Summary</Text>
+            <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm mb-4">
+              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Weekly Summary</Text>
               <View className="flex-row justify-between">
                 <View className="flex-1">
-                  <Text className="text-xs text-gray-500">Total Meals</Text>
-                  <Text className="text-lg font-bold text-gray-900">
+                  <Text className="text-xs text-gray-500 dark:text-gray-200">Total Meals</Text>
+                  <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">
                     {weeklyPlan.totalPlannedMeals || 0}
                   </Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="text-xs text-gray-500">Days Planned</Text>
-                  <Text className="text-lg font-bold text-gray-900">
+                  <Text className="text-xs text-gray-500 dark:text-gray-200">Days Planned</Text>
+                  <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">
                     {Object.keys(weeklyPlan.weeklyPlan || {}).filter(date => {
                       const dayMeals = weeklyPlan.weeklyPlan[date]?.meals || {};
                       return Object.values(dayMeals).some(m => m !== null) || (dayMeals.snacks?.length > 0);
@@ -1305,8 +1310,8 @@ export default function MealPlanScreen() {
                   </Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="text-xs text-gray-500">Week</Text>
-                  <Text className="text-lg font-bold text-gray-900">
+                  <Text className="text-xs text-gray-500 dark:text-gray-200">Week</Text>
+                  <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">
                     {weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </Text>
                 </View>
@@ -1319,54 +1324,54 @@ export default function MealPlanScreen() {
         {costAnalysis && (
           <View className="px-4 mb-4">
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-lg font-semibold text-gray-900">
+              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 💰 Weekly Cost Analysis
               </Text>
               {costAnalysis.budgetExceeded && (
-                <TouchableOpacity
+                <HapticTouchableOpacity
                   onPress={handleOptimizeCost}
-                  className="bg-blue-500 px-4 py-2 rounded-lg"
+                  className="bg-blue-500 dark:bg-blue-600 px-4 py-2 rounded-lg"
                 >
                   <Text className="text-white font-semibold text-sm">Optimize</Text>
-                </TouchableOpacity>
+                </HapticTouchableOpacity>
               )}
             </View>
             
-            <View className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-blue-500">
+            <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border-l-4 border-blue-500 dark:border-blue-600">
               <View className="flex-row justify-between items-center mb-3">
                 <View>
-                  <Text className="text-sm text-gray-500">Total Weekly Cost</Text>
-                  <Text className={`text-2xl font-bold ${costAnalysis.budgetExceeded ? 'text-red-500' : 'text-green-600'}`}>
+                  <Text className="text-sm text-gray-500 dark:text-gray-200">Total Weekly Cost</Text>
+                  <Text className={`text-2xl font-bold ${costAnalysis.budgetExceeded ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                     ${costAnalysis.totalCost.toFixed(2)}
                   </Text>
                 </View>
                 <View className="items-end">
-                  <Text className="text-sm text-gray-500">Per Day</Text>
-                  <Text className="text-lg font-semibold text-gray-900">
+                  <Text className="text-sm text-gray-500 dark:text-gray-200">Per Day</Text>
+                  <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     ${costAnalysis.costPerDay.toFixed(2)}
                   </Text>
                 </View>
               </View>
 
               {costAnalysis.budgetExceeded && (
-                <View className="bg-red-50 rounded-lg p-3 mb-3 border border-red-200">
+                <View className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 mb-3 border border-red-200 dark:border-red-800">
                   <View className="flex-row items-center mb-1">
-                    <Ionicons name="warning-outline" size={16} color="#EF4444" />
-                    <Text className="text-red-600 font-semibold ml-2">
+                    <Icon name={Icons.WARNING_OUTLINE} size={IconSizes.XS} color="#EF4444" accessibilityLabel="Budget exceeded warning" />
+                    <Text className="text-red-600 dark:text-red-400 font-semibold ml-2">
                       Over Budget by ${costAnalysis.budgetExceeded.toFixed(2)}
                     </Text>
                   </View>
-                  <Text className="text-sm text-red-600">
+                  <Text className="text-sm text-red-600 dark:text-red-400">
                     Consider cheaper recipe alternatives to stay within budget.
                   </Text>
                 </View>
               )}
 
               {costAnalysis.budgetRemaining && costAnalysis.budgetRemaining > 0 && (
-                <View className="bg-green-50 rounded-lg p-3 mb-3 border border-green-200">
+                <View className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 mb-3 border border-green-200 dark:border-green-800">
                   <View className="flex-row items-center">
-                    <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
-                    <Text className="text-green-700 font-semibold ml-2">
+                    <Icon name={Icons.CHECKMARK_CIRCLE_OUTLINE} size={IconSizes.XS} color="#10B981" accessibilityLabel="Budget remaining" />
+                    <Text className="text-green-700 dark:text-green-300 font-semibold ml-2">
                       ${costAnalysis.budgetRemaining.toFixed(2)} remaining in budget
                     </Text>
                   </View>
@@ -1376,23 +1381,23 @@ export default function MealPlanScreen() {
               {costAnalysis.recommendations && costAnalysis.recommendations.length > 0 && (
                 <View className="mt-2">
                   {costAnalysis.recommendations.map((rec: string, idx: number) => (
-                    <Text key={idx} className="text-sm text-gray-600 mb-1">
+                    <Text key={idx} className="text-sm text-gray-600 dark:text-gray-100 mb-1">
                       • {rec}
                     </Text>
               ))}
             </View>
               )}
 
-              <View className="mt-3 pt-3 border-t border-gray-200">
+              <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                 <View className="flex-row justify-between">
-                  <Text className="text-sm text-gray-500">Cost per meal</Text>
-                  <Text className="text-sm font-semibold text-gray-900">
+                  <Text className="text-sm text-gray-500 dark:text-gray-200">Cost per meal</Text>
+                  <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     ${costAnalysis.costPerMeal.toFixed(2)}
                   </Text>
                 </View>
                 <View className="flex-row justify-between mt-1">
-                  <Text className="text-sm text-gray-500">Meals planned</Text>
-                  <Text className="text-sm font-semibold text-gray-900">
+                  <Text className="text-sm text-gray-500 dark:text-gray-200">Meals planned</Text>
+                  <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {costAnalysis.mealsCount} meals
                   </Text>
                 </View>
@@ -1400,19 +1405,19 @@ export default function MealPlanScreen() {
 
               {/* Savings Suggestions */}
               {shoppingListSavings && shoppingListSavings.savings > 0 && (
-                <View className="mt-3 pt-3 border-t border-gray-200">
+                <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <View className="flex-row items-center justify-between mb-2">
                     <View className="flex-row items-center">
-                      <Ionicons name="storefront-outline" size={16} color="#10B981" />
-                      <Text className="text-sm font-semibold text-gray-900 ml-2">Best Store</Text>
+                      <Icon name={Icons.STORE_OUTLINE} size={IconSizes.XS} color="#10B981" accessibilityLabel="Best store" />
+                      <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 ml-2">Best Store</Text>
                     </View>
-                    <View className="bg-green-100 px-2 py-1 rounded">
-                      <Text className="text-green-700 font-semibold text-xs">
+                    <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+                      <Text className="text-green-700 dark:text-green-300 font-semibold text-xs">
                         Save ${shoppingListSavings.savings.toFixed(2)}
                       </Text>
                     </View>
                   </View>
-                  <Text className="text-sm text-gray-700">
+                  <Text className="text-sm text-gray-700 dark:text-gray-100">
                     Shop at <Text className="font-semibold">{shoppingListSavings.store}</Text>
                     {shoppingListSavings.location && ` (${shoppingListSavings.location})`} to save {shoppingListSavings.savingsPercent.toFixed(0)}%
                   </Text>
@@ -1424,66 +1429,70 @@ export default function MealPlanScreen() {
 
         {/* Daily Macros */}
         <View className="px-4 mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
             Daily Macros - {formatDate(selectedDate)}
           </Text>
           
-          <View className="bg-white rounded-lg p-4 shadow-sm">
+          <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
             <View className="flex-row justify-between mb-4">
               <View className="flex-1 items-center">
-                <Text className="text-sm text-gray-500">Calories</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-200">Calories</Text>
                 <Text className={`text-lg font-bold ${getMacroColor(dailyMacros.calories, targetMacros.calories)}`}>
                   {dailyMacros.calories}
                 </Text>
-                <Text className="text-xs text-gray-400">/ {targetMacros.calories}</Text>
-                <View className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                  <View 
-                    className="bg-orange-500 h-2 rounded-full" 
-                    style={{ width: `${getMacroProgress(dailyMacros.calories, targetMacros.calories)}%` }}
-                  />
-            </View>
+                <Text className="text-xs text-gray-400 dark:text-gray-200">/ {targetMacros.calories}</Text>
+                <AnimatedProgressBar
+                  progress={getMacroProgress(dailyMacros.calories, targetMacros.calories)}
+                  height={8}
+                  backgroundColor="#E5E7EB"
+                  progressColor="#F97316"
+                  style={{ marginTop: 4 }}
+                />
           </View>
 
               <View className="flex-1 items-center">
-                <Text className="text-sm text-gray-500">Protein</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-200">Protein</Text>
                 <Text className={`text-lg font-bold ${getMacroColor(dailyMacros.protein, targetMacros.protein)}`}>
                   {dailyMacros.protein}g
                 </Text>
-                <Text className="text-xs text-gray-400">/ {targetMacros.protein}g</Text>
-                <View className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                  <View 
-                    className="bg-blue-500 h-2 rounded-full" 
-                    style={{ width: `${getMacroProgress(dailyMacros.protein, targetMacros.protein)}%` }}
-                  />
-            </View>
+                <Text className="text-xs text-gray-400 dark:text-gray-200">/ {targetMacros.protein}g</Text>
+                <AnimatedProgressBar
+                  progress={getMacroProgress(dailyMacros.protein, targetMacros.protein)}
+                  height={8}
+                  backgroundColor="#E5E7EB"
+                  progressColor="#3B82F6"
+                  style={{ marginTop: 4 }}
+                />
           </View>
 
               <View className="flex-1 items-center">
-                <Text className="text-sm text-gray-500">Carbs</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-200">Carbs</Text>
                 <Text className={`text-lg font-bold ${getMacroColor(dailyMacros.carbs, targetMacros.carbs)}`}>
                   {dailyMacros.carbs}g
                 </Text>
-                <Text className="text-xs text-gray-400">/ {targetMacros.carbs}g</Text>
-                <View className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                  <View 
-                    className="bg-green-500 h-2 rounded-full" 
-                    style={{ width: `${getMacroProgress(dailyMacros.carbs, targetMacros.carbs)}%` }}
-                  />
-            </View>
+                <Text className="text-xs text-gray-400 dark:text-gray-200">/ {targetMacros.carbs}g</Text>
+                <AnimatedProgressBar
+                  progress={getMacroProgress(dailyMacros.carbs, targetMacros.carbs)}
+                  height={8}
+                  backgroundColor="#E5E7EB"
+                  progressColor="#10B981"
+                  style={{ marginTop: 4 }}
+                />
           </View>
 
               <View className="flex-1 items-center">
-                <Text className="text-sm text-gray-500">Fat</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-200">Fat</Text>
                 <Text className={`text-lg font-bold ${getMacroColor(dailyMacros.fat, targetMacros.fat)}`}>
                   {dailyMacros.fat}g
                 </Text>
-                <Text className="text-xs text-gray-400">/ {targetMacros.fat}g</Text>
-                <View className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                  <View 
-                    className="bg-purple-500 h-2 rounded-full" 
-                    style={{ width: `${getMacroProgress(dailyMacros.fat, targetMacros.fat)}%` }}
-                  />
-            </View>
+                <Text className="text-xs text-gray-400 dark:text-gray-200">/ {targetMacros.fat}g</Text>
+                <AnimatedProgressBar
+                  progress={getMacroProgress(dailyMacros.fat, targetMacros.fat)}
+                  height={8}
+                  backgroundColor="#E5E7EB"
+                  progressColor="#A855F7"
+                  style={{ marginTop: 4 }}
+                />
               </View>
             </View>
           </View>
@@ -1491,64 +1500,100 @@ export default function MealPlanScreen() {
 
         {/* Quick Actions */}
         <View className="px-4 mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">Quick Actions</Text>
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Quick Actions</Text>
           
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={handleAddRecipe}
-            className="bg-orange-500 py-4 px-6 rounded-lg items-center mb-3"
+            className="bg-orange-500 dark:bg-orange-600 py-4 px-6 rounded-lg items-center mb-3"
           >
             <Text className="text-white font-semibold text-lg">Browse Cookbook</Text>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
 
           {/* AI Generation Buttons */}
-          <TouchableOpacity 
-            onPress={handleGenerateFullDay}
+          <HapticTouchableOpacity
+            onPress={() => {
+              if (!generatingPlan) {
+                handleGenerateFullDay();
+              }
+            }}
             disabled={generatingPlan}
-            className={`${generatingPlan ? 'opacity-50' : ''} bg-orange-500 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
+            hapticStyle="medium"
+            className={`${generatingPlan ? 'opacity-50' : ''} bg-orange-500 dark:bg-orange-600 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
           >
-            <Ionicons name="sparkles" size={20} color="white" style={{ marginRight: 8 }} />
-            <Text className="text-white font-semibold text-lg">
-              {generatingPlan ? 'Generating...' : '🤖 Generate Full Day'}
-            </Text>
-          </TouchableOpacity>
+            {generatingPlan ? (
+              <>
+                <PulsingLoader size={16} color="white" />
+                <Text className="text-white font-semibold text-lg ml-3">Generating...</Text>
+              </>
+            ) : (
+              <>
+                <Icon name={Icons.AI_GENERATE} size={IconSizes.MD} color="white" accessibilityLabel="Generate full day meal plan" style={{ marginRight: 8 }} />
+                <Text className="text-white font-semibold text-lg">🤖 Generate Full Day</Text>
+              </>
+            )}
+          </HapticTouchableOpacity>
 
-          <TouchableOpacity 
-            onPress={handleGenerateRemainingMeals}
+          <HapticTouchableOpacity 
+            onPress={() => {
+              if (!generatingPlan) {
+                handleGenerateRemainingMeals();
+              }
+            }}
             disabled={generatingPlan}
-            className={`${generatingPlan ? 'opacity-50' : ''} border border-orange-500 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
+            className={`${generatingPlan ? 'opacity-50' : ''} border border-orange-500 dark:border-orange-600 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
           >
-            <Ionicons name="add-circle-outline" size={20} color="#F97316" style={{ marginRight: 8 }} />
-            <Text className="text-orange-500 font-semibold text-lg">
+            <Icon name={Icons.ADD_CIRCLE_OUTLINE} size={IconSizes.MD} color="#F97316" accessibilityLabel="Generate remaining meals" style={{ marginRight: 8 }} />
+            <Text className="text-orange-500 dark:text-orange-400 font-semibold text-lg">
               Generate Remaining Meals
             </Text>
-          </TouchableOpacity>
+          </HapticTouchableOpacity>
 
           {/* Generate Weekly Meal Plan Button */}
-          <TouchableOpacity 
-            onPress={handleGenerateWeeklyPlan}
+          <HapticTouchableOpacity 
+            onPress={() => {
+              if (!generatingPlan) {
+                handleGenerateWeeklyPlan();
+              }
+            }}
             disabled={generatingPlan}
-            className={`${generatingPlan ? 'opacity-50' : ''} bg-purple-500 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
+            hapticStyle="medium"
+            className={`${generatingPlan ? 'opacity-50' : ''} bg-purple-500 dark:bg-purple-600 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
           >
-            <Ionicons name="calendar-outline" size={20} color="white" style={{ marginRight: 8 }} />
-            <Text className="text-white font-semibold text-lg">
-              {generatingPlan ? 'Generating...' : '📅 Generate Weekly Plan'}
-            </Text>
-          </TouchableOpacity>
+            {generatingPlan ? (
+              <>
+                <PulsingLoader size={16} color="white" />
+                <Text className="text-white font-semibold text-lg ml-3">Generating...</Text>
+              </>
+            ) : (
+              <>
+                <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.MD} color="white" accessibilityLabel="Generate weekly meal plan" style={{ marginRight: 8 }} />
+                <Text className="text-white font-semibold text-lg">📅 Generate Weekly Plan</Text>
+              </>
+            )}
+          </HapticTouchableOpacity>
 
           {/* Generate Shopping List Button */}
-          <TouchableOpacity 
-            onPress={handleGenerateShoppingList}
+          <HapticTouchableOpacity 
+            onPress={() => setShowShoppingListNameModal(true)}
             disabled={generatingShoppingList}
-            className={`${generatingShoppingList ? 'opacity-50' : ''} bg-emerald-500 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
+            className={`${generatingShoppingList ? 'opacity-50' : ''} bg-emerald-500 dark:bg-emerald-600 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center`}
           >
-            <Ionicons name="cart-outline" size={20} color="white" style={{ marginRight: 8 }} />
-            <Text className="text-white font-semibold text-lg">
-              {generatingShoppingList ? 'Generating...' : '🛒 Generate Shopping List'}
-            </Text>
-          </TouchableOpacity>
+            {generatingShoppingList ? (
+              <>
+                <PulsingLoader size={16} color="white" />
+                <Text className="text-white font-semibold text-lg ml-3">Generating...</Text>
+              </>
+            ) : (
+              <>
+                <Icon name={Icons.CART_OUTLINE} size={IconSizes.MD} color="white" accessibilityLabel="Generate shopping list" style={{ marginRight: 8 }} />
+                <Text className="text-white font-semibold text-lg">🛒 Generate Shopping List</Text>
+              </>
+            )}
+          </HapticTouchableOpacity>
 
-          <TouchableOpacity 
+          <HapticTouchableOpacity 
             onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               // TODO: Clear all meals for the day
               Alert.alert('Clear Day', 'Clear all meals for this day?', [
                 { text: 'Cancel', style: 'cancel' },
@@ -1562,16 +1607,16 @@ export default function MealPlanScreen() {
                 },
               ]);
             }}
-            className="border border-red-300 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center"
+            className="border border-red-300 dark:border-red-700 py-4 px-6 rounded-lg items-center mb-3 flex-row justify-center"
           >
-            <Ionicons name="trash-outline" size={20} color="#EF4444" style={{ marginRight: 8 }} />
-            <Text className="text-red-500 font-semibold text-lg">Clear All Meals</Text>
-          </TouchableOpacity>
+            <Icon name={Icons.DELETE_OUTLINE} size={IconSizes.MD} color="#EF4444" accessibilityLabel="Clear all meals" style={{ marginRight: 8 }} />
+            <Text className="text-red-500 dark:text-red-400 font-semibold text-lg">Clear All Meals</Text>
+          </HapticTouchableOpacity>
         </View>
 
         {/* 24-Hour Meal Plan */}
         <View className="px-4 mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
             24-Hour Meal Plan
           </Text>
           
@@ -1580,18 +1625,18 @@ export default function MealPlanScreen() {
               <View key={index}>
                 {/* Hour Header */}
                 <View 
-                  className={`bg-white rounded-lg p-3 shadow-sm ${
-                    hourData.isMealTime ? 'border-l-4 border-orange-500' : ''
+                  className={`bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm ${
+                    hourData.isMealTime ? 'border-l-4 border-orange-500 dark:border-orange-600' : ''
                   }`}
                 >
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center flex-1">
                       <View className="w-16">
-                        <Text className="text-sm font-medium text-gray-900">
+                        <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {hourData.displayTime}
                         </Text>
                         {hourData.label && (
-                          <Text className="text-xs text-orange-500 font-medium">
+                          <Text className="text-xs text-orange-500 dark:text-orange-400 font-medium">
                             {hourData.label}
                           </Text>
                         )}
@@ -1599,21 +1644,21 @@ export default function MealPlanScreen() {
                       
                       <View className="flex-1 ml-3">
                         {hourlyMeals[hourData.hour] && hourlyMeals[hourData.hour].length > 0 ? (
-                          <Text className="text-sm text-gray-600">
+                          <Text className="text-sm text-gray-600 dark:text-gray-100">
                             {hourlyMeals[hourData.hour].length} meal{hourlyMeals[hourData.hour].length > 1 ? 's' : ''} planned
                           </Text>
                         ) : (
-                          <Text className="text-sm text-gray-400">No meals planned</Text>
+                          <Text className="text-sm text-gray-400 dark:text-gray-200">No meals planned</Text>
                         )}
                       </View>
           </View>
 
-                    <TouchableOpacity 
+                    <HapticTouchableOpacity 
                       onPress={() => handleAddMealToHour(hourData.hour)}
                       className="p-2 ml-2"
                     >
-                      <Ionicons name="add-circle-outline" size={20} color="#F97316" />
-              </TouchableOpacity>
+                      <Icon name={Icons.ADD_CIRCLE_OUTLINE} size={IconSizes.MD} color="#F97316" accessibilityLabel="Add meal to this hour" />
+              </HapticTouchableOpacity>
             </View>
           </View>
 
@@ -1621,39 +1666,39 @@ export default function MealPlanScreen() {
                 {hourlyMeals[hourData.hour] && hourlyMeals[hourData.hour].length > 0 && (
                   <View className="ml-4 mb-2">
                     {hourlyMeals[hourData.hour].map((meal, mealIndex) => (
-                      <TouchableOpacity 
+                      <HapticTouchableOpacity 
                         key={mealIndex} 
                         onPress={() => {
                           // Navigate to recipe details
                           router.push(`/modal?id=${meal.id}&source=meal-plan`);
                         }}
                         onLongPress={() => handleRemoveMeal(hourData.hour, mealIndex)}
-                        className="bg-orange-50 rounded-lg p-4 mb-3 border border-orange-200"
+                        className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 mb-3 border border-orange-200 dark:border-orange-800"
                       >
                         {/* Recipe Header */}
             <View className="flex-row items-center justify-between mb-3">
                           <View className="flex-1">
-                            <Text className="text-base font-semibold text-gray-900">{meal.name}</Text>
-                            <Text className="text-sm text-gray-600">{meal.calories} calories</Text>
+                            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{meal.name}</Text>
+                            <Text className="text-sm text-gray-600 dark:text-gray-100">{meal.calories} calories</Text>
             </View>
-                          <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                          <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.XS} color="#9CA3AF" accessibilityLabel="View recipe" />
           </View>
 
                         {/* Macro Breakdown */}
-                        <View className="bg-white rounded-lg p-3 mb-3">
-                          <Text className="text-xs font-medium text-gray-700 mb-2">Nutritional Info</Text>
+                        <View className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-3">
+                          <Text className="text-xs font-medium text-gray-700 dark:text-gray-100 mb-2">Nutritional Info</Text>
                           <View className="flex-row justify-between">
                             <View className="items-center">
-                              <Text className="text-lg font-bold text-blue-600">{meal.protein}g</Text>
-                              <Text className="text-xs text-gray-500">Protein</Text>
+                              <Text className="text-lg font-bold text-blue-600 dark:text-blue-400">{meal.protein}g</Text>
+                              <Text className="text-xs text-gray-500 dark:text-gray-200">Protein</Text>
                             </View>
                             <View className="items-center">
-                              <Text className="text-lg font-bold text-green-600">{meal.carbs}g</Text>
-                              <Text className="text-xs text-gray-500">Carbs</Text>
+                              <Text className="text-lg font-bold text-green-600 dark:text-green-400">{meal.carbs}g</Text>
+                              <Text className="text-xs text-gray-500 dark:text-gray-200">Carbs</Text>
                             </View>
                             <View className="items-center">
-                              <Text className="text-lg font-bold text-purple-600">{meal.fat}g</Text>
-                              <Text className="text-xs text-gray-500">Fat</Text>
+                              <Text className="text-lg font-bold text-purple-600 dark:text-purple-400">{meal.fat}g</Text>
+                              <Text className="text-xs text-gray-500 dark:text-gray-200">Fat</Text>
                             </View>
                           </View>
                         </View>
@@ -1663,27 +1708,27 @@ export default function MealPlanScreen() {
                           <View className="flex-row items-center space-x-4">
                             {meal.prepTime && (
                               <View className="flex-row items-center">
-                                <Ionicons name="time-outline" size={12} color="#6B7280" />
-                                <Text className="text-xs text-gray-600 ml-1">{meal.prepTime}</Text>
+                                <Icon name={Icons.COOK_TIME} size={12} color="#6B7280" accessibilityLabel="Prep time" />
+                                <Text className="text-xs text-gray-600 dark:text-gray-100 ml-1">{meal.prepTime}</Text>
                               </View>
                             )}
                             {meal.difficulty && (
                               <View className="flex-row items-center">
-                                <Ionicons name="star-outline" size={12} color="#6B7280" />
-                                <Text className="text-xs text-gray-600 ml-1">{meal.difficulty}</Text>
+                                <Icon name={Icons.STAR_OUTLINE} size={12} color="#6B7280" accessibilityLabel="Difficulty" />
+                                <Text className="text-xs text-gray-600 dark:text-gray-100 ml-1">{meal.difficulty}</Text>
                               </View>
                             )}
                           </View>
                           <View className="flex-row items-center">
-                            <Text className="text-xs text-orange-500 font-medium mr-1">
+                            <Text className="text-xs text-orange-500 dark:text-orange-400 font-medium mr-1">
                               View Recipe
                             </Text>
-                            <Text className="text-xs text-gray-400">
+                            <Text className="text-xs text-gray-400 dark:text-gray-200">
                               • Long press to remove
                             </Text>
                           </View>
                         </View>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
                     ))}
             </View>
                 )}
@@ -1694,30 +1739,30 @@ export default function MealPlanScreen() {
 
         {/* Daily Summary */}
           <View className="px-4 mb-6">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">Today's Summary</Text>
-            <View className="bg-white rounded-lg p-4 shadow-sm">
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Today's Summary</Text>
+            <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
               <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-gray-600">Total Meals</Text>
-              <Text className="font-semibold text-gray-900">
+              <Text className="text-gray-600 dark:text-gray-100">Total Meals</Text>
+              <Text className="font-semibold text-gray-900 dark:text-gray-100">
                 {Object.values(hourlyMeals).flat().length}
               </Text>
               </View>
               <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-gray-600">Calories Consumed</Text>
-              <Text className="font-semibold text-gray-900">{dailyMacros.calories}</Text>
+              <Text className="text-gray-600 dark:text-gray-100">Calories Consumed</Text>
+              <Text className="font-semibold text-gray-900 dark:text-gray-100">{dailyMacros.calories}</Text>
               </View>
               <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-gray-600">Macro Progress</Text>
-              <Text className="font-semibold text-gray-900">
+              <Text className="text-gray-600 dark:text-gray-100">Macro Progress</Text>
+              <Text className="font-semibold text-gray-900 dark:text-gray-100">
                 {Math.round((dailyMacros.calories / targetMacros.calories) * 100)}%
               </Text>
               </View>
               <View className="flex-row justify-between items-center">
-              <Text className="text-gray-600">Remaining Calories</Text>
+              <Text className="text-gray-600 dark:text-gray-100">Remaining Calories</Text>
               <Text className={`font-semibold ${
                 targetMacros.calories - dailyMacros.calories >= 0 
-                  ? 'text-green-600' 
-                  : 'text-red-600'
+                  ? 'text-green-600 dark:text-green-400' 
+                  : 'text-red-600 dark:text-red-400'
               }`}>
                 {targetMacros.calories - dailyMacros.calories}
               </Text>
@@ -1726,8 +1771,8 @@ export default function MealPlanScreen() {
           </View>
 
         {/* Weekly Overview - Compact View */}
-        <View className="bg-white p-4 mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">Weekly Overview</Text>
+        <View className="bg-white dark:bg-gray-800 p-4 mb-4">
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Weekly Overview</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View className="flex-row space-x-2">
               {weekDates.map((date, index) => {
@@ -1736,78 +1781,78 @@ export default function MealPlanScreen() {
                 const isCurrentDay = isToday(date);
                 
                 return (
-                  <TouchableOpacity
+                  <HapticTouchableOpacity
                     key={index}
                     onPress={() => handleDateSelect(date)}
                     className={`p-3 rounded-lg min-w-[70px] items-center ${
                       isSelected(date) 
-                        ? 'bg-orange-500' 
+                        ? 'bg-orange-500 dark:bg-orange-600' 
                         : isCurrentDay
-                          ? 'bg-orange-100 border border-orange-300'
+                          ? 'bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700'
                           : isPast
-                            ? 'bg-gray-50 border border-gray-200'
-                            : 'bg-green-50 border border-green-200'
+                            ? 'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
+                            : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
                     }`}
                   >
                     <Text className={`text-xs font-medium ${
-                      isSelected(date) ? 'text-white' : 'text-gray-700'
+                      isSelected(date) ? 'text-white' : 'text-gray-700 dark:text-gray-100'
                     }`}>
                       {date.toLocaleDateString('en-US', { weekday: 'short' })}
                     </Text>
                     <Text className={`text-sm font-bold ${
-                      isSelected(date) ? 'text-white' : 'text-gray-900'
+                      isSelected(date) ? 'text-white' : 'text-gray-900 dark:text-gray-100'
                     }`}>
                       {date.getDate()}
                     </Text>
                     <Text className={`text-xs ${
-                      isSelected(date) ? 'text-orange-100' : 'text-gray-500'
+                      isSelected(date) ? 'text-orange-100' : 'text-gray-500 dark:text-gray-200'
                     }`}>
                       {date.toLocaleDateString('en-US', { month: 'short' })}
                     </Text>
                     
                     {/* Status indicators */}
                     {isCurrentDay && !isSelected(date) && (
-                      <View className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1" />
+                      <View className="w-1.5 h-1.5 bg-orange-500 dark:bg-orange-400 rounded-full mt-1" />
                     )}
                     {isPast && !isCurrentDay && (
-                      <View className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-1" />
+                      <View className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full mt-1" />
                     )}
                     {isFuture && (
-                      <View className="w-1.5 h-1.5 bg-green-500 rounded-full mt-1" />
+                      <View className="w-1.5 h-1.5 bg-green-500 dark:bg-green-400 rounded-full mt-1" />
                     )}
-                  </TouchableOpacity>
+                  </HapticTouchableOpacity>
                 );
               })}
             </View>
       </ScrollView>
 
           {/* Week Summary */}
-          <View className="mt-3 pt-3 border-t border-gray-200">
+          <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
             <View className="flex-row justify-between items-center">
               <View className="flex-row items-center space-x-4">
                 <View className="flex-row items-center">
-                  <View className="w-2 h-2 bg-gray-400 rounded-full mr-2" />
-                  <Text className="text-xs text-gray-600">Past</Text>
+                  <View className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full mr-2" />
+                  <Text className="text-xs text-gray-600 dark:text-gray-100">Past</Text>
                 </View>
                 <View className="flex-row items-center">
-                  <View className="w-2 h-2 bg-orange-500 rounded-full mr-2" />
-                  <Text className="text-xs text-gray-600">Today</Text>
+                  <View className="w-2 h-2 bg-orange-500 dark:bg-orange-400 rounded-full mr-2" />
+                  <Text className="text-xs text-gray-600 dark:text-gray-100">Today</Text>
                 </View>
                 <View className="flex-row items-center">
-                  <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                  <Text className="text-xs text-gray-600">Upcoming</Text>
+                  <View className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mr-2" />
+                  <Text className="text-xs text-gray-600 dark:text-gray-100">Upcoming</Text>
                 </View>
               </View>
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 onPress={() => {
                   // Navigate to a full weekly view if needed
                   console.log('Navigate to full weekly view');
                 }}
                 className="flex-row items-center"
               >
-                <Text className="text-xs text-orange-600 font-medium">View Full Week</Text>
-                <Ionicons name="chevron-forward" size={12} color="#ea580c" />
-              </TouchableOpacity>
+                <Text className="text-xs text-orange-600 dark:text-orange-400 font-medium">View Full Week</Text>
+                <Icon name={Icons.CHEVRON_FORWARD} size={12} color="#ea580c" accessibilityLabel="View full week" />
+              </HapticTouchableOpacity>
             </View>
           </View>
         </View>
@@ -1816,26 +1861,26 @@ export default function MealPlanScreen() {
       {/* Time Picker Modal */}
       {showTimePickerModal && recipeId && recipeTitle && (
         <View className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <View className="bg-white rounded-lg p-6 mx-4 w-full max-w-sm">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">
+          <View className="bg-white dark:bg-gray-800 rounded-lg p-6 mx-4 w-full max-w-sm">
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Schedule Recipe
             </Text>
-            <Text className="text-gray-600 mb-4">
+            <Text className="text-gray-600 dark:text-gray-100 mb-4">
               Choose a time for "{recipeTitle}":
             </Text>
             
             {/* Time Display */}
-            <View className="bg-gray-50 rounded-lg p-4 mb-4">
+            <View className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-sm font-medium text-gray-700">Selected Time</Text>
-              <TouchableOpacity 
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-100">Selected Time</Text>
+              <HapticTouchableOpacity 
                   onPress={toggleManualInput}
-                  className="px-3 py-1 bg-orange-100 rounded-lg"
+                  className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-lg"
               >
-                  <Text className="text-orange-600 text-sm font-medium">
+                  <Text className="text-orange-600 dark:text-orange-400 text-sm font-medium">
                     {showManualInput ? 'Use Picker' : 'Type Time'}
                   </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
               </View>
               
               {showManualInput ? (
@@ -1844,17 +1889,18 @@ export default function MealPlanScreen() {
                     value={manualTimeInput}
                     onChangeText={handleManualTimeInput}
                     placeholder="2:30 PM"
-                    className="text-2xl font-bold text-gray-900 text-center bg-white rounded-lg px-4 py-2 border border-gray-300 w-full"
+                    placeholderTextColor="#9CA3AF"
+                    className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center bg-white dark:bg-gray-800 rounded-lg px-4 py-2 border border-gray-300 dark:border-gray-600 w-full"
                     keyboardType="default"
                     autoFocus={true}
                   />
-                  <Text className="text-xs text-gray-500 mt-1">
+                  <Text className="text-xs text-gray-500 dark:text-gray-200 mt-1">
                     Format: 2:30 PM or 14:30
                   </Text>
                 </View>
               ) : (
                 <View className="items-center">
-                  <Text className="text-2xl font-bold text-gray-900">
+                  <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {formatTime(selectedHour, selectedMinute)}
                   </Text>
                 </View>
@@ -1862,11 +1908,11 @@ export default function MealPlanScreen() {
             </View>
             
             {/* Time Picker Wheels */}
-            <View className="bg-gray-50 rounded-lg p-4 mb-6">
+            <View className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
               <View className="flex-row justify-center items-center">
                 {/* Hour Picker */}
                 <View className="items-center mr-6">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">Hour</Text>
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-100 mb-2">Hour</Text>
                   <WheelPicker
                     data={Array.from({ length: 24 }, (_, i) => i)}
                     selectedValue={selectedHour}
@@ -1877,12 +1923,12 @@ export default function MealPlanScreen() {
                 
                 {/* Separator */}
                 <View className="items-center justify-center">
-                  <Text className="text-3xl font-bold text-gray-400">:</Text>
+                  <Text className="text-3xl font-bold text-gray-400 dark:text-gray-200">:</Text>
                 </View>
                 
                 {/* Minute Picker */}
                 <View className="items-center ml-6">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">Min</Text>
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-100 mb-2">Min</Text>
                   <WheelPicker
                     data={Array.from({ length: 60 }, (_, i) => i)}
                     selectedValue={selectedMinute}
@@ -1895,19 +1941,25 @@ export default function MealPlanScreen() {
             
             {/* Action Buttons */}
             <View className="flex-row space-x-3">
-              <TouchableOpacity 
-                onPress={() => setShowTimePickerModal(false)}
-                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg"
+              <HapticTouchableOpacity 
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowTimePickerModal(false);
+                }}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
               >
-                <Text className="text-gray-700 font-medium text-center">Cancel</Text>
-              </TouchableOpacity>
+                <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
+              </HapticTouchableOpacity>
               
-              <TouchableOpacity 
-                onPress={handleTimePickerConfirm}
-                className="flex-1 py-3 px-4 bg-orange-500 rounded-lg"
+              <HapticTouchableOpacity 
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  handleTimePickerConfirm();
+                }}
+                className="flex-1 py-3 px-4 bg-orange-500 dark:bg-orange-600 rounded-lg"
               >
                 <Text className="text-white font-medium text-center">Add Recipe</Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </View>
           </View>
         </View>
@@ -1921,11 +1973,11 @@ export default function MealPlanScreen() {
         onRequestClose={() => setShowShoppingListNameModal(false)}
       >
         <View className="flex-1 bg-black bg-opacity-50 items-center justify-center px-4">
-          <View className="bg-white rounded-lg p-6 w-full max-w-sm">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">
+          <View className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm">
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Name Your Shopping List
             </Text>
-            <Text className="text-gray-600 mb-4 text-sm">
+            <Text className="text-gray-600 dark:text-gray-100 mb-4 text-sm">
               Enter a name for your shopping list (or leave blank to use default)
             </Text>
             
@@ -1933,31 +1985,37 @@ export default function MealPlanScreen() {
               value={shoppingListName}
               onChangeText={setShoppingListName}
               placeholder="e.g., Weekly Groceries, Thanksgiving Shopping"
-              className="border border-gray-300 rounded-lg px-4 py-3 mb-4 text-gray-900"
+              placeholderTextColor="#9CA3AF"
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
               autoFocus={true}
               maxLength={100}
             />
             
             <View className="flex-row space-x-3">
-              <TouchableOpacity 
+              <HapticTouchableOpacity 
                 onPress={() => {
                   setShowShoppingListNameModal(false);
                   setShoppingListName('');
                 }}
-                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg"
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
               >
-                <Text className="text-gray-700 font-medium text-center">Cancel</Text>
-              </TouchableOpacity>
+                <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
+              </HapticTouchableOpacity>
             
-            <TouchableOpacity 
+            <HapticTouchableOpacity 
                 onPress={handleConfirmShoppingListName}
                 disabled={generatingShoppingList}
-                className={`flex-1 py-3 px-4 bg-emerald-500 rounded-lg ${generatingShoppingList ? 'opacity-50' : ''}`}
+                className={`flex-1 py-3 px-4 bg-emerald-500 dark:bg-emerald-600 rounded-lg ${generatingShoppingList ? 'opacity-50' : ''} flex-row items-center justify-center`}
             >
-                <Text className="text-white font-medium text-center">
-                  {generatingShoppingList ? 'Generating...' : 'Generate'}
-                </Text>
-            </TouchableOpacity>
+                {generatingShoppingList ? (
+                  <>
+                    <PulsingLoader size={14} color="white" />
+                    <Text className="text-white font-medium text-center ml-2">Generating...</Text>
+                  </>
+                ) : (
+                  <Text className="text-white font-medium text-center">Generate</Text>
+                )}
+            </HapticTouchableOpacity>
           </View>
         </View>
         </View>
