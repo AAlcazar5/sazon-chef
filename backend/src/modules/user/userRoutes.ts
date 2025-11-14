@@ -34,4 +34,10 @@ router.put('/physical-profile', userController.upsertPhysicalProfile);
 router.get('/calculate-macros', userController.calculateRecommendedMacros);
 router.post('/apply-calculated-macros', userController.applyCalculatedMacros);
 
+// Superfood preferences routes
+router.get('/superfoods', userController.getPreferredSuperfoods);
+router.post('/superfoods', userController.addPreferredSuperfood);
+router.put('/superfoods', userController.updatePreferredSuperfoods);
+router.delete('/superfoods/:category', userController.removePreferredSuperfood);
+
 export const userRoutes = router;

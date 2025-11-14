@@ -31,6 +31,7 @@ export class AIRecipeController {
             likedCuisines: true,
             dietaryRestrictions: true,
             bannedIngredients: true,
+            preferredSuperfoods: true,
           },
         }),
         prisma.macroGoals.findUnique({
@@ -156,6 +157,7 @@ export class AIRecipeController {
               likedCuisines: preferences.likedCuisines.map((c) => c.name),
               dietaryRestrictions: preferences.dietaryRestrictions.map((d) => d.name),
               bannedIngredients: preferences.bannedIngredients.map((b) => b.name),
+              preferredSuperfoods: preferences.preferredSuperfoods?.map((sf) => sf.category) || [],
               spiceLevel: preferences.spiceLevel || 'medium',
               // Use filtered max cook time if provided, otherwise use user preference
               cookTimePreference: maxCookTime ? parseInt(maxCookTime as string) : (preferences.cookTimePreference || 30),
@@ -263,6 +265,7 @@ export class AIRecipeController {
             likedCuisines: true,
             dietaryRestrictions: true,
             bannedIngredients: true,
+            preferredSuperfoods: true,
           },
         }),
         prisma.macroGoals.findUnique({
@@ -350,6 +353,7 @@ export class AIRecipeController {
               : preferences.likedCuisines.map((c) => c.name),
             dietaryRestrictions: preferences.dietaryRestrictions.map((d) => d.name),
             bannedIngredients: preferences.bannedIngredients.map((b) => b.name),
+            preferredSuperfoods: preferences.preferredSuperfoods?.map((sf) => sf.category) || [],
             spiceLevel: preferences.spiceLevel || 'medium',
             cookTimePreference: preferences.cookTimePreference || 30,
           }

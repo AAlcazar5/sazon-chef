@@ -120,7 +120,8 @@ export const userController = {
         include: {
           bannedIngredients: true,
           likedCuisines: true,
-          dietaryRestrictions: true
+          dietaryRestrictions: true,
+          preferredSuperfoods: true
         }
       });
       
@@ -139,7 +140,8 @@ export const userController = {
           include: {
             bannedIngredients: true,
             likedCuisines: true,
-            dietaryRestrictions: true
+            dietaryRestrictions: true,
+            preferredSuperfoods: true
           }
         });
         return res.json(defaultPreferences);
@@ -161,6 +163,7 @@ export const userController = {
         bannedIngredients,
         likedCuisines,
         dietaryRestrictions,
+        preferredSuperfoods,
         cookTimePreference,
         spiceLevel
       } = req.body;
@@ -171,7 +174,8 @@ export const userController = {
         include: {
           bannedIngredients: true,
           likedCuisines: true,
-          dietaryRestrictions: true
+          dietaryRestrictions: true,
+          preferredSuperfoods: true
         }
       });
 
@@ -202,6 +206,13 @@ export const userController = {
         };
       }
 
+      if (preferredSuperfoods) {
+        updateData.preferredSuperfoods = {
+          deleteMany: {},
+          create: preferredSuperfoods.map((category: string) => ({ category }))
+        };
+      }
+
       const preferences = await prisma.userPreferences.upsert({
         where: { userId },
         update: updateData,
@@ -211,12 +222,14 @@ export const userController = {
           spiceLevel: spiceLevel || 'medium',
           bannedIngredients: { create: bannedIngredients?.map((name: string) => ({ name })) || [] },
           likedCuisines: { create: likedCuisines?.map((name: string) => ({ name })) || [] },
-          dietaryRestrictions: { create: dietaryRestrictions?.map((name: string) => ({ name })) || [] }
+          dietaryRestrictions: { create: dietaryRestrictions?.map((name: string) => ({ name })) || [] },
+          preferredSuperfoods: { create: preferredSuperfoods?.map((category: string) => ({ category })) || [] }
         },
         include: {
           bannedIngredients: true,
           likedCuisines: true,
-          dietaryRestrictions: true
+          dietaryRestrictions: true,
+          preferredSuperfoods: true
         }
       });
       
@@ -576,6 +589,173 @@ export const userController = {
     } catch (error) {
       console.error('Apply calculated macros error:', error);
       res.status(500).json({ error: 'Failed to apply calculated macros' });
+    }
+  },
+
+  // Get preferred superfoods
+  async getPreferredSuperfoods(req: Request, res: Response) {
+    try {
+      const userId = 'temp-user-id'; // TODO: Get from authentication
+      
+      const preferences = await prisma.userPreferences.findUnique({
+        where: { userId },
+        include: {
+          preferredSuperfoods: true
+        }
+      });
+      
+      if (!preferences) {
+        return res.json({ preferredSuperfoods: [] });
+      }
+      
+      res.json({ preferredSuperfoods: preferences.preferredSuperfoods });
+    } catch (error) {
+      console.error('Get preferred superfoods error:', error);
+      res.status(500).json({ error: 'Failed to fetch preferred superfoods' });
+    }
+  },
+
+  // Add preferred superfood
+  async addPreferredSuperfood(req: Request, res: Response) {
+    try {
+      const userId = 'temp-user-id'; // TODO: Get from authentication
+      const { category } = req.body;
+      
+      if (!category || typeof category !== 'string') {
+        return res.status(400).json({ error: 'Category is required' });
+      }
+      
+      // Get or create preferences
+      let preferences = await prisma.userPreferences.findUnique({
+        where: { userId }
+      });
+      
+      if (!preferences) {
+        preferences = await prisma.userPreferences.create({
+          data: {
+            userId,
+            cookTimePreference: 30,
+            spiceLevel: 'medium'
+          }
+        });
+      }
+      
+      // Check if superfood already exists
+      const existing = await prisma.preferredSuperfood.findFirst({
+        where: {
+          preferenceId: preferences.id,
+          category
+        }
+      });
+      
+      if (existing) {
+        return res.status(409).json({ error: 'Superfood already in preferences' });
+      }
+      
+      // Add superfood
+      const superfood = await prisma.preferredSuperfood.create({
+        data: {
+          preferenceId: preferences.id,
+          category
+        }
+      });
+      
+      res.json({ message: 'Superfood added successfully', superfood });
+    } catch (error) {
+      console.error('Add preferred superfood error:', error);
+      res.status(500).json({ error: 'Failed to add preferred superfood' });
+    }
+  },
+
+  // Remove preferred superfood
+  async removePreferredSuperfood(req: Request, res: Response) {
+    try {
+      const userId = 'temp-user-id'; // TODO: Get from authentication
+      const { category } = req.params;
+      
+      if (!category) {
+        return res.status(400).json({ error: 'Category is required' });
+      }
+      
+      // Get preferences
+      const preferences = await prisma.userPreferences.findUnique({
+        where: { userId }
+      });
+      
+      if (!preferences) {
+        return res.status(404).json({ error: 'Preferences not found' });
+      }
+      
+      // Delete superfood
+      const result = await prisma.preferredSuperfood.deleteMany({
+        where: {
+          preferenceId: preferences.id,
+          category
+        }
+      });
+      
+      if (result.count === 0) {
+        return res.status(404).json({ error: 'Superfood not found in preferences' });
+      }
+      
+      res.json({ message: 'Superfood removed successfully' });
+    } catch (error) {
+      console.error('Remove preferred superfood error:', error);
+      res.status(500).json({ error: 'Failed to remove preferred superfood' });
+    }
+  },
+
+  // Update preferred superfoods (replace all)
+  async updatePreferredSuperfoods(req: Request, res: Response) {
+    try {
+      const userId = 'temp-user-id'; // TODO: Get from authentication
+      const { categories } = req.body;
+      
+      if (!Array.isArray(categories)) {
+        return res.status(400).json({ error: 'Categories must be an array' });
+      }
+      
+      // Get or create preferences
+      let preferences = await prisma.userPreferences.findUnique({
+        where: { userId }
+      });
+      
+      if (!preferences) {
+        preferences = await prisma.userPreferences.create({
+          data: {
+            userId,
+            cookTimePreference: 30,
+            spiceLevel: 'medium'
+          }
+        });
+      }
+      
+      // Replace all superfoods
+      await prisma.preferredSuperfood.deleteMany({
+        where: { preferenceId: preferences.id }
+      });
+      
+      if (categories.length > 0) {
+        await prisma.preferredSuperfood.createMany({
+          data: categories.map((category: string) => ({
+            preferenceId: preferences!.id,
+            category
+          }))
+        });
+      }
+      
+      // Fetch updated list
+      const updated = await prisma.preferredSuperfood.findMany({
+        where: { preferenceId: preferences.id }
+      });
+      
+      res.json({ 
+        message: 'Preferred superfoods updated successfully',
+        preferredSuperfoods: updated
+      });
+    } catch (error) {
+      console.error('Update preferred superfoods error:', error);
+      res.status(500).json({ error: 'Failed to update preferred superfoods' });
     }
   }
 };

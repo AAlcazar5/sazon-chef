@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import FeedbackButtons from './FeedbackButtons';
 import AnimatedText from '../ui/AnimatedText';
 import SazonMascot from '../mascot/SazonMascot';
+import { detectRecipeSuperfoods, SuperfoodCategory } from '../../utils/superfoodDetection';
+import { SUPERFOOD_CATEGORIES } from '../../constants/Superfoods';
+import { useMemo } from 'react';
 
 // Interfaces for this component
 interface MacroNutrients {
@@ -44,11 +47,13 @@ interface RecipeCardProps {
         timeEfficiency: number;
       };
     };
+    ingredients?: string[] | Array<{ id: string; text: string; order: number } | { name: string }>;
   };
   variant?: 'default' | 'compact' | 'featured';
   showFeedback?: boolean;
   onLike?: (recipeId: string) => void;
   onDislike?: (recipeId: string) => void;
+  preferredSuperfoods?: string[]; // User's preferred superfood categories
 }
 
 export default function RecipeCard({ 
@@ -56,11 +61,36 @@ export default function RecipeCard({
   variant = 'default',
   showFeedback = true,
   onLike,
-  onDislike 
+  onDislike,
+  preferredSuperfoods = []
 }: RecipeCardProps) {
   const handleRecipePress = () => {
     router.push(`/modal?id=${recipe.id}`);
   };
+
+  // Detect superfoods in recipe ingredients
+  const detectedSuperfoods = useMemo(() => {
+    if (!recipe.ingredients || recipe.ingredients.length === 0) {
+      return [];
+    }
+    return detectRecipeSuperfoods(recipe.ingredients);
+  }, [recipe.ingredients]);
+
+  // Get superfood info with emojis and names
+  const superfoodBadges = useMemo(() => {
+    return detectedSuperfoods
+      .slice(0, 3) // Show max 3 superfoods to avoid clutter
+      .map(category => {
+        const superfoodInfo = SUPERFOOD_CATEGORIES.find(sf => sf.id === category);
+        const isPreferred = preferredSuperfoods.includes(category);
+        return {
+          category,
+          name: superfoodInfo?.name || category,
+          emoji: superfoodInfo?.emoji || '🌟',
+          isPreferred,
+        };
+      });
+  }, [detectedSuperfoods, preferredSuperfoods]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30';
@@ -236,6 +266,41 @@ export default function RecipeCard({
           />
         )}
       </View>
+
+      {/* Superfood Badges */}
+      {superfoodBadges.length > 0 && (
+        <View className="flex-row space-x-2 mt-3 flex-wrap">
+          {superfoodBadges.map((badge, index) => (
+            <View
+              key={`${badge.category}-${index}`}
+              className={`px-2 py-1 rounded-full flex-row items-center ${
+                badge.isPreferred
+                  ? 'bg-orange-200 dark:bg-orange-900/50 border border-orange-400 dark:border-orange-700'
+                  : 'bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800'
+              }`}
+            >
+              <Text className="text-xs mr-1">{badge.emoji}</Text>
+              <Text className={`text-xs font-medium ${
+                badge.isPreferred
+                  ? 'text-orange-900 dark:text-orange-200'
+                  : 'text-orange-800 dark:text-orange-300'
+              }`}>
+                {badge.name}
+              </Text>
+              {badge.isPreferred && (
+                <Ionicons name="star" size={10} color="#EA580C" style={{ marginLeft: 2 }} />
+              )}
+            </View>
+          ))}
+          {detectedSuperfoods.length > 3 && (
+            <View className="bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-full">
+              <Text className="text-orange-800 dark:text-orange-300 text-xs font-medium">
+                +{detectedSuperfoods.length - 3} more
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Macro Nutrients */}
       <View className="flex-row space-x-2 mt-3 flex-wrap">

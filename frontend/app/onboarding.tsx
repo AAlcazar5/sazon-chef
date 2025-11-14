@@ -20,13 +20,15 @@ import * as Haptics from 'expo-haptics';
 import SazonMascot from '../components/mascot/SazonMascot';
 import LoadingState from '../components/ui/LoadingState';
 import SuccessModal from '../components/ui/SuccessModal';
+import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
 
 // Step 1: Welcome
 // Step 2: Cuisines
 // Step 3: Dietary Restrictions
-// Step 4: Banned Ingredients
-// Step 5: Physical Profile
-// Step 6: Review & Finish
+// Step 4: Superfoods (NEW)
+// Step 5: Banned Ingredients
+// Step 6: Physical Profile
+// Step 7: Review & Finish
 
 const CUISINE_OPTIONS = [
   { name: 'Italian', icon: '🍝' },
@@ -82,10 +84,12 @@ interface OnboardingData {
   likedCuisines: string[];
   // Step 3: Dietary Restrictions
   dietaryRestrictions: string[];
-  // Step 4: Banned Ingredients
+  // Step 4: Superfoods
+  preferredSuperfoods: string[];
+  // Step 5: Banned Ingredients
   bannedIngredients: string[];
   customBannedIngredient: string;
-  // Step 5: Physical Profile
+  // Step 6: Physical Profile
   gender: 'male' | 'female' | 'other' | '';
   age: string;
   heightFeet: string;
@@ -109,6 +113,7 @@ export default function OnboardingScreen() {
   const [data, setData] = useState<OnboardingData>({
     likedCuisines: [],
     dietaryRestrictions: [],
+    preferredSuperfoods: [],
     bannedIngredients: [],
     customBannedIngredient: '',
     gender: '',
@@ -146,6 +151,9 @@ export default function OnboardingScreen() {
       const dietaryRestrictions = prefs.dietaryRestrictions?.map((d: any) => 
         typeof d === 'string' ? d : d.name
       ) || [];
+      const preferredSuperfoods = prefs.preferredSuperfoods?.map((sf: any) => 
+        typeof sf === 'string' ? sf : sf.category
+      ) || [];
       const bannedIngredients = prefs.bannedIngredients?.map((i: any) => 
         typeof i === 'string' ? i : i.name
       ) || [];
@@ -173,6 +181,7 @@ export default function OnboardingScreen() {
       setData({
         likedCuisines,
         dietaryRestrictions,
+        preferredSuperfoods,
         bannedIngredients,
         customBannedIngredient: '',
         gender: profile?.gender || '',
@@ -193,7 +202,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const totalSteps = 6;
+  const totalSteps = 7;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   // Get mascot expression based on current step
@@ -205,18 +214,20 @@ export default function OnboardingScreen() {
         return 'curious';
       case 2: // Dietary Restrictions
         return 'supportive';
-      case 3: // Banned Ingredients
+      case 3: // Superfoods
+        return 'happy';
+      case 4: // Banned Ingredients
         return 'thinking';
-      case 4: // Physical Profile
+      case 5: // Physical Profile
         return 'focused';
-      case 5: // Review
+      case 6: // Review
         return 'proud';
       default:
         return 'happy';
     }
   };
 
-  const toggleSelection = (field: 'likedCuisines' | 'dietaryRestrictions' | 'bannedIngredients', value: string) => {
+  const toggleSelection = (field: 'likedCuisines' | 'dietaryRestrictions' | 'bannedIngredients' | 'preferredSuperfoods', value: string) => {
     const currentArray = data[field];
     if (currentArray.includes(value)) {
       setData({ ...data, [field]: currentArray.filter(v => v !== value) });
@@ -243,9 +254,11 @@ export default function OnboardingScreen() {
         return data.likedCuisines.length > 0;
       case 2: // Dietary Restrictions
         return true; // Optional
-      case 3: // Banned Ingredients
+      case 3: // Superfoods
         return true; // Optional
-      case 4: // Physical Profile
+      case 4: // Banned Ingredients
+        return true; // Optional
+      case 5: // Physical Profile
         return (
           data.gender !== '' &&
           data.age !== '' &&
@@ -253,7 +266,7 @@ export default function OnboardingScreen() {
           data.activityLevel !== '' &&
           data.fitnessGoal !== ''
         );
-      case 5: // Review
+      case 6: // Review
         return true;
       default:
         return false;
@@ -295,6 +308,7 @@ export default function OnboardingScreen() {
       await userApi.updatePreferences({
         likedCuisines: data.likedCuisines,
         dietaryRestrictions: data.dietaryRestrictions,
+        preferredSuperfoods: data.preferredSuperfoods,
         bannedIngredients: data.bannedIngredients,
         cookTimePreference: 30,
         spiceLevel: 'medium',
@@ -358,10 +372,12 @@ export default function OnboardingScreen() {
       case 2:
         return renderDietaryRestrictions();
       case 3:
-        return renderBannedIngredients();
+        return renderSuperfoods();
       case 4:
-        return renderPhysicalProfile();
+        return renderBannedIngredients();
       case 5:
+        return renderPhysicalProfile();
+      case 6:
         return renderReview();
       default:
         return null;
@@ -533,6 +549,51 @@ export default function OnboardingScreen() {
           </HapticTouchableOpacity>
         );
       })}
+    </ScrollView>
+  );
+
+  const renderSuperfoods = () => (
+    <ScrollView className="flex-1 px-6 py-6">
+      <Text className="text-2xl font-bold text-gray-900 mb-2">
+        Preferred Superfoods
+      </Text>
+      <Text className="text-base text-gray-600 mb-6">
+        Optional - Select superfoods you'd like to see more of. Recipes containing these will be boosted in your recommendations!
+      </Text>
+
+      <View className="flex-row flex-wrap">
+        {SUPERFOOD_CATEGORIES.map((superfood) => {
+          const isSelected = data.preferredSuperfoods.includes(superfood.id);
+          return (
+            <HapticTouchableOpacity
+              key={superfood.id}
+              onPress={() => toggleSelection('preferredSuperfoods', superfood.id)}
+              className={`w-[48%] mb-3 p-3 rounded-xl border-2 ${
+                isSelected
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 bg-white'
+              }`}
+              activeOpacity={0.7}
+            >
+              <View className="items-center">
+                {superfood.emoji && (
+                  <Text className="text-3xl mb-2">{superfood.emoji}</Text>
+                )}
+                <Text className={`text-sm font-semibold text-center ${
+                  isSelected ? 'text-orange-900' : 'text-gray-900'
+                }`}>
+                  {superfood.name}
+                </Text>
+                {isSelected && (
+                  <View className="absolute top-2 right-2 bg-orange-500 rounded-full p-1">
+                    <Ionicons name="checkmark" size={10} color="white" />
+                  </View>
+                )}
+              </View>
+            </HapticTouchableOpacity>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 
@@ -813,6 +874,21 @@ export default function OnboardingScreen() {
         </Text>
         <Text className="text-base text-gray-700">
           {data.dietaryRestrictions.length > 0 ? data.dietaryRestrictions.join(', ') : 'None'}
+        </Text>
+      </View>
+
+      {/* Preferred Superfoods */}
+      <View className="bg-white rounded-xl p-4 mb-4">
+        <Text className="text-lg font-semibold text-gray-900 mb-2">
+          🌟 Preferred Superfoods
+        </Text>
+        <Text className="text-base text-gray-700">
+          {data.preferredSuperfoods.length > 0 
+            ? data.preferredSuperfoods.map(id => {
+                const superfood = SUPERFOOD_CATEGORIES.find(sf => sf.id === id);
+                return superfood?.name || id;
+              }).join(', ')
+            : 'None'}
         </Text>
       </View>
 

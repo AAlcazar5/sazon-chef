@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { userApi } from '../lib/api';
 import * as Haptics from 'expo-haptics';
+import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
 
 // Predefined options
 const CUISINE_OPTIONS = ['Italian', 'Mexican', 'Asian', 'Mediterranean', 'American', 'Indian', 'Middle Eastern', 'Latin American'];
@@ -21,6 +22,7 @@ export default function EditPreferencesScreen() {
   const [newIngredient, setNewIngredient] = useState('');
   const [likedCuisines, setLikedCuisines] = useState<string[]>([]);
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
+  const [preferredSuperfoods, setPreferredSuperfoods] = useState<string[]>([]);
   const [cookTimePreference, setCookTimePreference] = useState('30');
   const [spiceLevel, setSpiceLevel] = useState('medium');
 
@@ -46,6 +48,9 @@ export default function EditPreferencesScreen() {
       );
       setDietaryRestrictions(
         prefs.dietaryRestrictions?.map((d: any) => typeof d === 'string' ? d : d.name) || []
+      );
+      setPreferredSuperfoods(
+        prefs.preferredSuperfoods?.map((sf: any) => typeof sf === 'string' ? sf : sf.category) || []
       );
       setCookTimePreference(prefs.cookTimePreference?.toString() || '30');
       setSpiceLevel(prefs.spiceLevel || 'medium');
@@ -86,6 +91,14 @@ export default function EditPreferencesScreen() {
     );
   };
 
+  const toggleSuperfood = (category: string) => {
+    setPreferredSuperfoods(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
   const handleSave = async () => {
     // Validation
     if (!cookTimePreference || isNaN(Number(cookTimePreference))) {
@@ -107,6 +120,7 @@ export default function EditPreferencesScreen() {
         bannedIngredients,
         likedCuisines,
         dietaryRestrictions,
+        preferredSuperfoods,
         cookTimePreference: cookTime,
         spiceLevel
       });
@@ -243,6 +257,35 @@ export default function EditPreferencesScreen() {
                   dietaryRestrictions.includes(dietary) ? 'text-white' : 'text-gray-700'
                 }`}>
                   {dietary}
+                </Text>
+              </HapticTouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Preferred Superfoods */}
+        <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
+          <Text className="text-lg font-semibold text-gray-900 mb-2">Preferred Superfoods</Text>
+          <Text className="text-gray-600 text-sm mb-3">
+            Select superfoods you'd like to see more of in your recipes. Recipes containing these will be boosted in recommendations.
+          </Text>
+          
+          <View className="flex-row flex-wrap">
+            {SUPERFOOD_CATEGORIES.map((superfood) => (
+              <HapticTouchableOpacity 
+                key={superfood.id}
+                onPress={() => toggleSuperfood(superfood.id)}
+                className={`px-3 py-2 rounded-full mr-2 mb-2 flex-row items-center ${
+                  preferredSuperfoods.includes(superfood.id) ? 'bg-orange-500' : 'bg-gray-200'
+                }`}
+              >
+                {superfood.emoji && (
+                  <Text className="mr-1">{superfood.emoji}</Text>
+                )}
+                <Text className={`text-xs font-medium ${
+                  preferredSuperfoods.includes(superfood.id) ? 'text-white' : 'text-gray-700'
+                }`}>
+                  {superfood.name}
                 </Text>
               </HapticTouchableOpacity>
             ))}
