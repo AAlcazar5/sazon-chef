@@ -11,6 +11,7 @@ interface SazonMascotProps {
   size?: SazonSize;
   variant?: SazonVariant;
   style?: any;
+  tool?: 'spatula' | 'knife' | 'none'; // Tool in hand: spatula (default), knife, or none
 }
 
 const SIZE_MAP: Record<SazonSize, number> = {
@@ -26,6 +27,7 @@ export default function SazonMascot({
   size = 'medium',
   variant = 'orange',
   style,
+  tool = 'spatula',
 }: SazonMascotProps) {
   const dimensions = SIZE_MAP[size];
   
@@ -324,26 +326,55 @@ export default function SazonMascot({
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {/* Spatula in right hand */}
-            <G id="spatula">
-              {/* Spatula handle */}
-              <Path
-                d="M 142 140 L 170 160"
-                stroke="#8B4513"
-                strokeWidth="4.5"
-                strokeLinecap="round"
-              />
-              {/* Spatula head - medium size */}
-              <Ellipse
-                cx="178"
-                cy="167"
-                rx="16.5"
-                ry="12"
-                fill="#F3F4F6"
-                stroke="#8B4513"
-                strokeWidth="2.5"
-              />
-            </G>
+            {/* Tool in right hand - Spatula (default) */}
+            {tool === 'spatula' && (
+              <G id="spatula">
+                {/* Spatula handle */}
+                <Path
+                  d="M 142 140 L 170 160"
+                  stroke="#8B4513"
+                  strokeWidth="4.5"
+                  strokeLinecap="round"
+                />
+                {/* Spatula head - medium size */}
+                <Ellipse
+                  cx="178"
+                  cy="167"
+                  rx="16.5"
+                  ry="12"
+                  fill="#F3F4F6"
+                  stroke="#8B4513"
+                  strokeWidth="2.5"
+                />
+              </G>
+            )}
+            
+            {/* Tool in left hand - Knife (for chopping) */}
+            {tool === 'knife' && (
+              <G id="knife" transform="translate(50, 142) rotate(-45)">
+                {/* Knife handle */}
+                <Path
+                  d="M 0 0 L -6 4 L -5 10 L 2 8 Z"
+                  fill="#8B4513"
+                  stroke="#654321"
+                  strokeWidth="1"
+                />
+                {/* Knife blade */}
+                <Path
+                  d="M 2 8 L 2 20 L 0 22 L -2 20 L -2 8 Z"
+                  fill="#C0C0C0"
+                  stroke="#808080"
+                  strokeWidth="1.5"
+                />
+                {/* Knife edge highlight */}
+                <Path
+                  d="M 0 10 L 0 20"
+                  stroke="#FFFFFF"
+                  strokeWidth="1"
+                  opacity="0.6"
+                />
+              </G>
+            )}
           </G>
 
           {/* Legs - Attached to bottom of pepper */}
