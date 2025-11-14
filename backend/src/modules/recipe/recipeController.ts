@@ -280,7 +280,8 @@ export const recipeController = {
           include: {
             bannedIngredients: true,
             likedCuisines: true,
-            dietaryRestrictions: true
+            dietaryRestrictions: true,
+            preferredSuperfoods: true  // Include preferred superfoods for scoring
           }
         }),
         prisma.macroGoals.findFirst({

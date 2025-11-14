@@ -10,6 +10,7 @@ interface RecipeGenerationParams {
     likedCuisines: string[];
     dietaryRestrictions: string[];
     bannedIngredients: string[];
+    preferredSuperfoods?: string[]; // Superfood category IDs (e.g., 'beans', 'oliveOil', 'salmon')
     spiceLevel?: string;
     cookTimePreference?: number;
   };
@@ -410,6 +411,50 @@ export class AIRecipeService {
     if (params.userPreferences?.bannedIngredients && params.userPreferences.bannedIngredients.length > 0) {
       parts.push(
         `NEVER use these ingredients: ${params.userPreferences.bannedIngredients.join(', ')}.`
+      );
+    }
+
+    // Preferred superfoods - prioritize recipes with these ingredients
+    if (params.userPreferences?.preferredSuperfoods && params.userPreferences.preferredSuperfoods.length > 0) {
+      // Map category IDs to friendly names for the AI prompt
+      const superfoodNames = params.userPreferences.preferredSuperfoods.map(category => {
+        const mapping: Record<string, string> = {
+          'beans': 'beans (black beans, kidney beans, chickpeas, lentils)',
+          'oliveOil': 'olive oil',
+          'fermented': 'fermented foods (kimchi, sauerkraut, yogurt, miso)',
+          'ginger': 'ginger',
+          'turmeric': 'turmeric',
+          'cod': 'cod fish',
+          'sardines': 'sardines',
+          'salmon': 'salmon',
+          'mackerel': 'mackerel',
+          'herring': 'herring',
+          'blueberries': 'blueberries',
+          'strawberries': 'strawberries',
+          'raspberries': 'raspberries',
+          'blackberries': 'blackberries',
+          'spinach': 'spinach',
+          'kale': 'kale',
+          'arugula': 'arugula',
+          'almonds': 'almonds',
+          'walnuts': 'walnuts',
+          'chiaSeeds': 'chia seeds',
+          'flaxSeeds': 'flax seeds',
+          'quinoa': 'quinoa',
+          'oats': 'oats',
+          'brownRice': 'brown rice',
+          'avocado': 'avocado',
+          'sweetPotato': 'sweet potatoes',
+          'broccoli': 'broccoli',
+          'garlic': 'garlic',
+        };
+        return mapping[category] || category;
+      });
+
+      parts.push(
+        `PRIORITY: The user wants to see more recipes containing these superfoods: ${superfoodNames.join(', ')}.`,
+        `Try to incorporate at least one or more of these superfoods into the recipe when possible.`,
+        `These ingredients should be featured prominently in the recipe.`
       );
     }
 

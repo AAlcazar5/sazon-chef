@@ -515,6 +515,26 @@ export default function ProfileScreen() {
               </View>
             </View>
             
+            <View>
+              <Text className="text-gray-600 dark:text-gray-200 text-sm mb-1">Preferred Superfoods</Text>
+              <View className="flex-row flex-wrap">
+                {profile.preferences?.preferredSuperfoods && profile.preferences.preferredSuperfoods.length > 0 ? (
+                  profile.preferences.preferredSuperfoods.map((superfood: any, index: number) => {
+                    const category = typeof superfood === 'string' ? superfood : superfood.category;
+                    return (
+                      <View key={index} className="bg-orange-100 dark:bg-orange-900 px-2 py-1 rounded-full mr-2 mb-2">
+                        <Text className="text-orange-800 dark:text-orange-200 text-xs">
+                          {category}
+                        </Text>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text className="text-gray-400 dark:text-gray-200 text-xs">None set</Text>
+                )}
+              </View>
+            </View>
+            
             <View className="flex-row justify-between items-center">
               <Text className="text-gray-600 dark:text-gray-200">Max Cook Time</Text>
               <Text className="font-semibold text-gray-900 dark:text-gray-100">

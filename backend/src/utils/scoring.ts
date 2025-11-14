@@ -1,4 +1,5 @@
 // src/utils/scoring.ts
+import { detectRecipeSuperfoods, type SuperfoodCategory } from './superfoodDetection';
 
 export interface RecipeScore {
   total: number;
@@ -10,6 +11,7 @@ export interface RecipeScore {
     tasteMatch: number;
     cookTimeMatch: number;
     ingredientMatch: number;
+    superfoodBoost?: number;
   };
 }
 
@@ -18,13 +20,15 @@ export interface ScoringWeights {
   tasteWeight: number;
   cookTimeWeight: number;
   ingredientMatchWeight: number;
+  superfoodBoostWeight?: number;
 }
 
 const DEFAULT_WEIGHTS: ScoringWeights = {
   macroWeight: 0.7,
   tasteWeight: 0.3,
   cookTimeWeight: 0.1,
-  ingredientMatchWeight: 0.1
+  ingredientMatchWeight: 0.1,
+  superfoodBoostWeight: 0.15 // 15% boost for superfood matches
 };
 
 // Simple interface definitions that match our Prisma schema structure
@@ -52,6 +56,7 @@ interface UserPreferencesBasic {
   bannedIngredients: Array<{ name: string }>;
   likedCuisines: Array<{ name: string }>;
   dietaryRestrictions: Array<{ name: string }>;
+  preferredSuperfoods?: Array<{ category: string }>;
 }
 
 interface MacroGoalsBasic {
@@ -83,6 +88,7 @@ export function calculateRecipeScore(
   const tasteMatch = calculateTasteMatch(recipe, userPreferences);
   const cookTimeMatch = calculateCookTimeMatch(recipe, userPreferences);
   const ingredientMatch = calculateIngredientMatch(recipe, userPreferences);
+  const superfoodBoost = calculateSuperfoodBoost(recipe, userPreferences);
 
   const macroScore = macroMatch * 100;
   const tasteScore = (
@@ -90,6 +96,10 @@ export function calculateRecipeScore(
     cookTimeMatch * DEFAULT_WEIGHTS.cookTimeWeight +
     ingredientMatch * DEFAULT_WEIGHTS.ingredientMatchWeight
   ) * 100;
+  
+  // Apply superfood boost to taste score (additive boost)
+  const superfoodBoostAmount = superfoodBoost * (DEFAULT_WEIGHTS.superfoodBoostWeight || 0.15) * 100;
+  const boostedTasteScore = Math.min(100, tasteScore + superfoodBoostAmount);
 
   // Calculate weights for different scoring components
   const behavioralWeight = 0.15; // 15% weight for behavioral learning
@@ -97,7 +107,8 @@ export function calculateRecipeScore(
   const baseWeight = 1 - behavioralWeight - temporalWeight;
   
   let total: number;
-  const baseScore = macroScore * DEFAULT_WEIGHTS.macroWeight + tasteScore * DEFAULT_WEIGHTS.tasteWeight;
+  // Use boosted taste score instead of original taste score
+  const baseScore = macroScore * DEFAULT_WEIGHTS.macroWeight + boostedTasteScore * DEFAULT_WEIGHTS.tasteWeight;
   
   if (behavioralScore !== null && behavioralScore !== undefined && temporalScore !== null && temporalScore !== undefined) {
     total = Math.round(
@@ -124,13 +135,14 @@ export function calculateRecipeScore(
   return {
     total,
     macroScore: Math.round(macroScore),
-    tasteScore: Math.round(tasteScore),
+    tasteScore: Math.round(boostedTasteScore),
     matchPercentage,
     breakdown: {
       macroMatch: Math.round(macroMatch * 100),
       tasteMatch: Math.round(tasteMatch * 100),
       cookTimeMatch: Math.round(cookTimeMatch * 100),
-      ingredientMatch: Math.round(ingredientMatch * 100)
+      ingredientMatch: Math.round(ingredientMatch * 100),
+      superfoodBoost: Math.round(superfoodBoost * 100)
     }
   };
 }
@@ -224,6 +236,52 @@ function isNonVegan(recipe: RecipeBasic): boolean {
   return recipe.ingredients.some(ingredient =>
     nonVeganIngredients.some(nonVegan => ingredient.text.toLowerCase().includes(nonVegan))
   );
+}
+
+/**
+ * Calculate superfood boost score based on user's preferred superfoods
+ * Returns a value between 0 and 1, where 1 means all preferred superfoods are present
+ * @param recipe - The recipe to check
+ * @param preferences - User preferences including preferred superfoods
+ * @returns Boost score (0-1)
+ */
+function calculateSuperfoodBoost(
+  recipe: RecipeBasic,
+  preferences: UserPreferencesBasic
+): number {
+  // If no preferred superfoods, return 0 (no boost)
+  if (!preferences.preferredSuperfoods || preferences.preferredSuperfoods.length === 0) {
+    return 0;
+  }
+
+  // Detect superfoods in recipe
+  const recipeSuperfoods = detectRecipeSuperfoods(recipe.ingredients);
+  
+  // Get user's preferred superfood categories
+  const preferredCategories = new Set(
+    preferences.preferredSuperfoods.map(sf => sf.category as SuperfoodCategory)
+  );
+
+  // Count how many preferred superfoods are found in the recipe
+  let matchedCount = 0;
+  for (const superfood of recipeSuperfoods) {
+    if (preferredCategories.has(superfood)) {
+      matchedCount++;
+    }
+  }
+
+  // Calculate boost: more matches = higher boost
+  // Linear scaling: 0 matches = 0, all matches = 1
+  // Cap at 1.0 for recipes with more superfoods than preferred
+  const boost = Math.min(1.0, matchedCount / preferredCategories.size);
+  
+  // Apply a multiplier to make the boost more significant
+  // Recipes with at least one match get a minimum boost
+  if (matchedCount > 0) {
+    return Math.max(0.2, boost); // Minimum 20% boost if at least one superfood matches
+  }
+
+  return 0;
 }
 
 export function updateScoringWeights(

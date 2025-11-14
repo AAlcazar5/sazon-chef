@@ -409,6 +409,23 @@ export const userApi = {
     return apiClient.put('/user/preferences', preferences);
   },
 
+  // Superfood preferences
+  getPreferredSuperfoods: () => {
+    return apiClient.get('/user/superfoods');
+  },
+
+  addPreferredSuperfood: (category: string) => {
+    return apiClient.post('/user/superfoods', { category });
+  },
+
+  removePreferredSuperfood: (category: string) => {
+    return apiClient.delete(`/user/superfoods/${category}`);
+  },
+
+  updatePreferredSuperfoods: (categories: string[]) => {
+    return apiClient.put('/user/superfoods', { categories });
+  },
+
   // Macro goals
   getMacroGoals: () => {
     return apiClient.get('/user/macro-goals');
