@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import PulsingLoader from '../../components/ui/PulsingLoader';
+import SuccessModal from '../../components/ui/SuccessModal';
 import { View, Text, ScrollView, Alert, Dimensions, TextInput, Modal } from 'react-native';
 import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
 import AnimatedProgressBar from '../../components/ui/AnimatedProgressBar';
@@ -55,6 +56,12 @@ export default function MealPlanScreen() {
   
   // Shopping list generation state
   const [generatingShoppingList, setGeneratingShoppingList] = useState(false);
+  
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [showShoppingListSuccessModal, setShowShoppingListSuccessModal] = useState(false);
+  const [shoppingListSuccessMessage, setShoppingListSuccessMessage] = useState({ title: '', message: '' });
   const [showShoppingListNameModal, setShowShoppingListNameModal] = useState(false);
   const [shoppingListName, setShoppingListName] = useState('');
   
@@ -357,7 +364,11 @@ export default function MealPlanScreen() {
                 }
 
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                Alert.alert('✅ Success', 'Weekly meal plan generated! All 7 days have been planned.');
+                setSuccessMessage({
+                  title: 'Weekly Meal Plan Generated!',
+                  message: 'All 7 days have been planned. Your personalized meal plan is ready!',
+                });
+                setShowSuccessModal(true);
                 
                 // Reload meal plan to refresh weekly view
                 await loadMealPlan();
@@ -865,7 +876,11 @@ export default function MealPlanScreen() {
                   fat: prev.fat + total.fat,
                 }));
 
-                Alert.alert('✅ Success', 'Full day meal plan generated!');
+                setSuccessMessage({
+                  title: 'Full Day Meal Plan Generated!',
+                  message: 'Your complete meal plan for the day is ready!',
+                });
+                setShowSuccessModal(true);
               } catch (error: any) {
                 console.error('❌ Error generating full day plan:', error);
                 
@@ -988,7 +1003,11 @@ export default function MealPlanScreen() {
                   fat: prev.fat + totalAdded.fat,
                 }));
 
-                Alert.alert('✅ Success', `Generated ${Object.keys(mealPlan).length} meal(s)!`);
+                setSuccessMessage({
+                  title: 'Meals Generated!',
+                  message: `Successfully generated ${Object.keys(mealPlan).length} meal(s) for your plan!`,
+                });
+                setShowSuccessModal(true);
               } catch (error: any) {
                 console.error('❌ Error generating remaining meals:', error);
                 
@@ -1129,17 +1148,14 @@ export default function MealPlanScreen() {
 
       let message = `Shopping list created with ${itemsAdded} new items!`;
       if (estimatedCost) {
-        message += `\nEstimated cost: $${estimatedCost.toFixed(2)}`;
+        message += ` Estimated cost: $${estimatedCost.toFixed(2)}`;
       }
 
-      Alert.alert(
-        '✅ Shopping List Generated',
-        message,
-        [
-          { text: 'View List', onPress: () => router.push('/(tabs)/shopping-list') },
-          { text: 'OK' },
-        ]
-      );
+      setShoppingListSuccessMessage({
+        title: 'Shopping List Generated!',
+        message: message,
+      });
+      setShowShoppingListSuccessModal(true);
     } catch (error: any) {
       console.error('❌ Error generating shopping list:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -1203,7 +1219,8 @@ export default function MealPlanScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header */}
       <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <View className="w-8" />
@@ -2020,6 +2037,29 @@ export default function MealPlanScreen() {
         </View>
         </View>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+      
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title={successMessage.title}
+        message={successMessage.message}
+        expression="celebrating"
+        onDismiss={() => setShowSuccessModal(false)}
+      />
+
+      {/* Shopping List Success Modal */}
+      <SuccessModal
+        visible={showShoppingListSuccessModal}
+        title={shoppingListSuccessMessage.title}
+        message={shoppingListSuccessMessage.message}
+        expression="proud"
+        onDismiss={() => setShowShoppingListSuccessModal(false)}
+        actionLabel="View List"
+        onAction={() => {
+          router.push('/(tabs)/shopping-list');
+        }}
+      />
+    </>
   );
 }

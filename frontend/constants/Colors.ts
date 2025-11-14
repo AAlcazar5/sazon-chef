@@ -8,6 +8,7 @@ interface ColorPalette {
   primaryDark: string;
   secondary: string;
   accent: string;
+  accentSecondary: string; // Red accent for habanero variants and brand
   
   // Semantic colors
   success: string;
@@ -67,6 +68,7 @@ export const Colors: ColorPalette = {
   // Secondary colors
   secondary: '#6B7280', // gray-500
   accent: '#8B5CF6', // violet-500
+  accentSecondary: '#EF4444', // red-500 - for habanero variants and brand accents
   
   // Semantic colors
   success: '#10B981', // emerald-500
@@ -127,6 +129,7 @@ export const DarkColors: ColorPalette = {
   // Secondary colors
   secondary: '#9CA3AF', // gray-400 (lighter for dark mode)
   accent: '#A78BFA', // violet-400 (lighter for dark mode)
+  accentSecondary: '#F87171', // red-400 (lighter for dark mode) - for habanero variants and brand accents
   
   // Semantic colors (same as light theme)
   success: '#10B981', // emerald-500
@@ -229,7 +232,8 @@ export const TextColors = {
 export const Gradients = {
   primary: ['#F97316', '#EA580C'], // orange-500 to orange-600
   success: ['#10B981', '#059669'], // emerald-500 to emerald-600
-  premium: ['#8B5CF6', '#7C3AED'] // violet-500 to violet-600
+  premium: ['#8B5CF6', '#7C3AED'], // violet-500 to violet-600
+  accent: ['#EF4444', '#DC2626'] // red-500 to red-600 - for habanero variants
 };
 
 // Helper functions

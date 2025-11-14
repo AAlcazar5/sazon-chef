@@ -9,64 +9,65 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String?  // Hashed password (nullable for social login users)
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  password       String? // Hashed password (nullable for social login users)
   // Social login fields
-  provider        String?  // 'google', 'apple', or null for email/password
-  providerId      String?  // OAuth provider's user ID
-  providerEmail   String?  // Email from OAuth provider (may differ from email field)
+  provider       String? // 'google', 'apple', or null for email/password
+  providerId     String? // OAuth provider's user ID
+  providerEmail  String? // Email from OAuth provider (may differ from email field)
   // Encryption metadata
-  emailEncrypted  Boolean @default(false) // Whether email is encrypted
-  nameEncrypted   Boolean @default(false) // Whether name is encrypted
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  emailEncrypted Boolean  @default(false) // Whether email is encrypted
+  nameEncrypted  Boolean  @default(false) // Whether name is encrypted
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Preferences and goals
-  preferences UserPreferences?
-  macroGoals  MacroGoals?
+  preferences     UserPreferences?
+  macroGoals      MacroGoals?
   physicalProfile UserPhysicalProfile?
-  
+
   // Relationships
-  savedRecipes SavedRecipe[]
-  collections  Collection[]
-  feedback      RecipeFeedback[]
-  mealHistory   MealHistory[]
-  mealPlans     MealPlan[]
-  shoppingLists ShoppingList[]
+  savedRecipes            SavedRecipe[]
+  collections             Collection[]
+  feedback                RecipeFeedback[]
+  mealHistory             MealHistory[]
+  mealPlans               MealPlan[]
+  shoppingLists           ShoppingList[]
   shoppingAppIntegrations ShoppingAppIntegration[]
-  ingredientCosts IngredientCost[]
+  ingredientCosts         IngredientCost[]
   // NEW: User-created recipes
-  createdRecipes Recipe[]
+  createdRecipes          Recipe[]
 
   @@map("users")
 }
 
 model UserPreferences {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Banned ingredients and preferences
-  bannedIngredients     BannedIngredient[]
-  likedCuisines        LikedCuisine[]
-  dietaryRestrictions  DietaryRestriction[]
-  cookTimePreference   Int      // in minutes
-  spiceLevel           String?  // mild, medium, spicy
-  
+  bannedIngredients   BannedIngredient[]
+  likedCuisines       LikedCuisine[]
+  dietaryRestrictions DietaryRestriction[]
+  preferredSuperfoods PreferredSuperfood[] // Superfood preferences (Phase 6, Group 12a)
+  cookTimePreference  Int // in minutes
+  spiceLevel          String? // mild, medium, spicy
+
   // Cost tracking & budget preferences (Phase 6, Group 13)
-  maxRecipeCost        Float?   // Maximum cost per recipe
-  maxMealCost          Float?   // Maximum cost per meal
-  maxDailyFoodBudget   Float?   // Maximum daily food budget
-  currency             String?  @default("USD")
-  
+  maxRecipeCost      Float? // Maximum cost per recipe
+  maxMealCost        Float? // Maximum cost per meal
+  maxDailyFoodBudget Float? // Maximum daily food budget
+  currency           String? @default("USD")
+
   // Location preferences for store lookup
-  zipCode              String?  // User's zip code
-  latitude             Float?   // GPS latitude
-  longitude            Float?   // GPS longitude
-  useLocationServices  Boolean? @default(false) // Whether to use GPS location
-  
+  zipCode             String? // User's zip code
+  latitude            Float? // GPS latitude
+  longitude           Float? // GPS longitude
+  useLocationServices Boolean? @default(false) // Whether to use GPS location
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -75,42 +76,51 @@ model UserPreferences {
 
 // Separate tables for array-like fields
 model BannedIngredient {
-  id         String           @id @default(cuid())
-  preference UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  id           String           @id @default(cuid())
+  preference   UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
   preferenceId String?
-  name       String
-  
+  name         String
+
   @@map("banned_ingredients")
 }
 
 model LikedCuisine {
-  id         String           @id @default(cuid())
-  preference UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  id           String           @id @default(cuid())
+  preference   UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
   preferenceId String?
-  name       String
-  
+  name         String
+
   @@map("liked_cuisines")
 }
 
 model DietaryRestriction {
-  id         String           @id @default(cuid())
-  preference UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  id           String           @id @default(cuid())
+  preference   UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
   preferenceId String?
-  name       String
-  
+  name         String
+
   @@map("dietary_restrictions")
 }
 
+model PreferredSuperfood {
+  id           String           @id @default(cuid())
+  preference   UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  preferenceId String?
+  category     String // Superfood category (e.g., "beans", "oliveOil", "salmon", etc.)
+
+  @@map("preferred_superfoods")
+}
+
 model MacroGoals {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  calories  Int
-  protein   Int
-  carbs     Int
-  fat       Int
-  
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  calories Int
+  protein  Int
+  carbs    Int
+  fat      Int
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -118,28 +128,28 @@ model MacroGoals {
 }
 
 model UserPhysicalProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Physical measurements
-  gender           String   // male, female, other
-  age              Int
-  heightCm         Float    // Height in centimeters
-  weightKg         Float    // Weight in kilograms
-  
+  gender   String // male, female, other
+  age      Int
+  heightCm Float // Height in centimeters
+  weightKg Float // Weight in kilograms
+
   // Activity and goals
-  activityLevel    String   // sedentary, lightly_active, moderately_active, very_active, extra_active
-  fitnessGoal      String   // lose_weight, maintain, gain_muscle, gain_weight
-  
+  activityLevel String // sedentary, lightly_active, moderately_active, very_active, extra_active
+  fitnessGoal   String // lose_weight, maintain, gain_muscle, gain_weight
+
   // Calculated metrics (stored for tracking changes over time)
-  bmr              Float?   // Basal Metabolic Rate
-  tdee             Float?   // Total Daily Energy Expenditure
-  targetWeightKg   Float?   // Target weight if applicable
-  
+  bmr            Float? // Basal Metabolic Rate
+  tdee           Float? // Total Daily Energy Expenditure
+  targetWeightKg Float? // Target weight if applicable
+
   // Additional optional data for future metabolism tracking
   bodyFatPercentage Float?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -147,23 +157,23 @@ model UserPhysicalProfile {
 }
 
 model Recipe {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   title       String
   description String
-  cookTime    Int      // in minutes
+  cookTime    Int // in minutes
   cuisine     String
-  difficulty  String   @default("medium") // "easy", "medium", "hard"
-  servings    Int      @default(1)
+  difficulty  String  @default("medium") // "easy", "medium", "hard"
+  servings    Int     @default(1)
   imageUrl    String?
-  
+
   // Unsplash attribution (required for production API compliance)
-  unsplashPhotoId         String? // Unsplash photo ID
-  unsplashDownloadLocation String? // For triggering download events
-  unsplashPhotographerName String? // Photographer's name
+  unsplashPhotoId              String? // Unsplash photo ID
+  unsplashDownloadLocation     String? // For triggering download events
+  unsplashPhotographerName     String? // Photographer's name
   unsplashPhotographerUsername String? // Photographer's username
-  unsplashAttributionText String? // "Photo by {name} on Unsplash"
-  unsplashUrl             String? // Link to photo on Unsplash (hotlinked per guidelines)
-  
+  unsplashAttributionText      String? // "Photo by {name} on Unsplash"
+  unsplashUrl                  String? // Link to photo on Unsplash (hotlinked per guidelines)
+
   // Macro nutrients
   calories Int
   protein  Int
@@ -171,41 +181,41 @@ model Recipe {
   fat      Int
   fiber    Int?
   sugar    Int?
-  
+
   // NEW: Recipe ownership
-  userId      String?  // Null for system recipes, set for user-created recipes
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String? // Null for system recipes, set for user-created recipes
+  user          User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   isUserCreated Boolean @default(false)
-  
+
   // Recipe source tracking
-  source      String  @default("database") // "database", "user-created", "ai-generated", "external"
-  
+  source String @default("database") // "database", "user-created", "ai-generated", "external"
+
   // External data integration (Phase 5)
-  externalId       String?   // ID from external source (e.g., Spoonacular)
-  externalSource   String?   // Source name (e.g., "spoonacular", "edamam")
-  qualityScore     Float?    // Quality rating from external source (0-100)
-  popularityScore  Float?    // Popularity metric from external source (0-100)
-  healthScore      Float?    // Health score from external API
-  aggregateLikes   Int?      // Total likes/favorites from external source
-  spoonacularScore Float?    // Spoonacular-specific score
-  pricePerServing  Float?    // Cost per serving from external API
-  sourceUrl        String?   // Original recipe URL
-  sourceName       String?   // Original source attribution
+  externalId       String? // ID from external source (e.g., Spoonacular)
+  externalSource   String? // Source name (e.g., "spoonacular", "edamam")
+  qualityScore     Float? // Quality rating from external source (0-100)
+  popularityScore  Float? // Popularity metric from external source (0-100)
+  healthScore      Float? // Health score from external API
+  aggregateLikes   Int? // Total likes/favorites from external source
+  spoonacularScore Float? // Spoonacular-specific score
+  pricePerServing  Float? // Cost per serving from external API
+  sourceUrl        String? // Original recipe URL
+  sourceName       String? // Original source attribution
   lastEnriched     DateTime? // Last time external data was fetched
-  
+
   // Cost tracking (Phase 6, Group 13)
-  estimatedCost        Float?   // Estimated total cost of recipe
+  estimatedCost           Float? // Estimated total cost of recipe
   estimatedCostPerServing Float? // Estimated cost per serving
-  costSource          String?  // "user", "api", "calculated", "estimated"
-  
+  costSource              String? // "user", "api", "calculated", "estimated"
+
   // Recipe content
-  ingredients RecipeIngredient[]
+  ingredients  RecipeIngredient[]
   instructions RecipeInstruction[]
-  
+
   // Metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relationships
   feedback     RecipeFeedback[]
   savedRecipes SavedRecipe[]
@@ -216,41 +226,41 @@ model Recipe {
 }
 
 model RecipeIngredient {
-  id       String  @id @default(cuid())
-  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   recipeId String
   text     String
   order    Int
-  
+
   // Cost tracking (Phase 6, Group 13)
   estimatedCost Float? // Estimated cost for this ingredient
   unitCost      Float? // Cost per unit (e.g., per lb, per cup)
-  
+
   @@map("recipe_ingredients")
 }
 
 model RecipeInstruction {
-  id       String  @id @default(cuid())
-  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   recipeId String
   text     String
   step     Int
-  
+
   @@map("recipe_instructions")
 }
 
 model RecipeFeedback {
-  id       String   @id @default(cuid())
+  id       String @id @default(cuid())
   recipeId String
   userId   String
-  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  liked    Boolean  @default(false)
-  disliked Boolean  @default(false)
-  saved    Boolean  @default(false)
-  consumed Boolean  @default(false)
-  
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  liked    Boolean @default(false)
+  disliked Boolean @default(false)
+  saved    Boolean @default(false)
+  consumed Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   @@unique([recipeId, userId])
@@ -258,14 +268,14 @@ model RecipeFeedback {
 }
 
 model SavedRecipe {
-  id       String   @id @default(cuid())
+  id       String @id @default(cuid())
   recipeId String
   userId   String
-  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   savedDate DateTime @default(now())
-  
+
   // Many-to-many relationship with collections via RecipeCollection
   recipeCollections RecipeCollection[]
 
@@ -281,7 +291,7 @@ model Collection {
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Many-to-many relationship with recipes via RecipeCollection
   recipeCollections RecipeCollection[]
 
@@ -291,88 +301,88 @@ model Collection {
 
 // Join table for many-to-many relationship between recipes and collections
 model RecipeCollection {
-  id         String   @id @default(cuid())
+  id            String      @id @default(cuid())
   savedRecipeId String
-  collectionId String
-  savedRecipe SavedRecipe @relation(fields: [savedRecipeId], references: [id], onDelete: Cascade)
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  addedAt    DateTime @default(now())
-  
+  collectionId  String
+  savedRecipe   SavedRecipe @relation(fields: [savedRecipeId], references: [id], onDelete: Cascade)
+  collection    Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  addedAt       DateTime    @default(now())
+
   @@unique([savedRecipeId, collectionId])
   @@map("recipe_collections")
 }
 
 model MealHistory {
-  id       String   @id @default(cuid())
+  id       String @id @default(cuid())
   recipeId String
   userId   String
-  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   date     DateTime @default(now())
   consumed Boolean  @default(false)
-  feedback String?  // liked, disliked, null
+  feedback String? // liked, disliked, null
 
   @@map("meal_history")
 }
 
 model MealPlan {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   name      String?
   startDate DateTime
   endDate   DateTime
-  
-  isActive  Boolean  @default(true)
-  
+
+  isActive Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  meals     Meal[]
-  
+
+  meals Meal[]
+
   @@map("meal_plans")
 }
 
 model Meal {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   mealPlanId String
-  mealPlan   MealPlan  @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
-  
-  date       DateTime
-  mealType   String
-  recipeId   String?
-  recipe     Recipe?   @relation(fields: [recipeId], references: [id])
-  
-  customName String?
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+
+  date     DateTime
+  mealType String
+  recipeId String?
+  recipe   Recipe?  @relation(fields: [recipeId], references: [id])
+
+  customName        String?
   customDescription String?
-  customCalories Int?
-  customProtein Float?
-  customCarbs Float?
-  customFat Float?
-  
-  isCompleted Boolean @default(false)
+  customCalories    Int?
+  customProtein     Float?
+  customCarbs       Float?
+  customFat         Float?
+
+  isCompleted Boolean   @default(false)
   completedAt DateTime?
-  
+
   rating Int?
   notes  String?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@map("meals")
 }
 
 model ScoringWeights {
-  id          String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Scoring weights (70% macros, 30% taste by default)
-  macroWeight          Float    @default(0.7)
-  tasteWeight          Float    @default(0.3)
-  cookTimeWeight       Float    @default(0.1)
-  ingredientMatchWeight Float   @default(0.1)
-  
+  macroWeight           Float @default(0.7)
+  tasteWeight           Float @default(0.3)
+  cookTimeWeight        Float @default(0.1)
+  ingredientMatchWeight Float @default(0.1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -387,24 +397,24 @@ model ShoppingList {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  items     ShoppingListItem[]
-  
+
+  items ShoppingListItem[]
+
   @@map("shopping_lists")
 }
 
 model ShoppingListItem {
-  id            String       @id @default(cuid())
+  id             String       @id @default(cuid())
   shoppingListId String
-  shoppingList  ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
-  name          String
-  quantity      String
-  category      String?
-  purchased     Boolean      @default(false)
-  notes         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  
+  shoppingList   ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  name           String
+  quantity       String
+  category       String?
+  purchased      Boolean      @default(false)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
   @@map("shopping_list_items")
 }
 
@@ -412,29 +422,29 @@ model ShoppingAppIntegration {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appName      String   // e.g., "instacart", "walmart", "kroger"
+  appName      String // e.g., "instacart", "walmart", "kroger"
   apiKey       String?
   accessToken  String?
   refreshToken String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  
+
   @@unique([userId, appName])
   @@map("shopping_app_integrations")
 }
 
 model IngredientCost {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   ingredientName String
-  unitCost      Float
-  unit          String   @default("lb") // lb, oz, cup, piece, etc.
-  store         String?
-  location      String?
-  lastUpdated   DateTime @default(now())
-  createdAt     DateTime @default(now())
-  
+  unitCost       Float
+  unit           String   @default("lb") // lb, oz, cup, piece, etc.
+  store          String?
+  location       String?
+  lastUpdated    DateTime @default(now())
+  createdAt      DateTime @default(now())
+
   @@map("ingredient_costs")
 }

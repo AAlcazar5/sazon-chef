@@ -7,7 +7,7 @@ import RippleEffect from './RippleEffect';
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'accent';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
@@ -39,7 +39,8 @@ export default function Button({
     primary: 'bg-orange-500 dark:bg-orange-600 border border-orange-500 dark:border-orange-600',
     secondary: 'bg-gray-500 dark:bg-gray-600 border border-gray-500 dark:border-gray-600',
     outline: 'bg-transparent border border-gray-300 dark:border-gray-600',
-    danger: 'bg-red-500 dark:bg-red-600 border border-red-500 dark:border-red-600'
+    danger: 'bg-red-500 dark:bg-red-600 border border-red-500 dark:border-red-600',
+    accent: 'bg-red-500 dark:bg-red-400 border border-red-500 dark:border-red-400' // Red accent variant
   };
 
   // Size styles
@@ -54,7 +55,8 @@ export default function Button({
     primary: 'text-white',
     secondary: 'text-white',
     outline: 'text-gray-700 dark:text-gray-100',
-    danger: 'text-white'
+    danger: 'text-white',
+    accent: 'text-white'
   };
 
   // Text size styles
@@ -90,6 +92,7 @@ export default function Button({
     secondary: 'rgba(255, 255, 255, 0.5)',
     outline: 'rgba(0, 0, 0, 0.1)',
     danger: 'rgba(255, 255, 255, 0.5)',
+    accent: 'rgba(255, 255, 255, 0.5)',
   };
 
   return (

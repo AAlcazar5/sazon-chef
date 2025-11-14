@@ -3,15 +3,19 @@ import { View, Text, Animated } from 'react-native';
 import Icon from './Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
+import SazonMascot, { SazonExpression } from '../mascot/SazonMascot';
 
 interface AnimatedEmptyStateProps {
-  icon: keyof typeof Icons;
+  icon?: keyof typeof Icons;
   title: string;
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
   iconSize?: number;
   iconColor?: string;
+  useMascot?: boolean;
+  mascotExpression?: SazonExpression;
+  mascotSize?: 'tiny' | 'small' | 'medium' | 'large' | 'hero';
 }
 
 export default function AnimatedEmptyState({
@@ -22,6 +26,9 @@ export default function AnimatedEmptyState({
   onAction,
   iconSize = 64,
   iconColor = '#9CA3AF',
+  useMascot = false,
+  mascotExpression = 'curious',
+  mascotSize = 'medium',
 }: AnimatedEmptyStateProps) {
   const bounceScale = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(1)).current;
@@ -76,7 +83,15 @@ export default function AnimatedEmptyState({
           opacity: pulseOpacity,
         }}
       >
-        <Icon name={icon} size={iconSize} color={iconColor} accessibilityLabel={title} />
+        {useMascot ? (
+          <SazonMascot 
+            expression={mascotExpression} 
+            size={mascotSize}
+            variant="orange"
+          />
+        ) : (
+          icon && <Icon name={icon} size={iconSize} color={iconColor} accessibilityLabel={title} />
+        )}
       </Animated.View>
       <Text className="text-xl font-semibold text-gray-500 dark:text-gray-200 mt-4 text-center">
         {title}

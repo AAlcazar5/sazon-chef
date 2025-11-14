@@ -21,6 +21,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
+import SazonMascot from '../components/mascot/SazonMascot';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -151,6 +152,13 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="w-full max-w-md self-center">
+          <View className="items-center mb-4">
+            <SazonMascot 
+              expression="happy" 
+              size="medium" 
+              variant="orange"
+            />
+          </View>
           <Text className="text-3xl font-bold text-orange-500 dark:text-orange-400 mb-2 text-center">
             Welcome Back
           </Text>

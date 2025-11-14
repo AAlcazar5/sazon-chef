@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import FeedbackButtons from './FeedbackButtons';
 import AnimatedText from '../ui/AnimatedText';
+import SazonMascot from '../mascot/SazonMascot';
 
 // Interfaces for this component
 interface MacroNutrients {
@@ -133,13 +134,28 @@ export default function RecipeCard({
 
   const styles = variantStyles[variant];
 
+  // Determine if recipe is highly recommended (high match score)
+  const isHighlyRecommended = recipe.score && recipe.score.matchPercentage && recipe.score.matchPercentage >= 85;
+  const mascotExpression = isHighlyRecommended ? 'excited' : 'happy';
+
   return (
     <TouchableOpacity
       onPress={handleRecipePress}
       className={styles.container}
     >
+      {/* Mascot Badge - Small indicator in top-right corner */}
+      <View className="absolute top-2 right-2 z-10">
+        <View className="bg-white dark:bg-gray-800 rounded-full p-1 shadow-sm border border-orange-200 dark:border-orange-800">
+          <SazonMascot 
+            expression={mascotExpression} 
+            size="tiny" 
+            variant="orange" 
+          />
+        </View>
+      </View>
+
       {/* Header with Title and Score */}
-      <View className="flex-row justify-between items-start mb-2">
+      <View className="flex-row justify-between items-start mb-2 pr-8">
         <View className="flex-1 mr-2">
           <AnimatedText className={styles.title}>
             {recipe.title}

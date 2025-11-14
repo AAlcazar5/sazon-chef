@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { scannerApi } from '../lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import LoadingState from '../components/ui/LoadingState';
 
 type ScannerMode = 'food' | 'barcode';
 
@@ -391,11 +392,12 @@ export default function ScannerScreen() {
       {/* Processing Overlay */}
       {processing && (
         <View className="absolute inset-0 bg-black/50 items-center justify-center">
-          <View className="bg-white p-6 rounded-lg items-center">
-            <ActivityIndicator size="large" color="#F97316" />
-            <Text className="mt-4 text-gray-900 font-semibold">
-              {mode === 'food' ? 'Analyzing food photo...' : 'Looking up product...'}
-            </Text>
+          <View className="bg-white dark:bg-gray-800 p-8 rounded-lg items-center">
+            <LoadingState
+              message={mode === 'food' ? 'Analyzing food photo...' : 'Looking up product...'}
+              expression="focused"
+              size="medium"
+            />
           </View>
         </View>
       )}

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SazonMascot, { SazonExpression } from '../mascot/SazonMascot';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -79,24 +80,28 @@ export default function Toast({
           bg: 'bg-green-500 dark:bg-green-600',
           icon: 'checkmark-circle' as const,
           iconColor: 'white',
+          mascotExpression: 'celebrating' as SazonExpression,
         };
       case 'error':
         return {
           bg: 'bg-red-500 dark:bg-red-600',
           icon: 'close-circle' as const,
           iconColor: 'white',
+          mascotExpression: 'supportive' as SazonExpression,
         };
       case 'warning':
         return {
           bg: 'bg-yellow-500 dark:bg-yellow-600',
           icon: 'warning' as const,
           iconColor: 'white',
+          mascotExpression: 'surprised' as SazonExpression,
         };
       default:
         return {
           bg: 'bg-blue-500 dark:bg-blue-600',
           icon: 'information-circle' as const,
           iconColor: 'white',
+          mascotExpression: 'curious' as SazonExpression,
         };
     }
   };
@@ -121,8 +126,14 @@ export default function Toast({
           className="flex-row items-center px-4 py-3"
           activeOpacity={0.8}
         >
-          <Ionicons name={styles.icon} size={24} color={styles.iconColor} />
-          <Text className="text-white font-medium ml-3 flex-1">{message}</Text>
+          <View className="mr-2">
+            <SazonMascot
+              expression={styles.mascotExpression}
+              size="tiny"
+              variant="orange"
+            />
+          </View>
+          <Text className="text-white font-medium flex-1">{message}</Text>
           <Ionicons name="close" size={20} color="white" />
         </TouchableOpacity>
       </Animated.View>
