@@ -6,7 +6,7 @@ interface AnimatedSazonProps {
   expression?: SazonExpression;
   size?: SazonSize;
   variant?: SazonVariant;
-  animationType?: 'idle' | 'bounce' | 'pulse' | 'wave' | 'celebrate' | 'none';
+  animationType?: 'idle' | 'bounce' | 'pulse' | 'wave' | 'celebrate' | 'stirring' | 'chopping' | 'none';
   style?: any;
 }
 
@@ -160,6 +160,90 @@ export default function AnimatedSazon({
         ]).start();
         break;
 
+      case 'stirring':
+        // Stirring animation - circular rotation motion (simulates stirring with spatula)
+        Animated.loop(
+          Animated.sequence([
+            Animated.parallel([
+              Animated.timing(rotateAnim, {
+                toValue: 0.8,
+                duration: 600,
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: true,
+              }),
+              Animated.timing(translateYAnim, {
+                toValue: -3,
+                duration: 600,
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: true,
+              }),
+            ]),
+            Animated.parallel([
+              Animated.timing(rotateAnim, {
+                toValue: -0.8,
+                duration: 600,
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: true,
+              }),
+              Animated.timing(translateYAnim, {
+                toValue: 3,
+                duration: 600,
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: true,
+              }),
+            ]),
+            Animated.parallel([
+              Animated.timing(rotateAnim, {
+                toValue: 0,
+                duration: 600,
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: true,
+              }),
+              Animated.timing(translateYAnim, {
+                toValue: 0,
+                duration: 600,
+                easing: Easing.inOut(Easing.ease),
+                useNativeDriver: true,
+              }),
+            ]),
+          ])
+        ).start();
+        break;
+
+      case 'chopping':
+        // Chopping animation - up and down motion (simulates chopping with knife)
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(translateYAnim, {
+              toValue: -8,
+              duration: 200,
+              easing: Easing.out(Easing.quad),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateYAnim, {
+              toValue: 0,
+              duration: 150,
+              easing: Easing.in(Easing.quad),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateYAnim, {
+              toValue: -6,
+              duration: 180,
+              easing: Easing.out(Easing.quad),
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateYAnim, {
+              toValue: 0,
+              duration: 120,
+              easing: Easing.in(Easing.quad),
+              useNativeDriver: true,
+            }),
+            // Small pause between chops
+            Animated.delay(100),
+          ])
+        ).start();
+        break;
+
       case 'none':
       default:
         // No animation
@@ -171,6 +255,9 @@ export default function AnimatedSazon({
     inputRange: [-1, 1],
     outputRange: ['-10deg', '10deg'],
   });
+
+  // Determine tool based on animation type
+  const tool = animationType === 'chopping' ? 'knife' : animationType === 'stirring' ? 'spatula' : 'spatula';
 
   return (
     <Animated.View
@@ -186,7 +273,7 @@ export default function AnimatedSazon({
         },
       ]}
     >
-      <SazonMascot expression={expression} size={size} variant={variant} />
+      <SazonMascot expression={expression} size={size} variant={variant} tool={tool} />
     </Animated.View>
   );
 }
