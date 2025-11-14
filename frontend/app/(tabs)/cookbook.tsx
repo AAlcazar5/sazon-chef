@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Alert, TextInput, Modal, Animated } from 'react-native';
 import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
+import LoadingState from '../../components/ui/LoadingState';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -378,10 +379,12 @@ export default function CookbookScreen() {
           <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Cookbook</Text>
           <Text className="text-gray-500 dark:text-gray-200 mt-1">Loading saved recipes...</Text>
         </View>
-        <View className="flex-1 items-center justify-center p-8">
-          <Icon name={Icons.EMPTY_RECIPES} size={64} color="#9CA3AF" accessibilityLabel="Loading recipes" />
-          <Text className="text-xl font-semibold text-gray-500 dark:text-gray-200 mt-4">Loading recipes...</Text>
-        </View>
+        <LoadingState
+          message="Loading recipes..."
+          expression="thinking"
+          size="large"
+          fullScreen
+        />
       </SafeAreaView>
     );
   }
@@ -394,21 +397,15 @@ export default function CookbookScreen() {
           <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Cookbook</Text>
           <Text className="text-gray-500 dark:text-gray-200 mt-1">Failed to load recipes</Text>
         </View>
-        <View className="flex-1 items-center justify-center p-8">
-          <Icon name={Icons.RECIPE_ERROR} size={64} color="#EF4444" accessibilityLabel="Error loading recipes" />
-          <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
-            Failed to load saved recipes
-          </Text>
-          <Text className="text-gray-500 dark:text-gray-200 text-center mt-2">
-            {apiError}
-          </Text>
-          <HapticTouchableOpacity 
-            onPress={refetch}
-            className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg mt-4"
-          >
-            <Text className="text-white font-semibold">Try Again</Text>
-          </HapticTouchableOpacity>
-        </View>
+        <AnimatedEmptyState
+          useMascot
+          mascotExpression="supportive"
+          mascotSize="large"
+          title="Failed to load saved recipes"
+          description={apiError}
+          actionLabel="Try Again"
+          onAction={refetch}
+        />
       </SafeAreaView>
     );
   }
@@ -669,7 +666,9 @@ export default function CookbookScreen() {
         <>
           {viewMode === 'saved' && (
             <AnimatedEmptyState
-              icon={Icons.EMPTY_RECIPES}
+              useMascot
+              mascotExpression="supportive"
+              mascotSize="large"
               title="No saved recipes yet"
               description="Save recipes you like to see them here"
               actionLabel="Browse Recipes"
@@ -678,7 +677,9 @@ export default function CookbookScreen() {
           )}
           {viewMode === 'liked' && (
             <AnimatedEmptyState
-              icon={Icons.LIKE_OUTLINE}
+              useMascot
+              mascotExpression="happy"
+              mascotSize="large"
               title="No liked recipes yet"
               description="Like recipes to see them here"
               actionLabel="Browse Recipes"
@@ -690,7 +691,9 @@ export default function CookbookScreen() {
           )}
           {viewMode === 'disliked' && (
             <AnimatedEmptyState
-              icon={Icons.DISLIKE_OUTLINE}
+              useMascot
+              mascotExpression="thinking"
+              mascotSize="large"
               title="No disliked recipes yet"
               description="Dislike recipes to see them here"
               actionLabel="Browse Recipes"
@@ -724,10 +727,10 @@ export default function CookbookScreen() {
               style={{ opacity: 1 }}
               activeOpacity={0.7}
             >
-              <View className="flex-1">
+                <View className="flex-1">
                 <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  {recipe.title}
-                </Text>
+                    {recipe.title}
+                  </Text>
                 {/* Source Attribution */}
                 {(recipe as any).source === 'ai-generated' && (
                   <View className="flex-row items-center mt-1">
@@ -749,7 +752,7 @@ export default function CookbookScreen() {
                   {viewMode === 'liked' && (recipe as any).likedDate && `Liked on ${(recipe as any).likedDate}`}
                   {viewMode === 'disliked' && (recipe as any).dislikedDate && `Disliked on ${(recipe as any).dislikedDate}`}
                   {viewMode === 'saved' && recipe.savedDate && `Saved on ${recipe.savedDate}`}
-                </Text>
+                      </Text>
               )}
               
               <View className="flex-row items-center justify-between mt-2">
@@ -758,12 +761,12 @@ export default function CookbookScreen() {
                     <Icon name={Icons.TIME_OUTLINE} size={IconSizes.SM} color="#6B7280" accessibilityLabel="Cook time" />
                     <Text className="text-gray-500 dark:text-gray-200 text-sm ml-1">
                       {recipe.cookTime} min
-                    </Text>
-                  </View>
+                      </Text>
+                    </View>
                   <View className="bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-full">
                     <Text className="text-orange-800 dark:text-orange-300 text-xs font-medium">
                       {recipe.cuisine}
-                    </Text>
+                      </Text>
                   </View>
                 </View>
                 <FeedbackButtons

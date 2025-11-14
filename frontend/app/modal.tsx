@@ -1,6 +1,8 @@
 import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import AnimatedText from '../components/ui/AnimatedText';
+import LoadingState from '../components/ui/LoadingState';
+import SazonMascot from '../components/mascot/SazonMascot';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -441,7 +443,7 @@ export default function RecipeModal() {
     try {
       const shareContent = {
         title: `Check out this recipe: ${recipe.title}`,
-        message: `🍽️ ${recipe.title}\n\n${recipe.description}\n\n⏱️ Cook Time: ${recipe.cookTime} minutes\n🔥 Calories: ${recipe.calories}\n🥩 Protein: ${recipe.protein}g\n🍞 Carbs: ${recipe.carbs}g\n🥑 Fat: ${recipe.fat}g\n\nDownload Sazon Chef to discover more amazing recipes!`,
+        message: `🌶️ Sazon Chef Recipe: ${recipe.title}\n\n${recipe.description}\n\n⏱️ Cook Time: ${recipe.cookTime} minutes\n🔥 Calories: ${recipe.calories}\n🥩 Protein: ${recipe.protein}g\n🍞 Carbs: ${recipe.carbs}g\n🥑 Fat: ${recipe.fat}g\n\n🌶️ Discover more amazing recipes with Sazon Chef!`,
         url: `https://sazonchef.app/recipe/${recipe.id}`, // Future deep link
       };
 
@@ -449,6 +451,7 @@ export default function RecipeModal() {
       
       if (result.action === Share.sharedAction) {
         console.log('📱 Recipe shared successfully');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else if (result.action === Share.dismissedAction) {
         console.log('📱 Share dismissed');
       }
@@ -525,10 +528,12 @@ export default function RecipeModal() {
           <Text className="text-lg font-semibold text-gray-900">Recipe Details</Text>
           <View className="w-8" />
         </View>
-        <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="restaurant-outline" size={48} color="#9CA3AF" />
-          <Text className="text-lg font-semibold text-gray-500 mt-4">Loading recipe...</Text>
-        </View>
+        <LoadingState
+          message="Loading recipe..."
+          expression="thinking"
+          size="large"
+          fullScreen
+        />
       </SafeAreaView>
       </Animated.View>
     );
@@ -544,28 +549,35 @@ export default function RecipeModal() {
           opacity: modalOpacity,
         }}
       >
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-        <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+        <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+        <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <HapticTouchableOpacity 
             onPress={() => router.back()}
             className="p-2"
           >
             <Ionicons name="close" size={24} color="#374151" />
           </HapticTouchableOpacity>
-          <Text className="text-lg font-semibold text-gray-900">Recipe Details</Text>
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
           <View className="w-8" />
         </View>
         <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-          <Text className="text-lg font-semibold text-gray-900 mt-4 text-center">
+          <SazonMascot 
+            expression="supportive" 
+            size="large" 
+            variant="orange"
+          />
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
             Failed to load recipe
           </Text>
-          <Text className="text-gray-500 text-center mt-2">
+          <Text className="text-gray-500 dark:text-gray-400 text-center mt-2">
             {error || 'Recipe not found'}
+          </Text>
+          <Text className="text-sm text-gray-400 dark:text-gray-500 text-center mt-2 mb-4">
+            Don't worry, this happens sometimes. Try going back and selecting the recipe again.
           </Text>
           <HapticTouchableOpacity 
             onPress={() => router.back()}
-            className="bg-orange-500 px-6 py-3 rounded-lg mt-4"
+            className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg mt-2"
           >
             <Text className="text-white font-semibold">Go Back</Text>
           </HapticTouchableOpacity>

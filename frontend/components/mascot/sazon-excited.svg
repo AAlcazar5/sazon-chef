@@ -1,0 +1,83 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="habaneroGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F97316" stop-opacity="1" />
+      <stop offset="50%" stop-color="#FB923C" stop-opacity="1" />
+      <stop offset="100%" stop-color="#EA580C" stop-opacity="1" />
+    </linearGradient>
+    <linearGradient id="highlightGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Chef Hat -->
+  <g id="chefHat">
+    <ellipse cx="96" cy="40" rx="50" ry="12" fill="#FFFFFF" opacity="0.95" />
+    <path
+      d="M 96 20 Q 96 15, 100 15 Q 104 15, 104 20 L 104 28 Q 104 32, 100 32 Q 96 32, 96 28 Z"
+      fill="#FFFFFF"
+      opacity="0.95"
+    />
+    <ellipse cx="96" cy="40" rx="50" ry="3" fill="#F97316" opacity="0.3" />
+  </g>
+
+  <!-- Habanero Body -->
+  <g id="habaneroBody">
+    <path
+      d="M 96 50 
+         Q 120 50, 130 70
+         Q 135 90, 130 110
+         Q 125 130, 115 145
+         Q 105 155, 96 160
+         Q 87 155, 77 145
+         Q 67 130, 62 110
+         Q 57 90, 62 70
+         Q 67 50, 96 50 Z"
+      fill="url(#habaneroGradient)"
+    />
+    <path
+      d="M 96 50 
+         Q 120 50, 130 70
+         Q 135 90, 130 110
+         Q 125 130, 115 145
+         Q 105 155, 96 160
+         Q 87 155, 77 145
+         Q 67 130, 62 110
+         Q 57 90, 62 70
+         Q 67 50, 96 50 Z"
+      fill="url(#highlightGradient)"
+    />
+  </g>
+
+  <!-- Face - Excited Expression -->
+  <g id="face">
+    <!-- Wide open eyes -->
+    <ellipse cx="80" cy="100" rx="14" ry="16" fill="#1F2937" />
+    <ellipse cx="112" cy="100" rx="14" ry="16" fill="#1F2937" />
+    <!-- Eye highlights -->
+    <circle cx="83" cy="97" r="5" fill="#FFFFFF" />
+    <circle cx="115" cy="97" r="5" fill="#FFFFFF" />
+    <!-- Big excited smile -->
+    <path
+      d="M 70 120 Q 96 145, 122 120"
+      stroke="#1F2937"
+      stroke-width="4"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <!-- Teeth showing -->
+    <path
+      d="M 88 125 L 92 130 L 96 125 L 100 130 L 104 125"
+      stroke="#FFFFFF"
+      stroke-width="2"
+      fill="none"
+    />
+  </g>
+
+  <!-- Stem -->
+  <g id="stem" opacity="0.6">
+    <ellipse cx="96" cy="55" rx="8" ry="4" fill="#22C55E" />
+  </g>
+</svg>
+

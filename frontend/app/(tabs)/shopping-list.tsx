@@ -782,7 +782,9 @@ export default function ShoppingListScreen() {
           <ScrollView className="flex-1">
             {currentItems.length === 0 ? (
               <AnimatedEmptyState
-                icon={Icons.CART_OUTLINE}
+                useMascot
+                mascotExpression="curious"
+                mascotSize="large"
                 title="Your list is empty"
                 description="Add items to get started with your shopping list"
                 actionLabel="Add First Item"

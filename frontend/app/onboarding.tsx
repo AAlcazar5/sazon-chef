@@ -17,6 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { userApi } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import SazonMascot from '../components/mascot/SazonMascot';
+import LoadingState from '../components/ui/LoadingState';
+import SuccessModal from '../components/ui/SuccessModal';
 
 // Step 1: Welcome
 // Step 2: Cuisines
@@ -100,6 +103,8 @@ export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(isEditMode ? 1 : 0); // Skip welcome if editing
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEditMode);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   
   const [data, setData] = useState<OnboardingData>({
     likedCuisines: [],
@@ -190,6 +195,26 @@ export default function OnboardingScreen() {
 
   const totalSteps = 6;
   const progress = ((currentStep + 1) / totalSteps) * 100;
+
+  // Get mascot expression based on current step
+  const getMascotExpression = (): 'excited' | 'curious' | 'happy' | 'proud' | 'thinking' | 'supportive' | 'focused' => {
+    switch (currentStep) {
+      case 0: // Welcome
+        return 'excited';
+      case 1: // Cuisines
+        return 'curious';
+      case 2: // Dietary Restrictions
+        return 'supportive';
+      case 3: // Banned Ingredients
+        return 'thinking';
+      case 4: // Physical Profile
+        return 'focused';
+      case 5: // Review
+        return 'proud';
+      default:
+        return 'happy';
+    }
+  };
 
   const toggleSelection = (field: 'likedCuisines' | 'dietaryRestrictions' | 'bannedIngredients', value: string) => {
     const currentArray = data[field];
@@ -290,29 +315,19 @@ export default function OnboardingScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (isEditMode) {
-        // If editing, just go back to profile
-        Alert.alert(
-          '✅ Preferences Updated',
-          'Your preferences have been saved successfully.',
-          [
-            {
-              text: 'Done',
-              onPress: () => router.back(),
-            },
-          ]
-        );
+        // If editing, show success modal then go back
+        setSuccessMessage({
+          title: 'Preferences Updated!',
+          message: 'Your preferences have been saved successfully.',
+        });
+        setShowSuccessModal(true);
       } else {
-        // If first time, show welcome and go to main app
-        Alert.alert(
-          '🎉 Welcome to Sazon Chef!',
-          'Your preferences have been saved. We\'ll use this information to give you personalized recipe recommendations.',
-          [
-            {
-              text: 'Get Started',
-              onPress: () => router.replace('/(tabs)'),
-            },
-          ]
-        );
+        // If first time, show welcome success modal
+        setSuccessMessage({
+          title: 'Welcome to Sazon Chef!',
+          message: 'Your preferences have been saved. We\'ll use this information to give you personalized recipe recommendations.',
+        });
+        setShowSuccessModal(true);
       }
     } catch (error) {
       console.error('Error saving onboarding data:', error);
@@ -356,7 +371,12 @@ export default function OnboardingScreen() {
   const renderWelcome = () => (
     <ScrollView className="flex-1 px-6 py-8">
       <View className="items-center mb-8">
-        <Text className="text-6xl mb-4">👨‍🍳</Text>
+        <SazonMascot 
+          expression="excited" 
+          size="large" 
+          variant="orange"
+          style={{ marginBottom: 16 }}
+        />
         <Text className="text-3xl font-bold text-gray-900 text-center mb-3">
           Welcome to Sazon Chef!
         </Text>
@@ -862,10 +882,12 @@ export default function OnboardingScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#F97316" />
-          <Text className="text-gray-600 mt-4">Loading your preferences...</Text>
-        </View>
+        <LoadingState
+          message="Loading your preferences..."
+          expression="thinking"
+          size="large"
+          fullScreen
+        />
       </SafeAreaView>
     );
   }
@@ -883,9 +905,17 @@ export default function OnboardingScreen() {
             ) : (
               <View style={{ width: 32 }} />
             )}
-            <Text className="text-base font-medium text-gray-600">
-              Step {currentStep + 1} of {totalSteps}
-            </Text>
+            <View className="flex-row items-center">
+              <SazonMascot 
+                expression={getMascotExpression()} 
+                size="small" 
+                variant="orange"
+                style={{ marginRight: 8 }}
+              />
+              <Text className="text-base font-medium text-gray-600">
+                Step {currentStep + 1} of {totalSteps}
+              </Text>
+            </View>
             <HapticTouchableOpacity onPress={skipOnboarding} className="p-1">
               <Text className="text-base font-medium text-orange-500">Skip</Text>
             </HapticTouchableOpacity>
@@ -927,6 +957,30 @@ export default function OnboardingScreen() {
           </HapticTouchableOpacity>
         </View>
       </View>
+      
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title={successMessage.title}
+        message={successMessage.message}
+        expression={isEditMode ? 'chef-kiss' : 'excited'}
+        actionLabel={isEditMode ? 'Done' : 'Get Started'}
+        onAction={() => {
+          if (isEditMode) {
+            router.back();
+          } else {
+            router.replace('/(tabs)');
+          }
+        }}
+        onDismiss={() => {
+          setShowSuccessModal(false);
+          if (isEditMode) {
+            router.back();
+          } else {
+            router.replace('/(tabs)');
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }

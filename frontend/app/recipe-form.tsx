@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Animated } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import PulsingLoader from '../components/ui/PulsingLoader';
+import SuccessModal from '../components/ui/SuccessModal';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +18,8 @@ export default function RecipeFormScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(isEditMode);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   
   // Form state
   const [title, setTitle] = useState('');
@@ -312,13 +315,13 @@ export default function RecipeFormScreen() {
         }
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(
-          '✅ Recipe Generated!',
-          hasTitle 
+        setSuccessMessage({
+          title: 'Recipe Generated!',
+          message: hasTitle 
             ? `"${recipeTitle}" recipe has been generated. Review and edit as needed before saving.`
             : 'A random recipe has been generated. Review and edit as needed before saving.',
-          [{ text: 'OK' }]
-        );
+        });
+        setShowSuccessModal(true);
       } else {
         throw new Error('Failed to generate recipe');
       }
@@ -833,6 +836,15 @@ export default function RecipeFormScreen() {
           </Animated.View>
         </Animated.View>
       </Modal>
+
+      {/* Recipe Generation Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title={successMessage.title}
+        message={successMessage.message}
+        expression="chef-kiss"
+        onDismiss={() => setShowSuccessModal(false)}
+      />
     </SafeAreaView>
   );
 }

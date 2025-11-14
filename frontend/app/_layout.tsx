@@ -7,10 +7,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { ToastProvider } from '../contexts/ToastContext';
+import SplashScreen from '../components/ui/SplashScreen';
 import '../global.css';
 
 function RootLayoutNav() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
+  const [showSplash, setShowSplash] = useState(true);
   const router = useRouter();
   const segments = useSegments();
   const { isAuthenticated, isLoading } = useAuth();
@@ -60,6 +62,16 @@ function RootLayoutNav() {
       // Actually, let's not redirect here - they might be intentionally redoing onboarding
     }
   }, [isOnboardingComplete, segments, isAuthenticated, isLoading]);
+
+  // Show splash screen on first load
+  if (showSplash) {
+    return (
+      <SplashScreen
+        onFinish={() => setShowSplash(false)}
+        duration={2000}
+      />
+    );
+  }
 
   if (isOnboardingComplete === null || isLoading) {
     // Show loading screen while checking onboarding/authentication status

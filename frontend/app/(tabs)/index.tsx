@@ -6,8 +6,8 @@ import AnimatedRecipeCard from '../../components/recipe/AnimatedRecipeCard';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import CardStack from '../../components/ui/CardStack';
 import { Image } from 'expo-image';
-import { useState, useEffect, useRef } from 'react';
-import { router } from 'expo-router';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
@@ -18,6 +18,10 @@ import type { SuggestedRecipe } from '../../types';
 import * as Haptics from 'expo-haptics';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
+import { AnimatedSazon } from '../../components/mascot';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useToast } from '../../contexts/ToastContext';
+import HelpTooltip from '../../components/ui/HelpTooltip';
 
 // Track user feedback state
 interface UserFeedback {
@@ -223,6 +227,39 @@ function FilterModal({
                   ))}
                 </View>
               </View>
+
+              {/* Filter Guidance - Show when many filters are selected */}
+              {(() => {
+                const totalFilters = filters.cuisines.length + filters.dietaryRestrictions.length + 
+                                   (filters.maxCookTime ? 1 : 0) + filters.difficulty.length;
+                const isRestrictive = totalFilters >= 5;
+                
+                if (isRestrictive) {
+                  return (
+                    <View className="mt-4 mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <View className="flex-row items-start">
+                        <View className="mr-3">
+                          <AnimatedSazon 
+                            expression="thinking" 
+                            size="small" 
+                            variant="orange"
+                            animationType="idle"
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-orange-900 dark:text-orange-200 font-semibold mb-1">
+                            Many filters selected
+                          </Text>
+                          <Text className="text-orange-700 dark:text-orange-300 text-sm">
+                            You've selected {totalFilters} filter{totalFilters !== 1 ? 's' : ''}. This might limit your recipe options. Consider removing some filters to see more suggestions!
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                }
+                return null;
+              })()}
             </ScrollView>
           </SafeAreaView>
         </Animated.View>
@@ -233,6 +270,7 @@ function FilterModal({
 
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
+  const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
   const [reloadLoading, setReloadLoading] = useState(false);
   
@@ -261,6 +299,9 @@ export default function HomeScreen() {
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
+
+  // First-time user guidance
+  const [showFirstTimeTooltip, setShowFirstTimeTooltip] = useState(false);
 
   // Track if we're loading from filters to prevent useApi from interfering
   const [loadingFromFilters, setLoadingFromFilters] = useState(false);
@@ -386,6 +427,70 @@ export default function HomeScreen() {
       Alert.alert('Error', 'Failed to load recipes. Please try again.');
     }
   }, [error]);
+
+  // Welcome back notification - check if user has been away for more than 24 hours
+  useFocusEffect(
+    useCallback(() => {
+      const checkWelcomeBack = async () => {
+        try {
+          const LAST_VISIT_KEY = '@sazon_last_visit';
+          const lastVisitStr = await AsyncStorage.getItem(LAST_VISIT_KEY);
+          const now = Date.now();
+          
+          if (lastVisitStr) {
+            const lastVisit = parseInt(lastVisitStr, 10);
+            const hoursSinceLastVisit = (now - lastVisit) / (1000 * 60 * 60);
+            
+            // Show welcome back if user has been away for more than 24 hours
+            if (hoursSinceLastVisit >= 24) {
+              const daysSinceLastVisit = Math.floor(hoursSinceLastVisit / 24);
+              let message = "Welcome back! Ready to cook something amazing?";
+              
+              if (daysSinceLastVisit === 1) {
+                message = "Welcome back! It's been a day - let's find you some great recipes!";
+              } else if (daysSinceLastVisit > 1) {
+                message = `Welcome back! It's been ${daysSinceLastVisit} days - we've missed you!`;
+              }
+              
+              showToast(message, 'info', 4000);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+          }
+          
+          // Update last visit time
+          await AsyncStorage.setItem(LAST_VISIT_KEY, now.toString());
+        } catch (error) {
+          console.error('Error checking welcome back:', error);
+        }
+      };
+      
+      checkWelcomeBack();
+    }, [showToast])
+  );
+
+  // Check if first-time user and show guidance tooltip
+  useFocusEffect(
+    useCallback(() => {
+      const checkFirstTime = async () => {
+        try {
+          const HAS_SEEN_HOME_GUIDANCE_KEY = '@sazon_has_seen_home_guidance';
+          const hasSeen = await AsyncStorage.getItem(HAS_SEEN_HOME_GUIDANCE_KEY);
+          
+          // Only show if user hasn't seen it before and we have recipes loaded
+          if (!hasSeen && suggestedRecipes.length > 0 && !loading) {
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+              setShowFirstTimeTooltip(true);
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('Error checking first-time guidance:', error);
+        }
+      };
+      
+      checkFirstTime();
+    }, [suggestedRecipes.length, loading])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -905,9 +1010,17 @@ export default function HomeScreen() {
   if (loading && suggestedRecipes.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
-          <Text className="text-gray-500 dark:text-gray-200 mt-1">Personalized recipe suggestions</Text>
+        <View className="bg-white dark:bg-gray-800 px-4 pt-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+          <View className="flex-row items-center justify-center">
+            <AnimatedSazon 
+              expression="happy" 
+              size="small" 
+              variant="orange"
+              animationType="pulse"
+              style={{ marginRight: 8 }}
+            />
+            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
+          </View>
         </View>
         <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
           {/* Show 3 skeleton cards */}
@@ -923,43 +1036,68 @@ export default function HomeScreen() {
   if (error && suggestedRecipes.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
-          <Text className="text-gray-500 dark:text-gray-200 mt-1">Personalized recipe suggestions</Text>
+        <View className="bg-white dark:bg-gray-800 px-4 pt-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+          <View className="flex-row items-center justify-center">
+            <AnimatedSazon 
+              expression="supportive" 
+              size="small" 
+              variant="orange"
+              animationType="idle"
+              style={{ marginRight: 8 }}
+            />
+            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
+          </View>
         </View>
-        <View className="flex-1 items-center justify-center p-8">
-          <Icon name={Icons.RECIPE_ERROR} size={64} color="#EF4444" accessibilityLabel="Error loading recipes" />
-          <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
-            Failed to load recipes
-          </Text>
-          <Text className="text-gray-500 dark:text-gray-300 text-center mt-2">
-            {error}
-          </Text>
-          <HapticTouchableOpacity 
-            onPress={refetch}
-            className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg mt-4"
-          >
-            <Text className="text-white font-semibold">Try Again</Text>
-          </HapticTouchableOpacity>
-        </View>
+        <AnimatedEmptyState
+          useMascot
+          mascotExpression="supportive"
+          mascotSize="large"
+          title="Failed to load recipes"
+          description={error}
+          actionLabel="Try Again"
+          onAction={refetch}
+        />
       </SafeAreaView>
     );
   }
 
   // Empty state
   if (suggestedRecipes.length === 0 && !loading) {
+    const hasActiveFilters = activeFilters.length > 0;
+    const emptyStateTitle = hasActiveFilters 
+      ? "No recipes match your filters" 
+      : "No recipes found";
+    const emptyStateDescription = hasActiveFilters
+      ? "Try adjusting your filters or preferences to see more recipes"
+      : "We couldn't find any recipes to suggest at the moment";
+    const emptyStateExpression = hasActiveFilters ? 'thinking' : 'curious';
+    
     return (
       <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
-          <Text className="text-gray-500 dark:text-gray-200 mt-1">Personalized recipe suggestions</Text>
+        <View className="bg-white dark:bg-gray-800 px-4 pt-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+          <View className="flex-row items-center justify-center">
+            <AnimatedSazon 
+              expression={emptyStateExpression} 
+              size="small" 
+              variant="orange"
+              animationType="idle"
+              style={{ marginRight: 8 }}
+            />
+            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
+          </View>
         </View>
         <AnimatedEmptyState
-          icon={Icons.EMPTY_RECIPES}
-          title="No recipes found"
-          description="We couldn't find any recipes to suggest at the moment"
-          actionLabel="Refresh"
-          onAction={refetch}
+          useMascot
+          mascotExpression={emptyStateExpression}
+          mascotSize="large"
+          title={emptyStateTitle}
+          description={emptyStateDescription}
+          actionLabel={hasActiveFilters ? "Clear Filters" : "Refresh"}
+          onAction={hasActiveFilters ? () => {
+            setFilters(filterStorage.getDefaultFilters());
+            setActiveFilters([]);
+            filterStorage.saveFilters(filterStorage.getDefaultFilters());
+          } : refetch}
         />
       </SafeAreaView>
     );
@@ -968,27 +1106,31 @@ export default function HomeScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header - Fixed height */}
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-        <View className="flex-row justify-between items-center">
-          <View className="flex-1">
+      <View className="bg-white dark:bg-gray-800 px-4 pt-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center">
+            <AnimatedSazon 
+              expression="happy" 
+              size="small" 
+              variant="orange"
+              animationType="idle"
+              style={{ marginRight: 8 }}
+            />
             <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sazon Chef</Text>
-            <Text className="text-gray-500 dark:text-gray-200 mt-1">
-          {suggestedRecipes.length} recipe suggestions
-        </Text>
           </View>
           <View className="flex-row items-center">
             <HapticTouchableOpacity
               onPress={handleReload}
               activeOpacity={1}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg flex-row items-center border border-gray-300 dark:border-gray-600 mr-2"
+              className="bg-gray-100 dark:bg-gray-700 px-2 py-1.5 rounded-lg flex-row items-center border border-gray-300 dark:border-gray-600 mr-2"
               style={{ opacity: 1 }}
             >
               {reloadLoading ? (
-                <AnimatedActivityIndicator size="small" color={colorScheme === 'dark' ? '#D1D5DB' : '#6B7280'} style={{ marginRight: 6 }} />
+                <AnimatedActivityIndicator size="small" color={colorScheme === 'dark' ? '#D1D5DB' : '#6B7280'} style={{ marginRight: 4 }} />
               ) : (
-                <Icon name={Icons.RELOAD} size={IconSizes.SM} color={colorScheme === 'dark' ? '#D1D5DB' : '#6B7280'} accessibilityLabel="Reload recipes" style={{ marginRight: 4 }} />
+                <Icon name={Icons.RELOAD} size={IconSizes.XS} color={colorScheme === 'dark' ? '#D1D5DB' : '#6B7280'} accessibilityLabel="Reload recipes" style={{ marginRight: 3 }} />
               )}
-              <Text className="text-gray-700 dark:text-gray-100 font-semibold">
+              <Text className="text-gray-700 dark:text-gray-100 text-sm font-semibold">
                 {reloadLoading ? 'Loading...' : 'Reload'}
               </Text>
             </HapticTouchableOpacity>
@@ -1001,10 +1143,10 @@ export default function HomeScreen() {
               <HapticTouchableOpacity
                 onPress={handleRandomRecipe}
                 hapticStyle="medium"
-                className="bg-orange-500 dark:bg-orange-600 px-4 py-2 rounded-lg flex-row items-center"
+                className="bg-orange-500 dark:bg-orange-600 px-3 py-1.5 rounded-lg flex-row items-center"
               >
-                <Icon name={Icons.RANDOM_RECIPE} size={IconSizes.SM} color="white" accessibilityLabel="Random recipe" />
-                <Text className="text-white font-semibold ml-2">Random</Text>
+                <Icon name={Icons.RANDOM_RECIPE} size={IconSizes.XS} color="white" accessibilityLabel="Random recipe" />
+                <Text className="text-white text-sm font-semibold ml-1.5">Random</Text>
               </HapticTouchableOpacity>
             </Animated.View>
           </View>
@@ -1437,6 +1579,27 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* First-time user guidance tooltip */}
+      <HelpTooltip
+        visible={showFirstTimeTooltip}
+        title="Welcome to Sazon Chef!"
+        message={`Here's how to get started:
+
+• Tap the filter button to customize your recipe preferences
+• Swipe right or tap 👍 on recipes you like
+• Swipe left or tap 👎 on recipes you don't like
+• Tap any recipe card to see full details and save it to your cookbook
+• Use the random recipe button to discover new favorites!
+
+Your feedback helps us learn your tastes and suggest better recipes!`}
+        type="guide"
+        onDismiss={async () => {
+          setShowFirstTimeTooltip(false);
+          // Mark as seen
+          await AsyncStorage.setItem('@sazon_has_seen_home_guidance', 'true');
+        }}
+      />
     </SafeAreaView>
   );
 }
