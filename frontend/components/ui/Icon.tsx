@@ -51,7 +51,7 @@ export type IconName =
   | 'moon' | 'moon-outline'
   | 'phone-portrait' | 'phone-portrait-outline'
   | 'body' | 'body-outline'
-  | 'target' | 'target-outline'
+  | 'flag' | 'flag-outline'
   | 'download' | 'download-outline'
   | 'log-out' | 'log-out-outline'
   // Food & Recipe
@@ -239,8 +239,8 @@ function mapIconName(name: IconName): string {
     'phone-portrait-outline': 'phone-portrait-outline',
     'body': 'body',
     'body-outline': 'body-outline',
-    'target': 'target',
-    'target-outline': 'target-outline',
+    'flag': 'flag',
+    'flag-outline': 'flag-outline',
     'download': 'download',
     'download-outline': 'download-outline',
     'log-out': 'log-out',

@@ -444,6 +444,32 @@ export const shoppingListController = {
           return res.status(404).json({ error: 'No recipes found with provided IDs' });
         }
 
+        // Check for meal prep portions for these recipes (to get scaled quantities)
+        const mealPrepPortions = await prisma.mealPrepPortion.findMany({
+          where: {
+            userId,
+            recipeId: { in: recipeIds },
+            // Only include portions that haven't been fully consumed
+            OR: [
+              { freshServingsRemaining: { gt: 0 } },
+              { frozenServingsRemaining: { gt: 0 } },
+            ],
+          },
+        });
+
+        // Create a map of recipe ID to meal prep scale factor
+        const recipeScaleFactors = new Map<string, number>();
+        mealPrepPortions.forEach((portion) => {
+          const recipe = recipes.find(r => r.id === portion.recipeId);
+          if (recipe) {
+            const originalServings = recipe.servings || 1;
+            const scaleFactor = portion.totalServings / originalServings;
+            // If multiple portions exist for same recipe, use the maximum scale factor
+            const existingFactor = recipeScaleFactors.get(portion.recipeId) || 1;
+            recipeScaleFactors.set(portion.recipeId, Math.max(existingFactor, scaleFactor));
+          }
+        });
+
         // Aggregate ingredients from recipes using smart quantity parser
         const { parseIngredientQuantity, aggregateQuantities } = await import('../../utils/ingredientQuantityParser');
         const { calculatePurchaseQuantity } = await import('../../utils/packageSizeCalculator');
@@ -451,9 +477,18 @@ export const shoppingListController = {
         const ingredientQuantities = new Map<string, Array<{ amount: number; unit: string; originalText: string }>>();
 
         recipes.forEach((recipe) => {
+          const scaleFactor = recipeScaleFactors.get(recipe.id) || 1;
+          
           recipe.ingredients.forEach((ing) => {
             const parsed = parseIngredientQuantity(ing.text);
             if (parsed) {
+              // Scale the amount if this recipe has meal prep portions
+              const scaledAmount = parsed.amount * scaleFactor;
+              const scaledParsed = {
+                ...parsed,
+                amount: scaledAmount,
+              };
+              
               // Extract ingredient name (remove quantity from text)
               const nameMatch = ing.text.replace(/^[\d\s\/\.]+/, '').trim();
               const ingredientName = nameMatch.toLowerCase().trim();
@@ -461,7 +496,7 @@ export const shoppingListController = {
               if (!ingredientQuantities.has(ingredientName)) {
                 ingredientQuantities.set(ingredientName, []);
               }
-              ingredientQuantities.get(ingredientName)!.push(parsed);
+              ingredientQuantities.get(ingredientName)!.push(scaledParsed);
             }
           });
         });
@@ -649,6 +684,37 @@ export const shoppingListController = {
         return res.status(400).json({ error: 'Meal plan has no meals with recipes' });
       }
 
+      // Get recipe IDs from meal plan
+      const mealPlanRecipeIds = mealPlan.meals
+        .filter(meal => meal.recipeId)
+        .map(meal => meal.recipeId!);
+
+      // Check for meal prep portions for these recipes (to get scaled quantities)
+      const mealPrepPortions = await prisma.mealPrepPortion.findMany({
+        where: {
+          userId,
+          recipeId: { in: mealPlanRecipeIds },
+          // Only include portions that haven't been fully consumed
+          OR: [
+            { freshServingsRemaining: { gt: 0 } },
+            { frozenServingsRemaining: { gt: 0 } },
+          ],
+        },
+      });
+
+      // Create a map of recipe ID to meal prep scale factor
+      const recipeScaleFactors = new Map<string, number>();
+      mealPrepPortions.forEach((portion) => {
+        const meal = mealPlan.meals.find(m => m.recipeId === portion.recipeId);
+        if (meal && meal.recipe) {
+          const originalServings = meal.recipe.servings || 1;
+          const scaleFactor = portion.totalServings / originalServings;
+          // If multiple portions exist for same recipe, use the maximum scale factor
+          const existingFactor = recipeScaleFactors.get(portion.recipeId) || 1;
+          recipeScaleFactors.set(portion.recipeId, Math.max(existingFactor, scaleFactor));
+        }
+      });
+
       // Aggregate ingredients from all recipes in the meal plan using smart quantity parser
       const { parseIngredientQuantity, aggregateQuantities } = await import('../../utils/ingredientQuantityParser');
       const { calculatePurchaseQuantity } = await import('../../utils/packageSizeCalculator');
@@ -659,9 +725,18 @@ export const shoppingListController = {
         if (!meal.recipe) return;
 
         const recipe = meal.recipe;
+        const scaleFactor = recipeScaleFactors.get(recipe.id) || 1;
+        
         recipe.ingredients.forEach((ing) => {
           const parsed = parseIngredientQuantity(ing.text);
           if (parsed) {
+            // Scale the amount if this recipe has meal prep portions
+            const scaledAmount = parsed.amount * scaleFactor;
+            const scaledParsed = {
+              ...parsed,
+              amount: scaledAmount,
+            };
+            
             // Extract ingredient name (remove quantity and unit from text)
             // Pattern: "2 cups flour" -> extract "flour"
             const text = ing.text.trim();
@@ -689,7 +764,7 @@ export const shoppingListController = {
             if (!ingredientQuantities.has(ingredientName)) {
               ingredientQuantities.set(ingredientName, []);
             }
-            ingredientQuantities.get(ingredientName)!.push(parsed);
+            ingredientQuantities.get(ingredientName)!.push(scaledParsed);
           }
         });
       });

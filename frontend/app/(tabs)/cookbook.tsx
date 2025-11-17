@@ -775,7 +775,7 @@ export default function CookbookScreen() {
                   onDislike={handleDislike}
                   initialLiked={userFeedback[recipe.id]?.liked || false}
                   initialDisliked={userFeedback[recipe.id]?.disliked || false}
-                  size="sm"
+                  size="md"
                 />
               </View>
             </HapticTouchableOpacity>

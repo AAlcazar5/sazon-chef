@@ -3,6 +3,7 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import AnimatedText from '../components/ui/AnimatedText';
 import LoadingState from '../components/ui/LoadingState';
 import SazonMascot from '../components/mascot/SazonMascot';
+import MealPrepScalingModal from '../components/recipe/MealPrepScalingModal';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +11,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useApi } from '../hooks/useApi';
 import { recipeApi, collectionsApi, shoppingListApi, costTrackingApi, shoppingAppApi, ingredientAvailabilityApi } from '../lib/api';
 import type { Recipe } from '../types';
+import { ScaledRecipe } from '../utils/recipeScaling';
+import { generateStorageInstructions, getStorageMethods } from '../utils/storageInstructions';
+import { getMealPrepTags, getMealPrepSuitabilityBadge } from '../utils/mealPrepTags';
 import * as Haptics from 'expo-haptics';
 
 // Helper function to extract text from ingredients/instructions
@@ -48,6 +52,7 @@ export default function RecipeModal() {
   const [recipeAvailability, setRecipeAvailability] = useState<any>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [integrations, setIntegrations] = useState<any[]>([]);
+  const [showMealPrepModal, setShowMealPrepModal] = useState(false);
 
   // Animate modal entrance
   useEffect(() => {
@@ -469,6 +474,11 @@ export default function RecipeModal() {
     router.push(`/(tabs)/meal-plan?recipeId=${recipe.id}&recipeTitle=${encodeURIComponent(recipe.title)}`);
   };
 
+  const handleMealPrepScaling = (scaledRecipe: ScaledRecipe) => {
+    // Recipe has been scaled - user can add to meal plan from the scaling modal
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const handleEditRecipe = () => {
     if (!recipe) return;
     console.log('📱 Modal: Editing recipe', recipe.id);
@@ -517,7 +527,7 @@ export default function RecipeModal() {
           opacity: modalOpacity,
         }}
       >
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <SafeAreaView className="flex-1 bg-white" edges={['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
           <HapticTouchableOpacity 
             onPress={() => router.back()}
@@ -614,7 +624,7 @@ export default function RecipeModal() {
             <Ionicons name="create-outline" size={24} color="#F97316" />
           </HapticTouchableOpacity>
         ) : (
-          <View className="w-8" />
+        <View className="w-8" />
         )}
       </View>
 
@@ -940,6 +950,208 @@ export default function RecipeModal() {
             </View>
           )}
 
+          {/* Meal Prep Suitability Badge */}
+          {getMealPrepSuitabilityBadge(recipe) && (
+            <View className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Meal Prep Suitability</Text>
+                  <Text className="text-xs text-gray-500 dark:text-gray-500">
+                    How well this recipe works for meal prep
+                  </Text>
+                </View>
+                <View className={`px-4 py-3 rounded-lg border-2 ${
+                  (() => {
+                    const badge = getMealPrepSuitabilityBadge(recipe);
+                    if (badge?.includes('Great')) return 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
+                    if (badge?.includes('Good')) return 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700';
+                    if (badge?.includes('Okay')) return 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700';
+                    if (badge?.includes('Not Recommended')) return 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700';
+                    return 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700';
+                  })()
+                }`}>
+                  <Text className={`text-lg font-bold text-center ${
+                    (() => {
+                      const badge = getMealPrepSuitabilityBadge(recipe);
+                      if (badge?.includes('Great')) return 'text-green-700 dark:text-green-300';
+                      if (badge?.includes('Good')) return 'text-blue-700 dark:text-blue-300';
+                      if (badge?.includes('Okay')) return 'text-yellow-700 dark:text-yellow-300';
+                      if (badge?.includes('Not Recommended')) return 'text-red-700 dark:text-red-300';
+                      return 'text-orange-700 dark:text-orange-300';
+                    })()
+                  }`}>
+                    {(() => {
+                      const badge = getMealPrepSuitabilityBadge(recipe);
+                      if (badge?.includes('Great')) return '⭐';
+                      if (badge?.includes('Good')) return '👍';
+                      if (badge?.includes('Okay')) return '✓';
+                      if (badge?.includes('Not Recommended')) return '⚠️';
+                      return '🍱';
+                    })()}
+                  </Text>
+                  <Text className={`text-xs text-center mt-1 font-semibold ${
+                    (() => {
+                      const badge = getMealPrepSuitabilityBadge(recipe);
+                      if (badge?.includes('Great')) return 'text-green-600 dark:text-green-400';
+                      if (badge?.includes('Good')) return 'text-blue-600 dark:text-blue-400';
+                      if (badge?.includes('Okay')) return 'text-yellow-600 dark:text-yellow-400';
+                      if (badge?.includes('Not Recommended')) return 'text-red-600 dark:text-red-400';
+                      return 'text-orange-600 dark:text-orange-400';
+                    })()
+                  }`}>
+                    {getMealPrepSuitabilityBadge(recipe)?.split(' ')[0]}
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Badge Text and Score */}
+              <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    {getMealPrepSuitabilityBadge(recipe)}
+                  </Text>
+                  {recipe.mealPrepScore !== undefined && (
+                    <Text className={`text-sm font-bold ${
+                      recipe.mealPrepScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                      recipe.mealPrepScore >= 60 ? 'text-blue-600 dark:text-blue-400' :
+                      recipe.mealPrepScore >= 40 ? 'text-yellow-600 dark:text-yellow-400' :
+                      'text-red-600 dark:text-red-400'
+                    }`}>
+                      {Math.round(recipe.mealPrepScore)}/100
+                    </Text>
+                  )}
+                </View>
+                
+                {/* Meal Prep Tags */}
+                {getMealPrepTags(recipe).length > 0 && (
+                  <View className="flex-row space-x-2 mt-2 flex-wrap">
+                    {getMealPrepTags(recipe).slice(0, 4).map((tag) => (
+                      <View
+                        key={tag.id}
+                        className={`px-2.5 py-1 rounded-full flex-row items-center border ${tag.bgColor} ${tag.borderColor}`}
+                      >
+                        <Text className="text-xs mr-1">{tag.emoji}</Text>
+                        <Text className={`text-xs font-medium ${tag.textColor}`}>
+                          {tag.label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Storage Instructions - Enhanced Display */}
+          {(recipe.freezable || recipe.weeklyPrepFriendly || recipe.storageInstructions || recipe.fridgeStorageDays || recipe.freezerStorageMonths || recipe.shelfStable) && (
+            <View className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
+              <View className="flex-row items-center justify-between mb-3">
+                <View className="flex-row items-center">
+                  <Ionicons name="snow-outline" size={20} color="#3B82F6" />
+                  <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 ml-2">📦 Storage Instructions</Text>
+                </View>
+                {/* Storage Method Indicators */}
+                {getStorageMethods(recipe).length > 0 && (
+                  <View className="flex-row space-x-1">
+                    {getStorageMethods(recipe).map((method) => {
+                      const methodConfig = {
+                        freezer: { emoji: '❄️', icon: 'snow', color: '#3B82F6' },
+                        fridge: { emoji: '🧊', icon: 'snow-outline', color: '#06B6D4' },
+                        shelf: { emoji: '📦', icon: 'cube-outline', color: '#6B7280' },
+                      }[method];
+                      return (
+                        <View
+                          key={method}
+                          className="bg-white dark:bg-gray-700 px-2 py-1 rounded-full border border-blue-200 dark:border-blue-800"
+                        >
+                          <Ionicons 
+                            name={methodConfig.icon as any} 
+                            size={14} 
+                            color={methodConfig.color} 
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+              
+              {recipe.storageInstructions ? (
+                <Text className="text-gray-700 dark:text-gray-300 text-sm leading-5 mb-2">
+                  {recipe.storageInstructions}
+                </Text>
+              ) : (
+                <View className="space-y-3">
+                  {recipe.fridgeStorageDays && (
+                    <View className="flex-row items-start">
+                      <Text className="text-lg mr-2">🧊</Text>
+                      <View className="flex-1">
+                        <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Refrigerate
+                        </Text>
+                        <Text className="text-sm text-gray-700 dark:text-gray-300">
+                          Up to {recipe.fridgeStorageDays} day{recipe.fridgeStorageDays !== 1 ? 's' : ''} in the refrigerator
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  {recipe.freezerStorageMonths && (
+                    <View className="flex-row items-start">
+                      <Text className="text-lg mr-2">❄️</Text>
+                      <View className="flex-1">
+                        <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Freeze
+                        </Text>
+                        <Text className="text-sm text-gray-700 dark:text-gray-300">
+                          Up to {recipe.freezerStorageMonths} month{recipe.freezerStorageMonths !== 1 ? 's' : ''} in the freezer
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  {recipe.shelfStable && (
+                    <View className="flex-row items-start">
+                      <Text className="text-lg mr-2">📦</Text>
+                      <View className="flex-1">
+                        <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Shelf-Stable
+                        </Text>
+                        <Text className="text-sm text-gray-700 dark:text-gray-300">
+                          Can be stored at room temperature
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  {recipe.freezable && !recipe.freezerStorageMonths && (
+                    <View className="flex-row items-start">
+                      <Text className="text-lg mr-2">❄️</Text>
+                      <View className="flex-1">
+                        <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Freezable
+                        </Text>
+                        <Text className="text-sm text-gray-700 dark:text-gray-300">
+                          Can be frozen for up to 3 months (recommended)
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  {recipe.weeklyPrepFriendly && !recipe.fridgeStorageDays && (
+                    <View className="flex-row items-start">
+                      <Text className="text-lg mr-2">🧊</Text>
+                      <View className="flex-1">
+                        <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Weekly Meal Prep
+                        </Text>
+                        <Text className="text-sm text-gray-700 dark:text-gray-300">
+                          Good for weekly meal prep - refrigerate up to 5 days
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Price Comparison & Savings */}
           {recipeSavings && recipeSavings.potentialSavings > 0 && (
             <View className="mb-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
@@ -1033,6 +1245,19 @@ export default function RecipeModal() {
 
       {/* Action Buttons */}
       <View className="p-4 border-t border-gray-200">
+        {/* Meal Prep Scaling Button - Available for all recipes */}
+        <HapticTouchableOpacity 
+          onPress={() => setShowMealPrepModal(true)}
+          disabled={!recipe}
+          hapticStyle="medium"
+          className="bg-orange-500 dark:bg-orange-600 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center"
+        >
+          <Ionicons name="restaurant" size={20} color="white" style={{ marginRight: 8 }} />
+          <Text className="text-white font-semibold text-lg">
+            🍱 Meal Prep This Recipe
+          </Text>
+        </HapticTouchableOpacity>
+
         {/* Add to Shopping List Button - Available for all recipes */}
         <HapticTouchableOpacity 
           onPress={handleAddToShoppingList}
@@ -1159,21 +1384,21 @@ export default function RecipeModal() {
           // System recipe actions (from home screen)
           <>
             <HapticTouchableOpacity 
-              onPress={handleSaveRecipe}
-              disabled={isSaving}
-              className={`py-3 px-6 rounded-lg items-center mb-2 ${
-                isSaving ? 'bg-orange-300' : 'bg-orange-500'
-              }`}
-            >
-              <Text className="text-white font-semibold text-lg">
-                {isSaving ? 'Saving...' : 'Save to Cookbook'}
-              </Text>
+          onPress={handleSaveRecipe}
+          disabled={isSaving}
+          className={`py-3 px-6 rounded-lg items-center mb-2 ${
+            isSaving ? 'bg-orange-300' : 'bg-orange-500'
+          }`}
+        >
+          <Text className="text-white font-semibold text-lg">
+            {isSaving ? 'Saving...' : 'Save to Cookbook'}
+          </Text>
             </HapticTouchableOpacity>
             <HapticTouchableOpacity 
-              onPress={handleNotInterested}
-              className="border border-gray-300 py-3 px-6 rounded-lg items-center"
-            >
-              <Text className="text-gray-700 font-semibold">Not Interested</Text>
+          onPress={handleNotInterested}
+          className="border border-gray-300 py-3 px-6 rounded-lg items-center"
+        >
+          <Text className="text-gray-700 font-semibold">Not Interested</Text>
             </HapticTouchableOpacity>
           </>
         )}
@@ -1450,6 +1675,14 @@ export default function RecipeModal() {
           </View>
         </SafeAreaView>
       </Modal>
+
+      {/* Meal Prep Scaling Modal */}
+      <MealPrepScalingModal
+        visible={showMealPrepModal}
+        recipe={recipe}
+        onClose={() => setShowMealPrepModal(false)}
+        onConfirm={handleMealPrepScaling}
+      />
     </Animated.View>
     </>
   );
