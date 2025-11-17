@@ -38,6 +38,8 @@ export interface Recipe {
   description: string;
   cookTime: number;
   cuisine: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  servings?: number; // Number of servings (defaults to 1)
   imageUrl?: string;
   // Macro nutrients - match backend structure
   calories: number;
@@ -57,6 +59,17 @@ export interface Recipe {
   // Recipe source tracking
   source?: 'database' | 'user-created' | 'ai-generated' | 'external';
   isUserCreated?: boolean;
+  // Meal prep suitability (Phase 6, Group 14)
+  mealPrepSuitable?: boolean;
+  freezable?: boolean;
+  batchFriendly?: boolean;
+  weeklyPrepFriendly?: boolean;
+  mealPrepScore?: number;
+  // Storage instructions
+  storageInstructions?: string;
+  fridgeStorageDays?: number;
+  freezerStorageMonths?: number;
+  shelfStable?: boolean;
   // Health grade (Phase 6)
   healthGrade?: 'A' | 'B' | 'C' | 'D' | 'F';
   healthGradeScore?: number;

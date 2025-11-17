@@ -1,4 +1,4 @@
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, useColorScheme } from 'react-native';
 import { useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import Icon from '../ui/Icon';
@@ -27,6 +27,7 @@ export default function FeedbackButtons({
   initialDisliked = false,
   size = 'md'
 }: FeedbackButtonsProps) {
+  const colorScheme = useColorScheme();
   const [feedback, setFeedback] = useState<FeedbackState>({
     liked: initialLiked,
     disliked: initialDisliked
@@ -34,16 +35,16 @@ export default function FeedbackButtons({
 
   const sizeClasses = {
     sm: {
-      container: 'p-1',
-      iconSize: IconSizes.SM
+      container: 'p-2',
+      iconSize: IconSizes.MD
     },
     md: {
       container: 'p-2',
       iconSize: IconSizes.MD
     },
     lg: {
-      container: 'p-3',
-      iconSize: IconSizes.LG
+      container: 'p-2',
+      iconSize: IconSizes.MD
     }
   };
 
@@ -84,15 +85,16 @@ export default function FeedbackButtons({
   const currentSize = sizeClasses[size];
 
   return (
-    <View className="flex-row space-x-1">
+    <View className="flex-row">
       {/* Dislike Button */}
       <TouchableOpacity
         onPress={handleDislike}
         className={`
           ${currentSize.container} 
           rounded-full 
+          mr-2
           ${feedback.disliked 
-            ? 'bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800' 
+            ? 'bg-red-500 dark:bg-red-600 border border-red-600 dark:border-red-700' 
             : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
           }
         `}
@@ -100,7 +102,7 @@ export default function FeedbackButtons({
         <Icon 
           name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE} 
           size={currentSize.iconSize} 
-          color={feedback.disliked ? "#EF4444" : "#6B7280"}
+          color={feedback.disliked ? "#FFFFFF" : (colorScheme === 'dark' ? "#D1D5DB" : "#4B5563")}
           accessibilityLabel={feedback.disliked ? "Disliked" : "Dislike recipe"}
         />
       </TouchableOpacity>
@@ -112,7 +114,7 @@ export default function FeedbackButtons({
           ${currentSize.container} 
           rounded-full 
           ${feedback.liked 
-            ? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800' 
+            ? 'bg-green-500 dark:bg-green-600 border border-green-600 dark:border-green-700' 
             : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
           }
         `}
@@ -120,7 +122,7 @@ export default function FeedbackButtons({
         <Icon 
           name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} 
           size={currentSize.iconSize} 
-          color={feedback.liked ? "#10B981" : "#6B7280"}
+          color={feedback.liked ? "#FFFFFF" : (colorScheme === 'dark' ? "#D1D5DB" : "#4B5563")}
           accessibilityLabel={feedback.liked ? "Liked" : "Like recipe"}
         />
       </TouchableOpacity>

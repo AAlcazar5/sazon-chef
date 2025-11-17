@@ -21,6 +21,7 @@ router.get('/random', recipeController.getRandomRecipe);
 router.get('/saved', recipeController.getSavedRecipes);
 router.get('/liked', recipeController.getLikedRecipes);
 router.get('/disliked', recipeController.getDislikedRecipes);
+router.get('/batch-cooking-recommendations', recipeController.getBatchCookingRecommendations);
 router.post('/', recipeController.createRecipe);
 
 // Collections - must come before /:id

@@ -6,6 +6,8 @@ import AnimatedText from '../ui/AnimatedText';
 import SazonMascot from '../mascot/SazonMascot';
 import { detectRecipeSuperfoods, SuperfoodCategory } from '../../utils/superfoodDetection';
 import { SUPERFOOD_CATEGORIES } from '../../constants/Superfoods';
+import { getStorageMethods } from '../../utils/storageInstructions';
+import { getMealPrepTags } from '../../utils/mealPrepTags';
 import { useMemo } from 'react';
 
 // Interfaces for this component
@@ -48,6 +50,12 @@ interface RecipeCardProps {
       };
     };
     ingredients?: string[] | Array<{ id: string; text: string; order: number } | { name: string }>;
+    // Meal prep and storage
+    freezable?: boolean;
+    weeklyPrepFriendly?: boolean;
+    fridgeStorageDays?: number;
+    freezerStorageMonths?: number;
+    shelfStable?: boolean;
   };
   variant?: 'default' | 'compact' | 'featured';
   showFeedback?: boolean;
@@ -91,6 +99,16 @@ export default function RecipeCard({
         };
       });
   }, [detectedSuperfoods, preferredSuperfoods]);
+
+  // Get storage methods
+  const storageMethods = useMemo(() => {
+    return getStorageMethods(recipe);
+  }, [recipe]);
+
+  // Get meal prep tags
+  const mealPrepTags = useMemo(() => {
+    return getMealPrepTags(recipe);
+  }, [recipe]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30';
@@ -299,6 +317,60 @@ export default function RecipeCard({
               </Text>
             </View>
           )}
+        </View>
+      )}
+
+      {/* Meal Prep Tags */}
+      {mealPrepTags.length > 0 && (
+        <View className="flex-row space-x-2 mt-2 flex-wrap">
+          {mealPrepTags.slice(0, 3).map((tag) => (
+            <View
+              key={tag.id}
+              className={`px-2 py-1 rounded-full flex-row items-center border ${tag.bgColor} ${tag.borderColor}`}
+            >
+              <Text className="text-xs mr-1">{tag.emoji}</Text>
+              <Text className={`text-xs font-medium ${tag.textColor}`}>
+                {tag.label}
+              </Text>
+            </View>
+          ))}
+          {mealPrepTags.length > 3 && (
+            <View className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full border border-gray-200 dark:border-gray-600">
+              <Text className="text-gray-800 dark:text-gray-300 text-xs font-medium">
+                +{mealPrepTags.length - 3} more
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Storage Method Indicators */}
+      {storageMethods.length > 0 && (
+        <View className="flex-row space-x-2 mt-2 flex-wrap">
+          {storageMethods.map((method) => {
+            const methodConfig = {
+              freezer: { emoji: '❄️', label: 'Freezer', icon: 'snow', bgColor: 'bg-blue-100 dark:bg-blue-900/30', borderColor: 'border-blue-200 dark:border-blue-800', textColor: 'text-blue-800 dark:text-blue-300' },
+              fridge: { emoji: '🧊', label: 'Fridge', icon: 'snow-outline', bgColor: 'bg-cyan-100 dark:bg-cyan-900/30', borderColor: 'border-cyan-200 dark:border-cyan-800', textColor: 'text-cyan-800 dark:text-cyan-300' },
+              shelf: { emoji: '📦', label: 'Shelf', icon: 'cube-outline', bgColor: 'bg-gray-100 dark:bg-gray-700', borderColor: 'border-gray-200 dark:border-gray-600', textColor: 'text-gray-800 dark:text-gray-300' },
+            }[method];
+
+            return (
+              <View
+                key={method}
+                className={`px-2 py-1 rounded-full flex-row items-center border ${methodConfig.bgColor} ${methodConfig.borderColor}`}
+              >
+                <Text className="text-xs mr-1">{methodConfig.emoji}</Text>
+                <Ionicons 
+                  name={methodConfig.icon as any} 
+                  size={12} 
+                  color={method === 'freezer' ? '#3B82F6' : method === 'fridge' ? '#06B6D4' : '#6B7280'} 
+                />
+                <Text className={`text-xs font-medium ml-1 ${methodConfig.textColor}`}>
+                  {methodConfig.label}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       )}
 

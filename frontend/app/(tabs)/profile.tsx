@@ -10,7 +10,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import * as Haptics from 'expo-haptics';
 import type { UserProfile, UserNotifications } from '../../types';
-import SazonMascot from '../../components/mascot/SazonMascot';
 import HelpTooltip from '../../components/ui/HelpTooltip';
 
 export default function ProfileScreen() {
@@ -225,15 +224,10 @@ export default function ProfileScreen() {
       {/* Header */}
       <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-6 border-b border-gray-200 dark:border-gray-700">
         <View className="items-center">
-          <View className="flex-row items-center justify-center mb-3">
-            <View className="w-20 h-20 bg-orange-500 rounded-full items-center justify-center">
-              <Text className="text-white text-2xl font-bold">
-                {profile.name.split(' ').map(n => n[0]).join('')}
-              </Text>
-            </View>
-            <View className="ml-3">
-              <SazonMascot expression="happy" size="small" variant="orange" />
-            </View>
+          <View className="w-20 h-20 bg-orange-500 rounded-full items-center justify-center mb-3">
+            <Text className="text-white text-2xl font-bold">
+              {profile.name.split(' ').map(n => n[0]).join('')}
+            </Text>
           </View>
           <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">{profile.name}</Text>
           <Text className="text-gray-500 dark:text-gray-200">{profile.email}</Text>
@@ -241,44 +235,6 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView className="flex-1">
-        {/* Achievements Section */}
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <View className="flex-row items-center mb-3">
-            <SazonMascot expression="proud" size="small" variant="orange" />
-            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 ml-3">Achievements</Text>
-          </View>
-          
-          <View>
-            <View className="flex-row items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-900/30 mb-3">
-              <View className="flex-row items-center flex-1">
-                <Icon name={Icons.FAVORITE} size={IconSizes.SM} color="#F97316" accessibilityLabel="Recipes liked" />
-                <Text className="text-gray-900 dark:text-gray-100 font-medium ml-2">Recipe Explorer</Text>
-              </View>
-              <Text className="text-orange-600 dark:text-orange-400 font-semibold">Coming Soon</Text>
-            </View>
-            
-            <View className="flex-row items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-900/30 mb-3">
-              <View className="flex-row items-center flex-1">
-                <Icon name={Icons.BOOKMARK} size={IconSizes.SM} color="#F97316" accessibilityLabel="Recipes saved" />
-                <Text className="text-gray-900 dark:text-gray-100 font-medium ml-2">Cookbook Collector</Text>
-              </View>
-              <Text className="text-orange-600 dark:text-orange-400 font-semibold">Coming Soon</Text>
-            </View>
-            
-            <View className="flex-row items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-900/30">
-              <View className="flex-row items-center flex-1">
-                <Icon name={Icons.MEAL_PLAN} size={IconSizes.SM} color="#F97316" accessibilityLabel="Meal plans" />
-                <Text className="text-gray-900 dark:text-gray-100 font-medium ml-2">Meal Planner</Text>
-              </View>
-              <Text className="text-orange-600 dark:text-orange-400 font-semibold">Coming Soon</Text>
-            </View>
-          </View>
-          
-          <Text className="text-gray-500 dark:text-gray-400 text-xs mt-3 text-center">
-            Unlock achievements as you use Sazon Chef!
-          </Text>
-        </View>
-
         {/* Appearance Section */}
         <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
           <View className="flex-row items-center mb-3">

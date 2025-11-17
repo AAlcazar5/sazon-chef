@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { healthifyService } from '@/services/healthifyService';
 import { getUserId } from '@/utils/authHelper';
+import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
 
 // Note: Request.user type is declared in authMiddleware.ts
 // This ensures consistency across the application
@@ -268,7 +269,8 @@ export const recipeController = {
         maxCookTime, 
         difficulty,
         includeAI,
-        maxCost
+        maxCost,
+        mealPrepMode // Filter by meal prep suitability
       } = req.query;
       
       console.log('🔍 Filter parameters:', { cuisines, dietaryRestrictions, maxCookTime, difficulty });
@@ -332,6 +334,23 @@ export const recipeController = {
           cookTimeFilter.gte = Math.max(cookTimeFilter.gte ?? 0, 46);
         }
         if (Object.keys(cookTimeFilter).length > 0) where.cookTime = cookTimeFilter;
+      }
+      
+      // Filter by meal prep suitability
+      // Only apply filter when explicitly enabled (true, 'true', or '1')
+      // When false, undefined, or not provided, don't filter by meal prep
+      if (mealPrepMode === 'true' || mealPrepMode === '1' || mealPrepMode === true) {
+        // Show recipes that are suitable for meal prep (any of the meal prep flags)
+        where.OR = [
+          { mealPrepSuitable: true },
+          { freezable: true },
+          { batchFriendly: true },
+          { weeklyPrepFriendly: true }
+        ];
+        console.log('🍱 Filtering for meal prep suitable recipes');
+      } else if (mealPrepMode === 'false' || mealPrepMode === false || mealPrepMode === '0') {
+        // Explicitly disabled - ensure no meal prep filter is applied
+        console.log('🍽️ Meal prep mode disabled - showing all recipes');
       }
       
       console.log('🔍 Querying database for recipes with filters...');
@@ -1869,6 +1888,23 @@ export const recipeController = {
         message: error.message,
         code: error.code || (isQuotaError ? 'insufficient_quota' : 'HEALTHIFY_ERROR'),
       });
+    }
+  },
+
+  // Get batch cooking recommendations based on user preferences
+  async getBatchCookingRecommendations(req: Request, res: Response) {
+    try {
+      console.log('🍱 GET /api/recipes/batch-cooking-recommendations - METHOD CALLED');
+      const userId = getUserId(req);
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const recommendations = await generateBatchCookingRecommendations(userId, limit);
+
+      console.log(`✅ Returning ${recommendations.length} batch cooking recommendations`);
+      res.json(recommendations);
+    } catch (error: any) {
+      console.error('❌ Error in getBatchCookingRecommendations:', error);
+      res.status(500).json({ error: 'Failed to fetch batch cooking recommendations', details: error.message });
     }
   },
 };

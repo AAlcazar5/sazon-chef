@@ -80,7 +80,9 @@ api.interceptors.response.use(
       const isExpected404 = statusCode === 404 && (
         /no price data found/i.test(String(rawMessage || '')) ||
         /meal plan not found/i.test(String(rawMessage || '')) ||
-        /No active meal plan/i.test(String(rawMessage || ''))
+        /No active meal plan/i.test(String(rawMessage || '')) ||
+        /template not found/i.test(String(rawMessage || '')) ||
+        /no meal prep template exists/i.test(String(rawMessage || ''))
       );
       
       if (!isAlreadySaved && !isExpected404) {
@@ -226,12 +228,19 @@ export const recipeApi = {
     return apiClient.get(`/recipes/${id}`);
   },
 
+  getBatchCookingRecommendations: (limit?: number) => {
+    return apiClient.get('/recipes/batch-cooking-recommendations', {
+      params: { limit: limit || 10 },
+    });
+  },
+
   getSuggestedRecipes: (filters?: {
     cuisines?: string[];
     dietaryRestrictions?: string[];
     maxCookTime?: number;
     difficulty?: string[];
     offset?: number;
+    mealPrepMode?: boolean;
   }) => {
     const params: any = {};
     
@@ -249,6 +258,10 @@ export const recipeApi = {
     }
     if (filters?.offset !== undefined) {
       params.offset = filters.offset;
+    }
+    // Only include mealPrepMode when it's explicitly true
+    if (filters?.mealPrepMode === true) {
+      params.mealPrepMode = 'true';
     }
     
     return apiClient.get('/recipes/suggested', { params });
@@ -375,6 +388,139 @@ export const mealHistoryApi = {
   }
 };
 
+// Meal Prep API
+export const mealPrepApi = {
+  // Create a meal prep portion entry
+  createMealPrepPortion: (data: {
+    recipeId: string;
+    totalServings: number;
+    servingsToFreeze: number;
+    servingsForWeek: number;
+    prepDate?: string;
+    notes?: string;
+  }) => {
+    return apiClient.post('/meal-prep/portions', data);
+  },
+
+  // Get all meal prep portions
+  getMealPrepPortions: (includeConsumed?: boolean) => {
+    return apiClient.get('/meal-prep/portions', {
+      params: { includeConsumed: includeConsumed !== false },
+    });
+  },
+
+  // Get a specific meal prep portion
+  getMealPrepPortion: (id: string) => {
+    return apiClient.get(`/meal-prep/portions/${id}`);
+  },
+
+  // Record consumption of a meal prep portion
+  consumeMealPrepPortion: (id: string, data: {
+    servings: number;
+    portionType: 'frozen' | 'fresh';
+    consumedDate?: string;
+    notes?: string;
+  }) => {
+    return apiClient.post(`/meal-prep/portions/${id}/consume`, data);
+  },
+
+  // Get meal prep statistics
+  getMealPrepStats: () => {
+    return apiClient.get('/meal-prep/stats');
+  },
+
+  // Meal prep session management
+  createMealPrepSession: (data: {
+    scheduledDate: string;
+    scheduledTime?: string;
+    duration?: number;
+    notes?: string;
+    recipeIds?: string[];
+  }) => {
+    return apiClient.post('/meal-prep/sessions', data);
+  },
+
+  getMealPrepSessions: (params?: {
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    return apiClient.get('/meal-prep/sessions', { params });
+  },
+
+  updateMealPrepSession: (id: string, data: {
+    scheduledDate?: string;
+    scheduledTime?: string;
+    duration?: number;
+    notes?: string;
+    isCompleted?: boolean;
+  }) => {
+    return apiClient.put(`/meal-prep/sessions/${id}`, data);
+  },
+
+  deleteMealPrepSession: (id: string) => {
+    return apiClient.delete(`/meal-prep/sessions/${id}`);
+  },
+
+  // Get cost analysis for meal prep
+  getMealPrepCostAnalysis: (recipeId: string, totalServings?: number) => {
+    return apiClient.get('/meal-prep/cost-analysis', {
+      params: { recipeId, totalServings },
+    });
+  },
+
+  // Thawing reminders
+  getThawingReminders: (daysAhead?: number) => {
+    return apiClient.get('/meal-prep/thawing-reminders', {
+      params: { daysAhead: daysAhead || 1 },
+    });
+  },
+
+  scheduleThawingReminder: (data: {
+    mealPrepPortionId: string;
+    reminderDate: string;
+    reminderTime?: string;
+  }) => {
+    return apiClient.post('/meal-prep/thawing-reminders', data);
+  },
+
+  // Meal prep templates
+  createOrUpdateTemplate: (data: {
+    recipeId: string;
+    defaultServings: number;
+    defaultServingsToFreeze?: number;
+    defaultServingsForWeek?: number;
+    name?: string;
+    notes?: string;
+    isFavorite?: boolean;
+  }) => {
+    return apiClient.post('/meal-prep/templates', data);
+  },
+
+  getTemplates: (favoriteOnly?: boolean) => {
+    return apiClient.get('/meal-prep/templates', {
+      params: { favoriteOnly: favoriteOnly ? 'true' : undefined },
+    });
+  },
+
+  getTemplateByRecipe: (recipeId: string) => {
+    return apiClient.get(`/meal-prep/templates/recipe/${recipeId}`);
+  },
+
+  deleteTemplate: (id: string) => {
+    return apiClient.delete(`/meal-prep/templates/${id}`);
+  },
+
+  useTemplate: (id: string, data?: {
+    overrideServings?: number;
+    overrideServingsToFreeze?: number;
+    overrideServingsForWeek?: number;
+    prepDate?: string;
+    notes?: string;
+  }) => {
+    return apiClient.post(`/meal-prep/templates/${id}/use`, data);
+  },
+};
+
 // Daily Suggestions API
 export const dailySuggestionsApi = {
   // Get daily meal suggestions
@@ -478,8 +624,8 @@ export const mealPlanApi = {
     return apiClient.get('/meal-plan/daily');
   },
 
-  getWeeklyPlan: () => {
-    return apiClient.get('/meal-plan/weekly');
+  getWeeklyPlan: (params?: { startDate?: string; endDate?: string }) => {
+    return apiClient.get('/meal-plan/weekly', { params });
   },
 
   generateMealPlan: (preferences: any) => {

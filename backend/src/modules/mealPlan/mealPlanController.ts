@@ -133,6 +133,67 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
       }
     });
 
+    // Get meal prep sessions for the week
+    const mealPrepSessions = await prisma.mealPrepSession.findMany({
+      where: {
+        userId,
+        scheduledDate: {
+          gte: start,
+          lte: end
+        }
+      },
+      include: {
+        recipes: {
+          include: {
+            recipe: {
+              include: {
+                ingredients: { orderBy: { order: 'asc' } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { scheduledDate: 'asc' },
+    });
+
+    // Get active meal prep portions (available for consumption)
+    const mealPrepPortions = await prisma.mealPrepPortion.findMany({
+      where: {
+        userId,
+        AND: [
+          {
+            OR: [
+              { freshServingsRemaining: { gt: 0 } },
+              { frozenServingsRemaining: { gt: 0 } },
+            ],
+          },
+          {
+            OR: [
+              { expiryDate: null },
+              { expiryDate: { gte: start } },
+            ],
+          },
+          {
+            OR: [
+              { freezerExpiryDate: null },
+              { freezerExpiryDate: { gte: start } },
+            ],
+          },
+        ],
+      },
+      include: {
+        recipe: {
+          include: {
+            ingredients: { orderBy: { order: 'asc' } },
+          },
+        },
+        consumedPortions: {
+          orderBy: { consumedDate: 'desc' },
+          take: 5, // Recent consumption
+        },
+      },
+    });
+
     // Organize by date
     const weeklyPlan: { [key: string]: any } = {};
     
@@ -142,6 +203,11 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
         plan.meals.filter(meal => 
           meal.date.toISOString().split('T')[0] === dateStr
         )
+      );
+
+      // Get meal prep sessions for this date
+      const dayMealPrepSessions = mealPrepSessions.filter(session => 
+        session.scheduledDate.toISOString().split('T')[0] === dateStr
       );
 
       weeklyPlan[dateStr] = {
@@ -155,7 +221,8 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
         totalCalories: dayMeals.reduce((sum, meal) => {
           if (meal.recipe) return sum + meal.recipe.calories;
           return sum + (meal.customCalories || 0);
-        }, 0)
+        }, 0),
+        mealPrepSessions: dayMealPrepSessions,
       };
     }
 
@@ -163,7 +230,8 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
       startDate: start.toISOString().split('T')[0],
       endDate: end.toISOString().split('T')[0],
       weeklyPlan,
-      totalPlannedMeals: mealPlans.reduce((sum, plan) => sum + plan.meals.length, 0)
+      totalPlannedMeals: mealPlans.reduce((sum, plan) => sum + plan.meals.length, 0),
+      mealPrepPortions, // Available meal prep portions
     });
   } catch (error) {
     console.error('Error getting weekly plan:', error);

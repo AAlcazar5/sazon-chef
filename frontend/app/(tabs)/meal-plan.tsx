@@ -10,7 +10,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { useApi } from '../../hooks/useApi';
-import { mealPlanApi, aiRecipeApi, shoppingListApi, userApi, costTrackingApi } from '../../lib/api';
+import { mealPlanApi, aiRecipeApi, shoppingListApi, userApi, costTrackingApi, mealPrepApi } from '../../lib/api';
 import type { WeeklyPlan, DailySuggestion } from '../../types';
 import * as Haptics from 'expo-haptics';
 
@@ -38,7 +38,7 @@ const generateHours = () => {
 };
 
 export default function MealPlanScreen() {
-  const { recipeId, recipeTitle } = useLocalSearchParams();
+  const { recipeId, recipeTitle, scaledServings } = useLocalSearchParams();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
   const [dailySuggestion, setDailySuggestion] = useState<DailySuggestion | null>(null);
@@ -70,6 +70,10 @@ export default function MealPlanScreen() {
   const [loadingCostAnalysis, setLoadingCostAnalysis] = useState(false);
   const [shoppingListSavings, setShoppingListSavings] = useState<any>(null);
   const [loadingSavings, setLoadingSavings] = useState(false);
+  
+  // Thawing reminders state
+  const [thawingReminders, setThawingReminders] = useState<any[]>([]);
+  const [loadingThawingReminders, setLoadingThawingReminders] = useState(false);
   
   // Daily macros tracking
   const [dailyMacros, setDailyMacros] = useState({
@@ -123,13 +127,18 @@ export default function MealPlanScreen() {
       setLoading(true);
       console.log('📱 MealPlan: Loading meal plan data');
       
-      // Load weekly plan
-      const weeklyResponse = await mealPlanApi.getWeeklyPlan();
+      // Load weekly plan (now includes meal prep sessions and portions)
+      const startDate = weekDates[0].toISOString().split('T')[0];
+      const endDate = weekDates[6].toISOString().split('T')[0];
+      const weeklyResponse = await mealPlanApi.getWeeklyPlan({ startDate, endDate });
       setWeeklyPlan(weeklyResponse.data);
       
       // Load daily suggestion for selected date
       const dailyResponse = await mealPlanApi.getDailySuggestion();
       setDailySuggestion(dailyResponse.data);
+      
+      // Load thawing reminders
+      loadThawingReminders();
       
       // Cost analysis will be loaded when meals are available
       
@@ -139,6 +148,18 @@ export default function MealPlanScreen() {
       Alert.alert('Error', 'Failed to load meal plan');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadThawingReminders = async () => {
+    try {
+      setLoadingThawingReminders(true);
+      const response = await mealPrepApi.getThawingReminders(3); // Get reminders for next 3 days
+      setThawingReminders(response.data.reminders || []);
+    } catch (error) {
+      console.error('📱 MealPlan: Error loading thawing reminders', error);
+    } finally {
+      setLoadingThawingReminders(false);
     }
   };
 
@@ -1170,11 +1191,26 @@ export default function MealPlanScreen() {
   useEffect(() => {
     loadMealPlan();
     
-    // If we have a recipe to add, show the time picker modal
-    if (recipeId && recipeTitle) {
+    // If we have a scaled recipe from meal prep, show prompt to add to meal plan
+    if (recipeId && recipeTitle && scaledServings) {
+      Alert.alert(
+        'Add Scaled Recipe to Meal Plan',
+        `Add "${recipeTitle}" (${scaledServings} servings) to your meal plan?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Add to Meal Plan',
+            onPress: () => {
+              setShowTimePickerModal(true);
+            },
+          },
+        ]
+      );
+    } else if (recipeId && recipeTitle) {
+      // Regular recipe to add
       setShowTimePickerModal(true);
     }
-  }, [recipeId, recipeTitle]);
+  }, [recipeId, recipeTitle, scaledServings]);
 
   // Reload cost analysis when meals change
   useEffect(() => {
@@ -1269,8 +1305,11 @@ export default function MealPlanScreen() {
             {weekDates.map((date, index) => {
               const dateIsSelected = isSelected(date);
               const isTodayDate = isToday(date);
-              const dayMeals = weeklyPlan?.weeklyPlan?.[date.toISOString().split('T')[0]]?.meals || {};
+              const dateStr = date.toISOString().split('T')[0];
+              const dayMeals = weeklyPlan?.weeklyPlan?.[dateStr]?.meals || {};
               const mealsCount = Object.values(dayMeals).filter(m => m !== null).length + (dayMeals.snacks?.length || 0);
+              const mealPrepSessions = weeklyPlan?.weeklyPlan?.[dateStr]?.mealPrepSessions || [];
+              const hasMealPrep = mealPrepSessions.length > 0;
               
               return (
                 <HapticTouchableOpacity
@@ -1298,6 +1337,17 @@ export default function MealPlanScreen() {
                         dateIsSelected ? 'text-white' : 'text-orange-600 dark:text-orange-400'
                       }`}>
                         {mealsCount} meal{mealsCount > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  )}
+                  {hasMealPrep && (
+                    <View className={`mt-1 rounded-full px-2 py-0.5 ${
+                      dateIsSelected ? 'bg-white bg-opacity-30' : 'bg-blue-100 dark:bg-blue-900/30'
+                    }`}>
+                      <Text className={`text-xs text-center font-semibold ${
+                        dateIsSelected ? 'text-white' : 'text-blue-600 dark:text-blue-400'
+                      }`}>
+                        🍱 Prep
                       </Text>
                     </View>
                   )}
@@ -1443,6 +1493,100 @@ export default function MealPlanScreen() {
             </View>
           </View>
         )}
+
+        {/* Thawing Reminders */}
+        {thawingReminders.length > 0 && (
+          <View className="px-4 mb-4">
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              ❄️ Thawing Reminders
+            </Text>
+            {thawingReminders.slice(0, 3).map((reminder: any, index: number) => {
+              const thawDate = new Date(reminder.recommendedThawDate);
+              const isToday = thawDate.toDateString() === new Date().toDateString();
+              const isTomorrow = thawDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
+              
+              return (
+                <View key={index} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-2 border border-blue-200 dark:border-blue-800">
+                  <View className="flex-row items-center justify-between mb-1">
+                    <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      {reminder.recipe.title}
+                    </Text>
+                    <Text className="text-xs text-gray-600 dark:text-gray-400">
+                      {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : thawDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    {reminder.reminderMessage}
+                  </Text>
+                  <Text className="text-xs text-blue-600 dark:text-blue-400">
+                    ⏰ Thaw {reminder.estimatedThawHours} hours before use
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Meal Prep Sessions for Selected Date */}
+        {(() => {
+          const dateStr = selectedDate.toISOString().split('T')[0];
+          const dayMealPrepSessions = weeklyPlan?.weeklyPlan?.[dateStr]?.mealPrepSessions || [];
+          
+          if (dayMealPrepSessions.length > 0) {
+            return (
+              <View className="px-4 mb-4">
+                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                  🍱 Meal Prep - {formatDate(selectedDate)}
+                </Text>
+                
+                {/* Scheduled Meal Prep Sessions */}
+                {dayMealPrepSessions.length > 0 && (
+                  <View className="mb-3">
+                    {dayMealPrepSessions.map((session: any) => (
+                      <View key={session.id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-2 border border-blue-200 dark:border-blue-800">
+                        <View className="flex-row items-center justify-between mb-2">
+                          <View className="flex-row items-center">
+                            <Icon name={Icons.CALENDAR_OUTLINE} size={IconSizes.SM} color="#3B82F6" accessibilityLabel="Meal prep session" />
+                            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 ml-2">
+                              Meal Prep Session
+                            </Text>
+                          </View>
+                          {session.isCompleted && (
+                            <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+                              <Text className="text-green-700 dark:text-green-300 text-xs font-semibold">Completed</Text>
+                            </View>
+                          )}
+                        </View>
+                        {session.scheduledTime && (
+                          <Text className="text-sm text-gray-600 dark:text-gray-100 mb-1">
+                            ⏰ {session.scheduledTime}
+                          </Text>
+                        )}
+                        {session.duration && (
+                          <Text className="text-sm text-gray-600 dark:text-gray-100 mb-1">
+                            ⏱️ {session.duration} minutes
+                          </Text>
+                        )}
+                        {session.recipes && session.recipes.length > 0 && (
+                          <Text className="text-sm text-gray-600 dark:text-gray-100">
+                            📋 {session.recipes.length} recipe{session.recipes.length > 1 ? 's' : ''} to prep
+                          </Text>
+                        )}
+                        {session.notes && (
+                          <Text className="text-sm text-gray-600 dark:text-gray-100 mt-1 italic">
+                            {session.notes}
+                          </Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+                
+              </View>
+            );
+          }
+          return null;
+        })()}
 
         {/* Daily Macros */}
         <View className="px-4 mb-4">

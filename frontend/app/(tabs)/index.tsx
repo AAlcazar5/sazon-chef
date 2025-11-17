@@ -1,6 +1,7 @@
-import { View, Text, ScrollView, Alert, Modal, Linking, TextInput, Animated } from 'react-native';
+import { View, Text, ScrollView, Alert, Modal, Linking, TextInput, Animated, Switch } from 'react-native';
 import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
 import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
+import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import RecipeCardSkeleton from '../../components/recipe/RecipeCardSkeleton';
 import AnimatedRecipeCard from '../../components/recipe/AnimatedRecipeCard';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
@@ -303,6 +304,10 @@ export default function HomeScreen() {
   // First-time user guidance
   const [showFirstTimeTooltip, setShowFirstTimeTooltip] = useState(false);
 
+  // Meal prep mode state
+  const [mealPrepMode, setMealPrepMode] = useState(false);
+  const MEAL_PREP_STORAGE_KEY = '@sazon_meal_prep_mode';
+
   // Track if we're loading from filters to prevent useApi from interfering
   const [loadingFromFilters, setLoadingFromFilters] = useState(false);
 
@@ -333,7 +338,8 @@ export default function HomeScreen() {
               cuisines: savedFilters.cuisines.length > 0 ? savedFilters.cuisines : undefined,
               dietaryRestrictions: savedFilters.dietaryRestrictions.length > 0 ? savedFilters.dietaryRestrictions : undefined,
               maxCookTime: savedFilters.maxCookTime || undefined,
-              difficulty: savedFilters.difficulty.length > 0 ? savedFilters.difficulty : undefined
+              difficulty: savedFilters.difficulty.length > 0 ? savedFilters.difficulty : undefined,
+              mealPrepMode: mealPrepMode
             });
             
             const deduplicated = deduplicateRecipes(response.data);
@@ -360,6 +366,70 @@ export default function HomeScreen() {
 
     loadSavedFilters();
   }, []);
+
+  // Load meal prep mode preference on mount
+  useEffect(() => {
+    const loadMealPrepMode = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(MEAL_PREP_STORAGE_KEY);
+        if (saved !== null) {
+          setMealPrepMode(saved === 'true');
+        }
+      } catch (error) {
+        console.error('❌ Error loading meal prep mode:', error);
+      }
+    };
+    loadMealPrepMode();
+  }, []);
+
+  // Toggle meal prep mode
+  const handleToggleMealPrepMode = async (value: boolean) => {
+    try {
+      setMealPrepMode(value);
+      await AsyncStorage.setItem(MEAL_PREP_STORAGE_KEY, value.toString());
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      // Show toast notification
+      showToast(
+        value 
+          ? '🍱 Meal prep mode enabled - showing meal prep friendly recipes!' 
+          : '🍽️ Meal prep mode disabled - showing regular recipes',
+        'info',
+        2000
+      );
+      
+      // Refetch recipes with meal prep filter
+      try {
+        setLoadingFromFilters(true);
+        const apiFilters = {
+          cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+          dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+          maxCookTime: filters.maxCookTime || undefined,
+          difficulty: filters.difficulty.length > 0 ? filters.difficulty : undefined,
+          mealPrepMode: value
+        };
+        
+        const response = await recipeApi.getSuggestedRecipes(apiFilters);
+        const deduplicated = deduplicateRecipes(response.data);
+        setSuggestedRecipes(deduplicated);
+        
+        // Initialize feedback state
+        const initialFeedback: Record<string, UserFeedback> = {};
+        deduplicated.forEach((recipe: SuggestedRecipe) => {
+          initialFeedback[recipe.id] = { liked: false, disliked: false };
+        });
+        setUserFeedback(initialFeedback);
+        setInitialRecipesLoaded(true);
+        setLoadingFromFilters(false);
+      } catch (error: any) {
+        console.error('❌ Error fetching meal prep recipes:', error);
+        setLoadingFromFilters(false);
+      }
+    } catch (error) {
+      console.error('❌ Error saving meal prep mode:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
 
   // Helper function to deduplicate recipes by ID
   const deduplicateRecipes = (recipes: SuggestedRecipe[]): SuggestedRecipe[] => {
@@ -512,7 +582,8 @@ export default function HomeScreen() {
         dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
         maxCookTime: filters.maxCookTime || undefined,
         difficulty: filters.difficulty.length > 0 ? filters.difficulty : undefined,
-        offset: newOffset
+        offset: newOffset,
+        mealPrepMode: mealPrepMode
       });
       
       const deduplicated = deduplicateRecipes(response.data);
@@ -837,7 +908,8 @@ export default function HomeScreen() {
         cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
         dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
         maxCookTime: filters.maxCookTime || undefined,
-        difficulty: filters.difficulty.length > 0 ? filters.difficulty : undefined
+        difficulty: filters.difficulty.length > 0 ? filters.difficulty : undefined,
+        mealPrepMode: mealPrepMode
       };
       
       const response = await recipeApi.getSuggestedRecipes(apiFilters);
@@ -874,7 +946,9 @@ export default function HomeScreen() {
     
     // Reload original recipes without filters
     try {
-      const response = await recipeApi.getSuggestedRecipes();
+      const response = await recipeApi.getSuggestedRecipes({
+        mealPrepMode: mealPrepMode
+      });
       const deduplicated = deduplicateRecipes(response.data);
       setSuggestedRecipes(deduplicated);
       
@@ -1166,6 +1240,24 @@ export default function HomeScreen() {
           </HapticTouchableOpacity>
         </View>
         
+        {/* Meal Prep Mode Toggle */}
+        <View className="flex-row items-center justify-between mb-2 pb-2 border-b border-gray-200 dark:border-gray-600">
+          <View className="flex-row items-center flex-1">
+            <Text className="text-2xl mr-2">🍱</Text>
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">Meal Prep Mode</Text>
+              <Text className="text-xs text-gray-500 dark:text-gray-400">Show recipes suitable for batch cooking</Text>
+            </View>
+          </View>
+          <Switch
+            value={mealPrepMode}
+            onValueChange={handleToggleMealPrepMode}
+            trackColor={{ false: '#D1D5DB', true: '#F97316' }}
+            thumbColor={mealPrepMode ? '#FFFFFF' : '#F3F4F6'}
+            ios_backgroundColor="#D1D5DB"
+          />
+        </View>
+        
         {activeFilters.length > 0 ? (
           <View className="flex-row items-center">
             <ScrollView 
@@ -1203,10 +1295,27 @@ export default function HomeScreen() {
           <AnimatedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Today's Recommendation */}
+        {/* Meal Prep Mode Header */}
+        {mealPrepMode && (
+          <View className="px-4 pt-4 pb-2">
+            <View className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-800">
+              <View className="flex-row items-center mb-2">
+                <Text className="text-2xl mr-2">🍱</Text>
+                <Text className="text-lg font-semibold text-orange-900 dark:text-orange-200">
+                  Meal Prep Mode Active
+                </Text>
+              </View>
+              <Text className="text-sm text-orange-700 dark:text-orange-300">
+                Showing recipes suitable for batch cooking, freezing, and weekly meal prep
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Today's Recommendation / Meal Prep Recipes */}
         <View className="px-4 mb-6 mt-6">
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            Today's Recommendation
+            {mealPrepMode ? '🍱 Meal Prep Recipes' : "Today's Recommendation"}
           </Text>
           {suggestedRecipes.length > 0 && (() => {
             const recipe = suggestedRecipes[0];
@@ -1352,11 +1461,11 @@ export default function HomeScreen() {
           })()}
         </View>
 
-        {/* More Suggestions */}
+        {/* More Suggestions / More Meal Prep Recipes */}
         {suggestedRecipes.length > 1 && (
           <View className="px-4 pb-8">
             <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-              More Suggestions
+              {mealPrepMode ? '🍱 More Meal Prep Recipes' : 'More Suggestions'}
             </Text>
             {suggestedRecipes.slice(1).map((recipe, index) => {
               const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };

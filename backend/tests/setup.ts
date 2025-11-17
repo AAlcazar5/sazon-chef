@@ -81,6 +81,33 @@ const createPrismaMock = () => ({
     recipeInstruction: {
       create: jest.fn(),
       deleteMany: jest.fn()
+    },
+    mealPrepPortion: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    mealPrepConsumption: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
+    mealPrepSession: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    mealPrepTemplate: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     }
   }
 });
