@@ -11,6 +11,7 @@ import { getContainerRecommendations, formatContainerRecommendation, type Contai
 import type { Recipe } from '../../types';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, DarkColors } from '../../constants/Colors';
 
 interface MealPrepScalingModalProps {
   visible: boolean;
@@ -292,7 +293,7 @@ export default function MealPrepScalingModal({
                 ) : (
                   <>
                     {/* Recipe Info */}
-                    <View className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                    <View className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-red-200 dark:border-red-800">
                       <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
                         {recipe.title}
                       </Text>
@@ -378,7 +379,7 @@ export default function MealPrepScalingModal({
 
                 {/* Scaled Macros */}
                 {scaledRecipe && (
-                  <View className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <View className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-red-500 dark:border-red-400">
                     <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       Nutrition (per serving)
                     </Text>
@@ -601,7 +602,7 @@ export default function MealPrepScalingModal({
 
                 {/* Storage Instructions - Enhanced Display */}
                 {recipe && (recipe.freezable || recipe.weeklyPrepFriendly || recipe.storageInstructions || recipe.fridgeStorageDays || recipe.freezerStorageMonths) && (
-                  <View className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
+                  <View className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-red-500 dark:border-red-400">
                     <View className="flex-row items-center justify-between mb-3">
                       <View className="flex-row items-center">
                         <Ionicons name="snow-outline" size={20} color="#3B82F6" />
@@ -621,7 +622,7 @@ export default function MealPrepScalingModal({
                             return (
                               <View
                                 key={method}
-                                className="bg-white dark:bg-gray-700 px-2 py-1 rounded-full border border-blue-200 dark:border-blue-800"
+                                className="bg-white dark:bg-gray-700 px-2 py-1 rounded-full border border-red-200 dark:border-red-800"
                               >
                                 <Ionicons 
                                   name={methodConfig.icon as any} 
@@ -711,7 +712,7 @@ export default function MealPrepScalingModal({
                     
                     {/* Storage guidance */}
                     {scaledRecipe && recipe && (
-                      <View className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                      <View className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
                         <Text className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1">
                           💡 Storage Tips:
                         </Text>
@@ -741,7 +742,7 @@ export default function MealPrepScalingModal({
                 <HapticTouchableOpacity
                   onPress={handleSaveAsTemplate}
                   disabled={savingTemplate}
-                  className={`mb-3 py-2 px-4 bg-blue-500 dark:bg-blue-600 rounded-lg items-center flex-row justify-center ${savingTemplate ? 'opacity-50' : ''}`}
+                  className={`mb-3 py-2 px-4 bg-red-600 dark:bg-red-400 rounded-lg items-center flex-row justify-center ${savingTemplate ? 'opacity-50' : ''}`}
                   hapticStyle="light"
                 >
                   <Ionicons 
@@ -776,18 +777,11 @@ export default function MealPrepScalingModal({
                   </HapticTouchableOpacity>
                 )}
                 
-                <View className="flex-row space-x-3">
-                  <HapticTouchableOpacity
-                    onPress={onClose}
-                    className="flex-1 bg-gray-200 dark:bg-gray-700 py-3 rounded-lg items-center"
-                    hapticStyle="light"
-                  >
-                    <Text className="text-gray-900 dark:text-gray-100 font-semibold">Close</Text>
-                  </HapticTouchableOpacity>
+                <View className="mt-4">
                   <HapticTouchableOpacity
                     onPress={handleConfirm}
                     disabled={!scaledRecipe || parseInt(totalServings) <= 0}
-                    className={`flex-1 bg-orange-500 dark:bg-orange-600 py-3 rounded-lg items-center ${
+                    className={`bg-orange-500 dark:bg-orange-600 py-3 rounded-lg items-center ${
                       !scaledRecipe || parseInt(totalServings) <= 0 ? 'opacity-50' : ''
                     }`}
                     hapticStyle="medium"

@@ -518,6 +518,184 @@ export const authController = {
         message: error.message
       });
     }
+  },
+
+  /**
+   * Request password reset (simplified for development)
+   * POST /api/auth/forgot-password
+   */
+  async requestPasswordReset(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          error: 'Missing required field',
+          message: 'Email is required'
+        });
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          error: 'Invalid email format'
+        });
+      }
+
+      // Find user by email (check encrypted and unencrypted)
+      let user = await prisma.user.findFirst({
+        where: { providerEmail: email }
+      });
+
+      if (!user) {
+        const usersWithEncryptedEmails = await prisma.user.findMany({
+          where: { emailEncrypted: true },
+          select: { id: true, email: true, emailEncrypted: true }
+        });
+
+        for (const u of usersWithEncryptedEmails) {
+          try {
+            if (decrypt(u.email) === email) {
+              user = u as any;
+              break;
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      if (!user) {
+        user = await prisma.user.findFirst({
+          where: { email, emailEncrypted: false }
+        });
+      }
+
+      // For security: Always return success even if user doesn't exist
+      // This prevents email enumeration attacks
+      if (!user) {
+        return res.json({
+          success: true,
+          message: 'If an account exists with this email, a password reset code will be sent.'
+        });
+      }
+
+      // Generate a simple 6-digit reset code for development
+      // In production, you'd want to use a secure token and send via email
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const resetCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Store reset code in user record (you'll need to add these fields to schema in production)
+      // For now, we'll just log it and return it in development mode
+      console.log(`Password reset code for ${email}: ${resetCode}`);
+      console.log(`Code expires at: ${resetCodeExpiry}`);
+
+      // TODO: In production, send email with reset code
+      // For development, return the code in the response
+      res.json({
+        success: true,
+        message: 'If an account exists with this email, a password reset code will be sent.',
+        // Only in development - remove in production
+        ...(process.env.NODE_ENV === 'development' && { resetCode, expiresAt: resetCodeExpiry })
+      });
+    } catch (error: any) {
+      console.error('Request password reset error:', error);
+      res.status(500).json({
+        error: 'Failed to request password reset',
+        message: error.message
+      });
+    }
+  },
+
+  /**
+   * Reset password with email (simplified for development)
+   * POST /api/auth/reset-password
+   */
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const { email, newPassword } = req.body;
+
+      if (!email || !newPassword) {
+        return res.status(400).json({
+          error: 'Missing required fields',
+          message: 'Email and new password are required'
+        });
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          error: 'Invalid email format'
+        });
+      }
+
+      // Password validation
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          error: 'Password too short',
+          message: 'New password must be at least 8 characters long'
+        });
+      }
+
+      // Find user by email
+      let user = await prisma.user.findFirst({
+        where: { providerEmail: email }
+      });
+
+      if (!user) {
+        const usersWithEncryptedEmails = await prisma.user.findMany({
+          where: { emailEncrypted: true },
+          select: { id: true, email: true, emailEncrypted: true }
+        });
+
+        for (const u of usersWithEncryptedEmails) {
+          try {
+            if (decrypt(u.email) === email) {
+              user = u as any;
+              break;
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      if (!user) {
+        user = await prisma.user.findFirst({
+          where: { email, emailEncrypted: false }
+        });
+      }
+
+      if (!user) {
+        return res.status(404).json({
+          error: 'User not found',
+          message: 'No account found with this email address'
+        });
+      }
+
+      // Hash new password
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Update password
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword }
+      });
+
+      res.json({
+        success: true,
+        message: 'Password reset successfully. You can now log in with your new password.'
+      });
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      res.status(500).json({
+        error: 'Failed to reset password',
+        message: error.message
+      });
+    }
   }
 };
 

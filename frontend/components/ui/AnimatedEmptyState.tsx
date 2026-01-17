@@ -1,21 +1,41 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated } from 'react-native';
+import { View, Text, Animated, StyleSheet } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import Icon from './Icon';
-import { Icons, IconSizes } from '../../constants/Icons';
+import { Icons } from '../../constants/Icons';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
-import SazonMascot, { SazonExpression } from '../mascot/SazonMascot';
+import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
+import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
+import { Typography, FontSize } from '../../constants/Typography';
+import { Duration } from '../../constants/Animations';
+import { HapticPatterns } from '../../constants/Haptics';
+import { Colors, DarkColors } from '../../constants/Colors';
+import { EmptyStateConfig } from '../../constants/EmptyStates';
+import { buttonAccessibility } from '../../utils/accessibility';
 
 interface AnimatedEmptyStateProps {
+  /** Icon name from Icons constant (if not using mascot) */
   icon?: keyof typeof Icons;
+  /** Title text displayed prominently */
   title: string;
+  /** Description/subtitle text */
   description?: string;
+  /** Optional action button label */
   actionLabel?: string;
+  /** Action button press handler */
   onAction?: () => void;
+  /** Icon size (default: 64) */
   iconSize?: number;
+  /** Icon color (default: gray) */
   iconColor?: string;
+  /** Whether to use mascot instead of icon */
   useMascot?: boolean;
-  mascotExpression?: SazonExpression;
+  /** Mascot expression to use */
+  mascotExpression?: LogoMascotExpression;
+  /** Mascot size */
   mascotSize?: 'tiny' | 'small' | 'medium' | 'large' | 'hero';
+  /** Use predefined empty state config */
+  config?: EmptyStateConfig;
 }
 
 export default function AnimatedEmptyState({
@@ -24,12 +44,26 @@ export default function AnimatedEmptyState({
   description,
   actionLabel,
   onAction,
-  iconSize = 64,
-  iconColor = '#9CA3AF',
+  iconSize = ComponentSpacing.emptyState.iconSize,
+  iconColor,
   useMascot = false,
   mascotExpression = 'curious',
   mascotSize = 'medium',
+  config,
 }: AnimatedEmptyStateProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  // Use config values if provided
+  const displayTitle = config?.title ?? title;
+  const displayDescription = config?.description ?? description;
+  const displayActionLabel = config?.actionLabel ?? actionLabel;
+  const displayUseMascot = config?.useMascot ?? useMascot;
+  const displayMascotExpression = config?.mascotExpression ?? mascotExpression;
+  const displayMascotSize = config?.mascotSize ?? mascotSize;
+
+  const defaultIconColor = isDark ? DarkColors.text.tertiary : Colors.text.tertiary;
+
   const bounceScale = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(1)).current;
 
@@ -39,12 +73,12 @@ export default function AnimatedEmptyState({
       Animated.sequence([
         Animated.timing(bounceScale, {
           toValue: 1.1,
-          duration: 1500,
+          duration: Duration.extended * 1.5,
           useNativeDriver: true,
         }),
         Animated.timing(bounceScale, {
           toValue: 1,
-          duration: 1500,
+          duration: Duration.extended * 1.5,
           useNativeDriver: true,
         }),
       ])
@@ -55,12 +89,12 @@ export default function AnimatedEmptyState({
       Animated.sequence([
         Animated.timing(pulseOpacity, {
           toValue: 0.6,
-          duration: 2000,
+          duration: Duration.extended * 2,
           useNativeDriver: true,
         }),
         Animated.timing(pulseOpacity, {
           toValue: 1,
-          duration: 2000,
+          duration: Duration.extended * 2,
           useNativeDriver: true,
         }),
       ])
@@ -75,41 +109,98 @@ export default function AnimatedEmptyState({
     };
   }, [bounceScale, pulseOpacity]);
 
+  const handleAction = () => {
+    HapticPatterns.buttonPressPrimary();
+    onAction?.();
+  };
+
   return (
-    <View className="flex-1 items-center justify-center p-8">
+    <View style={styles.container}>
       <Animated.View
         style={{
           transform: [{ scale: bounceScale }],
           opacity: pulseOpacity,
         }}
       >
-        {useMascot ? (
-          <SazonMascot 
-            expression={mascotExpression} 
-            size={mascotSize}
-            variant="orange"
+        {displayUseMascot ? (
+          <LogoMascot
+            expression={displayMascotExpression}
+            size={displayMascotSize}
           />
         ) : (
-          icon && <Icon name={icon} size={iconSize} color={iconColor} accessibilityLabel={title} />
+          icon && (
+            <Icon
+              name={icon}
+              size={iconSize}
+              color={iconColor ?? defaultIconColor}
+              accessibilityLabel={displayTitle}
+            />
+          )
         )}
       </Animated.View>
-      <Text className="text-xl font-semibold text-gray-500 dark:text-gray-200 mt-4 text-center">
-        {title}
+      <Text
+        style={[
+          styles.title,
+          { color: isDark ? DarkColors.text.secondary : Colors.text.secondary },
+        ]}
+      >
+        {displayTitle}
       </Text>
-      {description && (
-        <Text className="text-gray-400 dark:text-gray-300 text-center mt-2">
-          {description}
+      {displayDescription && (
+        <Text
+          style={[
+            styles.description,
+            { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary },
+          ]}
+        >
+          {displayDescription}
         </Text>
       )}
-      {actionLabel && onAction && (
-        <HapticTouchableOpacity 
-          onPress={onAction}
-          className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg mt-4"
+      {displayActionLabel && onAction && (
+        <HapticTouchableOpacity
+          onPress={handleAction}
+          style={[
+            styles.actionButton,
+            { backgroundColor: isDark ? DarkColors.primary : Colors.primary },
+          ]}
+          {...buttonAccessibility(displayActionLabel)}
         >
-          <Text className="text-white font-semibold">{actionLabel}</Text>
+          <Text style={styles.actionButtonText}>{displayActionLabel}</Text>
         </HapticTouchableOpacity>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: ComponentSpacing.emptyState.padding,
+  },
+  title: {
+    fontSize: FontSize.xl,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: ComponentSpacing.emptyState.titleGap,
+  },
+  description: {
+    fontSize: FontSize.base,
+    textAlign: 'center',
+    marginTop: ComponentSpacing.emptyState.descriptionGap,
+    lineHeight: FontSize.base * 1.5,
+  },
+  actionButton: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    marginTop: ComponentSpacing.emptyState.actionGap,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: FontSize.md,
+    fontWeight: '600',
+  },
+});
 

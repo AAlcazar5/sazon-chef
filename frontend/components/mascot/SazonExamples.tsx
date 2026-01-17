@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { SazonMascot, AnimatedSazon } from './index';
+import { SazonMascot, AnimatedSazon, LogoMascot } from './index';
 
 export function SazonExamples() {
   return (
@@ -89,6 +89,49 @@ export function SazonExamples() {
           <View style={styles.example}>
             <AnimatedSazon animationType="wave" size="medium" />
             <Text style={styles.label}>Wave</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Logo Mascot Examples */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Logo Mascot (SVG)</Text>
+        <View style={styles.row}>
+          <View style={styles.example}>
+            <LogoMascot size="small" expression="happy" />
+            <Text style={styles.label}>Happy</Text>
+          </View>
+          <View style={styles.example}>
+            <LogoMascot size="small" expression="excited" />
+            <Text style={styles.label}>Excited</Text>
+          </View>
+          <View style={styles.example}>
+            <LogoMascot size="small" expression="curious" />
+            <Text style={styles.label}>Curious</Text>
+          </View>
+        </View>
+        <View style={styles.row}>
+          <View style={styles.example}>
+            <LogoMascot size="medium" expression="proud" />
+            <Text style={styles.label}>Proud</Text>
+          </View>
+          <View style={styles.example}>
+            <LogoMascot size="medium" expression="celebrating" />
+            <Text style={styles.label}>Celebrating</Text>
+          </View>
+          <View style={styles.example}>
+            <LogoMascot size="medium" expression="winking" />
+            <Text style={styles.label}>Winking</Text>
+          </View>
+        </View>
+        <View style={styles.row}>
+          <View style={styles.example}>
+            <LogoMascot size="large" />
+            <Text style={styles.label}>Large (Happy)</Text>
+          </View>
+          <View style={styles.example}>
+            <LogoMascot size="hero" />
+            <Text style={styles.label}>Hero Size</Text>
           </View>
         </View>
       </View>

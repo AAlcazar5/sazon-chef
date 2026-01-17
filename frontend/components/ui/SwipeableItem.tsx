@@ -1,7 +1,12 @@
 import React, { useRef } from 'react';
-import { View, Text, Animated, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
+import { Colors } from '../../constants/Colors';
+import { Spacing, BorderRadius } from '../../constants/Spacing';
+import { FontSize, FontWeight } from '../../constants/Typography';
+import { HapticPatterns } from '../../constants/Haptics';
+import HapticTouchableOpacity from './HapticTouchableOpacity';
 
 interface SwipeableItemProps {
   children: React.ReactNode;
@@ -16,7 +21,7 @@ export default function SwipeableItem({
   children,
   onDelete,
   onEdit,
-  deleteColor = '#EF4444',
+  deleteColor = Colors.secondaryRed,
   editColor = '#3B82F6',
   disabled = false,
 }: SwipeableItemProps) {
@@ -50,16 +55,20 @@ export default function SwipeableItem({
               },
             ]}
           >
-            <TouchableOpacity
+            <HapticTouchableOpacity
               style={styles.actionButtonContent}
               onPress={() => {
                 swipeableRef.current?.close();
                 onEdit();
               }}
+              hapticStyle="medium"
+              scaleOnPress={false}
+              accessibilityLabel="Edit item"
+              accessibilityHint="Double tap to edit this item"
             >
               <Ionicons name="create-outline" size={24} color="white" />
               <Text style={styles.actionText}>Edit</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </Animated.View>
         )}
         {onDelete && (
@@ -72,16 +81,20 @@ export default function SwipeableItem({
               },
             ]}
           >
-            <TouchableOpacity
+            <HapticTouchableOpacity
               style={styles.actionButtonContent}
               onPress={() => {
                 swipeableRef.current?.close();
                 onDelete();
               }}
+              hapticStyle="heavy"
+              scaleOnPress={false}
+              accessibilityLabel="Delete item"
+              accessibilityHint="Double tap to delete this item"
             >
               <Ionicons name="trash-outline" size={24} color="white" />
               <Text style={styles.actionText}>Delete</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </Animated.View>
         )}
       </View>
@@ -110,26 +123,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginVertical: 4,
+    marginVertical: Spacing.xs,
   },
   actionButton: {
     width: 80,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 4,
-    borderRadius: 8,
+    marginLeft: Spacing.xs,
+    borderRadius: BorderRadius.md,
   },
   actionButtonContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.sm,
   },
   actionText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    marginTop: Spacing.xs,
   },
 });
 

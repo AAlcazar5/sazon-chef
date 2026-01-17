@@ -55,6 +55,14 @@
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to find nearby grocery stores."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FF6B35",
+          "sounds": []
+        }
+      ],
     ],
     "experiments": {
       "typedRoutes": true,

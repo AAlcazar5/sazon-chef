@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import { View, Animated, StyleSheet, useColorScheme } from 'react-native';
+import { useColorScheme as useNativeWindColorScheme } from 'nativewind';
 
 interface SkeletonLoaderProps {
   width?: number | string;
   height?: number;
   borderRadius?: number;
   style?: any;
+  isDark?: boolean;
 }
 
 export default function SkeletonLoader({
@@ -13,7 +15,12 @@ export default function SkeletonLoader({
   height = 20,
   borderRadius = 4,
   style,
+  isDark: isDarkProp,
 }: SkeletonLoaderProps) {
+  const { colorScheme } = useNativeWindColorScheme();
+  const systemIsDark = useColorScheme() === 'dark';
+  const isDark = isDarkProp !== undefined ? isDarkProp : (colorScheme === 'dark' || systemIsDark);
+  
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -50,7 +57,7 @@ export default function SkeletonLoader({
           width,
           height,
           borderRadius,
-          backgroundColor: '#E5E7EB',
+          backgroundColor: isDark ? '#374151' : '#E5E7EB',
           overflow: 'hidden',
         },
         style,
@@ -60,7 +67,7 @@ export default function SkeletonLoader({
         style={[
           StyleSheet.absoluteFill,
           {
-            backgroundColor: '#F3F4F6',
+            backgroundColor: isDark ? '#4B5563' : '#F3F4F6',
             transform: [{ translateX }],
             opacity,
           },

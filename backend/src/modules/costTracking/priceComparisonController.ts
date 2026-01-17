@@ -92,30 +92,40 @@ export const getBestStore = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'ingredientNames array is required' });
     }
 
-    // Get user location from request or preferences
+    // Check if location services are enabled
+    const { isLocationServicesEnabledFromRequest } = require('@/utils/privacyHelper');
+    const locationServicesEnabled = isLocationServicesEnabledFromRequest(req);
+    
+    console.log('🔒 Location services enabled:', locationServicesEnabled);
+
+    // Get user location from request or preferences (only if location services enabled)
     let userLocation = null;
     let nearbyStores: Array<{ store: string; distance: number; address?: string }> | undefined = undefined;
 
-    if (zipCode || (latitude && longitude)) {
-      // Get location from request
-      userLocation = await getUserLocation(zipCode, latitude, longitude);
-    } else {
-      // Try to get from user preferences
-      const preferences = await prisma.userPreferences.findUnique({
-        where: { userId },
-      });
+    if (locationServicesEnabled) {
+      if (zipCode || (latitude && longitude)) {
+        // Get location from request
+        userLocation = await getUserLocation(zipCode, latitude, longitude);
+      } else {
+        // Try to get from user preferences
+        const preferences = await prisma.userPreferences.findUnique({
+          where: { userId },
+        });
 
-      if (preferences) {
-        if (preferences.useLocationServices && preferences.latitude && preferences.longitude) {
-          userLocation = {
-            latitude: preferences.latitude,
-            longitude: preferences.longitude,
-            zipCode: preferences.zipCode || undefined,
-          };
-        } else if (preferences.zipCode) {
-          userLocation = await getUserLocation(preferences.zipCode);
+        if (preferences) {
+          if (preferences.useLocationServices && preferences.latitude && preferences.longitude) {
+            userLocation = {
+              latitude: preferences.latitude,
+              longitude: preferences.longitude,
+              zipCode: preferences.zipCode || undefined,
+            };
+          } else if (preferences.zipCode) {
+            userLocation = await getUserLocation(preferences.zipCode);
+          }
         }
       }
+    } else {
+      console.log('🔒 Location services disabled - skipping location-based store recommendations');
     }
 
     // Find nearby stores if location is available

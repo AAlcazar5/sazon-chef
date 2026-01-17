@@ -1,13 +1,10 @@
 // frontend/app/login.tsx
-import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-// Login screen
+// Login screen with FormInput validation
 
 import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -21,46 +18,87 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
-import SazonMascot from '../components/mascot/SazonMascot';
+import LogoMascot from '../components/mascot/LogoMascot';
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import FormInput from '../components/ui/FormInput';
+import { Colors, DarkColors } from '../constants/Colors';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const [shakeEmail, setShakeEmail] = useState(false);
   const [shakePassword, setShakePassword] = useState(false);
+  // Inline validation errors
+  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const { login, socialLogin } = useAuth();
   const router = useRouter();
   const { theme } = useTheme();
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setShakeEmail(!email.trim());
-      setShakePassword(!password.trim());
-      setTimeout(() => {
-        setShakeEmail(false);
-        setShakePassword(false);
-      }, 500);
-      Alert.alert('Error', 'Please enter both email and password');
-      return;
+  // Clear field error when user starts typing
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (errors.email) {
+      setErrors(prev => ({ ...prev, email: undefined }));
     }
+  };
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    if (errors.password) {
+      setErrors(prev => ({ ...prev, password: undefined }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: { email?: string; password?: string } = {};
+    let isValid = true;
+
+    // Email validation
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
       setShakeEmail(true);
       setTimeout(() => setShakeEmail(false), 500);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
+      isValid = false;
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        newErrors.email = 'Please enter a valid email address';
+        setShakeEmail(true);
+        setTimeout(() => setShakeEmail(false), 500);
+        isValid = false;
+      }
     }
 
-    if (password.length < 8) {
+    // Password validation
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
       setShakePassword(true);
       setTimeout(() => setShakePassword(false), 500);
+      isValid = false;
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+      setShakePassword(true);
+      setTimeout(() => setShakePassword(false), 500);
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Password must be at least 8 characters');
+    }
+
+    return isValid;
+  };
+
+  const handleLogin = async () => {
+    // Clear previous form error
+    setErrors(prev => ({ ...prev, form: undefined }));
+
+    if (!validateForm()) {
       return;
     }
 
@@ -71,7 +109,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Login Failed', error.message || 'An error occurred during login');
+      setErrors(prev => ({ ...prev, form: error.message || 'An error occurred during login' }));
     } finally {
       setLoading(false);
     }
@@ -153,13 +191,12 @@ export default function LoginScreen() {
       >
         <View className="w-full max-w-md self-center">
           <View className="items-center mb-4">
-            <SazonMascot 
+            <LogoMascot 
               expression="happy" 
               size="medium" 
-              variant="orange"
             />
           </View>
-          <Text className="text-3xl font-bold text-orange-500 dark:text-orange-400 mb-2 text-center">
+          <Text className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2 text-center">
             Welcome Back
           </Text>
           <Text className="text-base text-gray-600 dark:text-gray-200 mb-8 text-center">
@@ -167,42 +204,57 @@ export default function LoginScreen() {
           </Text>
 
           <View className="w-full">
-            <View className="mb-5">
-              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Email</Text>
-              <ShakeAnimation shake={shakeEmail}>
-                <TextInput
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  placeholder="Enter your email"
-                  placeholderTextColor="#9CA3AF"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  editable={!loading}
-                />
-              </ShakeAnimation>
-            </View>
+            {/* Form-level error */}
+            {errors.form && (
+              <View className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4 flex-row items-center">
+                <Ionicons name="alert-circle" size={18} color={Colors.error} />
+                <Text className="text-red-600 dark:text-red-400 text-sm ml-2 flex-1">{errors.form}</Text>
+              </View>
+            )}
 
-            <View className="mb-5">
-              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Password</Text>
-              <ShakeAnimation shake={shakePassword}>
-                <TextInput
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  placeholder="Enter your password"
-                  placeholderTextColor="#9CA3AF"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="password"
-                  editable={!loading}
-                />
-              </ShakeAnimation>
+            <ShakeAnimation shake={shakeEmail}>
+              <FormInput
+                label="Email"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={handleEmailChange}
+                error={errors.email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                disabled={loading}
+                leftIcon="mail-outline"
+              />
+            </ShakeAnimation>
+
+            <ShakeAnimation shake={shakePassword}>
+              <FormInput
+                label="Password"
+                placeholder="Enter your password"
+                value={password}
+                onChangeText={handlePasswordChange}
+                error={errors.password}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                disabled={loading}
+                leftIcon="lock-closed-outline"
+                rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+              />
+            </ShakeAnimation>
+
+            <View className="flex-row justify-end mb-4">
+              <HapticTouchableOpacity
+                onPress={() => router.push('/forgot-password')}
+                disabled={loading}
+              >
+                <Text className="text-red-600 dark:text-red-400 text-sm font-semibold">Forgot Password?</Text>
+              </HapticTouchableOpacity>
             </View>
 
             <HapticTouchableOpacity
-              className={`bg-orange-500 dark:bg-orange-600 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
+              className={`bg-red-600 dark:bg-red-400 rounded-lg px-4 py-4 items-center justify-center min-h-[50px] ${loading ? 'opacity-60' : ''}`}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -259,7 +311,7 @@ export default function LoginScreen() {
                 onPress={() => router.push('/register')}
                 disabled={loading}
               >
-                <Text className="text-orange-500 dark:text-orange-400 text-sm font-semibold">Sign Up</Text>
+                <Text className="text-red-600 dark:text-red-400 text-sm font-semibold">Sign Up</Text>
               </HapticTouchableOpacity>
             </View>
           </View>

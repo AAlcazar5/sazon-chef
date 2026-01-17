@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import SazonMascot, { SazonExpression } from '../mascot/SazonMascot';
+import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import Icon from './Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import * as Haptics from 'expo-haptics';
+import { Duration } from '../../constants/Animations';
+import { HapticPatterns } from '../../constants/Haptics';
 
 export type HelpTooltipType = 'info' | 'guide' | 'support';
 
@@ -34,19 +35,19 @@ export default function HelpTooltip({
     if (visible) {
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 300,
+        duration: Duration.medium,
         useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 200,
+        duration: Duration.fast,
         useNativeDriver: true,
       }).start();
     }
   }, [visible, fadeAnim]);
 
-  const getMascotExpression = (): SazonExpression => {
+  const getMascotExpression = (): LogoMascotExpression => {
     switch (type) {
       case 'guide':
         return 'curious';
@@ -58,13 +59,13 @@ export default function HelpTooltip({
   };
 
   const handleDismiss = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    HapticPatterns.buttonPress();
     onDismiss();
   };
 
   const handleAction = () => {
     if (onAction) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      HapticPatterns.buttonPressPrimary();
       onAction();
     }
     handleDismiss();
@@ -99,10 +100,9 @@ export default function HelpTooltip({
             >
               {/* Header with Mascot */}
               <View className="flex-row items-center mb-4">
-                <SazonMascot
+                <LogoMascot
                   expression={getMascotExpression()}
                   size="medium"
-                  variant="orange"
                 />
                 <View className="flex-1 ml-4">
                   <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">

@@ -3,7 +3,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { api, setAuthToken } from '../lib/api';
+import { api, setAuthToken, setLogoutCallback } from '../lib/api';
+import { analytics } from '../utils/analytics';
 
 interface User {
   id: string;
@@ -44,9 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedUser = await SecureStore.getItemAsync(USER_KEY);
 
       if (storedToken && storedUser) {
+        const userData = JSON.parse(storedUser);
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        setUser(userData);
         setAuthToken(storedToken); // Set API client token immediately
+        
+        // Initialize analytics
+        if (userData?.id) {
+          await analytics.initialize(userData.id);
+        }
         
         // Verify token is still valid by fetching user profile
         try {
@@ -54,8 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             headers: { Authorization: `Bearer ${storedToken}` },
           });
           if (response.data?.user) {
-            setUser(response.data.user);
-            await SecureStore.setItemAsync(USER_KEY, JSON.stringify(response.data.user));
+            const updatedUser = response.data.user;
+            setUser(updatedUser);
+            await SecureStore.setItemAsync(USER_KEY, JSON.stringify(updatedUser));
+            
+            // Re-initialize analytics with updated user data
+            if (updatedUser?.id) {
+              await analytics.initialize(updatedUser.id);
+            }
           }
         } catch (error) {
           // Token is invalid, clear stored auth
@@ -96,6 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(authToken);
         setUser(userData);
         setAuthToken(authToken); // Update API client token
+        
+        // Initialize analytics
+        if (userData?.id) {
+          await analytics.initialize(userData.id);
+          await analytics.track('user_login', { method: 'email' });
+        }
       } else {
         throw new Error('Invalid response from server');
       }
@@ -120,6 +139,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(authToken);
         setUser(userData);
         setAuthToken(authToken); // Update API client token
+        
+        // Initialize analytics
+        if (userData?.id) {
+          await analytics.initialize(userData.id);
+          await analytics.track('user_register', { method: 'email' });
+        }
       } else {
         throw new Error('Invalid response from server');
       }
@@ -132,6 +157,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await clearStoredAuth();
   };
+
+  // Register logout callback with API client for automatic logout on auth errors
+  useEffect(() => {
+    setLogoutCallback(logout);
+    return () => {
+      setLogoutCallback(null);
+    };
+  }, []);
 
   const socialLogin = async (
     provider: 'google' | 'apple',

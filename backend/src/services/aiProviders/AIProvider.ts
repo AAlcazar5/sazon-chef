@@ -4,7 +4,7 @@ import type { GeneratedRecipe } from '../aiRecipeService';
 export interface RecipeGenerationRequest {
   prompt: string;
   systemPrompt: string;
-  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'any';
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'any';
   temperature?: number;
   maxTokens?: number;
 }
@@ -85,10 +85,21 @@ export abstract class AIProvider {
       errorCode === 'rate_limit_exceeded' ||
       /rate.*limit|too.*many.*requests/i.test(errorMessage);
 
+    // Detect overloaded errors (529 from Claude)
+    const isOverloadedError = 
+      errorStatus === 529 ||
+      errorCode === 'overloaded_error' ||
+      error.error?.type === 'overloaded_error' ||
+      /overloaded/i.test(errorMessage);
+
     // Determine if error is retryable
+    // Include 529 (Overloaded), 503 (Service Unavailable), 502 (Bad Gateway), and network/timeout errors
     normalized.retryable = 
       !normalized.isQuotaError && 
-      (errorStatus === 503 || errorStatus === 502 || /timeout|network/i.test(errorMessage));
+      (isOverloadedError ||
+       errorStatus === 503 || 
+       errorStatus === 502 || 
+       /timeout|network/i.test(errorMessage));
 
     return normalized;
   }

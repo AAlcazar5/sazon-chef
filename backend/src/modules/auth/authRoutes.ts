@@ -12,6 +12,8 @@ const router = Router();
 router.post('/register', authLimiter, validateRegistration, authController.register);
 router.post('/login', authLimiter, validateLogin, authController.login);
 router.post('/social/callback', authLimiter, socialAuthCallback);
+router.post('/forgot-password', authLimiter, authController.requestPasswordReset);
+router.post('/reset-password', authLimiter, authController.resetPassword);
 
 // Protected routes (authentication required)
 router.get('/profile', authenticateToken, authController.getProfile);

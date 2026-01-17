@@ -16,18 +16,25 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { userApi } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Haptics from 'expo-haptics';
-import SazonMascot from '../components/mascot/SazonMascot';
+import LogoMascot from '../components/mascot/LogoMascot';
 import LoadingState from '../components/ui/LoadingState';
 import SuccessModal from '../components/ui/SuccessModal';
 import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
+import { Colors, DarkColors } from '../constants/Colors';
+import { Spacing, BorderRadius } from '../constants/Spacing';
+import { HapticPatterns } from '../constants/Haptics';
+import { useColorScheme } from 'nativewind';
+import RecipeRoulette from '../components/recipe/RecipeRoulette';
+import { recipeApi } from '../lib/api';
+import type { SuggestedRecipe } from '../types';
 
-// Step 1: Welcome
-// Step 2: Cuisines
-// Step 3: Dietary Restrictions
-// Step 4: Superfoods (NEW)
-// Step 5: Banned Ingredients
-// Step 6: Physical Profile
+// Step 0: Welcome
+// Step 1: Cuisines
+// Step 2: Dietary Restrictions
+// Step 3: Superfoods
+// Step 4: Banned Ingredients
+// Step 5: Physical Profile
+// Step 6: Recipe Roulette
 // Step 7: Review & Finish
 
 const CUISINE_OPTIONS = [
@@ -101,6 +108,8 @@ interface OnboardingData {
 }
 
 export default function OnboardingScreen() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams();
   const isEditMode = params.edit === 'true';
   
@@ -109,6 +118,12 @@ export default function OnboardingScreen() {
   const [loading, setLoading] = useState(isEditMode);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  
+  // Recipe roulette state
+  const [rouletteRecipes, setRouletteRecipes] = useState<SuggestedRecipe[]>([]);
+  const [rouletteLoading, setRouletteLoading] = useState(false);
+  const [rouletteLiked, setRouletteLiked] = useState<Set<string>>(new Set());
+  const [roulettePassed, setRoulettePassed] = useState<Set<string>>(new Set());
   
   const [data, setData] = useState<OnboardingData>({
     likedCuisines: [],
@@ -132,6 +147,13 @@ export default function OnboardingScreen() {
       loadExistingData();
     }
   }, [isEditMode]);
+
+  // Fetch recipes for roulette when entering that step
+  useEffect(() => {
+    if (currentStep === 6 && rouletteRecipes.length === 0 && !rouletteLoading) {
+      fetchRouletteRecipes();
+    }
+  }, [currentStep]);
 
   const loadExistingData = async () => {
     try {
@@ -195,14 +217,14 @@ export default function OnboardingScreen() {
       });
     } catch (error) {
       console.error('Error loading existing data:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Error', 'Failed to load existing preferences');
     } finally {
       setLoading(false);
     }
   };
 
-  const totalSteps = 7;
+  const totalSteps = 8; // Added roulette step (step 6)
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   // Get mascot expression based on current step
@@ -266,7 +288,9 @@ export default function OnboardingScreen() {
           data.activityLevel !== '' &&
           data.fitnessGoal !== ''
         );
-      case 6: // Review
+      case 6: // Recipe Roulette
+        return rouletteLiked.size > 0 || roulettePassed.size > 0; // At least one interaction
+      case 7: // Review
         return true;
       default:
         return false;
@@ -327,7 +351,7 @@ export default function OnboardingScreen() {
       // Mark onboarding as complete
       await AsyncStorage.setItem('onboarding_complete', 'true');
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      HapticPatterns.success();
       if (isEditMode) {
         // If editing, show success modal then go back
         setSuccessMessage({
@@ -345,7 +369,7 @@ export default function OnboardingScreen() {
       }
     } catch (error) {
       console.error('Error saving onboarding data:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Error', 'Failed to save your preferences. Please try again.');
     } finally {
       setSaving(false);
@@ -378,6 +402,8 @@ export default function OnboardingScreen() {
       case 5:
         return renderPhysicalProfile();
       case 6:
+        return renderRoulette();
+      case 7:
         return renderReview();
       default:
         return null;
@@ -387,79 +413,92 @@ export default function OnboardingScreen() {
   const renderWelcome = () => (
     <ScrollView className="flex-1 px-6 py-8">
       <View className="items-center mb-8">
-        <SazonMascot 
+        <LogoMascot 
           expression="excited" 
           size="large" 
-          variant="orange"
           style={{ marginBottom: 16 }}
         />
-        <Text className="text-3xl font-bold text-gray-900 text-center mb-3">
+        <Text className="text-3xl font-bold text-center mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           Welcome to Sazon Chef!
         </Text>
-        <Text className="text-lg text-gray-600 text-center">
+        <Text className="text-lg text-center" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
           Let's personalize your experience in just a few steps
         </Text>
       </View>
 
-      <View className="bg-white rounded-2xl p-6 mb-4 shadow-sm">
+      <View className="rounded-2xl p-6 mb-4 shadow-sm" style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}>
         <View className="flex-row items-center mb-4">
-          <View className="bg-orange-100 rounded-full p-3 mr-4">
+          <View className="rounded-full p-3 mr-4" style={{ backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight }}>
             <Text className="text-2xl">🍝</Text>
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 mb-1">
+            <Text className="text-lg font-semibold mb-1" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               Choose Your Cuisines
             </Text>
-            <Text className="text-sm text-gray-600">
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
               Select the cuisines you love
             </Text>
           </View>
         </View>
 
         <View className="flex-row items-center mb-4">
-          <View className="bg-green-100 rounded-full p-3 mr-4">
+          <View className="rounded-full p-3 mr-4" style={{ backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenLight }}>
             <Text className="text-2xl">🥗</Text>
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 mb-1">
+            <Text className="text-lg font-semibold mb-1" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               Set Your Restrictions
             </Text>
-            <Text className="text-sm text-gray-600">
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
               Tell us about dietary needs
             </Text>
           </View>
         </View>
 
         <View className="flex-row items-center mb-4">
-          <View className="bg-blue-100 rounded-full p-3 mr-4">
+          <View className="rounded-full p-3 mr-4" style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight }}>
             <Text className="text-2xl">💪</Text>
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 mb-1">
+            <Text className="text-lg font-semibold mb-1" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               Build Your Profile
             </Text>
-            <Text className="text-sm text-gray-600">
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
               Set your fitness goals
             </Text>
           </View>
         </View>
 
-        <View className="flex-row items-center">
-          <View className="bg-purple-100 rounded-full p-3 mr-4">
+        <View className="flex-row items-center mb-4">
+          <View className="rounded-full p-3 mr-4" style={{ backgroundColor: isDark ? `${Colors.accent}33` : '#EDE9FE' }}>
             <Text className="text-2xl">🎯</Text>
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 mb-1">
+            <Text className="text-lg font-semibold mb-1" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               Get Recommendations
             </Text>
-            <Text className="text-sm text-gray-600">
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
               Personalized just for you
+            </Text>
+          </View>
+        </View>
+
+        <View className="flex-row items-center">
+          <View className="rounded-full p-3 mr-4" style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight }}>
+            <Text className="text-2xl">🎲</Text>
+          </View>
+          <View className="flex-1">
+            <Text className="text-lg font-semibold mb-1" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+              Quick Recipe Roulette
+            </Text>
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+              Swipe through recipes to help us learn your taste
             </Text>
           </View>
         </View>
       </View>
 
-      <Text className="text-sm text-gray-500 text-center px-4">
+      <Text className="text-sm text-center px-4" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>
         This will take about 2-3 minutes. You can skip and set this up later.
       </Text>
     </ScrollView>
@@ -467,10 +506,10 @@ export default function OnboardingScreen() {
 
   const renderCuisines = () => (
     <ScrollView className="flex-1 px-6 py-6">
-      <Text className="text-2xl font-bold text-gray-900 mb-2">
+      <Text className="text-2xl font-bold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
         Select Your Favorite Cuisines
       </Text>
-      <Text className="text-base text-gray-600 mb-6">
+      <Text className="text-base mb-6" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
         Choose at least one cuisine you enjoy
       </Text>
 
@@ -481,22 +520,28 @@ export default function OnboardingScreen() {
             <HapticTouchableOpacity
               key={cuisine.name}
               onPress={() => toggleSelection('likedCuisines', cuisine.name)}
-              className={`w-[48%] ${index % 2 === 0 ? 'mr-[4%]' : ''} mb-4 p-4 rounded-2xl border-2 ${
-                isSelected
-                  ? 'border-orange-500 bg-orange-50'
-                  : 'border-gray-200 bg-white'
-              }`}
+              className={`w-[48%] ${index % 2 === 0 ? 'mr-[4%]' : ''} mb-4 p-4 rounded-2xl border-2`}
+              style={{
+                borderColor: isSelected 
+                  ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                  : (isDark ? DarkColors.border.light : Colors.border.light),
+                backgroundColor: isSelected 
+                  ? (isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight)
+                  : (isDark ? '#1F2937' : '#FFFFFF'),
+              }}
               activeOpacity={0.7}
             >
               <View className="items-center">
                 <Text className="text-4xl mb-2">{cuisine.icon}</Text>
-                <Text className={`text-base font-semibold text-center ${
-                  isSelected ? 'text-orange-900' : 'text-gray-900'
-                }`}>
+                <Text className="text-base font-semibold text-center" style={{ 
+                  color: isSelected 
+                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                    : (isDark ? DarkColors.text.primary : Colors.text.primary)
+                }}>
                   {cuisine.name}
                 </Text>
                 {isSelected && (
-                  <View className="absolute top-2 right-2 bg-orange-500 rounded-full p-1">
+                  <View className="absolute top-2 right-2 rounded-full p-1" style={{ backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>
                     <Ionicons name="checkmark" size={12} color="white" />
                   </View>
                 )}
@@ -510,10 +555,10 @@ export default function OnboardingScreen() {
 
   const renderDietaryRestrictions = () => (
     <ScrollView className="flex-1 px-6 py-6">
-      <Text className="text-2xl font-bold text-gray-900 mb-2">
+      <Text className="text-2xl font-bold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
         Any Dietary Restrictions?
       </Text>
-      <Text className="text-base text-gray-600 mb-6">
+      <Text className="text-base mb-6" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
         Optional - Skip if none apply
       </Text>
 
@@ -523,26 +568,32 @@ export default function OnboardingScreen() {
           <HapticTouchableOpacity
             key={restriction.name}
             onPress={() => toggleSelection('dietaryRestrictions', restriction.name)}
-            className={`mb-3 p-4 rounded-xl border-2 flex-row items-center ${
-              isSelected
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-200 bg-white'
-            }`}
+            className="mb-3 p-4 rounded-xl border-2 flex-row items-center"
+            style={{
+              borderColor: isSelected 
+                ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
+                : (isDark ? DarkColors.border.light : Colors.border.light),
+              backgroundColor: isSelected 
+                ? (isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenLight)
+                : (isDark ? '#1F2937' : '#FFFFFF'),
+            }}
             activeOpacity={0.7}
           >
             <Text className="text-3xl mr-3">{restriction.icon}</Text>
             <View className="flex-1">
-              <Text className={`text-base font-semibold ${
-                isSelected ? 'text-green-900' : 'text-gray-900'
-              }`}>
+              <Text className="text-base font-semibold" style={{ 
+                color: isSelected 
+                  ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
+                  : (isDark ? DarkColors.text.primary : Colors.text.primary)
+              }}>
                 {restriction.name}
               </Text>
-              <Text className="text-sm text-gray-600 mt-1">
+              <Text className="text-sm mt-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                 {restriction.description}
               </Text>
             </View>
             {isSelected && (
-              <View className="bg-green-500 rounded-full p-1">
+              <View className="rounded-full p-1" style={{ backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}>
                 <Ionicons name="checkmark" size={16} color="white" />
               </View>
             )}
@@ -554,10 +605,10 @@ export default function OnboardingScreen() {
 
   const renderSuperfoods = () => (
     <ScrollView className="flex-1 px-6 py-6">
-      <Text className="text-2xl font-bold text-gray-900 mb-2">
+      <Text className="text-2xl font-bold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
         Preferred Superfoods
       </Text>
-      <Text className="text-base text-gray-600 mb-6">
+      <Text className="text-base mb-6" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
         Optional - Select superfoods you'd like to see more of. Recipes containing these will be boosted in your recommendations!
       </Text>
 
@@ -568,24 +619,30 @@ export default function OnboardingScreen() {
             <HapticTouchableOpacity
               key={superfood.id}
               onPress={() => toggleSelection('preferredSuperfoods', superfood.id)}
-              className={`w-[48%] mb-3 p-3 rounded-xl border-2 ${
-                isSelected
-                  ? 'border-orange-500 bg-orange-50'
-                  : 'border-gray-200 bg-white'
-              }`}
+              className="w-[48%] mb-3 p-3 rounded-xl border-2"
+              style={{
+                borderColor: isSelected 
+                  ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
+                  : (isDark ? DarkColors.border.light : Colors.border.light),
+                backgroundColor: isSelected 
+                  ? (isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenLight)
+                  : (isDark ? '#1F2937' : '#FFFFFF'),
+              }}
               activeOpacity={0.7}
             >
               <View className="items-center">
                 {superfood.emoji && (
                   <Text className="text-3xl mb-2">{superfood.emoji}</Text>
                 )}
-                <Text className={`text-sm font-semibold text-center ${
-                  isSelected ? 'text-orange-900' : 'text-gray-900'
-                }`}>
+                <Text className="text-sm font-semibold text-center" style={{ 
+                  color: isSelected 
+                    ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
+                    : (isDark ? DarkColors.text.primary : Colors.text.primary)
+                }}>
                   {superfood.name}
                 </Text>
                 {isSelected && (
-                  <View className="absolute top-2 right-2 bg-orange-500 rounded-full p-1">
+                  <View className="absolute top-2 right-2 rounded-full p-1" style={{ backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}>
                     <Ionicons name="checkmark" size={10} color="white" />
                   </View>
                 )}
@@ -599,16 +656,16 @@ export default function OnboardingScreen() {
 
   const renderBannedIngredients = () => (
     <ScrollView className="flex-1 px-6 py-6">
-      <Text className="text-2xl font-bold text-gray-900 mb-2">
+      <Text className="text-2xl font-bold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
         Ingredients to Avoid?
       </Text>
-      <Text className="text-base text-gray-600 mb-6">
+      <Text className="text-base mb-6" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
         Optional - Select ingredients you don't like or are allergic to
       </Text>
 
       {/* Custom ingredient input */}
       <View className="mb-6">
-        <Text className="text-sm font-semibold text-gray-700 mb-2">
+        <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           Add Custom Ingredient
         </Text>
         <View className="flex-row">
@@ -616,13 +673,21 @@ export default function OnboardingScreen() {
             value={data.customBannedIngredient}
             onChangeText={(text) => setData({ ...data, customBannedIngredient: text })}
             placeholder="e.g., Cilantro"
-            className="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-3 text-base"
+            className="flex-1 border rounded-xl px-4 py-3 text-base"
+            style={{
+              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+              borderWidth: 1,
+              color: isDark ? DarkColors.text.primary : Colors.text.primary,
+            }}
+            placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
             returnKeyType="done"
             onSubmitEditing={addCustomIngredient}
           />
           <HapticTouchableOpacity
             onPress={addCustomIngredient}
-            className="ml-2 bg-orange-500 rounded-xl px-4 justify-center"
+            className="ml-2 rounded-xl px-4 justify-center"
+            style={{ backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
             activeOpacity={0.7}
           >
             <Ionicons name="add" size={24} color="white" />
@@ -631,7 +696,7 @@ export default function OnboardingScreen() {
       </View>
 
       {/* Common ingredients */}
-      <Text className="text-sm font-semibold text-gray-700 mb-3">
+      <Text className="text-sm font-semibold mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
         Common Ingredients
       </Text>
       <View className="flex-row flex-wrap">
@@ -641,16 +706,22 @@ export default function OnboardingScreen() {
             <HapticTouchableOpacity
               key={ingredient}
               onPress={() => toggleSelection('bannedIngredients', ingredient)}
-              className={`mb-3 mr-2 px-4 py-2 rounded-full border-2 ${
-                isSelected
-                  ? 'border-red-500 bg-red-50'
-                  : 'border-gray-200 bg-white'
-              }`}
+              className="mb-3 mr-2 px-4 py-2 rounded-full border-2"
+              style={{
+                borderColor: isSelected 
+                  ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                  : (isDark ? DarkColors.border.light : Colors.border.light),
+                backgroundColor: isSelected 
+                  ? (isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight)
+                  : (isDark ? '#1F2937' : '#FFFFFF'),
+              }}
               activeOpacity={0.7}
             >
-              <Text className={`text-sm font-medium ${
-                isSelected ? 'text-red-900' : 'text-gray-900'
-              }`}>
+              <Text className="text-sm font-medium" style={{ 
+                color: isSelected 
+                  ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                  : (isDark ? DarkColors.text.primary : Colors.text.primary)
+              }}>
                 {ingredient}
               </Text>
             </HapticTouchableOpacity>
@@ -661,7 +732,7 @@ export default function OnboardingScreen() {
       {/* Custom banned ingredients */}
       {data.bannedIngredients.filter(ing => !COMMON_INGREDIENTS.includes(ing)).length > 0 && (
         <>
-          <Text className="text-sm font-semibold text-gray-700 mb-3 mt-4">
+          <Text className="text-sm font-semibold mb-3 mt-4" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
             Your Custom Ingredients
           </Text>
           <View className="flex-row flex-wrap">
@@ -671,10 +742,14 @@ export default function OnboardingScreen() {
                 <HapticTouchableOpacity
                   key={ingredient}
                   onPress={() => toggleSelection('bannedIngredients', ingredient)}
-                  className="mb-3 mr-2 px-4 py-2 rounded-full border-2 border-red-500 bg-red-50"
+                  className="mb-3 mr-2 px-4 py-2 rounded-full border-2"
+                  style={{
+                    borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
+                    backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight,
+                  }}
                   activeOpacity={0.7}
                 >
-                  <Text className="text-sm font-medium text-red-900">
+                  <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>
                     {ingredient}
                   </Text>
                 </HapticTouchableOpacity>
@@ -687,66 +762,82 @@ export default function OnboardingScreen() {
 
   const renderPhysicalProfile = () => (
     <ScrollView className="flex-1 px-6 py-6">
-      <Text className="text-2xl font-bold text-gray-900 mb-2">
+      <Text className="text-2xl font-bold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
         Tell Us About Yourself
       </Text>
-      <Text className="text-base text-gray-600 mb-6">
+      <Text className="text-base mb-6" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
         We'll calculate your nutritional needs
       </Text>
 
       {/* Unit Toggle */}
-      <View className="bg-white rounded-xl p-4 mb-4 flex-row items-center justify-between">
-        <Text className="text-base font-medium text-gray-900">
+      <View className="rounded-xl p-4 mb-4 flex-row items-center justify-between" style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}>
+        <Text className="text-base font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           Use Metric Units (cm, kg)
         </Text>
         <Switch
           value={data.useMetric}
           onValueChange={(value) => setData({ ...data, useMetric: value })}
-          trackColor={{ false: '#d1d5db', true: '#f97316' }}
+          trackColor={{ false: isDark ? '#4B5563' : '#d1d5db', true: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
           thumbColor={data.useMetric ? '#fff' : '#f4f3f4'}
         />
       </View>
 
       {/* Gender */}
       <View className="mb-4">
-        <Text className="text-sm font-semibold text-gray-700 mb-2">Gender</Text>
+        <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Gender</Text>
         <View className="flex-row">
-          {['male', 'female', 'other'].map((gender) => (
-            <HapticTouchableOpacity
-              key={gender}
-              onPress={() => setData({ ...data, gender: gender as any })}
-              className={`flex-1 ${gender !== 'other' ? 'mr-2' : ''} py-3 rounded-xl border-2 ${
-                data.gender === gender
-                  ? 'border-orange-500 bg-orange-50'
-                  : 'border-gray-200 bg-white'
-              }`}
-              activeOpacity={0.7}
-            >
-              <Text className={`text-center font-semibold capitalize ${
-                data.gender === gender ? 'text-orange-900' : 'text-gray-900'
-              }`}>
-                {gender}
-              </Text>
-            </HapticTouchableOpacity>
-          ))}
+          {['male', 'female', 'other'].map((gender) => {
+            const isSelected = data.gender === gender;
+            return (
+              <HapticTouchableOpacity
+                key={gender}
+                onPress={() => setData({ ...data, gender: gender as any })}
+                className={`flex-1 ${gender !== 'other' ? 'mr-2' : ''} py-3 rounded-xl border-2`}
+                style={{
+                  borderColor: isSelected 
+                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                    : (isDark ? DarkColors.border.light : Colors.border.light),
+                  backgroundColor: isSelected 
+                    ? (isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight)
+                    : (isDark ? '#1F2937' : '#FFFFFF'),
+                }}
+                activeOpacity={0.7}
+              >
+                <Text className="text-center font-semibold capitalize" style={{ 
+                  color: isSelected 
+                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                    : (isDark ? DarkColors.text.primary : Colors.text.primary)
+                }}>
+                  {gender}
+                </Text>
+              </HapticTouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
       {/* Age */}
       <View className="mb-4">
-        <Text className="text-sm font-semibold text-gray-700 mb-2">Age</Text>
+        <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Age</Text>
         <TextInput
           value={data.age}
           onChangeText={(text) => setData({ ...data, age: text })}
           placeholder="Enter your age"
           keyboardType="numeric"
-          className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base"
+          className="border rounded-xl px-4 py-3 text-base"
+          style={{
+            backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+            borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+            borderWidth: 1,
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
+          }}
+          placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
         />
       </View>
 
       {/* Height */}
       <View className="mb-4">
-        <Text className="text-sm font-semibold text-gray-700 mb-2">
+        <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           Height {data.useMetric ? '(cm)' : '(feet & inches)'}
         </Text>
         {data.useMetric ? (
@@ -755,7 +846,14 @@ export default function OnboardingScreen() {
             onChangeText={(text) => setData({ ...data, heightFeet: text })}
             placeholder="Enter height in cm"
             keyboardType="numeric"
-            className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base"
+            className="border rounded-xl px-4 py-3 text-base"
+            style={{
+              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+              borderWidth: 1,
+              color: isDark ? DarkColors.text.primary : Colors.text.primary,
+            }}
+            placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
           />
         ) : (
           <View className="flex-row">
@@ -764,14 +862,28 @@ export default function OnboardingScreen() {
               onChangeText={(text) => setData({ ...data, heightFeet: text })}
               placeholder="Feet"
               keyboardType="numeric"
-              className="flex-1 mr-2 bg-white border border-gray-300 rounded-xl px-4 py-3 text-base"
+              className="flex-1 mr-2 border rounded-xl px-4 py-3 text-base"
+              style={{
+                backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+                borderWidth: 1,
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+              }}
+              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
             />
             <TextInput
               value={data.heightInches}
               onChangeText={(text) => setData({ ...data, heightInches: text })}
               placeholder="Inches"
               keyboardType="numeric"
-              className="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-3 text-base"
+              className="flex-1 border rounded-xl px-4 py-3 text-base"
+              style={{
+                backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+                borderWidth: 1,
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+              }}
+              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
             />
           </View>
         )}
@@ -779,7 +891,7 @@ export default function OnboardingScreen() {
 
       {/* Weight */}
       <View className="mb-4">
-        <Text className="text-sm font-semibold text-gray-700 mb-2">
+        <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           Weight {data.useMetric ? '(kg)' : '(lbs)'}
         </Text>
         <TextInput
@@ -787,102 +899,253 @@ export default function OnboardingScreen() {
           onChangeText={(text) => setData({ ...data, weight: text })}
           placeholder={`Enter weight in ${data.useMetric ? 'kg' : 'lbs'}`}
           keyboardType="numeric"
-          className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base"
+          className="border rounded-xl px-4 py-3 text-base"
+          style={{
+            backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+            borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+            borderWidth: 1,
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
+          }}
+          placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
         />
       </View>
 
       {/* Activity Level */}
       <View className="mb-4">
-        <Text className="text-sm font-semibold text-gray-700 mb-2">Activity Level</Text>
-        {ACTIVITY_LEVELS.map((level) => (
-          <HapticTouchableOpacity
-            key={level.value}
-            onPress={() => setData({ ...data, activityLevel: level.value })}
-            className={`mb-2 p-4 rounded-xl border-2 ${
-              data.activityLevel === level.value
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 bg-white'
-            }`}
-            activeOpacity={0.7}
-          >
-            <Text className={`text-base font-semibold mb-1 ${
-              data.activityLevel === level.value ? 'text-blue-900' : 'text-gray-900'
-            }`}>
-              {level.label}
-            </Text>
-            <Text className="text-sm text-gray-600">
-              {level.description}
-            </Text>
-          </HapticTouchableOpacity>
-        ))}
+        <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Activity Level</Text>
+        {ACTIVITY_LEVELS.map((level) => {
+          const isSelected = data.activityLevel === level.value;
+          return (
+            <HapticTouchableOpacity
+              key={level.value}
+              onPress={() => setData({ ...data, activityLevel: level.value })}
+              className="mb-2 p-4 rounded-xl border-2"
+              style={{
+                borderColor: isSelected 
+                  ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                  : (isDark ? DarkColors.border.light : Colors.border.light),
+                backgroundColor: isSelected 
+                  ? (isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight)
+                  : (isDark ? '#1F2937' : '#FFFFFF'),
+              }}
+              activeOpacity={0.7}
+            >
+              <Text className="text-base font-semibold mb-1" style={{ 
+                color: isSelected 
+                  ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                  : (isDark ? DarkColors.text.primary : Colors.text.primary)
+              }}>
+                {level.label}
+              </Text>
+              <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                {level.description}
+              </Text>
+            </HapticTouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Fitness Goal */}
       <View className="mb-4">
-        <Text className="text-sm font-semibold text-gray-700 mb-2">Fitness Goal</Text>
+        <Text className="text-sm font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Fitness Goal</Text>
         <View className="flex-row flex-wrap">
-          {FITNESS_GOALS.map((goal) => (
-            <HapticTouchableOpacity
-              key={goal.value}
-              onPress={() => setData({ ...data, fitnessGoal: goal.value })}
-              className={`w-[48%] ${FITNESS_GOALS.indexOf(goal) % 2 === 0 ? 'mr-[4%]' : ''} mb-4 p-4 rounded-2xl border-2 ${
-                data.fitnessGoal === goal.value
-                  ? 'border-purple-500 bg-purple-50'
-                  : 'border-gray-200 bg-white'
-              }`}
-              activeOpacity={0.7}
-            >
-              <Text className="text-3xl text-center mb-2">{goal.icon}</Text>
-              <Text className={`text-sm font-semibold text-center mb-1 ${
-                data.fitnessGoal === goal.value ? 'text-purple-900' : 'text-gray-900'
-              }`}>
-                {goal.label}
-              </Text>
-              <Text className="text-xs text-gray-600 text-center">
-                {goal.description}
-              </Text>
-            </HapticTouchableOpacity>
-          ))}
+          {FITNESS_GOALS.map((goal) => {
+            const isSelected = data.fitnessGoal === goal.value;
+            let bgColor = isSelected 
+              ? (goal.value === 'lose_weight' ? (isDark ? '#DC2626' : '#DC2626')
+                : goal.value === 'maintain' ? (isDark ? '#10B981' : '#10B981')
+                : goal.value === 'gain_muscle' ? (isDark ? '#8B5CF6' : '#8B5CF6')
+                : (isDark ? '#F97316' : '#F97316'))
+              : (isDark ? '#1F2937' : '#FFFFFF');
+            let borderColor = isSelected 
+              ? (goal.value === 'lose_weight' ? (isDark ? '#DC2626' : '#DC2626')
+                : goal.value === 'maintain' ? (isDark ? '#10B981' : '#10B981')
+                : goal.value === 'gain_muscle' ? (isDark ? '#8B5CF6' : '#8B5CF6')
+                : (isDark ? '#F97316' : '#F97316'))
+              : (isDark ? DarkColors.border.light : Colors.border.light);
+            
+            return (
+              <HapticTouchableOpacity
+                key={goal.value}
+                onPress={() => setData({ ...data, fitnessGoal: goal.value })}
+                className={`w-[48%] ${FITNESS_GOALS.indexOf(goal) % 2 === 0 ? 'mr-[4%]' : ''} mb-4 p-4 rounded-2xl border-2`}
+                style={{
+                  backgroundColor: bgColor,
+                  borderColor: borderColor,
+                }}
+                activeOpacity={0.7}
+              >
+                <Text className="text-3xl text-center mb-2">{goal.icon}</Text>
+                <Text className="text-sm font-semibold text-center mb-1" style={{ 
+                  color: isSelected ? 'white' : (isDark ? DarkColors.text.primary : Colors.text.primary)
+                }}>
+                  {goal.label}
+                </Text>
+                <Text className="text-xs text-center" style={{ 
+                  color: isSelected ? 'white' : (isDark ? DarkColors.text.secondary : Colors.text.secondary)
+                }}>
+                  {goal.description}
+                </Text>
+              </HapticTouchableOpacity>
+            );
+          })}
         </View>
       </View>
     </ScrollView>
   );
 
+  // Fetch recipes for roulette
+  const fetchRouletteRecipes = async () => {
+    try {
+      setRouletteLoading(true);
+      const response = await recipeApi.getAllRecipes({
+        page: 0,
+        limit: 20, // Get 20 recipes for roulette
+      });
+      
+      const responseData = response.data;
+      let recipes: SuggestedRecipe[] = [];
+      
+      if (responseData && responseData.recipes && Array.isArray(responseData.recipes)) {
+        recipes = responseData.recipes;
+      } else if (Array.isArray(responseData)) {
+        recipes = responseData;
+      }
+      
+      setRouletteRecipes(recipes);
+    } catch (error) {
+      console.error('Error fetching roulette recipes:', error);
+      Alert.alert('Error', 'Failed to load recipes. You can skip this step.');
+    } finally {
+      setRouletteLoading(false);
+    }
+  };
+
+  // Handle roulette like
+  const handleRouletteLike = async (recipeId: string) => {
+    setRouletteLiked(prev => new Set(prev).add(recipeId));
+    setRoulettePassed(prev => {
+      const next = new Set(prev);
+      next.delete(recipeId);
+      return next;
+    });
+    
+    // Save like to backend
+    try {
+      await recipeApi.likeRecipe(recipeId);
+    } catch (error) {
+      console.error('Error liking recipe:', error);
+    }
+  };
+
+  // Handle roulette pass
+  const handleRoulettePass = async (recipeId: string) => {
+    setRoulettePassed(prev => new Set(prev).add(recipeId));
+    setRouletteLiked(prev => {
+      const next = new Set(prev);
+      next.delete(recipeId);
+      return next;
+    });
+    
+    // Save dislike to backend
+    try {
+      await recipeApi.dislikeRecipe(recipeId);
+    } catch (error) {
+      console.error('Error disliking recipe:', error);
+    }
+  };
+
+  const renderRoulette = () => {
+    if (rouletteLoading) {
+      return (
+        <View className="flex-1 justify-center items-center px-6">
+          <LoadingState
+            message="Loading recipes for you..."
+            expression="thinking"
+            size="large"
+          />
+        </View>
+      );
+    }
+
+    if (rouletteRecipes.length === 0) {
+      return (
+        <ScrollView className="flex-1 px-6 py-8">
+          <View className="items-center mb-8">
+            <LogoMascot 
+              expression="curious" 
+              size="large" 
+              style={{ marginBottom: 16 }}
+            />
+            <Text className="text-2xl font-bold text-center mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+              No Recipes Available
+            </Text>
+            <Text className="text-lg text-center mb-6" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+              We couldn't load any recipes right now. You can skip this step and continue.
+            </Text>
+            <HapticTouchableOpacity
+              onPress={nextStep}
+              className="py-4 px-8 rounded-xl"
+              style={{ backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
+            >
+              <Text className="text-white font-semibold text-lg">Skip This Step</Text>
+            </HapticTouchableOpacity>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    return (
+      <View className="flex-1">
+        <RecipeRoulette
+          recipes={rouletteRecipes}
+          onLike={handleRouletteLike}
+          onPass={handleRoulettePass}
+          onClose={() => {
+            // When roulette closes (all recipes viewed), show message that they can continue
+            // The Continue button will be enabled if they've interacted with at least one recipe
+          }}
+          initialIndex={0}
+        />
+      </View>
+    );
+  };
+
   const renderReview = () => (
     <ScrollView className="flex-1 px-6 py-6">
-      <Text className="text-2xl font-bold text-gray-900 mb-2">
+      <Text className="text-2xl font-bold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
         Review Your Profile
       </Text>
-      <Text className="text-base text-gray-600 mb-6">
+      <Text className="text-base mb-6" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
         Make sure everything looks good
       </Text>
 
       {/* Cuisines */}
-      <View className="bg-white rounded-xl p-4 mb-4">
-        <Text className="text-lg font-semibold text-gray-900 mb-2">
+      <View className="rounded-xl p-4 mb-4" style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}>
+        <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           🍝 Favorite Cuisines
         </Text>
-        <Text className="text-base text-gray-700">
+        <Text className="text-base" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
           {data.likedCuisines.join(', ') || 'None selected'}
         </Text>
       </View>
 
       {/* Dietary Restrictions */}
-      <View className="bg-white rounded-xl p-4 mb-4">
-        <Text className="text-lg font-semibold text-gray-900 mb-2">
+      <View className="rounded-xl p-4 mb-4" style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}>
+        <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           🥗 Dietary Restrictions
         </Text>
-        <Text className="text-base text-gray-700">
+        <Text className="text-base" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
           {data.dietaryRestrictions.length > 0 ? data.dietaryRestrictions.join(', ') : 'None'}
         </Text>
       </View>
 
       {/* Preferred Superfoods */}
-      <View className="bg-white rounded-xl p-4 mb-4">
-        <Text className="text-lg font-semibold text-gray-900 mb-2">
+      <View className="rounded-xl p-4 mb-4" style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}>
+        <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           🌟 Preferred Superfoods
         </Text>
-        <Text className="text-base text-gray-700">
+        <Text className="text-base" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
           {data.preferredSuperfoods.length > 0 
             ? data.preferredSuperfoods.map(id => {
                 const superfood = SUPERFOOD_CATEGORIES.find(sf => sf.id === id);
@@ -893,61 +1156,64 @@ export default function OnboardingScreen() {
       </View>
 
       {/* Banned Ingredients */}
-      <View className="bg-white rounded-xl p-4 mb-4">
-        <Text className="text-lg font-semibold text-gray-900 mb-2">
+      <View className="rounded-xl p-4 mb-4" style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}>
+        <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           🚫 Ingredients to Avoid
         </Text>
-        <Text className="text-base text-gray-700">
+        <Text className="text-base" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
           {data.bannedIngredients.length > 0 ? data.bannedIngredients.join(', ') : 'None'}
         </Text>
       </View>
 
       {/* Physical Profile */}
-      <View className="bg-white rounded-xl p-4 mb-4">
-        <Text className="text-lg font-semibold text-gray-900 mb-3">
+      <View className="rounded-xl p-4 mb-4" style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}>
+        <Text className="text-lg font-semibold mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           💪 Physical Profile
         </Text>
         <View className="space-y-2">
-          <View className="flex-row justify-between py-2 border-b border-gray-100">
-            <Text className="text-sm text-gray-600">Gender</Text>
-            <Text className="text-sm font-medium text-gray-900 capitalize">{data.gender}</Text>
+          <View className="flex-row justify-between py-2 border-b" style={{ borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light }}>
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Gender</Text>
+            <Text className="text-sm font-medium capitalize" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{data.gender}</Text>
           </View>
-          <View className="flex-row justify-between py-2 border-b border-gray-100">
-            <Text className="text-sm text-gray-600">Age</Text>
-            <Text className="text-sm font-medium text-gray-900">{data.age} years</Text>
+          <View className="flex-row justify-between py-2 border-b" style={{ borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light }}>
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Age</Text>
+            <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{data.age} years</Text>
           </View>
-          <View className="flex-row justify-between py-2 border-b border-gray-100">
-            <Text className="text-sm text-gray-600">Height</Text>
-            <Text className="text-sm font-medium text-gray-900">
+          <View className="flex-row justify-between py-2 border-b" style={{ borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light }}>
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Height</Text>
+            <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               {data.useMetric 
                 ? `${data.heightFeet} cm` 
                 : `${data.heightFeet}' ${data.heightInches}"`
               }
             </Text>
           </View>
-          <View className="flex-row justify-between py-2 border-b border-gray-100">
-            <Text className="text-sm text-gray-600">Weight</Text>
-            <Text className="text-sm font-medium text-gray-900">
+          <View className="flex-row justify-between py-2 border-b" style={{ borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light }}>
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Weight</Text>
+            <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               {data.weight} {data.useMetric ? 'kg' : 'lbs'}
             </Text>
           </View>
-          <View className="flex-row justify-between py-2 border-b border-gray-100">
-            <Text className="text-sm text-gray-600">Activity Level</Text>
-            <Text className="text-sm font-medium text-gray-900 capitalize">
+          <View className="flex-row justify-between py-2 border-b" style={{ borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light }}>
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Activity Level</Text>
+            <Text className="text-sm font-medium capitalize" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               {ACTIVITY_LEVELS.find(l => l.value === data.activityLevel)?.label}
             </Text>
           </View>
           <View className="flex-row justify-between py-2">
-            <Text className="text-sm text-gray-600">Fitness Goal</Text>
-            <Text className="text-sm font-medium text-gray-900">
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Fitness Goal</Text>
+            <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               {FITNESS_GOALS.find(g => g.value === data.fitnessGoal)?.label}
             </Text>
           </View>
         </View>
       </View>
 
-      <View className="bg-orange-50 rounded-xl p-4 border border-orange-200">
-        <Text className="text-sm text-orange-900 text-center">
+      <View className="rounded-xl p-4 border" style={{
+        backgroundColor: isDark ? `${Colors.secondaryRedLight}1A` : Colors.secondaryRedLight,
+        borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
+      }}>
+        <Text className="text-sm text-center" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>
           💡 You can update these preferences anytime from your Profile
         </Text>
       </View>
@@ -957,7 +1223,7 @@ export default function OnboardingScreen() {
   // Show loading screen while fetching data in edit mode
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
         <LoadingState
           message="Loading your preferences..."
           expression="thinking"
@@ -969,38 +1235,43 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       <View className="flex-1">
         {/* Header */}
-        <View className="bg-white px-6 py-4 border-b border-gray-200">
+        <View className="px-6 py-4 border-b" style={{ 
+          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+          borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light,
+        }}>
           <View className="flex-row items-center justify-between mb-3">
             {currentStep > 0 ? (
               <HapticTouchableOpacity onPress={prevStep} className="p-1">
-                <Ionicons name="arrow-back" size={24} color="#6B7280" />
+                <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
               </HapticTouchableOpacity>
             ) : (
               <View style={{ width: 32 }} />
             )}
             <View className="flex-row items-center">
-              <SazonMascot 
+              <LogoMascot 
                 expression={getMascotExpression()} 
                 size="small" 
-                variant="orange"
                 style={{ marginRight: 8 }}
               />
-              <Text className="text-base font-medium text-gray-600">
+              <Text className="text-base font-medium" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                 Step {currentStep + 1} of {totalSteps}
               </Text>
             </View>
             <HapticTouchableOpacity onPress={skipOnboarding} className="p-1">
-              <Text className="text-base font-medium text-orange-500">Skip</Text>
+              <Text className="text-base font-medium" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>Skip</Text>
             </HapticTouchableOpacity>
           </View>
           {/* Progress Bar */}
-          <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
             <View 
-              className="h-full bg-orange-500 rounded-full"
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full"
+              style={{ 
+                width: `${progress}%`,
+                backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
+              }}
             />
           </View>
         </View>
@@ -1009,15 +1280,19 @@ export default function OnboardingScreen() {
         {renderStep()}
 
         {/* Bottom Bar */}
-        <View className="bg-white px-6 py-4 border-t border-gray-200">
+        <View className="px-6 py-4 border-t" style={{ 
+          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+          borderTopColor: isDark ? DarkColors.border.light : Colors.border.light,
+        }}>
           <HapticTouchableOpacity
             onPress={nextStep}
             disabled={!canProceed() || saving}
-            className={`py-4 rounded-xl ${
-              !canProceed() || saving
-                ? 'bg-gray-300'
-                : 'bg-orange-500'
-            }`}
+            className="py-4 rounded-xl"
+            style={{
+              backgroundColor: (!canProceed() || saving)
+                ? (isDark ? '#4B5563' : '#D1D5DB')
+                : (isDark ? DarkColors.secondaryRed : Colors.secondaryRed),
+            }}
             activeOpacity={0.7}
           >
             {saving ? (
@@ -1042,8 +1317,10 @@ export default function OnboardingScreen() {
         expression={isEditMode ? 'chef-kiss' : 'excited'}
         actionLabel={isEditMode ? 'Done' : 'Get Started'}
         onAction={() => {
+          setShowSuccessModal(false);
           if (isEditMode) {
-            router.back();
+            // Redirect to profile page when editing preferences
+            router.replace('/(tabs)/profile');
           } else {
             router.replace('/(tabs)');
           }
@@ -1051,7 +1328,8 @@ export default function OnboardingScreen() {
         onDismiss={() => {
           setShowSuccessModal(false);
           if (isEditMode) {
-            router.back();
+            // Redirect to profile page when editing preferences
+            router.replace('/(tabs)/profile');
           } else {
             router.replace('/(tabs)');
           }

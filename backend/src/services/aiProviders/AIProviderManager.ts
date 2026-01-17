@@ -1,6 +1,5 @@
 // AI Provider Manager - Handles automatic fallback between providers
 import { AIProvider, RecipeGenerationRequest, AIProviderError } from './AIProvider';
-import { OpenAIProvider } from './OpenAIProvider';
 import { ClaudeProvider } from './ClaudeProvider';
 import { GeminiProvider } from './GeminiProvider';
 import type { GeneratedRecipe } from '../aiRecipeService';
@@ -12,16 +11,15 @@ export class AIProviderManager {
 
   constructor() {
     // Initialize providers in priority order
-    // Order can be configured via environment variable: AI_PROVIDER_ORDER=claude,gemini,openai
+    // Order can be configured via environment variable: AI_PROVIDER_ORDER=claude,gemini
     const configuredOrder = process.env.AI_PROVIDER_ORDER?.split(',').map(p => p.trim()) || [];
     
-    // Default order: Claude -> OpenAI -> Gemini (Claude first since it's the only one with access)
-    const defaultOrder = ['claude', 'openai', 'gemini'];
+    // Default order: Claude -> Gemini (OpenAI removed - not being used)
+    const defaultOrder = ['claude', 'gemini'];
     this.providerOrder = configuredOrder.length > 0 ? configuredOrder : defaultOrder;
 
     // Initialize all available providers
     const allProviders: { [key: string]: AIProvider } = {
-      openai: new OpenAIProvider(),
       claude: new ClaudeProvider(),
       gemini: new GeminiProvider(),
     };
@@ -39,7 +37,7 @@ export class AIProviderManager {
 
     if (this.providers.length === 0) {
       console.error('❌ [ProviderManager] No AI providers are configured!');
-      throw new Error('No AI providers configured. Please set at least one: OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_AI_API_KEY');
+      throw new Error('No AI providers configured. Please set at least one: ANTHROPIC_API_KEY or GOOGLE_AI_API_KEY');
     }
 
     console.log(`✅ [ProviderManager] ${this.providers.length} provider(s) ready: ${this.providers.map(p => p.getName()).join(', ')}`);
@@ -95,6 +93,12 @@ export class AIProviderManager {
         // If it's a retryable error, try next provider
         if (normalizedError.retryable) {
           console.log(`🔄 [ProviderManager] ${provider.getName()} retryable error, trying next provider...`);
+          continue;
+        }
+
+        // Explicitly handle 529 (Overloaded) errors - treat as retryable and fallback
+        if (normalizedError.status === 529) {
+          console.log(`🔄 [ProviderManager] ${provider.getName()} overloaded (529), trying next provider...`);
           continue;
         }
 

@@ -109,6 +109,9 @@ export const Icons = {
   SAVE_RECIPE: 'bookmark-outline' as IconName,
   AI_GENERATE: 'sparkles' as IconName,
   AI_GENERATE_OUTLINE: 'sparkles-outline' as IconName,
+  NOTE: 'document-text' as IconName,
+  NOTE_OUTLINE: 'document-text-outline' as IconName,
+  SWAP_HORIZONTAL: 'swap-horizontal' as IconName,
   
   // Shopping
   CART: 'cart' as IconName,

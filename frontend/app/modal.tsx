@@ -1,20 +1,23 @@
-import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated } from 'react-native';
+import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, Image } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import AnimatedText from '../components/ui/AnimatedText';
 import LoadingState from '../components/ui/LoadingState';
-import SazonMascot from '../components/mascot/SazonMascot';
+import LogoMascot from '../components/mascot/LogoMascot';
 import MealPrepScalingModal from '../components/recipe/MealPrepScalingModal';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
+import { useColorScheme } from 'nativewind';
 import { useApi } from '../hooks/useApi';
-import { recipeApi, collectionsApi, shoppingListApi, costTrackingApi, shoppingAppApi, ingredientAvailabilityApi } from '../lib/api';
+import { recipeApi, collectionsApi, shoppingListApi, costTrackingApi, shoppingAppApi } from '../lib/api';
 import type { Recipe } from '../types';
 import { ScaledRecipe } from '../utils/recipeScaling';
 import { generateStorageInstructions, getStorageMethods } from '../utils/storageInstructions';
-import { getMealPrepTags, getMealPrepSuitabilityBadge } from '../utils/mealPrepTags';
+import { getMealPrepTags } from '../utils/mealPrepTags';
 import * as Haptics from 'expo-haptics';
+import { Colors, DarkColors } from '../constants/Colors';
 
 // Helper function to extract text from ingredients/instructions
 const getTextContent = (item: any): string => {
@@ -25,6 +28,8 @@ const getTextContent = (item: any): string => {
 
 export default function RecipeModal() {
   const { id, source } = useLocalSearchParams();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,10 +54,10 @@ export default function RecipeModal() {
   const [addingToShoppingList, setAddingToShoppingList] = useState(false);
   const [recipeSavings, setRecipeSavings] = useState<any>(null);
   const [loadingSavings, setLoadingSavings] = useState(false);
-  const [recipeAvailability, setRecipeAvailability] = useState<any>(null);
-  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [showMealPrepModal, setShowMealPrepModal] = useState(false);
+  const [similarRecipes, setSimilarRecipes] = useState<Recipe[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
 
   // Animate modal entrance
   useEffect(() => {
@@ -119,8 +124,17 @@ export default function RecipeModal() {
         console.log('📱 Modal: Received recipe data', response.data);
         setRecipe(response.data);
       } catch (err: any) {
+        // Don't fail the modal if it's just a quota error - recipe should still load
+        const isQuotaError = err?.code === 'insufficient_quota' || 
+          err?.message?.includes('quota') || 
+          err?.message?.includes('Too many requests');
+        if (!isQuotaError) {
         console.error('📱 Modal: Error fetching recipe', err);
         setError(err.message || 'Failed to load recipe');
+        } else {
+          // For quota errors, just log quietly - the recipe might still be cached or available
+          console.log('📱 Modal: Recipe fetch hit quota limit, continuing anyway');
+        }
       } finally {
         setLoading(false);
       }
@@ -128,6 +142,40 @@ export default function RecipeModal() {
 
     fetchRecipe();
   }, [id]);
+
+  // Load similar recipes when recipe is loaded
+  useEffect(() => {
+    const loadSimilarRecipes = async () => {
+      if (!recipe?.id) return;
+      
+      try {
+        setLoadingSimilar(true);
+        
+        // Check if meal prep mode is enabled
+        const MEAL_PREP_STORAGE_KEY = '@sazon_meal_prep_mode';
+        const savedMealPrepMode = await AsyncStorage.getItem(MEAL_PREP_STORAGE_KEY);
+        const mealPrepMode = savedMealPrepMode === 'true';
+        
+        console.log(`🍱 Loading similar recipes (mealPrepMode: ${mealPrepMode})`);
+        
+        const response = await recipeApi.getSimilarRecipes(recipe.id, 5, mealPrepMode);
+        setSimilarRecipes(response.data);
+      } catch (error: any) {
+        // Similar recipes are optional, don't show errors
+        // Only log if it's not a quota/rate limit error
+        const isQuotaError = error?.code === 'insufficient_quota' || 
+          error?.message?.includes('quota') || 
+          error?.message?.includes('Too many requests');
+        if (!isQuotaError) {
+          console.log('Similar recipes not available:', error);
+        }
+      } finally {
+        setLoadingSimilar(false);
+      }
+    };
+
+    loadSimilarRecipes();
+  }, [recipe?.id]);
 
   // Load recipe savings when recipe is loaded
   useEffect(() => {
@@ -138,9 +186,15 @@ export default function RecipeModal() {
         setLoadingSavings(true);
         const response = await costTrackingApi.getRecipeSavings(recipe.id);
         setRecipeSavings(response.data);
-      } catch (error) {
+      } catch (error: any) {
         // Savings are optional, don't show errors
-        console.log('Savings not available:', error);
+        // Only log if it's not a quota/rate limit error
+        const isQuotaError = error?.code === 'insufficient_quota' || 
+          error?.message?.includes('quota') || 
+          error?.message?.includes('Too many requests');
+        if (!isQuotaError) {
+          console.log('Savings not available:', error);
+        }
       } finally {
         setLoadingSavings(false);
       }
@@ -148,26 +202,9 @@ export default function RecipeModal() {
 
     if (recipe) {
       loadSavings();
-      loadAvailability();
       loadIntegrations();
     }
   }, [recipe]);
-
-  // Load recipe availability
-  const loadAvailability = async () => {
-    if (!recipe?.id) return;
-    
-    try {
-      setLoadingAvailability(true);
-      const response = await ingredientAvailabilityApi.analyzeRecipe(recipe.id);
-      setRecipeAvailability(response.data);
-    } catch (error) {
-      // Availability is optional
-      console.log('Availability not available:', error);
-    } finally {
-      setLoadingAvailability(false);
-    }
-  };
 
   // Load shopping app integrations
   const loadIntegrations = async () => {
@@ -243,7 +280,7 @@ export default function RecipeModal() {
               { text: 'OK', onPress: () => router.back() }
             ]);
           }
-        } else {
+      } else {
           Alert.alert('Already Saved', 'This recipe is already in your cookbook!', [
             { text: 'OK', onPress: () => router.back() }
           ]);
@@ -295,8 +332,8 @@ export default function RecipeModal() {
     try {
       setAddingToShoppingList(true);
 
-      // Generate shopping list from recipe
-      const response = await shoppingListApi.generateFromRecipes([recipe.id]);
+      // Generate shopping list from recipe, using recipe name as list name
+      const response = await shoppingListApi.generateFromRecipes([recipe.id], recipe.title);
 
       if (response.data.shoppingList) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -329,6 +366,16 @@ export default function RecipeModal() {
   const handleHealthify = async () => {
     if (!recipe) return;
     
+    // Check if recipe already has a healthy grade (A, B, or C)
+    if (recipe.healthGrade && (recipe.healthGrade.toUpperCase() === 'A' || recipe.healthGrade.toUpperCase() === 'B' || recipe.healthGrade.toUpperCase() === 'C')) {
+      Alert.alert(
+        'Recipe Already Healthy',
+        `This recipe already has a healthy grade (${recipe.healthGrade}) and doesn't need healthifying. Healthify is only available for recipes with grades D or F.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     try {
       setHealthifying(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -351,6 +398,17 @@ export default function RecipeModal() {
       }
     } catch (error: any) {
       console.error('❌ Healthify error:', error);
+      
+      // Handle "already healthy" error specifically
+      if (error.response?.data?.code === 'ALREADY_HEALTHY') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(
+          'Recipe Already Healthy',
+          error.response.data.message || `This recipe already has a healthy grade and doesn't need healthifying.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
       
       const isQuotaError = error.code === 'insufficient_quota' || 
                           error.message?.includes('quota') ||
@@ -398,46 +456,6 @@ export default function RecipeModal() {
             Alert.alert('Error', 'Failed to remove recipe from cookbook');
           }
         },
-      },
-    ]);
-  };
-
-  const handleRateRecipe = async () => {
-    if (!recipe) return;
-    
-    Alert.alert(
-      'Rate Recipe',
-      'How would you rate this recipe?',
-      [
-      {
-        text: 'Like',
-        onPress: async () => {
-          try {
-            await recipeApi.likeRecipe(recipe.id);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('Thanks!', 'Your feedback helps us improve recommendations');
-          } catch (error) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert('Error', 'Failed to submit rating');
-          }
-        },
-      },
-      {
-        text: 'Dislike',
-        onPress: async () => {
-          try {
-            await recipeApi.dislikeRecipe(recipe.id);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('Thanks!', 'Your feedback helps us improve recommendations');
-          } catch (error) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert('Error', 'Failed to submit rating');
-          }
-        },
-      },
-      {
-        text: 'Cancel',
-        style: 'cancel',
       },
     ]);
   };
@@ -527,15 +545,15 @@ export default function RecipeModal() {
           opacity: modalOpacity,
         }}
       >
-      <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-        <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+        <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <HapticTouchableOpacity 
             onPress={() => router.back()}
             className="p-2"
           >
-            <Ionicons name="close" size={24} color="#374151" />
+            <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
           </HapticTouchableOpacity>
-          <Text className="text-lg font-semibold text-gray-900">Recipe Details</Text>
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
           <View className="w-8" />
         </View>
         <LoadingState
@@ -561,20 +579,19 @@ export default function RecipeModal() {
       >
         <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <HapticTouchableOpacity 
+        <HapticTouchableOpacity 
             onPress={() => router.back()}
             className="p-2"
           >
-            <Ionicons name="close" size={24} color="#374151" />
-          </HapticTouchableOpacity>
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
+          <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
+        </HapticTouchableOpacity>
+        <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
           <View className="w-8" />
         </View>
         <View className="flex-1 items-center justify-center p-8">
-          <SazonMascot 
+          <LogoMascot 
             expression="supportive" 
             size="large" 
-            variant="orange"
           />
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
             Failed to load recipe
@@ -582,7 +599,7 @@ export default function RecipeModal() {
           <Text className="text-gray-500 dark:text-gray-400 text-center mt-2">
             {error || 'Recipe not found'}
           </Text>
-          <Text className="text-sm text-gray-400 dark:text-gray-500 text-center mt-2 mb-4">
+          <Text className="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
             Don't worry, this happens sometimes. Try going back and selecting the recipe again.
           </Text>
           <HapticTouchableOpacity 
@@ -606,16 +623,16 @@ export default function RecipeModal() {
         opacity: modalOpacity,
       }}
     >
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
       {/* Header - Single title with close button */}
-      <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+      <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <HapticTouchableOpacity 
           onPress={() => router.back()}
           className="p-2"
         >
-          <Ionicons name="close" size={24} color="#374151" />
+          <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
         </HapticTouchableOpacity>
-        <Text className="text-lg font-semibold text-gray-900">Recipe Details</Text>
+        <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
         {isUserRecipe ? (
           <HapticTouchableOpacity 
             onPress={handleEditRecipe}
@@ -628,70 +645,103 @@ export default function RecipeModal() {
         )}
       </View>
 
-      <ScrollView className="flex-1">
-        <View className="p-4">
+      <ScrollView className="flex-1 bg-white dark:bg-gray-900">
+        <View className="p-4 bg-white dark:bg-gray-900">
           {/* Recipe Title - Removed the duplicate title here */}
-          <AnimatedText className="text-2xl font-bold text-gray-900 mb-2">
+          <AnimatedText className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             {recipe.title}
           </AnimatedText>
           
           {/* Description */}
-          <AnimatedText className="text-gray-600 mb-4">
+          <AnimatedText className="text-gray-600 dark:text-gray-300 mb-4">
             {recipe.description}
           </AnimatedText>
 
           {/* Quick Stats */}
-          <View className="flex-row justify-between mb-6 p-4 bg-gray-50 rounded-lg">
+          <View className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <View className="flex-row items-center mb-3">
+              <Text className="text-xl mr-2">⏱️</Text>
+              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cook Time</Text>
+            </View>
+            <View className="flex-row justify-between">
             <View className="items-center">
-              <Text className="text-gray-500 text-sm">Cook Time</Text>
-              <Text className="font-semibold text-gray-900">{recipe.cookTime} min</Text>
+              <Text className="text-gray-500 dark:text-gray-400 text-sm">Time</Text>
+              <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.cookTime} min</Text>
             </View>
             <View className="items-center">
-              <Text className="text-gray-500 text-sm">Calories</Text>
-              <Text className="font-semibold text-gray-900">{recipe.calories}</Text>
+              <Text className="text-gray-500 dark:text-gray-400 text-sm">Calories</Text>
+              <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.calories}</Text>
             </View>
             <View className="items-center">
-              <Text className="text-gray-500 text-sm">Protein</Text>
-              <Text className="font-semibold text-gray-900">{recipe.protein}g</Text>
+              <Text className="text-gray-500 dark:text-gray-400 text-sm">Protein</Text>
+              <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.protein}g</Text>
+            </View>
+            </View>
+          </View>
+
+          {/* Macro Nutrients */}
+          <View className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <View className="flex-row items-center mb-2">
+              <Text className="text-xl mr-2">🥗</Text>
+              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Nutrition</Text>
+            </View>
+            <View className="flex-row justify-between">
+              <View className="items-center">
+                <Text className="text-gray-500 dark:text-gray-400 text-sm">Carbs</Text>
+                <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.carbs}g</Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-gray-500 dark:text-gray-400 text-sm">Fat</Text>
+                <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.fat}g</Text>
+              </View>
+              {recipe.fiber && (
+                <View className="items-center">
+                  <Text className="text-gray-500 dark:text-gray-400 text-sm">Fiber</Text>
+                  <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.fiber}g</Text>
+                </View>
+              )}
             </View>
           </View>
 
           {/* Health Grade Badge */}
           {(recipe.healthGrade || recipe.healthGradeScore) && (
-            <View className="mb-4 p-4 bg-white rounded-lg border border-gray-200">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="text-sm font-medium text-gray-600 mb-1">Health Grade</Text>
-                  <Text className="text-xs text-gray-500">
-                    Objective nutritional quality rating
-                  </Text>
+            <View className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <View className="flex-row items-start justify-between mb-3">
+                <View className="flex-row items-start flex-1">
+                  <Text className="text-xl mr-2 mt-0.5">⭐</Text>
+                  <View>
+                    <Text className="text-base font-medium text-gray-600 dark:text-gray-200">Health Grade</Text>
+                    <Text className="text-sm text-gray-500 dark:text-gray-400">
+                      Objective nutritional quality rating
+                    </Text>
+                  </View>
                 </View>
-                <View className={`px-4 py-2 rounded-lg border-2 ${
-                  recipe.healthGrade === 'A' ? 'bg-green-100 border-green-300' :
-                  recipe.healthGrade === 'B' ? 'bg-blue-100 border-blue-300' :
-                  recipe.healthGrade === 'C' ? 'bg-yellow-100 border-yellow-300' :
-                  recipe.healthGrade === 'D' ? 'bg-orange-100 border-orange-300' :
-                  recipe.healthGrade === 'F' ? 'bg-red-100 border-red-300' :
-                  'bg-gray-100 border-gray-300'
+                <View className={`px-1.5 py-0.5 rounded-lg border-2 ml-3 ${
+                  recipe.healthGrade === 'A' ? 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700' :
+                  recipe.healthGrade === 'B' ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700' :
+                  recipe.healthGrade === 'C' ? 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700' :
+                  recipe.healthGrade === 'D' ? 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700' :
+                  recipe.healthGrade === 'F' ? 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-500' :
+                  'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600'
                 }`}>
-                  <Text className={`text-2xl font-bold ${
-                    recipe.healthGrade === 'A' ? 'text-green-700' :
-                    recipe.healthGrade === 'B' ? 'text-blue-700' :
-                    recipe.healthGrade === 'C' ? 'text-yellow-700' :
-                    recipe.healthGrade === 'D' ? 'text-orange-700' :
-                    recipe.healthGrade === 'F' ? 'text-red-700' :
-                    'text-gray-700'
+                  <Text className={`text-sm font-bold ${
+                    recipe.healthGrade === 'A' ? 'text-green-700 dark:text-green-300' :
+                    recipe.healthGrade === 'B' ? 'text-blue-700 dark:text-blue-300' :
+                    recipe.healthGrade === 'C' ? 'text-yellow-700 dark:text-yellow-300' :
+                    recipe.healthGrade === 'D' ? 'text-orange-700 dark:text-orange-300' :
+                    recipe.healthGrade === 'F' ? 'text-red-600 dark:text-red-400' :
+                    'text-gray-700 dark:text-gray-300'
                   }`}>
                     {recipe.healthGrade}
                   </Text>
                   {recipe.healthGradeScore !== undefined && (
-                    <Text className={`text-xs text-center mt-1 ${
-                      recipe.healthGrade === 'A' ? 'text-green-600' :
-                      recipe.healthGrade === 'B' ? 'text-blue-600' :
-                      recipe.healthGrade === 'C' ? 'text-yellow-600' :
-                      recipe.healthGrade === 'D' ? 'text-orange-600' :
-                      recipe.healthGrade === 'F' ? 'text-red-600' :
-                      'text-gray-600'
+                    <Text className={`text-xs text-center mt-0.5 ${
+                      recipe.healthGrade === 'A' ? 'text-green-600 dark:text-green-400' :
+                      recipe.healthGrade === 'B' ? 'text-blue-600 dark:text-blue-400' :
+                      recipe.healthGrade === 'C' ? 'text-yellow-600 dark:text-yellow-400' :
+                      recipe.healthGrade === 'D' ? 'text-orange-600 dark:text-orange-400' :
+                      recipe.healthGrade === 'F' ? 'text-red-600 dark:text-red-400' : // Using secondary red
+                      'text-gray-600 dark:text-gray-400'
                     }`}>
                       {Math.round(recipe.healthGradeScore)}/100
                     </Text>
@@ -699,15 +749,15 @@ export default function RecipeModal() {
                 </View>
               </View>
               {recipe.healthGradeBreakdown && (
-                <View className="mt-3 pt-3 border-t border-gray-200">
-                  <Text className="text-xs font-medium text-gray-600 mb-2">Breakdown</Text>
+                <View className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <Text className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Breakdown</Text>
                   <View className="space-y-2">
                     <View>
                       <View className="flex-row justify-between mb-1">
-                        <Text className="text-xs text-gray-600">Macro Balance</Text>
-                        <Text className="text-xs font-semibold text-gray-900">{recipe.healthGradeBreakdown.macronutrientBalance}/25</Text>
+                        <Text className="text-xs text-gray-600 dark:text-gray-400">Macro Balance</Text>
+                        <Text className="text-xs font-semibold text-gray-900 dark:text-gray-100">{recipe.healthGradeBreakdown.macronutrientBalance}/25</Text>
                       </View>
-                      <View className="w-full bg-gray-200 rounded-full h-1.5">
+                      <View className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                         <View 
                           className="bg-blue-500 h-1.5 rounded-full" 
                           style={{ width: `${(recipe.healthGradeBreakdown.macronutrientBalance / 25) * 100}%` }}
@@ -716,10 +766,10 @@ export default function RecipeModal() {
                     </View>
                     <View>
                       <View className="flex-row justify-between mb-1">
-                        <Text className="text-xs text-gray-600">Nutrient Density</Text>
-                        <Text className="text-xs font-semibold text-gray-900">{recipe.healthGradeBreakdown.nutrientDensity}/25</Text>
+                        <Text className="text-xs text-gray-600 dark:text-gray-400">Nutrient Density</Text>
+                        <Text className="text-xs font-semibold text-gray-900 dark:text-gray-100">{recipe.healthGradeBreakdown.nutrientDensity}/25</Text>
                       </View>
-                      <View className="w-full bg-gray-200 rounded-full h-1.5">
+                      <View className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                         <View 
                           className="bg-green-500 h-1.5 rounded-full" 
                           style={{ width: `${(recipe.healthGradeBreakdown.nutrientDensity / 25) * 100}%` }}
@@ -728,10 +778,10 @@ export default function RecipeModal() {
                     </View>
                     <View>
                       <View className="flex-row justify-between mb-1">
-                        <Text className="text-xs text-gray-600">Ingredient Quality</Text>
-                        <Text className="text-xs font-semibold text-gray-900">{recipe.healthGradeBreakdown.ingredientQuality}/20</Text>
+                        <Text className="text-xs text-gray-600 dark:text-gray-400">Ingredient Quality</Text>
+                        <Text className="text-xs font-semibold text-gray-900 dark:text-gray-100">{recipe.healthGradeBreakdown.ingredientQuality}/20</Text>
                       </View>
-                      <View className="w-full bg-gray-200 rounded-full h-1.5">
+                      <View className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                         <View 
                           className="bg-purple-500 h-1.5 rounded-full" 
                           style={{ width: `${(recipe.healthGradeBreakdown.ingredientQuality / 20) * 100}%` }}
@@ -746,16 +796,19 @@ export default function RecipeModal() {
 
           {/* Nutritional Analysis */}
           {recipe.nutritionalAnalysis && (
-            <View className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <Text className="text-lg font-semibold text-gray-900 mb-3">Advanced Nutritional Analysis</Text>
+            <View className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <View className="flex-row items-center mb-3">
+                <Text className="text-xl mr-2">🔬</Text>
+                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Advanced Nutritional Analysis</Text>
+              </View>
               
               {/* Nutritional Density Score */}
               <View className="mb-4">
                 <View className="flex-row justify-between items-center mb-2">
-                  <Text className="text-sm font-medium text-gray-700">Nutritional Density Score</Text>
-                  <Text className="text-lg font-bold text-purple-700">{Math.round(recipe.nutritionalAnalysis.nutritionalDensityScore)}/100</Text>
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Nutritional Density Score</Text>
+                  <Text className="text-lg font-bold text-purple-700 dark:text-purple-300">{Math.round(recipe.nutritionalAnalysis.nutritionalDensityScore)}/100</Text>
                 </View>
-                <View className="w-full bg-gray-200 rounded-full h-2">
+                <View className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <View 
                     className="bg-purple-500 h-2 rounded-full" 
                     style={{ width: `${Math.round(recipe.nutritionalAnalysis.nutritionalDensityScore)}%` }}
@@ -766,11 +819,11 @@ export default function RecipeModal() {
               {/* Key Nutrients */}
               {recipe.nutritionalAnalysis.keyNutrients.length > 0 && (
                 <View className="mb-3">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">Key Nutrients</Text>
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Key Nutrients</Text>
                   <View className="flex-row flex-wrap">
                     {recipe.nutritionalAnalysis.keyNutrients.map((nutrient, idx) => (
-                      <View key={idx} className="bg-green-100 px-2 py-1 rounded-full mr-2 mb-2">
-                        <Text className="text-xs font-medium text-green-700">{nutrient}</Text>
+                      <View key={idx} className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full mr-2 mb-2">
+                        <Text className="text-xs font-medium text-green-700 dark:text-green-300">{nutrient}</Text>
                       </View>
                     ))}
                   </View>
@@ -779,60 +832,60 @@ export default function RecipeModal() {
 
               {/* Omega-3 */}
               {recipe.nutritionalAnalysis.omega3.totalOmega3 > 0 && (
-                <View className="mb-3 p-3 bg-blue-50 rounded-lg">
-                  <Text className="text-sm font-medium text-gray-700 mb-1">Omega-3 Fatty Acids</Text>
+                <View className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Omega-3 Fatty Acids</Text>
                   <View className="flex-row justify-between">
-                    <Text className="text-xs text-gray-600">Total: {recipe.nutritionalAnalysis.omega3.totalOmega3.toFixed(2)}g</Text>
+                    <Text className="text-xs text-gray-600 dark:text-gray-400">Total: {recipe.nutritionalAnalysis.omega3.totalOmega3.toFixed(2)}g</Text>
                     {recipe.nutritionalAnalysis.omega3.epa > 0 && (
-                      <Text className="text-xs text-gray-600">EPA: {recipe.nutritionalAnalysis.omega3.epa.toFixed(2)}g</Text>
+                      <Text className="text-xs text-gray-600 dark:text-gray-400">EPA: {recipe.nutritionalAnalysis.omega3.epa.toFixed(2)}g</Text>
                     )}
                     {recipe.nutritionalAnalysis.omega3.dha > 0 && (
-                      <Text className="text-xs text-gray-600">DHA: {recipe.nutritionalAnalysis.omega3.dha.toFixed(2)}g</Text>
+                      <Text className="text-xs text-gray-600 dark:text-gray-400">DHA: {recipe.nutritionalAnalysis.omega3.dha.toFixed(2)}g</Text>
                     )}
                   </View>
-                  <Text className="text-xs text-blue-600 mt-1">Score: {Math.round(recipe.nutritionalAnalysis.omega3.omega3Score)}/100</Text>
+                  <Text className="text-xs text-blue-600 dark:text-blue-400 mt-1">Score: {Math.round(recipe.nutritionalAnalysis.omega3.omega3Score)}/100</Text>
                 </View>
               )}
 
               {/* Antioxidants */}
               {recipe.nutritionalAnalysis.antioxidants.oracValue > 0 && (
-                <View className="mb-3 p-3 bg-orange-50 rounded-lg">
-                  <Text className="text-sm font-medium text-gray-700 mb-1">Antioxidants</Text>
-                  <Text className="text-xs text-gray-600">ORAC Value: {recipe.nutritionalAnalysis.antioxidants.oracValue.toLocaleString()}</Text>
+                <View className="mb-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Antioxidants</Text>
+                  <Text className="text-xs text-gray-600 dark:text-gray-400">ORAC Value: {recipe.nutritionalAnalysis.antioxidants.oracValue.toLocaleString()}</Text>
                   {recipe.nutritionalAnalysis.antioxidants.polyphenols > 0 && (
-                    <Text className="text-xs text-gray-600">Polyphenols: {recipe.nutritionalAnalysis.antioxidants.polyphenols}mg</Text>
+                    <Text className="text-xs text-gray-600 dark:text-gray-400">Polyphenols: {recipe.nutritionalAnalysis.antioxidants.polyphenols}mg</Text>
                   )}
-                  <Text className="text-xs text-orange-600 mt-1">Score: {Math.round(recipe.nutritionalAnalysis.antioxidants.antioxidantScore)}/100</Text>
+                  <Text className="text-xs text-orange-600 dark:text-orange-400 mt-1">Score: {Math.round(recipe.nutritionalAnalysis.antioxidants.antioxidantScore)}/100</Text>
                 </View>
               )}
 
               {/* Micronutrients Summary */}
               <View className="mb-3">
-                <Text className="text-sm font-medium text-gray-700 mb-2">Micronutrients</Text>
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Micronutrients</Text>
                 <View className="flex-row flex-wrap">
                   {recipe.nutritionalAnalysis.micronutrients.vitamins.vitaminC > 0 && (
-                    <View className="bg-yellow-100 px-2 py-1 rounded mr-2 mb-2">
-                      <Text className="text-xs text-yellow-700">C: {Math.round(recipe.nutritionalAnalysis.micronutrients.vitamins.vitaminC)}mg</Text>
+                    <View className="bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded mr-2 mb-2">
+                      <Text className="text-xs text-yellow-700 dark:text-yellow-300">C: {Math.round(recipe.nutritionalAnalysis.micronutrients.vitamins.vitaminC)}mg</Text>
                     </View>
                   )}
                   {recipe.nutritionalAnalysis.micronutrients.vitamins.vitaminA > 0 && (
-                    <View className="bg-orange-100 px-2 py-1 rounded mr-2 mb-2">
-                      <Text className="text-xs text-orange-700">A: {Math.round(recipe.nutritionalAnalysis.micronutrients.vitamins.vitaminA)}IU</Text>
+                    <View className="bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded mr-2 mb-2">
+                      <Text className="text-xs text-orange-700 dark:text-orange-300">A: {Math.round(recipe.nutritionalAnalysis.micronutrients.vitamins.vitaminA)}IU</Text>
                     </View>
                   )}
                   {recipe.nutritionalAnalysis.micronutrients.minerals.calcium > 0 && (
-                    <View className="bg-blue-100 px-2 py-1 rounded mr-2 mb-2">
-                      <Text className="text-xs text-blue-700">Ca: {Math.round(recipe.nutritionalAnalysis.micronutrients.minerals.calcium)}mg</Text>
+                    <View className="bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded mr-2 mb-2">
+                      <Text className="text-xs text-blue-700 dark:text-blue-300">Ca: {Math.round(recipe.nutritionalAnalysis.micronutrients.minerals.calcium)}mg</Text>
                     </View>
                   )}
                   {recipe.nutritionalAnalysis.micronutrients.minerals.iron > 0 && (
-                    <View className="bg-red-100 px-2 py-1 rounded mr-2 mb-2">
-                      <Text className="text-xs text-red-700">Fe: {recipe.nutritionalAnalysis.micronutrients.minerals.iron.toFixed(1)}mg</Text>
+                    <View className="bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded mr-2 mb-2">
+                      <Text className="text-xs text-red-600 dark:text-red-400">Fe: {recipe.nutritionalAnalysis.micronutrients.minerals.iron.toFixed(1)}mg</Text>
                     </View>
                   )}
                   {recipe.nutritionalAnalysis.micronutrients.minerals.potassium > 0 && (
-                    <View className="bg-green-100 px-2 py-1 rounded mr-2 mb-2">
-                      <Text className="text-xs text-green-700">K: {Math.round(recipe.nutritionalAnalysis.micronutrients.minerals.potassium)}mg</Text>
+                    <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded mr-2 mb-2">
+                      <Text className="text-xs text-green-700 dark:text-green-300">K: {Math.round(recipe.nutritionalAnalysis.micronutrients.minerals.potassium)}mg</Text>
                     </View>
                   )}
                 </View>
@@ -840,85 +893,11 @@ export default function RecipeModal() {
 
               {/* Nutrient Gaps */}
               {recipe.nutritionalAnalysis.nutrientGaps.length > 0 && (
-                <View className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <Text className="text-sm font-medium text-yellow-800 mb-1">Nutrient Gaps</Text>
-                  <Text className="text-xs text-yellow-700">
+                <View className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <Text className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">Nutrient Gaps</Text>
+                  <Text className="text-xs text-yellow-700 dark:text-yellow-400">
                     Consider adding: {recipe.nutritionalAnalysis.nutrientGaps.join(', ')}
                   </Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Macro Nutrients */}
-          <View className="mb-6 p-4 bg-blue-50 rounded-lg">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">Nutrition</Text>
-            <View className="flex-row justify-between">
-              <View className="items-center">
-                <Text className="text-gray-500 text-sm">Carbs</Text>
-                <Text className="font-semibold text-gray-900">{recipe.carbs}g</Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-gray-500 text-sm">Fat</Text>
-                <Text className="font-semibold text-gray-900">{recipe.fat}g</Text>
-              </View>
-              {recipe.fiber && (
-                <View className="items-center">
-                  <Text className="text-gray-500 text-sm">Fiber</Text>
-                  <Text className="font-semibold text-gray-900">{recipe.fiber}g</Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Ingredient Availability */}
-          {recipeAvailability && (
-            <View className="mb-6 p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
-              <View className="flex-row items-center justify-between mb-3">
-                <View className="flex-row items-center">
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#9333EA" />
-                  <Text className="text-lg font-semibold text-gray-900 ml-2">Ingredient Availability</Text>
-                </View>
-                <View className={`px-3 py-1 rounded-full ${
-                  recipeAvailability.overallAvailability >= 80 ? 'bg-green-100' :
-                  recipeAvailability.overallAvailability >= 50 ? 'bg-yellow-100' :
-                  'bg-red-100'
-                }`}>
-                  <Text className={`font-bold ${
-                    recipeAvailability.overallAvailability >= 80 ? 'text-green-700' :
-                    recipeAvailability.overallAvailability >= 50 ? 'text-yellow-700' :
-                    'text-red-700'
-                  }`}>
-                    {recipeAvailability.overallAvailability}%
-                  </Text>
-                </View>
-              </View>
-              
-              <View className="mb-3">
-                <View className="flex-row justify-between items-center mb-1">
-                  <Text className="text-gray-600">Available Ingredients</Text>
-                  <Text className="text-gray-900 font-semibold">
-                    {recipeAvailability.availableIngredients} / {recipeAvailability.totalIngredients}
-                  </Text>
-                </View>
-                {recipeAvailability.unavailableIngredients && recipeAvailability.unavailableIngredients.length > 0 && (
-                  <View className="mt-2">
-                    <Text className="text-sm text-gray-600 mb-1">May be unavailable:</Text>
-                    <Text className="text-sm text-red-600">
-                      {recipeAvailability.unavailableIngredients.slice(0, 5).join(', ')}
-                      {recipeAvailability.unavailableIngredients.length > 5 && '...'}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {recipeAvailability.recommendations && recipeAvailability.recommendations.length > 0 && (
-                <View className="mt-2 pt-2 border-t border-purple-200">
-                  {recipeAvailability.recommendations.map((rec: string, idx: number) => (
-                    <Text key={idx} className="text-sm text-gray-700 mb-1">
-                      • {rec}
-                    </Text>
-                  ))}
                 </View>
               )}
             </View>
@@ -932,7 +911,7 @@ export default function RecipeModal() {
                 <View>
                   <Text className="text-gray-500 text-sm">Total Cost</Text>
                   <Text className="text-2xl font-bold text-emerald-700">
-                    ${recipe.estimatedCost ? Math.round(recipe.estimatedCost * 100) / 100 : (recipe.pricePerServing ? Math.round(recipe.pricePerServing * recipe.servings * 100) / 100 : 'N/A')}
+                    ${recipe.estimatedCost ? Math.round(recipe.estimatedCost * 100) / 100 : (recipe.pricePerServing && recipe.servings ? Math.round(recipe.pricePerServing * recipe.servings * 100) / 100 : 'N/A')}
                   </Text>
                 </View>
                 <View className="items-end">
@@ -950,97 +929,6 @@ export default function RecipeModal() {
             </View>
           )}
 
-          {/* Meal Prep Suitability Badge */}
-          {getMealPrepSuitabilityBadge(recipe) && (
-            <View className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Meal Prep Suitability</Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-500">
-                    How well this recipe works for meal prep
-                  </Text>
-                </View>
-                <View className={`px-4 py-3 rounded-lg border-2 ${
-                  (() => {
-                    const badge = getMealPrepSuitabilityBadge(recipe);
-                    if (badge?.includes('Great')) return 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
-                    if (badge?.includes('Good')) return 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700';
-                    if (badge?.includes('Okay')) return 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700';
-                    if (badge?.includes('Not Recommended')) return 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700';
-                    return 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700';
-                  })()
-                }`}>
-                  <Text className={`text-lg font-bold text-center ${
-                    (() => {
-                      const badge = getMealPrepSuitabilityBadge(recipe);
-                      if (badge?.includes('Great')) return 'text-green-700 dark:text-green-300';
-                      if (badge?.includes('Good')) return 'text-blue-700 dark:text-blue-300';
-                      if (badge?.includes('Okay')) return 'text-yellow-700 dark:text-yellow-300';
-                      if (badge?.includes('Not Recommended')) return 'text-red-700 dark:text-red-300';
-                      return 'text-orange-700 dark:text-orange-300';
-                    })()
-                  }`}>
-                    {(() => {
-                      const badge = getMealPrepSuitabilityBadge(recipe);
-                      if (badge?.includes('Great')) return '⭐';
-                      if (badge?.includes('Good')) return '👍';
-                      if (badge?.includes('Okay')) return '✓';
-                      if (badge?.includes('Not Recommended')) return '⚠️';
-                      return '🍱';
-                    })()}
-                  </Text>
-                  <Text className={`text-xs text-center mt-1 font-semibold ${
-                    (() => {
-                      const badge = getMealPrepSuitabilityBadge(recipe);
-                      if (badge?.includes('Great')) return 'text-green-600 dark:text-green-400';
-                      if (badge?.includes('Good')) return 'text-blue-600 dark:text-blue-400';
-                      if (badge?.includes('Okay')) return 'text-yellow-600 dark:text-yellow-400';
-                      if (badge?.includes('Not Recommended')) return 'text-red-600 dark:text-red-400';
-                      return 'text-orange-600 dark:text-orange-400';
-                    })()
-                  }`}>
-                    {getMealPrepSuitabilityBadge(recipe)?.split(' ')[0]}
-                  </Text>
-                </View>
-              </View>
-              
-              {/* Badge Text and Score */}
-              <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                    {getMealPrepSuitabilityBadge(recipe)}
-                  </Text>
-                  {recipe.mealPrepScore !== undefined && (
-                    <Text className={`text-sm font-bold ${
-                      recipe.mealPrepScore >= 80 ? 'text-green-600 dark:text-green-400' :
-                      recipe.mealPrepScore >= 60 ? 'text-blue-600 dark:text-blue-400' :
-                      recipe.mealPrepScore >= 40 ? 'text-yellow-600 dark:text-yellow-400' :
-                      'text-red-600 dark:text-red-400'
-                    }`}>
-                      {Math.round(recipe.mealPrepScore)}/100
-                    </Text>
-                  )}
-                </View>
-                
-                {/* Meal Prep Tags */}
-                {getMealPrepTags(recipe).length > 0 && (
-                  <View className="flex-row space-x-2 mt-2 flex-wrap">
-                    {getMealPrepTags(recipe).slice(0, 4).map((tag) => (
-                      <View
-                        key={tag.id}
-                        className={`px-2.5 py-1 rounded-full flex-row items-center border ${tag.bgColor} ${tag.borderColor}`}
-                      >
-                        <Text className="text-xs mr-1">{tag.emoji}</Text>
-                        <Text className={`text-xs font-medium ${tag.textColor}`}>
-                          {tag.label}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
 
           {/* Storage Instructions - Enhanced Display */}
           {(recipe.freezable || recipe.weeklyPrepFriendly || recipe.storageInstructions || recipe.fridgeStorageDays || recipe.freezerStorageMonths || recipe.shelfStable) && (
@@ -1221,40 +1109,111 @@ export default function RecipeModal() {
 
           {/* Ingredients */}
           <View className="mb-6">
-            <Text className="text-xl font-semibold text-gray-900 mb-3">Ingredients</Text>
+            <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Ingredients</Text>
             {recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.map((ingredient: any, index: number) => (
               <View key={index} className="flex-row items-center mb-2">
                 <View className="w-2 h-2 bg-orange-500 rounded-full mr-3" />
-                <Text className="text-gray-700 flex-1">{getTextContent(ingredient)}</Text>
+                <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
               </View>
             ))}
           </View>
 
           {/* Instructions */}
           <View className="mb-6">
-            <Text className="text-xl font-semibold text-gray-900 mb-3">Instructions</Text>
+            <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Instructions</Text>
             {recipe.instructions && Array.isArray(recipe.instructions) && recipe.instructions.map((instruction: any, index: number) => (
               <View key={index} className="flex-row mb-3">
                 <Text className="font-bold text-orange-500 mr-3">{index + 1}.</Text>
-                <Text className="flex-1 text-gray-700">{getTextContent(instruction)}</Text>
+                <Text className="flex-1 text-gray-700 dark:text-gray-300">{getTextContent(instruction)}</Text>
               </View>
             ))}
           </View>
+
+          {/* You Might Like Section */}
+          {similarRecipes.length > 0 && (
+            <View className="mb-6">
+              <View className="flex-row items-center mb-4">
+                <View className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
+                  <Text className="text-lg">💡</Text>
+                </View>
+                <Text className="text-lg font-semibold text-gray-900 dark:text-white">
+                  You might also like
+                </Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                {similarRecipes.map((similarRecipe) => (
+                  <View key={similarRecipe.id} className="mr-4" style={{ width: 280, height: 260 }}>
+                      <HapticTouchableOpacity
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          router.push(`/modal?id=${similarRecipe.id}`);
+                        }}
+                        className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border-2 border-orange-500 dark:border-orange-600 h-full"
+                      >
+                      {similarRecipe.imageUrl && (
+                        <Image
+                          source={{ uri: similarRecipe.imageUrl }}
+                          className="w-full h-32"
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View className="p-3 flex-1">
+                        <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1" numberOfLines={2}>
+                          {similarRecipe.title}
+                        </Text>
+                        <Text className="text-sm text-gray-600 dark:text-gray-300 mb-2" numberOfLines={2}>
+                          {similarRecipe.description}
+                        </Text>
+                        <View className="flex-row items-center justify-between mt-auto">
+                          <View className="flex-row items-center">
+                            <Ionicons 
+                              name="time-outline" 
+                              size={14} 
+                              color={isDark ? "#9CA3AF" : "#6B7280"} 
+                            />
+                            <Text className="text-xs text-gray-600 dark:text-gray-400 ml-1">
+                              {similarRecipe.cookTime} min
+                            </Text>
+                          </View>
+                          <View className="flex-row items-center">
+                            <Ionicons 
+                              name="restaurant-outline" 
+                              size={14} 
+                              color={isDark ? "#9CA3AF" : "#6B7280"} 
+                            />
+                            <Text className="text-xs text-gray-600 dark:text-gray-400 ml-1">
+                              {similarRecipe.cuisine}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      </HapticTouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+          {loadingSimilar && (
+            <View className="mb-6">
+              <Text className="text-sm text-gray-500 dark:text-gray-400">Loading similar recipes...</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
       {/* Action Buttons */}
-      <View className="p-4 border-t border-gray-200">
+      <View className="p-4 border-t border-gray-200 dark:border-gray-700">
         {/* Meal Prep Scaling Button - Available for all recipes */}
         <HapticTouchableOpacity 
           onPress={() => setShowMealPrepModal(true)}
           disabled={!recipe}
           hapticStyle="medium"
-          className="bg-orange-500 dark:bg-orange-600 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center"
+          className="py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center"
+          style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
         >
           <Ionicons name="restaurant" size={20} color="white" style={{ marginRight: 8 }} />
           <Text className="text-white font-semibold text-lg">
-            🍱 Meal Prep This Recipe
+            Meal Prep This Recipe
           </Text>
         </HapticTouchableOpacity>
 
@@ -1263,11 +1222,11 @@ export default function RecipeModal() {
           onPress={handleAddToShoppingList}
           disabled={addingToShoppingList || !recipe}
           hapticStyle="medium"
-          className={`${addingToShoppingList ? 'opacity-50' : ''} bg-blue-500 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
+          className={`${addingToShoppingList ? 'opacity-50' : ''} bg-red-600 dark:bg-red-400 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
         >
           <Ionicons name="cart" size={20} color="white" style={{ marginRight: 8 }} />
           <Text className="text-white font-semibold text-lg">
-            {addingToShoppingList ? 'Adding...' : '🛒 Add to Shopping List'}
+            {addingToShoppingList ? 'Adding...' : 'Add to Shopping List'}
           </Text>
         </HapticTouchableOpacity>
 
@@ -1280,10 +1239,10 @@ export default function RecipeModal() {
                 key={integration.id}
                 onPress={() => handleSyncRecipeToApp(integration.appName)}
                 hapticStyle="medium"
-                className="bg-blue-100 py-3 px-4 rounded-lg items-center mb-2 flex-row justify-center"
+                className="bg-red-100 dark:bg-red-900/30 py-3 px-4 rounded-lg items-center mb-2 flex-row justify-center border border-red-200 dark:border-red-800"
               >
-                <Ionicons name="link-outline" size={18} color="#3B82F6" style={{ marginRight: 8 }} />
-                <Text className="text-blue-700 font-semibold">
+                <Ionicons name="link-outline" size={18} color={Colors.secondaryRed} style={{ marginRight: 8 }} />
+                <Text className="text-red-600 dark:text-red-400 font-semibold">
                   Sync to {integration.appName.charAt(0).toUpperCase() + integration.appName.slice(1)}
                 </Text>
               </HapticTouchableOpacity>
@@ -1291,17 +1250,27 @@ export default function RecipeModal() {
           </View>
         )}
 
-        {/* Healthify Button - Available for all recipes */}
-        <HapticTouchableOpacity 
-          onPress={handleHealthify}
-          disabled={healthifying}
-          className={`${healthifying ? 'opacity-50' : ''} bg-green-500 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
-        >
-          <Ionicons name="leaf" size={20} color="white" style={{ marginRight: 8 }} />
-          <Text className="text-white font-semibold text-lg">
-            {healthifying ? 'Healthifying...' : '💚 Healthify Recipe'}
-          </Text>
-        </HapticTouchableOpacity>
+        {/* Healthify Button - Only available for recipes with D or F grades */}
+        {recipe.healthGrade && (recipe.healthGrade.toUpperCase() === 'A' || recipe.healthGrade.toUpperCase() === 'B' || recipe.healthGrade.toUpperCase() === 'C') ? (
+          <View className="bg-gray-100 dark:bg-gray-800 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center">
+            <Ionicons name="leaf" size={20} color={isDark ? "#9CA3AF" : "#6B7280"} style={{ marginRight: 8 }} />
+            <Text className="text-gray-600 dark:text-gray-400 font-semibold text-lg">
+              Recipe already healthy (Grade {recipe.healthGrade})
+            </Text>
+          </View>
+        ) : (
+          <HapticTouchableOpacity 
+            onPress={handleHealthify}
+            disabled={healthifying}
+            className={`${healthifying ? 'opacity-50' : ''} py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
+            style={{ backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}
+          >
+            <Ionicons name="leaf" size={20} color="white" style={{ marginRight: 8 }} />
+            <Text className="text-white font-semibold text-lg">
+              {healthifying ? 'Healthifying...' : 'Healthify Recipe'}
+            </Text>
+          </HapticTouchableOpacity>
+        )}
 
         {isUserRecipe ? (
           // User-created recipe actions
@@ -1329,76 +1298,74 @@ export default function RecipeModal() {
               <Text className="text-white font-semibold text-lg">Remove from Cookbook</Text>
             </HapticTouchableOpacity>
             <HapticTouchableOpacity 
-              onPress={handleRateRecipe}
-              className="border border-orange-500 py-3 px-6 rounded-lg items-center mb-2"
-            >
-              <Text className="text-orange-500 font-semibold">Rate Recipe</Text>
-            </HapticTouchableOpacity>
-            <HapticTouchableOpacity 
               onPress={handleShareRecipe}
-              className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
+              className="border border-gray-300 dark:border-gray-600 py-3 px-6 rounded-lg items-center mb-2"
             >
-              <Text className="text-gray-700 font-semibold">Share Recipe</Text>
+              <Text className="text-gray-700 dark:text-gray-300 font-semibold">Share Recipe</Text>
             </HapticTouchableOpacity>
             <HapticTouchableOpacity 
               onPress={handleAddToMealPlan}
-              className="border border-blue-500 py-3 px-6 rounded-lg items-center"
+              className="border border-red-600 dark:border-red-400 py-3 px-6 rounded-lg items-center"
             >
-              <Text className="text-blue-500 font-semibold">Add to Meal Plan</Text>
+              <Text className="text-red-600 dark:text-red-400 font-semibold">Add to Meal Plan</Text>
             </HapticTouchableOpacity>
           </>
         ) : source === 'random' ? (
           // System recipe actions (from random button)
           <>
             <HapticTouchableOpacity 
-              onPress={handleSaveRecipe}
-              disabled={isSaving}
-              className={`py-3 px-6 rounded-lg items-center mb-2 ${
-                isSaving ? 'bg-orange-300' : 'bg-orange-500'
-              }`}
-            >
-              <Text className="text-white font-semibold text-lg">
-                {isSaving ? 'Saving...' : 'Save to Cookbook'}
-              </Text>
-            </HapticTouchableOpacity>
+          onPress={handleSaveRecipe}
+          disabled={isSaving}
+                className={`py-3 px-6 rounded-lg items-center flex-row justify-center border-2 border-orange-500 dark:border-orange-600 mb-2 ${
+                  isSaving ? 'opacity-50' : ''
+          }`}
+        >
+                <Ionicons name="bookmark" size={20} color={isDark ? '#EA580C' : '#F97316'} style={{ marginRight: 8 }} />
+                <Text className="text-orange-500 dark:text-orange-600 text-lg font-semibold">
+            {isSaving ? 'Saving...' : 'Save to Cookbook'}
+          </Text>
+              </HapticTouchableOpacity>
             <HapticTouchableOpacity 
-              onPress={handleNotInterested}
-              className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
+          onPress={handleNotInterested}
+              className="border border-gray-300 dark:border-gray-600 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center"
             >
-              <Text className="text-gray-700 font-semibold">Not Interested</Text>
+              <Ionicons name="close-circle-outline" size={20} color={isDark ? "#9CA3AF" : "#374151"} style={{ marginRight: 8 }} />
+              <Text className="text-gray-700 dark:text-gray-300 font-semibold">Not Interested</Text>
             </HapticTouchableOpacity>
             <HapticTouchableOpacity 
               onPress={handleShareRecipe}
-              className="border border-gray-300 py-3 px-6 rounded-lg items-center mb-2"
+              className="border border-gray-300 dark:border-gray-600 py-3 px-6 rounded-lg items-center mb-2"
             >
-              <Text className="text-gray-700 font-semibold">Share Recipe</Text>
+              <Text className="text-gray-700 dark:text-gray-300 font-semibold">Share Recipe</Text>
             </HapticTouchableOpacity>
             <HapticTouchableOpacity 
               onPress={handleAddToMealPlan}
-              className="border border-blue-500 py-3 px-6 rounded-lg items-center"
+              className="border border-red-600 dark:border-red-400 py-3 px-6 rounded-lg items-center"
             >
-              <Text className="text-blue-500 font-semibold">Add to Meal Plan</Text>
+              <Text className="text-red-600 dark:text-red-400 font-semibold">Add to Meal Plan</Text>
             </HapticTouchableOpacity>
           </>
         ) : (
           // System recipe actions (from home screen)
           <>
             <HapticTouchableOpacity 
-          onPress={handleSaveRecipe}
-          disabled={isSaving}
-          className={`py-3 px-6 rounded-lg items-center mb-2 ${
-            isSaving ? 'bg-orange-300' : 'bg-orange-500'
-          }`}
-        >
-          <Text className="text-white font-semibold text-lg">
-            {isSaving ? 'Saving...' : 'Save to Cookbook'}
-          </Text>
-            </HapticTouchableOpacity>
+                onPress={handleSaveRecipe}
+                disabled={isSaving}
+                className={`py-3 px-6 rounded-lg items-center flex-row justify-center border-2 border-orange-500 dark:border-orange-600 mb-2 ${
+                  isSaving ? 'opacity-50' : ''
+                }`}
+              >
+                <Ionicons name="bookmark" size={20} color={isDark ? '#EA580C' : '#F97316'} style={{ marginRight: 8 }} />
+                <Text className="text-orange-500 dark:text-orange-600 text-lg font-semibold">
+                  {isSaving ? 'Saving...' : 'Save to Cookbook'}
+                </Text>
+              </HapticTouchableOpacity>
             <HapticTouchableOpacity 
           onPress={handleNotInterested}
-          className="border border-gray-300 py-3 px-6 rounded-lg items-center"
+          className="border border-gray-300 dark:border-gray-600 py-3 px-6 rounded-lg items-center flex-row justify-center"
         >
-          <Text className="text-gray-700 font-semibold">Not Interested</Text>
+          <Ionicons name="close-circle-outline" size={20} color={isDark ? "#9CA3AF" : "#374151"} style={{ marginRight: 8 }} />
+          <Text className="text-gray-700 dark:text-gray-300 font-semibold">Not Interested</Text>
             </HapticTouchableOpacity>
           </>
         )}
@@ -1479,16 +1446,16 @@ export default function RecipeModal() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowHealthifyModal(false)}
       >
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+        <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
           {/* Header */}
-          <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
+          <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <HapticTouchableOpacity 
               onPress={() => setShowHealthifyModal(false)}
               className="p-2"
             >
-              <Ionicons name="close" size={24} color="#374151" />
+              <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
             </HapticTouchableOpacity>
-            <Text className="text-lg font-semibold text-gray-900">Healthified Recipe</Text>
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Healthified Recipe</Text>
             <View className="w-8" />
           </View>
 
@@ -1496,58 +1463,58 @@ export default function RecipeModal() {
             <ScrollView className="flex-1">
               <View className="p-4">
                 {/* Title */}
-                <Text className="text-2xl font-bold text-gray-900 mb-2">
+                <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                   {healthifiedRecipe.title}
                 </Text>
                 
                 {/* Description */}
-                <Text className="text-gray-600 mb-6">
+                <Text className="text-gray-600 dark:text-gray-300 mb-6">
                   {healthifiedRecipe.description}
                 </Text>
 
                 {/* Nutrition Comparison */}
-                <View className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <Text className="text-lg font-semibold text-gray-900 mb-4">Nutrition Comparison</Text>
+                <View className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Nutrition Comparison</Text>
                   
                   {healthifiedRecipe.nutritionComparison && (
                     <View>
                       {/* Calories */}
                       <View className="flex-row justify-between items-center mb-3">
-                        <Text className="text-gray-700 font-medium">Calories</Text>
+                        <Text className="text-gray-700 dark:text-gray-300 font-medium">Calories</Text>
                         <View className="flex-row items-center">
-                          <Text className="text-gray-500 mr-2">{healthifiedRecipe.nutritionComparison.before.calories}</Text>
-                          <Ionicons name="arrow-forward" size={16} color="#6B7280" />
-                          <Text className="text-green-600 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.calories}</Text>
+                          <Text className="text-gray-500 dark:text-gray-400 mr-2">{healthifiedRecipe.nutritionComparison.before.calories}</Text>
+                          <Ionicons name="arrow-forward" size={16} color={isDark ? "#9CA3AF" : "#6B7280"} />
+                          <Text className="text-green-600 dark:text-green-400 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.calories}</Text>
                         </View>
                       </View>
                       
                       {/* Protein */}
                       <View className="flex-row justify-between items-center mb-3">
-                        <Text className="text-gray-700 font-medium">Protein</Text>
+                        <Text className="text-gray-700 dark:text-gray-300 font-medium">Protein</Text>
                         <View className="flex-row items-center">
-                          <Text className="text-gray-500 mr-2">{healthifiedRecipe.nutritionComparison.before.protein}g</Text>
-                          <Ionicons name="arrow-forward" size={16} color="#6B7280" />
-                          <Text className="text-green-600 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.protein}g</Text>
+                          <Text className="text-gray-500 dark:text-gray-400 mr-2">{healthifiedRecipe.nutritionComparison.before.protein}g</Text>
+                          <Ionicons name="arrow-forward" size={16} color={isDark ? "#9CA3AF" : "#6B7280"} />
+                          <Text className="text-green-600 dark:text-green-400 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.protein}g</Text>
                         </View>
                       </View>
                       
                       {/* Carbs */}
                       <View className="flex-row justify-between items-center mb-3">
-                        <Text className="text-gray-700 font-medium">Carbs</Text>
+                        <Text className="text-gray-700 dark:text-gray-300 font-medium">Carbs</Text>
                         <View className="flex-row items-center">
-                          <Text className="text-gray-500 mr-2">{healthifiedRecipe.nutritionComparison.before.carbs}g</Text>
-                          <Ionicons name="arrow-forward" size={16} color="#6B7280" />
-                          <Text className="text-green-600 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.carbs}g</Text>
+                          <Text className="text-gray-500 dark:text-gray-400 mr-2">{healthifiedRecipe.nutritionComparison.before.carbs}g</Text>
+                          <Ionicons name="arrow-forward" size={16} color={isDark ? "#9CA3AF" : "#6B7280"} />
+                          <Text className="text-green-600 dark:text-green-400 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.carbs}g</Text>
                         </View>
                       </View>
                       
                       {/* Fat */}
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-gray-700 font-medium">Fat</Text>
+                        <Text className="text-gray-700 dark:text-gray-300 font-medium">Fat</Text>
                         <View className="flex-row items-center">
-                          <Text className="text-gray-500 mr-2">{healthifiedRecipe.nutritionComparison.before.fat}g</Text>
-                          <Ionicons name="arrow-forward" size={16} color="#6B7280" />
-                          <Text className="text-green-600 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.fat}g</Text>
+                          <Text className="text-gray-500 dark:text-gray-400 mr-2">{healthifiedRecipe.nutritionComparison.before.fat}g</Text>
+                          <Ionicons name="arrow-forward" size={16} color={isDark ? "#9CA3AF" : "#6B7280"} />
+                          <Text className="text-green-600 dark:text-green-400 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.fat}g</Text>
                         </View>
                       </View>
                     </View>
@@ -1557,18 +1524,18 @@ export default function RecipeModal() {
                 {/* Substitutions */}
                 {healthifiedRecipe.substitutions && healthifiedRecipe.substitutions.length > 0 && (
                   <View className="mb-6">
-                    <Text className="text-xl font-semibold text-gray-900 mb-3">Smart Substitutions</Text>
+                    <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Smart Substitutions</Text>
                     {healthifiedRecipe.substitutions.map((sub: any, index: number) => (
-                      <View key={index} className="mb-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <View key={index} className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                         <View className="flex-row items-start mb-2">
                           <Ionicons name="swap-horizontal" size={20} color="#10B981" style={{ marginRight: 8, marginTop: 2 }} />
                           <View className="flex-1">
-                            <Text className="text-gray-900 font-medium">
-                              <Text className="text-red-600 line-through">{sub.original}</Text>
+                            <Text className="text-gray-900 dark:text-gray-100 font-medium">
+                              <Text className="text-red-600 dark:text-red-400 line-through">{sub.original}</Text>
                               {' → '}
-                              <Text className="text-green-600">{sub.replacement}</Text>
+                              <Text className="text-green-600 dark:text-green-400">{sub.replacement}</Text>
                             </Text>
-                            <Text className="text-gray-600 text-sm mt-1">{sub.reason}</Text>
+                            <Text className="text-gray-600 dark:text-gray-300 text-sm mt-1">{sub.reason}</Text>
                           </View>
                         </View>
                       </View>
@@ -1579,17 +1546,17 @@ export default function RecipeModal() {
                 {/* Improvements */}
                 {healthifiedRecipe.improvements && healthifiedRecipe.improvements.length > 0 && (
                   <View className="mb-6">
-                    <Text className="text-xl font-semibold text-gray-900 mb-3">Health Improvements</Text>
+                    <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Health Improvements</Text>
                     {healthifiedRecipe.improvements.map((improvement: any, index: number) => (
-                      <View key={index} className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <Text className="text-gray-900 font-medium mb-1">{improvement.aspect}</Text>
+                      <View key={index} className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <Text className="text-gray-900 dark:text-gray-100 font-medium mb-1">{improvement.aspect}</Text>
                         <View className="flex-row items-center mb-1">
-                          <Text className="text-gray-500 text-sm">Before: {improvement.before}</Text>
+                          <Text className="text-gray-500 dark:text-gray-400 text-sm">Before: {improvement.before}</Text>
                         </View>
                         <View className="flex-row items-center mb-1">
-                          <Text className="text-green-600 text-sm font-semibold">After: {improvement.after}</Text>
+                          <Text className="text-green-600 dark:text-green-400 text-sm font-semibold">After: {improvement.after}</Text>
                         </View>
-                        <Text className="text-gray-600 text-sm mt-1">💡 {improvement.benefit}</Text>
+                        <Text className="text-gray-600 dark:text-gray-300 text-sm mt-1">💡 {improvement.benefit}</Text>
                       </View>
                     ))}
                   </View>
@@ -1597,22 +1564,22 @@ export default function RecipeModal() {
 
                 {/* Ingredients */}
                 <View className="mb-6">
-                  <Text className="text-xl font-semibold text-gray-900 mb-3">Ingredients</Text>
+                  <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Ingredients</Text>
                   {healthifiedRecipe.ingredients && healthifiedRecipe.ingredients.map((ingredient: any, index: number) => (
                     <View key={index} className="flex-row items-center mb-2">
                       <View className="w-2 h-2 bg-green-500 rounded-full mr-3" />
-                      <Text className="text-gray-700 flex-1">{getTextContent(ingredient)}</Text>
+                      <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
                     </View>
                   ))}
                 </View>
 
                 {/* Instructions */}
                 <View className="mb-6">
-                  <Text className="text-xl font-semibold text-gray-900 mb-3">Instructions</Text>
+                  <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Instructions</Text>
                   {healthifiedRecipe.instructions && healthifiedRecipe.instructions.map((instruction: any, index: number) => (
                     <View key={index} className="flex-row mb-3">
-                      <Text className="font-bold text-green-500 mr-3">{index + 1}.</Text>
-                      <Text className="flex-1 text-gray-700">{getTextContent(instruction)}</Text>
+                      <Text className="font-bold text-green-500 dark:text-green-400 mr-3">{index + 1}.</Text>
+                      <Text className="flex-1 text-gray-700 dark:text-gray-300">{getTextContent(instruction)}</Text>
                     </View>
                   ))}
                 </View>
@@ -1621,7 +1588,7 @@ export default function RecipeModal() {
           )}
 
           {/* Action Buttons */}
-          <View className="p-4 border-t border-gray-200">
+          <View className="p-4 border-t border-gray-200 dark:border-gray-700">
             <HapticTouchableOpacity 
               onPress={async () => {
                 if (!healthifiedRecipe) return;
@@ -1668,12 +1635,12 @@ export default function RecipeModal() {
             
             <HapticTouchableOpacity 
               onPress={() => setShowHealthifyModal(false)}
-              className="border border-gray-300 py-3 px-6 rounded-lg items-center"
-            >
-              <Text className="text-gray-700 font-semibold text-lg">Close</Text>
+          className="border border-gray-300 py-3 px-6 rounded-lg items-center"
+        >
+              <Text className="text-gray-700 dark:text-gray-300 font-semibold text-lg">Close</Text>
             </HapticTouchableOpacity>
-          </View>
-        </SafeAreaView>
+      </View>
+    </SafeAreaView>
       </Modal>
 
       {/* Meal Prep Scaling Modal */}

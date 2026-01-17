@@ -3,6 +3,7 @@ import { useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
+import { Colors, DarkColors } from '../../constants/Colors';
 
 // Interfaces for this component
 interface FeedbackButtonsProps {
@@ -94,7 +95,7 @@ export default function FeedbackButtons({
           rounded-full 
           mr-2
           ${feedback.disliked 
-            ? 'bg-red-500 dark:bg-red-600 border border-red-600 dark:border-red-700' 
+            ? 'bg-red-600 dark:bg-red-400 border border-red-600 dark:border-red-500' 
             : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
           }
         `}
