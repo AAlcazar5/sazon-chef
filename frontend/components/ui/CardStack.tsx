@@ -1,15 +1,23 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Animated, PanResponder, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../../constants/Colors';
+import { Spacing, BorderRadius } from '../../constants/Spacing';
+import { FontSize, FontWeight } from '../../constants/Typography';
+import { Duration } from '../../constants/Animations';
+import { HapticPatterns } from '../../constants/Haptics';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
+const SWIPE_VERTICAL_THRESHOLD = 100;
 const ROTATION_DEG = 10;
 
 interface CardStackProps {
   children: React.ReactNode;
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
+  onSwipeUp?: () => void;
+  onSwipeDown?: () => void;
   disabled?: boolean;
 }
 
@@ -17,30 +25,56 @@ export default function CardStack({
   children,
   onSwipeLeft,
   onSwipeRight,
+  onSwipeUp,
+  onSwipeDown,
   disabled = false,
 }: CardStackProps) {
   const position = useRef(new Animated.ValueXY()).current;
   const rotation = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
   const [showIndicator, setShowIndicator] = useState(false);
-  const [indicatorType, setIndicatorType] = useState<'like' | 'dislike' | null>(null);
+  const [indicatorType, setIndicatorType] = useState<'like' | 'dislike' | 'save' | null>(null);
+  const [hapticTriggered, setHapticTriggered] = useState(false);
 
   // Track position for indicator
   useEffect(() => {
-    const listener = position.x.addListener(({ value }) => {
-      if (Math.abs(value) > 50) {
+    const listener = position.addListener(({ x, y }) => {
+      const absX = Math.abs(x);
+      const absY = Math.abs(y);
+      
+      // Determine which direction is dominant
+      if (absX > 50 || absY > 50) {
         setShowIndicator(true);
-        setIndicatorType(value > 0 ? 'like' : 'dislike');
+        
+        if (absX > absY) {
+          // Horizontal swipe
+          setIndicatorType(x > 0 ? 'like' : 'dislike');
+        } else if (y < 0) {
+          // Only show indicator for swipe up (save)
+          setIndicatorType('save');
+        } else {
+          // Swipe down has no indicator
+          setShowIndicator(false);
+          setIndicatorType(null);
+        }
+        
+        // Trigger haptic feedback once when threshold is crossed
+        if (!hapticTriggered && (absX > 50 || absY > 50)) {
+          HapticPatterns.swipeThreshold();
+          setHapticTriggered(true);
+        }
       } else {
         setShowIndicator(false);
         setIndicatorType(null);
+        setHapticTriggered(false);
       }
     });
 
     return () => {
-      position.x.removeListener(listener);
+      position.removeListener(listener);
     };
-  }, [position.x]);
+  }, [position, hapticTriggered]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -48,23 +82,43 @@ export default function CardStack({
       onMoveShouldSetPanResponder: () => !disabled,
       onPanResponderMove: (_, gesture) => {
         position.setValue({ x: gesture.dx, y: gesture.dy });
+        
+        // Horizontal rotation
         rotation.setValue(gesture.dx / SCREEN_WIDTH);
-        opacity.setValue(1 - Math.abs(gesture.dx) / SCREEN_WIDTH);
+        
+        // Opacity based on distance
+        const distance = Math.sqrt(gesture.dx * gesture.dx + gesture.dy * gesture.dy);
+        const maxDistance = Math.max(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.5;
+        opacity.setValue(1 - Math.min(distance / maxDistance, 0.5));
+        
+        // Scale effect for vertical swipes
+        if (Math.abs(gesture.dy) > Math.abs(gesture.dx)) {
+          const scaleValue = 1 - Math.abs(gesture.dy) / (SCREEN_HEIGHT * 0.3);
+          scale.setValue(Math.max(0.9, scaleValue));
+        } else {
+          scale.setValue(1);
+        }
       },
       onPanResponderRelease: (_, gesture) => {
-        if (Math.abs(gesture.dx) > SWIPE_THRESHOLD) {
-          // Swipe detected
+        const absX = Math.abs(gesture.dx);
+        const absY = Math.abs(gesture.dy);
+        const isHorizontal = absX > absY;
+        
+        if (isHorizontal && absX > SWIPE_THRESHOLD) {
+          // Horizontal swipe detected
           const direction = gesture.dx > 0 ? 'right' : 'left';
+          
+          HapticPatterns.swipeComplete();
           
           Animated.parallel([
             Animated.timing(position, {
               toValue: { x: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH, y: gesture.dy },
-              duration: 300,
+              duration: Duration.medium,
               useNativeDriver: false,
             }),
             Animated.timing(opacity, {
               toValue: 0,
-              duration: 300,
+              duration: Duration.medium,
               useNativeDriver: true,
             }),
           ]).start(() => {
@@ -77,11 +131,51 @@ export default function CardStack({
             position.setValue({ x: 0, y: 0 });
             rotation.setValue(0);
             opacity.setValue(1);
+            scale.setValue(1);
             setShowIndicator(false);
             setIndicatorType(null);
+            setHapticTriggered(false);
+          });
+        } else if (!isHorizontal && absY > SWIPE_VERTICAL_THRESHOLD) {
+          // Vertical swipe detected
+          const direction = gesture.dy < 0 ? 'up' : 'down';
+          
+          HapticPatterns.swipeComplete();
+          
+          Animated.parallel([
+            Animated.timing(position, {
+              toValue: { x: gesture.dx, y: direction === 'up' ? -SCREEN_HEIGHT : SCREEN_HEIGHT },
+              duration: Duration.medium,
+              useNativeDriver: false,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0,
+              duration: Duration.medium,
+              useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+              toValue: 0.8,
+              duration: Duration.medium,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            if (direction === 'up' && onSwipeUp) {
+              onSwipeUp();
+            } else if (direction === 'down' && onSwipeDown) {
+              onSwipeDown();
+            }
+            // Reset position
+            position.setValue({ x: 0, y: 0 });
+            rotation.setValue(0);
+            opacity.setValue(1);
+            scale.setValue(1);
+            setShowIndicator(false);
+            setIndicatorType(null);
+            setHapticTriggered(false);
           });
         } else {
           // Spring back to center
+          HapticPatterns.buttonPress();
           Animated.parallel([
             Animated.spring(position, {
               toValue: { x: 0, y: 0 },
@@ -95,7 +189,15 @@ export default function CardStack({
               toValue: 1,
               useNativeDriver: true,
             }),
-          ]).start();
+            Animated.spring(scale, {
+              toValue: 1,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            setShowIndicator(false);
+            setIndicatorType(null);
+            setHapticTriggered(false);
+          });
         }
       },
     })
@@ -117,6 +219,7 @@ export default function CardStack({
             { translateX: position.x },
             { translateY: position.y },
             { rotate: rotateCard },
+            { scale },
           ],
           opacity,
         },
@@ -127,13 +230,22 @@ export default function CardStack({
       {/* Swipe indicators */}
       {showIndicator && (
         <View style={styles.indicators}>
-          {indicatorType === 'like' ? (
+          {indicatorType === 'like' && (
             <View style={[styles.indicator, styles.likeIndicator]}>
-              <Ionicons name="heart" size={40} color="#10B981" />
+              <Ionicons name="heart" size={50} color={Colors.success} />
+              <Animated.Text style={styles.indicatorText}>Like</Animated.Text>
             </View>
-          ) : (
+          )}
+          {indicatorType === 'dislike' && (
             <View style={[styles.indicator, styles.dislikeIndicator]}>
-              <Ionicons name="close" size={40} color="#EF4444" />
+              <Ionicons name="close-circle" size={50} color={Colors.secondaryRed} />
+              <Animated.Text style={styles.indicatorText}>Dislike</Animated.Text>
+            </View>
+          )}
+          {indicatorType === 'save' && (
+            <View style={[styles.indicator, styles.saveIndicator]}>
+              <Ionicons name="bookmark" size={50} color={Colors.primary} />
+              <Animated.Text style={styles.indicatorText}>Save</Animated.Text>
             </View>
           )}
         </View>
@@ -156,19 +268,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     pointerEvents: 'none',
+    zIndex: 1000,
   },
   indicator: {
-    borderRadius: 8,
-    padding: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: Spacing.xs },
+    shadowOpacity: 0.3,
+    shadowRadius: Spacing.sm,
+    elevation: 8,
+  },
+  indicatorText: {
+    marginTop: Spacing.sm,
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
   },
   likeIndicator: {
     borderWidth: 4,
-    borderColor: '#10B981',
+    borderColor: Colors.success,
   },
   dislikeIndicator: {
     borderWidth: 4,
-    borderColor: '#EF4444',
+    borderColor: Colors.secondaryRed,
+  },
+  saveIndicator: {
+    borderWidth: 4,
+    borderColor: Colors.primary,
   },
 });
 

@@ -6,6 +6,7 @@ import { View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, DarkColors } from '../constants/Colors';
 
 export default function ScannerResultsScreen() {
   const { result, imageUri } = useLocalSearchParams<{
@@ -32,7 +33,7 @@ export default function ScannerResultsScreen() {
         </Text>
         <HapticTouchableOpacity
           onPress={() => router.back()}
-          className="bg-orange-500 px-6 py-3 rounded-lg"
+          className="bg-red-600 dark:bg-red-400 px-6 py-3 rounded-lg"
         >
           <Text className="text-white font-semibold">Go Back</Text>
         </HapticTouchableOpacity>
@@ -58,11 +59,11 @@ export default function ScannerResultsScreen() {
           )}
 
           {/* Summary */}
-          <View className="bg-orange-50 p-4 rounded-lg mb-4">
-            <Text className="text-lg font-semibold text-gray-900 mb-1">
+          <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4 border border-red-200 dark:border-red-800">
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
               {parsedResult.mealDescription || 'Food Items'}
             </Text>
-            <Text className="text-3xl font-bold text-orange-600">
+            <Text className="text-3xl font-bold text-red-600 dark:text-red-400">
               {parsedResult.totalEstimatedCalories} calories
             </Text>
           </View>
@@ -75,7 +76,7 @@ export default function ScannerResultsScreen() {
                 <View key={index} className="bg-gray-50 p-3 rounded-lg mb-2">
                   <View className="flex-row justify-between items-center">
                     <Text className="font-semibold text-gray-900">{food.name}</Text>
-                    <Text className="text-orange-600 font-bold">{food.estimatedCalories} cal</Text>
+                    <Text className="text-red-600 dark:text-red-400 font-bold">{food.estimatedCalories} cal</Text>
                   </View>
                   {food.estimatedPortion && (
                     <Text className="text-sm text-gray-600 mt-1">Portion: {food.estimatedPortion}</Text>
@@ -89,7 +90,7 @@ export default function ScannerResultsScreen() {
           <View className="mt-4 space-y-2">
             <HapticTouchableOpacity
               onPress={() => router.back()}
-              className="bg-orange-500 py-3 rounded-lg"
+              className="bg-red-600 dark:bg-red-400 py-3 rounded-lg"
             >
               <Text className="text-white text-center font-semibold">Done</Text>
             </HapticTouchableOpacity>

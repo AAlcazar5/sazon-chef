@@ -149,12 +149,23 @@ export class HealthifyService {
       );
     }
 
-    // Banned ingredients
+    // ============================================
+    // INGREDIENT PREFERENCES SECTION
+    // This section is dynamically updated from user preferences
+    // Updated when user completes onboarding or updates preferences
+    // ============================================
+    
+    // Banned ingredients - CRITICAL: Must be strictly avoided
     if (params.bannedIngredients && params.bannedIngredients.length > 0) {
+      const bannedList = params.bannedIngredients.map(ing => `- ${ing}`).join('\n');
       parts.push(
         ``,
-        `NEVER USE THESE INGREDIENTS:`,
-        ...params.bannedIngredients.map(ing => `- ${ing}`),
+        `🚫 BANNED INGREDIENTS (from user preferences - NEVER USE THESE):`,
+        bannedList,
+        ``,
+        `CRITICAL: You MUST NOT use any of these ingredients in any form, even in substitutions.`,
+        `Check every ingredient name carefully - avoid even partial matches.`,
+        `If the original recipe contains a banned ingredient, you MUST substitute it with a suitable alternative that maintains the recipe's integrity.`
       );
     }
 

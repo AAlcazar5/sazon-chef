@@ -47,6 +47,7 @@ router.post('/:id/save', recipeController.saveRecipe);
 router.delete('/:id/save', recipeController.unsaveRecipe);
 router.post('/:id/like', recipeController.likeRecipe);
 router.post('/:id/dislike', recipeController.dislikeRecipe);
+router.get('/:id/similar', recipeController.getSimilarRecipes); // Must come before /:id
 router.get('/:id', recipeController.getRecipe);
 
 export const recipeRoutes = router;

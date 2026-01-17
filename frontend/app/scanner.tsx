@@ -12,6 +12,7 @@ import { scannerApi } from '../lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import LoadingState from '../components/ui/LoadingState';
+import { Colors, DarkColors } from '../constants/Colors';
 
 type ScannerMode = 'food' | 'barcode';
 
@@ -189,7 +190,7 @@ export default function ScannerScreen() {
         </Text>
         <HapticTouchableOpacity
           onPress={requestPermission}
-          className="bg-orange-500 px-6 py-3 rounded-lg"
+          className="bg-red-600 dark:bg-red-400 px-6 py-3 rounded-lg"
         >
           <Text className="text-white font-semibold">Grant Permission</Text>
         </HapticTouchableOpacity>
@@ -206,7 +207,7 @@ export default function ScannerScreen() {
             setMode('food');
             reset();
           }}
-          className={`flex-1 py-2 px-4 rounded-lg mr-2 ${mode === 'food' ? 'bg-orange-500' : 'bg-gray-700'}`}
+          className={`flex-1 py-2 px-4 rounded-lg mr-2 ${mode === 'food' ? 'bg-red-600 dark:bg-red-400' : 'bg-gray-700'}`}
         >
           <Text className={`text-center font-semibold ${mode === 'food' ? 'text-white' : 'text-gray-300'}`}>
             📸 Food Photo
@@ -217,7 +218,7 @@ export default function ScannerScreen() {
             setMode('barcode');
             reset();
           }}
-          className={`flex-1 py-2 px-4 rounded-lg ${mode === 'barcode' ? 'bg-orange-500' : 'bg-gray-700'}`}
+          className={`flex-1 py-2 px-4 rounded-lg ${mode === 'barcode' ? 'bg-red-600 dark:bg-red-400' : 'bg-gray-700'}`}
         >
           <Text className={`text-center font-semibold ${mode === 'barcode' ? 'text-white' : 'text-gray-300'}`}>
             📱 Barcode
@@ -239,7 +240,7 @@ export default function ScannerScreen() {
           />
           {mode === 'barcode' ? (
             <View className="absolute inset-0 justify-center items-center">
-              <View className="w-64 h-64 border-4 border-orange-500 rounded-lg" />
+              <View className="w-64 h-64 border-4 border-red-600 dark:border-red-400 rounded-lg" />
               <Text className="text-white mt-4 text-lg font-semibold">Position barcode within frame</Text>
             </View>
           ) : (
@@ -255,7 +256,7 @@ export default function ScannerScreen() {
                   onPress={handleTakePhoto}
                   disabled={scanning || processing}
                   hapticStyle="medium"
-                  className="w-20 h-20 rounded-full bg-orange-500 items-center justify-center border-4 border-white"
+                  className="w-20 h-20 rounded-full bg-red-600 dark:bg-red-400 items-center justify-center border-4 border-white"
                 >
                   {scanning || processing ? (
                     <ActivityIndicator color="white" />
@@ -295,11 +296,11 @@ export default function ScannerScreen() {
             {/* Food Recognition Results */}
             {mode === 'food' && 'foods' in result && (
               <View>
-                <View className="bg-orange-50 p-4 rounded-lg mb-4">
-                  <Text className="text-lg font-semibold text-gray-900 mb-1">
+                <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4 border border-red-200 dark:border-red-800">
+                  <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
                     {result.mealDescription}
                   </Text>
-                  <Text className="text-3xl font-bold text-orange-600">
+                  <Text className="text-3xl font-bold text-red-600 dark:text-red-400">
                     {result.totalEstimatedCalories} calories
                   </Text>
                 </View>
@@ -309,7 +310,7 @@ export default function ScannerScreen() {
                   <View key={index} className="bg-gray-50 p-3 rounded-lg mb-2">
                     <View className="flex-row justify-between items-center">
                       <Text className="font-semibold text-gray-900">{food.name}</Text>
-                      <Text className="text-orange-600 font-bold">{food.estimatedCalories} cal</Text>
+                      <Text className="text-red-600 dark:text-red-400 font-bold">{food.estimatedCalories} cal</Text>
                     </View>
                     {food.estimatedPortion && (
                       <Text className="text-sm text-gray-600 mt-1">Portion: {food.estimatedPortion}</Text>
@@ -374,7 +375,7 @@ export default function ScannerScreen() {
             <View className="mt-6 space-y-2">
               <HapticTouchableOpacity
                 onPress={reset}
-                className="bg-orange-500 py-3 rounded-lg"
+                className="bg-red-600 dark:bg-red-400 py-3 rounded-lg"
               >
                 <Text className="text-white text-center font-semibold">Scan Again</Text>
               </HapticTouchableOpacity>

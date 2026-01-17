@@ -1,8 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, Animated, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import SazonMascot, { SazonExpression } from '../mascot/SazonMascot';
+import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
+import { Colors, DarkColors } from '../../constants/Colors';
+import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
+import { FontSize, FontWeight } from '../../constants/Typography';
+import { Duration, Spring } from '../../constants/Animations';
+import { alertAccessibility } from '../../utils/accessibility';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -26,17 +31,17 @@ export default function Toast({
 
   useEffect(() => {
     if (visible) {
-      // Slide in from top
+      // Slide in from top using animation constants
       Animated.parallel([
         Animated.spring(translateY, {
           toValue: 0,
-          friction: 8,
-          tension: 40,
+          friction: Spring.default.friction,
+          tension: Spring.default.tension,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 300,
+          duration: Duration.medium,
           useNativeDriver: true,
         }),
       ]).start();
@@ -58,12 +63,12 @@ export default function Toast({
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: -100,
-        duration: 200,
+        duration: Duration.normal,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 0,
-        duration: 200,
+        duration: Duration.normal,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -80,33 +85,33 @@ export default function Toast({
           bg: 'bg-green-500 dark:bg-green-600',
           icon: 'checkmark-circle' as const,
           iconColor: 'white',
-          mascotExpression: 'celebrating' as SazonExpression,
+          mascotExpression: 'celebrating' as LogoMascotExpression,
         };
       case 'error':
         return {
-          bg: 'bg-red-500 dark:bg-red-600',
+          bg: 'bg-red-600 dark:bg-red-400',
           icon: 'close-circle' as const,
           iconColor: 'white',
-          mascotExpression: 'supportive' as SazonExpression,
+          mascotExpression: 'supportive' as LogoMascotExpression,
         };
       case 'warning':
         return {
           bg: 'bg-yellow-500 dark:bg-yellow-600',
           icon: 'warning' as const,
           iconColor: 'white',
-          mascotExpression: 'surprised' as SazonExpression,
+          mascotExpression: 'surprised' as LogoMascotExpression,
         };
       default:
         return {
           bg: 'bg-blue-500 dark:bg-blue-600',
           icon: 'information-circle' as const,
           iconColor: 'white',
-          mascotExpression: 'curious' as SazonExpression,
+          mascotExpression: 'curious' as LogoMascotExpression,
         };
     }
   };
 
-  const styles = getTypeStyles();
+  const typeStyles = getTypeStyles();
 
   return (
     <SafeAreaView
@@ -115,29 +120,62 @@ export default function Toast({
       pointerEvents="box-none"
     >
       <Animated.View
-        style={{
-          transform: [{ translateY }],
-          opacity,
-        }}
-        className={`${styles.bg} mx-4 mt-2 rounded-lg shadow-lg`}
+        style={[
+          styles.toastContainer,
+          {
+            transform: [{ translateY }],
+            opacity,
+          },
+        ]}
+        className={typeStyles.bg}
+        {...alertAccessibility(message, type)}
       >
         <TouchableOpacity
           onPress={handleClose}
-          className="flex-row items-center px-4 py-3"
+          style={styles.touchable}
           activeOpacity={0.8}
+          accessibilityLabel="Dismiss notification"
+          accessibilityHint="Double tap to dismiss"
         >
-          <View className="mr-2">
-            <SazonMascot
-              expression={styles.mascotExpression}
+          <View style={styles.mascotContainer}>
+            <LogoMascot
+              expression={typeStyles.mascotExpression}
               size="tiny"
-              variant="orange"
             />
           </View>
-          <Text className="text-white font-medium flex-1">{message}</Text>
+          <Text style={styles.message}>{message}</Text>
           <Ionicons name="close" size={20} color="white" />
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  toastContainer: {
+    marginHorizontal: ComponentSpacing.toast.marginBottom,
+    marginTop: Spacing.sm,
+    borderRadius: ComponentSpacing.toast.borderRadius,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  touchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: ComponentSpacing.toast.paddingHorizontal,
+    paddingVertical: ComponentSpacing.toast.padding,
+  },
+  mascotContainer: {
+    marginRight: Spacing.sm,
+  },
+  message: {
+    color: '#FFFFFF',
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.medium,
+    flex: 1,
+  },
+});
 

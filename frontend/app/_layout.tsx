@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import SplashScreen from '../components/ui/SplashScreen';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
+import { Duration } from '../constants/Animations';
 import '../global.css';
 
 function RootLayoutNav() {
@@ -81,56 +83,44 @@ function RootLayoutNav() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <View className="flex-1">
-          <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: 'default', // Smooth default transitions
-            animationDuration: 300,
-          }}
-        >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen 
-          name="modal" 
-          options={{ 
-            presentation: 'modal',
-          }} 
-        />
-        <Stack.Screen 
-          name="edit-physical-profile" 
-        />
-        <Stack.Screen 
-          name="edit-macro-goals" 
-        />
-        <Stack.Screen 
-          name="edit-preferences" 
-        />
-        <Stack.Screen 
-          name="recipe-form" 
-        />
-        <Stack.Screen 
-          name="scanner-results" 
-        />
-        <Stack.Screen 
-          name="edit-budget" 
-        />
-        <Stack.Screen 
-          name="onboarding" 
-        />
-        <Stack.Screen 
-          name="login" 
-          options={{ 
-            presentation: 'modal',
-          }} 
-        />
-        <Stack.Screen 
-          name="register" 
-          options={{ 
-            presentation: 'modal',
-          }} 
-        />
-        </Stack>
-        </View>
+        <ErrorBoundary>
+          <View className="flex-1">
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'default',
+                animationDuration: Duration.medium,
+              }}
+            >
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen
+                name="modal"
+                options={{
+                  presentation: 'modal',
+                }}
+              />
+              <Stack.Screen name="edit-physical-profile" />
+              <Stack.Screen name="edit-macro-goals" />
+              <Stack.Screen name="edit-preferences" />
+              <Stack.Screen name="recipe-form" />
+              <Stack.Screen name="scanner-results" />
+              <Stack.Screen name="edit-budget" />
+              <Stack.Screen name="onboarding" />
+              <Stack.Screen
+                name="login"
+                options={{
+                  presentation: 'modal',
+                }}
+              />
+              <Stack.Screen
+                name="register"
+                options={{
+                  presentation: 'modal',
+                }}
+              />
+            </Stack>
+          </View>
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

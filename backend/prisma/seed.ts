@@ -8,16 +8,16 @@ async function main() {
 
   // Check if we should clear existing data (only if CLEAR_DB=true env var is set)
   const shouldClear = process.env.CLEAR_DB === 'true';
-  
+
   if (shouldClear) {
     console.log('⚠️  CLEAR_DB=true detected - Clearing existing data...');
-    await prisma.recipeIngredient.deleteMany();
-    await prisma.recipeInstruction.deleteMany();
+  await prisma.recipeIngredient.deleteMany();
+  await prisma.recipeInstruction.deleteMany();
     await prisma.savedRecipe.deleteMany();
     await prisma.recipeFeedback.deleteMany();
     await prisma.mealHistory.deleteMany();
-    await prisma.recipe.deleteMany();
-    
+  await prisma.recipe.deleteMany();
+
     // Clear user data
     await prisma.bannedIngredient.deleteMany();
     await prisma.likedCuisine.deleteMany();
@@ -94,8 +94,8 @@ async function main() {
       fat: 15,
       imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&h=600&fit=crop',
       ingredients: [
-        { text: '2 chicken breasts', order: 1 },
-        { text: '1 cup quinoa', order: 2 },
+          { text: '2 chicken breasts', order: 1 },
+          { text: '1 cup quinoa', order: 2 },
         { text: '1 cucumber, diced', order: 3 },
         { text: '1 cup cherry tomatoes', order: 4 },
         { text: '1/2 cup tzatziki sauce', order: 5 }
@@ -341,10 +341,10 @@ async function main() {
         },
         instructions: {
           create: recipeData.instructions
-        }
-      },
-    });
-    console.log('✅ Recipe created:', recipe.title);
+      }
+    },
+  });
+  console.log('✅ Recipe created:', recipe.title);
   }
   
   console.log('🎉 Database seeding completed!');

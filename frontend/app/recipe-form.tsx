@@ -6,11 +6,17 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
+import { useColorScheme } from 'nativewind';
 import { recipeApi, collectionsApi, aiRecipeApi } from '../lib/api';
 import type { Recipe } from '../types';
-import * as Haptics from 'expo-haptics';
+import { Colors, DarkColors } from '../constants/Colors';
+import { Spacing, BorderRadius } from '../constants/Spacing';
+import { Duration, Spring } from '../constants/Animations';
+import { HapticPatterns } from '../constants/Haptics';
 
 export default function RecipeFormScreen() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams();
   const recipeId = params.id as string | undefined;
   const isEditMode = !!recipeId;
@@ -26,6 +32,8 @@ export default function RecipeFormScreen() {
   const [description, setDescription] = useState('');
   const [cookTime, setCookTime] = useState('');
   const [cuisine, setCuisine] = useState('');
+  const [recipeType, setRecipeType] = useState<'meal' | 'snack' | 'dessert'>('meal');
+  const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner'>('dinner');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -58,13 +66,11 @@ export default function RecipeFormScreen() {
       Animated.parallel([
         Animated.spring(pickerScale, {
           toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
+          ...Spring.stiff,
         }),
         Animated.timing(pickerOpacity, {
           toValue: 1,
-          duration: 300,
+          duration: Duration.medium,
           useNativeDriver: true,
         }),
       ]).start();
@@ -72,12 +78,12 @@ export default function RecipeFormScreen() {
       Animated.parallel([
         Animated.timing(pickerScale, {
           toValue: 0,
-          duration: 200,
+          duration: Duration.normal,
           useNativeDriver: true,
         }),
         Animated.timing(pickerOpacity, {
           toValue: 0,
-          duration: 200,
+          duration: Duration.normal,
           useNativeDriver: true,
         }),
       ]).start();
@@ -126,7 +132,7 @@ export default function RecipeFormScreen() {
         setCreatingCollection(false);
       }
     } catch (e: any) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Error', e?.message || 'Failed to create collection');
     }
   };
@@ -149,6 +155,20 @@ export default function RecipeFormScreen() {
       setFiber(recipe.fiber?.toString() || '');
       setSugar(recipe.sugar?.toString() || '');
 
+      // Set recipeType and mealType based on recipe.mealType
+      if (recipe.mealType) {
+        if (recipe.mealType === 'snack') {
+          setRecipeType('snack');
+        } else if (recipe.mealType === 'dessert') {
+          setRecipeType('dessert');
+        } else {
+          setRecipeType('meal');
+          if (recipe.mealType === 'breakfast' || recipe.mealType === 'lunch' || recipe.mealType === 'dinner') {
+            setMealType(recipe.mealType);
+          }
+        }
+      }
+
       // Handle both string[] and object array formats
       const ingredientTexts = Array.isArray(recipe.ingredients)
         ? recipe.ingredients.map((ing: any) => 
@@ -167,7 +187,7 @@ export default function RecipeFormScreen() {
       setLoadingRecipe(false);
     } catch (error: any) {
       console.error('Failed to load recipe:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Error', error.message || 'Failed to load recipe');
       setLoadingRecipe(false);
       router.back();
@@ -263,9 +283,19 @@ export default function RecipeFormScreen() {
         { cancelable: false }
       );
 
+      // Determine mealType based on recipeType selection
+      let aiMealType: string;
+      if (recipeType === 'snack') {
+        aiMealType = 'snack';
+      } else if (recipeType === 'dessert') {
+        aiMealType = 'dessert';
+      } else {
+        aiMealType = mealType; // breakfast, lunch, or dinner
+      }
+
       // Generate recipe using AI - with title if provided, random otherwise
       const response = await aiRecipeApi.generateRecipe({
-        mealType: 'any',
+        mealType: aiMealType,
         cuisine: cuisine.trim() || undefined,
         recipeTitle: hasTitle ? recipeTitle : undefined, // Pass title if provided
       });
@@ -314,7 +344,7 @@ export default function RecipeFormScreen() {
           setInstructions(instructionTexts.length > 0 ? instructionTexts : ['']);
         }
 
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        HapticPatterns.success();
         setSuccessMessage({
           title: 'Recipe Generated!',
           message: hasTitle 
@@ -346,56 +376,56 @@ export default function RecipeFormScreen() {
 
   const validateForm = (): boolean => {
     if (!title.trim()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter a recipe title');
       return false;
     }
     if (!description.trim()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter a description');
       return false;
     }
     if (!cookTime || isNaN(parseInt(cookTime))) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter a valid cook time');
       return false;
     }
     if (!cuisine.trim()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter a cuisine type');
       return false;
     }
     if (!calories || isNaN(parseInt(calories))) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter valid calorie amount');
       return false;
     }
     if (!protein || isNaN(parseInt(protein))) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter valid protein amount');
       return false;
     }
     if (!carbs || isNaN(parseInt(carbs))) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter valid carbs amount');
       return false;
     }
     if (!fat || isNaN(parseInt(fat))) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter valid fat amount');
       return false;
     }
 
     const validIngredients = ingredients.filter(ing => ing.trim());
     if (validIngredients.length === 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please add at least one ingredient');
       return false;
     }
 
     const validInstructions = instructions.filter(inst => inst.trim());
     if (validInstructions.length === 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Validation Error', 'Please add at least one instruction');
       return false;
     }
@@ -411,11 +441,22 @@ export default function RecipeFormScreen() {
     try {
       setLoading(true);
 
+      // Determine mealType based on recipeType
+      let finalMealType: string;
+      if (recipeType === 'snack') {
+        finalMealType = 'snack';
+      } else if (recipeType === 'dessert') {
+        finalMealType = 'dessert';
+      } else {
+        finalMealType = mealType; // breakfast, lunch, or dinner
+      }
+
       const recipeData = {
         title: title.trim(),
         description: description.trim(),
         cookTime: parseInt(cookTime),
         cuisine: cuisine.trim(),
+        mealType: finalMealType,
         calories: parseInt(calories),
         protein: parseInt(protein),
         carbs: parseInt(carbs),
@@ -429,7 +470,7 @@ export default function RecipeFormScreen() {
 
       if (isEditMode && recipeId) {
         await recipeApi.updateRecipe(recipeId, recipeData);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        HapticPatterns.success();
         Alert.alert('Success', 'Recipe updated successfully!');
         router.back();
       } else {
@@ -439,7 +480,7 @@ export default function RecipeFormScreen() {
         // Backend already saves to collections if collectionIds are provided in recipeData
         // No additional API call needed
         
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        HapticPatterns.success();
         Alert.alert(
           'Success', 
           'Recipe created and saved to your cookbook!',
@@ -456,7 +497,7 @@ export default function RecipeFormScreen() {
       }
     } catch (error: any) {
       console.error('Failed to save recipe:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      HapticPatterns.error();
       Alert.alert('Error', error.message || 'Failed to save recipe');
     } finally {
       setLoading(false);
@@ -474,13 +515,13 @@ export default function RecipeFormScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top']}>
       {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
+      <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} px-4 py-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center justify-between`}>
         <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={isDark ? "#E5E7EB" : "#111827"} />
         </HapticTouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">
+        <Text className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
           {isEditMode ? 'Edit Recipe' : 'Create Recipe'}
         </Text>
         <HapticTouchableOpacity 
@@ -488,7 +529,7 @@ export default function RecipeFormScreen() {
           disabled={loading}
           className="p-2"
         >
-          <Text className={`text-lg font-semibold ${loading ? 'text-gray-400' : 'text-orange-500'}`}>
+          <Text className={`text-lg font-semibold ${loading ? (isDark ? 'text-gray-400' : 'text-gray-500') : 'text-orange-500'}`}>
             {loading ? 'Saving...' : 'Save'}
           </Text>
         </HapticTouchableOpacity>
@@ -507,7 +548,7 @@ export default function RecipeFormScreen() {
               onPress={handleGenerateRandomRecipe}
               disabled={generatingAI}
               hapticStyle="medium"
-              className={`flex-row items-center justify-center px-4 py-3 rounded-lg mb-4 ${generatingAI ? 'bg-gray-300' : 'bg-blue-500'}`}
+              className={`flex-row items-center justify-center px-4 py-3 rounded-lg mb-4 ${generatingAI ? 'bg-gray-300' : 'bg-red-600 dark:bg-red-400'}`}
             >
               {generatingAI ? (
                 <>
@@ -529,141 +570,274 @@ export default function RecipeFormScreen() {
         )}
 
         {/* Basic Information */}
-        <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">Basic Information</Text>
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+          <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Basic Information</Text>
           
-          <Text className="text-gray-700 font-medium mb-2">Recipe Title *</Text>
+          <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Recipe Title *</Text>
           <TextInput
             value={title}
             onChangeText={setTitle}
             placeholder="Enter recipe title"
-            className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-3"
-            placeholderTextColor="#9CA3AF"
+            className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3 mb-3`}
+            placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
           />
 
-          <Text className="text-gray-700 font-medium mb-2">Description *</Text>
+          <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Description *</Text>
           <TextInput
             value={description}
             onChangeText={setDescription}
             placeholder="Describe your recipe"
             multiline
             numberOfLines={3}
-            className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-3"
-            placeholderTextColor="#9CA3AF"
+            className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3 mb-3`}
+            placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
             style={{ textAlignVertical: 'top' }}
           />
 
           <View className="flex-row gap-3">
             <View className="flex-1">
-              <Text className="text-gray-700 font-medium mb-2">Cook Time (min) *</Text>
+              <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Cook Time (min) *</Text>
               <TextInput
                 value={cookTime}
                 onChangeText={setCookTime}
                 placeholder="30"
                 keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                placeholderTextColor="#9CA3AF"
+                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
             <View className="flex-1">
-              <Text className="text-gray-700 font-medium mb-2">Cuisine *</Text>
+              <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Cuisine *</Text>
               <TextInput
                 value={cuisine}
                 onChangeText={setCuisine}
                 placeholder="Italian"
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                placeholderTextColor="#9CA3AF"
+                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
+          </View>
+
+          {/* Recipe Type Selection */}
+          <View className="mt-3">
+            <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Recipe Type *</Text>
+            <View className="flex-row gap-2 mb-2">
+              <HapticTouchableOpacity
+                onPress={() => setRecipeType('meal')}
+                className={`flex-1 py-3 px-4 rounded-lg border-2 ${
+                  recipeType === 'meal'
+                    ? isDark
+                      ? 'bg-orange-500/20 border-orange-500'
+                      : 'bg-orange-50 border-orange-500'
+                    : isDark
+                    ? 'bg-gray-700 border-gray-600'
+                    : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <Text className={`text-center font-medium ${
+                  recipeType === 'meal'
+                    ? 'text-orange-500'
+                    : isDark ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Meal
+                </Text>
+              </HapticTouchableOpacity>
+              <HapticTouchableOpacity
+                onPress={() => setRecipeType('snack')}
+                className={`flex-1 py-3 px-4 rounded-lg border-2 ${
+                  recipeType === 'snack'
+                    ? isDark
+                      ? 'bg-orange-500/20 border-orange-500'
+                      : 'bg-orange-50 border-orange-500'
+                    : isDark
+                    ? 'bg-gray-700 border-gray-600'
+                    : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <Text className={`text-center font-medium ${
+                  recipeType === 'snack'
+                    ? 'text-orange-500'
+                    : isDark ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Snack
+                </Text>
+              </HapticTouchableOpacity>
+              <HapticTouchableOpacity
+                onPress={() => setRecipeType('dessert')}
+                className={`flex-1 py-3 px-4 rounded-lg border-2 ${
+                  recipeType === 'dessert'
+                    ? isDark
+                      ? 'bg-orange-500/20 border-orange-500'
+                      : 'bg-orange-50 border-orange-500'
+                    : isDark
+                    ? 'bg-gray-700 border-gray-600'
+                    : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <Text className={`text-center font-medium ${
+                  recipeType === 'dessert'
+                    ? 'text-orange-500'
+                    : isDark ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Dessert
+                </Text>
+              </HapticTouchableOpacity>
+            </View>
+            
+            {/* Meal Type Selection (only shown when recipeType is 'meal') */}
+            {recipeType === 'meal' && (
+              <View className="flex-row gap-2">
+                <HapticTouchableOpacity
+                  onPress={() => setMealType('breakfast')}
+                  className={`flex-1 py-2 px-3 rounded-lg border ${
+                    mealType === 'breakfast'
+                      ? isDark
+                        ? 'bg-orange-500/20 border-orange-500'
+                        : 'bg-orange-50 border-orange-500'
+                      : isDark
+                      ? 'bg-gray-700 border-gray-600'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <Text className={`text-center text-sm ${
+                    mealType === 'breakfast'
+                      ? 'text-orange-500 font-semibold'
+                      : isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Breakfast
+                  </Text>
+                </HapticTouchableOpacity>
+                <HapticTouchableOpacity
+                  onPress={() => setMealType('lunch')}
+                  className={`flex-1 py-2 px-3 rounded-lg border ${
+                    mealType === 'lunch'
+                      ? isDark
+                        ? 'bg-orange-500/20 border-orange-500'
+                        : 'bg-orange-50 border-orange-500'
+                      : isDark
+                      ? 'bg-gray-700 border-gray-600'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <Text className={`text-center text-sm ${
+                    mealType === 'lunch'
+                      ? 'text-orange-500 font-semibold'
+                      : isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Lunch
+                  </Text>
+                </HapticTouchableOpacity>
+                <HapticTouchableOpacity
+                  onPress={() => setMealType('dinner')}
+                  className={`flex-1 py-2 px-3 rounded-lg border ${
+                    mealType === 'dinner'
+                      ? isDark
+                        ? 'bg-orange-500/20 border-orange-500'
+                        : 'bg-orange-50 border-orange-500'
+                      : isDark
+                      ? 'bg-gray-700 border-gray-600'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <Text className={`text-center text-sm ${
+                    mealType === 'dinner'
+                      ? 'text-orange-500 font-semibold'
+                      : isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Dinner
+                  </Text>
+                </HapticTouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 
         {/* Nutrition Information */}
-        <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">Nutrition Information</Text>
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+          <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Nutrition Information</Text>
           
           <View className="flex-row gap-3 mb-3">
             <View className="flex-1">
-              <Text className="text-gray-700 font-medium mb-2">Calories *</Text>
+              <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Calories *</Text>
               <TextInput
                 value={calories}
                 onChangeText={setCalories}
                 placeholder="500"
                 keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                placeholderTextColor="#9CA3AF"
+                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
             <View className="flex-1">
-              <Text className="text-gray-700 font-medium mb-2">Protein (g) *</Text>
+              <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Protein (g) *</Text>
               <TextInput
                 value={protein}
                 onChangeText={setProtein}
                 placeholder="30"
                 keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                placeholderTextColor="#9CA3AF"
+                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
           </View>
 
           <View className="flex-row gap-3 mb-3">
             <View className="flex-1">
-              <Text className="text-gray-700 font-medium mb-2">Carbs (g) *</Text>
+              <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Carbs (g) *</Text>
               <TextInput
                 value={carbs}
                 onChangeText={setCarbs}
                 placeholder="50"
                 keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                placeholderTextColor="#9CA3AF"
+                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
             <View className="flex-1">
-              <Text className="text-gray-700 font-medium mb-2">Fat (g) *</Text>
+              <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Fat (g) *</Text>
               <TextInput
                 value={fat}
                 onChangeText={setFat}
                 placeholder="15"
                 keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                placeholderTextColor="#9CA3AF"
+                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
           </View>
 
           <View className="flex-row gap-3">
             <View className="flex-1">
-              <Text className="text-gray-700 font-medium mb-2">Fiber (g)</Text>
+              <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Fiber (g)</Text>
               <TextInput
                 value={fiber}
                 onChangeText={setFiber}
                 placeholder="5"
                 keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                placeholderTextColor="#9CA3AF"
+                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
             <View className="flex-1">
-              <Text className="text-gray-700 font-medium mb-2">Sugar (g)</Text>
+              <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Sugar (g)</Text>
               <TextInput
                 value={sugar}
                 onChangeText={setSugar}
                 placeholder="10"
                 keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                placeholderTextColor="#9CA3AF"
+                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
           </View>
         </View>
 
         {/* Ingredients */}
-        <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-lg font-semibold text-gray-900">Ingredients *</Text>
+            <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Ingredients *</Text>
             <HapticTouchableOpacity onPress={addIngredient} className="p-2">
-              <Ionicons name="add-circle" size={24} color="#F97316" />
+              <Ionicons name="add-circle" size={24} color={Colors.secondaryRed} />
             </HapticTouchableOpacity>
           </View>
 
@@ -674,13 +848,13 @@ export default function RecipeFormScreen() {
                   value={ingredient}
                   onChangeText={(value) => updateIngredient(index, value)}
                   placeholder={`Ingredient ${index + 1}`}
-                  className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                  placeholderTextColor="#9CA3AF"
+                  className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                  placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                 />
               </View>
               {ingredients.length > 1 && (
                 <HapticTouchableOpacity onPress={() => removeIngredient(index)} className="p-2">
-                  <Ionicons name="remove-circle" size={24} color="#EF4444" />
+                  <Ionicons name="remove-circle" size={24} color={Colors.secondaryRed} />
                 </HapticTouchableOpacity>
               )}
             </View>
@@ -688,11 +862,11 @@ export default function RecipeFormScreen() {
         </View>
 
         {/* Instructions */}
-        <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-lg font-semibold text-gray-900">Instructions *</Text>
+            <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Instructions *</Text>
             <HapticTouchableOpacity onPress={addInstruction} className="p-2">
-              <Ionicons name="add-circle" size={24} color="#F97316" />
+              <Ionicons name="add-circle" size={24} color={Colors.secondaryRed} />
             </HapticTouchableOpacity>
           </View>
 
@@ -700,21 +874,21 @@ export default function RecipeFormScreen() {
             <View key={index} className="mb-3">
               <View className="flex-row items-start">
                 <View className="flex-1 mr-2">
-                  <Text className="text-gray-600 text-sm mb-1">Step {index + 1}</Text>
+                  <Text className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-sm mb-1`}>Step {index + 1}</Text>
                   <TextInput
                     value={instruction}
                     onChangeText={(value) => updateInstruction(index, value)}
                     placeholder={`Step ${index + 1} instructions`}
                     multiline
                     numberOfLines={2}
-                    className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-                    placeholderTextColor="#9CA3AF"
+                    className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                    placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                     style={{ textAlignVertical: 'top' }}
                   />
                 </View>
                 {instructions.length > 1 && (
                   <HapticTouchableOpacity onPress={() => removeInstruction(index)} className="p-2 mt-6">
-                    <Ionicons name="remove-circle" size={24} color="#EF4444" />
+                    <Ionicons name="remove-circle" size={24} color={Colors.secondaryRed} />
                   </HapticTouchableOpacity>
                 )}
               </View>
@@ -724,9 +898,9 @@ export default function RecipeFormScreen() {
 
         {/* Collections Selection (create mode only) */}
         {!isEditMode && (
-          <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
+          <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
             <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-lg font-semibold text-gray-900">Collections</Text>
+              <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Collections</Text>
               <HapticTouchableOpacity onPress={openCollectionPicker} className="p-2">
                 <Ionicons name="add-circle" size={24} color="#F97316" />
               </HapticTouchableOpacity>
@@ -740,26 +914,26 @@ export default function RecipeFormScreen() {
                     <HapticTouchableOpacity
                       key={id}
                       onPress={() => setSelectedCollectionIds(prev => prev.filter(i => i !== id))}
-                      className="bg-orange-100 px-3 py-1 rounded-full flex-row items-center"
+                      className="bg-red-100 dark:bg-red-900/30 px-3 py-1 rounded-full flex-row items-center border border-red-200 dark:border-red-800"
                     >
-                      <Text className="text-orange-800 font-medium mr-2">{collection.name}</Text>
-                      <Ionicons name="close-circle" size={16} color="#F97316" />
+                      <Text className="text-red-800 dark:text-red-300 font-medium mr-2">{collection.name}</Text>
+                      <Ionicons name="close-circle" size={16} color={Colors.secondaryRed} />
                     </HapticTouchableOpacity>
                   ) : null;
                 })}
               </View>
             ) : (
-              <Text className="text-gray-500 text-sm mb-3">
+              <Text className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-sm mb-3`}>
                 No collections selected. Recipe will be saved to "All".
               </Text>
             )}
             
             <HapticTouchableOpacity
               onPress={openCollectionPicker}
-              className="border border-orange-500 rounded-lg px-4 py-3 flex-row items-center justify-center"
+              className="border border-red-600 dark:border-red-400 rounded-lg px-4 py-3 flex-row items-center justify-center"
             >
-              <Ionicons name="folder-outline" size={20} color="#F97316" />
-              <Text className="text-orange-500 font-semibold ml-2">
+              <Ionicons name="folder-outline" size={20} color={Colors.secondaryRed} />
+              <Text className="text-red-600 dark:text-red-400 font-semibold ml-2">
                 {selectedCollectionIds.length > 0 ? 'Change Collections' : 'Select Collections'}
               </Text>
             </HapticTouchableOpacity>
@@ -782,12 +956,12 @@ export default function RecipeFormScreen() {
           style={{ opacity: pickerOpacity }}
         >
           <Animated.View 
-            className="bg-white rounded-2xl p-4 w-full max-w-sm max-h-[70%]"
+            className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4 w-full max-w-sm max-h-[70%]`}
             style={{
               transform: [{ scale: pickerScale }],
             }}
           >
-            <Text className="text-lg font-semibold mb-3">Select Collections</Text>
+            <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Select Collections</Text>
             <ScrollView className="mb-3">
               {collections.map((c) => (
                 <HapticTouchableOpacity
@@ -799,14 +973,14 @@ export default function RecipeFormScreen() {
                         : [...prev, c.id]
                     );
                   }}
-                  className="flex-row items-center py-3 border-b border-gray-100"
+                  className={`flex-row items-center py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}
                 >
-                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-orange-500 border-orange-500' : 'border-gray-300'}`}>
+                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-red-600 dark:bg-red-400 border-red-600 dark:border-red-400' : (isDark ? 'border-gray-600' : 'border-gray-300')}`}>
                     {selectedCollectionIds.includes(c.id) && (
                       <Ionicons name="checkmark" size={14} color="white" style={{ position: 'absolute', top: 1, left: 1 }} />
                     )}
                   </View>
-                  <Text className="text-gray-900 flex-1">{c.name}</Text>
+                  <Text className={`${isDark ? 'text-gray-100' : 'text-gray-900'} flex-1`}>{c.name}</Text>
                 </HapticTouchableOpacity>
               ))}
               {creatingCollection ? (
@@ -815,22 +989,22 @@ export default function RecipeFormScreen() {
                     value={newCollectionName}
                     onChangeText={setNewCollectionName}
                     placeholder="New collection name"
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
-                    placeholderTextColor="#9CA3AF"
+                    className={`flex-1 border ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-300'} rounded-lg px-3 py-2 mr-2`}
+                    placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
-                  <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
+                  <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-red-600 dark:bg-red-400 px-3 py-2 rounded-lg">
                     <Text className="text-white font-semibold">Create</Text>
                   </HapticTouchableOpacity>
                 </View>
               ) : (
                 <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
-                  <Text className="text-orange-600 font-medium">+ Create new collection</Text>
+                  <Text className="text-red-600 dark:text-red-400 font-medium">+ Create new collection</Text>
                 </HapticTouchableOpacity>
               )}
             </ScrollView>
             <View className="flex-row justify-end space-x-3">
               <HapticTouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
-                <Text className="text-gray-700">Done</Text>
+                <Text className={isDark ? 'text-gray-300' : 'text-gray-700'}>Done</Text>
               </HapticTouchableOpacity>
             </View>
           </Animated.View>

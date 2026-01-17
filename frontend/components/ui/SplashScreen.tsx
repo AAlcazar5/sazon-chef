@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AnimatedSazon } from '../mascot';
+import { AnimatedLogoMascot } from '../mascot';
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -86,10 +86,9 @@ export default function SplashScreen({ onFinish, duration = 2000 }: SplashScreen
             transform: [{ scale: scaleAnim }],
           }}
         >
-          <AnimatedSazon
+          <AnimatedLogoMascot
             expression="excited"
             size="hero"
-            variant="orange"
             animationType="celebrate"
           />
         </Animated.View>

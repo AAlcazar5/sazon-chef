@@ -1,5 +1,47 @@
 // Color palette for Sazon Chef app
 // Using Tailwind CSS color system for consistency
+//
+// WCAG 2.1 Contrast Guidelines:
+// - AA Normal Text (< 18pt): 4.5:1 minimum ratio
+// - AA Large Text (>= 18pt or >= 14pt bold): 3:1 minimum ratio
+//
+// Gray Scale Usage (ensures WCAG AA compliance):
+// ┌─────────────┬───────────┬──────────────────────┬──────────────────────┐
+// │ Color       │ Hex       │ On White (#FFF)      │ On Dark (#111827)    │
+// ├─────────────┼───────────┼──────────────────────┼──────────────────────┤
+// │ gray-400    │ #9CA3AF   │ 2.91:1 ❌ FAILS AA   │ 5.85:1 ✓ PASSES AA  │
+// │ gray-500    │ #6B7280   │ 5.03:1 ✓ PASSES AA  │ 3.39:1 ❌ FAILS AA   │
+// │ gray-600    │ #4B5563   │ 7.52:1 ✓ PASSES AA  │ 2.27:1 ❌ FAILS AA   │
+// │ gray-700    │ #374151   │ 10.18:1 ✓ PASSES AA │ 1.67:1 ❌ FAILS AA   │
+// └─────────────┴───────────┴──────────────────────┴──────────────────────┘
+//
+// CORRECT PATTERN: text-gray-500 dark:text-gray-400
+// WRONG PATTERN:   text-gray-400 dark:text-gray-500 (both fail!)
+//
+// Text Color Usage:
+// - text.primary:   Body text, headings (gray-900 light / gray-50 dark)
+// - text.secondary: Labels, descriptions (gray-500 light / gray-300 dark) - PASSES AA
+// - text.tertiary:  Hints, placeholders ONLY (gray-400) - fails AA on light, OK on dark
+// - text.inverse:   Text on colored backgrounds (white/gray-900)
+//
+// Theme Usage - When to use which approach:
+// ┌─────────────────────────────────────────────────────────────────────────────┐
+// │ Approach              │ When to Use                                         │
+// ├─────────────────────────────────────────────────────────────────────────────┤
+// │ useColorScheme()      │ NativeWind/Tailwind classes (dark:, className)     │
+// │ from 'nativewind'     │ Example: className="bg-white dark:bg-gray-900"     │
+// ├─────────────────────────────────────────────────────────────────────────────┤
+// │ useTheme()            │ JS style objects, dynamic colors, theme switching   │
+// │ from ThemeContext     │ Example: style={{ color: colors.text.primary }}    │
+// │                       │ Also provides: setThemeMode, toggleTheme            │
+// ├─────────────────────────────────────────────────────────────────────────────┤
+// │ Colors/DarkColors     │ Direct imports when theme is known or for constants │
+// │ imports               │ Example: placeholderTextColor={Colors.text.tertiary}│
+// └─────────────────────────────────────────────────────────────────────────────┘
+//
+// Best Practice: Use NativeWind classes (dark:) for most styling. Use useTheme()
+// when you need the colors object for dynamic styling or conditional logic.
+// The ThemeContext syncs with NativeWind, so they stay consistent.
 
 // Interfaces for this file
 interface ColorPalette {
@@ -7,6 +49,13 @@ interface ColorPalette {
   primaryLight: string;
   primaryDark: string;
   secondary: string;
+  secondaryRed: string; // Complementary red shade for secondary color
+  secondaryRedLight: string; // Light variant of secondary red
+  secondaryRedDark: string; // Dark variant of secondary red
+  tertiary: string; // Rainbow gradient for special screens and actions
+  tertiaryGreen: string; // Green tertiary color
+  tertiaryGreenLight: string; // Light variant of tertiary green
+  tertiaryGreenDark: string; // Dark variant of tertiary green
   accent: string;
   accentSecondary: string; // Red accent for habanero variants and brand
   
@@ -61,14 +110,21 @@ interface ColorPalette {
 // Light theme color palette
 export const Colors: ColorPalette = {
   // Primary colors (Orange theme - Sazon means seasoning/flavor)
-  primary: '#F97316', // orange-500
-  primaryLight: '#FDBA74', // orange-300
-  primaryDark: '#EA580C', // orange-600
+  primary: '#fa7e12', // New brand orange
+  primaryLight: '#ffb464', // Lighter variant for backgrounds/highlights
+  primaryDark: '#d67a0c', // Darker variant for emphasis
   
   // Secondary colors
   secondary: '#6B7280', // gray-500
+  secondaryRed: '#e42614', // New darker habanero red for light mode
+  secondaryRedLight: '#dc2626', // Darker variant for better text visibility with white text
+  secondaryRedDark: '#b91c1c', // Dark variant for emphasis
+  tertiary: 'rainbow', // Rainbow gradient for special screens and actions
+  tertiaryGreen: '#5e8659', // Green tertiary color
+  tertiaryGreenLight: '#9dc299', // Light variant for backgrounds/highlights
+  tertiaryGreenDark: '#4a6b45', // Dark variant for emphasis
   accent: '#8B5CF6', // violet-500
-  accentSecondary: '#EF4444', // red-500 - for habanero variants and brand accents
+  accentSecondary: '#e42614', // New habanero red - for habanero variants and brand accents
   
   // Semantic colors
   success: '#10B981', // emerald-500
@@ -122,14 +178,21 @@ export const Colors: ColorPalette = {
 // Dark theme color palette
 export const DarkColors: ColorPalette = {
   // Primary colors (same as light theme for brand consistency)
-  primary: '#F97316', // orange-500
-  primaryLight: '#FDBA74', // orange-300
-  primaryDark: '#EA580C', // orange-600
+  primary: '#fa7e12', // New brand orange
+  primaryLight: '#ffb464', // Lighter variant for backgrounds/highlights
+  primaryDark: '#d67a0c', // Darker variant for emphasis
   
   // Secondary colors
   secondary: '#9CA3AF', // gray-400 (lighter for dark mode)
+  secondaryRed: '#f87171', // Lighter red for dark mode (brighter for visibility)
+  secondaryRedLight: '#dc2626', // Darker variant for better text visibility with white text
+  secondaryRedDark: '#e42614', // New habanero red - darker variant for borders/accents
+  tertiary: 'rainbow', // Rainbow gradient for special screens and actions
+  tertiaryGreen: '#6fa06a', // Lighter green for dark mode (brighter for visibility)
+  tertiaryGreenLight: '#9dc299', // Light variant for backgrounds with opacity
+  tertiaryGreenDark: '#4a6b45', // Dark variant for borders/accents
   accent: '#A78BFA', // violet-400 (lighter for dark mode)
-  accentSecondary: '#F87171', // red-400 (lighter for dark mode) - for habanero variants and brand accents
+  accentSecondary: '#f87171', // Lighter red for dark mode - for habanero variants and brand accents
   
   // Semantic colors (same as light theme)
   success: '#10B981', // emerald-500
@@ -230,10 +293,13 @@ export const TextColors = {
 
 // Gradient colors for potential future use
 export const Gradients = {
-  primary: ['#F97316', '#EA580C'], // orange-500 to orange-600
+  primary: ['#fa7e12', '#d67a0c'], // New brand orange gradient
   success: ['#10B981', '#059669'], // emerald-500 to emerald-600
   premium: ['#8B5CF6', '#7C3AED'], // violet-500 to violet-600
-  accent: ['#EF4444', '#DC2626'] // red-500 to red-600 - for habanero variants
+  accent: ['#e42614', '#b91c1c'], // New habanero red gradient - for habanero variants
+  rainbow: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3', '#FF0000'], // Rainbow gradient - red, orange, yellow, green, blue, indigo, violet, back to red
+  rainbowBright: ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#E0BBE4', '#FFB3E6', '#FFB3BA'], // Pastel rainbow gradient for dark mode - soft, light colors
+  rainbowBrightLight: ['#E63946', '#F77F00', '#FCBF49', '#06A77D', '#118AB2', '#7209B7', '#B5179E', '#E63946'] // Vibrant, saturated rainbow gradient for light mode - non-pastel for better legibility
 };
 
 // Helper functions

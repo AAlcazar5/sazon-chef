@@ -26,7 +26,7 @@ interface RecipeGenerationParams {
     activityLevel: string;
     fitnessGoal: string;
   };
-  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'any';
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'any';
   cuisineOverride?: string;
   previousMeals?: Array<{
     title: string;
@@ -47,6 +47,10 @@ interface RecipeGenerationParams {
       cookTime: number;
     }>;
   };
+  maxTotalPrepTime?: number; // Remaining total prep time in minutes for the day
+  maxCookTimeForMeal?: number; // Maximum cook time for this specific meal
+  maxDailyBudget?: number; // Maximum daily budget in dollars
+  remainingBudget?: number; // Remaining budget for the day
 }
 
 export interface GeneratedRecipe {
@@ -84,16 +88,26 @@ export class AIRecipeService {
 
   /**
    * Generate a single AI-powered recipe based on user preferences and macro goals
+   * Includes automatic retry logic for safety check failures
    */
-  async generateRecipe(params: RecipeGenerationParams): Promise<GeneratedRecipe> {
+  async generateRecipe(params: RecipeGenerationParams, retryCount: number = 0, previousFailures: string[] = []): Promise<GeneratedRecipe> {
+    const MAX_RETRIES = 3;
+    
     try {
       console.log('🤖 AI Recipe Generation: Starting with params', {
         userId: params.userId,
         mealType: params.mealType,
         cuisineOverride: params.cuisineOverride,
+        retryAttempt: retryCount,
+        previousFailures: previousFailures.length,
       });
 
-      const prompt = this.buildRecipePrompt(params);
+      // Build prompt with feedback from previous failures
+      let prompt = this.buildRecipePrompt(params);
+      if (previousFailures.length > 0) {
+        prompt += `\n\n⚠️ CRITICAL: Previous attempt(s) failed because:\n${previousFailures.map(f => `- ${f}`).join('\n')}\n\nYou MUST create a recipe that does NOT have any of these issues. Double-check all ingredients against banned ingredients list.`;
+      }
+      
       const systemPrompt = this.getSystemPrompt();
       
       // Use provider manager with automatic fallback
@@ -101,7 +115,7 @@ export class AIRecipeService {
         prompt,
         systemPrompt,
         mealType: params.mealType,
-        temperature: 1.1, // High creativity for variety and randomness
+        temperature: retryCount > 0 ? 1.2 : 1.1, // Slightly higher temperature on retries for more variation
         maxTokens: 2000,
       });
       
@@ -111,7 +125,42 @@ export class AIRecipeService {
       const validated = this.validateAndNormalizeRecipe(recipe);
       
       // Run safety checks
-      this.performSafetyChecks(validated, params);
+      try {
+        this.performSafetyChecks(validated, params);
+      } catch (safetyError: any) {
+        // Safety check failed - retry if we haven't exceeded max retries
+        const errorMessage = safetyError.message || String(safetyError);
+        if (retryCount < MAX_RETRIES) {
+          console.warn(`⚠️  Safety check failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, errorMessage);
+          
+          // Extract specific failure reasons and add to previous failures
+          const newFailures = [...previousFailures];
+          if (errorMessage.includes('banned ingredients')) {
+            const bannedMatch = errorMessage.match(/banned ingredients: ([^;]+)/);
+            if (bannedMatch) {
+              newFailures.push(`Recipe contained banned ingredients: ${bannedMatch[1]}. You MUST use alternative ingredients that are NOT banned.`);
+            } else {
+              newFailures.push('Recipe contained banned ingredients. You MUST avoid ALL banned ingredients completely.');
+            }
+          } else if (errorMessage.includes('vegetarian')) {
+            newFailures.push('Recipe contained meat but user requires vegetarian. You MUST use only plant-based ingredients.');
+          } else if (errorMessage.includes('vegan')) {
+            newFailures.push('Recipe contained animal products but user requires vegan. You MUST use only plant-based ingredients with no animal products.');
+          } else if (errorMessage.includes('dairy-free')) {
+            newFailures.push('Recipe contained dairy but user requires dairy-free. You MUST use dairy alternatives (e.g., almond milk, coconut milk, vegan cheese).');
+          } else {
+            newFailures.push(errorMessage);
+          }
+          
+          // Retry with updated context
+          console.log(`🔄 Retrying recipe generation (attempt ${retryCount + 2}/${MAX_RETRIES + 1}) with failure feedback...`);
+          return this.generateRecipe(params, retryCount + 1, newFailures);
+        } else {
+          // Max retries exceeded
+          console.error(`❌ Max retries (${MAX_RETRIES + 1}) exceeded for recipe generation`);
+          throw new Error(`Failed to generate recipe after ${MAX_RETRIES + 1} attempts. Last error: ${errorMessage}`);
+        }
+      }
       
       return validated;
     } catch (error: any) {
@@ -126,6 +175,35 @@ export class AIRecipeService {
         throw quotaError;
       }
       
+      // If this is a safety check error and we haven't retried yet, retry
+      if (error.message && error.message.includes('Recipe failed safety checks') && retryCount < MAX_RETRIES) {
+        const errorMessage = error.message;
+        console.warn(`⚠️  Safety check failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, errorMessage);
+        
+        // Extract specific failure reasons
+        const newFailures = [...previousFailures];
+        if (errorMessage.includes('banned ingredients')) {
+          const bannedMatch = errorMessage.match(/banned ingredients: ([^;]+)/);
+          if (bannedMatch) {
+            newFailures.push(`Recipe contained banned ingredients: ${bannedMatch[1]}. You MUST use alternative ingredients that are NOT banned.`);
+          } else {
+            newFailures.push('Recipe contained banned ingredients. You MUST avoid ALL banned ingredients completely.');
+          }
+        } else if (errorMessage.includes('vegetarian')) {
+          newFailures.push('Recipe contained meat but user requires vegetarian. You MUST use only plant-based ingredients.');
+        } else if (errorMessage.includes('vegan')) {
+          newFailures.push('Recipe contained animal products but user requires vegan. You MUST use only plant-based ingredients with no animal products.');
+        } else if (errorMessage.includes('dairy-free')) {
+          newFailures.push('Recipe contained dairy but user requires dairy-free. You MUST use dairy alternatives (e.g., almond milk, coconut milk, vegan cheese).');
+        } else {
+          newFailures.push(errorMessage);
+        }
+        
+        // Retry with updated context
+        console.log(`🔄 Retrying recipe generation (attempt ${retryCount + 2}/${MAX_RETRIES + 1}) with failure feedback...`);
+        return this.generateRecipe(params, retryCount + 1, newFailures);
+      }
+      
       throw new Error(`Failed to generate recipe: ${error.message}`);
     }
   }
@@ -138,7 +216,7 @@ export class AIRecipeService {
   async generateDailyMealPlan(
     params: RecipeGenerationParams,
     options?: {
-      mealsToGenerate?: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'>;
+      mealsToGenerate?: Array<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert'>;
       customMealCount?: number;
       remainingMacros?: {
         calories: number;
@@ -146,12 +224,15 @@ export class AIRecipeService {
         carbs: number;
         fat: number;
       };
+      maxTotalPrepTime?: number; // Maximum total prep time in minutes (default: 60)
+      maxDailyBudget?: number; // Maximum daily budget in dollars
     }
   ): Promise<{
     breakfast?: GeneratedRecipe;
     lunch?: GeneratedRecipe;
     dinner?: GeneratedRecipe;
     snack?: GeneratedRecipe;
+    dessert?: GeneratedRecipe;
   }> {
     try {
       console.log('🍽️ AI Daily Meal Plan: Generating for user', params.userId);
@@ -182,12 +263,13 @@ export class AIRecipeService {
           lunch: 0.30,     // 30%
           dinner: 0.35,    // 35%
           snack: 0.10,     // 10%
+          dessert: 0.08,   // 8% (desserts are typically smaller)
         };
         
         // Normalize distribution for selected meals only
-        const totalStandard = mealsToGenerate.reduce((sum, meal) => sum + standardDistribution[meal], 0);
+        const totalStandard = mealsToGenerate.reduce((sum, meal) => sum + (standardDistribution[meal] || 0.1), 0);
         mealsToGenerate.forEach(mealType => {
-          mealDistribution[mealType] = standardDistribution[mealType] / totalStandard;
+          mealDistribution[mealType] = (standardDistribution[mealType] || 0.1) / totalStandard;
         });
       }
 
@@ -200,9 +282,22 @@ export class AIRecipeService {
       lunch?: GeneratedRecipe;
       dinner?: GeneratedRecipe;
       snack?: GeneratedRecipe;
+      dessert?: GeneratedRecipe;
     } = {};
 
     const previousMeals: Array<{ title: string; cuisine: string; mainProtein?: string }> = [];
+    
+    // Track total prep time to keep under maxTotalPrepTime (default 60 minutes)
+    const maxTotalPrepTime = options?.maxTotalPrepTime || 60;
+    let totalPrepTime = 0;
+    console.log(`⏱️  Total prep time constraint: ${maxTotalPrepTime} minutes`);
+    
+    // Track total budget to keep under maxDailyBudget if provided
+    const maxDailyBudget = options?.maxDailyBudget;
+    let totalBudget = 0;
+    if (maxDailyBudget) {
+      console.log(`💰 Daily budget constraint: $${maxDailyBudget}`);
+    }
 
     for (const mealType of mealsToGenerate) {
       const portion = mealDistribution[mealType] || (1 / mealsToGenerate.length);
@@ -225,11 +320,33 @@ export class AIRecipeService {
           
           console.log(`📊 Target macros for ${mealType}:`, mealMacros);
           
+          // Calculate remaining prep time for this meal
+          const remainingPrepTime = maxTotalPrepTime - totalPrepTime;
+          const mealsRemaining = mealsToGenerate.length - Object.keys(result).length;
+          const maxCookTimeForMeal = Math.max(10, Math.floor(remainingPrepTime / mealsRemaining));
+          
+          // Calculate remaining budget for this meal
+          const remainingBudget = maxDailyBudget ? maxDailyBudget - totalBudget : undefined;
+          const avgBudgetPerMeal = maxDailyBudget && mealsRemaining > 0 
+            ? (remainingBudget || 0) / mealsRemaining 
+            : undefined;
+          
+          console.log(`⏱️  Prep time: ${totalPrepTime}/${maxTotalPrepTime} min used, ${remainingPrepTime} min remaining`);
+          console.log(`⏱️  Max cook time for ${mealType}: ${maxCookTimeForMeal} min (${mealsRemaining} meals remaining)`);
+          if (maxDailyBudget) {
+            console.log(`💰 Budget: $${totalBudget.toFixed(2)}/$${maxDailyBudget.toFixed(2)} used, $${remainingBudget?.toFixed(2)} remaining`);
+            console.log(`💰 Avg budget per remaining meal: $${avgBudgetPerMeal?.toFixed(2)}`);
+          }
+          
           recipe = await this.generateRecipe({
             ...params,
             mealType,
             macroGoals: mealMacros,
             previousMeals: previousMeals.length > 0 ? previousMeals : undefined,
+            maxTotalPrepTime: remainingPrepTime, // Pass remaining time as constraint
+            maxCookTimeForMeal, // Pass calculated max cook time for this meal
+            maxDailyBudget: maxDailyBudget, // Pass daily budget constraint
+            remainingBudget: remainingBudget, // Pass remaining budget
           });
           break; // Success, exit retry loop
         } catch (error: any) {
@@ -253,6 +370,14 @@ export class AIRecipeService {
 
       result[mealType] = recipe;
       
+      // Update total prep time
+      totalPrepTime += recipe.cookTime || 0;
+      console.log(`⏱️  Added ${recipe.cookTime} min, total prep time: ${totalPrepTime}/${maxTotalPrepTime} min`);
+      
+      // Note: Budget tracking would require cost estimation from ingredients
+      // For now, we rely on AI prompt instructions to keep costs reasonable
+      // Future enhancement: estimate cost from ingredients and track actual budget
+      
       // Track this meal for next iterations
       previousMeals.push({
         title: recipe.title,
@@ -260,7 +385,7 @@ export class AIRecipeService {
         mainProtein: this.extractMainProtein(recipe),
       });
       
-      console.log(`✅ ${mealType} generated: ${recipe.title} (${recipe.cuisine})`);
+      console.log(`✅ ${mealType} generated: ${recipe.title} (${recipe.cuisine}, ${recipe.cookTime} min)`);
     }
 
       console.log('✅ AI Daily Meal Plan: Complete');
@@ -303,7 +428,13 @@ export class AIRecipeService {
       if (params.recipeTitle) {
         parts.push(`This is a ${params.mealType} recipe.`);
       } else {
-        parts.push(`Generate a ${params.mealType} recipe.`);
+        if (params.mealType === 'dessert') {
+          parts.push(`Generate a dessert recipe (sweet treats like cakes, cookies, pies, ice cream, etc.).`);
+        } else if (params.mealType === 'snack') {
+          parts.push(`Generate a healthy snack recipe (light, nutritious options suitable for between meals - NOT desserts). Examples: yogurt with fruit, cheese and crackers, protein bars, trail mix, etc.`);
+        } else {
+          parts.push(`Generate a ${params.mealType} recipe.`);
+        }
       }
     } else if (!params.recipeTitle) {
       parts.push('Generate a delicious recipe.');
@@ -400,17 +531,33 @@ export class AIRecipeService {
       );
     }
 
+    // ============================================
+    // INGREDIENT PREFERENCES SECTION
+    // This section is dynamically updated from user preferences
+    // Updated when user completes onboarding or updates preferences
+    // ============================================
+    
     // Dietary restrictions
     if (params.userPreferences?.dietaryRestrictions && params.userPreferences.dietaryRestrictions.length > 0) {
       parts.push(
-        `The recipe must be: ${params.userPreferences.dietaryRestrictions.join(', ')}.`
+        ``,
+        `DIETARY RESTRICTIONS (from user profile):`,
+        `The recipe MUST comply with: ${params.userPreferences.dietaryRestrictions.join(', ')}.`,
+        `Do NOT include any ingredients that violate these restrictions.`
       );
     }
 
-    // Banned ingredients
+    // Banned ingredients - CRITICAL: Must be strictly avoided
     if (params.userPreferences?.bannedIngredients && params.userPreferences.bannedIngredients.length > 0) {
+      const bannedList = params.userPreferences.bannedIngredients.map(ing => `- ${ing}`).join('\n');
       parts.push(
-        `NEVER use these ingredients: ${params.userPreferences.bannedIngredients.join(', ')}.`
+        ``,
+        `🚫 BANNED INGREDIENTS (from user preferences - NEVER USE THESE):`,
+        bannedList,
+        ``,
+        `CRITICAL: You MUST NOT use any of these ingredients in any form.`,
+        `Check every ingredient name carefully - avoid even partial matches (e.g., if "bell peppers" is banned, do not use "red bell peppers", "green peppers", or "peppers").`,
+        `If a recipe typically requires a banned ingredient, you MUST substitute it with a suitable alternative.`
       );
     }
 
@@ -451,17 +598,44 @@ export class AIRecipeService {
         return mapping[category] || category;
       });
 
+      const preferredList = superfoodNames.map(sf => `- ${sf}`).join('\n');
       parts.push(
-        `PRIORITY: The user wants to see more recipes containing these superfoods: ${superfoodNames.join(', ')}.`,
-        `Try to incorporate at least one or more of these superfoods into the recipe when possible.`,
-        `These ingredients should be featured prominently in the recipe.`
+        ``,
+        `⭐ PREFERRED INGREDIENTS (from user preferences - PRIORITIZE THESE):`,
+        preferredList,
+        ``,
+        `PRIORITY: The user wants to see more recipes containing these superfoods.`,
+        `Try to incorporate at least one or more of these ingredients into the recipe when possible.`,
+        `These ingredients should be featured prominently in the recipe when it makes sense.`
       );
     }
 
     // Cook time preference
-    if (params.userPreferences?.cookTimePreference) {
+    if (params.maxCookTimeForMeal) {
+      // Use the calculated max cook time for this meal (based on remaining total prep time)
+      parts.push(
+        `CRITICAL: Cook time MUST be ${params.maxCookTimeForMeal} minutes or less. This is part of a daily meal plan with limited total prep time.`
+      );
+    } else if (params.userPreferences?.cookTimePreference) {
       parts.push(
         `Cook time should be under ${params.userPreferences.cookTimePreference} minutes.`
+      );
+    }
+    
+    // Total prep time constraint
+    if (params.maxTotalPrepTime) {
+      parts.push(
+        `IMPORTANT: This meal is part of a daily meal plan. Keep cook time reasonable to stay within the daily prep time budget of ${params.maxTotalPrepTime} minutes total.`
+      );
+    }
+    
+    // Daily budget constraint
+    if (params.maxDailyBudget) {
+      const budgetInfo = params.remainingBudget !== undefined
+        ? `Remaining budget: $${params.remainingBudget.toFixed(2)} out of $${params.maxDailyBudget.toFixed(2)} daily budget.`
+        : `Daily budget limit: $${params.maxDailyBudget.toFixed(2)}.`;
+      parts.push(
+        `BUDGET CONSTRAINT: ${budgetInfo} Keep ingredient costs reasonable. Prefer affordable, common ingredients. Avoid expensive specialty items, premium cuts of meat, or exotic ingredients unless necessary. Aim for cost-effective recipes that stay within budget.`
       );
     }
 
@@ -668,8 +842,22 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
       }
     });
 
-    // Check cook time reasonableness for meal type
-    if (params.mealType && params.mealType !== 'any') {
+    // Check cook time constraint for daily meal plan
+    if (params.maxCookTimeForMeal && recipe.cookTime > params.maxCookTimeForMeal) {
+      errors.push(`Recipe cook time (${recipe.cookTime} min) exceeds maximum allowed (${params.maxCookTimeForMeal} min) for this meal in the daily plan`);
+    }
+    
+    // Check total prep time constraint
+    if (params.maxTotalPrepTime && recipe.cookTime > params.maxTotalPrepTime) {
+      errors.push(`Recipe cook time (${recipe.cookTime} min) exceeds remaining total prep time budget (${params.maxTotalPrepTime} min) for the day`);
+    }
+    
+    // Note: Budget validation would require cost estimation from ingredients
+    // Currently, budget constraint is enforced via AI prompt instructions
+    // Future enhancement: Estimate recipe cost from ingredients and validate against remainingBudget
+    
+    // Check cook time reasonableness for meal type (only if no strict constraint is set)
+    if (!params.maxCookTimeForMeal && params.mealType && params.mealType !== 'any') {
       const maxCookTimes: Record<string, number> = {
         breakfast: 45,
         lunch: 60,

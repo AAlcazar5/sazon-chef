@@ -1,10 +1,16 @@
 // frontend/components/ui/ActionSheet.tsx
 // Action sheet modal for quick actions
 
-import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
+import { useColorScheme } from 'nativewind';
+import { Colors, DarkColors } from '../../constants/Colors';
+import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
+import { FontSize, FontWeight } from '../../constants/Typography';
+import { Duration, Spring } from '../../constants/Animations';
+import { HapticPatterns } from '../../constants/Haptics';
+import { buttonAccessibility } from '../../utils/accessibility';
 
 export interface ActionSheetItem {
   label: string;
@@ -22,6 +28,9 @@ interface ActionSheetProps {
 }
 
 export default function ActionSheet({ visible, onClose, items, title }: ActionSheetProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   // Animation for slide from bottom
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(100)).current;
@@ -31,31 +40,34 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
       // Reset and animate in from bottom
       opacity.setValue(0);
       translateY.setValue(100);
-      
+
       Animated.parallel([
         Animated.spring(translateY, {
           toValue: 0,
-          friction: 8,
-          tension: 40,
+          friction: Spring.default.friction,
+          tension: Spring.default.tension,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 300,
+          duration: Duration.medium,
           useNativeDriver: true,
         }),
       ]).start();
+
+      // Haptic feedback when opening
+      HapticPatterns.actionSheetOpen();
     } else {
       // Animate out to bottom
       Animated.parallel([
         Animated.timing(translateY, {
           toValue: 100,
-          duration: 200,
+          duration: Duration.normal,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 0,
-          duration: 200,
+          duration: Duration.normal,
           useNativeDriver: true,
         }),
       ]).start();
@@ -63,8 +75,17 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
   }, [visible]);
 
   const handleItemPress = (item: ActionSheetItem) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (item.destructive) {
+      HapticPatterns.buttonPressDestructive();
+    } else {
+      HapticPatterns.buttonPress();
+    }
     item.onPress();
+    onClose();
+  };
+
+  const handleCancel = () => {
+    HapticPatterns.buttonPress();
     onClose();
   };
 
@@ -75,72 +96,108 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
       animationType="none"
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View 
+      <TouchableWithoutFeedback onPress={onClose} accessibilityLabel="Close action sheet">
+        <Animated.View
           className="flex-1 bg-black/50"
           style={{ opacity }}
         >
           <TouchableWithoutFeedback>
-            <Animated.View 
-              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl overflow-hidden"
-              style={{
-                transform: [{ translateY }],
-              }}
+            <Animated.View
+              style={[
+                styles.container,
+                {
+                  backgroundColor: isDark ? DarkColors.surface : Colors.surface,
+                  transform: [{ translateY }],
+                },
+              ]}
+              accessibilityRole="menu"
+              accessibilityLabel={title || 'Action sheet'}
             >
               {/* Handle */}
-              <View className="items-center py-2">
-                <View className="w-12 h-1 bg-gray-300 rounded-full" />
+              <View style={styles.handleContainer}>
+                <View style={[styles.handle, { backgroundColor: isDark ? DarkColors.border.medium : Colors.border.light }]} />
               </View>
 
               {/* Title */}
               {title && (
-                <View className="px-6 py-4 border-b border-gray-200">
-                  <Text className="text-lg font-semibold text-gray-900">{title}</Text>
+                <View style={[styles.titleContainer, { borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light }]}>
+                  <Text style={[styles.title, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
+                    {title}
+                  </Text>
                 </View>
               )}
 
               {/* Action Items */}
-              <View className="px-4 py-2">
+              <View style={styles.itemsContainer}>
                 {items.map((item, index) => (
                   <TouchableOpacity
                     key={index}
                     onPress={() => handleItemPress(item)}
-                    className={`flex-row items-center py-4 px-4 rounded-lg mb-1 ${
-                      item.destructive ? 'bg-red-50' : 'bg-gray-50'
-                    }`}
+                    style={[
+                      styles.item,
+                      {
+                        backgroundColor: item.destructive
+                          ? (isDark ? 'rgba(220, 38, 38, 0.1)' : 'rgba(254, 226, 226, 1)')
+                          : (isDark ? DarkColors.background : '#F9FAFB'),
+                      },
+                    ]}
+                    {...buttonAccessibility(item.label, {
+                      hint: item.destructive ? 'This is a destructive action' : undefined,
+                    })}
+                    accessibilityRole="menuitem"
                   >
                     <View
-                      className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
-                        item.destructive ? 'bg-red-100' : item.color ? `bg-${item.color}-100` : 'bg-orange-100'
-                      }`}
+                      style={[
+                        styles.iconContainer,
+                        {
+                          backgroundColor: item.destructive
+                            ? (isDark ? 'rgba(220, 38, 38, 0.2)' : 'rgba(254, 202, 202, 1)')
+                            : (isDark ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 237, 213, 1)'),
+                        },
+                      ]}
                     >
                       <Ionicons
                         name={item.icon as any}
                         size={22}
-                        color={item.destructive ? '#EF4444' : item.color ? `#${item.color}` : '#F97316'}
+                        color={item.destructive ? Colors.secondaryRed : Colors.primary}
                       />
                     </View>
                     <Text
-                      className={`flex-1 text-base font-medium ${
-                        item.destructive ? 'text-red-700' : 'text-gray-900'
-                      }`}
+                      style={[
+                        styles.itemLabel,
+                        {
+                          color: item.destructive
+                            ? (isDark ? '#F87171' : Colors.secondaryRed)
+                            : (isDark ? DarkColors.text.primary : Colors.text.primary),
+                        },
+                      ]}
                     >
                       {item.label}
                     </Text>
-                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
+                    />
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Cancel Button */}
               <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  onClose();
-                }}
-                className="mx-4 mb-4 py-4 bg-gray-100 rounded-lg items-center"
+                onPress={handleCancel}
+                style={[
+                  styles.cancelButton,
+                  {
+                    backgroundColor: isDark ? DarkColors.background : '#F3F4F6',
+                    borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+                  },
+                ]}
+                {...buttonAccessibility('Cancel')}
               >
-                <Text className="text-gray-700 font-semibold text-base">Cancel</Text>
+                <Text style={[styles.cancelText, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
             </Animated.View>
           </TouchableWithoutFeedback>
@@ -149,4 +206,71 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: BorderRadius['2xl'],
+    borderTopRightRadius: BorderRadius['2xl'],
+    overflow: 'hidden',
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  handle: {
+    width: 48,
+    height: 4,
+    borderRadius: BorderRadius.full,
+  },
+  titleContainer: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.lg,
+    borderBottomWidth: 1,
+  },
+  title: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+  },
+  itemsContainer: {
+    paddingHorizontal: ComponentSpacing.actionSheet.padding,
+    paddingVertical: Spacing.sm,
+    gap: ComponentSpacing.actionSheet.itemGap,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  itemLabel: {
+    flex: 1,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+  },
+  cancelButton: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  cancelText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
+  },
+});
 

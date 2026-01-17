@@ -4,7 +4,11 @@ import {
   getWeeklyPlan,
   generateMealPlan,
   getMealHistory,
-  addRecipeToMeal
+  addRecipeToMeal,
+  updateMealCompletion,
+  updateMealNotes,
+  getMealSwapSuggestions,
+  getWeeklyNutritionSummary
 } from './mealPlanController';
 import {
   getMealPlanCostAnalysis,
@@ -20,6 +24,12 @@ router.get('/weekly', getWeeklyPlan);
 router.post('/generate', generateMealPlan);
 router.get('/history', getMealHistory);
 router.post('/add-recipe', addRecipeToMeal);
+
+// Meal enhancement routes
+router.put('/meals/:mealId/complete', updateMealCompletion);
+router.put('/meals/:mealId/notes', updateMealNotes);
+router.get('/meals/:mealId/swap-suggestions', getMealSwapSuggestions);
+router.get('/weekly-nutrition', getWeeklyNutritionSummary);
 
 // Cost optimization routes (must come before /:id routes)
 router.get('/recipes/:recipeId/cheaper-alternatives', getCheaperAlternatives);

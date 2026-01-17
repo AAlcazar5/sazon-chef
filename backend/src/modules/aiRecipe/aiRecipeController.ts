@@ -23,65 +23,81 @@ export class AIRecipeController {
       console.log('⏱️  AI Recipe Generation: Request started at', new Date().toISOString());
       console.log('🎯 Generate AI Recipe Request:', { userId, cuisine, mealType, maxCookTime });
 
-      // Fetch user data including feedback for AI learning
-      const [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([
-        prisma.userPreferences.findUnique({
-          where: { userId },
-          include: {
-            likedCuisines: true,
-            dietaryRestrictions: true,
-            bannedIngredients: true,
-            preferredSuperfoods: true,
-          },
-        }),
-        prisma.macroGoals.findUnique({
-          where: { userId },
-        }),
-        prisma.userPhysicalProfile.findUnique({
-          where: { userId },
-        }),
-        // Get user feedback (liked/disliked recipes) for AI learning
-        prisma.recipeFeedback.findMany({
-          where: { userId },
-          include: {
-            recipe: {
-              include: {
-                ingredients: true,
+      // Check if data sharing is enabled for recommendations
+      const { isDataSharingEnabledFromRequest } = require('@/utils/privacyHelper');
+      const dataSharingEnabled = isDataSharingEnabledFromRequest(req);
+      console.log('🔒 Data sharing enabled for AI recipe generation:', dataSharingEnabled);
+
+      // Fetch user data including feedback for AI learning (only if data sharing enabled)
+      let preferences = null;
+      let macroGoals = null;
+      let physicalProfile = null;
+      let feedbackData: any[] = [];
+      let likedRecipes: any[] = [];
+      let dislikedRecipes: any[] = [];
+
+      if (dataSharingEnabled) {
+        [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([
+          prisma.userPreferences.findUnique({
+            where: { userId },
+            include: {
+              likedCuisines: true,
+              dietaryRestrictions: true,
+              bannedIngredients: true,
+              preferredSuperfoods: true,
+            },
+          }),
+          prisma.macroGoals.findUnique({
+            where: { userId },
+          }),
+          prisma.userPhysicalProfile.findUnique({
+            where: { userId },
+          }),
+          // Get user feedback (liked/disliked recipes) for AI learning
+          prisma.recipeFeedback.findMany({
+            where: { userId },
+            include: {
+              recipe: {
+                include: {
+                  ingredients: true,
+                },
               },
             },
-          },
-          take: 50,
-          orderBy: { createdAt: 'desc' },
-        }),
-      ]);
+            take: 50,
+            orderBy: { createdAt: 'desc' },
+          }),
+        ]);
 
-      // Process feedback into liked/disliked recipe patterns
-      const likedRecipes = feedbackData
-        .filter(f => f.liked)
-        .slice(0, 10)
-        .map(f => ({
-          title: f.recipe.title,
-          cuisine: f.recipe.cuisine,
-          ingredients: f.recipe.ingredients.map(i => i.text.toLowerCase()),
-          cookTime: f.recipe.cookTime,
-        }));
+        // Process feedback into liked/disliked recipe patterns
+        likedRecipes = feedbackData
+          .filter(f => f.liked)
+          .slice(0, 10)
+          .map(f => ({
+            title: f.recipe.title,
+            cuisine: f.recipe.cuisine,
+            ingredients: f.recipe.ingredients.map((i: { text: string }) => i.text.toLowerCase()),
+            cookTime: f.recipe.cookTime,
+          }));
 
-      const dislikedRecipes = feedbackData
-        .filter(f => f.disliked)
-        .slice(0, 10)
-        .map(f => ({
-          title: f.recipe.title,
-          cuisine: f.recipe.cuisine,
-          ingredients: f.recipe.ingredients.map(i => i.text.toLowerCase()),
-          cookTime: f.recipe.cookTime,
-        }));
+        dislikedRecipes = feedbackData
+          .filter(f => f.disliked)
+          .slice(0, 10)
+          .map(f => ({
+            title: f.recipe.title,
+            cuisine: f.recipe.cuisine,
+            ingredients: f.recipe.ingredients.map((i: { text: string }) => i.text.toLowerCase()),
+            cookTime: f.recipe.cookTime,
+          }));
+      } else {
+        console.log('🔒 Data sharing disabled - generating generic AI recipe without personalization');
+      }
 
       // Check if recipe title is provided (for recipe form generation)
       const recipeTitle = req.query.recipeTitle as string | undefined;
 
       // RANDOMIZATION: Pick a random meal type if not specified (unless recipe title is provided)
-      const mealTypes: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> = ['breakfast', 'lunch', 'dinner', 'snack'];
-      let randomMealType = mealType || mealTypes[Math.floor(Math.random() * mealTypes.length)];
+      const mealTypes: Array<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert'> = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert'];
+      let randomMealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' = (mealType as any) || mealTypes[Math.floor(Math.random() * mealTypes.length)];
       
       // If recipe title is provided, try to infer meal type from title
       if (recipeTitle && !mealType) {
@@ -90,6 +106,8 @@ export class AIRecipeController {
           randomMealType = 'breakfast';
         } else if (titleLower.includes('snack') || titleLower.includes('appetizer')) {
           randomMealType = 'snack';
+        } else if (titleLower.includes('dessert') || titleLower.includes('cake') || titleLower.includes('cookie') || titleLower.includes('pie') || titleLower.includes('ice cream') || titleLower.includes('brownie') || titleLower.includes('mousse')) {
+          randomMealType = 'dessert';
         } else {
           randomMealType = 'dinner'; // Default to dinner for most recipes
         }
@@ -253,9 +271,9 @@ export class AIRecipeController {
   async generateDailyPlan(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      const { meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat } = req.query;
+      const { meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat, maxTotalPrepTime, maxDailyBudget } = req.query;
 
-      console.log('🍽️ Generate AI Daily Plan Request:', { userId, meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat });
+      console.log('🍽️ Generate AI Daily Plan Request:', { userId, meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat, maxTotalPrepTime, maxDailyBudget });
 
       // Fetch user data including feedback for AI learning
       const [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([
@@ -343,6 +361,14 @@ export class AIRecipeController {
       }
       if (remainingMacros) {
         generationOptions.remainingMacros = remainingMacros;
+      }
+      // Add max total prep time constraint (default: 60 minutes)
+      generationOptions.maxTotalPrepTime = maxTotalPrepTime ? parseInt(maxTotalPrepTime as string) : 60;
+      
+      // Add max daily budget constraint if provided
+      if (maxDailyBudget) {
+        generationOptions.maxDailyBudget = parseFloat(maxDailyBudget as string);
+        console.log(`💰 Daily budget constraint: $${generationOptions.maxDailyBudget}`);
       }
 
       // Build user preferences with optional cuisine override

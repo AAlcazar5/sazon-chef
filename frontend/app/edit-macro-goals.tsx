@@ -7,8 +7,12 @@ import { useState, useEffect } from 'react';
 import { userApi } from '../lib/api';
 import type { MacroCalculations } from '../types';
 import * as Haptics from 'expo-haptics';
+import { Colors, DarkColors } from '../constants/Colors';
+import { useColorScheme } from 'nativewind';
 
 export default function EditMacroGoalsScreen() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [calculating, setCalculating] = useState(false);
@@ -171,29 +175,29 @@ export default function EditMacroGoalsScreen() {
 
   if (loadingData) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
         <View className="flex-1 items-center justify-center">
-          <Ionicons name="fitness-outline" size={64} color="#9CA3AF" />
-          <Text className="text-gray-500 mt-4">Loading...</Text>
+          <Ionicons name="fitness-outline" size={64} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
+          <Text className="mt-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center justify-between">
+      <View className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
         <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.primary : Colors.text.primary} />
         </HapticTouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">Edit Macro Goals</Text>
+        <Text className="text-xl font-bold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Edit Macro Goals</Text>
         <HapticTouchableOpacity 
           onPress={handleSave}
           disabled={loading}
           className="p-2"
         >
-          <Text className={`text-lg font-semibold ${loading ? 'text-gray-400' : 'text-orange-500'}`}>
+          <Text className="text-lg font-semibold" style={{ color: loading ? (isDark ? DarkColors.text.secondary : Colors.text.secondary) : (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) }}>
             {loading ? 'Saving...' : 'Save'}
           </Text>
         </HapticTouchableOpacity>
@@ -205,7 +209,8 @@ export default function EditMacroGoalsScreen() {
           <HapticTouchableOpacity
             onPress={handleCalculateFromProfile}
             disabled={calculating}
-            className="bg-gradient-to-r from-purple-500 to-blue-500 p-4 rounded-xl mb-4 flex-row items-center justify-center shadow-sm"
+            className="p-4 rounded-xl mb-4 flex-row items-center justify-center shadow-sm"
+            style={{ backgroundColor: isDark ? DarkColors.accent : Colors.accent }}
           >
             <Ionicons name="calculator" size={24} color="white" />
             <Text className="text-white font-bold text-lg ml-2">
@@ -221,18 +226,22 @@ export default function EditMacroGoalsScreen() {
               router.back();
               setTimeout(() => router.push('/edit-physical-profile'), 100);
             }}
-            className="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-200"
+            className="p-4 rounded-xl mb-4 border"
+            style={{
+              backgroundColor: isDark ? `${Colors.secondaryRedLight}1A` : Colors.secondaryRedDark,
+              borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark,
+            }}
           >
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={20} color="#3B82F6" />
+              <Ionicons name="information-circle" size={20} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} />
               <View className="flex-1 ml-2">
-                <Text className="text-blue-900 font-semibold mb-1">
+                <Text className="font-semibold mb-1" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
                   Get Personalized Recommendations
                 </Text>
-                <Text className="text-blue-800 text-sm">
+                <Text className="text-sm" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
                   Complete your physical profile to automatically calculate your ideal macro goals based on scientific formulas.
                 </Text>
-                <Text className="text-blue-600 text-xs mt-2 font-medium">
+                <Text className="text-xs mt-2 font-medium" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
                   Tap here to set up your profile →
                 </Text>
               </View>
@@ -240,70 +249,94 @@ export default function EditMacroGoalsScreen() {
           </HapticTouchableOpacity>
         )}
 
-        <View className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <Text className="text-gray-600 text-sm mb-4">
+        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <Text className="text-sm mb-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
             Set your daily macro nutrient targets to help personalize recipe recommendations.
           </Text>
 
           {/* Calories */}
           <View className="mb-4">
-            <Text className="text-gray-700 font-medium mb-2">Daily Calories *</Text>
+            <Text className="font-medium mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Daily Calories *</Text>
             <TextInput
               value={calories}
               onChangeText={setCalories}
               placeholder="2000"
               keyboardType="numeric"
-              className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-              placeholderTextColor="#9CA3AF"
+              className="rounded-lg px-4 py-3"
+              style={{
+                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+                borderWidth: 1,
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+              }}
+              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
             />
-            <Text className="text-gray-400 text-xs mt-1">Recommended: 1500-3000 calories</Text>
+            <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Recommended: 1500-3000 calories</Text>
           </View>
 
           {/* Protein */}
           <View className="mb-4">
-            <Text className="text-gray-700 font-medium mb-2">Protein (grams) *</Text>
+            <Text className="font-medium mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Protein (grams) *</Text>
             <TextInput
               value={protein}
               onChangeText={setProtein}
               placeholder="150"
               keyboardType="numeric"
-              className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-              placeholderTextColor="#9CA3AF"
+              className="rounded-lg px-4 py-3"
+              style={{
+                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+                borderWidth: 1,
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+              }}
+              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
             />
-            <Text className="text-gray-400 text-xs mt-1">Recommended: 0.8-1.2g per lb body weight</Text>
+            <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Recommended: 0.8-1.2g per lb body weight</Text>
           </View>
 
           {/* Carbs */}
           <View className="mb-4">
-            <Text className="text-gray-700 font-medium mb-2">Carbs (grams) *</Text>
+            <Text className="font-medium mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Carbs (grams) *</Text>
             <TextInput
               value={carbs}
               onChangeText={setCarbs}
               placeholder="200"
               keyboardType="numeric"
-              className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-              placeholderTextColor="#9CA3AF"
+              className="rounded-lg px-4 py-3"
+              style={{
+                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+                borderWidth: 1,
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+              }}
+              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
             />
-            <Text className="text-gray-400 text-xs mt-1">Adjust based on activity level</Text>
+            <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Adjust based on activity level</Text>
           </View>
 
           {/* Fat */}
           <View className="mb-4">
-            <Text className="text-gray-700 font-medium mb-2">Fat (grams) *</Text>
+            <Text className="font-medium mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Fat (grams) *</Text>
             <TextInput
               value={fat}
               onChangeText={setFat}
               placeholder="65"
               keyboardType="numeric"
-              className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-              placeholderTextColor="#9CA3AF"
+              className="rounded-lg px-4 py-3"
+              style={{
+                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+                borderWidth: 1,
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+              }}
+              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
             />
-            <Text className="text-gray-400 text-xs mt-1">Essential for hormone production</Text>
+            <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Essential for hormone production</Text>
           </View>
 
           {/* Quick presets */}
           <View className="mt-4">
-            <Text className="text-gray-600 text-sm mb-2">Quick Presets:</Text>
+            <Text className="text-sm mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Quick Presets:</Text>
             <View className="flex-row flex-wrap gap-2">
               <HapticTouchableOpacity 
                 onPress={() => {
@@ -312,9 +345,13 @@ export default function EditMacroGoalsScreen() {
                   setCarbs('200');
                   setFat('65');
                 }}
-                className="bg-blue-100 px-3 py-2 rounded-lg"
+                className="px-3 py-2 rounded-lg border"
+                style={{
+                  backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedDark,
+                  borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark,
+                }}
               >
-                <Text className="text-blue-800 text-xs font-medium">Standard</Text>
+                <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>Standard</Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity 
                 onPress={() => {
@@ -323,9 +360,13 @@ export default function EditMacroGoalsScreen() {
                   setCarbs('150');
                   setFat('60');
                 }}
-                className="bg-green-100 px-3 py-2 rounded-lg"
+                className="px-3 py-2 rounded-lg border"
+                style={{
+                  backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenDark,
+                  borderColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreenDark,
+                }}
               >
-                <Text className="text-green-800 text-xs font-medium">Weight Loss</Text>
+                <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.tertiaryGreen : '#FFFFFF' }}>Weight Loss</Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity 
                 onPress={() => {
@@ -334,9 +375,13 @@ export default function EditMacroGoalsScreen() {
                   setCarbs('280');
                   setFat('80');
                 }}
-                className="bg-purple-100 px-3 py-2 rounded-lg"
+                className="px-3 py-2 rounded-lg border"
+                style={{
+                  backgroundColor: isDark ? `${Colors.accent}33` : '#7C3AED',
+                  borderColor: isDark ? DarkColors.accent : '#7C3AED',
+                }}
               >
-                <Text className="text-purple-800 text-xs font-medium">Muscle Gain</Text>
+                <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.accent : '#FFFFFF' }}>Muscle Gain</Text>
               </HapticTouchableOpacity>
             </View>
           </View>

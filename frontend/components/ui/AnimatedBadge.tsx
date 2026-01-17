@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
+import { Colors } from '../../constants/Colors';
 
 interface AnimatedBadgeProps {
   count: number;
@@ -17,7 +18,7 @@ export default function AnimatedBadge({
   showZero = false,
   size = 'md',
   color = 'white',
-  backgroundColor = '#EF4444',
+  backgroundColor = Colors.secondaryRed,
   style,
 }: AnimatedBadgeProps) {
   const scale = useRef(new Animated.Value(0)).current;

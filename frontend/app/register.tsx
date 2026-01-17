@@ -1,14 +1,10 @@
 // frontend/app/register.tsx
-import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-// Registration screen
+// Registration screen with FormInput validation
 
 import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,42 +17,93 @@ import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAu
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import FormInput from '../components/ui/FormInput';
+import { Colors, DarkColors } from '../constants/Colors';
+
+interface FormErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  form?: string;
+}
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
   const { register, socialLogin } = useAuth();
   const router = useRouter();
   const { theme } = useTheme();
 
+  // Clear field error when user starts typing
+  const clearError = (field: keyof FormErrors) => {
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    let isValid = true;
+
+    // Name validation
+    if (!name.trim()) {
+      newErrors.name = 'Name is required';
+      isValid = false;
+    }
+
+    // Email validation
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+      isValid = false;
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        newErrors.email = 'Please enter a valid email address';
+        isValid = false;
+      }
+    }
+
+    // Password validation
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+      isValid = false;
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+      isValid = false;
+    }
+
+    // Confirm password validation
+    if (!confirmPassword.trim()) {
+      newErrors.confirmPassword = 'Please confirm your password';
+      isValid = false;
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+
+    return isValid;
+  };
+
   const handleRegister = async () => {
-    // Validation
-    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
+    // Clear previous form error
+    setErrors(prev => ({ ...prev, form: undefined }));
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
-    }
-
-    if (password.length < 8) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Password must be at least 8 characters');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Passwords do not match');
+    if (!validateForm()) {
       return;
     }
 
@@ -67,7 +114,7 @@ export default function RegisterScreen() {
       router.replace('/(tabs)');
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Registration Failed', error.message || 'An error occurred during registration');
+      setErrors(prev => ({ ...prev, form: error.message || 'An error occurred during registration' }));
     } finally {
       setLoading(false);
     }
@@ -148,7 +195,7 @@ export default function RegisterScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View className="w-full max-w-md self-center">
-            <Text className="text-3xl font-bold text-orange-500 dark:text-orange-400 mb-2 text-center">
+            <Text className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2 text-center">
               Create Account
             </Text>
             <Text className="text-base text-gray-600 dark:text-gray-200 mb-8 text-center">
@@ -156,69 +203,74 @@ export default function RegisterScreen() {
             </Text>
 
             <View className="w-full">
-              <View className="mb-5">
-                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Name</Text>
-                <TextInput
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  placeholder="Enter your name"
-                  placeholderTextColor="#9CA3AF"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  editable={!loading}
-                />
-              </View>
+              {/* Form-level error */}
+              {errors.form && (
+                <View className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4 flex-row items-center">
+                  <Ionicons name="alert-circle" size={18} color={Colors.error} />
+                  <Text className="text-red-600 dark:text-red-400 text-sm ml-2 flex-1">{errors.form}</Text>
+                </View>
+              )}
 
-              <View className="mb-5">
-                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Email</Text>
-                <TextInput
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  placeholder="Enter your email"
-                  placeholderTextColor="#9CA3AF"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  editable={!loading}
-                />
-              </View>
+              <FormInput
+                label="Name"
+                placeholder="Enter your name"
+                value={name}
+                onChangeText={(value) => { setName(value); clearError('name'); }}
+                error={errors.name}
+                autoCapitalize="words"
+                autoComplete="name"
+                disabled={loading}
+                leftIcon="person-outline"
+                required
+              />
 
-              <View className="mb-5">
-                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Password</Text>
-                <TextInput
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  placeholder="Enter your password (min 8 characters)"
-                  placeholderTextColor="#9CA3AF"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="off"
-                  {...(Platform.OS === 'ios' && { passwordRules: '' })}
-                  editable={!loading}
-                />
-              </View>
+              <FormInput
+                label="Email"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={(value) => { setEmail(value); clearError('email'); }}
+                error={errors.email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                disabled={loading}
+                leftIcon="mail-outline"
+                required
+              />
 
-              <View className="mb-5">
-                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Confirm Password</Text>
-                <TextInput
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  placeholder="Confirm your password"
-                  placeholderTextColor="#9CA3AF"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="off"
-                  {...(Platform.OS === 'ios' && { passwordRules: '' })}
-                  editable={!loading}
-                />
-              </View>
+              <FormInput
+                label="Password"
+                placeholder="Enter your password (min 8 characters)"
+                value={password}
+                onChangeText={(value) => { setPassword(value); clearError('password'); }}
+                error={errors.password}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                disabled={loading}
+                leftIcon="lock-closed-outline"
+                rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+                hint="Must be at least 8 characters"
+                required
+              />
+
+              <FormInput
+                label="Confirm Password"
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChangeText={(value) => { setConfirmPassword(value); clearError('confirmPassword'); }}
+                error={errors.confirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+                disabled={loading}
+                leftIcon="lock-closed-outline"
+                rightIcon={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                required
+              />
 
               <HapticTouchableOpacity
-                className={`bg-orange-500 dark:bg-orange-600 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
+                className={`bg-red-600 dark:bg-red-400 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
                 onPress={handleRegister}
                 disabled={loading}
               >
@@ -275,7 +327,7 @@ export default function RegisterScreen() {
                   onPress={() => router.push('/login')}
                   disabled={loading}
                 >
-                  <Text className="text-orange-500 dark:text-orange-400 text-sm font-semibold">Sign In</Text>
+                  <Text className="text-red-600 dark:text-red-400 text-sm font-semibold">Sign In</Text>
                 </HapticTouchableOpacity>
               </View>
             </View>

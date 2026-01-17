@@ -43,6 +43,9 @@ model User {
   mealPrepPortions        MealPrepPortion[]
   mealPrepSessions        MealPrepSession[]
   mealPrepTemplates       MealPrepTemplate[]
+  // Weight tracking
+  weightLogs              WeightLog[]
+  weightGoals             WeightGoal[]
 
   @@map("users")
 }
@@ -166,6 +169,7 @@ model Recipe {
   description String
   cookTime    Int // in minutes
   cuisine     String
+  mealType    String? // "breakfast", "lunch", "dinner", "snack", "dessert"
   difficulty  String  @default("medium") // "easy", "medium", "hard"
   servings    Int     @default(1)
   imageUrl    String?
@@ -213,17 +217,17 @@ model Recipe {
   costSource              String? // "user", "api", "calculated", "estimated"
 
   // Meal prep suitability (Phase 6, Group 14)
-  mealPrepSuitable    Boolean? @default(false) // General meal prep suitability
-  freezable           Boolean? @default(false) // Can be frozen
-  batchFriendly       Boolean? @default(false) // Good for batch cooking
-  weeklyPrepFriendly  Boolean? @default(false) // Good for weekly meal prep
-  mealPrepScore       Float? // 0-100 score for meal prep suitability
-  
+  mealPrepSuitable   Boolean? @default(false) // General meal prep suitability
+  freezable          Boolean? @default(false) // Can be frozen
+  batchFriendly      Boolean? @default(false) // Good for batch cooking
+  weeklyPrepFriendly Boolean? @default(false) // Good for weekly meal prep
+  mealPrepScore      Float? // 0-100 score for meal prep suitability
+
   // Storage instructions
-  storageInstructions String? // Storage instructions (e.g., "Refrigerate for up to 5 days", "Freeze for up to 3 months")
-  fridgeStorageDays   Int? // Number of days recipe can be stored in fridge
+  storageInstructions  String? // Storage instructions (e.g., "Refrigerate for up to 5 days", "Freeze for up to 3 months")
+  fridgeStorageDays    Int? // Number of days recipe can be stored in fridge
   freezerStorageMonths Int? // Number of months recipe can be stored in freezer
-  shelfStable         Boolean? @default(false) // Can be stored at room temperature
+  shelfStable          Boolean? @default(false) // Can be stored at room temperature
 
   // Recipe content
   ingredients  RecipeIngredient[]
@@ -234,12 +238,13 @@ model Recipe {
   updatedAt DateTime @updatedAt
 
   // Relationships
-  feedback     RecipeFeedback[]
-  savedRecipes SavedRecipe[]
-  mealHistory  MealHistory[]
-  meals        Meal[]
-  mealPrepPortions MealPrepPortion[] // Meal prep portion tracking
+  feedback          RecipeFeedback[]
+  savedRecipes      SavedRecipe[]
+  mealHistory       MealHistory[]
+  meals             Meal[]
+  mealPrepPortions  MealPrepPortion[] // Meal prep portion tracking
   mealPrepTemplates MealPrepTemplate[] // Meal prep templates
+  shoppingListItems ShoppingListItem[] // Shopping list items from this recipe
 
   @@map("recipes")
 }
@@ -395,37 +400,37 @@ model Meal {
 
 // Meal Prep Portion Tracking (Phase 6, Group 14)
 model MealPrepPortion {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipeId   String
-  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   // Portion allocation
-  totalServings      Int      // Total servings made
-  servingsToFreeze   Int      // Number of servings frozen
-  servingsForWeek    Int      // Number of servings for immediate use (refrigerated)
-  
+  totalServings    Int // Total servings made
+  servingsToFreeze Int // Number of servings frozen
+  servingsForWeek  Int // Number of servings for immediate use (refrigerated)
+
   // Current status
-  frozenServingsRemaining  Int      @default(0) // How many frozen servings are left
-  freshServingsRemaining   Int      @default(0) // How many fresh servings are left
-  
+  frozenServingsRemaining Int @default(0) // How many frozen servings are left
+  freshServingsRemaining  Int @default(0) // How many fresh servings are left
+
   // Tracking
-  prepDate           DateTime @default(now()) // When meal prep was done
-  freezeDate         DateTime? // When portions were frozen
-  expiryDate         DateTime? // When fresh portions expire
-  freezerExpiryDate  DateTime? // When frozen portions expire
-  
+  prepDate          DateTime  @default(now()) // When meal prep was done
+  freezeDate        DateTime? // When portions were frozen
+  expiryDate        DateTime? // When fresh portions expire
+  freezerExpiryDate DateTime? // When frozen portions expire
+
   // Notes
-  notes              String?
-  
+  notes String?
+
   // Consumption tracking
-  consumedPortions   MealPrepConsumption[]
-  
+  consumedPortions MealPrepConsumption[]
+
   // Meal prep session (optional - links to scheduled prep session)
   mealPrepSessionId String?
   mealPrepSession   MealPrepSession? @relation(fields: [mealPrepSessionId], references: [id], onDelete: SetNull)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -434,21 +439,21 @@ model MealPrepPortion {
 
 // Meal Prep Session Planning (Phase 6, Group 14)
 model MealPrepSession {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Session scheduling
-  scheduledDate      DateTime  // When the meal prep session is scheduled
-  scheduledTime      String?    // Optional time (e.g., "10:00 AM")
-  duration           Int?       // Estimated duration in minutes
-  isCompleted        Boolean    @default(false)
-  completedAt        DateTime?
-  
+  scheduledDate DateTime // When the meal prep session is scheduled
+  scheduledTime String? // Optional time (e.g., "10:00 AM")
+  duration      Int? // Estimated duration in minutes
+  isCompleted   Boolean   @default(false)
+  completedAt   DateTime?
+
   // Session details
-  notes              String?
-  recipes             MealPrepPortion[] // Recipes being prepped in this session
-  
+  notes   String?
+  recipes MealPrepPortion[] // Recipes being prepped in this session
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -457,26 +462,26 @@ model MealPrepSession {
 
 // Meal Prep Recipe Templates (Phase 6, Group 14)
 model MealPrepTemplate {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipeId   String
-  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
   // Default meal prep configuration
-  defaultServings      Int      // Default total servings for meal prep
-  defaultServingsToFreeze   Int? // Default servings to freeze
-  defaultServingsForWeek    Int? // Default servings for immediate use
-  
+  defaultServings         Int // Default total servings for meal prep
+  defaultServingsToFreeze Int? // Default servings to freeze
+  defaultServingsForWeek  Int? // Default servings for immediate use
+
   // Template metadata
-  name                 String?  // Custom name for this template (e.g., "Weekly Batch")
-  notes                String?  // Notes or tips for this meal prep
-  isFavorite           Boolean  @default(false) // Quick access favorite
-  
+  name       String? // Custom name for this template (e.g., "Weekly Batch")
+  notes      String? // Notes or tips for this meal prep
+  isFavorite Boolean @default(false) // Quick access favorite
+
   // Usage tracking
-  timesUsed            Int      @default(0) // How many times this template has been used
-  lastUsed             DateTime? // Last time this template was used
-  
+  timesUsed Int       @default(0) // How many times this template has been used
+  lastUsed  DateTime? // Last time this template was used
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -486,15 +491,15 @@ model MealPrepTemplate {
 
 // Track consumption of meal prep portions
 model MealPrepConsumption {
-  id                String   @id @default(cuid())
-  mealPrepPortionId  String
-  mealPrepPortion    MealPrepPortion @relation(fields: [mealPrepPortionId], references: [id], onDelete: Cascade)
-  
-  servings           Int      // Number of servings consumed
-  portionType        String   // "frozen" or "fresh"
-  consumedDate       DateTime @default(now())
-  notes              String?
-  
+  id                String          @id @default(cuid())
+  mealPrepPortionId String
+  mealPrepPortion   MealPrepPortion @relation(fields: [mealPrepPortionId], references: [id], onDelete: Cascade)
+
+  servings     Int // Number of servings consumed
+  portionType  String // "frozen" or "fresh"
+  consumedDate DateTime @default(now())
+  notes        String?
+
   createdAt DateTime @default(now())
 
   @@map("meal_prep_consumption")
@@ -538,6 +543,8 @@ model ShoppingListItem {
   category       String?
   purchased      Boolean      @default(false)
   notes          String?
+  recipeId       String?
+  recipe         Recipe?      @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -573,4 +580,38 @@ model IngredientCost {
   createdAt      DateTime @default(now())
 
   @@map("ingredient_costs")
+}
+
+model WeightLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now())
+  weightKg  Float
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@map("weight_logs")
+}
+
+model WeightGoal {
+  id                     String   @id @default(cuid())
+  userId                 String
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentWeightKg        Float
+  targetWeightKg         Float
+  targetDate             DateTime
+  dailyCalorieDeficit    Float
+  requiredCaloriesPerDay Float
+  requiredStepsPerDay    Int
+  caloriesFromSteps      Float
+  caloriesFromDiet       Float
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([userId, isActive])
+  @@map("weight_goals")
 }

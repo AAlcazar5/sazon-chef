@@ -117,12 +117,14 @@ export function calculateHealthGrade(recipe: any): HealthGradeResult {
 
 /**
  * Calculate protein adequacy score (0-10 points)
+ * More lenient to avoid penalizing lighter meals and salads
  */
 function calculateProteinAdequacy(protein: number): number {
   if (protein >= 20) return 10;
-  if (protein >= 15) return 7;
-  if (protein >= 10) return 4;
-  return 0;
+  if (protein >= 15) return 8;
+  if (protein >= 10) return 6;
+  if (protein >= 5) return 4;
+  return 2; // Even very low protein gets some points - salads are still healthy
 }
 
 /**
@@ -280,17 +282,27 @@ function calculateProteinEfficiencyScore(calories: number, protein: number): num
  */
 function calculateOverallNutrientRichness(allText: string): number {
   const healthyIndicators = [
+    // General categories
     'vegetable', 'vegetables', 'fruit', 'fruits', 'legume', 'legumes',
     'nut', 'nuts', 'seed', 'seeds', 'lean protein', 'lean meat', 'fish',
     'whole grain', 'whole grains', 'quinoa', 'brown rice', 'oats', 'barley',
+    // Specific vegetables (expanded)
     'broccoli', 'spinach', 'kale', 'carrot', 'tomato', 'pepper', 'onion',
-    'salmon', 'chicken breast', 'turkey', 'tofu', 'beans', 'lentils'
+    'lettuce', 'arugula', 'romaine', 'cabbage', 'cucumber', 'celery',
+    'zucchini', 'squash', 'asparagus', 'green bean', 'pea', 'corn',
+    'cauliflower', 'brussels', 'artichoke', 'beet', 'radish', 'mushroom',
+    'eggplant', 'avocado', 'sweet potato', 'potato',
+    // Proteins
+    'salmon', 'chicken breast', 'turkey', 'tofu', 'beans', 'lentils',
+    'tuna', 'shrimp', 'egg', 'greek yogurt', 'cottage cheese',
+    // Salad-specific
+    'salad', 'greens', 'mixed greens', 'spring mix', 'garden',
+    'vinaigrette', 'olive oil', 'lemon', 'lime', 'herb', 'herbs'
   ];
 
   const unhealthyIndicators = [
-    'fried', 'deep fried', 'battered', 'crispy', 'processed', 'refined',
-    'white bread', 'white rice', 'white pasta', 'sugar', 'syrup',
-    'high fructose', 'artificial', 'preservative'
+    'fried', 'deep fried', 'battered', 'processed', 'refined',
+    'white bread', 'syrup', 'high fructose', 'artificial', 'preservative'
   ];
 
   let healthyCount = 0;
@@ -309,13 +321,23 @@ function calculateOverallNutrientRichness(allText: string): number {
   }
 
   // Primarily whole foods, vegetables, fruits, lean proteins
-  if (healthyCount >= 5 && unhealthyCount === 0) {
+  if (healthyCount >= 4 && unhealthyCount === 0) {
     return 5;
   }
 
+  // Good nutrient content
+  if (healthyCount >= 2 && unhealthyCount === 0) {
+    return 4;
+  }
+
   // Moderate nutrient content
-  if (healthyCount >= 3 && unhealthyCount <= 1) {
+  if (healthyCount >= 1 && unhealthyCount <= 1) {
     return 3;
+  }
+
+  // Mixed content
+  if (healthyCount >= 1) {
+    return 2;
   }
 
   // Low nutrient content
@@ -327,13 +349,18 @@ function calculateOverallNutrientRichness(allText: string): number {
  */
 function calculateWholeFoodsPresence(allText: string): number {
   const wholeFoodKeywords = [
+    // General whole food terms
     'whole grain', 'whole wheat', 'fresh', 'raw', 'organic', 'natural',
-    'vegetable', 'fruit', 'legume', 'nut', 'seed', 'lean', 'unprocessed'
+    'vegetable', 'fruit', 'legume', 'nut', 'seed', 'lean', 'unprocessed',
+    // Salad and veggie terms
+    'salad', 'greens', 'leafy', 'grilled', 'roasted', 'steamed', 'baked',
+    'olive oil', 'avocado', 'tomato', 'cucumber', 'carrot', 'spinach',
+    'kale', 'lettuce', 'arugula', 'mixed greens', 'garden'
   ];
 
   const processedKeywords = [
-    'refined', 'processed', 'canned', 'pre-made', 'packaged', 'instant',
-    'white flour', 'white bread', 'white rice', 'white pasta'
+    'refined', 'processed', 'pre-made', 'packaged', 'instant',
+    'white flour', 'deep fried', 'battered'
   ];
 
   let wholeFoodCount = 0;
@@ -356,13 +383,23 @@ function calculateWholeFoodsPresence(allText: string): number {
     return 10;
   }
 
-  // Mix of whole and processed
-  if (wholeFoodCount >= 2 && processedCount <= 2) {
+  // Good amount of whole foods
+  if (wholeFoodCount >= 2 && processedCount === 0) {
+    return 8;
+  }
+
+  // Some whole foods present
+  if (wholeFoodCount >= 1 && processedCount <= 1) {
     return 6;
   }
 
-  // Mostly processed
-  return 2;
+  // Mix of whole and processed
+  if (wholeFoodCount >= 1) {
+    return 4;
+  }
+
+  // Mostly processed or unknown
+  return 3;
 }
 
 /**
@@ -373,17 +410,16 @@ function calculateProcessedIngredientsPenalty(allText: string): number {
   const highlyProcessedIndicators = [
     'refined sugar', 'high fructose', 'corn syrup', 'artificial',
     'preservative', 'hydrogenated', 'trans fat', 'processed meat',
-    'sausage', 'bacon', 'hot dog', 'deli meat', 'cured meat',
-    'instant', 'pre-made', 'packaged', 'frozen dinner'
+    'hot dog', 'frozen dinner'
   ];
 
-  const unhealthyKeywords = [
-    'sugar', 'syrup', 'sweetener', 'soda', 'soda pop',
-    'candy', 'chips', 'crackers', 'cookies', 'cake', 'pastry'
+  const moderatelyProcessedKeywords = [
+    'soda', 'soda pop', 'candy', 'chips', 'cookies', 'cake', 'pastry',
+    'deep fried', 'battered'
   ];
 
   let highlyProcessedCount = 0;
-  let unhealthyCount = 0;
+  let moderateCount = 0;
 
   for (const indicator of highlyProcessedIndicators) {
     if (allText.includes(indicator)) {
@@ -391,23 +427,33 @@ function calculateProcessedIngredientsPenalty(allText: string): number {
     }
   }
 
-  for (const keyword of unhealthyKeywords) {
+  for (const keyword of moderatelyProcessedKeywords) {
     if (allText.includes(keyword)) {
-      unhealthyCount++;
+      moderateCount++;
     }
   }
 
-  // No highly processed ingredients detected
-  if (highlyProcessedCount === 0 && unhealthyCount === 0) {
+  // No processed ingredients detected
+  if (highlyProcessedCount === 0 && moderateCount === 0) {
     return 10;
   }
 
-  // 1-2 processed ingredients
-  if (highlyProcessedCount <= 2 && unhealthyCount <= 2) {
+  // No highly processed, some moderate
+  if (highlyProcessedCount === 0 && moderateCount <= 2) {
+    return 8;
+  }
+
+  // Some processed ingredients
+  if (highlyProcessedCount <= 1 && moderateCount <= 2) {
     return 6;
   }
 
-  // 3+ processed ingredients
+  // Moderate amount of processed ingredients
+  if (highlyProcessedCount <= 2) {
+    return 4;
+  }
+
+  // Heavily processed
   return 2;
 }
 
@@ -496,10 +542,11 @@ function calculateSodiumContent(allText: string): number {
  * Assign health grade based on score
  */
 function assignGrade(score: number): HealthGrade {
-  if (score >= 90) return 'A';
-  if (score >= 80) return 'B';
-  if (score >= 70) return 'C';
-  if (score >= 60) return 'D';
+  // More lenient thresholds to avoid penalizing healthy foods like salads
+  if (score >= 80) return 'A';
+  if (score >= 65) return 'B';
+  if (score >= 50) return 'C';
+  if (score >= 35) return 'D';
   return 'F';
 }
 

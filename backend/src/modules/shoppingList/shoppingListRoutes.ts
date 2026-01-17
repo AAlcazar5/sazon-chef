@@ -20,6 +20,7 @@ router.delete('/:id', shoppingListController.deleteShoppingList);
 
 // Shopping list items
 router.post('/:id/items', shoppingListController.addItem);
+router.put('/:listId/items/batch', shoppingListController.batchUpdateItems);
 router.put('/:listId/items/:itemId', shoppingListController.updateItem);
 router.delete('/:listId/items/:itemId', shoppingListController.deleteItem);
 

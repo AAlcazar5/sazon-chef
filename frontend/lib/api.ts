@@ -24,12 +24,42 @@ const api: AxiosInstance = axios.create({
 
 // Request interceptor to add auth token and other headers
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  async (config: InternalAxiosRequestConfig) => {
     // Add auth token if available
     const token = getAuthToken();
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Add privacy settings to headers if available
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const SecureStore = require('expo-secure-store');
+      const USER_KEY = 'auth_user';
+      
+      // Get user ID from secure store
+      const storedUser = await SecureStore.getItemAsync(USER_KEY);
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        const userId = userData?.id;
+        
+        if (userId) {
+          const savedSettings = await AsyncStorage.getItem(`privacy_settings_${userId}`);
+          if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            config.headers = config.headers || {};
+            config.headers['x-data-sharing-enabled'] = settings.dataSharingEnabled ? 'true' : 'false';
+            config.headers['x-analytics-enabled'] = settings.analyticsEnabled ? 'true' : 'false';
+            config.headers['x-location-services-enabled'] = settings.locationServicesEnabled ? 'true' : 'false';
+          }
+        }
+      }
+    } catch (error) {
+      // Silently fail - privacy settings are optional
+      if (__DEV__) {
+        console.log('Could not load privacy settings for request:', error);
+      }
     }
 
     // Log request in development
@@ -82,15 +112,26 @@ api.interceptors.response.use(
         /meal plan not found/i.test(String(rawMessage || '')) ||
         /No active meal plan/i.test(String(rawMessage || '')) ||
         /template not found/i.test(String(rawMessage || '')) ||
-        /no meal prep template exists/i.test(String(rawMessage || ''))
+        /no meal prep template exists/i.test(String(rawMessage || '')) ||
+        /item not found/i.test(String(rawMessage || '')) || // Shopping list items that were deleted
+        /shopping list.*not found/i.test(String(rawMessage || ''))
       );
+      const isQuotaError = statusCode === 429 || 
+        statusCode === 503 ||
+        /quota.*exceeded/i.test(String(rawMessage || '')) ||
+        /too many requests/i.test(String(rawMessage || '')) ||
+        /insufficient_quota/i.test(String(rawMessage || '')) ||
+        /API quota exceeded/i.test(String(rawMessage || ''));
       
-      if (!isAlreadySaved && !isExpected404) {
+      if (!isAlreadySaved && !isExpected404 && !isQuotaError) {
         console.error('❌ Response Error:', raw || error.message);
       } else if (isAlreadySaved) {
         console.log('ℹ️  Response Conflict (already saved)');
       } else if (isExpected404) {
         // Silently handle expected 404s (no price data, no meal plan, etc.)
+      } else if (isQuotaError) {
+        // Silently handle quota/rate limit errors - these are expected when API limits are reached
+        // The UI will handle these gracefully by showing fallback content
       }
     }
 
@@ -106,12 +147,37 @@ api.interceptors.response.use(
       const statusCode = error.response.status;
 
       // Normalize common patterns
+      // Rate limiter returns: { error: '...', message: '...' }
+      // Some APIs return: { error: '...' } or { message: '...' }
       const rawMessage: string | undefined = serverError?.message || serverError?.error || serverError?.msg;
       const normalizedMessage = rawMessage ? String(rawMessage) : getErrorMessage(statusCode);
 
+      // Initialize error with normalized message (may be overridden by specific handlers below)
       apiError.message = normalizedMessage;
       apiError.code = serverError?.code || `HTTP_${statusCode}`;
       apiError.details = serverError?.details;
+
+      // Special-case: Authentication errors (401/403) - automatically logout
+      if (statusCode === 401 || statusCode === 403) {
+        apiError.code = statusCode === 401 ? 'HTTP_401' : 'HTTP_403';
+        apiError.message = statusCode === 401 
+          ? 'Your session has expired. Please log in again.'
+          : 'You do not have permission to perform this action.';
+        
+        // Automatically logout on authentication errors
+        if (logoutCallback) {
+          // Call logout asynchronously to avoid blocking error handling
+          // The AuthContext state change will trigger navigation in _layout.tsx
+          const doLogout = logoutCallback;
+          setTimeout(async () => {
+            try {
+              await doLogout();
+            } catch (error) {
+              console.error('Error during automatic logout:', error);
+            }
+          }, 0);
+        }
+      }
 
       // Special-case: recipe already saved (some backends return 400 with message only)
       if (statusCode === 409) {
@@ -125,13 +191,44 @@ api.interceptors.response.use(
       }
       
       // Special-case: quota/billing errors (429 or message contains quota info)
-      const isQuotaError = statusCode === 429 || 
-                          serverError?.code === 'insufficient_quota' ||
-                          /quota|billing|429.*exceeded/i.test(normalizedMessage);
+      // BUT: Only apply this to AI-related endpoints, not shopping list or auth endpoints
+      const isAIEndpoint = error.config?.url?.includes('/ai-recipes') || 
+                          (error.config?.url?.includes('/recipes') && (error.config?.method === 'post' || error.config?.method === 'put'));
+      const isShoppingListEndpoint = error.config?.url?.includes('/shopping-lists');
+      const isAuthEndpoint = error.config?.url?.includes('/auth/');
       
-      if (isQuotaError) {
+      // Check if it's a true AI quota error (not just a generic 429 or rate limit)
+      const isTrueAIQuotaError = serverError?.code === 'insufficient_quota' ||
+                                (statusCode === 429 && isAIEndpoint) ||
+                                (/AI.*quota|OpenAI.*quota|Claude.*quota|anthropic.*quota/i.test(normalizedMessage));
+      
+      // Generic rate limit or quota-like errors (could be from any service)
+      const isGenericRateLimit = statusCode === 429 && !isTrueAIQuotaError;
+      const isGenericQuotaMessage = /quota|billing|rate.*limit/i.test(normalizedMessage) && !isTrueAIQuotaError;
+      
+      if (isTrueAIQuotaError && isAIEndpoint && !isShoppingListEndpoint && !isAuthEndpoint) {
+        console.warn(`[API_CLIENT] Quota error detected on AI endpoint: ${error.config?.url}`);
         apiError.code = 'insufficient_quota';
         apiError.message = 'API quota exceeded. Please try again later.';
+      } else if (isAuthEndpoint && (isGenericRateLimit || isGenericQuotaMessage)) {
+        // Auth endpoints have legitimate rate limiting for security - pass through original message
+        // The rate limiter returns: { error: '...', message: '...' }
+        const authRateLimitMessage = serverError?.message || normalizedMessage || 'Too many login attempts. Please try again after 15 minutes.';
+        apiError.code = serverError?.code || `HTTP_${statusCode}`;
+        apiError.message = authRateLimitMessage;
+      } else if (isShoppingListEndpoint && (isGenericRateLimit || isGenericQuotaMessage)) {
+        // Shopping list endpoints might hit generic rate limits (database, API gateway, etc.)
+        // This is not necessarily a bug - just pass through as a regular error
+        apiError.code = serverError?.code || `HTTP_${statusCode}`;
+        apiError.message = normalizedMessage || 'Rate limit exceeded. Please try again later.';
+      } else if (isTrueAIQuotaError) {
+        // For other endpoints with true AI quota errors, apply quota error handling
+        apiError.code = 'insufficient_quota';
+        apiError.message = 'API quota exceeded. Please try again later.';
+      } else if (isGenericRateLimit && !isAuthEndpoint) {
+        // Generic rate limit (not AI-specific, not auth)
+        apiError.code = 'rate_limit';
+        apiError.message = 'Rate limit exceeded. Please try again later.';
       }
     } else if (error.request) {
       // Request was made but no response received
@@ -151,9 +248,14 @@ api.interceptors.response.use(
 // This is called synchronously in the interceptor, so we need to handle it carefully
 // For now, we'll use a module-level variable that gets updated by AuthContext
 let currentAuthToken: string | null = null;
+let logoutCallback: (() => Promise<void>) | null = null;
 
 export function setAuthToken(token: string | null) {
   currentAuthToken = token;
+}
+
+export function setLogoutCallback(callback: (() => Promise<void>) | null) {
+  logoutCallback = callback;
 }
 
 function getAuthToken(): string | null {
@@ -228,6 +330,15 @@ export const recipeApi = {
     return apiClient.get(`/recipes/${id}`);
   },
 
+  getSimilarRecipes: (id: string, limit?: number, mealPrepMode?: boolean) => {
+    return apiClient.get(`/recipes/${id}/similar`, {
+      params: { 
+        limit: limit || 5,
+        mealPrepMode: mealPrepMode !== undefined ? mealPrepMode : undefined,
+      },
+    });
+  },
+
   getBatchCookingRecommendations: (limit?: number) => {
     return apiClient.get('/recipes/batch-cooking-recommendations', {
       params: { limit: limit || 10 },
@@ -241,6 +352,7 @@ export const recipeApi = {
     difficulty?: string[];
     offset?: number;
     mealPrepMode?: boolean;
+    search?: string;
   }) => {
     const params: any = {};
     
@@ -263,8 +375,38 @@ export const recipeApi = {
     if (filters?.mealPrepMode === true) {
       params.mealPrepMode = 'true';
     }
+    if (filters?.search && filters.search.trim().length > 0) {
+      params.search = filters.search.trim();
+    }
     
     return apiClient.get('/recipes/suggested', { params });
+  },
+
+  // Get all recipes with pagination (for browsing all recipes in database)
+  getAllRecipes: (options?: { 
+    page?: number; 
+    limit?: number; 
+    cuisine?: string; 
+    cuisines?: string[];
+    dietaryRestrictions?: string[];
+    mealType?: string; 
+    search?: string;
+    maxCookTime?: number;
+    difficulty?: string;
+    mealPrepMode?: boolean;
+  }) => {
+    const params: any = {};
+    if (options?.page !== undefined) params.page = options.page;
+    if (options?.limit !== undefined) params.limit = options.limit;
+    if (options?.cuisine) params.cuisine = options.cuisine;
+    if (options?.cuisines && options.cuisines.length > 0) params.cuisines = options.cuisines.join(',');
+    if (options?.dietaryRestrictions && options.dietaryRestrictions.length > 0) params.dietaryRestrictions = options.dietaryRestrictions.join(',');
+    if (options?.mealType) params.mealType = options.mealType;
+    if (options?.search) params.search = options.search;
+    if (options?.maxCookTime) params.maxCookTime = options.maxCookTime;
+    if (options?.difficulty) params.difficulty = options.difficulty;
+    if (options?.mealPrepMode !== undefined) params.mealPrepMode = options.mealPrepMode ? 'true' : 'false';
+    return apiClient.get('/recipes', { params });
   },
 
   getRandomRecipe: () => {
@@ -324,7 +466,10 @@ export const recipeApi = {
 // Collections API
 export const collectionsApi = {
   list: () => apiClient.get('/recipes/collections'),
-  create: (name: string) => apiClient.post('/recipes/collections', { name }),
+  create: (data: string | { name: string; coverImageUrl?: string }) => {
+    const body = typeof data === 'string' ? { name: data } : data;
+    return apiClient.post('/recipes/collections', body);
+  },
   update: (id: string, name: string) => apiClient.put(`/recipes/collections/${id}`, { name }),
   remove: (id: string) => apiClient.delete(`/recipes/collections/${id}`),
   moveSavedRecipe: (recipeId: string, collectionIds: string[]) =>
@@ -543,6 +688,10 @@ export const authApi = {
   changePassword: (currentPassword: string, newPassword: string) => {
     return apiClient.put('/auth/password', { currentPassword, newPassword });
   },
+
+  deleteAccount: () => {
+    return apiClient.delete('/auth/account');
+  },
 };
 
 export const userApi = {
@@ -635,6 +784,27 @@ export const mealPlanApi = {
   getMealHistory: (params?: { startDate?: string; endDate?: string }) => {
     return apiClient.get('/meal-plan/history', { params });
   },
+
+  addRecipeToMeal: (data: { mealPlanId?: string; recipeId: string; date: string; mealType: string }) => {
+    return apiClient.post('/meal-plan/add-recipe', data);
+  },
+
+  // Meal enhancement methods
+  updateMealCompletion: (mealId: string, isCompleted: boolean) => {
+    return apiClient.put(`/meal-plan/meals/${mealId}/complete`, { isCompleted });
+  },
+
+  updateMealNotes: (mealId: string, notes: string) => {
+    return apiClient.put(`/meal-plan/meals/${mealId}/notes`, { notes });
+  },
+
+  getMealSwapSuggestions: (mealId: string) => {
+    return apiClient.get(`/meal-plan/meals/${mealId}/swap-suggestions`);
+  },
+
+  getWeeklyNutritionSummary: (params?: { startDate?: string; endDate?: string }) => {
+    return apiClient.get('/meal-plan/weekly-nutrition', { params });
+  },
 };
 
 // AI Recipe API
@@ -651,6 +821,8 @@ export const aiRecipeApi = {
     cuisine?: string;
     useRemainingMacros?: boolean;
     remainingMacros?: { calories: number; protein: number; carbs: number; fat: number };
+    maxTotalPrepTime?: number; // Maximum total prep time in minutes (default: 60)
+    maxWeeklyBudget?: number; // Maximum daily budget in dollars (for single day generation, this is daily budget)
   }) => {
     // Convert remainingMacros object to query params if present
     const queryParams: any = { ...params };
@@ -660,6 +832,12 @@ export const aiRecipeApi = {
       queryParams.remainingCarbs = params.remainingMacros.carbs;
       queryParams.remainingFat = params.remainingMacros.fat;
       delete queryParams.remainingMacros; // Remove the nested object
+    }
+    if (params?.maxTotalPrepTime) {
+      queryParams.maxTotalPrepTime = params.maxTotalPrepTime;
+    }
+    if (params?.maxWeeklyBudget) {
+      queryParams.maxDailyBudget = params.maxWeeklyBudget; // Backend expects daily budget
     }
     return apiClient.get('/ai-recipes/daily-plan', { params: queryParams });
   },
@@ -711,7 +889,7 @@ export const shoppingListApi = {
     return apiClient.get(`/shopping-lists/${id}`);
   },
 
-  createShoppingList: (data?: { name?: string }) => {
+  createShoppingList: (data?: { name?: string; items?: Array<{ name: string; quantity?: string; category?: string; notes?: string }> }) => {
     return apiClient.post('/shopping-lists', data);
   },
 
@@ -727,8 +905,18 @@ export const shoppingListApi = {
     return apiClient.post(`/shopping-lists/${listId}/items`, data);
   },
 
-  updateItem: (listId: string, itemId: string, data: { name?: string; quantity?: string; category?: string; isCompleted?: boolean }) => {
-    return apiClient.put(`/shopping-lists/${listId}/items/${itemId}`, data);
+  updateItem: (listId: string, itemId: string, data: { name?: string; quantity?: string; category?: string; purchased?: boolean; isCompleted?: boolean }) => {
+    // Map isCompleted to purchased for backward compatibility
+    const mappedData = { ...data };
+    if (mappedData.isCompleted !== undefined) {
+      mappedData.purchased = mappedData.isCompleted;
+      delete mappedData.isCompleted;
+    }
+    return apiClient.put(`/shopping-lists/${listId}/items/${itemId}`, mappedData);
+  },
+
+  batchUpdateItems: (listId: string, updates: Array<{ itemId: string; purchased?: boolean; name?: string; quantity?: string; category?: string | null; notes?: string | null }>) => {
+    return apiClient.put(`/shopping-lists/${listId}/items/batch`, { updates });
   },
 
   deleteItem: (listId: string, itemId: string) => {
@@ -822,6 +1010,25 @@ export const costTrackingApi = {
       ingredientNames,
       ...options,
     });
+  },
+};
+
+// Weight Goal and Tracking API
+export const weightGoalApi = {
+  logWeight: (data: { weightKg: number; date?: string; notes?: string }) => {
+    return apiClient.post('/weight-goal/log', data);
+  },
+
+  getWeightHistory: (days?: number) => {
+    return apiClient.get('/weight-goal/history', { params: { days } });
+  },
+
+  setWeightGoal: (data: { targetWeightKg: number; targetDate: string }) => {
+    return apiClient.post('/weight-goal', data);
+  },
+
+  getWeightGoal: () => {
+    return apiClient.get('/weight-goal');
   },
 };
 

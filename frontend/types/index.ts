@@ -170,10 +170,24 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+export interface NotificationHistoryEntry {
+  type: 'mealReminders' | 'newRecipes' | 'goalUpdates';
+  sentAt: string; // ISO timestamp
+  status: 'success' | 'failed' | 'pending';
+  message?: string;
+}
+
 export interface UserNotifications {
   mealReminders: boolean;
+  mealReminderTimes?: string[]; // Array of times in HH:mm format (e.g., ["08:00", "12:00", "18:00"])
   newRecipes: boolean;
   goalUpdates: boolean;
+  goalUpdateDay?: string; // Day of week for goal updates (e.g., "Monday")
+  goalUpdateTime?: string; // Time for goal updates in HH:mm format
+  // History tracking
+  lastMealReminderSent?: string; // ISO timestamp
+  lastNewRecipeSent?: string; // ISO timestamp
+  lastGoalUpdateSent?: string; // ISO timestamp
 }
 
 // Component Prop Types
@@ -304,6 +318,8 @@ export interface ShoppingListItem {
   category?: string;
   purchased: boolean;
   notes?: string;
+  recipeId?: string;
+  recipe?: Recipe;
   createdAt: string;
   updatedAt: string;
 }

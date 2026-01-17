@@ -1,15 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { AnimatedSazon } from '../mascot';
-import { SazonExpression } from '../mascot/SazonMascot';
+import { AnimatedLogoMascot } from '../mascot';
+import { LogoMascotExpression } from '../mascot/LogoMascot';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
+import { Colors, DarkColors, Gradients } from '../../constants/Colors';
+import { useColorScheme } from 'react-native';
+import GradientBorder from './GradientBorder';
+import GradientText from './GradientText';
 
 interface SuccessStateProps {
   title: string;
   message?: string;
-  expression?: SazonExpression;
+  expression?: LogoMascotExpression;
   size?: 'small' | 'medium' | 'large' | 'hero';
-  variant?: 'orange' | 'red';
   actionLabel?: string;
   onAction?: () => void;
   fullScreen?: boolean;
@@ -23,7 +26,6 @@ export default function SuccessState({
   message,
   expression = 'chef-kiss',
   size = 'large',
-  variant = 'orange',
   actionLabel,
   onAction,
   fullScreen = false,
@@ -31,6 +33,7 @@ export default function SuccessState({
   onDismiss,
   dismissDelay = 3000,
 }: SuccessStateProps) {
+  const colorScheme = useColorScheme();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
@@ -96,12 +99,15 @@ export default function SuccessState({
     ? styles.fullScreenContainer
     : styles.container;
 
+  const isDark = colorScheme === 'dark';
+
   return (
     <Animated.View
       style={[
         containerStyle,
         {
           opacity: opacityAnim,
+          backgroundColor: fullScreen ? (isDark ? DarkColors.background : Colors.background) : 'transparent',
         },
       ]}
     >
@@ -110,10 +116,9 @@ export default function SuccessState({
           transform: [{ scale: scaleAnim }],
         }}
       >
-        <AnimatedSazon
+        <AnimatedLogoMascot
           expression={expression}
           size={size}
-          variant={variant}
           animationType="celebrate"
         />
       </Animated.View>
@@ -125,20 +130,39 @@ export default function SuccessState({
           alignItems: 'center',
         }}
       >
-        <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-6 text-center">
+        <Text 
+          className="text-2xl font-bold mt-6 text-center"
+          style={{ color: colorScheme === 'dark' ? DarkColors.text.primary : Colors.text.primary }}
+        >
           {title}
         </Text>
         {message && (
-          <Text className="text-base text-gray-600 dark:text-gray-400 mt-2 text-center">
+          <Text 
+            className="text-base mt-2 text-center"
+            style={{ color: colorScheme === 'dark' ? DarkColors.text.secondary : Colors.text.secondary }}
+          >
             {message}
           </Text>
         )}
         {actionLabel && onAction && (
           <HapticTouchableOpacity
             onPress={onAction}
-            className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg mt-6"
+            className="px-6 py-3 rounded-lg mt-6"
+            style={{ 
+              backgroundColor: colorScheme === 'dark' ? DarkColors.primary : Colors.primary,
+              minWidth: 120,
+            }}
           >
-            <Text className="text-white font-semibold">{actionLabel}</Text>
+            <Text 
+              style={{ 
+                fontSize: 16, 
+                fontWeight: '600', 
+                textAlign: 'center',
+                color: '#FFFFFF',
+              }}
+            >
+              {actionLabel}
+            </Text>
           </HapticTouchableOpacity>
         )}
       </Animated.View>

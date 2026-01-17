@@ -13,21 +13,47 @@ export const shoppingListController = {
   async getShoppingLists(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
+      console.log(`[SHOPPING_LIST] GET /api/shopping-lists - User: ${userId}`);
 
-      const shoppingLists = await prisma.shoppingList.findMany({
+      // Try without items first to isolate the issue
+      let shoppingLists = await prisma.shoppingList.findMany({
         where: { userId },
-        include: {
-          items: {
-            orderBy: { createdAt: 'asc' },
-          },
-        },
-        orderBy: { updatedAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
       });
 
+      // Fetch items for each list
+      shoppingLists = await Promise.all(
+        shoppingLists.map(async (list) => {
+          const items = await prisma.shoppingListItem.findMany({
+            where: { shoppingListId: list.id },
+            include: {
+              recipe: {
+                select: {
+                  id: true,
+                  title: true,
+                  imageUrl: true,
+                },
+              },
+            },
+            orderBy: { createdAt: 'asc' },
+          });
+          return { ...list, items };
+        })
+      );
+
+      console.log(`[SHOPPING_LIST] GET /api/shopping-lists - Success - Found ${shoppingLists.length} lists`);
       res.json(shoppingLists);
     } catch (error: any) {
-      console.error('Error getting shopping lists:', error);
-      res.status(500).json({ error: 'Failed to get shopping lists' });
+      console.error('[SHOPPING_LIST] GET /api/shopping-lists - ERROR:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        name: error.name,
+      });
+      res.status(500).json({ 
+        error: 'Failed to get shopping lists',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   },
 
@@ -36,46 +62,95 @@ export const shoppingListController = {
    * GET /api/shopping-lists/:id
    */
   async getShoppingList(req: Request, res: Response) {
+    const startTime = Date.now();
     try {
       const userId = getUserId(req);
       const { id } = req.params;
 
+      console.log(`[SHOPPING_LIST] GET /api/shopping-lists/${id} - User: ${userId} - Start: ${new Date().toISOString()}`);
+
       const shoppingList = await prisma.shoppingList.findFirst({
         where: { id, userId },
-        include: {
-          items: {
-            orderBy: { createdAt: 'asc' },
-          },
-        },
       });
 
       if (!shoppingList) {
+        console.log(`[SHOPPING_LIST] GET /api/shopping-lists/${id} - Not found`);
         return res.status(404).json({ error: 'Shopping list not found' });
       }
 
-      res.json(shoppingList);
+      // Fetch items with recipe relation
+      const items = await prisma.shoppingListItem.findMany({
+        where: { shoppingListId: id },
+        include: {
+          recipe: {
+            select: {
+              id: true,
+              title: true,
+              imageUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const shoppingListWithItems = { ...shoppingList, items };
+
+      const duration = Date.now() - startTime;
+      console.log(`[SHOPPING_LIST] GET /api/shopping-lists/${id} - Success - Duration: ${duration}ms - Items: ${items.length}`);
+      res.json(shoppingListWithItems);
     } catch (error: any) {
-      console.error('Error getting shopping list:', error);
-      res.status(500).json({ error: 'Failed to get shopping list' });
+      const duration = Date.now() - startTime;
+      console.error(`[SHOPPING_LIST] GET /api/shopping-lists/${req.params.id} - ERROR after ${duration}ms:`, {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        stack: error.stack,
+        name: error.name,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      });
+      res.status(500).json({ 
+        error: 'Failed to get shopping list',
+        code: error.code || 'SHOPPING_LIST_ERROR',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   },
 
   /**
    * Create a new shopping list
    * POST /api/shopping-lists
+   * Body: { name?: string, items?: Array<{ name: string, quantity?: string, category?: string, notes?: string }> }
    */
   async createShoppingList(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      const { name } = req.body;
+      const { name, items } = req.body;
+
+      // Build the create data
+      const createData: any = {
+        userId,
+        name: name || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      };
+
+      // Add items if provided
+      if (items && Array.isArray(items) && items.length > 0) {
+        createData.items = {
+          create: items.map((item: { name: string; quantity?: string; category?: string; notes?: string }) => ({
+            name: item.name,
+            quantity: item.quantity || '1',
+            category: item.category || null,
+            notes: item.notes || null,
+            purchased: false,
+          })),
+        };
+      }
 
       const shoppingList = await prisma.shoppingList.create({
-        data: {
-          userId,
-          name: name || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        },
+        data: createData,
         include: {
-          items: true,
+          items: {
+            orderBy: { createdAt: 'asc' },
+          },
         },
       });
 
@@ -232,6 +307,133 @@ export const shoppingListController = {
     } catch (error: any) {
       console.error('Error updating shopping list item:', error);
       res.status(500).json({ error: 'Failed to update shopping list item' });
+    }
+  },
+
+  /**
+   * Batch update shopping list items
+   * PUT /api/shopping-lists/:listId/items/batch
+   */
+  async batchUpdateItems(req: Request, res: Response) {
+    const startTime = Date.now();
+    try {
+      const userId = getUserId(req);
+      const { listId } = req.params;
+      const { updates } = req.body; // Array of { itemId, purchased, name, quantity, category, notes }
+
+      console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - User: ${userId} - Updates: ${updates?.length || 0} - Start: ${new Date().toISOString()}`);
+
+      if (!Array.isArray(updates) || updates.length === 0) {
+        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Invalid request: updates array empty or missing`);
+        return res.status(400).json({ error: 'Updates array is required and must not be empty' });
+      }
+
+      const shoppingList = await prisma.shoppingList.findFirst({
+        where: { id: listId, userId },
+      });
+
+      if (!shoppingList) {
+        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - List not found`);
+        return res.status(404).json({ error: 'Shopping list not found' });
+      }
+
+      // Verify all items exist and belong to this list before updating
+      const itemIds = updates.map((u: { itemId: string }) => u.itemId);
+      const existingItems = await prisma.shoppingListItem.findMany({
+        where: {
+          id: { in: itemIds },
+          shoppingListId: listId,
+        },
+        select: { id: true },
+      });
+
+      const existingItemIds = new Set(existingItems.map(item => item.id));
+      const missingItemIds = itemIds.filter(id => !existingItemIds.has(id));
+
+      if (missingItemIds.length > 0) {
+        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Some items not found:`, missingItemIds);
+        // Continue with items that exist, but log the missing ones
+      }
+
+      // Update only items that exist, using Promise.allSettled to handle individual failures gracefully
+      const validUpdates = updates.filter((u: { itemId: string }) => existingItemIds.has(u.itemId));
+      
+      const updateResults = await Promise.allSettled(
+        validUpdates.map(async (update: { itemId: string; purchased?: boolean; name?: string; quantity?: string; category?: string | null; notes?: string | null }) => {
+          try {
+            const { itemId, ...data } = update;
+            
+            // Remove undefined values
+            const updateData: any = {};
+            if (data.purchased !== undefined) updateData.purchased = data.purchased;
+            if (data.name !== undefined) updateData.name = data.name;
+            if (data.quantity !== undefined) updateData.quantity = data.quantity;
+            if (data.category !== undefined) updateData.category = data.category;
+            if (data.notes !== undefined) updateData.notes = data.notes;
+
+            return await prisma.shoppingListItem.update({
+              where: { id: itemId },
+              data: updateData,
+            });
+          } catch (error: any) {
+            // Handle Prisma errors (e.g., P2025 - record not found)
+            // This can happen if an item is deleted between validation and update (race condition)
+            console.log(`[SHOPPING_LIST] Failed to update item ${update.itemId}:`, error.code, error.message);
+            throw error; // Re-throw so Promise.allSettled can catch it
+          }
+        })
+      );
+
+      // Extract successful updates
+      const updatedItems = updateResults
+        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+        .map(result => result.value);
+
+      const failedUpdates = updateResults.filter(result => result.status === 'rejected');
+      if (failedUpdates.length > 0) {
+        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - ${failedUpdates.length} items failed to update:`, 
+          failedUpdates.map((f: any) => f.reason?.message || f.reason));
+      }
+
+      // If some items were missing, include that in the response
+      if (missingItemIds.length > 0) {
+        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Updated ${updatedItems.length} items, ${missingItemIds.length} items were missing`);
+      }
+
+      // Return success even if some items were missing or failed (partial success)
+      // This allows the frontend to handle gracefully
+
+      const duration = Date.now() - startTime;
+      console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Success - Duration: ${duration}ms - Updated: ${updatedItems.length} items, Missing: ${missingItemIds.length}, Failed: ${failedUpdates.length}`);
+      
+      // Return success response even if some items were missing or failed (partial success)
+      res.json({ 
+        updated: updatedItems.length, 
+        items: updatedItems,
+        missing: missingItemIds.length > 0 ? missingItemIds : undefined,
+        failed: failedUpdates.length > 0 ? failedUpdates.length : undefined
+      });
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      console.error(`[SHOPPING_LIST] PUT /api/shopping-lists/${req.params.listId}/items/batch - ERROR after ${duration}ms:`, {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        stack: error.stack,
+        name: error.name,
+        isQuotaError: error.code === 'insufficient_quota' || error.status === 429,
+        isPrismaError: error.code?.startsWith('P'),
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      });
+      
+      // Never return 404 from batch endpoint - always return 500 with details
+      // 404s should be handled internally as missing items
+      res.status(500).json({ 
+        error: 'Failed to batch update shopping list items',
+        code: error.code || 'BATCH_UPDATE_ERROR',
+        message: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   },
 

@@ -1,36 +1,38 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, Modal, Animated, Dimensions } from 'react-native';
+import { View, Text, Modal, Animated, Dimensions, TextInput, Platform } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedBadge from '../../components/ui/AnimatedBadge';
-import { router } from 'expo-router';
+import { router, usePathname, useSegments } from 'expo-router';
 import ActionSheet, { ActionSheetItem } from '../../components/ui/ActionSheet';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { scannerApi } from '../../lib/api';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, DarkColors } from '../../constants/Colors';
+import { FontSize, FontWeight } from '../../constants/Typography';
+import { Spacing, ComponentSpacing, Gap } from '../../constants/Spacing';
+import { Duration } from '../../constants/Animations';
+import { useColorScheme } from 'nativewind';
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+  const segments = useSegments();
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [searchQuery, setSearchQuery] = useState('');
   
   // FAB (Floating Action Button) animations
-  const fabScale = useRef(new Animated.Value(0)).current;
+  const fabScale = useRef(new Animated.Value(1)).current;
   const fabRotation = useRef(new Animated.Value(0)).current;
-  
-  // FAB bounce animation on mount
-  useEffect(() => {
-    Animated.spring(fabScale, {
-      toValue: 1,
-      friction: 4,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  }, [fabScale]);
 
   const actionItems: ActionSheetItem[] = [
     {
@@ -46,7 +48,7 @@ export default function TabLayout() {
         }
         setShowCamera(true);
       },
-      color: 'orange',
+      color: 'red',
     },
     {
       label: 'Add Recipe',
@@ -54,14 +56,13 @@ export default function TabLayout() {
       onPress: () => {
         router.push('/recipe-form');
       },
-      color: 'orange',
+      color: 'red',
     },
     {
       label: 'Input Daily Weight',
       icon: 'scale-outline',
       onPress: () => {
-        // TODO: Navigate to weight input screen
-        router.push('/profile');
+        router.push('/weight-input');
       },
       color: 'blue',
     },
@@ -77,16 +78,15 @@ export default function TabLayout() {
       label: 'Create Collection',
       icon: 'create-outline',
       onPress: () => {
-        // TODO: Navigate to create collection screen
-        router.push('/(tabs)/cookbook');
+        router.push('/create-collection');
       },
       color: 'purple',
     },
     {
-      label: 'Shopping List',
-      icon: 'list-outline',
+      label: 'Create Shopping List',
+      icon: 'cart-outline',
       onPress: () => {
-        router.push('/(tabs)/shopping-list');
+        router.push('/create-shopping-list');
       },
       color: 'green',
     },
@@ -126,111 +126,47 @@ export default function TabLayout() {
   };
 
   return (
-    <>
-      <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: '#F97316',
-          headerShown: false,
-          tabBarStyle: {
+    <View style={{ flex: 1, margin: 0, padding: 0 }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: '#F97316',
+        headerShown: false,
+        tabBarStyle: {
             backgroundColor: colors.background,
-            borderTopWidth: 1,
-            borderTopColor: colors.border.light,
-            height: 60,
-            paddingBottom: 16,
-            paddingTop: 8,
-            position: 'relative',
-          },
-          tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: '500',
-          },
-        }}>
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="cookbook"
-          options={{
-            title: 'Cookbook',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="book-outline" size={size} color={color} />
-            ),
-          }}
-        />
+            borderTopWidth: 0,
+          height: ComponentSpacing.tabBar.height,
+            paddingBottom: ComponentSpacing.tabBar.paddingBottom,
+          paddingTop: ComponentSpacing.tabBar.paddingTop,
+        },
+        tabBarLabelStyle: {
+          fontSize: FontSize.sm,
+          fontWeight: FontWeight.medium,
+        },
+      }}>
         <Tabs.Screen
           name="add"
           options={{
-            title: '',
-            tabBarButton: (props) => {
-              const handlePress = () => {
-                // Rotate animation on press
-                Animated.sequence([
-                  Animated.timing(fabRotation, {
-                    toValue: 1,
-                    duration: 200,
-                    useNativeDriver: true,
-                  }),
-                  Animated.timing(fabRotation, {
-                    toValue: 0,
-                    duration: 200,
-                    useNativeDriver: true,
-                  }),
-                ]).start();
-                
-                // Bounce animation
-                Animated.sequence([
-                  Animated.spring(fabScale, {
-                    toValue: 0.9,
-                    friction: 3,
-                    tension: 40,
-                    useNativeDriver: true,
-                  }),
-                  Animated.spring(fabScale, {
-                    toValue: 1,
-                    friction: 4,
-                    tension: 40,
-                    useNativeDriver: true,
-                  }),
-                ]).start();
-                
-                setShowActionSheet(true);
-              };
-              
-              const rotation = fabRotation.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0deg', '45deg'],
-              });
-              
-              return (
-                <HapticTouchableOpacity
-                  {...props}
-                  onPress={handlePress}
-                  className="flex-1 items-center justify-center -mt-2"
-                >
-                  <Animated.View
-                    style={{
-                      transform: [
-                        { scale: fabScale },
-                        { rotate: rotation },
-                      ],
-                    }}
-                  >
-                    <View className="w-14 h-14 bg-orange-500 dark:bg-orange-600 rounded-full items-center justify-center shadow-lg">
-                      <Ionicons name="add" size={28} color="white" />
-                    </View>
-                  </Animated.View>
-                </HapticTouchableOpacity>
-              );
-            },
-            tabBarLabel: () => null,
+            href: null, // Hide from tab bar
           }}
         />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="cookbook"
+        options={{
+          title: 'Cookbook',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
         <Tabs.Screen
           name="meal-plan"
           options={{
@@ -246,19 +182,147 @@ export default function TabLayout() {
             title: 'Shopping',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="cart-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: 'Profile',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person-outline" size={size} color={color} />
-            ),
-          }}
-        />
-      </Tabs>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
+
+      {/* Search Bar + Plus Button Above Tab Bar */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          backgroundColor: colors.background,
+          bottom: 55, // Position closer to tab bar
+          paddingVertical: Spacing.md,
+          paddingHorizontal: Spacing.lg,
+          zIndex: 10,
+        }}
+      >
+        <View className="flex-row items-center" style={{ gap: Gap.md }}>
+          {/* Search Bar */}
+          <View className="flex-1 flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
+            <Ionicons name="search-outline" size={20} color={colors.text.secondary} style={{ marginRight: Spacing.sm }} />
+            <TextInput
+              placeholder="Search recipes..."
+              placeholderTextColor={colors.text.tertiary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              accessibilityLabel="Search recipes"
+              accessibilityHint="Enter recipe name or ingredient to search"
+              onSubmitEditing={() => {
+                if (searchQuery.trim()) {
+                  const query = searchQuery.trim();
+                  console.log('🔍 Navigating to search with query:', query);
+                  console.log('📍 Current pathname:', pathname);
+                  console.log('📍 Current segments:', segments);
+                  
+                  // Check if we're already on the index tab
+                  const isOnIndexTab = pathname === '/(tabs)/index' || pathname === '/index' || pathname === '/' || segments[segments.length - 1] === 'index';
+                  
+                  if (isOnIndexTab) {
+                    // If already on index tab, just update params
+                    console.log('📍 Already on index tab, updating params');
+                    router.setParams({ search: query });
+                  } else {
+                    // Navigate to index tab
+                    console.log('📍 Navigating to index tab');
+                    // Try the path format based on current segments
+                    const basePath = segments.length > 0 && segments[0] === '(tabs)' 
+                      ? 'index' 
+                      : '/(tabs)/index';
+                    router.push(`${basePath}?search=${encodeURIComponent(query)}`);
+                  }
+                }
+              }}
+              className="flex-1 text-gray-900 dark:text-gray-100"
+              style={{ fontSize: FontSize.md, color: colors.text.primary }}
+            />
+            {searchQuery.length > 0 && (
+              <HapticTouchableOpacity
+                onPress={() => setSearchQuery('')}
+                className="p-1"
+                accessibilityLabel="Clear search"
+                accessibilityRole="button"
+                accessibilityHint="Clears the search text"
+              >
+                <Ionicons name="close-circle" size={20} color={colors.text.secondary} />
+              </HapticTouchableOpacity>
+            )}
+          </View>
+
+          {/* Plus Button */}
+          <HapticTouchableOpacity
+            onPress={() => {
+              // Rotate animation on press
+              Animated.sequence([
+                Animated.timing(fabRotation, {
+                  toValue: 1,
+                  duration: Duration.normal,
+                  useNativeDriver: true,
+                }),
+                Animated.timing(fabRotation, {
+                  toValue: 0,
+                  duration: Duration.normal,
+                  useNativeDriver: true,
+                }),
+              ]).start();
+              
+              // Bounce animation
+              Animated.sequence([
+                Animated.spring(fabScale, {
+                  toValue: 0.9,
+                  friction: 3,
+                  tension: 40,
+                  useNativeDriver: true,
+                }),
+                Animated.spring(fabScale, {
+                  toValue: 1,
+                  friction: 4,
+                  tension: 40,
+                  useNativeDriver: true,
+                }),
+              ]).start();
+              
+              setShowActionSheet(true);
+            }}
+            className="w-12 h-12 rounded-full items-center justify-center shadow-lg border-2"
+            style={{
+              backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+              borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed
+            }}
+            accessibilityLabel="Quick actions menu"
+            accessibilityRole="button"
+            accessibilityHint="Opens menu with options to add recipes, take photos, and more"
+          >
+            <Animated.View
+              style={{
+                transform: [
+                  { scale: fabScale },
+                  {
+                    rotate: fabRotation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '45deg'],
+                    }),
+                  },
+                ],
+              }}
+            >
+              <Ionicons name="add" size={24} color="white" />
+            </Animated.View>
+          </HapticTouchableOpacity>
+        </View>
+      </View>
 
       {/* Action Sheet */}
       <ActionSheet
@@ -276,7 +340,7 @@ export default function TabLayout() {
           onTakePhoto={handleTakePhoto}
         />
       )}
-    </>
+    </View>
   );
 }
 
@@ -310,6 +374,8 @@ function QuickCameraModal({
             <HapticTouchableOpacity
               onPress={onClose}
               className="w-16 h-16 rounded-full bg-gray-700 dark:bg-gray-600 items-center justify-center"
+              accessibilityLabel="Close camera"
+              accessibilityRole="button"
             >
               <Ionicons name="close" size={32} color="white" />
             </HapticTouchableOpacity>
@@ -317,6 +383,9 @@ function QuickCameraModal({
               onPress={() => onTakePhoto(cameraRef)}
               hapticStyle="medium"
               className="w-20 h-20 rounded-full bg-orange-500 dark:bg-orange-600 items-center justify-center border-4 border-white"
+              accessibilityLabel="Take photo"
+              accessibilityRole="button"
+              accessibilityHint="Takes a photo of food to scan"
             >
               <View className="w-16 h-16 rounded-full bg-white" />
             </HapticTouchableOpacity>
@@ -350,6 +419,9 @@ function QuickCameraModal({
                 }
               }}
               className="w-16 h-16 rounded-full bg-gray-700 dark:bg-gray-600 items-center justify-center"
+              accessibilityLabel="Choose from photo library"
+              accessibilityRole="button"
+              accessibilityHint="Opens photo library to select an image"
             >
               <Ionicons name="images-outline" size={32} color="white" />
             </HapticTouchableOpacity>

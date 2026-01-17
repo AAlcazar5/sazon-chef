@@ -10,8 +10,12 @@ import { router } from 'expo-router';
 import { costTrackingApi } from '../lib/api';
 import { BudgetSettings } from '../types';
 import * as Haptics from 'expo-haptics';
+import { Colors, DarkColors } from '../constants/Colors';
+import { useColorScheme } from 'nativewind';
 
 export default function EditBudgetScreen() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [budget, setBudget] = useState<BudgetSettings>({
@@ -59,34 +63,40 @@ export default function EditBudgetScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#F97316" />
-        <Text className="text-gray-600 mt-4">Loading budget settings...</Text>
+      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? '#111827' : '#F9FAFB' }} edges={['top']}>
+        <ActivityIndicator size="large" color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} />
+        <Text className="mt-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Loading budget settings...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? '#111827' : '#F9FAFB' }} edges={['top']}>
       {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-200">
+      <View className="px-4 py-4 border-b" style={{ 
+        backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+        borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light,
+      }}>
         <View className="flex-row items-center">
           <HapticTouchableOpacity onPress={() => router.back()} className="mr-4">
-            <Ionicons name="arrow-back" size={24} color="#374151" />
+            <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.primary : Colors.text.primary} />
           </HapticTouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-900">Budget Settings</Text>
+          <Text className="text-2xl font-bold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Budget Settings</Text>
         </View>
       </View>
 
       <ScrollView className="flex-1">
         <View className="p-4">
           {/* Info Banner */}
-          <View className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200">
+          <View className="p-4 rounded-lg mb-6 border" style={{
+            backgroundColor: isDark ? `${Colors.secondaryRedLight}1A` : Colors.secondaryRedDark,
+            borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark,
+          }}>
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={24} color="#3B82F6" />
+              <Ionicons name="information-circle" size={24} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} />
               <View className="ml-3 flex-1">
-                <Text className="text-blue-900 font-semibold mb-1">Budget-Based Recommendations</Text>
-                <Text className="text-blue-700 text-sm">
+                <Text className="font-semibold mb-1" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>Budget-Based Recommendations</Text>
+                <Text className="text-sm" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
                   Set your budget limits to filter recipes and get personalized recommendations that fit your budget.
                 </Text>
               </View>
@@ -95,40 +105,53 @@ export default function EditBudgetScreen() {
 
           {/* Currency Selection */}
           <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">Currency</Text>
+            <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Currency</Text>
             <View className="flex-row space-x-2">
-              {['USD', 'EUR', 'GBP', 'CAD'].map((currency) => (
-                <HapticTouchableOpacity
-                  key={currency}
-                  onPress={() => setBudget({ ...budget, currency })}
-                  className={`px-4 py-2 rounded-lg border-2 ${
-                    budget.currency === currency
-                      ? 'bg-orange-500 border-orange-500'
-                      : 'bg-white border-gray-300'
-                  }`}
-                >
-                  <Text
-                    className={`font-semibold ${
-                      budget.currency === currency ? 'text-white' : 'text-gray-700'
-                    }`}
+              {['USD', 'EUR', 'GBP', 'CAD'].map((currency) => {
+                const isSelected = budget.currency === currency;
+                return (
+                  <HapticTouchableOpacity
+                    key={currency}
+                    onPress={() => setBudget({ ...budget, currency })}
+                    className="px-4 py-2 rounded-lg border-2"
+                    style={{
+                      backgroundColor: isSelected 
+                        ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark)
+                        : (isDark ? '#1F2937' : '#FFFFFF'),
+                      borderColor: isSelected 
+                        ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark)
+                        : (isDark ? DarkColors.border.light : Colors.border.light),
+                    }}
                   >
-                    {currency}
-                  </Text>
-                </HapticTouchableOpacity>
-              ))}
+                    <Text className="font-semibold" style={{ 
+                      color: isSelected 
+                        ? 'white' 
+                        : (isDark ? DarkColors.text.primary : Colors.text.primary)
+                    }}>
+                      {currency}
+                    </Text>
+                  </HapticTouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
           {/* Max Recipe Cost */}
           <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">
+            <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               Max Recipe Cost ({budget.currency})
             </Text>
-            <Text className="text-sm text-gray-600 mb-2">
+            <Text className="text-sm mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
               Maximum cost for a single recipe. Recipes exceeding this will be filtered out.
             </Text>
-            <View className="flex-row items-center bg-white rounded-lg border border-gray-300">
-              <Text className="text-gray-500 px-4 font-semibold">{budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}</Text>
+            <View className="flex-row items-center rounded-lg border" style={{
+              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+              borderWidth: 1,
+            }}>
+              <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}
+              </Text>
               <TextInput
                 placeholder="No limit"
                 value={budget.maxRecipeCost?.toString() || ''}
@@ -137,21 +160,29 @@ export default function EditBudgetScreen() {
                   setBudget({ ...budget, maxRecipeCost: value || undefined });
                 }}
                 keyboardType="decimal-pad"
-                className="flex-1 py-3 text-gray-900"
+                className="flex-1 py-3"
+                style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
+                placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
               />
             </View>
           </View>
 
           {/* Max Meal Cost */}
           <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">
+            <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               Max Meal Cost ({budget.currency})
             </Text>
-            <Text className="text-sm text-gray-600 mb-2">
+            <Text className="text-sm mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
               Maximum cost per meal. Useful for meal planning.
             </Text>
-            <View className="flex-row items-center bg-white rounded-lg border border-gray-300">
-              <Text className="text-gray-500 px-4 font-semibold">{budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}</Text>
+            <View className="flex-row items-center rounded-lg border" style={{
+              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+              borderWidth: 1,
+            }}>
+              <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}
+              </Text>
               <TextInput
                 placeholder="No limit"
                 value={budget.maxMealCost?.toString() || ''}
@@ -160,21 +191,29 @@ export default function EditBudgetScreen() {
                   setBudget({ ...budget, maxMealCost: value || undefined });
                 }}
                 keyboardType="decimal-pad"
-                className="flex-1 py-3 text-gray-900"
+                className="flex-1 py-3"
+                style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
+                placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
               />
             </View>
           </View>
 
           {/* Daily Food Budget */}
           <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">
+            <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
               Daily Food Budget ({budget.currency})
             </Text>
-            <Text className="text-sm text-gray-600 mb-2">
+            <Text className="text-sm mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
               Maximum daily food spending. Helps track overall food costs.
             </Text>
-            <View className="flex-row items-center bg-white rounded-lg border border-gray-300">
-              <Text className="text-gray-500 px-4 font-semibold">{budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}</Text>
+            <View className="flex-row items-center rounded-lg border" style={{
+              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
+              borderWidth: 1,
+            }}>
+              <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}
+              </Text>
               <TextInput
                 placeholder="No limit"
                 value={budget.maxDailyFoodBudget?.toString() || ''}
@@ -183,7 +222,9 @@ export default function EditBudgetScreen() {
                   setBudget({ ...budget, maxDailyFoodBudget: value || undefined });
                 }}
                 keyboardType="decimal-pad"
-                className="flex-1 py-3 text-gray-900"
+                className="flex-1 py-3"
+                style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
+                placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
               />
             </View>
           </View>
@@ -192,7 +233,13 @@ export default function EditBudgetScreen() {
           <HapticTouchableOpacity
             onPress={handleSave}
             disabled={saving}
-            className={`bg-orange-500 py-4 rounded-lg ${saving ? 'opacity-50' : ''}`}
+            className="py-4 rounded-lg"
+            style={{
+              backgroundColor: saving 
+                ? (isDark ? '#4B5563' : '#D1D5DB')
+                : (isDark ? DarkColors.secondaryRed : Colors.secondaryRed),
+              opacity: saving ? 0.6 : 1,
+            }}
           >
             {saving ? (
               <ActivityIndicator color="white" />
