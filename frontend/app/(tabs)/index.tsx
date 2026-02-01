@@ -41,7 +41,7 @@ import { RecipeCard } from '../../components/recipe/RecipeCard';
 import MoodSelector, { MoodChip, MOODS, type Mood } from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, RecipeSearchBar } from '../../components/home';
+import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel } from '../../components/home';
 import {
   type UserFeedback,
   deduplicateRecipes,
@@ -2694,126 +2694,22 @@ export default function HomeScreen() {
 
         {/* Today's Recommendation / Featured Recipe - First section after filters */}
         {(!searchQuery || searchQuery.trim().length === 0) && (
-        <View className="px-4">
-          <View className="flex-row items-center justify-between" style={{ marginBottom: Spacing.xl }}>
-            <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {mealPrepMode ? '🍱 Meal Prep Recipes' : "Today's Recommendation"}
-            </Text>
-              {suggestedRecipes.length > 1 && !mealPrepMode && (
-                <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Swipe to see more top matches
-                </Text>
-              )}
-            </View>
-            <Animated.View
-              style={{
-                transform: [{ scale: randomButtonScale }],
-                opacity: randomButtonOpacity,
-              }}
-            >
-              <HapticTouchableOpacity
-                onPress={handleRandomRecipe}
-                hapticStyle="medium"
-                className="px-3 py-1.5 rounded-lg flex-row items-center"
-                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                <Icon name={Icons.RANDOM_RECIPE} size={IconSizes.XS} color="#FFFFFF" accessibilityLabel="Random recipe" />
-                <Text className="text-white text-sm font-semibold" style={{ marginLeft: 6 }}>
-                  Random Recipe
-                </Text>
-              </HapticTouchableOpacity>
-            </Animated.View>
-          </View>
-          {suggestedRecipes.length > 0 && (() => {
-            // Get top 3 recipes for featured rotation
-            const topRecipes = suggestedRecipes.slice(0, Math.min(3, suggestedRecipes.length));
-            const recipe = topRecipes[featuredRecipeIndex] || topRecipes[0];
-            const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-            const isFeedbackLoading = feedbackLoading === recipe.id;
-            
-            // Generate recommendation reasoning
-            const getRecommendationReason = () => {
-              const reasons: string[] = [];
-              if (recipe.score?.matchPercentage && recipe.score.matchPercentage >= 85) {
-                reasons.push('Perfect Match');
-              }
-              if (recipe.score?.macroScore && recipe.score.macroScore >= 80) {
-                reasons.push('Matches Your Macros');
-              }
-              if (recipe.score?.tasteScore && recipe.score.tasteScore >= 80) {
-                reasons.push('Your Preferred Cuisine');
-              }
-              if ((recipe as any).mealPrepSuitable || (recipe as any).freezable) {
-                reasons.push('Great for Meal Prep');
-              }
-              if (recipe.cookTime && recipe.cookTime <= 30) {
-                reasons.push('Quick Recipe');
-              }
-              if (recipe.healthGrade === 'A' || recipe.healthGrade === 'B') {
-                reasons.push('Highly Nutritious');
-              }
-              return reasons.length > 0 ? reasons[0] : 'Recommended for You';
-            };
-            
-            const recommendationReason = getRecommendationReason();
-            const isTopMatch = recipe.score?.matchPercentage && recipe.score.matchPercentage >= 85;
-            
-            // Handle swipe to next featured recipe
-            const handleSwipeNext = () => {
-              if (topRecipes.length > 1) {
-                const nextIndex = (featuredRecipeIndex + 1) % topRecipes.length;
-                setFeaturedRecipeIndex(nextIndex);
-                HapticPatterns.buttonPress();
-              }
-            };
-            
-            const handleSwipePrev = () => {
-              if (topRecipes.length > 1) {
-                const prevIndex = featuredRecipeIndex === 0 ? topRecipes.length - 1 : featuredRecipeIndex - 1;
-                setFeaturedRecipeIndex(prevIndex);
-                HapticPatterns.buttonPress();
-              }
-            };
-            
-            return (
-              <View>
-                <CardStack
-                  onSwipeRight={() => {
-                    handleLike(recipe.id);
-                    handleSwipeNext();
-                  }}
-                  onSwipeLeft={() => {
-                    handleDislike(recipe.id);
-                    handleSwipeNext();
-                  }}
-                  onSwipeUp={handleSwipeNext}
-                  onSwipeDown={handleSwipePrev}
-                >
-                  <RecipeCard
-                    recipe={recipe}
-                    variant="list"
-                    onPress={handleRecipePress}
-                    onLongPress={handleLongPress}
-                    onLike={handleLike}
-                    onDislike={handleDislike}
-                    onSave={openSavePicker}
-                    feedback={feedback}
-                    isFeedbackLoading={isFeedbackLoading}
-                    isDark={isDark}
-                    showDescription={true}
-                    showTopMatchBadge={isTopMatch}
-                    recommendationReason={recommendationReason}
-                    showSwipeIndicators={topRecipes.length > 1}
-                    swipeIndicatorCount={topRecipes.length}
-                    swipeIndicatorIndex={featuredRecipeIndex}
-                    className="mb-4"
-                  />
-                </CardStack>
-              </View>
-            );
-          })()}
-        </View>
+          <FeaturedRecipeCarousel
+            recipes={suggestedRecipes}
+            currentIndex={featuredRecipeIndex}
+            onIndexChange={setFeaturedRecipeIndex}
+            mealPrepMode={mealPrepMode}
+            randomButtonScale={randomButtonScale}
+            randomButtonOpacity={randomButtonOpacity}
+            onRandomRecipe={handleRandomRecipe}
+            userFeedback={userFeedback}
+            feedbackLoading={feedbackLoading}
+            onLike={handleLike}
+            onDislike={handleDislike}
+            onRecipePress={handleRecipePress}
+            onLongPress={handleLongPress}
+            onSave={openSavePicker}
+          />
         )}
 
         {/* Contextual Recipe Sections */}
