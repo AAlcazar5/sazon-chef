@@ -63,6 +63,9 @@ import {
 import { useViewMode } from '../../hooks/useViewMode';
 import { useMealPrepMode } from '../../hooks/useMealPrepMode';
 import { useTimeAwareMode } from '../../hooks/useTimeAwareMode';
+import { useRecipePagination } from '../../hooks/useRecipePagination';
+import { useRecipeInteractions } from '../../hooks/useRecipeInteractions';
+import { useRecipeFilters } from '../../hooks/useRecipeFilters';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -87,20 +90,27 @@ export default function HomeScreen() {
   const [refreshingQuickMeals, setRefreshingQuickMeals] = useState(false);
   const [refreshingPerfectMatches, setRefreshingPerfectMatches] = useState(false);
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
-  
+  const [initialRecipesLoaded, setInitialRecipesLoaded] = useState(false); // Track if we've loaded initial recipes
+
   // Scroll position for parallax effect
   const scrollY = useRef(new Animated.Value(0)).current;
-  const [feedbackLoading, setFeedbackLoading] = useState<string | null>(null);
-  const [userFeedback, setUserFeedback] = useState<Record<string, UserFeedback>>({});
+
+  // Recipe interactions (feedback, action menu) - using extracted hook
+  const interactions = useRecipeInteractions();
+  const { userFeedback, feedbackLoading, actionMenuVisible, selectedRecipeForMenu } = interactions;
+  const { setUserFeedback, setFeedbackLoading, openActionMenu, closeActionMenu, updateRecipeFeedback, initializeFeedback } = interactions;
 
   // View mode state (grid/list) - using extracted hook
   const { viewMode, setViewMode, recipesPerPage: RECIPES_PER_PAGE, isLoaded: viewModeLoaded } = useViewMode('list');
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(0);
-  const [paginationLoading, setPaginationLoading] = useState(false);
-  const [allRecipes, setAllRecipes] = useState<SuggestedRecipe[]>([]);
-  const [totalRecipes, setTotalRecipes] = useState(0); // Total recipes in database for pagination
+  // Pagination state - using extracted hook
+  const pagination = useRecipePagination({
+    recipesPerPage: RECIPES_PER_PAGE,
+  });
+  const { currentPage, totalRecipes, paginationLoading, paginationInfo } = pagination;
+  const { setCurrentPage, setTotalRecipes, setPaginationLoading } = pagination;
+
+  const [allRecipes, setAllRecipes] = useState<SuggestedRecipe[]>([]); // Keep for backward compatibility
   
   
   // Featured recipe swipe state (cycle through top 3)
@@ -114,15 +124,10 @@ export default function HomeScreen() {
   const [recentlyViewedRecipes, setRecentlyViewedRecipes] = useState<string[]>([]);
   const [loadingPersonalized, setLoadingPersonalized] = useState(false);
   
-  // Filter state
-  const [filters, setFilters] = useState<FilterState>(filterStorage.getDefaultFilters());
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [filtersLoaded, setFiltersLoaded] = useState(false);
-  
-  // Long-press menu state
-  const [actionMenuVisible, setActionMenuVisible] = useState(false);
-  const [selectedRecipeForMenu, setSelectedRecipeForMenu] = useState<SuggestedRecipe | null>(null);
+  // Filter state - using extracted hook
+  const filterHook = useRecipeFilters();
+  const { filters, activeFilters, filtersLoaded, showFilterModal } = filterHook;
+  const { setFilters, openFilterModal, closeFilterModal, handleFilterChange, updateActiveFilters, saveFilters, resetFilters } = filterHook;
   
   // Collections state for save to collection
   const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
@@ -181,85 +186,46 @@ export default function HomeScreen() {
     });
   }, [suggestedRecipes.length, loading, initialLoading, loadingFromFilters, filtersLoaded, error]);
 
-  // Load saved filters on component mount
+  // Apply saved filters when they're loaded (hook handles loading from storage)
   useEffect(() => {
-    const loadSavedFilters = async () => {
-      try {
-        const savedFilters = await filterStorage.loadFilters();
-        if (savedFilters) {
-          setFilters(savedFilters);
-          
-          // Update active filters display
-          const active: string[] = [];
-          if (savedFilters.cuisines.length > 0) active.push(`${savedFilters.cuisines.length} cuisines`);
-          if (savedFilters.dietaryRestrictions.length > 0) active.push(`${savedFilters.dietaryRestrictions.length} dietary`);
-          if (savedFilters.maxCookTime) active.push(`≤${savedFilters.maxCookTime}min`);
-          if (savedFilters.difficulty.length > 0) active.push(`${savedFilters.difficulty.length} difficulty`);
-          
-          setActiveFilters(active);
-          
-          // Apply saved filters to get filtered recipes
-          if (active.length > 0) {
-            setLoadingFromFilters(true); // Prevent useApi from loading
-            try {
-              const response = await recipeApi.getAllRecipes({
-                page: 0,
-                limit: RECIPES_PER_PAGE,
-              cuisines: savedFilters.cuisines.length > 0 ? savedFilters.cuisines : undefined,
-              dietaryRestrictions: savedFilters.dietaryRestrictions.length > 0 ? savedFilters.dietaryRestrictions : undefined,
-              maxCookTime: savedFilters.maxCookTime || undefined,
-                difficulty: savedFilters.difficulty.length > 0 ? savedFilters.difficulty[0] : undefined,
-              mealPrepMode: mealPrepMode,
-                search: searchQuery || undefined, // Preserve search query
-              });
+    const applySavedFilters = async () => {
+      // Only run once when filters are first loaded and have active values
+      if (filtersLoaded && activeFilters.length > 0 && !initialRecipesLoaded && !loadingFromFilters) {
+        setLoadingFromFilters(true);
+        try {
+          const response = await recipeApi.getAllRecipes({
+            page: 0,
+            limit: RECIPES_PER_PAGE,
+            cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+            dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+            maxCookTime: filters.maxCookTime || undefined,
+            difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+            mealPrepMode: mealPrepMode,
+            search: searchQuery || undefined,
+          });
 
-              const responseData = response.data;
-              let recipes: SuggestedRecipe[];
-              let total: number;
+          const { recipes, total } = parseRecipeResponse(response.data);
+          console.log(`📱 HomeScreen: Loaded filtered recipes: ${recipes.length}, total: ${total}`);
 
-              if (responseData && responseData.recipes && responseData.pagination) {
-                recipes = responseData.recipes;
-                total = responseData.pagination.total;
-                console.log(`📱 HomeScreen: Loaded filtered recipes (paginated): ${recipes.length}, total: ${total}`);
-              } else if (Array.isArray(responseData)) {
-                recipes = responseData;
-                total = recipes.length;
-                console.log(`📱 HomeScreen: Loaded filtered recipes (array fallback): ${recipes.length}`);
-              } else {
-                console.error('❌ Unexpected API response format:', responseData);
-                setLoadingFromFilters(false);
-                return;
-              }
+          setTotalRecipes(total);
+          setSuggestedRecipes(recipes);
+          setAllRecipes(recipes);
+          setCurrentPage(0);
+          setInitialRecipesLoaded(true);
 
-              setTotalRecipes(total);
-              setSuggestedRecipes(recipes);
-              setAllRecipes(recipes);
-              setCurrentPage(0);
-            setInitialRecipesLoaded(true); // Mark as loaded
-            
-            const initialFeedback: Record<string, UserFeedback> = {};
-              recipes.forEach((recipe: SuggestedRecipe) => {
-              initialFeedback[recipe.id] = { liked: false, disliked: false };
-            });
-            setUserFeedback(initialFeedback);
-            } finally {
-            setLoadingFromFilters(false);
-            setInitialLoading(false); // Also mark initial loading as complete
-            }
-          }
+          // Initialize feedback state
+          setUserFeedback(initializeFeedbackState(recipes));
+        } catch (error) {
+          console.error('❌ Error applying saved filters:', error);
+        } finally {
+          setLoadingFromFilters(false);
+          setInitialLoading(false);
         }
-        setFiltersLoaded(true);
-        // If no active filters, initialLoading will be handled by fetchInitialRecipes
-      } catch (error) {
-        console.error('❌ Error loading saved filters:', error);
-        setFiltersLoaded(true);
-        setLoadingFromFilters(false);
-        setInitialLoading(false);
       }
     };
 
-    loadSavedFilters();
-  }, []);
+    applySavedFilters();
+  }, [filtersLoaded, activeFilters.length]);
 
 
 
@@ -521,8 +487,6 @@ export default function HomeScreen() {
     }
   };
 
-  // Track if we've loaded initial recipes to prevent duplicate loading
-  const [initialRecipesLoaded, setInitialRecipesLoaded] = useState(false);
 
   // IMPORTANT:
   // We intentionally do NOT overwrite filtered/paginated results with `/recipes/suggested`.
@@ -775,11 +739,8 @@ export default function HomeScreen() {
           setCurrentPage(0);
           setAnimatedRecipeIds(new Set());
           
-          const newFeedback: Record<string, UserFeedback> = {};
-          recipes.forEach((recipe: SuggestedRecipe) => {
-            newFeedback[recipe.id] = { liked: false, disliked: false };
-          });
-          setUserFeedback(prev => ({ ...prev, ...newFeedback }));
+          // Initialize feedback for new recipes
+          setUserFeedback({ ...userFeedback, ...initializeFeedbackState(recipes) });
         } catch (error: any) {
           console.error('❌ Error refetching recipes:', error?.message || error);
           // Don't show error to user, just log it - the search will handle its own fetching
@@ -791,15 +752,6 @@ export default function HomeScreen() {
       refetchWithNewLimit();
     }
   }, [viewMode]); // Only trigger on viewMode change, not searchQuery
-
-  // Pagination calculations - use totalRecipes from server for accurate page count
-  const paginationInfo = useMemo(() => {
-    const totalPages = Math.max(1, Math.ceil(totalRecipes / RECIPES_PER_PAGE));
-    const hasMultiplePages = totalRecipes > RECIPES_PER_PAGE;
-    const isFirstPage = currentPage === 0;
-    const isLastPage = currentPage >= totalPages - 1;
-    return { totalPages, hasMultiplePages, isFirstPage, isLastPage, totalRecipes };
-  }, [totalRecipes, RECIPES_PER_PAGE, currentPage]);
 
   // Refs to track current recipes for loadMore functionality
   const quickMealsRecipesRef = useRef<SuggestedRecipe[]>([]);
@@ -1146,8 +1098,7 @@ export default function HomeScreen() {
 
   // Long-press menu handlers
   const handleLongPress = (recipe: SuggestedRecipe) => {
-    setSelectedRecipeForMenu(recipe);
-    setActionMenuVisible(true);
+    openActionMenu(recipe); // Hook handles setting recipe and showing menu
     HapticPatterns.buttonPressPrimary();
   };
 
@@ -1201,7 +1152,7 @@ export default function HomeScreen() {
       if (response.data && response.data.length > 0) {
         setSuggestedRecipes(response.data);
         showToast(`Found ${response.data.length} similar recipes`, 'success');
-        setActionMenuVisible(false);
+        closeActionMenu();
       } else {
         Alert.alert('No Similar Recipes', 'We couldn\'t find any similar recipes at the moment.');
       }
@@ -1222,7 +1173,7 @@ export default function HomeScreen() {
         HapticPatterns.success();
         showToast('Recipe healthified!', 'success');
         router.push(`/modal?id=${response.data.id || selectedRecipeForMenu.id}`);
-        setActionMenuVisible(false);
+        closeActionMenu();
       }
     } catch (error: any) {
       console.error('Error healthifying recipe:', error);
@@ -1250,7 +1201,7 @@ export default function HomeScreen() {
   const reportIssue = (issueType: string) => {
     HapticPatterns.success();
     showToast('Thank you for reporting! We\'ll look into it.', 'success');
-    setActionMenuVisible(false);
+    closeActionMenu();
   };
 
   const handleRandomRecipe = async () => {
@@ -1400,35 +1351,9 @@ export default function HomeScreen() {
 
   // Filter functions
   const handleFilterPress = () => {
-    setShowFilterModal(true);
+    openFilterModal();
   };
 
-  const handleFilterChange = (type: keyof FilterState, value: string | number | null | string[]) => {
-    setFilters(prev => {
-      const newFilters = { ...prev };
-      
-      if (type === 'maxCookTime') {
-        newFilters.maxCookTime = value as number | null;
-      } else {
-        const arrayType = type as 'cuisines' | 'dietaryRestrictions' | 'difficulty';
-        // If value is already an array, use it directly (for quick filter chips)
-        if (Array.isArray(value)) {
-          newFilters[arrayType] = value;
-        } else {
-        const currentArray = newFilters[arrayType];
-        const valueStr = value as string;
-        
-        if (currentArray.includes(valueStr)) {
-          newFilters[arrayType] = currentArray.filter(item => item !== valueStr);
-        } else {
-          newFilters[arrayType] = [...currentArray, valueStr];
-          }
-        }
-      }
-      
-      return newFilters;
-    });
-  };
 
   // Toggle time-aware mode (Home Page 2.0)
   const handleToggleTimeAwareMode = () => {
@@ -1596,24 +1521,10 @@ export default function HomeScreen() {
       }
     }
     
-    // Update state
+    // Update state and save (using hook functions)
     setFilters(newFilters);
-    
-    // Apply filters immediately
-    const active: string[] = [];
-    if (newFilters.cuisines.length > 0) active.push(`${newFilters.cuisines.length} cuisines`);
-    if (newFilters.dietaryRestrictions.length > 0) active.push(`${newFilters.dietaryRestrictions.length} dietary`);
-    if (newFilters.maxCookTime) active.push(`≤${newFilters.maxCookTime}min`);
-    if (newFilters.difficulty.length > 0) active.push(`${newFilters.difficulty.length} difficulty`);
-    
-    setActiveFilters(active);
-    
-    // Save filters to storage
-    try {
-      await filterStorage.saveFilters(newFilters);
-    } catch (error) {
-      console.error('❌ Error saving filters:', error);
-    }
+    await saveFilters(); // Hook will save the updated filters
+    updateActiveFilters(); // Hook will recompute active filter labels
     
     // Apply filters to API call using paginated endpoint
     try {
@@ -1673,23 +1584,10 @@ export default function HomeScreen() {
   };
 
   const applyFilters = async () => {
-    // Update active filters display
-    const active: string[] = [];
-    if (filters.cuisines.length > 0) active.push(`${filters.cuisines.length} cuisines`);
-    if (filters.dietaryRestrictions.length > 0) active.push(`${filters.dietaryRestrictions.length} dietary`);
-    if (filters.maxCookTime) active.push(`≤${filters.maxCookTime}min`);
-    if (filters.difficulty.length > 0) active.push(`${filters.difficulty.length} difficulty`);
-    
-    setActiveFilters(active);
-    setShowFilterModal(false);
-    
-    // Save filters to storage
-    try {
-      await filterStorage.saveFilters(filters);
-      console.log('💾 Filters saved to storage');
-    } catch (error) {
-      console.error('❌ Error saving filters:', error);
-    }
+    // Update active filters display and save to storage (using hook functions)
+    updateActiveFilters();
+    await saveFilters();
+    closeFilterModal();
     
     // Apply filters to API call using paginated endpoint
     console.log('🔍 Filters applied:', filters);
@@ -1750,17 +1648,8 @@ export default function HomeScreen() {
   };
 
   const clearFilters = async () => {
-    const defaultFilters = filterStorage.getDefaultFilters();
-    setFilters(defaultFilters);
-    setActiveFilters([]);
-    
-    // Clear filters from storage
-    try {
-      await filterStorage.clearFilters();
-      console.log('🗑️ Filters cleared from storage');
-    } catch (error) {
-      console.error('❌ Error clearing filters from storage:', error);
-    }
+    // Reset filters using hook function (handles storage and state)
+    await resetFilters();
     
     // Reload original recipes without filters using paginated endpoint
     try {
@@ -1819,11 +1708,8 @@ export default function HomeScreen() {
       setFeedbackLoading(recipeId);
       console.log('📱 HomeScreen: Liking recipe', recipeId);
       
-      // Update UI immediately
-      setUserFeedback(prev => ({
-        ...prev,
-        [recipeId]: { liked: true, disliked: false }
-      }));
+      // Update UI immediately (using hook function)
+      updateRecipeFeedback(recipeId, { liked: true, disliked: false });
       
       await recipeApi.likeRecipe(recipeId);
       
@@ -1849,11 +1735,8 @@ export default function HomeScreen() {
       // Error haptic
       HapticPatterns.error();
       
-      // Revert UI state on error
-      setUserFeedback(prev => ({
-        ...prev,
-        [recipeId]: { liked: false, disliked: false }
-      }));
+      // Revert UI state on error (using hook function)
+      updateRecipeFeedback(recipeId, { liked: false, disliked: false });
       
       Alert.alert('Error', 'Failed to like recipe');
     } finally {
@@ -1866,11 +1749,8 @@ export default function HomeScreen() {
       setFeedbackLoading(recipeId);
       console.log('📱 HomeScreen: Disliking recipe', recipeId);
       
-      // Update UI immediately
-      setUserFeedback(prev => ({
-        ...prev,
-        [recipeId]: { liked: false, disliked: true }
-      }));
+      // Update UI immediately (using hook function)
+      updateRecipeFeedback(recipeId, { liked: false, disliked: true });
       
       await recipeApi.dislikeRecipe(recipeId);
       
@@ -1896,11 +1776,8 @@ export default function HomeScreen() {
       // Error haptic
       HapticPatterns.error();
       
-      // Revert UI state on error
-      setUserFeedback(prev => ({
-        ...prev,
-        [recipeId]: { liked: false, disliked: false }
-      }));
+      // Revert UI state on error (using hook function)
+      updateRecipeFeedback(recipeId, { liked: false, disliked: false });
       
       Alert.alert('Error', 'Failed to dislike recipe');
     } finally {
@@ -3602,7 +3479,7 @@ export default function HomeScreen() {
       {/* Filter Modal */}
       <FilterModal
         visible={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
+        onClose={closeFilterModal}
         onApply={applyFilters}
         filters={filters}
         onFilterChange={handleFilterChange}
@@ -3733,10 +3610,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
         <RecipeActionMenu
           visible={actionMenuVisible}
           recipe={selectedRecipeForMenu}
-          onClose={() => {
-            setActionMenuVisible(false);
-            setSelectedRecipeForMenu(null);
-          }}
+          onClose={closeActionMenu}
           onAddToMealPlan={handleAddToMealPlan}
           onViewSimilar={handleViewSimilar}
           onHealthify={handleHealthify}
