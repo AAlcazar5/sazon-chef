@@ -59,6 +59,11 @@ import {
   DIFFICULTY_OPTIONS,
 } from '../../utils/filterUtils';
 
+// Extracted hooks
+import { useViewMode } from '../../hooks/useViewMode';
+import { useMealPrepMode } from '../../hooks/useMealPrepMode';
+import { useTimeAwareMode } from '../../hooks/useTimeAwareMode';
+
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
   const { colorScheme } = useColorScheme();
@@ -88,17 +93,14 @@ export default function HomeScreen() {
   const [feedbackLoading, setFeedbackLoading] = useState<string | null>(null);
   const [userFeedback, setUserFeedback] = useState<Record<string, UserFeedback>>({});
 
-  // View mode state (grid/list)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const VIEW_MODE_STORAGE_KEY = '@sazon_view_mode';
+  // View mode state (grid/list) - using extracted hook
+  const { viewMode, setViewMode, recipesPerPage: RECIPES_PER_PAGE, isLoaded: viewModeLoaded } = useViewMode('list');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
   const [paginationLoading, setPaginationLoading] = useState(false);
   const [allRecipes, setAllRecipes] = useState<SuggestedRecipe[]>([]);
   const [totalRecipes, setTotalRecipes] = useState(0); // Total recipes in database for pagination
-  // Add +1 to account for the featured recipe at the top
-  const RECIPES_PER_PAGE = viewMode === 'grid' ? 21 : 11; // Grid: 1 featured + 20, List: 1 featured + 10
   
   
   // Featured recipe swipe state (cycle through top 3)
@@ -133,9 +135,8 @@ export default function HomeScreen() {
   // First-time user guidance
   const [showFirstTimeTooltip, setShowFirstTimeTooltip] = useState(false);
 
-  // Meal prep mode state
-  const [mealPrepMode, setMealPrepMode] = useState(false);
-  const MEAL_PREP_STORAGE_KEY = '@sazon_meal_prep_mode';
+  // Meal prep mode state - using extracted hook
+  const { mealPrepMode, setMealPrepMode, toggleMealPrepMode, isLoaded: mealPrepLoaded } = useMealPrepMode();
 
   // Quick macro filters (Home Page 2.0)
   const [quickMacroFilters, setQuickMacroFilters] = useState<{
@@ -148,18 +149,8 @@ export default function HomeScreen() {
     lowCalorie: false,
   });
 
-  // Time-aware suggestions toggle (Home Page 2.0)
-  const [timeAwareMode, setTimeAwareMode] = useState(true);
-  const TIME_AWARE_STORAGE_KEY = '@sazon_time_aware_mode';
-
-  // Get current meal period for display (Home Page 2.0)
-  const currentMealPeriod = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour >= 6 && hour < 11) return { label: 'Breakfast', emoji: '🌅', period: 'breakfast' };
-    if (hour >= 11 && hour < 15) return { label: 'Lunch', emoji: '☀️', period: 'lunch' };
-    if (hour >= 15 && hour < 21) return { label: 'Dinner', emoji: '🌙', period: 'dinner' };
-    return { label: 'Late Night', emoji: '🌃', period: 'snack' };
-  }, []);
+  // Time-aware suggestions toggle (Home Page 2.0) - using extracted hook
+  const { timeAwareMode, setTimeAwareMode, toggleTimeAwareMode, currentMealPeriod, isLoaded: timeAwareLoaded } = useTimeAwareMode();
 
   // Recipe of the Day (Home Page 2.0)
   const [recipeOfTheDay, setRecipeOfTheDay] = useState<SuggestedRecipe | null>(null);
@@ -211,14 +202,9 @@ export default function HomeScreen() {
           if (active.length > 0) {
             setLoadingFromFilters(true); // Prevent useApi from loading
             try {
-              // Use stored view mode (if available) so grid mode loads 20 cards immediately
-              const storedViewMode = await AsyncStorage.getItem(VIEW_MODE_STORAGE_KEY);
-              const effectiveViewMode = storedViewMode === 'grid' || storedViewMode === 'list' ? storedViewMode : viewMode;
-              const limit = effectiveViewMode === 'grid' ? 21 : 11;
-
               const response = await recipeApi.getAllRecipes({
                 page: 0,
-                limit,
+                limit: RECIPES_PER_PAGE,
               cuisines: savedFilters.cuisines.length > 0 ? savedFilters.cuisines : undefined,
               dietaryRestrictions: savedFilters.dietaryRestrictions.length > 0 ? savedFilters.dietaryRestrictions : undefined,
               maxCookTime: savedFilters.maxCookTime || undefined,
@@ -275,56 +261,13 @@ export default function HomeScreen() {
     loadSavedFilters();
   }, []);
 
-  // Load meal prep mode preference on mount
-  useEffect(() => {
-    const loadMealPrepMode = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(MEAL_PREP_STORAGE_KEY);
-        if (saved !== null) {
-          setMealPrepMode(saved === 'true');
-        }
-      } catch (error) {
-        console.error('❌ Error loading meal prep mode:', error);
-      }
-    };
-    loadMealPrepMode();
-  }, []);
 
-  // Load view mode preference on mount
-  useEffect(() => {
-    const loadPreferences = async () => {
-      try {
-        const savedViewMode = await AsyncStorage.getItem(VIEW_MODE_STORAGE_KEY);
-        if (savedViewMode === 'grid' || savedViewMode === 'list') {
-          setViewMode(savedViewMode);
-        }
-        
-      } catch (error) {
-        console.error('❌ Error loading preferences:', error);
-      }
-    };
-    loadPreferences();
-  }, []);
 
   // Reset pagination when view mode changes (grid/list)
   useEffect(() => {
     setCurrentPage(0); // Reset to first page when view mode changes
   }, [viewMode]);
 
-  // Load time-aware mode preference on mount (Home Page 2.0)
-  useEffect(() => {
-    const loadTimeAwareMode = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(TIME_AWARE_STORAGE_KEY);
-        if (saved !== null) {
-          setTimeAwareMode(saved === 'true');
-        }
-      } catch (error) {
-        console.error('❌ Error loading time-aware mode:', error);
-      }
-    };
-    loadTimeAwareMode();
-  }, []);
 
   // Fetch Recipe of the Day on mount (Home Page 2.0)
   useEffect(() => {
@@ -375,24 +318,12 @@ export default function HomeScreen() {
     loadPersonalizedData();
   }, [user?.id]);
 
-  // Fetch quick meals and perfect matches when filters are loaded and when filters/meal prep mode changes
-  useEffect(() => {
-    if (filtersLoaded && !searchQuery) { // Only fetch when not searching
-      fetchQuickMeals();
-      fetchPerfectMatches();
-    }
-  }, [filtersLoaded, filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, mealPrepMode, searchQuery, fetchQuickMeals, fetchPerfectMatches]);
 
 
   // Toggle view mode
-  const handleToggleViewMode = async (mode: 'grid' | 'list') => {
-    try {
-      setViewMode(mode);
-      await AsyncStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
-      HapticPatterns.buttonPress();
-    } catch (error) {
-      console.error('❌ Error saving view mode:', error);
-    }
+  const handleToggleViewMode = (mode: 'grid' | 'list') => {
+    setViewMode(mode); // Hook handles persistence automatically
+    HapticPatterns.buttonPress();
   };
 
 
@@ -527,70 +458,65 @@ export default function HomeScreen() {
 
   // Toggle meal prep mode
   const handleToggleMealPrepMode = async (value: boolean) => {
+    setMealPrepMode(value); // Hook handles persistence automatically
+    HapticPatterns.buttonPress();
+
+    // Show toast notification
+    showToast(
+      value
+        ? '🍱 Meal prep mode enabled - showing meal prep friendly recipes!'
+        : '🍽️ Meal prep mode disabled - showing regular recipes',
+      'info',
+      2000
+    );
+
+    // Refetch recipes with meal prep filter
     try {
-      setMealPrepMode(value);
-      await AsyncStorage.setItem(MEAL_PREP_STORAGE_KEY, value.toString());
-      HapticPatterns.buttonPress();
-      
-      // Show toast notification
-      showToast(
-        value 
-          ? '🍱 Meal prep mode enabled - showing meal prep friendly recipes!' 
-          : '🍽️ Meal prep mode disabled - showing regular recipes',
-        'info',
-        2000
-      );
-      
-      // Refetch recipes with meal prep filter
-      try {
-        setLoadingFromFilters(true);
-        const response = await recipeApi.getAllRecipes({
-          page: 0,
-          limit: RECIPES_PER_PAGE,
-          cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-          dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-          maxCookTime: filters.maxCookTime || undefined,
-          difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-          mealPrepMode: value,
-          search: searchQuery || undefined, // Preserve search query
-        });
+      setLoadingFromFilters(true);
+      const response = await recipeApi.getAllRecipes({
+        page: 0,
+        limit: RECIPES_PER_PAGE,
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        maxCookTime: filters.maxCookTime || undefined,
+        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+        mealPrepMode: value,
+        search: searchQuery || undefined, // Preserve search query
+      });
 
-        const responseData = response.data;
-        let recipes: SuggestedRecipe[];
-        let total: number;
+      const responseData = response.data;
+      let recipes: SuggestedRecipe[];
+      let total: number;
 
-        if (responseData && responseData.recipes && responseData.pagination) {
-          recipes = responseData.recipes;
-          total = responseData.pagination.total;
-        } else if (Array.isArray(responseData)) {
-          recipes = responseData;
-          total = recipes.length;
-        } else {
-          console.error('❌ Unexpected API response format:', responseData);
-          setLoadingFromFilters(false);
-          return;
-        }
-
-        const deduplicated = deduplicateRecipes(recipes);
-        setTotalRecipes(total);
-        setAllRecipes(deduplicated);
-        setSuggestedRecipes(deduplicated);
-        setCurrentPage(0);
-        
-        // Initialize feedback state
-        const initialFeedback: Record<string, UserFeedback> = {};
-        deduplicated.forEach((recipe: SuggestedRecipe) => {
-          initialFeedback[recipe.id] = { liked: false, disliked: false };
-        });
-        setUserFeedback(initialFeedback);
-        setInitialRecipesLoaded(true);
+      if (responseData && responseData.recipes && responseData.pagination) {
+        recipes = responseData.recipes;
+        total = responseData.pagination.total;
+      } else if (Array.isArray(responseData)) {
+        recipes = responseData;
+        total = recipes.length;
+      } else {
+        console.error('❌ Unexpected API response format:', responseData);
         setLoadingFromFilters(false);
-      } catch (error: any) {
-        console.error('❌ Error fetching meal prep recipes:', error);
-        setLoadingFromFilters(false);
+        return;
       }
-    } catch (error) {
-      console.error('❌ Error saving meal prep mode:', error);
+
+      const deduplicated = deduplicateRecipes(recipes);
+      setTotalRecipes(total);
+      setAllRecipes(deduplicated);
+      setSuggestedRecipes(deduplicated);
+      setCurrentPage(0);
+
+      // Initialize feedback state
+      const initialFeedback: Record<string, UserFeedback> = {};
+      deduplicated.forEach((recipe: SuggestedRecipe) => {
+        initialFeedback[recipe.id] = { liked: false, disliked: false };
+      });
+      setUserFeedback(initialFeedback);
+      setInitialRecipesLoaded(true);
+      setLoadingFromFilters(false);
+    } catch (error: any) {
+      console.error('❌ Error fetching meal prep recipes:', error);
+      setLoadingFromFilters(false);
       HapticPatterns.error();
     }
   };
@@ -1027,6 +953,14 @@ export default function HomeScreen() {
       }
     }
   }, [filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, mealPrepMode]);
+
+  // Fetch quick meals and perfect matches when filters are loaded and when filters/meal prep mode changes
+  useEffect(() => {
+    if (filtersLoaded && !searchQuery) { // Only fetch when not searching
+      fetchQuickMeals();
+      fetchPerfectMatches();
+    }
+  }, [filtersLoaded, filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, mealPrepMode, searchQuery, fetchQuickMeals, fetchPerfectMatches]);
 
   // Fetch recipes for a specific page from the server
   const fetchRecipesForPage = useCallback(async (page: number) => {
@@ -1497,17 +1431,9 @@ export default function HomeScreen() {
   };
 
   // Toggle time-aware mode (Home Page 2.0)
-  const handleToggleTimeAwareMode = async () => {
-    const newValue = !timeAwareMode;
-    setTimeAwareMode(newValue);
+  const handleToggleTimeAwareMode = () => {
+    toggleTimeAwareMode(); // Hook handles state and persistence automatically
     HapticPatterns.buttonPress();
-
-    // Save preference
-    try {
-      await AsyncStorage.setItem(TIME_AWARE_STORAGE_KEY, newValue ? 'true' : 'false');
-    } catch (error) {
-      console.error('❌ Error saving time-aware mode:', error);
-    }
 
     // Refresh recipes with new setting
     onRefresh();
