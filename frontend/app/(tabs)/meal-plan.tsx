@@ -23,6 +23,8 @@ import { buttonAccessibility, iconButtonAccessibility, inputAccessibility, switc
 import { useColorScheme } from 'nativewind';
 import { useApi } from '../../hooks/useApi';
 import { useMealPlanData } from '../../hooks/useMealPlanData';
+import { useMealCompletion } from '../../hooks/useMealCompletion';
+import { useGenerationState } from '../../hooks/useGenerationState';
 import { mealPlanApi, aiRecipeApi, shoppingListApi, userApi, costTrackingApi, mealPrepApi } from '../../lib/api';
 import type { WeeklyPlan, DailySuggestion } from '../../types';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -1071,6 +1073,69 @@ export default function MealPlanScreen() {
     isMountedRef,
     mealTypeToHour,
   });
+
+  // Use meal completion hook
+  const {
+    showNotesModal,
+    editingMealId,
+    editingMealName,
+    editingNotes,
+    showCelebrationToast,
+    celebrationMessage,
+    quickTemplates,
+    handleToggleMealCompletion,
+    handleOpenNotes,
+    handleSaveNotes,
+    handleCloseNotesModal,
+    insertBulletPoint,
+    insertTemplate,
+    setEditingNotes,
+    setShowCelebrationToast,
+  } = useMealCompletion({
+    hourlyMeals,
+    weeklyPlan,
+    mealCompletionStatus,
+    mealNotes,
+    setMealCompletionStatus,
+    setMealNotes,
+  });
+
+  // Use generation state hook
+  const {
+    generatingPlan,
+    showMealSnackSelector,
+    selectedMeals,
+    selectedSnacks,
+    maxTotalPrepTime,
+    maxWeeklyBudget,
+    generationType,
+    showDayMealsModal,
+    selectedDayForModal,
+    generatingShoppingList,
+    showSuccessModal,
+    successMessage,
+    showShoppingListSuccessModal,
+    shoppingListSuccessMessage,
+    showShoppingListNameModal,
+    shoppingListName,
+    setGeneratingPlan,
+    setShowMealSnackSelector,
+    setSelectedMeals,
+    setSelectedSnacks,
+    setMaxTotalPrepTime,
+    setMaxWeeklyBudget,
+    setGenerationType,
+    setShowDayMealsModal,
+    setSelectedDayForModal,
+    setGeneratingShoppingList,
+    setShowSuccessModal,
+    setSuccessMessage,
+    setShowShoppingListSuccessModal,
+    setShoppingListSuccessMessage,
+    setShowShoppingListNameModal,
+    setShoppingListName,
+  } = useGenerationState();
+
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
   const [showTimePickerModal, setShowTimePickerModal] = useState(false);
   const [selectedHour, setSelectedHour] = useState(12);
@@ -1081,30 +1146,6 @@ export default function MealPlanScreen() {
   // Drag and drop state
   const [draggingMeal, setDraggingMeal] = useState<{ hour: number; mealIndex: number; meal: any } | null>(null);
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
-  
-  // AI Generation state
-  const [generatingPlan, setGeneratingPlan] = useState(false);
-  const [showMealSnackSelector, setShowMealSnackSelector] = useState(false);
-  const [selectedMeals, setSelectedMeals] = useState(3);
-  const [selectedSnacks, setSelectedSnacks] = useState(1);
-  const [maxTotalPrepTime, setMaxTotalPrepTime] = useState(60); // Default: 60 minutes (1 hour)
-  const [maxWeeklyBudget, setMaxWeeklyBudget] = useState<number | null>(null); // Weekly budget in dollars
-  const [generationType, setGenerationType] = useState<'fullDay' | 'weekly' | null>(null);
-  const [showDayMealsModal, setShowDayMealsModal] = useState(false);
-  const [selectedDayForModal, setSelectedDayForModal] = useState<Date | null>(null);
-  
-  // Shopping list generation state
-  const [generatingShoppingList, setGeneratingShoppingList] = useState(false);
-  
-  // Success modal state
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
-  
-  // Quick action badge state
-  const [showShoppingListSuccessModal, setShowShoppingListSuccessModal] = useState(false);
-  const [shoppingListSuccessMessage, setShoppingListSuccessMessage] = useState({ title: '', message: '' });
-  const [showShoppingListNameModal, setShowShoppingListNameModal] = useState(false);
-  const [shoppingListName, setShoppingListName] = useState('');
   
   // Cost analysis state
   const [costAnalysis, setCostAnalysis] = useState<any>(null);
@@ -1125,11 +1166,7 @@ export default function MealPlanScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollPositionRef = useRef(0);
   
-  // Meal enhancement state
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [editingMealId, setEditingMealId] = useState<string | null>(null);
-  const [editingMealName, setEditingMealName] = useState<string>('');
-  const [editingNotes, setEditingNotes] = useState('');
+  // Meal enhancement state (swap functionality)
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapSuggestions, setSwapSuggestions] = useState<any[]>([]);
   const [selectedMealForSwap, setSelectedMealForSwap] = useState<any | null>(null);
@@ -1864,123 +1901,6 @@ export default function MealPlanScreen() {
     setTotalPrepTime(prev => prev + (newMeal.cookTime || 0));
   };
 
-  // Celebration toast state
-  const [showCelebrationToast, setShowCelebrationToast] = useState(false);
-  const [celebrationMessage, setCelebrationMessage] = useState('');
-
-  // Handle meal completion toggle
-  const handleToggleMealCompletion = async (mealId: string, isCompleted: boolean) => {
-    try {
-      await mealPlanApi.updateMealCompletion(mealId, isCompleted);
-      setMealCompletionStatus(prev => ({
-        ...prev,
-        [mealId]: isCompleted
-      }));
-      
-      if (isCompleted) {
-        // Find the meal name for celebration message
-        // Check hourlyMeals first (24-hour view)
-        let meal = Object.values(hourlyMeals)
-          .flat()
-          .find(m => m.mealPlanMealId === mealId);
-        
-        // If not found, check weeklyPlan (compact/collapsible views)
-        if (!meal && weeklyPlan?.weeklyPlan) {
-          const allMeals: any[] = [];
-          Object.values(weeklyPlan.weeklyPlan).forEach((day: any) => {
-            if (day?.meals) {
-              if (day.meals.breakfast?.recipe) allMeals.push(day.meals.breakfast.recipe);
-              if (day.meals.lunch?.recipe) allMeals.push(day.meals.lunch.recipe);
-              if (day.meals.dinner?.recipe) allMeals.push(day.meals.dinner.recipe);
-              if (day.meals.snacks) {
-                day.meals.snacks.forEach((snack: any) => {
-                  if (snack?.recipe) allMeals.push(snack.recipe);
-                });
-              }
-            }
-          });
-          meal = allMeals.find(m => m.mealPlanMealId === mealId);
-        }
-        
-        const mealName = meal?.name || meal?.title || 'Meal';
-        
-        // Show celebration
-        setCelebrationMessage(`🎉 ${mealName} completed!`);
-        setShowCelebrationToast(true);
-        
-        // Auto-hide toast after 2 seconds
-        setTimeout(() => {
-          setShowCelebrationToast(false);
-        }, 2000);
-      }
-      
-      HapticPatterns.success();
-    } catch (error: any) {
-      console.error('Error updating meal completion:', error);
-      Alert.alert('Error', 'Failed to update meal completion status');
-    }
-  };
-
-  // Handle meal notes
-  const handleOpenNotes = (mealId: string) => {
-    // Find the meal to get its name
-    let mealName = '';
-    Object.values(hourlyMeals).forEach((meals) => {
-      const meal = meals.find(m => m.mealPlanMealId === mealId);
-      if (meal) {
-        mealName = meal.name || meal.title || 'Meal';
-      }
-    });
-    
-    setEditingMealId(mealId);
-    setEditingMealName(mealName);
-    setEditingNotes(mealNotes[mealId] || '');
-    setShowNotesModal(true);
-  };
-  
-  // Quick formatting helpers
-  const insertBulletPoint = () => {
-    const cursorPos = editingNotes.length;
-    setEditingNotes(prev => prev + '\n• ');
-  };
-  
-  const insertTemplate = (template: string) => {
-    setEditingNotes(prev => prev + (prev ? '\n\n' : '') + template);
-  };
-  
-  const quickTemplates = [
-    { label: 'Taste Notes', text: 'Taste: \n• \n• ' },
-    { label: 'Modifications', text: 'Modifications:\n• \n• ' },
-    { label: 'Prep Tips', text: 'Prep Tips:\n• \n• ' },
-    { label: 'Rating', text: 'Rating: ⭐⭐⭐⭐⭐\n\nNotes: ' },
-  ];
-
-  const handleSaveNotes = async () => {
-    if (!editingMealId) return;
-
-    try {
-      await mealPlanApi.updateMealNotes(editingMealId, editingNotes);
-      setMealNotes(prev => ({
-        ...prev,
-        [editingMealId]: editingNotes
-      }));
-      setShowNotesModal(false);
-      setEditingMealId(null);
-      setEditingMealName('');
-      setEditingNotes('');
-      HapticPatterns.success();
-    } catch (error: any) {
-      console.error('Error saving meal notes:', error);
-      Alert.alert('Error', 'Failed to save meal notes');
-    }
-  };
-  
-  const handleCloseNotesModal = () => {
-    setShowNotesModal(false);
-    setEditingMealId(null);
-    setEditingMealName('');
-    setEditingNotes('');
-  };
 
   // Handle meal swap suggestions - inline version
   const handleGetSwapSuggestions = async (mealId: string, meal: any) => {
