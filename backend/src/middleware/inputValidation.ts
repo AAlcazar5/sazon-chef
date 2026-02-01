@@ -44,15 +44,18 @@ export const validatePassword = (password: string): { valid: boolean; message?: 
  */
 export const checkValidationErrors = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
-  
+
   if (!errors.isEmpty()) {
+    // Get the first error message for a clean user-facing error
+    const firstError = errors.array()[0];
+    const errorMessage = firstError.msg || 'Please check your input and try again';
+
     return res.status(400).json({
-      error: 'Validation failed',
-      message: 'Please check your input and try again',
-      details: errors.array()
+      success: false,
+      error: errorMessage
     });
   }
-  
+
   next();
 };
 

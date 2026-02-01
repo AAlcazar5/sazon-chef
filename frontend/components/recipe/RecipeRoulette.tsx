@@ -127,16 +127,18 @@ export default function RecipeRoulette({
           
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           
-          // Animate card off screen
+          // Run position animation separately since it requires useNativeDriver: false
+          Animated.timing(position, {
+            toValue: { 
+              x: direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5, 
+              y: gesture.dy 
+            },
+            duration: 300,
+            useNativeDriver: false,
+          }).start();
+          
+          // Run native driver animations in parallel
           Animated.parallel([
-            Animated.timing(position, {
-              toValue: { 
-                x: direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5, 
-                y: gesture.dy 
-              },
-              duration: 300,
-              useNativeDriver: false,
-            }),
             Animated.timing(opacity, {
               toValue: 0,
               duration: 300,
@@ -161,11 +163,15 @@ export default function RecipeRoulette({
         } else {
           // Spring back to center
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          
+          // Run position animation separately since it requires useNativeDriver: false
+          Animated.spring(position, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+          }).start();
+          
+          // Run native driver animations in parallel
           Animated.parallel([
-            Animated.spring(position, {
-              toValue: { x: 0, y: 0 },
-              useNativeDriver: false,
-            }),
             Animated.spring(rotation, {
               toValue: 0,
               useNativeDriver: true,

@@ -5,17 +5,18 @@ import {
   Text,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { apiClient } from '../lib/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useColorScheme } from 'nativewind';
@@ -122,14 +123,12 @@ export default function WeightInputScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-white dark:bg-gray-900"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+      <KeyboardAvoidingContainer>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="w-full max-w-md self-center">
           {/* Back button */}
           <HapticTouchableOpacity
@@ -270,6 +269,7 @@ export default function WeightInputScreen() {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
+    </SafeAreaView>
   );
 }

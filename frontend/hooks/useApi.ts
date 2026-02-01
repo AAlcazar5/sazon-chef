@@ -30,19 +30,43 @@ export function useApi<T = any>(
       setLoading(true);
       setError(null);
       
-      const response = await api.get(url);
-      setData(response.data);
+      console.log(`🔵 useApi: Fetching ${url}`);
+      const response = await api.get(url, {
+        // Force fresh data by adding cache-busting parameter
+        params: { _t: Date.now() },
+        // Ensure we get the response even if cached
+        validateStatus: (status) => status < 500
+      });
+      
+      console.log(`✅ useApi: Received response from ${url}`, {
+        status: response.status,
+        dataType: typeof response.data,
+        isArray: Array.isArray(response.data),
+        dataLength: Array.isArray(response.data) ? response.data.length : 'not array',
+        hasData: !!response.data,
+        dataPreview: Array.isArray(response.data) && response.data.length > 0 
+          ? `First item: ${response.data[0]?.title || response.data[0]?.id || 'unknown'}` 
+          : 'no preview'
+      });
+      
+      // Handle both array and object responses
+      if (response.data) {
+        setData(response.data);
+      } else {
+        console.warn(`⚠️ useApi: Empty response data from ${url}`);
+        setData(null);
+      }
       
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred';
       setError(errorMessage);
       
+      console.error(`❌ useApi: Error fetching ${url}:`, errorMessage, err);
+      
       // Show alert if configured to do so
       if (options.showErrorAlert !== false) {
         Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
       }
-      
-      console.error('API Error:', err);
       
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -186,6 +187,7 @@ export default function EditMacroGoalsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <KeyboardAvoidingContainer>
       {/* Header */}
       <View className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
         <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
@@ -390,6 +392,7 @@ export default function EditMacroGoalsScreen() {
         {/* Bottom padding */}
         <View className="h-8" />
       </ScrollView>
+      </KeyboardAvoidingContainer>
     </SafeAreaView>
   );
 }

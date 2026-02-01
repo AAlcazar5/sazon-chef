@@ -5,12 +5,12 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
-  SafeAreaView,
+  Alert,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAuth';
@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import FormInput from '../components/ui/FormInput';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { Colors, DarkColors } from '../constants/Colors';
 
 interface FormErrors {
@@ -183,12 +184,8 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+      <KeyboardAvoidingContainer>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
@@ -333,7 +330,7 @@ export default function RegisterScreen() {
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </SafeAreaView>
   );
 }

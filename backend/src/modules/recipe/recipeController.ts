@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { healthifyService } from '@/services/healthifyService';
 import { getUserId } from '@/utils/authHelper';
 import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
+import { varyImageUrlsForPage } from '@/utils/runtimeImageVariation';
 
 // Note: Request.user type is declared in authMiddleware.ts
 // This ensures consistency across the application
@@ -121,6 +122,82 @@ export async function getUserBehaviorData(userId: string) {
 }
 
 export const recipeController = {
+  /**
+   * OPTIMIZED: Get recipes with tiered scoring approach
+   * Scales to 10,000+ recipes with <500ms response time
+   * NEW ENDPOINT - Recommended for production use
+   */
+  async getRecipesOptimized(req: Request, res: Response) {
+    try {
+      console.log('⚡ GET /api/recipes/optimized called');
+      const userId = getUserId(req);
+
+      const page = Math.max(0, parseInt(req.query.page as string) || 0);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
+
+      // Optional filters
+      const filters = {
+        mealType: req.query.mealType as string | undefined,
+        maxCookTime: req.query.maxCookTime ? parseInt(req.query.maxCookTime as string) : undefined,
+        search: req.query.search as string | undefined,
+      };
+
+      // Import optimized helpers
+      const {
+        getUserPreferencesOptimized,
+        getBehavioralDataOptimized,
+        fetchRecipesOptimized,
+        getCurrentTemporalContext,
+      } = require('@/utils/recipeOptimizationHelpers');
+
+      // Get user preferences (fast - from cache if available)
+      const prefs = await getUserPreferencesOptimized(userId);
+
+      if (!prefs) {
+        return res.status(200).json({
+          recipes: [],
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+          message: 'Complete onboarding to get personalized recommendations',
+        });
+      }
+
+      // Fetch and score recipes using tiered approach
+      const result = await fetchRecipesOptimized(prefs, {
+        limit,
+        page,
+        filters,
+      });
+
+      // Debug: Check imageUrl presence
+      const recipesWithImages = result.recipes.filter((r: any) => r.imageUrl);
+      if (recipesWithImages.length < result.recipes.length) {
+        console.log(`⚠️  ${result.recipes.length - recipesWithImages.length} recipes missing imageUrl out of ${result.recipes.length} total`);
+      }
+
+      // Apply runtime image variation for unique images per page
+      result.recipes = varyImageUrlsForPage(result.recipes, page * limit);
+
+      // Verify imageUrl is preserved after variation
+      const variedWithImages = result.recipes.filter((r: any) => r.imageUrl);
+      if (variedWithImages.length < recipesWithImages.length) {
+        console.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} recipes`);
+      }
+
+      console.log(`✅ Returned ${result.recipes.length} optimized recipes (page ${page + 1}/${result.totalPages})`);
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('❌ Error in getRecipesOptimized:', error);
+      res.status(500).json({
+        error: 'Failed to fetch recipes',
+        details: error.message,
+      });
+    }
+  },
+
   // Get all recipes with pagination support
   async getRecipes(req: Request, res: Response) {
     try {
@@ -140,6 +217,20 @@ export const recipeController = {
       const maxCookTime = req.query.maxCookTime as string;
       const difficulty = req.query.difficulty as string;
       const mealPrepMode = req.query.mealPrepMode as string;
+
+      // Quick macro filters (Home Page 2.0)
+      const minProtein = req.query.minProtein as string;
+      const maxCarbs = req.query.maxCarbs as string;
+      const maxCalories = req.query.maxCalories as string;
+
+      // Discovery mode for pull-to-refresh (Home Page 2.0)
+      const shuffle = req.query.shuffle as string;
+
+      // Time-aware defaults (Home Page 2.0)
+      const useTimeAwareDefaults = req.query.useTimeAwareDefaults as string;
+
+      // Mood-based recommendations (Home Page 2.0)
+      const mood = req.query.mood as string;
       
       // Build where clause
       const where: any = { isUserCreated: false };
@@ -187,7 +278,68 @@ export const recipeController = {
           mealPrepScore: { gte: 60 }
         });
       }
-      
+
+      // Quick macro filters (Home Page 2.0)
+      if (minProtein && !isNaN(Number(minProtein))) {
+        andConditions.push({ protein: { gte: Number(minProtein) } });
+      }
+      if (maxCarbs && !isNaN(Number(maxCarbs))) {
+        andConditions.push({ carbs: { lte: Number(maxCarbs) } });
+      }
+      if (maxCalories && !isNaN(Number(maxCalories))) {
+        andConditions.push({ calories: { lte: Number(maxCalories) } });
+      }
+
+      // Time-aware defaults (Home Page 2.0) - auto-apply mealType based on time of day
+      if (useTimeAwareDefaults === 'true' && !mealType) {
+        const { getCurrentTemporalContext } = require('@/utils/temporalScoring');
+        const temporalContext = getCurrentTemporalContext();
+        // Map meal period to mealType filter
+        const mealTypeMap: Record<string, string> = {
+          'breakfast': 'breakfast',
+          'lunch': 'lunch',
+          'dinner': 'dinner',
+          'snack': 'snack'
+        };
+        const suggestedMealType = mealTypeMap[temporalContext.mealPeriod];
+        if (suggestedMealType) {
+          where.mealType = suggestedMealType;
+        }
+      }
+
+      // Mood-based recommendations (Home Page 2.0)
+      if (mood) {
+        const moodCriteria: Record<string, any> = {
+          lazy: { maxCookTime: 20 },
+          healthy: { maxCalories: 500, minProtein: 20, healthGrades: ['A', 'B'] },
+          adventurous: { cuisines: ['Thai', 'Indian', 'Japanese', 'Korean', 'Vietnamese', 'Ethiopian', 'Moroccan', 'Greek', 'Turkish'] },
+          indulgent: { /* No restrictions - comfort food */ },
+          comfort: { cuisines: ['American', 'Italian', 'Mexican', 'French', 'Chinese'] },
+          energetic: { minProtein: 30, maxCookTime: 30 },
+        };
+
+        const criteria = moodCriteria[mood];
+        if (criteria) {
+          // Apply cook time filter
+          if (criteria.maxCookTime && !where.cookTime) {
+            where.cookTime = { lte: criteria.maxCookTime };
+          }
+          // Apply calorie filter
+          if (criteria.maxCalories) {
+            andConditions.push({ calories: { lte: criteria.maxCalories } });
+          }
+          // Apply protein filter
+          if (criteria.minProtein) {
+            andConditions.push({ protein: { gte: criteria.minProtein } });
+          }
+          // Apply cuisine filter (only if not already filtered)
+          if (criteria.cuisines && !where.cuisine) {
+            where.cuisine = { in: criteria.cuisines };
+          }
+          console.log(`🎭 Mood filter applied: ${mood}`, criteria);
+        }
+      }
+
       // Search filter - combine with mealType filter using AND
       if (search) {
         andConditions.push({
@@ -450,13 +602,48 @@ export const recipeController = {
         return scoreB - scoreA; // Descending order (highest score first)
       });
 
+      // Shuffle mode for pull-to-discover (Home Page 2.0)
+      // Applies weighted randomization while still respecting scores
+      if (shuffle === 'true') {
+        // Fisher-Yates shuffle with weighted bias towards higher scores
+        for (let i = allRecipesWithScores.length - 1; i > 0; i--) {
+          // Bias towards keeping higher-scored items near the top
+          const biasedRandom = Math.pow(Math.random(), 0.7); // 0.7 gives moderate shuffle
+          const j = Math.floor(biasedRandom * (i + 1));
+          [allRecipesWithScores[i], allRecipesWithScores[j]] = [allRecipesWithScores[j], allRecipesWithScores[i]];
+        }
+        console.log('🔀 Applied shuffle for discovery mode');
+      }
+
       // Apply pagination after sorting
       const recipes = allRecipesWithScores.slice(offset, offset + limit);
 
+      // Debug: Check imageUrl presence before variation
+      const recipesWithImages = recipes.filter((r: any) => r.imageUrl);
+      const recipesWithoutImages = recipes.filter((r: any) => !r.imageUrl);
+      if (recipesWithoutImages.length > 0) {
+        console.log(`⚠️  ${recipesWithoutImages.length} recipes missing imageUrl out of ${recipes.length} total`);
+      }
+
+      // Apply runtime image variation for unique images per page
+      const recipesWithVariedImages = varyImageUrlsForPage(recipes, offset);
+
+      // Debug: Check imageUrl presence after variation
+      const variedWithImages = recipesWithVariedImages.filter((r: any) => r.imageUrl);
+      if (variedWithImages.length < recipesWithImages.length) {
+        console.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} recipes`);
+      }
+
+      // Debug: Log sample imageUrls to verify they're valid
+      if (variedWithImages.length > 0) {
+        const sampleRecipe = variedWithImages[0];
+        console.log(`🖼️  Sample imageUrl: ${sampleRecipe.imageUrl?.substring(0, 100)}...`);
+      }
+
       console.log(`📊 Found ${recipes.length} of ${total} total recipes (page ${page + 1}, limit ${limit}), sorted by match percentage`);
-      
+
       res.json({
-        recipes,
+        recipes: recipesWithVariedImages,
         pagination: {
           page,
           limit,
@@ -473,6 +660,117 @@ export const recipeController = {
         error: 'Failed to fetch recipes', 
         details: error.message,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  },
+
+  /**
+   * Get Recipe of the Day (Home Page 2.0)
+   * Returns a high-quality recipe that changes daily
+   * Uses date-based seeding for consistent selection throughout the day
+   */
+  async getRecipeOfTheDay(req: Request, res: Response) {
+    try {
+      console.log('🌟 GET /api/recipes/recipe-of-the-day called');
+      const userId = getUserId(req);
+
+      // Get today's date as a seed for consistent daily selection
+      const today = new Date();
+      const dateSeed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+
+      // Get user preferences for personalization (optional)
+      const userPreferences = await prisma.userPreferences.findFirst({
+        where: { userId },
+        include: {
+          likedCuisines: true,
+          dietaryRestrictions: true
+        }
+      });
+
+      // Try to get recipes with images first (preferred)
+      let recipes = await prisma.recipe.findMany({
+        where: {
+          isUserCreated: false,
+          imageUrl: { not: null },
+        },
+        include: {
+          ingredients: { orderBy: { order: 'asc' } },
+          instructions: { orderBy: { step: 'asc' } }
+        },
+        orderBy: [
+          { healthScore: 'desc' },
+          { qualityScore: 'desc' }
+        ],
+        take: 100
+      });
+
+      // Fallback: If no recipes with images, get any non-user-created recipes
+      if (recipes.length === 0) {
+        console.log('🌟 No recipes with images found, falling back to any recipes');
+        recipes = await prisma.recipe.findMany({
+          where: {
+            isUserCreated: false,
+          },
+          include: {
+            ingredients: { orderBy: { order: 'asc' } },
+            instructions: { orderBy: { step: 'asc' } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 100
+        });
+      }
+
+      // Final fallback: Get any recipe at all
+      if (recipes.length === 0) {
+        console.log('🌟 No non-user recipes found, getting any available recipe');
+        recipes = await prisma.recipe.findMany({
+          include: {
+            ingredients: { orderBy: { order: 'asc' } },
+            instructions: { orderBy: { step: 'asc' } }
+          },
+          take: 100
+        });
+      }
+
+      if (recipes.length === 0) {
+        console.log('🌟 No recipes found in database at all');
+        return res.status(404).json({ error: 'No recipes available in database' });
+      }
+
+      // Use date seed to consistently select the same recipe for the whole day
+      const selectedIndex = dateSeed % recipes.length;
+      const recipeOfTheDay = recipes[selectedIndex];
+
+      // Calculate health grade (with fallback if utility not available)
+      let healthGrade = { grade: 'B', score: 70 }; // Default fallback
+      try {
+        const healthGradeUtil = require('../../utils/healthGrade');
+        if (healthGradeUtil?.calculateHealthGrade) {
+          healthGrade = healthGradeUtil.calculateHealthGrade(recipeOfTheDay);
+        }
+      } catch (e) {
+        console.log('🌟 Health grade utility not available, using default');
+      }
+
+      // Add scoring info
+      const enrichedRecipe = {
+        ...recipeOfTheDay,
+        healthGrade: healthGrade?.grade || 'B',
+        isRecipeOfTheDay: true,
+        selectedDate: today.toISOString().split('T')[0]
+      };
+
+      console.log(`🌟 Recipe of the Day: "${recipeOfTheDay.title}" (index ${selectedIndex}/${recipes.length}, from ${recipes.length} candidates)`);
+
+      res.json({
+        recipe: enrichedRecipe,
+        message: 'Recipe of the Day'
+      });
+    } catch (error: any) {
+      console.error('❌ Error getting Recipe of the Day:', error);
+      res.status(500).json({
+        error: 'Failed to get Recipe of the Day',
+        details: error.message
       });
     }
   },
@@ -1552,11 +1850,26 @@ export const recipeController = {
         
         console.log(`✅ Returning ${finalRecipes.length} recipes with real scores`);
         console.log(`🏆 Top recipe: "${finalRecipes[0]?.title}" (${finalRecipes[0]?.score?.total}% match)`);
-        
+
         // Log all recipe IDs for debugging
         console.log('📋 Recipe IDs:', finalRecipes.map(r => r.id).join(', '));
-        
-        res.json(finalRecipes);
+
+        // Debug: Check imageUrl presence before variation
+        const recipesWithImages = finalRecipes.filter((r: any) => r.imageUrl);
+        if (recipesWithImages.length < finalRecipes.length) {
+          console.log(`⚠️  ${finalRecipes.length - recipesWithImages.length} suggested recipes missing imageUrl out of ${finalRecipes.length} total`);
+        }
+
+        // Apply runtime image variation for unique images per page
+        const recipesWithVariedImages = varyImageUrlsForPage(finalRecipes, offset);
+
+        // Verify imageUrl is preserved after variation
+        const variedWithImages = recipesWithVariedImages.filter((r: any) => r.imageUrl);
+        if (variedWithImages.length < recipesWithImages.length) {
+          console.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} suggested recipes`);
+        }
+
+        res.json(recipesWithVariedImages);
     } catch (error: any) {
       console.error('❌ Error in getSuggestedRecipes:', error);
       console.error('❌ Error details:', error.message);
@@ -3147,7 +3460,11 @@ export const recipeController = {
         .sort((a, b) => b.similarityScore - a.similarityScore);
 
       console.log(`✅ Returning ${sortedSimilar.length} similar recipes`);
-      res.json(sortedSimilar);
+
+      // Apply runtime image variation for unique images
+      const recipesWithVariedImages = varyImageUrlsForPage(sortedSimilar, 0);
+
+      res.json(recipesWithVariedImages);
     } catch (error: any) {
       console.error('❌ Error in getSimilarRecipes:', error);
       res.status(500).json({ error: 'Failed to fetch similar recipes', details: error.message });

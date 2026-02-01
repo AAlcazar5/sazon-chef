@@ -1,7 +1,7 @@
 // frontend/app/create-shopping-list.tsx
 // Screen for creating a new shopping list with items
 
-import { View, Text, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, ScrollView, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { router } from 'expo-router';
@@ -9,6 +9,7 @@ import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import Icon from '../components/ui/Icon';
 import { Icons, IconSizes } from '../constants/Icons';
 import { Colors, DarkColors } from '../constants/Colors';
@@ -206,10 +207,7 @@ export default function CreateShoppingListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
+      <KeyboardAvoidingContainer>
         {/* Header */}
         <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-gray-700">
           <View className="flex-row items-center justify-between mb-3">
@@ -379,13 +377,13 @@ export default function CreateShoppingListScreen() {
                             onPress={() => handleStartEdit(item)}
                             className="p-2 mr-1"
                           >
-                            <Icon name={Icons.PENCIL} size={IconSizes.SM} color="#9CA3AF" accessibilityLabel="Edit item" />
+                            <Icon name={Icons.EDIT} size={IconSizes.SM} color="#9CA3AF" accessibilityLabel="Edit item" />
                           </HapticTouchableOpacity>
                           <HapticTouchableOpacity
                             onPress={() => handleRemoveItem(item.id)}
                             className="p-2"
                           >
-                            <Icon name={Icons.TRASH_OUTLINE} size={IconSizes.SM} color="#EF4444" accessibilityLabel="Remove item" />
+                            <Icon name={Icons.DELETE_OUTLINE} size={IconSizes.SM} color="#EF4444" accessibilityLabel="Remove item" />
                           </HapticTouchableOpacity>
                         </>
                       )}
@@ -431,7 +429,7 @@ export default function CreateShoppingListScreen() {
             )}
           </HapticTouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </SafeAreaView>
   );
 }

@@ -1,5 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -156,6 +157,7 @@ export default function EditPreferencesScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top']}>
+      <KeyboardAvoidingContainer>
       {/* Header */}
       <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} px-4 py-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center justify-between`}>
         <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
@@ -392,6 +394,7 @@ export default function EditPreferencesScreen() {
         {/* Bottom padding for safe scrolling */}
         <View className="h-8" />
       </ScrollView>
+      </KeyboardAvoidingContainer>
     </SafeAreaView>
   );
 }

@@ -36,4 +36,4 @@ Sazon Chef is a full-stack AI-powered recipe recommendation app.
 - **Naming**: Use camelCase for variables/functions, PascalCase for Components.
 - **Roadmap**: There's a complete roadmap in the root folder called ROADMAP.md that outlines our progress through the app, and has next steps that we break down into smaller todo lists. We then mark tasks as complete as we go through them.
 - **Testing**: Ensure to thoroughly test and add edge cases for each feature.
-- 
+- **Cross Platform**: Ensure that all code works on both iOS and Android, run test cases for both.

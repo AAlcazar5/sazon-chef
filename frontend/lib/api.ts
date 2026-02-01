@@ -14,13 +14,34 @@ interface ApiError {
 }
 
 // Create axios instance with default configuration
+// Android emulator uses 10.0.2.2 to access host localhost
+const getBaseURL = () => {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl;
+
+  // Default to 10.0.2.2 for Android emulator, localhost for iOS
+  try {
+    const { Platform } = require('react-native');
+    if (Platform.OS === 'android') {
+      return 'http://10.0.2.2:3001/api';
+    }
+  } catch (e) {
+    // Fallback if Platform is not available
+  }
+
+  return 'http://localhost:3001/api';
+};
+
 const api: AxiosInstance = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api',
+  baseURL: getBaseURL(),
   timeout: 60000, // 60s timeout - allows for sequential meal generation with retries
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Cache for privacy settings to avoid reading from storage on every request
+let cachedPrivacySettings: { userId: string; settings: any } | null = null;
 
 // Request interceptor to add auth token and other headers
 api.interceptors.request.use(
@@ -32,28 +53,47 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Add privacy settings to headers if available
+    // Add privacy settings to headers if available (use cached settings to avoid storage reads)
+    // This is done asynchronously but with a short timeout to prevent blocking
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      const SecureStore = require('expo-secure-store');
-      const USER_KEY = 'auth_user';
-      
-      // Get user ID from secure store
-      const storedUser = await SecureStore.getItemAsync(USER_KEY);
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        const userId = userData?.id;
-        
-        if (userId) {
-          const savedSettings = await AsyncStorage.getItem(`privacy_settings_${userId}`);
-          if (savedSettings) {
-            const settings = JSON.parse(savedSettings);
-            config.headers = config.headers || {};
-            config.headers['x-data-sharing-enabled'] = settings.dataSharingEnabled ? 'true' : 'false';
-            config.headers['x-analytics-enabled'] = settings.analyticsEnabled ? 'true' : 'false';
-            config.headers['x-location-services-enabled'] = settings.locationServicesEnabled ? 'true' : 'false';
+      // Only read from storage if we don't have cached settings
+      if (!cachedPrivacySettings) {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const SecureStore = require('expo-secure-store');
+        const USER_KEY = 'auth_user';
+
+        // Wrap in a timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Storage timeout')), 1000)
+        );
+
+        const readStorage = async () => {
+          const storedUser = await SecureStore.getItemAsync(USER_KEY);
+          if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            const userId = userData?.id;
+
+            if (userId) {
+              const savedSettings = await AsyncStorage.getItem(`privacy_settings_${userId}`);
+              if (savedSettings) {
+                cachedPrivacySettings = { userId, settings: JSON.parse(savedSettings) };
+              }
+            }
           }
-        }
+        };
+
+        await Promise.race([readStorage(), timeoutPromise]).catch(() => {
+          // Timeout or error - continue without privacy settings
+        });
+      }
+
+      // Apply cached settings if available
+      if (cachedPrivacySettings?.settings) {
+        const settings = cachedPrivacySettings.settings;
+        config.headers = config.headers || {};
+        config.headers['x-data-sharing-enabled'] = settings.dataSharingEnabled ? 'true' : 'false';
+        config.headers['x-analytics-enabled'] = settings.analyticsEnabled ? 'true' : 'false';
+        config.headers['x-location-services-enabled'] = settings.locationServicesEnabled ? 'true' : 'false';
       }
     } catch (error) {
       // Silently fail - privacy settings are optional
@@ -105,7 +145,7 @@ api.interceptors.response.use(
       // Don't surface noisy errors for benign conflicts (already saved) or expected 404s
       const statusCode = error.response?.status;
       const raw = error.response?.data;
-      const rawMessage: string | undefined = raw?.message || raw?.error || raw?.msg;
+      const rawMessage: string | undefined = raw?.error || raw?.message || raw?.msg;
       const isAlreadySaved = statusCode === 409 || /already\s*saved/i.test(String(rawMessage || ''));
       const isExpected404 = statusCode === 404 && (
         /no price data found/i.test(String(rawMessage || '')) ||
@@ -116,14 +156,17 @@ api.interceptors.response.use(
         /item not found/i.test(String(rawMessage || '')) || // Shopping list items that were deleted
         /shopping list.*not found/i.test(String(rawMessage || ''))
       );
-      const isQuotaError = statusCode === 429 || 
+      const isQuotaError = statusCode === 429 ||
         statusCode === 503 ||
         /quota.*exceeded/i.test(String(rawMessage || '')) ||
         /too many requests/i.test(String(rawMessage || '')) ||
         /insufficient_quota/i.test(String(rawMessage || '')) ||
         /API quota exceeded/i.test(String(rawMessage || ''));
-      
-      if (!isAlreadySaved && !isExpected404 && !isQuotaError) {
+
+      // Don't log expected user errors (bad credentials, validation errors, not found)
+      const isExpectedUserError = statusCode === 400 || statusCode === 401 || statusCode === 404;
+
+      if (!isAlreadySaved && !isExpected404 && !isQuotaError && !isExpectedUserError) {
         console.error('❌ Response Error:', raw || error.message);
       } else if (isAlreadySaved) {
         console.log('ℹ️  Response Conflict (already saved)');
@@ -132,6 +175,9 @@ api.interceptors.response.use(
       } else if (isQuotaError) {
         // Silently handle quota/rate limit errors - these are expected when API limits are reached
         // The UI will handle these gracefully by showing fallback content
+      } else if (isExpectedUserError) {
+        // Silently handle expected user errors (wrong credentials, validation errors)
+        // These are displayed to the user via the UI, no need to log them
       }
     }
 
@@ -146,10 +192,11 @@ api.interceptors.response.use(
       const serverError = error.response.data;
       const statusCode = error.response.status;
 
-      // Normalize common patterns
+      // Normalize common patterns - prioritize 'error' field as primary message
+      // Backend auth returns: { success: false, error: '...' }
       // Rate limiter returns: { error: '...', message: '...' }
       // Some APIs return: { error: '...' } or { message: '...' }
-      const rawMessage: string | undefined = serverError?.message || serverError?.error || serverError?.msg;
+      const rawMessage: string | undefined = serverError?.error || serverError?.message || serverError?.msg;
       const normalizedMessage = rawMessage ? String(rawMessage) : getErrorMessage(statusCode);
 
       // Initialize error with normalized message (may be overridden by specific handlers below)
@@ -158,14 +205,26 @@ api.interceptors.response.use(
       apiError.details = serverError?.details;
 
       // Special-case: Authentication errors (401/403) - automatically logout
+      // BUT: Don't auto-logout on login/register endpoints - those 401s mean bad credentials
+      const isAuthEndpoint = error.config?.url?.includes('/auth/login') ||
+                            error.config?.url?.includes('/auth/register') ||
+                            error.config?.url?.includes('/auth/forgot-password') ||
+                            error.config?.url?.includes('/auth/reset-password');
+
       if (statusCode === 401 || statusCode === 403) {
         apiError.code = statusCode === 401 ? 'HTTP_401' : 'HTTP_403';
-        apiError.message = statusCode === 401 
-          ? 'Your session has expired. Please log in again.'
-          : 'You do not have permission to perform this action.';
-        
-        // Automatically logout on authentication errors
-        if (logoutCallback) {
+
+        // For auth endpoints, use specific error messages (don't mention session expiry)
+        if (isAuthEndpoint && statusCode === 401) {
+          apiError.message = normalizedMessage || 'Invalid credentials. Please check your email and password.';
+        } else {
+          apiError.message = statusCode === 401
+            ? 'Your session has expired. Please log in again.'
+            : 'You do not have permission to perform this action.';
+        }
+
+        // Automatically logout on authentication errors (but NOT on auth endpoints)
+        if (logoutCallback && !isAuthEndpoint) {
           // Call logout asynchronously to avoid blocking error handling
           // The AuthContext state change will trigger navigation in _layout.tsx
           const doLogout = logoutCallback;
@@ -192,10 +251,10 @@ api.interceptors.response.use(
       
       // Special-case: quota/billing errors (429 or message contains quota info)
       // BUT: Only apply this to AI-related endpoints, not shopping list or auth endpoints
-      const isAIEndpoint = error.config?.url?.includes('/ai-recipes') || 
+      const isAIEndpoint = error.config?.url?.includes('/ai-recipes') ||
                           (error.config?.url?.includes('/recipes') && (error.config?.method === 'post' || error.config?.method === 'put'));
       const isShoppingListEndpoint = error.config?.url?.includes('/shopping-lists');
-      const isAuthEndpoint = error.config?.url?.includes('/auth/');
+      const isAuthEndpointGeneral = error.config?.url?.includes('/auth/');
       
       // Check if it's a true AI quota error (not just a generic 429 or rate limit)
       const isTrueAIQuotaError = serverError?.code === 'insufficient_quota' ||
@@ -206,14 +265,14 @@ api.interceptors.response.use(
       const isGenericRateLimit = statusCode === 429 && !isTrueAIQuotaError;
       const isGenericQuotaMessage = /quota|billing|rate.*limit/i.test(normalizedMessage) && !isTrueAIQuotaError;
       
-      if (isTrueAIQuotaError && isAIEndpoint && !isShoppingListEndpoint && !isAuthEndpoint) {
+      if (isTrueAIQuotaError && isAIEndpoint && !isShoppingListEndpoint && !isAuthEndpointGeneral) {
         console.warn(`[API_CLIENT] Quota error detected on AI endpoint: ${error.config?.url}`);
         apiError.code = 'insufficient_quota';
         apiError.message = 'API quota exceeded. Please try again later.';
-      } else if (isAuthEndpoint && (isGenericRateLimit || isGenericQuotaMessage)) {
+      } else if (isAuthEndpointGeneral && (isGenericRateLimit || isGenericQuotaMessage)) {
         // Auth endpoints have legitimate rate limiting for security - pass through original message
         // The rate limiter returns: { error: '...', message: '...' }
-        const authRateLimitMessage = serverError?.message || normalizedMessage || 'Too many login attempts. Please try again after 15 minutes.';
+        const authRateLimitMessage = serverError?.error || serverError?.message || normalizedMessage || 'Too many login attempts. Please try again after 15 minutes.';
         apiError.code = serverError?.code || `HTTP_${statusCode}`;
         apiError.message = authRateLimitMessage;
       } else if (isShoppingListEndpoint && (isGenericRateLimit || isGenericQuotaMessage)) {
@@ -225,7 +284,7 @@ api.interceptors.response.use(
         // For other endpoints with true AI quota errors, apply quota error handling
         apiError.code = 'insufficient_quota';
         apiError.message = 'API quota exceeded. Please try again later.';
-      } else if (isGenericRateLimit && !isAuthEndpoint) {
+      } else if (isGenericRateLimit && !isAuthEndpointGeneral) {
         // Generic rate limit (not AI-specific, not auth)
         apiError.code = 'rate_limit';
         apiError.message = 'Rate limit exceeded. Please try again later.';
@@ -252,6 +311,10 @@ let logoutCallback: (() => Promise<void>) | null = null;
 
 export function setAuthToken(token: string | null) {
   currentAuthToken = token;
+  // Clear cached privacy settings when token changes (login/logout)
+  if (!token) {
+    cachedPrivacySettings = null;
+  }
 }
 
 export function setLogoutCallback(callback: (() => Promise<void>) | null) {
@@ -383,17 +446,27 @@ export const recipeApi = {
   },
 
   // Get all recipes with pagination (for browsing all recipes in database)
-  getAllRecipes: (options?: { 
-    page?: number; 
-    limit?: number; 
-    cuisine?: string; 
+  getAllRecipes: (options?: {
+    page?: number;
+    limit?: number;
+    cuisine?: string;
     cuisines?: string[];
     dietaryRestrictions?: string[];
-    mealType?: string; 
+    mealType?: string;
     search?: string;
     maxCookTime?: number;
     difficulty?: string;
     mealPrepMode?: boolean;
+    // Quick macro filters (Home Page 2.0)
+    minProtein?: number;
+    maxCarbs?: number;
+    maxCalories?: number;
+    // Discovery mode for pull-to-refresh
+    shuffle?: boolean;
+    // Time-aware defaults
+    useTimeAwareDefaults?: boolean;
+    // Mood-based recommendations (Home Page 2.0)
+    mood?: string;
   }) => {
     const params: any = {};
     if (options?.page !== undefined) params.page = options.page;
@@ -406,11 +479,26 @@ export const recipeApi = {
     if (options?.maxCookTime) params.maxCookTime = options.maxCookTime;
     if (options?.difficulty) params.difficulty = options.difficulty;
     if (options?.mealPrepMode !== undefined) params.mealPrepMode = options.mealPrepMode ? 'true' : 'false';
+    // Quick macro filters (Home Page 2.0)
+    if (options?.minProtein !== undefined) params.minProtein = options.minProtein;
+    if (options?.maxCarbs !== undefined) params.maxCarbs = options.maxCarbs;
+    if (options?.maxCalories !== undefined) params.maxCalories = options.maxCalories;
+    // Discovery mode for pull-to-refresh
+    if (options?.shuffle) params.shuffle = 'true';
+    // Time-aware defaults
+    if (options?.useTimeAwareDefaults) params.useTimeAwareDefaults = 'true';
+    // Mood-based recommendations (Home Page 2.0)
+    if (options?.mood) params.mood = options.mood;
     return apiClient.get('/recipes', { params });
   },
 
   getRandomRecipe: () => {
     return apiClient.get('/recipes/random');
+  },
+
+  // Get Recipe of the Day (Home Page 2.0)
+  getRecipeOfTheDay: () => {
+    return apiClient.get('/recipes/recipe-of-the-day');
   },
 
   getSavedRecipes: () => {
@@ -1029,6 +1117,27 @@ export const weightGoalApi = {
 
   getWeightGoal: () => {
     return apiClient.get('/weight-goal');
+  },
+};
+
+// Scanner API for food recognition
+export const scannerApi = {
+  recognizeFood: (imageUri: string) => {
+    const formData = new FormData();
+    formData.append('image', {
+      uri: imageUri,
+      type: 'image/jpeg',
+      name: 'food-image.jpg',
+    } as any);
+    return apiClient.post('/scanner/recognize-food', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  scanBarcode: (barcode: string) => {
+    return apiClient.post('/scanner/scan-barcode', { barcode });
   },
 };
 

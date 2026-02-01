@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import * as bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { encrypt, decrypt, isEncrypted } from '@/utils/encryption';
+import { encrypt, decrypt } from '@/utils/encryption';
 
 // Note: Request.user type is declared in authMiddleware.ts
 
@@ -24,8 +24,8 @@ export const authController = {
       // Validation
       if (!email || !password || !name) {
         return res.status(400).json({
-          error: 'Missing required fields',
-          message: 'Email, password, and name are required'
+          success: false,
+          error: 'Email, password, and name are required'
         });
       }
 
@@ -33,15 +33,16 @@ export const authController = {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({
-          error: 'Invalid email format'
+          success: false,
+          error: 'Please enter a valid email address'
         });
       }
 
       // Password validation (min 8 characters)
       if (password.length < 8) {
         return res.status(400).json({
-          error: 'Password too short',
-          message: 'Password must be at least 8 characters long'
+          success: false,
+          error: 'Password must be at least 8 characters long'
         });
       }
 
@@ -79,8 +80,8 @@ export const authController = {
 
       if (existingUser) {
         return res.status(409).json({
-          error: 'User already exists',
-          message: 'An account with this email already exists'
+          success: false,
+          error: 'An account with this email already exists'
         });
       }
 
@@ -131,8 +132,8 @@ export const authController = {
     } catch (error: any) {
       console.error('Registration error:', error);
       res.status(500).json({
-        error: 'Failed to register user',
-        message: error.message
+        success: false,
+        error: 'An unexpected error occurred. Please try again.'
       });
     }
   },
@@ -148,8 +149,8 @@ export const authController = {
       // Validation
       if (!email || !password) {
         return res.status(400).json({
-          error: 'Missing required fields',
-          message: 'Email and password are required'
+          success: false,
+          error: 'Email and password are required'
         });
       }
 
@@ -223,16 +224,16 @@ export const authController = {
 
       if (!user) {
         return res.status(401).json({
-          error: 'Invalid credentials',
-          message: 'Email or password is incorrect'
+          success: false,
+          error: 'Email or password is incorrect'
         });
       }
 
       // Check if user has a password (social login users may not have one)
       if (!user.password) {
         return res.status(401).json({
-          error: 'Invalid credentials',
-          message: 'This account uses social login. Please sign in with your social provider.'
+          success: false,
+          error: 'This account uses social login. Please sign in with your social provider.'
         });
       }
 
@@ -241,8 +242,8 @@ export const authController = {
 
       if (!isValidPassword) {
         return res.status(401).json({
-          error: 'Invalid credentials',
-          message: 'Email or password is incorrect'
+          success: false,
+          error: 'Email or password is incorrect'
         });
       }
 
@@ -270,8 +271,8 @@ export const authController = {
     } catch (error: any) {
       console.error('Login error:', error);
       res.status(500).json({
-        error: 'Failed to login',
-        message: error.message
+        success: false,
+        error: 'An unexpected error occurred. Please try again.'
       });
     }
   },
@@ -530,8 +531,8 @@ export const authController = {
 
       if (!email) {
         return res.status(400).json({
-          error: 'Missing required field',
-          message: 'Email is required'
+          success: false,
+          error: 'Email is required'
         });
       }
 
@@ -539,7 +540,8 @@ export const authController = {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({
-          error: 'Invalid email format'
+          success: false,
+          error: 'Please enter a valid email address'
         });
       }
 
@@ -581,13 +583,19 @@ export const authController = {
         });
       }
 
-      // Generate a simple 6-digit reset code for development
-      // In production, you'd want to use a secure token and send via email
+      // Generate a simple 6-digit reset code
       const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
       const resetCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-      // Store reset code in user record (you'll need to add these fields to schema in production)
-      // For now, we'll just log it and return it in development mode
+      // Store reset code in user record
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetCode,
+          resetCodeExpiry
+        }
+      });
+
       console.log(`Password reset code for ${email}: ${resetCode}`);
       console.log(`Code expires at: ${resetCodeExpiry}`);
 
@@ -595,15 +603,15 @@ export const authController = {
       // For development, return the code in the response
       res.json({
         success: true,
-        message: 'If an account exists with this email, a password reset code will be sent.',
+        message: 'A password reset code has been sent to your email.',
         // Only in development - remove in production
         ...(process.env.NODE_ENV === 'development' && { resetCode, expiresAt: resetCodeExpiry })
       });
     } catch (error: any) {
       console.error('Request password reset error:', error);
       res.status(500).json({
-        error: 'Failed to request password reset',
-        message: error.message
+        success: false,
+        error: 'An unexpected error occurred. Please try again.'
       });
     }
   },
@@ -614,12 +622,12 @@ export const authController = {
    */
   async resetPassword(req: Request, res: Response) {
     try {
-      const { email, newPassword } = req.body;
+      const { email, resetCode, newPassword } = req.body;
 
-      if (!email || !newPassword) {
+      if (!email || !resetCode || !newPassword) {
         return res.status(400).json({
-          error: 'Missing required fields',
-          message: 'Email and new password are required'
+          success: false,
+          error: 'Email, reset code, and new password are required'
         });
       }
 
@@ -627,27 +635,41 @@ export const authController = {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({
-          error: 'Invalid email format'
+          success: false,
+          error: 'Please enter a valid email address'
         });
       }
 
       // Password validation
       if (newPassword.length < 8) {
         return res.status(400).json({
-          error: 'Password too short',
-          message: 'New password must be at least 8 characters long'
+          success: false,
+          error: 'New password must be at least 8 characters long'
         });
       }
 
       // Find user by email
       let user = await prisma.user.findFirst({
-        where: { providerEmail: email }
+        where: { providerEmail: email },
+        select: {
+          id: true,
+          email: true,
+          emailEncrypted: true,
+          resetCode: true,
+          resetCodeExpiry: true
+        }
       });
 
       if (!user) {
         const usersWithEncryptedEmails = await prisma.user.findMany({
           where: { emailEncrypted: true },
-          select: { id: true, email: true, emailEncrypted: true }
+          select: {
+            id: true,
+            email: true,
+            emailEncrypted: true,
+            resetCode: true,
+            resetCodeExpiry: true
+          }
         });
 
         for (const u of usersWithEncryptedEmails) {
@@ -664,14 +686,45 @@ export const authController = {
 
       if (!user) {
         user = await prisma.user.findFirst({
-          where: { email, emailEncrypted: false }
+          where: { email, emailEncrypted: false },
+          select: {
+            id: true,
+            email: true,
+            emailEncrypted: true,
+            resetCode: true,
+            resetCodeExpiry: true
+          }
         });
       }
 
       if (!user) {
         return res.status(404).json({
-          error: 'User not found',
-          message: 'No account found with this email address'
+          success: false,
+          error: 'No account found with this email address'
+        });
+      }
+
+      // Verify reset code
+      if (!user.resetCode || !user.resetCodeExpiry) {
+        return res.status(400).json({
+          success: false,
+          error: 'No reset code found. Please request a new password reset.'
+        });
+      }
+
+      // Check if code matches
+      if (user.resetCode !== resetCode) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid reset code. Please check the code and try again.'
+        });
+      }
+
+      // Check if code has expired
+      if (new Date() > user.resetCodeExpiry) {
+        return res.status(400).json({
+          success: false,
+          error: 'Reset code has expired. Please request a new password reset.'
         });
       }
 
@@ -679,10 +732,14 @@ export const authController = {
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
-      // Update password
+      // Update password and clear reset code
       await prisma.user.update({
         where: { id: user.id },
-        data: { password: hashedPassword }
+        data: {
+          password: hashedPassword,
+          resetCode: null,
+          resetCodeExpiry: null
+        }
       });
 
       res.json({
@@ -692,8 +749,8 @@ export const authController = {
     } catch (error: any) {
       console.error('Reset password error:', error);
       res.status(500).json({
-        error: 'Failed to reset password',
-        message: error.message
+        success: false,
+        error: 'An unexpected error occurred. Please try again.'
       });
     }
   }

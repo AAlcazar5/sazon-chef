@@ -112,8 +112,7 @@ export const userController = {
   // Get user preferences
   async getPreferences(req: Request, res: Response) {
     try {
-      // TODO: Get user ID from authentication
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       const preferences = await prisma.userPreferences.findUnique({
         where: { userId },
@@ -158,7 +157,7 @@ export const userController = {
   async updatePreferences(req: Request, res: Response) {
     try {
       // TODO: Get user ID from authentication
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       const {
         bannedIngredients,
         likedCuisines,
@@ -243,8 +242,7 @@ export const userController = {
   // Get macro goals
   async getMacroGoals(req: Request, res: Response) {
     try {
-      // TODO: Get user ID from authentication
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       const macroGoals = await prisma.macroGoals.findUnique({
         where: { userId }
@@ -275,7 +273,7 @@ export const userController = {
   async updateMacroGoals(req: Request, res: Response) {
     try {
       // TODO: Get user ID from authentication
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       const { calories, protein, carbs, fat } = req.body;
       
       if (!calories || !protein || !carbs || !fat) {
@@ -349,7 +347,7 @@ export const userController = {
   async getMealHistory(req: Request, res: Response) {
     try {
       // TODO: Get user ID from authentication
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       const { startDate, endDate } = req.query;
       
       const where: any = { userId };
@@ -384,7 +382,7 @@ export const userController = {
   // Get user physical profile
   async getPhysicalProfile(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       
       const profile = await prisma.userPhysicalProfile.findUnique({
         where: { userId }
@@ -405,7 +403,7 @@ export const userController = {
   // Create or update user physical profile
   async upsertPhysicalProfile(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
       const {
         gender,
         age,
@@ -496,7 +494,7 @@ export const userController = {
   // Calculate recommended macros based on physical profile
   async calculateRecommendedMacros(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
 
       // Get physical profile
       const profile = await prisma.userPhysicalProfile.findUnique({
@@ -534,7 +532,7 @@ export const userController = {
   // Apply calculated macros to user's macro goals
   async applyCalculatedMacros(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id';
+      const userId = getUserId(req);
 
       // Get physical profile
       const profile = await prisma.userPhysicalProfile.findUnique({
@@ -595,7 +593,7 @@ export const userController = {
   // Get preferred superfoods
   async getPreferredSuperfoods(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Get from authentication
+      const userId = getUserId(req); // TODO: Get from authentication
       
       const preferences = await prisma.userPreferences.findUnique({
         where: { userId },
@@ -618,7 +616,7 @@ export const userController = {
   // Add preferred superfood
   async addPreferredSuperfood(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Get from authentication
+      const userId = getUserId(req); // TODO: Get from authentication
       const { category } = req.body;
       
       if (!category || typeof category !== 'string') {
@@ -670,7 +668,7 @@ export const userController = {
   // Remove preferred superfood
   async removePreferredSuperfood(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Get from authentication
+      const userId = getUserId(req); // TODO: Get from authentication
       const { category } = req.params;
       
       if (!category) {
@@ -708,7 +706,7 @@ export const userController = {
   // Update preferred superfoods (replace all)
   async updatePreferredSuperfoods(req: Request, res: Response) {
     try {
-      const userId = 'temp-user-id'; // TODO: Get from authentication
+      const userId = getUserId(req); // TODO: Get from authentication
       const { categories } = req.body;
       
       if (!Array.isArray(categories)) {

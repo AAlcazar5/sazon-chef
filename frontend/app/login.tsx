@@ -6,11 +6,11 @@ import {
   View,
   Text,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAuth';
@@ -21,6 +21,7 @@ import ShakeAnimation from '../components/ui/ShakeAnimation';
 import LogoMascot from '../components/mascot/LogoMascot';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import FormInput from '../components/ui/FormInput';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { Colors, DarkColors } from '../constants/Colors';
 
 export default function LoginScreen() {
@@ -181,14 +182,12 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-white dark:bg-gray-900"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+      <KeyboardAvoidingContainer>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="w-full max-w-md self-center">
           <View className="items-center mb-4">
             <LogoMascot 
@@ -317,6 +316,7 @@ export default function LoginScreen() {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
+    </SafeAreaView>
   );
 }

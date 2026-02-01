@@ -33,15 +33,22 @@ export function useHapticPress(
 ): () => void {
   const { hapticStyle = 'light', disabled = false } = options;
 
-  return useCallback(() => {
+  return useCallback(async () => {
     if (!disabled) {
       const styleMap = {
         light: Haptics.ImpactFeedbackStyle.Light,
         medium: Haptics.ImpactFeedbackStyle.Medium,
         heavy: Haptics.ImpactFeedbackStyle.Heavy,
       };
-      
-      Haptics.impactAsync(styleMap[hapticStyle]);
+
+      try {
+        await Haptics.impactAsync(styleMap[hapticStyle]);
+      } catch (error) {
+        // Silently fail - haptics may not be available on all devices or simulators
+        if (__DEV__) {
+          console.debug('Haptic feedback not available:', error);
+        }
+      }
     }
     onPress();
   }, [onPress, hapticStyle, disabled]);
@@ -64,14 +71,21 @@ export function withHaptic(
   onPress: () => void,
   hapticStyle: HapticStyle = 'light'
 ): () => void {
-  return () => {
+  return async () => {
     const styleMap = {
       light: Haptics.ImpactFeedbackStyle.Light,
       medium: Haptics.ImpactFeedbackStyle.Medium,
       heavy: Haptics.ImpactFeedbackStyle.Heavy,
     };
-    
-    Haptics.impactAsync(styleMap[hapticStyle]);
+
+    try {
+      await Haptics.impactAsync(styleMap[hapticStyle]);
+    } catch (error) {
+      // Silently fail - haptics may not be available on all devices or simulators
+      if (__DEV__) {
+        console.debug('Haptic feedback not available:', error);
+      }
+    }
     onPress();
   };
 }

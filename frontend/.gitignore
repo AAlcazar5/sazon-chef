@@ -9,6 +9,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Expo web cache (can cause favicon errors if corrupted)
+.expo/web/cache/
+
 # Native
 .kotlin/
 *.orig.*
@@ -20,6 +23,9 @@ expo-env.d.ts
 
 # Metro
 .metro-health-check*
+
+# NativeWind cache
+node_modules/react-native-css-interop/.cache/
 
 # debug
 npm-debug.*

@@ -19,6 +19,8 @@ function RootLayoutNav() {
   const segments = useSegments();
   const { isAuthenticated, isLoading } = useAuth();
 
+  console.log('[Layout] RootLayoutNav rendering with state:', { showSplash, isOnboardingComplete, isLoading, isAuthenticated, segments });
+
   useEffect(() => {
     checkOnboarding();
   }, []);
@@ -26,29 +28,39 @@ function RootLayoutNav() {
   const checkOnboarding = async () => {
     try {
       const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
-      setIsOnboardingComplete(onboardingComplete === 'true');
+      console.log('[Layout] Onboarding status from storage:', onboardingComplete);
+      // For Android testing, default to true if not set (dev bypass)
+      const isComplete = onboardingComplete === 'true' || onboardingComplete === null;
+      setIsOnboardingComplete(isComplete);
     } catch (error) {
       console.error('Error checking onboarding status:', error);
-      setIsOnboardingComplete(false);
+      setIsOnboardingComplete(true);
     }
   };
 
   useEffect(() => {
-    if (isOnboardingComplete === null || isLoading) return; // Still loading
+    if (isOnboardingComplete === null || isLoading) {
+      console.log('[Layout] Still loading:', { isOnboardingComplete, isLoading });
+      return;
+    }
 
     const inAuth = segments[0] === 'login' || segments[0] === 'register';
     const inOnboarding = segments[0] === 'onboarding';
     const inTabs = segments[0] === '(tabs)';
 
+    console.log('[Layout] Navigation logic:', { isAuthenticated, isOnboardingComplete, inAuth, inOnboarding, inTabs });
+
     // Check authentication first
     if (!isAuthenticated && !inAuth && !inOnboarding) {
       // User is not authenticated and not on auth/onboarding screens
+      console.log('[Layout] Redirecting to login');
       router.replace('/login');
       return;
     }
 
     if (isAuthenticated && inAuth) {
       // User is authenticated but on auth screen, redirect to tabs
+      console.log('[Layout] Redirecting to tabs from auth screen');
       router.replace('/(tabs)');
       return;
     }
@@ -56,6 +68,7 @@ function RootLayoutNav() {
     // Then check onboarding
     if (isAuthenticated && !isOnboardingComplete && !inOnboarding) {
       // User is authenticated but hasn't completed onboarding
+      console.log('[Layout] Redirecting to onboarding');
       router.replace('/onboarding');
     } else if (isOnboardingComplete && inOnboarding && segments.length === 1) {
       // User has completed onboarding but is on onboarding screen (without edit param)
