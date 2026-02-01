@@ -6,3 +6,4 @@ export { default as RecipeSearchBar } from './RecipeSearchBar';
 export { default as HomeHeader } from './HomeHeader';
 export { default as RecipeOfTheDayCard } from './RecipeOfTheDayCard';
 export { default as QuickFiltersBar } from './QuickFiltersBar';
+export { default as FeaturedRecipeCarousel } from './FeaturedRecipeCarousel';
