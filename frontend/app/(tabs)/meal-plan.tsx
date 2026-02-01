@@ -22,6 +22,7 @@ import { MealPlanEmptyStates } from '../../constants/EmptyStates';
 import { buttonAccessibility, iconButtonAccessibility, inputAccessibility, switchAccessibility } from '../../utils/accessibility';
 import { useColorScheme } from 'nativewind';
 import { useApi } from '../../hooks/useApi';
+import { useMealPlanData } from '../../hooks/useMealPlanData';
 import { mealPlanApi, aiRecipeApi, shoppingListApi, userApi, costTrackingApi, mealPrepApi } from '../../lib/api';
 import type { WeeklyPlan, DailySuggestion } from '../../types';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -1033,10 +1034,43 @@ export default function MealPlanScreen() {
   const { recipeId, recipeTitle, scaledServings } = useLocalSearchParams();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const isMountedRef = useRef(false);
-  const [weeklyPlan, setWeeklyPlan] = useState<any | null>(null);
-  const [dailySuggestion, setDailySuggestion] = useState<DailySuggestion | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+
+  // Map meal types to hours
+  const mealTypeToHour: Record<string, number> = {
+    breakfast: 7,
+    lunch: 12,
+    dinner: 18,
+    snack: 15, // 3 PM snack
+  };
+
+  // Use meal plan data hook
+  const {
+    weeklyPlan,
+    dailySuggestion,
+    loading,
+    refreshing,
+    hourlyMeals,
+    dailyMacros,
+    totalPrepTime,
+    thawingReminders,
+    loadingThawingReminders,
+    mealCompletionStatus,
+    mealNotes,
+    weekDates,
+    loadMealPlan,
+    refreshMealPlan,
+    getMealsForDate,
+    setHourlyMeals,
+    setDailyMacros,
+    setTotalPrepTime,
+    setMealCompletionStatus,
+    setMealNotes,
+    setWeeklyPlan,
+  } = useMealPlanData({
+    selectedDate,
+    isMountedRef,
+    mealTypeToHour,
+  });
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
   const [showTimePickerModal, setShowTimePickerModal] = useState(false);
   const [selectedHour, setSelectedHour] = useState(12);
@@ -1078,10 +1112,6 @@ export default function MealPlanScreen() {
   const [shoppingListSavings, setShoppingListSavings] = useState<any>(null);
   const [loadingSavings, setLoadingSavings] = useState(false);
   
-  // Thawing reminders state
-  const [thawingReminders, setThawingReminders] = useState<any[]>([]);
-  const [loadingThawingReminders, setLoadingThawingReminders] = useState(false);
-  
   // View mode state
   const [viewMode, setViewMode] = useState<'24hour' | 'compact' | 'collapsible'>('24hour');
   const [mealTypeFilter, setMealTypeFilter] = useState<'all' | 'breakfast' | 'lunch' | 'dinner' | 'snacks'>('all');
@@ -1095,17 +1125,7 @@ export default function MealPlanScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollPositionRef = useRef(0);
   
-  // Daily macros tracking
-  const [dailyMacros, setDailyMacros] = useState({
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fat: 0
-  });
-
   // Meal enhancement state
-  const [mealCompletionStatus, setMealCompletionStatus] = useState<Record<string, boolean>>({});
-  const [mealNotes, setMealNotes] = useState<Record<string, string>>({});
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [editingMealId, setEditingMealId] = useState<string | null>(null);
   const [editingMealName, setEditingMealName] = useState<string>('');
@@ -1116,7 +1136,6 @@ export default function MealPlanScreen() {
   const [expandedSwapMealId, setExpandedSwapMealId] = useState<string | null>(null);
   const [loadingSwapSuggestions, setLoadingSwapSuggestions] = useState<string | null>(null);
   const [mealSwapSuggestions, setMealSwapSuggestions] = useState<Record<string, any[]>>({});
-  const [totalPrepTime, setTotalPrepTime] = useState(0);
   const [weeklyNutrition, setWeeklyNutrition] = useState<any | null>(null);
   const [loadingWeeklyNutrition, setLoadingWeeklyNutrition] = useState(false);
   
@@ -1127,19 +1146,8 @@ export default function MealPlanScreen() {
     carbs: 200,
     fat: 67
   });
-  
-  // Meals for each hour
-  const [hourlyMeals, setHourlyMeals] = useState<{ [key: number]: any[] }>({});
-  
+
   const hours = generateHours();
-  
-  // Map meal types to hours
-  const mealTypeToHour: Record<string, number> = {
-    breakfast: 7,
-    lunch: 12,
-    dinner: 18,
-    snack: 15, // 3 PM snack
-  };
 
   // Helper function to group meals by approximate meal type based on hour
   const groupMealsByType = (hourlyMeals: { [key: number]: any[] }) => {
@@ -1171,232 +1179,7 @@ export default function MealPlanScreen() {
     return grouped;
   };
 
-  // Helper function to get meals for a specific date
-  const getMealsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    const dayMeals = weeklyPlan?.weeklyPlan?.[dateStr]?.meals || {};
-    const meals: any[] = [];
-    
-    if (dayMeals.breakfast?.recipe) {
-      meals.push({ ...dayMeals.breakfast.recipe, mealType: 'breakfast', hour: 7 });
-    }
-    if (dayMeals.lunch?.recipe) {
-      meals.push({ ...dayMeals.lunch.recipe, mealType: 'lunch', hour: 12 });
-    }
-    if (dayMeals.dinner?.recipe) {
-      meals.push({ ...dayMeals.dinner.recipe, mealType: 'dinner', hour: 18 });
-    }
-    if (dayMeals.snacks && Array.isArray(dayMeals.snacks)) {
-      dayMeals.snacks.forEach((snack: any) => {
-        if (snack?.recipe) {
-          meals.push({ ...snack.recipe, mealType: 'snack', hour: 15 });
-        }
-      });
-    }
-    
-    return meals;
-  };
 
-  // Get current week dates
-  const getWeekDates = (date: Date) => {
-    const startOfWeek = new Date(date);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day;
-    startOfWeek.setDate(diff);
-    
-    const weekDates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startOfWeek);
-      date.setDate(startOfWeek.getDate() + i);
-      weekDates.push(date);
-    }
-    return weekDates;
-  };
-
-  const weekDates = getWeekDates(selectedDate);
-
-  const loadMealPlan = async () => {
-    if (!isMountedRef.current) return;
-    
-    try {
-      setLoading(true);
-      console.log('📱 MealPlan: Loading meal plan data');
-      
-      // Load weekly plan (now includes meal prep sessions and portions)
-      const startDate = weekDates[0].toISOString().split('T')[0];
-      const endDate = weekDates[6].toISOString().split('T')[0];
-      const weeklyResponse = await mealPlanApi.getWeeklyPlan({ startDate, endDate });
-      setWeeklyPlan(weeklyResponse.data);
-      
-      // Load saved meals and convert to hourlyMeals format
-      const savedMeals: { [key: number]: any[] } = {};
-      const selectedDateStr = selectedDate.toISOString().split('T')[0];
-      
-      if (weeklyResponse.data?.weeklyPlan?.[selectedDateStr]?.meals) {
-        const dayMeals = weeklyResponse.data.weeklyPlan[selectedDateStr].meals;
-        
-        // Convert saved meals to hourlyMeals format
-        if (dayMeals.breakfast?.recipe) {
-          const hour = mealTypeToHour.breakfast;
-          if (!savedMeals[hour]) savedMeals[hour] = [];
-          savedMeals[hour].push({
-            id: dayMeals.breakfast.recipe.id,
-            mealPlanMealId: dayMeals.breakfast.id, // Store meal plan meal ID for completion tracking
-            name: dayMeals.breakfast.recipe.title,
-            description: dayMeals.breakfast.recipe.description,
-            calories: dayMeals.breakfast.recipe.calories,
-            protein: dayMeals.breakfast.recipe.protein,
-            carbs: dayMeals.breakfast.recipe.carbs,
-            fat: dayMeals.breakfast.recipe.fat,
-            cookTime: dayMeals.breakfast.recipe.cookTime,
-            difficulty: dayMeals.breakfast.recipe.difficulty,
-            cuisine: dayMeals.breakfast.recipe.cuisine,
-            imageUrl: dayMeals.breakfast.recipe.imageUrl,
-            isCompleted: dayMeals.breakfast.isCompleted || false,
-            notes: dayMeals.breakfast.notes || '',
-          });
-        }
-        
-        if (dayMeals.lunch?.recipe) {
-          const hour = mealTypeToHour.lunch;
-          if (!savedMeals[hour]) savedMeals[hour] = [];
-          savedMeals[hour].push({
-            id: dayMeals.lunch.recipe.id,
-            mealPlanMealId: dayMeals.lunch.id,
-            name: dayMeals.lunch.recipe.title,
-            description: dayMeals.lunch.recipe.description,
-            calories: dayMeals.lunch.recipe.calories,
-            protein: dayMeals.lunch.recipe.protein,
-            carbs: dayMeals.lunch.recipe.carbs,
-            fat: dayMeals.lunch.recipe.fat,
-            cookTime: dayMeals.lunch.recipe.cookTime,
-            difficulty: dayMeals.lunch.recipe.difficulty,
-            cuisine: dayMeals.lunch.recipe.cuisine,
-            imageUrl: dayMeals.lunch.recipe.imageUrl,
-            isCompleted: dayMeals.lunch.isCompleted || false,
-            notes: dayMeals.lunch.notes || '',
-          });
-        }
-        
-        if (dayMeals.dinner?.recipe) {
-          const hour = mealTypeToHour.dinner;
-          if (!savedMeals[hour]) savedMeals[hour] = [];
-          savedMeals[hour].push({
-            id: dayMeals.dinner.recipe.id,
-            mealPlanMealId: dayMeals.dinner.id,
-            name: dayMeals.dinner.recipe.title,
-            description: dayMeals.dinner.recipe.description,
-            calories: dayMeals.dinner.recipe.calories,
-            protein: dayMeals.dinner.recipe.protein,
-            carbs: dayMeals.dinner.recipe.carbs,
-            fat: dayMeals.dinner.recipe.fat,
-            cookTime: dayMeals.dinner.recipe.cookTime,
-            difficulty: dayMeals.dinner.recipe.difficulty,
-            cuisine: dayMeals.dinner.recipe.cuisine,
-            imageUrl: dayMeals.dinner.recipe.imageUrl,
-            isCompleted: dayMeals.dinner.isCompleted || false,
-            notes: dayMeals.dinner.notes || '',
-          });
-        }
-        
-        // Handle snacks (array)
-        if (dayMeals.snacks && Array.isArray(dayMeals.snacks)) {
-          dayMeals.snacks.forEach((snack: any) => {
-            if (snack?.recipe) {
-              const hour = mealTypeToHour.snack;
-              if (!savedMeals[hour]) savedMeals[hour] = [];
-              savedMeals[hour].push({
-                id: snack.recipe.id,
-                mealPlanMealId: snack.id,
-                name: snack.recipe.title,
-                description: snack.recipe.description,
-                calories: snack.recipe.calories,
-                protein: snack.recipe.protein,
-                carbs: snack.recipe.carbs,
-                fat: snack.recipe.fat,
-                cookTime: snack.recipe.cookTime,
-                difficulty: snack.recipe.difficulty,
-                cuisine: snack.recipe.cuisine,
-                imageUrl: snack.recipe.imageUrl,
-                isCompleted: snack.isCompleted || false,
-                notes: snack.notes || '',
-              });
-            }
-          });
-        }
-        
-        // Calculate daily macros from saved meals
-        let totalCalories = 0;
-        let totalProtein = 0;
-        let totalCarbs = 0;
-        let totalFat = 0;
-        
-        Object.values(savedMeals).flat().forEach((meal: any) => {
-          totalCalories += meal.calories || 0;
-          totalProtein += meal.protein || 0;
-          totalCarbs += meal.carbs || 0;
-          totalFat += meal.fat || 0;
-        });
-
-        // Calculate total prep time
-        let totalCookTime = 0;
-        Object.values(savedMeals).flat().forEach((meal: any) => {
-          totalCookTime += meal.cookTime || 0;
-        });
-        setTotalPrepTime(totalCookTime);
-
-        // Load meal completion status and notes
-        const completionStatus: Record<string, boolean> = {};
-        const notesData: Record<string, string> = {};
-        Object.values(savedMeals).flat().forEach((meal: any) => {
-          if (meal.mealPlanMealId) {
-            completionStatus[meal.mealPlanMealId] = meal.isCompleted || false;
-            if (meal.notes) {
-              notesData[meal.mealPlanMealId] = meal.notes;
-            }
-          }
-        });
-        setMealCompletionStatus(completionStatus);
-        setMealNotes(notesData);
-        
-        setHourlyMeals(savedMeals);
-        setDailyMacros({
-          calories: totalCalories,
-          protein: totalProtein,
-          carbs: totalCarbs,
-          fat: totalFat,
-        });
-      }
-      
-      // Load daily suggestion for selected date
-      const dailyResponse = await mealPlanApi.getDailySuggestion();
-      setDailySuggestion(dailyResponse.data);
-      
-      // Load thawing reminders
-      loadThawingReminders();
-      
-      // Cost analysis will be loaded when meals are available
-      
-      console.log('📱 MealPlan: Meal plan loaded successfully');
-    } catch (error) {
-      console.error('📱 MealPlan: Error loading meal plan', error);
-      Alert.alert('Error', 'Failed to load meal plan');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadThawingReminders = async () => {
-    try {
-      setLoadingThawingReminders(true);
-      const response = await mealPrepApi.getThawingReminders(3); // Get reminders for next 3 days
-      setThawingReminders(response.data.reminders || []);
-    } catch (error) {
-      console.error('📱 MealPlan: Error loading thawing reminders', error);
-    } finally {
-      setLoadingThawingReminders(false);
-    }
-  };
 
   // Load cost analysis for current meal plan
   const loadCostAnalysis = async () => {
@@ -1950,9 +1733,7 @@ export default function MealPlanScreen() {
   };
 
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadMealPlan();
-    setRefreshing(false);
+    await refreshMealPlan();
   };
 
   const handleDateSelect = (date: Date) => {
