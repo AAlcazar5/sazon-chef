@@ -25,6 +25,9 @@ import { useApi } from '../../hooks/useApi';
 import { useMealPlanData } from '../../hooks/useMealPlanData';
 import { useMealCompletion } from '../../hooks/useMealCompletion';
 import { useGenerationState } from '../../hooks/useGenerationState';
+import { useMealSwap } from '../../hooks/useMealSwap';
+import { useCostTracking } from '../../hooks/useCostTracking';
+import { useNutritionTracking } from '../../hooks/useNutritionTracking';
 import { mealPlanApi, aiRecipeApi, shoppingListApi, userApi, costTrackingApi, mealPrepApi } from '../../lib/api';
 import type { WeeklyPlan, DailySuggestion } from '../../types';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -1136,6 +1139,53 @@ export default function MealPlanScreen() {
     setShoppingListName,
   } = useGenerationState();
 
+  // Use meal swap hook
+  const {
+    showSwapModal,
+    swapSuggestions,
+    selectedMealForSwap,
+    expandedSwapMealId,
+    loadingSwapSuggestions,
+    mealSwapSuggestions,
+    handleGetSwapSuggestions,
+    handleSwapMeal,
+    setShowSwapModal,
+    setSwapSuggestions,
+    setSelectedMealForSwap,
+    setExpandedSwapMealId,
+  } = useMealSwap({
+    hourlyMeals,
+    selectedDate,
+    setHourlyMeals,
+    setDailyMacros,
+    setTotalPrepTime,
+  });
+
+  // Use cost tracking hook
+  const {
+    costAnalysis,
+    loadingCostAnalysis,
+    shoppingListSavings,
+    loadingSavings,
+    loadCostAnalysis,
+    setCostAnalysis,
+    setLoadingCostAnalysis,
+    setShoppingListSavings,
+    setLoadingSavings,
+  } = useCostTracking({
+    hourlyMeals,
+  });
+
+  // Use nutrition tracking hook
+  const {
+    weeklyNutrition,
+    loadingWeeklyNutrition,
+    targetMacros,
+    setWeeklyNutrition,
+    setLoadingWeeklyNutrition,
+    setTargetMacros,
+  } = useNutritionTracking();
+
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
   const [showTimePickerModal, setShowTimePickerModal] = useState(false);
   const [selectedHour, setSelectedHour] = useState(12);
@@ -1147,11 +1197,6 @@ export default function MealPlanScreen() {
   const [draggingMeal, setDraggingMeal] = useState<{ hour: number; mealIndex: number; meal: any } | null>(null);
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
   
-  // Cost analysis state
-  const [costAnalysis, setCostAnalysis] = useState<any>(null);
-  const [loadingCostAnalysis, setLoadingCostAnalysis] = useState(false);
-  const [shoppingListSavings, setShoppingListSavings] = useState<any>(null);
-  const [loadingSavings, setLoadingSavings] = useState(false);
   
   // View mode state
   const [viewMode, setViewMode] = useState<'24hour' | 'compact' | 'collapsible'>('24hour');
@@ -1166,23 +1211,6 @@ export default function MealPlanScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollPositionRef = useRef(0);
   
-  // Meal enhancement state (swap functionality)
-  const [showSwapModal, setShowSwapModal] = useState(false);
-  const [swapSuggestions, setSwapSuggestions] = useState<any[]>([]);
-  const [selectedMealForSwap, setSelectedMealForSwap] = useState<any | null>(null);
-  const [expandedSwapMealId, setExpandedSwapMealId] = useState<string | null>(null);
-  const [loadingSwapSuggestions, setLoadingSwapSuggestions] = useState<string | null>(null);
-  const [mealSwapSuggestions, setMealSwapSuggestions] = useState<Record<string, any[]>>({});
-  const [weeklyNutrition, setWeeklyNutrition] = useState<any | null>(null);
-  const [loadingWeeklyNutrition, setLoadingWeeklyNutrition] = useState(false);
-  
-  // Target macros (from user profile)
-  const [targetMacros, setTargetMacros] = useState({
-    calories: 2000,
-    protein: 150,
-    carbs: 200,
-    fat: 67
-  });
 
   const hours = generateHours();
 
@@ -1218,127 +1246,6 @@ export default function MealPlanScreen() {
 
 
 
-  // Load cost analysis for current meal plan
-  const loadCostAnalysis = async () => {
-    try {
-      setLoadingCostAnalysis(true);
-      
-      // Get user preferences for budget
-      const prefsResponse = await userApi.getPreferences();
-      const preferences = prefsResponse.data;
-      
-      const maxDailyBudget = preferences?.maxDailyFoodBudget 
-        ? preferences.maxDailyFoodBudget / 7 // Convert weekly to daily
-        : undefined;
-      const maxWeeklyBudget = preferences?.maxDailyFoodBudget;
-      const maxMealCost = preferences?.maxMealCost;
-
-      // Calculate cost from current recipes in view
-      // Since we don't have a saved meal plan, we'll calculate from recipe IDs
-      const recipeIds: string[] = [];
-      Object.values(hourlyMeals).forEach((meals) => {
-        meals.forEach((meal) => {
-          if (meal.id && !recipeIds.includes(meal.id)) {
-            recipeIds.push(meal.id);
-          }
-        });
-      });
-
-      if (recipeIds.length === 0) {
-        setCostAnalysis(null);
-        return;
-      }
-
-      // Calculate estimated cost from shopping list generation
-      try {
-        const shoppingListResponse = await shoppingListApi.generateFromMealPlan({
-          recipeIds,
-        });
-        const estimatedCost = shoppingListResponse.data.estimatedCost;
-        
-        if (estimatedCost) {
-          // Create a simple cost analysis object
-          const daysCount = 7; // Assume weekly
-          const mealsCount = recipeIds.length;
-          
-          // Calculate per-meal costs and breakdown by meal type
-          const mealCosts: Array<{ name: string; cost: number; mealType: string; hour: number }> = [];
-          const costByMealType: Record<string, number> = { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 };
-          
-          // Get meal costs from hourlyMeals
-          Object.entries(hourlyMeals).forEach(([hourStr, meals]) => {
-            meals.forEach((meal) => {
-              const mealCost = meal.estimatedCost || meal.estimatedCostPerServing || (estimatedCost / mealsCount);
-              const mealType = meal.mealType || 'other';
-              const mealTypeKey = mealType === 'snack' || mealType === 'dessert' ? 'snacks' : mealType;
-              
-              mealCosts.push({
-                name: meal.name || meal.title || 'Unknown Meal',
-                cost: mealCost,
-                mealType: mealTypeKey,
-                hour: parseInt(hourStr),
-              });
-              
-              if (costByMealType[mealTypeKey] !== undefined) {
-                costByMealType[mealTypeKey] += mealCost;
-              }
-            });
-          });
-          
-          setCostAnalysis({
-            totalCost: estimatedCost,
-            costPerDay: estimatedCost / daysCount,
-            costPerMeal: estimatedCost / mealsCount,
-            mealsCount,
-            daysCount,
-            isWithinBudget: maxWeeklyBudget ? estimatedCost <= maxWeeklyBudget : true,
-            budgetRemaining: maxWeeklyBudget ? Math.max(0, maxWeeklyBudget - estimatedCost) : undefined,
-            budgetExceeded: maxWeeklyBudget && estimatedCost > maxWeeklyBudget 
-              ? estimatedCost - maxWeeklyBudget 
-              : undefined,
-            recommendations: maxWeeklyBudget && estimatedCost > maxWeeklyBudget
-              ? [`Meal plan exceeds weekly budget by $${(estimatedCost - maxWeeklyBudget).toFixed(2)}. Consider cheaper recipe alternatives.`]
-              : maxWeeklyBudget
-              ? [`You have $${(maxWeeklyBudget - estimatedCost).toFixed(2)} remaining in your weekly budget.`]
-              : undefined,
-            mealCosts, // Per-meal costs
-            costByMealType, // Cost breakdown by meal type
-          });
-
-          // Load savings suggestions for shopping list
-          if (shoppingListResponse.data.items) {
-            try {
-              setLoadingSavings(true);
-              const ingredientNames = shoppingListResponse.data.items
-                .map((item: any) => item.name.toLowerCase())
-                .filter((name: string) => name.length > 0);
-              
-              if (ingredientNames.length > 0) {
-                const bestStoreResponse = await costTrackingApi.getBestStoreForShoppingList(ingredientNames);
-                setShoppingListSavings(bestStoreResponse.data);
-              }
-            } catch (error) {
-              console.log('Savings not available:', error);
-            } finally {
-              setLoadingSavings(false);
-            }
-          }
-        } else {
-          setCostAnalysis(null);
-        }
-      } catch (error) {
-        // Cost calculation is optional
-        console.log('Cost analysis not available:', error);
-        setCostAnalysis(null);
-      }
-    } catch (error: any) {
-      // Cost analysis is optional, don't show errors
-      console.log('Cost analysis not available:', error.message);
-      setCostAnalysis(null);
-    } finally {
-      setLoadingCostAnalysis(false);
-    }
-  };
 
   // Generate weekly meal plan
   const handleGenerateWeeklyPlan = async () => {
