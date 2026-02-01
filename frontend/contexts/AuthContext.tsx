@@ -40,45 +40,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadStoredAuth = async () => {
+    console.log('[Auth] loadStoredAuth called');
+
+    // Shorter timeout for faster feedback on Android
+    const timeoutMs = 5000;
+    let didTimeout = false;
+
+    const timeoutId = setTimeout(() => {
+      console.log('[Auth] TIMEOUT - forcing isLoading to false');
+      didTimeout = true;
+      setIsLoading(false);
+    }, timeoutMs);
+
     try {
-      const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
-      const storedUser = await SecureStore.getItemAsync(USER_KEY);
+      console.log('[Auth] Starting to load stored auth...');
+
+      // Wrap SecureStore calls with individual timeouts
+      const getWithTimeout = async (key: string, timeoutMs: number = 2000): Promise<string | null> => {
+        return new Promise(async (resolve) => {
+          const timeout = setTimeout(() => {
+            console.log(`[Auth] SecureStore.getItemAsync(${key}) timed out`);
+            resolve(null);
+          }, timeoutMs);
+
+          try {
+            const result = await SecureStore.getItemAsync(key);
+            clearTimeout(timeout);
+            resolve(result);
+          } catch (e) {
+            clearTimeout(timeout);
+            console.log(`[Auth] SecureStore.getItemAsync(${key}) error:`, e);
+            resolve(null);
+          }
+        });
+      };
+
+      const storedToken = await getWithTimeout(TOKEN_KEY);
+      console.log('[Auth] Got stored token:', !!storedToken);
+
+      if (didTimeout) return;
+
+      const storedUser = await getWithTimeout(USER_KEY);
+      console.log('[Auth] Got stored user:', !!storedUser);
+
+      if (didTimeout) return;
 
       if (storedToken && storedUser) {
         const userData = JSON.parse(storedUser);
         setToken(storedToken);
         setUser(userData);
-        setAuthToken(storedToken); // Set API client token immediately
-        
-        // Initialize analytics
+        setAuthToken(storedToken);
+
+        // Skip analytics init during load - can be slow
+        // Initialize analytics in background
         if (userData?.id) {
-          await analytics.initialize(userData.id);
+          analytics.initialize(userData.id).catch(() => {});
         }
-        
-        // Verify token is still valid by fetching user profile
+
+        // Verify token with shorter timeout
         try {
+          console.log('[Auth] Verifying token with server...');
           const response = await api.get('/auth/profile', {
             headers: { Authorization: `Bearer ${storedToken}` },
+            timeout: 3000,
           });
-          if (response.data?.user) {
+          console.log('[Auth] Token verified successfully');
+          if (response.data?.user && !didTimeout) {
             const updatedUser = response.data.user;
             setUser(updatedUser);
-            await SecureStore.setItemAsync(USER_KEY, JSON.stringify(updatedUser));
-            
-            // Re-initialize analytics with updated user data
-            if (updatedUser?.id) {
-              await analytics.initialize(updatedUser.id);
-            }
+            // Don't await storage write - do it in background
+            SecureStore.setItemAsync(USER_KEY, JSON.stringify(updatedUser)).catch(() => {});
           }
         } catch (error) {
-          // Token is invalid, clear stored auth
-          await clearStoredAuth();
+          console.log('[Auth] Token verification failed, clearing auth');
+          if (!didTimeout) {
+            await clearStoredAuth();
+          }
         }
+      } else {
+        console.log('[Auth] No stored auth found');
       }
     } catch (error) {
-      console.error('Error loading stored auth:', error);
+      console.error('[Auth] Error loading stored auth:', error);
     } finally {
-      setIsLoading(false);
+      clearTimeout(timeoutId);
+      if (!didTimeout) {
+        console.log('[Auth] Setting isLoading to false');
+        setIsLoading(false);
+      }
     }
   };
 
@@ -97,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await api.post('/auth/login', { email, password });
-      
+
       if (response.data?.token && response.data?.user) {
         const authToken = response.data.token;
         const userData = response.data.user;
@@ -109,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(authToken);
         setUser(userData);
         setAuthToken(authToken); // Update API client token
-        
+
         // Initialize analytics
         if (userData?.id) {
           await analytics.initialize(userData.id);
@@ -119,7 +168,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Invalid response from server');
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Login failed';
+      // The API interceptor already normalizes errors into { message, code, details }
+      // If it's already an Error with a message, use it. Otherwise extract from error object.
+      let errorMessage = 'Login failed. Please try again.';
+
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
       throw new Error(errorMessage);
     }
   };
@@ -127,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     try {
       const response = await api.post('/auth/register', { name, email, password });
-      
+
       if (response.data?.token && response.data?.user) {
         const authToken = response.data.token;
         const userData = response.data.user;
@@ -139,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(authToken);
         setUser(userData);
         setAuthToken(authToken); // Update API client token
-        
+
         // Initialize analytics
         if (userData?.id) {
           await analytics.initialize(userData.id);
@@ -149,7 +209,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Invalid response from server');
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Registration failed';
+      let errorMessage = 'Registration failed. Please try again.';
+
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
       throw new Error(errorMessage);
     }
   };
@@ -183,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         idToken,
         accessToken,
       });
-      
+
       if (response.data?.token && response.data?.user) {
         const authToken = response.data.token;
         const userData = response.data.user;
@@ -199,7 +268,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Invalid response from server');
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Social login failed';
+      let errorMessage = 'Social login failed. Please try again.';
+
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
       throw new Error(errorMessage);
     }
   };
@@ -207,14 +285,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUser = async (userData: Partial<User>) => {
     try {
       const response = await api.put('/auth/profile', userData);
-      
+
       if (response.data?.user) {
         const updatedUser = { ...user, ...response.data.user } as User;
         setUser(updatedUser);
         await SecureStore.setItemAsync(USER_KEY, JSON.stringify(updatedUser));
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to update profile';
+      let errorMessage = 'Failed to update profile. Please try again.';
+
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
       throw new Error(errorMessage);
     }
   };

@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Anim
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import PulsingLoader from '../components/ui/PulsingLoader';
 import SuccessModal from '../components/ui/SuccessModal';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -516,6 +517,7 @@ export default function RecipeFormScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top']}>
+      <KeyboardAvoidingContainer>
       {/* Header */}
       <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} px-4 py-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center justify-between`}>
         <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
@@ -1019,6 +1021,7 @@ export default function RecipeFormScreen() {
         expression="chef-kiss"
         onDismiss={() => setShowSuccessModal(false)}
       />
+      </KeyboardAvoidingContainer>
     </SafeAreaView>
   );
 }

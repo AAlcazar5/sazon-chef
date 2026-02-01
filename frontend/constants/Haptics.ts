@@ -30,89 +30,115 @@ export const NotificationType = {
 } as const;
 
 /**
+ * Helper function to safely execute haptic feedback with error handling
+ * Silently fails if haptics are not available on the device
+ */
+const safeHaptic = async (hapticFn: () => Promise<void>) => {
+  try {
+    await hapticFn();
+  } catch (error) {
+    // Silently fail - haptics may not be available on all devices or simulators
+    if (__DEV__) {
+      console.debug('Haptic feedback not available:', error);
+    }
+  }
+};
+
+/**
  * Haptic feedback patterns for common UI interactions
  * These are semantic mappings to help developers choose the right feedback
+ * All patterns include error handling and will fail silently if haptics are unavailable
  */
 export const HapticPatterns = {
   // Button interactions
   /** Standard button press */
-  buttonPress: () => Haptics.impactAsync(ImpactStyle.light),
+  buttonPress: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
   /** Primary/CTA button press */
-  buttonPressPrimary: () => Haptics.impactAsync(ImpactStyle.medium),
+  buttonPressPrimary: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Destructive button press */
-  buttonPressDestructive: () => Haptics.impactAsync(ImpactStyle.heavy),
+  buttonPressDestructive: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.heavy)),
 
   // Selection interactions
   /** Single item selection (checkbox, radio) */
-  selection: () => Haptics.selectionAsync(),
+  selection: () => safeHaptic(() => Haptics.selectionAsync()),
   /** Toggle switch */
-  toggle: () => Haptics.impactAsync(ImpactStyle.light),
+  toggle: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
   /** Tab switch */
-  tabSwitch: () => Haptics.impactAsync(ImpactStyle.light),
+  tabSwitch: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
 
   // Gesture interactions
   /** Swipe action started */
-  swipeStart: () => Haptics.impactAsync(ImpactStyle.light),
+  swipeStart: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
   /** Swipe threshold reached */
-  swipeThreshold: () => Haptics.impactAsync(ImpactStyle.medium),
+  swipeThreshold: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Swipe action completed */
-  swipeComplete: () => Haptics.impactAsync(ImpactStyle.medium),
+  swipeComplete: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Long press detected */
-  longPress: () => Haptics.impactAsync(ImpactStyle.heavy),
+  longPress: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.heavy)),
   /** Pull to refresh triggered */
-  pullToRefresh: () => Haptics.impactAsync(ImpactStyle.medium),
+  pullToRefresh: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
 
   // Feedback interactions
   /** Like/favorite action */
-  like: () => Haptics.impactAsync(ImpactStyle.medium),
+  like: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Dislike action */
-  dislike: () => Haptics.impactAsync(ImpactStyle.medium),
+  dislike: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Save/bookmark action */
-  save: () => Haptics.impactAsync(ImpactStyle.medium),
+  save: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
 
   // State change notifications
   /** Success state (save complete, action succeeded) */
-  success: () => Haptics.notificationAsync(NotificationType.success),
+  success: () => safeHaptic(() => Haptics.notificationAsync(NotificationType.success)),
   /** Warning state (confirmation needed) */
-  warning: () => Haptics.notificationAsync(NotificationType.warning),
+  warning: () => safeHaptic(() => Haptics.notificationAsync(NotificationType.warning)),
   /** Error state (action failed, validation error) */
-  error: () => Haptics.notificationAsync(NotificationType.error),
+  error: () => safeHaptic(() => Haptics.notificationAsync(NotificationType.error)),
 
   // Modal/sheet interactions
   /** Modal opened */
-  modalOpen: () => Haptics.impactAsync(ImpactStyle.light),
+  modalOpen: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
   /** Modal closed */
-  modalClose: () => Haptics.impactAsync(ImpactStyle.light),
+  modalClose: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
   /** Action sheet opened */
-  actionSheetOpen: () => Haptics.impactAsync(ImpactStyle.medium),
+  actionSheetOpen: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
 
   // List interactions
   /** Item deleted from list */
-  itemDelete: () => Haptics.impactAsync(ImpactStyle.medium),
+  itemDelete: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Item added to list */
-  itemAdd: () => Haptics.impactAsync(ImpactStyle.light),
+  itemAdd: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
   /** Item reordered */
-  itemReorder: () => Haptics.impactAsync(ImpactStyle.light),
+  itemReorder: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
 
   // Navigation
   /** Navigate forward */
-  navigateForward: () => Haptics.impactAsync(ImpactStyle.light),
+  navigateForward: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
   /** Navigate back */
-  navigateBack: () => Haptics.impactAsync(ImpactStyle.light),
+  navigateBack: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
 
   // Form interactions
   /** Form submitted */
-  formSubmit: () => Haptics.impactAsync(ImpactStyle.medium),
+  formSubmit: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Form validation error */
-  formError: () => Haptics.notificationAsync(NotificationType.error),
+  formError: () => safeHaptic(() => Haptics.notificationAsync(NotificationType.error)),
 
   // Special interactions
   /** Recipe card flip/expand */
-  cardFlip: () => Haptics.impactAsync(ImpactStyle.medium),
+  cardFlip: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Roulette spin */
-  rouletteSpin: () => Haptics.impactAsync(ImpactStyle.medium),
+  rouletteSpin: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
   /** Random recipe generated */
-  randomGenerate: () => Haptics.impactAsync(ImpactStyle.heavy),
+  randomGenerate: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.heavy)),
+
+  // Additional UI interactions
+  /** Refresh action (pull-to-refresh, manual refresh) */
+  refresh: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
+  /** Tab navigation change */
+  tabChange: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.light)),
+  /** Delete action */
+  delete: () => safeHaptic(() => Haptics.impactAsync(ImpactStyle.medium)),
+  /** Task/action completed */
+  complete: () => safeHaptic(() => Haptics.notificationAsync(NotificationType.success)),
 } as const;
 
 /**

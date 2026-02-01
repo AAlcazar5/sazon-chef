@@ -376,13 +376,27 @@ export default function OnboardingScreen() {
     }
   };
 
-  const skipOnboarding = () => {
+  const skipOnboarding = async () => {
     Alert.alert(
       'Skip Onboarding?',
       'You can always set up your preferences later from the Profile screen.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Skip', onPress: () => router.replace('/(tabs)') },
+        { 
+          text: 'Skip', 
+          onPress: async () => {
+            try {
+              // Mark onboarding as complete so the app doesn't redirect back
+              await AsyncStorage.setItem('onboarding_complete', 'true');
+              // Navigate to tabs
+              router.replace('/(tabs)');
+            } catch (error) {
+              console.error('Error skipping onboarding:', error);
+              // Still navigate even if storage fails
+              router.replace('/(tabs)');
+            }
+          }
+        },
       ]
     );
   };

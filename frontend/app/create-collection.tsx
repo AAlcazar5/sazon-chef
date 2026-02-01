@@ -5,12 +5,11 @@ import {
   Text,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { collectionsApi } from '../lib/api';
 import { useColorScheme } from 'nativewind';
 
@@ -99,14 +99,12 @@ export default function CreateCollectionScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-white dark:bg-gray-900"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+      <KeyboardAvoidingContainer>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="w-full max-w-md self-center">
           {/* Back button */}
           <HapticTouchableOpacity
@@ -242,6 +240,7 @@ export default function CreateCollectionScreen() {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
+    </SafeAreaView>
   );
 }

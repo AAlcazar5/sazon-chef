@@ -8,17 +8,30 @@ import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  categorizeError,
+  getUserFriendlyMessage,
+  getRecoveryAction,
+} from '../../utils/errorLogger';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  /** Screen name for error context */
+  screen?: string;
+  /** User ID for error context */
+  userId?: string;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  errorCategory?: ErrorCategory;
 }
 
 class ErrorBoundaryClass extends Component<Props, State> {
@@ -33,22 +46,28 @@ class ErrorBoundaryClass extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     // Update state so the next render will show the fallback UI
+    const category = categorizeError(error);
     return {
       hasError: true,
       error,
       errorInfo: null,
+      errorCategory: category,
     };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to console in development
-    if (__DEV__) {
-      console.error('🚨 ErrorBoundary caught an error:', error);
-      console.error('Error Info:', errorInfo);
-    }
-
-    // Log error details for monitoring
-    this.logError(error, errorInfo);
+    // Log error with full context using centralized error logger
+    const category = categorizeError(error);
+    logError(error, {
+      userId: this.props.userId,
+      screen: this.props.screen,
+      action: 'Component Render',
+      componentStack: errorInfo.componentStack,
+      metadata: {
+        errorName: error.name,
+        errorStack: error.stack,
+      },
+    });
 
     // Call optional error handler
     if (this.props.onError) {
@@ -59,33 +78,13 @@ class ErrorBoundaryClass extends Component<Props, State> {
     this.setState({
       error,
       errorInfo,
+      errorCategory: category,
     });
 
     // Provide haptic feedback
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   }
 
-  private logError(error: Error, errorInfo: ErrorInfo) {
-    // In production, you would send this to an error monitoring service
-    // For now, we'll store it locally and log it
-    const errorData = {
-      message: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-      timestamp: new Date().toISOString(),
-    };
-
-    // Store error for potential reporting
-    try {
-      // Could store in AsyncStorage for error reporting
-      // await AsyncStorage.setItem('last_error', JSON.stringify(errorData));
-    } catch (storageError) {
-      console.error('Failed to store error:', storageError);
-    }
-
-    // In production, send to error monitoring service (e.g., Sentry, Bugsnag)
-    // Example: Sentry.captureException(error, { extra: errorInfo });
-  }
 
   handleReset = () => {
     this.setState({
@@ -103,51 +102,55 @@ class ErrorBoundaryClass extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      // Default error UI
-      return <ErrorFallback error={this.state.error} onReset={this.handleReset} />;
+      // Default error UI with category
+      return (
+        <ErrorFallback
+          error={this.state.error}
+          errorCategory={this.state.errorCategory}
+          onReset={this.handleReset}
+        />
+      );
     }
 
     return this.props.children;
   }
 }
 
-// Error Fallback Component - Now uses ScreenError for consistency
+// Error Fallback Component - Now uses ScreenError with enhanced categorization
 interface ErrorFallbackProps {
   error: Error | null;
+  errorCategory?: ErrorCategory;
   onReset: () => void;
 }
 
-function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
-  const errorMessage = error?.message || '';
-
-  // Determine error type based on error message
+function ErrorFallback({ error, errorCategory, onReset }: ErrorFallbackProps) {
+  // Map error category to ScreenError type
   const getErrorType = (): ErrorType => {
-    if (errorMessage.includes('network') ||
-        errorMessage.includes('Network') ||
-        errorMessage.includes('ECONNREFUSED') ||
-        errorMessage.includes('timeout') ||
-        errorMessage.includes('fetch')) {
-      return 'network';
+    if (!errorCategory) return 'generic';
+
+    switch (errorCategory) {
+      case ErrorCategory.NETWORK:
+        return 'network';
+      case ErrorCategory.AUTH:
+        return 'unauthorized';
+      case ErrorCategory.API:
+        return 'server';
+      default:
+        return 'generic';
     }
-    if (errorMessage.includes('401') || errorMessage.includes('unauthorized')) {
-      return 'unauthorized';
-    }
-    if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-      return 'notFound';
-    }
-    if (errorMessage.includes('500') || errorMessage.includes('server')) {
-      return 'server';
-    }
-    return 'generic';
   };
+
+  // Get user-friendly message
+  const message = error ? getUserFriendlyMessage(error, errorCategory) : 'An unexpected error occurred.';
+  const recoveryAction = error ? getRecoveryAction(error, errorCategory) : 'Try Again';
 
   return (
     <ScreenError
       type={getErrorType()}
       title="Oops! Something went wrong"
-      message="We encountered an unexpected error. Don't worry, your data is safe."
+      message={message}
       onRetry={onReset}
-      retryLabel="Try Again"
+      retryLabel={recoveryAction}
       showMascot={true}
       errorDetails={__DEV__ ? error?.stack || error?.message : undefined}
     />

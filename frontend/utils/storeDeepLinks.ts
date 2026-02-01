@@ -10,125 +10,140 @@ export interface StoreDeepLinkOptions {
 }
 
 /**
+ * Store configuration for deep links
+ * Each store has platform-specific URL schemes and web URLs
+ */
+interface StoreConfig {
+  /** Display name for the store */
+  displayName: string;
+  /** iOS app URL scheme */
+  iosScheme: string;
+  /** Android package name */
+  androidPackage: string;
+  /** Web URL for search */
+  webSearchUrl: (query: string) => string;
+  /** Web URL for homepage */
+  webHomeUrl: string;
+}
+
+/**
+ * Centralized store configurations
+ * Add new stores by adding entries to this object
+ */
+const STORE_CONFIGS: Record<string, StoreConfig> = {
+  instacart: {
+    displayName: 'Instacart',
+    iosScheme: 'instacart',
+    androidPackage: 'com.instacart.client',
+    webSearchUrl: (q) => `https://www.instacart.com/store/search?q=${q}`,
+    webHomeUrl: 'https://www.instacart.com/store',
+  },
+  walmart: {
+    displayName: 'Walmart',
+    iosScheme: 'walmart',
+    androidPackage: 'com.walmart.android',
+    webSearchUrl: (q) => `https://www.walmart.com/search?q=${q}`,
+    webHomeUrl: 'https://www.walmart.com',
+  },
+  kroger: {
+    displayName: 'Kroger',
+    iosScheme: 'kroger',
+    androidPackage: 'com.kroger.mobileapp',
+    webSearchUrl: (q) => `https://www.kroger.com/search?q=${q}`,
+    webHomeUrl: 'https://www.kroger.com',
+  },
+  target: {
+    displayName: 'Target',
+    iosScheme: 'target',
+    androidPackage: 'com.target.ui',
+    webSearchUrl: (q) => `https://www.target.com/s?searchTerm=${q}`,
+    webHomeUrl: 'https://www.target.com',
+  },
+  safeway: {
+    displayName: 'Safeway',
+    iosScheme: 'safeway',
+    androidPackage: 'com.safeway.client.android.safeway',
+    webSearchUrl: (q) => `https://www.safeway.com/shop/search-results.html?q=${q}`,
+    webHomeUrl: 'https://www.safeway.com',
+  },
+  'whole foods': {
+    displayName: 'Whole Foods',
+    iosScheme: 'amazonfresh',
+    androidPackage: 'com.amazon.fresh',
+    webSearchUrl: (q) => `https://www.amazon.com/alm/storefront?almBrandId=WholeFoods&searchTerm=${q}`,
+    webHomeUrl: 'https://www.amazon.com/alm/storefront?almBrandId=WholeFoods',
+  },
+};
+
+// Alias for "wholefoods" (without space)
+STORE_CONFIGS['wholefoods'] = STORE_CONFIGS['whole foods'];
+
+/**
+ * Build a deep link URL for a specific platform and store
+ */
+function buildDeepLink(config: StoreConfig, searchQuery: string, isSearch: boolean): string {
+  if (Platform.OS === 'ios') {
+    return isSearch
+      ? `${config.iosScheme}://search?q=${searchQuery}`
+      : `${config.iosScheme}://home`;
+  } else if (Platform.OS === 'android') {
+    return isSearch
+      ? `intent://search?q=${searchQuery}#Intent;scheme=${config.iosScheme};package=${config.androidPackage};end`
+      : `intent://home#Intent;scheme=${config.iosScheme};package=${config.androidPackage};end`;
+  }
+
+  // Fallback to web URL
+  return isSearch ? config.webSearchUrl(searchQuery) : config.webHomeUrl;
+}
+
+/**
  * Generate a deep link URL for a shopping app
  * Since most stores don't support adding multiple items via URL,
  * we'll search for the first item or open the store homepage
  */
 export function generateStoreDeepLink(options: StoreDeepLinkOptions, searchFirstItem: boolean = true): string | null {
-  const { storeName, items, location } = options;
+  const { storeName, items } = options;
   const normalizedStore = storeName.toLowerCase().trim();
 
-  // Get the first item for search, or use homepage if no items
+  // Get the first item for search
   const firstItem = items.length > 0 ? items[0].name : '';
   const searchQuery = encodeURIComponent(firstItem);
+  const isSearch = searchFirstItem && !!firstItem;
 
-  switch (normalizedStore) {
-    case 'instacart':
-      if (searchFirstItem && firstItem) {
-        if (Platform.OS === 'ios') {
-          return `instacart://search?q=${searchQuery}`;
-        } else if (Platform.OS === 'android') {
-          return `intent://search?q=${searchQuery}#Intent;scheme=instacart;package=com.instacart.client;end`;
-        }
-        return `https://www.instacart.com/store/search?q=${searchQuery}`;
-      }
-      // Open homepage if no items or searchFirstItem is false
-      if (Platform.OS === 'ios') {
-        return `instacart://home`;
-      } else if (Platform.OS === 'android') {
-        return `intent://home#Intent;scheme=instacart;package=com.instacart.client;end`;
-      }
-      return `https://www.instacart.com/store`;
-
-    case 'walmart':
-      if (searchFirstItem && firstItem) {
-        if (Platform.OS === 'ios') {
-          return `walmart://search?q=${searchQuery}`;
-        } else if (Platform.OS === 'android') {
-          return `intent://search?q=${searchQuery}#Intent;scheme=walmart;package=com.walmart.android;end`;
-        }
-        return `https://www.walmart.com/search?q=${searchQuery}`;
-      }
-      // Open Walmart homepage
-      if (Platform.OS === 'ios') {
-        return `walmart://home`;
-      } else if (Platform.OS === 'android') {
-        return `intent://home#Intent;scheme=walmart;package=com.walmart.android;end`;
-      }
-      return `https://www.walmart.com`;
-
-    case 'kroger':
-      if (searchFirstItem && firstItem) {
-        if (Platform.OS === 'ios') {
-          return `kroger://search?q=${searchQuery}`;
-        } else if (Platform.OS === 'android') {
-          return `intent://search?q=${searchQuery}#Intent;scheme=kroger;package=com.kroger.mobileapp;end`;
-        }
-        return `https://www.kroger.com/search?q=${searchQuery}`;
-      }
-      if (Platform.OS === 'ios') {
-        return `kroger://home`;
-      } else if (Platform.OS === 'android') {
-        return `intent://home#Intent;scheme=kroger;package=com.kroger.mobileapp;end`;
-      }
-      return `https://www.kroger.com`;
-
-    case 'target':
-      if (searchFirstItem && firstItem) {
-        if (Platform.OS === 'ios') {
-          return `target://search?q=${searchQuery}`;
-        } else if (Platform.OS === 'android') {
-          return `intent://search?q=${searchQuery}#Intent;scheme=target;package=com.target.ui;end`;
-        }
-        return `https://www.target.com/s?searchTerm=${searchQuery}`;
-      }
-      if (Platform.OS === 'ios') {
-        return `target://home`;
-      } else if (Platform.OS === 'android') {
-        return `intent://home#Intent;scheme=target;package=com.target.ui;end`;
-      }
-      return `https://www.target.com`;
-
-    case 'safeway':
-      if (searchFirstItem && firstItem) {
-        if (Platform.OS === 'ios') {
-          return `safeway://search?q=${searchQuery}`;
-        } else if (Platform.OS === 'android') {
-          return `intent://search?q=${searchQuery}#Intent;scheme=safeway;package=com.safeway.client.android.safeway;end`;
-        }
-        return `https://www.safeway.com/shop/search-results.html?q=${searchQuery}`;
-      }
-      if (Platform.OS === 'ios') {
-        return `safeway://home`;
-      } else if (Platform.OS === 'android') {
-        return `intent://home#Intent;scheme=safeway;package=com.safeway.client.android.safeway;end`;
-      }
-      return `https://www.safeway.com`;
-
-    case 'whole foods':
-    case 'wholefoods':
-      if (searchFirstItem && firstItem) {
-        if (Platform.OS === 'ios') {
-          return `amazonfresh://search?q=${searchQuery}`;
-        } else if (Platform.OS === 'android') {
-          return `intent://search?q=${searchQuery}#Intent;scheme=amazonfresh;package=com.amazon.fresh;end`;
-        }
-        return `https://www.amazon.com/alm/storefront?almBrandId=WholeFoods&searchTerm=${searchQuery}`;
-      }
-      if (Platform.OS === 'ios') {
-        return `amazonfresh://home`;
-      } else if (Platform.OS === 'android') {
-        return `intent://home#Intent;scheme=amazonfresh;package=com.amazon.fresh;end`;
-      }
-      return `https://www.amazon.com/alm/storefront?almBrandId=WholeFoods`;
-
-    default:
-      // Generic web search fallback
-      if (firstItem) {
-        return `https://www.google.com/search?q=${encodeURIComponent(`${storeName} ${firstItem}`)}`;
-      }
-      return `https://www.google.com/search?q=${encodeURIComponent(storeName)}`;
+  // Check if we have a configuration for this store
+  const config = STORE_CONFIGS[normalizedStore];
+  if (config) {
+    return buildDeepLink(config, searchQuery, isSearch);
   }
+
+  // Generic web search fallback for unknown stores
+  if (firstItem) {
+    return `https://www.google.com/search?q=${encodeURIComponent(`${storeName} ${firstItem}`)}`;
+  }
+  return `https://www.google.com/search?q=${encodeURIComponent(storeName)}`;
+}
+
+/**
+ * Get web fallback URL for a store
+ */
+function getWebFallbackUrl(options: StoreDeepLinkOptions, searchFirstItem: boolean = true): string | null {
+  const { storeName, items } = options;
+  const normalizedStore = storeName.toLowerCase().trim();
+  const firstItem = items.length > 0 ? items[0].name : '';
+  const searchQuery = encodeURIComponent(firstItem);
+  const isSearch = searchFirstItem && !!firstItem;
+
+  // Check if we have a configuration for this store
+  const config = STORE_CONFIGS[normalizedStore];
+  if (config) {
+    return isSearch ? config.webSearchUrl(searchQuery) : config.webHomeUrl;
+  }
+
+  // Generic web search fallback
+  if (firstItem) {
+    return `https://www.google.com/search?q=${encodeURIComponent(`${storeName} ${firstItem}`)}`;
+  }
+  return `https://www.google.com/search?q=${encodeURIComponent(storeName)}`;
 }
 
 /**
@@ -138,7 +153,7 @@ export function generateStoreDeepLink(options: StoreDeepLinkOptions, searchFirst
  */
 export async function openStoreWithItems(options: StoreDeepLinkOptions, searchFirstItem: boolean = true): Promise<boolean> {
   const url = generateStoreDeepLink(options, searchFirstItem);
-  
+
   if (!url) {
     return false;
   }
@@ -174,70 +189,10 @@ export async function openStoreWithItems(options: StoreDeepLinkOptions, searchFi
 }
 
 /**
- * Get web fallback URL for a store
- */
-function getWebFallbackUrl(options: StoreDeepLinkOptions, searchFirstItem: boolean = true): string | null {
-  const { storeName, items } = options;
-  const normalizedStore = storeName.toLowerCase().trim();
-  const firstItem = items.length > 0 ? items[0].name : '';
-  const searchQuery = encodeURIComponent(firstItem);
-
-  switch (normalizedStore) {
-    case 'instacart':
-      if (searchFirstItem && firstItem) {
-        return `https://www.instacart.com/store/search?q=${searchQuery}`;
-      }
-      return `https://www.instacart.com/store`;
-    case 'walmart':
-      if (searchFirstItem && firstItem) {
-        return `https://www.walmart.com/search?q=${searchQuery}`;
-      }
-      return `https://www.walmart.com`;
-    case 'kroger':
-      if (searchFirstItem && firstItem) {
-        return `https://www.kroger.com/search?q=${searchQuery}`;
-      }
-      return `https://www.kroger.com`;
-    case 'target':
-      if (searchFirstItem && firstItem) {
-        return `https://www.target.com/s?searchTerm=${searchQuery}`;
-      }
-      return `https://www.target.com`;
-    case 'safeway':
-      if (searchFirstItem && firstItem) {
-        return `https://www.safeway.com/shop/search-results.html?q=${searchQuery}`;
-      }
-      return `https://www.safeway.com`;
-    case 'whole foods':
-    case 'wholefoods':
-      if (searchFirstItem && firstItem) {
-        return `https://www.amazon.com/alm/storefront?almBrandId=WholeFoods&searchTerm=${searchQuery}`;
-      }
-      return `https://www.amazon.com/alm/storefront?almBrandId=WholeFoods`;
-    default:
-      if (firstItem) {
-        return `https://www.google.com/search?q=${encodeURIComponent(`${storeName} ${firstItem}`)}`;
-      }
-      return `https://www.google.com/search?q=${encodeURIComponent(storeName)}`;
-  }
-}
-
-/**
  * Get store app name for display
  */
 export function getStoreAppName(storeName: string): string {
   const normalized = storeName.toLowerCase().trim();
-  
-  const storeMap: Record<string, string> = {
-    'instacart': 'Instacart',
-    'walmart': 'Walmart',
-    'kroger': 'Kroger',
-    'target': 'Target',
-    'safeway': 'Safeway',
-    'whole foods': 'Whole Foods',
-    'wholefoods': 'Whole Foods',
-  };
-
-  return storeMap[normalized] || storeName;
+  const config = STORE_CONFIGS[normalized];
+  return config?.displayName || storeName;
 }
-

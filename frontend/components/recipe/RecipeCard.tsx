@@ -20,6 +20,7 @@ interface RecipeCardProps {
   onLike?: (recipeId: string) => void;
   onDislike?: (recipeId: string) => void;
   onSave?: (recipeId: string) => void;
+  onDelete?: (recipeId: string) => void;
   feedback?: { liked: boolean; disliked: boolean };
   isFeedbackLoading?: boolean;
   showDescription?: boolean;
@@ -44,13 +45,14 @@ const truncateDescription = (text: string | undefined, maxLength: number): strin
 };
 
 export const RecipeCard: React.FC<RecipeCardProps> = ({
-  recipe, 
+  recipe,
   variant = 'list',
   onPress,
   onLongPress,
   onLike,
   onDislike,
   onSave,
+  onDelete,
   feedback = { liked: false, disliked: false },
   isFeedbackLoading = false,
   showDescription = true,
@@ -65,10 +67,18 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
   swipeIndicatorCount = 0,
   swipeIndicatorIndex = 0,
 }) => {
+  const [imageError, setImageError] = React.useState(false);
+  const [imageLoading, setImageLoading] = React.useState(true);
+
+  // Reset image error when recipe changes
+  React.useEffect(() => {
+    setImageError(false);
+    setImageLoading(true);
+  }, [recipe.id, recipe.imageUrl]);
 
   // Default dimensions based on variant
-  const defaultImageHeight = variant === 'featured' ? 180 : (variant === 'carousel' ? 140 : variant === 'grid' ? 110 : 130);
-  const defaultCardHeight = variant === 'featured' ? undefined : variant === 'carousel' ? 360 : variant === 'grid' ? 300 : 350;
+  const defaultImageHeight = variant === 'featured' ? 240 : (variant === 'carousel' ? 140 : variant === 'grid' ? 150 : 170);
+  const defaultCardHeight = variant === 'featured' ? undefined : variant === 'carousel' ? 360 : variant === 'grid' ? 340 : 390;
   const finalImageHeight = imageHeight || defaultImageHeight;
   const finalCardHeight = cardHeight || defaultCardHeight;
 
@@ -136,15 +146,54 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
         })}
       >
         {/* Hero Recipe Image */}
-        {recipe.imageUrl && (
+        {recipe.imageUrl && recipe.imageUrl.trim() !== '' && !imageError ? (
           <View style={{ position: 'relative' }}>
             <Image 
-              source={{ uri: recipe.imageUrl }}
+              source={{ uri: recipe.imageUrl.trim() }}
               style={{ width: '100%', height: finalImageHeight }}
               contentFit="cover"
               transition={Duration.normal}
               cachePolicy="memory-disk"
               placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              onLoad={() => {
+                setImageLoading(false);
+                setImageError(false);
+              }}
+              onError={(error: any) => {
+                // Extract error message from nested structure
+                let errorMessage = '';
+                if (typeof error === 'string') {
+                  errorMessage = error;
+                } else if (error?.error?.error) {
+                  errorMessage = error.error.error;
+                } else if (error?.error) {
+                  errorMessage = typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
+                } else if (error?.message) {
+                  errorMessage = error.message;
+                } else {
+                  errorMessage = JSON.stringify(error);
+                }
+                
+                // Silently handle image loading errors - these are expected for unreliable image sources
+                // Only log in development for debugging, using warn instead of error to avoid alarming users
+                if (__DEV__) {
+                  const isNetworkError = errorMessage.includes('UnknownHostException') ||
+                                        errorMessage.includes('Unable to resolve host') ||
+                                        errorMessage.includes('Network request failed') ||
+                                        errorMessage.includes('No address associated with hostname');
+                  const isServiceError = errorMessage.includes('503') ||
+                                        errorMessage.includes('Service Unavailable') ||
+                                        errorMessage.includes('502') ||
+                                        errorMessage.includes('504');
+
+                  // Only log non-service errors in dev mode, and use warn instead of error
+                  if (!isNetworkError && !isServiceError) {
+                    console.warn(`⚠️ Image unavailable for "${recipe.title}" - using fallback`);
+                  }
+                }
+                setImageError(true);
+                setImageLoading(false);
+              }}
             />
             <LinearGradient
               colors={isDark 
@@ -202,7 +251,45 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
             
             {renderUnsplashAttribution()}
         </View>
-        )}
+        ) : ((recipe.imageUrl && imageError) || !recipe.imageUrl || (recipe.imageUrl && recipe.imageUrl.trim() === '')) ? (
+          // Fallback UI when image fails to load or is missing
+          <View style={{ 
+            width: '100%', 
+            height: finalImageHeight, 
+            backgroundColor: isDark ? '#374151' : '#E5E7EB',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative',
+          }}>
+            <Icon 
+              name={Icons.RESTAURANT} 
+              size={48} 
+              color={isDark ? '#6B7280' : '#9CA3AF'} 
+              accessibilityLabel="Recipe image placeholder"
+            />
+            <Text style={{ 
+              marginTop: 8,
+              fontSize: 12,
+              color: isDark ? '#6B7280' : '#9CA3AF',
+              fontWeight: '500',
+            }}>
+              {recipe.cuisine}
+            </Text>
+            <LinearGradient
+              colors={isDark 
+                ? ['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']
+                : ['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']
+              }
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 120,
+              }}
+            />
+          </View>
+        ) : null}
 
         <View className="p-4">
           <View className="flex-row justify-between items-start mb-2">
@@ -250,15 +337,25 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
           {/* Action Buttons */}
           <View className="flex-row items-center justify-between">
             <HapticTouchableOpacity
-              onPress={() => onSave?.(recipe.id)}
+              onPress={() => onDelete ? onDelete(recipe.id) : onSave?.(recipe.id)}
               className="p-2 rounded-full border"
               style={{
-                backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryDark,
-                borderColor: isDark ? DarkColors.primary : Colors.primaryDark,
+                backgroundColor: onDelete
+                  ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2')
+                  : (isDark ? `${Colors.primaryLight}33` : Colors.primaryDark),
+                borderColor: onDelete
+                  ? (isDark ? '#EF4444' : '#DC2626')
+                  : (isDark ? DarkColors.primary : Colors.primaryDark),
               }}
-              {...iconButtonAccessibility('Save recipe', { hint: 'Save this recipe to your cookbook' })}
+              {...iconButtonAccessibility(onDelete ? 'Remove recipe' : 'Save recipe', {
+                hint: onDelete ? 'Remove this recipe from your cookbook' : 'Save this recipe to your cookbook'
+              })}
             >
-              <Icon name={Icons.SAVE_RECIPE} size={18} color={isDark ? DarkColors.primary : '#FFFFFF'} />
+              <Icon
+                name={onDelete ? Icons.CLOSE : Icons.SAVE_RECIPE}
+                size={18}
+                color={onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF')}
+              />
             </HapticTouchableOpacity>
 
             <View className="flex-row items-center">
@@ -328,15 +425,54 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
         })}
       >
         {/* Recipe Image */}
-        {recipe.imageUrl && (
+        {recipe.imageUrl && recipe.imageUrl.trim() !== '' && !imageError ? (
           <View style={{ position: 'relative' }}>
             <Image
-              source={{ uri: recipe.imageUrl }}
+              source={{ uri: recipe.imageUrl.trim() }}
               style={{ width: '100%', height: finalImageHeight }}
               contentFit="cover"
               transition={Duration.normal}
               cachePolicy="memory-disk"
               placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              onLoad={() => {
+                setImageLoading(false);
+                setImageError(false);
+              }}
+              onError={(error: any) => {
+                // Extract error message from nested structure
+                let errorMessage = '';
+                if (typeof error === 'string') {
+                  errorMessage = error;
+                } else if (error?.error?.error) {
+                  errorMessage = error.error.error;
+                } else if (error?.error) {
+                  errorMessage = typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
+                } else if (error?.message) {
+                  errorMessage = error.message;
+                } else {
+                  errorMessage = JSON.stringify(error);
+                }
+                
+                // Silently handle image loading errors - these are expected for unreliable image sources
+                // Only log in development for debugging, using warn instead of error to avoid alarming users
+                if (__DEV__) {
+                  const isNetworkError = errorMessage.includes('UnknownHostException') ||
+                                        errorMessage.includes('Unable to resolve host') ||
+                                        errorMessage.includes('Network request failed') ||
+                                        errorMessage.includes('No address associated with hostname');
+                  const isServiceError = errorMessage.includes('503') ||
+                                        errorMessage.includes('Service Unavailable') ||
+                                        errorMessage.includes('502') ||
+                                        errorMessage.includes('504');
+
+                  // Only log non-service errors in dev mode, and use warn instead of error
+                  if (!isNetworkError && !isServiceError) {
+                    console.warn(`⚠️ Image unavailable for "${recipe.title}" - using fallback`);
+                  }
+                }
+                setImageError(true);
+                setImageLoading(false);
+              }}
             />
             <LinearGradient
               colors={isDark
@@ -394,7 +530,45 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
             
             {renderUnsplashAttribution()}
           </View>
-        )}
+        ) : ((recipe.imageUrl && imageError) || !recipe.imageUrl || (recipe.imageUrl && recipe.imageUrl.trim() === '')) ? (
+          // Fallback UI when image fails to load or is missing
+          <View style={{ 
+            width: '100%', 
+            height: finalImageHeight, 
+            backgroundColor: isDark ? '#374151' : '#E5E7EB',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative',
+          }}>
+            <Icon 
+              name={Icons.RESTAURANT} 
+              size={40} 
+              color={isDark ? '#6B7280' : '#9CA3AF'} 
+              accessibilityLabel="Recipe image placeholder"
+            />
+            <Text style={{ 
+              marginTop: 8,
+              fontSize: 11,
+              color: isDark ? '#6B7280' : '#9CA3AF',
+              fontWeight: '500',
+            }}>
+              {recipe.cuisine}
+            </Text>
+            <LinearGradient
+              colors={isDark
+                ? ['transparent', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.5)']
+                : ['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)']
+              }
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 40,
+              }}
+            />
+          </View>
+        ) : null}
 
         <View className="p-3" style={{ flex: 1, justifyContent: 'space-between' }}>
           <View>
@@ -512,15 +686,25 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
           {/* Action Buttons */}
           <View className="flex-row items-center justify-between" style={{ marginTop: isCarousel ? 0 : 8 }}>
             <HapticTouchableOpacity
-              onPress={() => onSave?.(recipe.id)}
+              onPress={() => onDelete ? onDelete(recipe.id) : onSave?.(recipe.id)}
               className="p-1.5 rounded-full border"
               style={{
-                backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryDark,
-                borderColor: isDark ? DarkColors.primary : Colors.primaryDark,
+                backgroundColor: onDelete
+                  ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2')
+                  : (isDark ? `${Colors.primaryLight}33` : Colors.primaryDark),
+                borderColor: onDelete
+                  ? (isDark ? '#EF4444' : '#DC2626')
+                  : (isDark ? DarkColors.primary : Colors.primaryDark),
               }}
-              {...iconButtonAccessibility('Save recipe', { hint: 'Save this recipe to your cookbook' })}
+              {...iconButtonAccessibility(onDelete ? 'Remove recipe' : 'Save recipe', {
+                hint: onDelete ? 'Remove this recipe from your cookbook' : 'Save this recipe to your cookbook'
+              })}
             >
-              <Icon name={Icons.SAVE_RECIPE} size={14} color={isDark ? DarkColors.primary : '#FFFFFF'} />
+              <Icon
+                name={onDelete ? Icons.CLOSE : Icons.SAVE_RECIPE}
+                size={14}
+                color={onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF')}
+              />
             </HapticTouchableOpacity>
 
             <View className="flex-row items-center">

@@ -39,12 +39,21 @@ export class ImageService {
   /**
    * Search for a food image based on recipe details
    * Returns full photo data including attribution info for compliance
+   *
+   * @param params.page - Page number (1-based) to fetch different images from search results
+   * @param params.resultIndex - Index within the page (0-based) to select specific result
    */
   async searchFoodImage(params: {
     recipeName: string;
     cuisine?: string;
     mainIngredient?: string;
+    page?: number; // 1-based page number for Unsplash API
+    resultIndex?: number; // 0-based index to select from results (0-29)
   }): Promise<UnsplashPhoto | null> {
+    // Page and result index for getting different images (moved outside try for scope)
+    const page = params.page || 1;
+    const resultIndex = params.resultIndex || 0;
+
     try {
       // Build search query
       const searchTerms = [params.recipeName];
@@ -54,20 +63,22 @@ export class ImageService {
       searchTerms.push('food'); // Always include 'food' to get relevant results
 
       const query = searchTerms.join(' ');
-      
-      console.log('🖼️  Searching for image:', query);
+
+      console.log('🖼️  Searching for image:', query, `(page: ${page}, index: ${resultIndex})`);
 
       // If no API key, use a fallback approach (less reliable)
       if (!this.unsplashAccessKey) {
         console.log('⚠️  No Unsplash API key - using fallback image URL');
-        return this.getFallbackPhoto(params.recipeName, params.cuisine);
+        return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
       }
 
       // Search Unsplash with API key (GUIDELINE #1: Use API endpoints)
+      // Fetch up to 30 results per page to have variety
       const response = await axios.get(`${this.baseUrl}/search/photos`, {
         params: {
           query,
-          per_page: 1,
+          per_page: 30, // Fetch multiple results per page
+          page,
           orientation: 'landscape',
           content_filter: 'high', // Family-friendly content only
         },
@@ -78,16 +89,18 @@ export class ImageService {
       });
 
       if (response.data.results && response.data.results.length > 0) {
-        const photo = response.data.results[0];
-        
+        // Use resultIndex to select different images (mod to wrap around if needed)
+        const photoIndex = resultIndex % response.data.results.length;
+        const photo = response.data.results[photoIndex];
+
         // GUIDELINE #1: Hotlink to photo URLs (required)
         // Use 'full' quality for production (1920px width) - perfect for mobile/tablet displays
         // Falls back to 'regular' if 'full' is not available
         const imageUrl = photo.urls.full || photo.urls.regular;
-        
+
         // GUIDELINE #2: Store download_location for triggering downloads
         const downloadLocation = photo.links.download_location;
-        
+
         // GUIDELINE #3: Prepare attribution data
         const photographer = {
           name: photo.user.name,
@@ -95,13 +108,13 @@ export class ImageService {
           // Add UTM parameters as required
           profileUrl: `https://unsplash.com/@${photo.user.username}?utm_source=${this.appName}&utm_medium=referral`,
         };
-        
+
         const unsplashUrl = `https://unsplash.com/photos/${photo.id}?utm_source=${this.appName}&utm_medium=referral`;
         const attributionText = `Photo by ${photographer.name} on Unsplash`;
-        
-        console.log('✅ Found image:', imageUrl);
+
+        console.log(`✅ Found image [${photoIndex}]:`, imageUrl);
         console.log('📸 Photographer:', photographer.name);
-        
+
         return {
           id: photo.id,
           url: imageUrl,
@@ -113,10 +126,10 @@ export class ImageService {
       }
 
       console.log('⚠️  No image found, using fallback');
-      return this.getFallbackPhoto(params.recipeName, params.cuisine);
+      return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
     } catch (error: any) {
       console.error('❌ Error fetching image from Unsplash:', error.message);
-      return this.getFallbackPhoto(params.recipeName, params.cuisine);
+      return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
     }
   }
 
@@ -148,15 +161,15 @@ export class ImageService {
    * Get a fallback photo (no API key required)
    * Returns minimal attribution data
    */
-  private getFallbackPhoto(recipeName: string, cuisine?: string): UnsplashPhoto | null {
+  private getFallbackPhoto(recipeName: string, cuisine?: string, resultIndex: number = 0): UnsplashPhoto | null {
     // Unsplash Source provides random images based on keywords
     // Format: https://source.unsplash.com/800x600/?food,pasta
     const keywords = ['food'];
-    
+
     if (cuisine) {
       keywords.push(cuisine.toLowerCase());
     }
-    
+
     // Add first word of recipe name as additional context
     const firstWord = recipeName.split(' ')[0].toLowerCase();
     if (firstWord && !['the', 'a', 'an'].includes(firstWord)) {
@@ -164,12 +177,12 @@ export class ImageService {
     }
 
     const keywordString = keywords.join(',');
-    // Add timestamp to prevent caching of same image
-    const randomSeed = Date.now();
+    // Add resultIndex and timestamp to prevent caching and get variety
+    const randomSeed = Date.now() + resultIndex;
     const fallbackUrl = `https://source.unsplash.com/800x600/?${keywordString}&sig=${randomSeed}`;
-    
+
     console.log('🖼️  Using fallback image URL:', fallbackUrl);
-    
+
     // Return minimal photo object
     return {
       id: `fallback-${randomSeed}`,

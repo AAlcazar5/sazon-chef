@@ -1,5 +1,6 @@
 // frontend/app/edit-budget.tsx
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 // Budget settings screen
 
 import { View, Text, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
@@ -72,6 +73,7 @@ export default function EditBudgetScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? '#111827' : '#F9FAFB' }} edges={['top']}>
+      <KeyboardAvoidingContainer>
       {/* Header */}
       <View className="px-4 py-4 border-b" style={{ 
         backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
@@ -249,6 +251,7 @@ export default function EditBudgetScreen() {
           </HapticTouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingContainer>
     </SafeAreaView>
   );
 }

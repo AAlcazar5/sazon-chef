@@ -16,7 +16,16 @@ import { buttonAccessibility, iconButtonAccessibility, inputAccessibility, switc
 import { userApi, authApi, recipeApi, mealPlanApi, shoppingListApi, mealHistoryApi, collectionsApi, costTrackingApi, weightGoalApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import * as Notifications from 'expo-notifications';
+import {
+  getNotificationPermissions,
+  requestNotificationPermissions,
+  getAllScheduledNotifications,
+  scheduleNotification,
+  cancelScheduledNotification,
+  setNotificationHandler,
+  type DailyTriggerInput,
+  type DateTriggerInput,
+} from '../../utils/notificationsService';
 import type { UserProfile, UserNotifications } from '../../types';
 import HelpTooltip from '../../components/ui/HelpTooltip';
 import * as ImagePicker from 'expo-image-picker';
@@ -645,21 +654,21 @@ export default function ProfileScreen() {
   const scheduleMealReminderNotifications = async (times: string[]) => {
     try {
       // Request permissions first
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+      const existingStatusResult = await getNotificationPermissions();
+      let finalStatus = existingStatusResult?.status;
       
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
+      if (!finalStatus || finalStatus !== 'granted') {
+        const requestResult = await requestNotificationPermissions();
+        finalStatus = requestResult?.status;
       }
       
-      if (finalStatus !== 'granted') {
+      if (!finalStatus || finalStatus !== 'granted') {
         console.log('📱 Profile: Notification permissions not granted');
         return;
       }
 
       // Cancel all existing meal reminder notifications
-      const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const allScheduled = await getAllScheduledNotifications();
       const mealReminderIds = allScheduled
         .filter(n => n.identifier.startsWith('meal-reminder-'))
         .map(n => n.identifier);
@@ -667,13 +676,13 @@ export default function ProfileScreen() {
       if (mealReminderIds.length > 0) {
         // Cancel each notification individually
         for (const id of mealReminderIds) {
-          await Notifications.cancelScheduledNotificationAsync(id);
+          await cancelScheduledNotification(id);
         }
         console.log(`📱 Profile: Cancelled ${mealReminderIds.length} existing meal reminder notifications`);
       }
 
       // Configure notification handler
-      Notifications.setNotificationHandler({
+      await setNotificationHandler({
         handleNotification: async () => ({
           shouldShowAlert: true,
           shouldPlaySound: true,
@@ -686,14 +695,14 @@ export default function ProfileScreen() {
         const [hours, minutes] = time.split(':').map(Number);
         
         // Create a daily recurring trigger
-        const trigger: Notifications.DailyTriggerInput = {
+        const trigger: DailyTriggerInput = {
           type: 'daily',
           hour: hours,
           minute: minutes,
           repeats: true,
         };
 
-        await Notifications.scheduleNotificationAsync({
+        await scheduleNotification({
           identifier: `meal-reminder-${time}`,
           content: {
             title: '🍳 Meal Reminder',
@@ -714,7 +723,7 @@ export default function ProfileScreen() {
   // Cancel all meal reminder notifications
   const cancelMealReminderNotifications = async () => {
     try {
-      const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const allScheduled = await getAllScheduledNotifications();
       const mealReminderIds = allScheduled
         .filter(n => n.identifier.startsWith('meal-reminder-'))
         .map(n => n.identifier);
@@ -722,7 +731,7 @@ export default function ProfileScreen() {
       if (mealReminderIds.length > 0) {
         // Cancel each notification individually
         for (const id of mealReminderIds) {
-          await Notifications.cancelScheduledNotificationAsync(id);
+          await cancelScheduledNotification(id);
         }
         console.log(`📱 Profile: Cancelled ${mealReminderIds.length} meal reminder notifications`);
       }
@@ -735,32 +744,32 @@ export default function ProfileScreen() {
   const scheduleGoalUpdateNotification = async (day: string, time: string) => {
     try {
       // Request permissions first
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+      const existingStatusResult = await getNotificationPermissions();
+      let finalStatus = existingStatusResult?.status;
       
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
+      if (!finalStatus || finalStatus !== 'granted') {
+        const requestResult = await requestNotificationPermissions();
+        finalStatus = requestResult?.status;
       }
       
-      if (finalStatus !== 'granted') {
+      if (!finalStatus || finalStatus !== 'granted') {
         console.log('📱 Profile: Notification permissions not granted');
         return;
       }
 
       // Cancel existing goal update notification
-      const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const allScheduled = await getAllScheduledNotifications();
       const goalUpdateId = allScheduled
         .find(n => n.identifier === 'goal-update-weekly')
         ?.identifier;
       
       if (goalUpdateId) {
-        await Notifications.cancelScheduledNotificationAsync(goalUpdateId);
+        await cancelScheduledNotification(goalUpdateId);
         console.log('📱 Profile: Cancelled existing goal update notification');
       }
 
       // Configure notification handler
-      Notifications.setNotificationHandler({
+      await setNotificationHandler({
         handleNotification: async () => ({
           shouldShowAlert: true,
           shouldPlaySound: true,
@@ -813,7 +822,7 @@ export default function ProfileScreen() {
         const notificationDate = new Date(nextDate);
         notificationDate.setDate(nextDate.getDate() + (week * 7));
         
-        const trigger: Notifications.DateTriggerInput = {
+        const trigger: DateTriggerInput = {
           type: 'date',
           date: notificationDate,
           repeats: false,
@@ -833,7 +842,7 @@ export default function ProfileScreen() {
 
       // Schedule all weekly notifications
       for (const notification of notificationsToSchedule) {
-        await Notifications.scheduleNotificationAsync(notification);
+        await scheduleNotification(notification);
       }
 
       console.log(`📱 Profile: Scheduled 52 weekly goal update notifications starting ${day} at ${time}`);
@@ -845,7 +854,7 @@ export default function ProfileScreen() {
   // Cancel goal update notifications
   const cancelGoalUpdateNotification = async () => {
     try {
-      const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const allScheduled = await getAllScheduledNotifications();
       const goalUpdateIds = allScheduled
         .filter(n => n.identifier.startsWith('goal-update-weekly-'))
         .map(n => n.identifier);
@@ -853,7 +862,7 @@ export default function ProfileScreen() {
       if (goalUpdateIds.length > 0) {
         // Cancel each notification individually
         for (const id of goalUpdateIds) {
-          await Notifications.cancelScheduledNotificationAsync(id);
+          await cancelScheduledNotification(id);
         }
         console.log(`📱 Profile: Cancelled ${goalUpdateIds.length} goal update notifications`);
       }
@@ -1589,7 +1598,7 @@ export default function ProfileScreen() {
       // Cancel the specific notification for the removed time
       if (removedTime) {
         try {
-          await Notifications.cancelScheduledNotificationAsync(`meal-reminder-${removedTime}`);
+          await cancelScheduledNotification(`meal-reminder-${removedTime}`);
           console.log(`📱 Profile: Cancelled notification for ${removedTime}`);
         } catch (error) {
           console.error('📱 Profile: Error cancelling specific notification', error);

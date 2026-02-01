@@ -78,8 +78,16 @@ export default function CardStack({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabled,
-      onMoveShouldSetPanResponder: () => !disabled,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        if (disabled) return false;
+        // Only capture pan responder if user has moved significantly
+        // This allows ScrollView to handle vertical scrolling on Android
+        const dx = Math.abs(gesture.dx);
+        const dy = Math.abs(gesture.dy);
+        return dx > 10 || dy > 10;
+      },
+      onPanResponderTerminationRequest: () => true,
       onPanResponderMove: (_, gesture) => {
         position.setValue({ x: gesture.dx, y: gesture.dy });
         
@@ -110,12 +118,15 @@ export default function CardStack({
           
           HapticPatterns.swipeComplete();
           
+          // Run position animation separately since it requires useNativeDriver: false
+          Animated.timing(position, {
+            toValue: { x: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH, y: gesture.dy },
+            duration: Duration.medium,
+            useNativeDriver: false,
+          }).start();
+          
+          // Run native driver animations in parallel
           Animated.parallel([
-            Animated.timing(position, {
-              toValue: { x: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH, y: gesture.dy },
-              duration: Duration.medium,
-              useNativeDriver: false,
-            }),
             Animated.timing(opacity, {
               toValue: 0,
               duration: Duration.medium,
@@ -142,12 +153,15 @@ export default function CardStack({
           
           HapticPatterns.swipeComplete();
           
+          // Run position animation separately since it requires useNativeDriver: false
+          Animated.timing(position, {
+            toValue: { x: gesture.dx, y: direction === 'up' ? -SCREEN_HEIGHT : SCREEN_HEIGHT },
+            duration: Duration.medium,
+            useNativeDriver: false,
+          }).start();
+          
+          // Run native driver animations in parallel
           Animated.parallel([
-            Animated.timing(position, {
-              toValue: { x: gesture.dx, y: direction === 'up' ? -SCREEN_HEIGHT : SCREEN_HEIGHT },
-              duration: Duration.medium,
-              useNativeDriver: false,
-            }),
             Animated.timing(opacity, {
               toValue: 0,
               duration: Duration.medium,
@@ -176,11 +190,15 @@ export default function CardStack({
         } else {
           // Spring back to center
           HapticPatterns.buttonPress();
+          
+          // Run position animation separately since it requires useNativeDriver: false
+          Animated.spring(position, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+          }).start();
+          
+          // Run native driver animations in parallel
           Animated.parallel([
-            Animated.spring(position, {
-              toValue: { x: 0, y: 0 },
-              useNativeDriver: false,
-            }),
             Animated.spring(rotation, {
               toValue: 0,
               useNativeDriver: true,

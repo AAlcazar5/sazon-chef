@@ -16,8 +16,10 @@ router.get('/debug/test', (req, res) => {
 
 // Basic routes - specific routes MUST come before parameterized routes
 router.get('/', recipeController.getRecipes);
+router.get('/optimized', recipeController.getRecipesOptimized); // NEW: Optimized endpoint for 10K+ recipes
 router.get('/suggested', recipeController.getSuggestedRecipes);
 router.get('/random', recipeController.getRandomRecipe);
+router.get('/recipe-of-the-day', recipeController.getRecipeOfTheDay); // Home Page 2.0
 router.get('/saved', recipeController.getSavedRecipes);
 router.get('/liked', recipeController.getLikedRecipes);
 router.get('/disliked', recipeController.getDislikedRecipes);

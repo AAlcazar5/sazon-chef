@@ -57,6 +57,7 @@ export interface GeneratedRecipe {
   title: string;
   description: string;
   cuisine: string;
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert';
   cookTime: number;
   difficulty: 'easy' | 'medium' | 'hard';
   servings: number;
@@ -123,7 +124,12 @@ export class AIRecipeService {
       
       // Validate and normalize the recipe
       const validated = this.validateAndNormalizeRecipe(recipe);
-      
+
+      // Ensure mealType from params is set (override if provided, exclude 'any')
+      if (params.mealType && params.mealType !== 'any') {
+        validated.mealType = params.mealType;
+      }
+
       // Run safety checks
       try {
         this.performSafetyChecks(validated, params);
@@ -805,6 +811,11 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (Â
     recipe.tips = recipe.tips || [];
     recipe.tags = recipe.tags || [];
 
+    // Ensure mealType is set if not already provided
+    if (!recipe.mealType) {
+      recipe.mealType = 'lunch'; // Default meal type
+    }
+
     return recipe;
   }
 
@@ -948,6 +959,7 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (Â
           title: recipe.title,
           description: recipe.description,
           cuisine: recipe.cuisine,
+          mealType: recipe.mealType,
           cookTime: recipe.cookTime,
           difficulty: recipe.difficulty,
           servings: recipe.servings,

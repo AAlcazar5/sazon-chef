@@ -38,6 +38,7 @@ import SmartBadges from '../../components/recipe/SmartBadges';
 import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import RippleEffect from '../../components/ui/RippleEffect';
 import { RecipeCard } from '../../components/recipe/RecipeCard';
+import MoodSelector, { MoodChip, MOODS, type Mood } from '../../components/ui/MoodSelector';
 
 // Track user feedback state
 interface UserFeedback {
@@ -303,6 +304,7 @@ function FilterModal({
 }
 
 export default function HomeScreen() {
+  console.log('[HomeScreen] Component rendering');
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { showToast } = useToast();
@@ -317,6 +319,12 @@ export default function HomeScreen() {
   const [showRandomModal, setShowRandomModal] = useState(false);
   
   const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
+  const [quickMealsRecipes, setQuickMealsRecipes] = useState<SuggestedRecipe[]>([]); // Separate state for quick meals
+  const [perfectMatchRecipes, setPerfectMatchRecipes] = useState<SuggestedRecipe[]>([]); // Separate state for perfect match recipes
+  const [quickMealsCurrentIndex, setQuickMealsCurrentIndex] = useState(0); // Track which recipe user is viewing
+  const [perfectMatchCurrentIndex, setPerfectMatchCurrentIndex] = useState(0); // Track which recipe user is viewing
+  const [refreshingQuickMeals, setRefreshingQuickMeals] = useState(false);
+  const [refreshingPerfectMatches, setRefreshingPerfectMatches] = useState(false);
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
   
   // Scroll position for parallax effect
@@ -373,11 +381,58 @@ export default function HomeScreen() {
   const [mealPrepMode, setMealPrepMode] = useState(false);
   const MEAL_PREP_STORAGE_KEY = '@sazon_meal_prep_mode';
 
+  // Quick macro filters (Home Page 2.0)
+  const [quickMacroFilters, setQuickMacroFilters] = useState<{
+    highProtein: boolean;
+    lowCarb: boolean;
+    lowCalorie: boolean;
+  }>({
+    highProtein: false,
+    lowCarb: false,
+    lowCalorie: false,
+  });
+
+  // Time-aware suggestions toggle (Home Page 2.0)
+  const [timeAwareMode, setTimeAwareMode] = useState(true);
+  const TIME_AWARE_STORAGE_KEY = '@sazon_time_aware_mode';
+
+  // Get current meal period for display (Home Page 2.0)
+  const currentMealPeriod = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 11) return { label: 'Breakfast', emoji: '🌅', period: 'breakfast' };
+    if (hour >= 11 && hour < 15) return { label: 'Lunch', emoji: '☀️', period: 'lunch' };
+    if (hour >= 15 && hour < 21) return { label: 'Dinner', emoji: '🌙', period: 'dinner' };
+    return { label: 'Late Night', emoji: '🌃', period: 'snack' };
+  }, []);
+
+  // Recipe of the Day (Home Page 2.0)
+  const [recipeOfTheDay, setRecipeOfTheDay] = useState<SuggestedRecipe | null>(null);
+  const [loadingRecipeOfTheDay, setLoadingRecipeOfTheDay] = useState(false);
+
+  // Mood-based recommendations (Home Page 2.0)
+  const [selectedMood, setSelectedMood] = useState<{ id: string; label: string; emoji: string; color: string } | null>(null);
+  const [showMoodSelector, setShowMoodSelector] = useState(false);
+
   // Track if we're loading from filters to prevent useApi from interfering
   const [loadingFromFilters, setLoadingFromFilters] = useState(false);
 
+  // Track initial loading state for paginated fetch
+  const [initialLoading, setInitialLoading] = useState(true);
+
   // Use the useApi hook for fetching suggested recipes (only when no filters)
   const { data: recipesData, loading, error, refetch } = useApi('/recipes/suggested');
+
+  // Debug logging for loading states
+  useEffect(() => {
+    console.log('[HomeScreen] State:', {
+      suggestedRecipesLength: suggestedRecipes.length,
+      loading,
+      initialLoading,
+      loadingFromFilters,
+      filtersLoaded,
+      error: error ? String(error) : null,
+    });
+  }, [suggestedRecipes.length, loading, initialLoading, loadingFromFilters, filtersLoaded, error]);
 
   // Load saved filters on component mount
   useEffect(() => {
@@ -447,14 +502,17 @@ export default function HomeScreen() {
             setUserFeedback(initialFeedback);
             } finally {
             setLoadingFromFilters(false);
+            setInitialLoading(false); // Also mark initial loading as complete
             }
           }
         }
         setFiltersLoaded(true);
+        // If no active filters, initialLoading will be handled by fetchInitialRecipes
       } catch (error) {
         console.error('❌ Error loading saved filters:', error);
         setFiltersLoaded(true);
         setLoadingFromFilters(false);
+        setInitialLoading(false);
       }
     };
 
@@ -497,6 +555,40 @@ export default function HomeScreen() {
     setCurrentPage(0); // Reset to first page when view mode changes
   }, [viewMode]);
 
+  // Load time-aware mode preference on mount (Home Page 2.0)
+  useEffect(() => {
+    const loadTimeAwareMode = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(TIME_AWARE_STORAGE_KEY);
+        if (saved !== null) {
+          setTimeAwareMode(saved === 'true');
+        }
+      } catch (error) {
+        console.error('❌ Error loading time-aware mode:', error);
+      }
+    };
+    loadTimeAwareMode();
+  }, []);
+
+  // Fetch Recipe of the Day on mount (Home Page 2.0)
+  useEffect(() => {
+    const fetchRecipeOfTheDay = async () => {
+      try {
+        setLoadingRecipeOfTheDay(true);
+        const response = await recipeApi.getRecipeOfTheDay();
+        if (response.data?.recipe) {
+          setRecipeOfTheDay(response.data.recipe);
+          console.log('🌟 Recipe of the Day loaded:', response.data.recipe.title);
+        }
+      } catch (error: any) {
+        console.error('❌ Error fetching Recipe of the Day:', error);
+      } finally {
+        setLoadingRecipeOfTheDay(false);
+      }
+    };
+    fetchRecipeOfTheDay();
+  }, []);
+
   // Load personalized data (liked recipes, recently viewed)
   useEffect(() => {
     const loadPersonalizedData = async () => {
@@ -526,6 +618,14 @@ export default function HomeScreen() {
     
     loadPersonalizedData();
   }, [user?.id]);
+
+  // Fetch quick meals and perfect matches when filters are loaded and when filters/meal prep mode changes
+  useEffect(() => {
+    if (filtersLoaded && !searchQuery) { // Only fetch when not searching
+      fetchQuickMeals();
+      fetchPerfectMatches();
+    }
+  }, [filtersLoaded, filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, mealPrepMode, searchQuery, fetchQuickMeals, fetchPerfectMatches]);
 
 
   // Toggle view mode
@@ -848,7 +948,53 @@ export default function HomeScreen() {
     setInitialRecipesLoaded(false); // Reset flag to allow reloading
     setCurrentPage(0);
     setAllRecipes([]);
-    await refetch();
+
+    // Use shuffle mode for pull-to-discover (Home Page 2.0)
+    try {
+      const response = await recipeApi.getAllRecipes({
+        page: 0,
+        limit: RECIPES_PER_PAGE,
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        maxCookTime: filters.maxCookTime || undefined,
+        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+        mealPrepMode: mealPrepMode,
+        search: searchQuery || undefined,
+        ...getMacroFilterParams(),
+        useTimeAwareDefaults: timeAwareMode,
+        shuffle: true, // Enable shuffle for fresh discovery on pull
+      });
+
+      const responseData = response.data;
+      let recipes: SuggestedRecipe[];
+      let total: number;
+
+      if (responseData && responseData.recipes && responseData.pagination) {
+        recipes = responseData.recipes;
+        total = responseData.pagination.total;
+      } else if (Array.isArray(responseData)) {
+        recipes = responseData;
+        total = recipes.length;
+      } else {
+        console.error('❌ Unexpected API response format:', responseData);
+        setRefreshing(false);
+        return;
+      }
+
+      setTotalRecipes(total);
+      setSuggestedRecipes(recipes);
+      setAllRecipes(recipes);
+      setInitialRecipesLoaded(true);
+
+      const initialFeedback: Record<string, UserFeedback> = {};
+      recipes.forEach((recipe: SuggestedRecipe) => {
+        initialFeedback[recipe.id] = { liked: false, disliked: false };
+      });
+      setUserFeedback(initialFeedback);
+    } catch (error: any) {
+      console.error('❌ Error refreshing recipes:', error);
+    }
+
     setRefreshing(false);
   };
 
@@ -856,22 +1002,25 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchInitialRecipes = async () => {
       if (!filtersLoaded) return; // Wait for filters to load first
-      
+
       // Only fetch from paginated API if no filters are active and not in meal prep mode
       if (activeFilters.length === 0 && !mealPrepMode && !loadingFromFilters) {
+        setInitialLoading(true);
         try {
           console.log('📄 Fetching initial page of all recipes');
           const response = await recipeApi.getAllRecipes({
             page: 0,
             limit: RECIPES_PER_PAGE,
-            search: searchQuery || undefined
+            search: searchQuery || undefined,
+            ...getMacroFilterParams(),
+            useTimeAwareDefaults: timeAwareMode,
           });
-          
+
           // Handle both new paginated format { recipes, pagination } and old array format
           const responseData = response.data;
           let recipes: SuggestedRecipe[];
           let total: number;
-          
+
           if (responseData && responseData.recipes && responseData.pagination) {
             // New paginated format
             recipes = responseData.recipes;
@@ -884,18 +1033,19 @@ export default function HomeScreen() {
             console.log(`📄 Initial load (array fallback): ${recipes.length} recipes`);
           } else {
             console.error('❌ Unexpected API response format:', responseData);
+            setInitialLoading(false);
             return;
           }
-          
+
           // Set total count from server
           setTotalRecipes(total);
-          
+
           // Set initial recipes
           setSuggestedRecipes(recipes);
           setAllRecipes(recipes); // Keep for backward compatibility
           setCurrentPage(0);
           setInitialRecipesLoaded(true);
-          
+
           // Initialize feedback state
           const initialFeedback: Record<string, UserFeedback> = {};
           recipes.forEach((recipe: SuggestedRecipe) => {
@@ -904,10 +1054,15 @@ export default function HomeScreen() {
           setUserFeedback(initialFeedback);
         } catch (error: any) {
           console.error('❌ Error fetching initial recipes:', error?.message || error);
+        } finally {
+          setInitialLoading(false);
         }
+      } else {
+        // If filters are active or in meal prep mode, we're not doing initial load
+        setInitialLoading(false);
       }
     };
-    
+
     fetchInitialRecipes();
   }, [filtersLoaded, activeFilters, mealPrepMode, loadingFromFilters, searchQuery]); // Removed RECIPES_PER_PAGE - viewMode change effect handles refetching
 
@@ -980,6 +1135,159 @@ export default function HomeScreen() {
     const isLastPage = currentPage >= totalPages - 1;
     return { totalPages, hasMultiplePages, isFirstPage, isLastPage, totalRecipes };
   }, [totalRecipes, RECIPES_PER_PAGE, currentPage]);
+
+  // Refs to track current recipes for loadMore functionality
+  const quickMealsRecipesRef = useRef<SuggestedRecipe[]>([]);
+  const perfectMatchRecipesRef = useRef<SuggestedRecipe[]>([]);
+  
+  // Refs for ScrollView components to control scroll position
+  const quickMealsScrollViewRef = useRef<ScrollView>(null);
+  const perfectMatchScrollViewRef = useRef<ScrollView>(null);
+  
+  // Update refs when recipes change
+  useEffect(() => {
+    quickMealsRecipesRef.current = quickMealsRecipes;
+  }, [quickMealsRecipes]);
+  
+  useEffect(() => {
+    perfectMatchRecipesRef.current = perfectMatchRecipes;
+  }, [perfectMatchRecipes]);
+
+  // Fetch quick meals separately (independent of pagination)
+  const fetchQuickMeals = useCallback(async (refresh: boolean = false) => {
+    try {
+      if (refresh) {
+        setRefreshingQuickMeals(true);
+      }
+      
+      // Use a random page to get variety when refreshing
+      const page = refresh ? Math.floor(Math.random() * 10) : 0;
+      console.log(`⚡ Fetching quick meals (≤30 min)... ${refresh ? 'refreshing' : 'initial'}`);
+      
+      const response = await recipeApi.getAllRecipes({
+        page,
+        limit: 5, // Only get 5 recipes
+        maxCookTime: 30, // Only recipes ≤ 30 minutes
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        mealPrepMode: mealPrepMode,
+      });
+      
+      const responseData = response.data;
+      let recipes: SuggestedRecipe[] = [];
+      
+      if (responseData && responseData.recipes && responseData.pagination) {
+        recipes = responseData.recipes;
+      } else if (Array.isArray(responseData)) {
+        recipes = responseData;
+      }
+      
+      // Filter to ensure all are actually ≤ 30 minutes
+      const quickMeals = recipes.filter(r => r.cookTime && r.cookTime <= 30).slice(0, 5);
+      
+      // Avoid duplicates with existing recipes
+      if (refresh && quickMealsRecipesRef.current.length > 0) {
+        const existingIds = new Set(quickMealsRecipesRef.current.map(r => r.id));
+        const uniqueMeals = quickMeals.filter(r => !existingIds.has(r.id));
+        
+        // If we got duplicates, try fetching from a different page
+        if (uniqueMeals.length < 3 && quickMeals.length === 5) {
+          // Retry with different page
+          const retryPage = (page + 1) % 10;
+          const retryResponse = await recipeApi.getAllRecipes({
+            page: retryPage,
+            limit: 5,
+            maxCookTime: 30,
+            cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+            dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+            mealPrepMode: mealPrepMode,
+          });
+          const retryData = retryResponse.data;
+          const retryRecipes = Array.isArray(retryData) ? retryData : (retryData?.recipes || []);
+          const retryMeals = retryRecipes.filter((r: SuggestedRecipe) => r.cookTime && r.cookTime <= 30 && !existingIds.has(r.id)).slice(0, 5);
+          setQuickMealsRecipes(retryMeals.length > 0 ? retryMeals : quickMeals);
+        } else {
+          setQuickMealsRecipes(uniqueMeals.length > 0 ? uniqueMeals : quickMeals);
+        }
+      } else {
+        setQuickMealsRecipes(quickMeals);
+      }
+      
+      // Reset scroll position
+      setQuickMealsCurrentIndex(0);
+      // Scroll to first card after a brief delay to ensure state is updated
+      setTimeout(() => {
+        quickMealsScrollViewRef.current?.scrollTo({ x: 0, animated: true });
+      }, 100);
+      console.log(`⚡ Found ${quickMeals.length} quick meals`);
+    } catch (error) {
+      console.error('❌ Error fetching quick meals:', error);
+      if (!refresh) {
+        setQuickMealsRecipes([]);
+      }
+    } finally {
+      if (refresh) {
+        setRefreshingQuickMeals(false);
+      }
+    }
+  }, [filters.cuisines, filters.dietaryRestrictions, mealPrepMode]);
+
+  // Fetch perfect match recipes separately (independent of pagination)
+  const fetchPerfectMatches = useCallback(async (refresh: boolean = false) => {
+    try {
+      if (refresh) {
+        setRefreshingPerfectMatches(true);
+      }
+      
+      console.log(`⭐ Fetching perfect match recipes (≥85% match)... ${refresh ? 'refreshing' : 'initial'}`);
+      // Use suggested recipes endpoint which includes scoring
+      const response = await recipeApi.getSuggestedRecipes({
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        maxCookTime: filters.maxCookTime || undefined,
+        mealPrepMode: mealPrepMode,
+        offset: refresh ? Math.floor(Math.random() * 50) : 0, // Random offset when refreshing for variety
+      });
+      
+      const recipes: SuggestedRecipe[] = Array.isArray(response.data) ? response.data : [];
+      
+      // Filter for recipes with matchPercentage >= 85
+      const perfectMatches = recipes.filter(r => 
+        r.score?.matchPercentage && r.score.matchPercentage >= 85
+      );
+      
+      // Sort by match percentage and take top 5
+      const sortedMatches = perfectMatches
+        .sort((a, b) => (b.score?.matchPercentage || 0) - (a.score?.matchPercentage || 0))
+        .slice(0, 5);
+      
+      // Avoid duplicates with existing recipes
+      if (refresh && perfectMatchRecipesRef.current.length > 0) {
+        const existingIds = new Set(perfectMatchRecipesRef.current.map(r => r.id));
+        const uniqueMatches = sortedMatches.filter(r => !existingIds.has(r.id));
+        setPerfectMatchRecipes(uniqueMatches.length > 0 ? uniqueMatches : sortedMatches);
+      } else {
+        setPerfectMatchRecipes(sortedMatches);
+      }
+      
+      // Reset scroll position
+      setPerfectMatchCurrentIndex(0);
+      // Scroll to first card after a brief delay to ensure state is updated
+      setTimeout(() => {
+        perfectMatchScrollViewRef.current?.scrollTo({ x: 0, animated: true });
+      }, 100);
+      console.log(`⭐ Found ${sortedMatches.length} perfect match recipes`);
+    } catch (error) {
+      console.error('❌ Error fetching perfect match recipes:', error);
+      if (!refresh) {
+        setPerfectMatchRecipes([]);
+      }
+    } finally {
+      if (refresh) {
+        setRefreshingPerfectMatches(false);
+      }
+    }
+  }, [filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, mealPrepMode]);
 
   // Fetch recipes for a specific page from the server
   const fetchRecipesForPage = useCallback(async (page: number) => {
@@ -1449,6 +1757,158 @@ export default function HomeScreen() {
     });
   };
 
+  // Toggle time-aware mode (Home Page 2.0)
+  const handleToggleTimeAwareMode = async () => {
+    const newValue = !timeAwareMode;
+    setTimeAwareMode(newValue);
+    HapticPatterns.buttonPress();
+
+    // Save preference
+    try {
+      await AsyncStorage.setItem(TIME_AWARE_STORAGE_KEY, newValue ? 'true' : 'false');
+    } catch (error) {
+      console.error('❌ Error saving time-aware mode:', error);
+    }
+
+    // Refresh recipes with new setting
+    onRefresh();
+  };
+
+  // Handle mood selection (Home Page 2.0)
+  const handleMoodSelect = async (mood: Mood | null) => {
+    setSelectedMood(mood);
+    setShowMoodSelector(false);
+
+    // Fetch recipes with mood filter
+    try {
+      setPaginationLoading(true);
+      const response = await recipeApi.getAllRecipes({
+        page: 0,
+        limit: RECIPES_PER_PAGE,
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        maxCookTime: filters.maxCookTime || undefined,
+        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+        mealPrepMode: mealPrepMode,
+        search: searchQuery || undefined,
+        ...getMacroFilterParams(),
+        useTimeAwareDefaults: timeAwareMode,
+        mood: mood?.id,
+      });
+
+      const responseData = response.data;
+      let recipes: SuggestedRecipe[];
+      let total: number;
+
+      if (responseData && responseData.recipes && responseData.pagination) {
+        recipes = responseData.recipes;
+        total = responseData.pagination.total;
+      } else if (Array.isArray(responseData)) {
+        recipes = responseData;
+        total = recipes.length;
+      } else {
+        console.error('❌ Unexpected API response format:', responseData);
+        setPaginationLoading(false);
+        return;
+      }
+
+      setTotalRecipes(total);
+      setSuggestedRecipes(recipes);
+      setAllRecipes(recipes);
+      setCurrentPage(0);
+
+      const initialFeedback: Record<string, UserFeedback> = {};
+      recipes.forEach((recipe: SuggestedRecipe) => {
+        initialFeedback[recipe.id] = { liked: false, disliked: false };
+      });
+      setUserFeedback(initialFeedback);
+
+      if (mood) {
+        console.log(`🎭 Mood filter applied: ${mood.label}, got ${recipes.length} recipes`);
+      } else {
+        console.log('🎭 Mood filter cleared');
+      }
+    } catch (error: any) {
+      console.error('❌ Error applying mood filter:', error);
+      HapticPatterns.error();
+    } finally {
+      setPaginationLoading(false);
+    }
+  };
+
+  // Get macro filter params for API calls (Home Page 2.0)
+  const getMacroFilterParams = () => {
+    const params: { minProtein?: number; maxCarbs?: number; maxCalories?: number } = {};
+    if (quickMacroFilters.highProtein) params.minProtein = 30;
+    if (quickMacroFilters.lowCarb) params.maxCarbs = 30;
+    if (quickMacroFilters.lowCalorie) params.maxCalories = 400;
+    return params;
+  };
+
+  // Handler for quick macro filters (Home Page 2.0)
+  const handleQuickMacroFilter = async (filterType: 'highProtein' | 'lowCarb' | 'lowCalorie') => {
+    const newMacroFilters = {
+      ...quickMacroFilters,
+      [filterType]: !quickMacroFilters[filterType],
+    };
+    setQuickMacroFilters(newMacroFilters);
+    HapticPatterns.buttonPress();
+
+    // Apply filter immediately
+    try {
+      setPaginationLoading(true);
+      const macroParams: { minProtein?: number; maxCarbs?: number; maxCalories?: number } = {};
+      if (newMacroFilters.highProtein) macroParams.minProtein = 30;
+      if (newMacroFilters.lowCarb) macroParams.maxCarbs = 30;
+      if (newMacroFilters.lowCalorie) macroParams.maxCalories = 400;
+
+      const response = await recipeApi.getAllRecipes({
+        page: 0,
+        limit: RECIPES_PER_PAGE,
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        maxCookTime: filters.maxCookTime || undefined,
+        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+        mealPrepMode: mealPrepMode,
+        search: searchQuery || undefined,
+        ...macroParams,
+        useTimeAwareDefaults: timeAwareMode,
+      });
+
+      const responseData = response.data;
+      let recipes: SuggestedRecipe[];
+      let total: number;
+
+      if (responseData && responseData.recipes && responseData.pagination) {
+        recipes = responseData.recipes;
+        total = responseData.pagination.total;
+      } else if (Array.isArray(responseData)) {
+        recipes = responseData;
+        total = recipes.length;
+      } else {
+        console.error('❌ Unexpected API response format:', responseData);
+        setPaginationLoading(false);
+        return;
+      }
+
+      setTotalRecipes(total);
+      setSuggestedRecipes(recipes);
+      setAllRecipes(recipes);
+      setCurrentPage(0);
+
+      const initialFeedback: Record<string, UserFeedback> = {};
+      recipes.forEach((recipe: SuggestedRecipe) => {
+        initialFeedback[recipe.id] = { liked: false, disliked: false };
+      });
+      setUserFeedback(initialFeedback);
+    } catch (error: any) {
+      console.error('❌ Error applying quick macro filter:', error);
+      HapticPatterns.error();
+    } finally {
+      setPaginationLoading(false);
+    }
+  };
+
   // Quick filter handler that applies filters immediately
   const handleQuickFilter = async (type: keyof FilterState, value: string | number | null | string[]) => {
     // Update filters first
@@ -1504,7 +1964,9 @@ export default function HomeScreen() {
         maxCookTime: newFilters.maxCookTime || undefined,
         difficulty: newFilters.difficulty.length > 0 ? newFilters.difficulty[0] : undefined,
         mealPrepMode: mealPrepMode,
-        search: searchQuery || undefined
+        search: searchQuery || undefined,
+        ...getMacroFilterParams(),
+        useTimeAwareDefaults: timeAwareMode,
       });
       
       // Handle paginated response format
@@ -1789,41 +2251,12 @@ export default function HomeScreen() {
   };
 
 
-  // Get current time and day for time-based recommendations
-  const getTimeBasedSection = useMemo(() => {
-    const now = new Date();
-    const hour = now.getHours();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    
-    // Determine meal time based on hour
-    let mealTime: 'breakfast' | 'lunch' | 'dinner' | 'weekend' | null = null;
-    let sectionTitle = '';
-    let emoji = '';
-    
-    if (isWeekend) {
-      // Weekend projects (longer cook time recipes)
-      mealTime = 'weekend';
-      sectionTitle = 'Weekend Projects';
-      emoji = '🏗️';
-    } else if (hour >= 5 && hour < 11) {
-      // Morning: 5 AM - 11 AM
-      mealTime = 'breakfast';
-      sectionTitle = 'Good Morning! Breakfast Ideas';
-      emoji = '🌅';
-    } else if (hour >= 11 && hour < 15) {
-      // Midday: 11 AM - 3 PM
-      mealTime = 'lunch';
-      sectionTitle = 'Lunch Time';
-      emoji = '☀️';
-    } else if (hour >= 17 && hour < 21) {
-      // Evening: 5 PM - 9 PM
-      mealTime = 'dinner';
-      sectionTitle = 'Dinner Time';
-      emoji = '🌙';
-    }
-    
-    return { mealTime, sectionTitle, emoji, isWeekend };
+  // Quick Meals section - always shows easy-to-make meals
+  const getQuickMealsSection = useMemo(() => {
+    return {
+      sectionTitle: 'Quick Meals',
+      emoji: '⚡',
+    };
   }, []);
 
   // Group recipes into contextual sections
@@ -1850,67 +2283,45 @@ export default function HomeScreen() {
       return picked;
     };
     
-    // Time-based section (highest priority)
-    if (getTimeBasedSection.mealTime) {
-      const mealTime = getTimeBasedSection.mealTime;
-      let timeBasedRecipes: SuggestedRecipe[] = [];
-
-      if (mealTime === 'weekend') {
-        timeBasedRecipes = takeUnique(
-          remainingRecipes,
-          (r) =>
-            (!!r.cookTime && r.cookTime > 60) ||
-            r.difficulty === 'hard' ||
-            (r as any).mealType === 'dinner',
-          5
-        );
-      } else {
-        // First try: exact mealType match
-        timeBasedRecipes = takeUnique(
-          remainingRecipes,
-          (r) => (r as any).mealType === mealTime,
-          5
-        );
-
-        // Fallbacks if not enough
-        if (timeBasedRecipes.length === 0) {
-          if (mealTime === 'breakfast' || mealTime === 'lunch') {
-            timeBasedRecipes = takeUnique(
-              remainingRecipes,
-              (r) => !!r.cookTime && r.cookTime <= 45,
-              5
-            );
-          } else {
-            // Dinner fallback: just take top unique
-            timeBasedRecipes = takeUnique(remainingRecipes, () => true, 5);
-          }
-        }
-      }
-      
-      if (timeBasedRecipes.length > 0) {
+    // Quick Meals section - uses separately fetched quick meals (not from paginated results)
+    // Only show if not searching (search results should be focused)
+    if (!searchQuery && quickMealsRecipes.length > 0) {
+      // Filter out any recipes that are already in other sections
+      const availableQuickMeals = quickMealsRecipes.filter(r => !usedHighlightIds.has(r.id));
+      if (availableQuickMeals.length > 0) {
+        // Always show max 5 recipes
+        const quickMeals = availableQuickMeals.slice(0, 5);
+        quickMeals.forEach(r => usedHighlightIds.add(r.id));
+        
         sections.push({
-          title: getTimeBasedSection.sectionTitle,
-          emoji: getTimeBasedSection.emoji,
-          recipes: timeBasedRecipes,
-          key: `time-based-${getTimeBasedSection.mealTime}`,
-          priority: 1 // Highest priority
+          title: getQuickMealsSection.sectionTitle,
+          emoji: getQuickMealsSection.emoji,
+          recipes: quickMeals,
+          key: 'quick-meals',
+          priority: 10 // Lower priority - shows after Recipes for You
         });
       }
     }
     
-    // Perfect Match for You (high match percentage)
-    const perfectMatches = takeUnique(
-      remainingRecipes,
-      (r) => !!r.score?.matchPercentage && r.score.matchPercentage >= 85,
-      10
-    );
-    if (perfectMatches.length > 0) {
-      sections.push({
-        title: 'Perfect Match for You',
-        emoji: '⭐',
-        recipes: perfectMatches,
-        key: 'perfect-match'
-      });
+    // Perfect Match for You - uses separately fetched perfect match recipes (not from paginated results)
+    // Only show if not searching (search results should be focused)
+    if (!searchQuery && perfectMatchRecipes.length > 0) {
+      // Filter out any recipes that are already in other sections
+      const availablePerfectMatches = perfectMatchRecipes.filter(r => !usedHighlightIds.has(r.id));
+      if (availablePerfectMatches.length > 0) {
+        // Always show max 5 recipes, sorted by match percentage
+        const perfectMatches = availablePerfectMatches
+          .sort((a, b) => (b.score?.matchPercentage || 0) - (a.score?.matchPercentage || 0))
+          .slice(0, 5);
+        perfectMatches.forEach(r => usedHighlightIds.add(r.id));
+        
+        sections.push({
+          title: 'Perfect Match for You',
+          emoji: '⭐',
+          recipes: perfectMatches,
+          key: 'perfect-match'
+        });
+      }
     }
     
     // Great for Meal Prep
@@ -1951,18 +2362,19 @@ export default function HomeScreen() {
     ];
     if (recipesForYou.length > 0) {
       sections.push({
-        title: 'Recipes for You',
+        title: 'For You',
         emoji: '🍳',
         recipes: recipesForYou,
-        key: 'quick-easy'
+        key: 'quick-easy',
+        priority: 5 // Shows before Quick Meals section
       });
     }
     
-    // Sort sections by priority (time-based first, then others)
+    // Sort sections by priority (Quick Meals first, then others)
     sections.sort((a, b) => (a.priority || 99) - (b.priority || 99));
     
     return sections;
-  }, [suggestedRecipes, mealPrepMode, isDark, getTimeBasedSection, viewMode]);
+  }, [suggestedRecipes, quickMealsRecipes, perfectMatchRecipes, mealPrepMode, isDark, getQuickMealsSection, viewMode, searchQuery]);
 
   // Toggle section collapse
   const toggleSection = (sectionKey: string) => {
@@ -2027,7 +2439,7 @@ export default function HomeScreen() {
   };
 
   // Loading state with skeleton loaders
-  if (loading && suggestedRecipes.length === 0) {
+  if ((loading || initialLoading) && suggestedRecipes.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
         <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
@@ -2173,7 +2585,7 @@ export default function HomeScreen() {
   }
 
   // Empty state
-  if (suggestedRecipes.length === 0 && !loading && !loadingFromFilters) {
+  if (suggestedRecipes.length === 0 && !loading && !loadingFromFilters && !initialLoading) {
     const hasActiveFilters = activeFilters.length > 0 || mealPrepMode;
     const hasCuisineFilters = filters.cuisines.length > 0;
     const hasDietaryFilters = filters.dietaryRestrictions.length > 0;
@@ -2346,7 +2758,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#111827' : '#F9FAFB' }} edges={['top']}>
       {/* Header */}
       <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700" style={{ minHeight: 56 }}>
         <View className="flex-row items-center justify-between" style={{ height: 28 }}>
@@ -2359,6 +2771,25 @@ export default function HomeScreen() {
           </HapticTouchableOpacity>
           <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2, lineHeight: 28 }} accessibilityRole="header">Sazon Chef</Text>
         </View>
+          {/* Time-Aware Mode Indicator (Home Page 2.0) */}
+          <HapticTouchableOpacity
+            onPress={handleToggleTimeAwareMode}
+            className={`flex-row items-center px-2 py-1 rounded-lg mr-2 ${
+              timeAwareMode ? '' : 'bg-gray-100 dark:bg-gray-700'
+            }`}
+            style={timeAwareMode ? {
+              backgroundColor: isDark ? `${Colors.primary}33` : `${Colors.primary}22`,
+            } : undefined}
+            accessibilityLabel={`${currentMealPeriod.label} time suggestions ${timeAwareMode ? 'enabled' : 'disabled'}`}
+          >
+            <Text className="text-sm">{currentMealPeriod.emoji}</Text>
+            <Text className={`text-xs font-medium ml-1 ${
+              timeAwareMode ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'
+            }`}>
+              {currentMealPeriod.label}
+            </Text>
+          </HapticTouchableOpacity>
+
           {/* View Mode Toggle */}
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
@@ -2367,10 +2798,10 @@ export default function HomeScreen() {
                 className={`px-3 py-1.5 rounded ${viewMode === 'list' ? '' : ''}`}
                 style={viewMode === 'list' ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
               >
-                <Ionicons 
-                  name="list" 
-                  size={18} 
-                  color={viewMode === 'list' ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')} 
+                <Ionicons
+                  name="list"
+                  size={18}
+                  color={viewMode === 'list' ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
                 />
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
@@ -2378,10 +2809,10 @@ export default function HomeScreen() {
                 className={`px-3 py-1.5 rounded ${viewMode === 'grid' ? '' : ''}`}
                 style={viewMode === 'grid' ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
               >
-                <Ionicons 
-                  name="grid" 
-                  size={18} 
-                  color={viewMode === 'grid' ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')} 
+                <Ionicons
+                  name="grid"
+                  size={18}
+                  color={viewMode === 'grid' ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
                 />
               </HapticTouchableOpacity>
             </View>
@@ -2414,6 +2845,36 @@ export default function HomeScreen() {
             contentContainerStyle={{ paddingRight: 16 }}
           >
             <View className="flex-row items-center" style={{ gap: 8 }}>
+              {/* Mood Filter (Home Page 2.0) */}
+              <HapticTouchableOpacity
+                onPress={() => setShowMoodSelector(true)}
+                className={`px-4 py-2 rounded-full flex-row items-center ${
+                  selectedMood ? '' : 'bg-gray-100 dark:bg-gray-700'
+                }`}
+                style={selectedMood ? {
+                  backgroundColor: `${selectedMood.color}22`,
+                  borderWidth: 1,
+                  borderColor: selectedMood.color,
+                } : undefined}
+              >
+                <Text className="text-base">{selectedMood?.emoji || '🎭'}</Text>
+                <Text className={`text-sm font-semibold ml-1.5`} style={selectedMood ? { color: selectedMood.color } : undefined}>
+                  {selectedMood?.label || 'Mood'}
+                </Text>
+                {selectedMood && (
+                  <HapticTouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleMoodSelect(null);
+                    }}
+                    className="ml-1.5"
+                    hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }}
+                  >
+                    <Text style={{ color: selectedMood.color, fontSize: 12 }}>✕</Text>
+                  </HapticTouchableOpacity>
+                )}
+              </HapticTouchableOpacity>
+
               {/* Quick (<30min) */}
               <HapticTouchableOpacity
                 onPress={() => {
@@ -2462,53 +2923,55 @@ export default function HomeScreen() {
                 </Text>
               </HapticTouchableOpacity>
 
-              {/* High Protein */}
+              {/* High Protein (30g+) - Home Page 2.0 Macro Filter */}
               <HapticTouchableOpacity
-                onPress={() => {
-                  const isActive = filters.dietaryRestrictions.includes('High-Protein');
-                  handleQuickFilter('dietaryRestrictions', 
-                    isActive 
-                      ? filters.dietaryRestrictions.filter(d => d !== 'High-Protein')
-                      : [...filters.dietaryRestrictions, 'High-Protein']
-                  );
-                  HapticPatterns.buttonPress();
-                }}
+                onPress={() => handleQuickMacroFilter('highProtein')}
                 className={`px-4 py-2 rounded-full flex-row items-center ${
-                  filters.dietaryRestrictions.includes('High-Protein') ? '' : 'bg-gray-100 dark:bg-gray-700'
+                  quickMacroFilters.highProtein ? '' : 'bg-gray-100 dark:bg-gray-700'
                 }`}
-                style={filters.dietaryRestrictions.includes('High-Protein') ? {
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                style={quickMacroFilters.highProtein ? {
+                  backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen,
                 } : undefined}
               >
                 <Text className="text-base">💪</Text>
                 <Text className={`text-sm font-semibold ml-1.5 ${
-                  filters.dietaryRestrictions.includes('High-Protein') ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                  quickMacroFilters.highProtein ? 'text-white' : 'text-gray-700 dark:text-gray-300'
                 }`}>
                   High Protein
                 </Text>
               </HapticTouchableOpacity>
 
-              {/* Low Cal */}
+              {/* Low Carb (<30g) - Home Page 2.0 Macro Filter */}
               <HapticTouchableOpacity
-                onPress={() => {
-                  const isActive = filters.dietaryRestrictions.includes('Low-Calorie');
-                  handleQuickFilter('dietaryRestrictions',
-                    isActive
-                      ? filters.dietaryRestrictions.filter(d => d !== 'Low-Calorie')
-                      : [...filters.dietaryRestrictions, 'Low-Calorie']
-                  );
-                  HapticPatterns.buttonPress();
-                }}
+                onPress={() => handleQuickMacroFilter('lowCarb')}
                 className={`px-4 py-2 rounded-full flex-row items-center ${
-                  filters.dietaryRestrictions.includes('Low-Calorie') ? '' : 'bg-gray-100 dark:bg-gray-700'
+                  quickMacroFilters.lowCarb ? '' : 'bg-gray-100 dark:bg-gray-700'
                 }`}
-                style={filters.dietaryRestrictions.includes('Low-Calorie') ? {
+                style={quickMacroFilters.lowCarb ? {
+                  backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
+                } : undefined}
+              >
+                <Text className="text-base">🥩</Text>
+                <Text className={`text-sm font-semibold ml-1.5 ${
+                  quickMacroFilters.lowCarb ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  Low Carb
+                </Text>
+              </HapticTouchableOpacity>
+
+              {/* Low Calorie (<400) - Home Page 2.0 Macro Filter */}
+              <HapticTouchableOpacity
+                onPress={() => handleQuickMacroFilter('lowCalorie')}
+                className={`px-4 py-2 rounded-full flex-row items-center ${
+                  quickMacroFilters.lowCalorie ? '' : 'bg-gray-100 dark:bg-gray-700'
+                }`}
+                style={quickMacroFilters.lowCalorie ? {
                   backgroundColor: isDark ? DarkColors.primary : Colors.primary,
                 } : undefined}
               >
                 <Text className="text-base">🥗</Text>
                 <Text className={`text-sm font-semibold ml-1.5 ${
-                  filters.dietaryRestrictions.includes('Low-Calorie') ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                  quickMacroFilters.lowCalorie ? 'text-white' : 'text-gray-700 dark:text-gray-300'
                 }`}>
                   Low Cal
                 </Text>
@@ -2629,14 +3092,11 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Main content area - FIXED SCROLLING ISSUE */}
+      {/* Main content area - FIXED: Removed AnimatedRefreshControl */}
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 200 }}
         showsVerticalScrollIndicator={true}
-        refreshControl={
-          <AnimatedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
       >
         {/* Meal Prep Mode Header */}
         {mealPrepMode && (
@@ -2657,6 +3117,38 @@ export default function HomeScreen() {
 
         {/* Spacer to replace pt-6 */}
         <View style={{ height: Spacing.xl }} />
+
+        {/* Recipe of the Day (Home Page 2.0) */}
+        {recipeOfTheDay && !searchQuery && !mealPrepMode && (
+          <View className="px-4 mb-6">
+            <View className="flex-row items-center mb-3">
+              <Text className="text-xl">🌟</Text>
+              <Text className="text-lg font-bold text-gray-900 dark:text-gray-100 ml-2">
+                Recipe of the Day
+              </Text>
+              <View className="ml-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: isDark ? `${Colors.primary}33` : `${Colors.primary}22` }}>
+                <Text className="text-xs font-medium" style={{ color: isDark ? Colors.primaryLight : Colors.primaryDark }}>
+                  Featured
+                </Text>
+              </View>
+            </View>
+            <RecipeCard
+              recipe={recipeOfTheDay}
+              variant="list"
+              onPress={handleRecipePress}
+              onLongPress={handleLongPress}
+              onLike={handleLike}
+              onDislike={handleDislike}
+              onSave={openSavePicker}
+              feedback={userFeedback[recipeOfTheDay.id] || { liked: false, disliked: false }}
+              isFeedbackLoading={feedbackLoading === recipeOfTheDay.id}
+              isDark={isDark}
+              showDescription={true}
+              showTopMatchBadge={true}
+              recommendationReason="Today's Pick"
+            />
+          </View>
+        )}
 
         {/* Today's Recommendation / Featured Recipe - First section after filters */}
         {(!searchQuery || searchQuery.trim().length === 0) && (
@@ -2787,7 +3279,7 @@ export default function HomeScreen() {
           <View className="px-4">
             {groupRecipesIntoSections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep').map((section) => {
               const isCollapsed = collapsedSections[section.key];
-              const isTimeBased = section.key.startsWith('time-based-');
+              const isQuickMeals = section.key === 'quick-meals';
               const isMealPrep = section.key === 'meal-prep';
               const isRecipesForYou = section.key === 'quick-easy';
               
@@ -2821,15 +3313,33 @@ export default function HomeScreen() {
                   {/* Section Content */}
                   {!isCollapsed && (
                     <Animated.View>
-                      {/* Time-based sections and meal prep render as carousel */}
-                      {isTimeBased || isMealPrep ? (
+                      {/* Quick Meals section and meal prep render as carousel */}
+                      {isQuickMeals || isMealPrep ? (
                     <ScrollView
+                      ref={isQuickMeals ? quickMealsScrollViewRef : undefined}
                       horizontal
                       showsHorizontalScrollIndicator={false}
                       contentContainerStyle={{ paddingRight: 16 }}
                       decelerationRate="fast"
                       snapToInterval={280}
                       snapToAlignment="start"
+                      onScroll={(event) => {
+                        if (!isQuickMeals) return; // Only handle for quick meals
+                        const { contentOffset } = event.nativeEvent;
+                        const scrollPosition = contentOffset.x;
+                        const cardWidth = 280 + 12; // card width + margin
+                        const currentIndex = Math.round(scrollPosition / cardWidth);
+                        setQuickMealsCurrentIndex(currentIndex);
+                      }}
+                      scrollEventThrottle={100}
+                      onMomentumScrollEnd={(event) => {
+                        if (!isQuickMeals) return;
+                        const { contentOffset } = event.nativeEvent;
+                        const scrollPosition = contentOffset.x;
+                        const cardWidth = 280 + 12;
+                        const currentIndex = Math.round(scrollPosition / cardWidth);
+                        setQuickMealsCurrentIndex(currentIndex);
+                      }}
                     >
                           {section.recipes.map((recipe) => {
               const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
@@ -2853,6 +3363,60 @@ export default function HomeScreen() {
                     </View>
             );
                       })}
+                      {/* Refresh prompt when on last recipe */}
+                      {isQuickMeals && quickMealsCurrentIndex >= section.recipes.length - 1 && section.recipes.length >= 5 && (
+                        <View style={{ width: 280, marginRight: 12, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                          <View style={{ 
+                            backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
+                            borderRadius: 12,
+                            padding: 16,
+                            alignItems: 'center',
+                            borderWidth: 1,
+                            borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
+                          }}>
+                            <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
+                            <Text style={{ 
+                              fontSize: 14, 
+                              fontWeight: '600',
+                              color: isDark ? DarkColors.text : Colors.text,
+                              marginBottom: 4,
+                              textAlign: 'center',
+                            }}>
+                              Want more recipes?
+                            </Text>
+                            <Text style={{ 
+                              fontSize: 12, 
+                              color: isDark ? '#9CA3AF' : '#6B7280',
+                              marginBottom: 12,
+                              textAlign: 'center',
+                            }}>
+                              Swipe to refresh and get new quick meals
+                            </Text>
+                            <HapticTouchableOpacity
+                              onPress={() => {
+                                HapticPatterns.buttonPress();
+                                fetchQuickMeals(true);
+                              }}
+                              disabled={refreshingQuickMeals}
+                              style={{
+                                backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                                paddingHorizontal: 20,
+                                paddingVertical: 10,
+                                borderRadius: 8,
+                                opacity: refreshingQuickMeals ? 0.7 : 1,
+                              }}
+                            >
+                              {refreshingQuickMeals ? (
+                                <AnimatedActivityIndicator size="small" color="#FFFFFF" />
+                              ) : (
+                                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+                                  Refresh Recipes
+                                </Text>
+                              )}
+                            </HapticTouchableOpacity>
+                          </View>
+                        </View>
+                      )}
                     </ScrollView>
                       ) : viewMode === 'grid' ? (
                         // Grid View - 2 Column Layout
@@ -3087,6 +3651,60 @@ export default function HomeScreen() {
                           </View>
                         );
                       })}
+                      {/* Refresh prompt when on last recipe */}
+                      {perfectMatchCurrentIndex >= perfectMatchSection.recipes.length - 1 && perfectMatchSection.recipes.length >= 5 && (
+                        <View style={{ width: 280, marginRight: 12, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                          <View style={{ 
+                            backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
+                            borderRadius: 12,
+                            padding: 16,
+                            alignItems: 'center',
+                            borderWidth: 1,
+                            borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
+                          }}>
+                            <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
+                            <Text style={{ 
+                              fontSize: 14, 
+                              fontWeight: '600',
+                              color: isDark ? DarkColors.text : Colors.text,
+                              marginBottom: 4,
+                              textAlign: 'center',
+                            }}>
+                              Want more recipes?
+                            </Text>
+                            <Text style={{ 
+                              fontSize: 12, 
+                              color: isDark ? '#9CA3AF' : '#6B7280',
+                              marginBottom: 12,
+                              textAlign: 'center',
+                            }}>
+                              Swipe to refresh and get new perfect matches
+                            </Text>
+                            <HapticTouchableOpacity
+                              onPress={() => {
+                                HapticPatterns.buttonPress();
+                                fetchPerfectMatches(true);
+                              }}
+                              disabled={refreshingPerfectMatches}
+                              style={{
+                                backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                                paddingHorizontal: 20,
+                                paddingVertical: 10,
+                                borderRadius: 8,
+                                opacity: refreshingPerfectMatches ? 0.7 : 1,
+                              }}
+                            >
+                              {refreshingPerfectMatches ? (
+                                <AnimatedActivityIndicator size="small" color="#FFFFFF" />
+                              ) : (
+                                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+                                  Refresh Recipes
+                                </Text>
+                              )}
+                            </HapticTouchableOpacity>
+                          </View>
+                        </View>
+                      )}
                     </ScrollView>
                   )}
                 </View>
@@ -3128,12 +3746,28 @@ export default function HomeScreen() {
                   
                   {!isCollapsed && (
                         <ScrollView
+                          ref={perfectMatchScrollViewRef}
                           horizontal
                           showsHorizontalScrollIndicator={false}
                           contentContainerStyle={{ paddingRight: 16 }}
                           decelerationRate="fast"
                           snapToInterval={280}
                           snapToAlignment="start"
+                          onScroll={(event) => {
+                            const { contentOffset } = event.nativeEvent;
+                            const scrollPosition = contentOffset.x;
+                            const cardWidth = 280 + 12; // card width + margin
+                            const currentIndex = Math.round(scrollPosition / cardWidth);
+                            setPerfectMatchCurrentIndex(currentIndex);
+                          }}
+                          scrollEventThrottle={100}
+                          onMomentumScrollEnd={(event) => {
+                            const { contentOffset } = event.nativeEvent;
+                            const scrollPosition = contentOffset.x;
+                            const cardWidth = 280 + 12;
+                            const currentIndex = Math.round(scrollPosition / cardWidth);
+                            setPerfectMatchCurrentIndex(currentIndex);
+                          }}
                         >
                       {perfectMatchSection.recipes.map((recipe) => {
               const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
@@ -3157,6 +3791,60 @@ export default function HomeScreen() {
                     </View>
                             );
                           })}
+                          {/* Refresh prompt when on last recipe */}
+                          {perfectMatchCurrentIndex >= perfectMatchSection.recipes.length - 1 && perfectMatchSection.recipes.length >= 5 && (
+                            <View style={{ width: 280, marginRight: 12, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                              <View style={{ 
+                                backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
+                                borderRadius: 12,
+                                padding: 16,
+                                alignItems: 'center',
+                                borderWidth: 1,
+                                borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
+                              }}>
+                                <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
+                                <Text style={{ 
+                                  fontSize: 14, 
+                                  fontWeight: '600',
+                                  color: isDark ? DarkColors.text : Colors.text,
+                                  marginBottom: 4,
+                                  textAlign: 'center',
+                                }}>
+                                  Want more recipes?
+                                </Text>
+                                <Text style={{ 
+                                  fontSize: 12, 
+                                  color: isDark ? '#9CA3AF' : '#6B7280',
+                                  marginBottom: 12,
+                                  textAlign: 'center',
+                                }}>
+                                  Swipe to refresh and get new perfect matches
+                                </Text>
+                                <HapticTouchableOpacity
+                                  onPress={() => {
+                                    HapticPatterns.buttonPress();
+                                    fetchPerfectMatches(true);
+                                  }}
+                                  disabled={refreshingPerfectMatches}
+                                  style={{
+                                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                                    paddingHorizontal: 20,
+                                    paddingVertical: 10,
+                                    borderRadius: 8,
+                                    opacity: refreshingPerfectMatches ? 0.7 : 1,
+                                  }}
+                                >
+                                  {refreshingPerfectMatches ? (
+                                    <AnimatedActivityIndicator size="small" color="#FFFFFF" />
+                                  ) : (
+                                    <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+                                      Refresh Recipes
+                                    </Text>
+                                  )}
+                                </HapticTouchableOpacity>
+                              </View>
+                            </View>
+                          )}
                         </ScrollView>
                   )}
                   </View>
@@ -3236,101 +3924,6 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* Pagination Component - Only show when there are multiple pages and no search query (inline pagination handles search) */}
-        {totalRecipes > 0 && paginationInfo.hasMultiplePages && !searchQuery && (
-        <View className="px-4 py-6">
-            {/* Recipe count summary - use actual recipes count */}
-            <Text className="text-center text-sm text-gray-500 dark:text-gray-400 mb-3">
-              Showing {currentPage * suggestedRecipes.length + 1}-{Math.min(currentPage * suggestedRecipes.length + suggestedRecipes.length, totalRecipes)} of {totalRecipes} recipes
-            </Text>
-            
-            <View className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
-              <TouchableOpacity
-                onPress={handlePrevPage}
-                disabled={paginationInfo.isFirstPage || paginationLoading}
-                activeOpacity={0.7}
-              style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: (paginationInfo.isFirstPage || paginationLoading) ? 0.5 : 1,
-                  backgroundColor: (paginationInfo.isFirstPage || paginationLoading)
-                    ? (isDark ? '#374151' : '#F3F4F6')
-                    : (isDark ? DarkColors.primary : Colors.primary),
-                minWidth: 100,
-              }}
-            >
-              <Icon 
-                name={Icons.CHEVRON_BACK} 
-                size={IconSizes.SM} 
-                  color={(paginationInfo.isFirstPage || paginationLoading) ? (isDark ? '#6B7280' : '#9CA3AF') : '#FFFFFF'} 
-                accessibilityLabel="Previous page"
-              />
-              <Text 
-                  style={{ 
-                    fontSize: FontSize.base,
-                    fontWeight: '600',
-                    marginLeft: 4,
-                    color: (paginationInfo.isFirstPage || paginationLoading) ? (isDark ? '#6B7280' : '#9CA3AF') : '#FFFFFF' 
-                  }}
-              >
-                Previous
-              </Text>
-              </TouchableOpacity>
-
-              {/* Page Indicator */}
-              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              {paginationLoading ? (
-                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
-              ) : (
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Page {currentPage + 1} of {paginationInfo.totalPages}
-                </Text>
-              )}
-            </View>
-
-              <TouchableOpacity
-                onPress={handleNextPage}
-                disabled={paginationInfo.isLastPage || paginationLoading}
-                activeOpacity={0.7}
-              style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: (paginationInfo.isLastPage || paginationLoading) ? 0.5 : 1,
-                  backgroundColor: (paginationInfo.isLastPage || paginationLoading)
-                    ? (isDark ? '#374151' : '#F3F4F6')
-                    : (isDark ? DarkColors.primary : Colors.primary),
-                minWidth: 100,
-              }}
-            >
-              <Text 
-                  style={{ 
-                    fontSize: FontSize.base,
-                    fontWeight: '600',
-                    marginRight: 4,
-                    color: (paginationInfo.isLastPage || paginationLoading) ? (isDark ? '#6B7280' : '#9CA3AF') : '#FFFFFF' 
-                  }}
-              >
-                Next
-              </Text>
-              <Icon 
-                name={Icons.CHEVRON_FORWARD} 
-                size={IconSizes.SM} 
-                  color={(paginationInfo.isLastPage || paginationLoading) ? (isDark ? '#6B7280' : '#9CA3AF') : '#FFFFFF'} 
-                accessibilityLabel="Next page"
-              />
-              </TouchableOpacity>
-          </View>
-        </View>
-        )}
-        
         {/* Show recipe count when there's only one page */}
         {totalRecipes > 0 && !paginationInfo.hasMultiplePages && (
           <View className="px-4 py-4">
@@ -3348,6 +3941,14 @@ export default function HomeScreen() {
         onApply={applyFilters}
         filters={filters}
         onFilterChange={handleFilterChange}
+      />
+
+      {/* Mood Selector Modal (Home Page 2.0) */}
+      <MoodSelector
+        visible={showMoodSelector}
+        onClose={() => setShowMoodSelector(false)}
+        onSelectMood={handleMoodSelect}
+        selectedMood={selectedMood}
       />
 
       {/* Collection Save Picker Modal */}

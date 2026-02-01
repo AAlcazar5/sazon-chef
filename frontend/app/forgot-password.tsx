@@ -6,11 +6,10 @@ import {
   View,
   Text,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,24 +18,29 @@ import ShakeAnimation from '../components/ui/ShakeAnimation';
 import LogoMascot from '../components/mascot/LogoMascot';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import FormInput from '../components/ui/FormInput';
+import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { Colors } from '../constants/Colors';
 import { apiClient } from '../lib/api';
 
 interface FormErrors {
   email?: string;
+  code?: string;
   password?: string;
   form?: string;
 }
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [shakeEmail, setShakeEmail] = useState(false);
+  const [shakeCode, setShakeCode] = useState(false);
   const [shakePassword, setShakePassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [step, setStep] = useState<'email' | 'reset'>('email');
+  const [step, setStep] = useState<'email' | 'code' | 'reset'>('email');
+  const [devResetCode, setDevResetCode] = useState<string>(''); // For development only
   const router = useRouter();
   const { theme } = useTheme();
 
@@ -74,13 +78,20 @@ export default function ForgotPasswordScreen() {
       const response = await apiClient.post('/auth/forgot-password', { email: email.trim() });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Move to reset step
-      setStep('reset');
+      // Store dev reset code if available
+      if (response.data?.resetCode) {
+        setDevResetCode(response.data.resetCode);
+      }
+
+      // Move to code verification step
+      setStep('code');
 
       // Show success message
       Alert.alert(
-        'Email Verified',
-        'Please enter your new password below.',
+        'Code Sent',
+        __DEV__ && response.data?.resetCode
+          ? `For development: Your reset code is ${response.data.resetCode}`
+          : 'A 6-digit reset code has been sent to your email. Please check your inbox.',
         [{ text: 'OK' }]
       );
     } catch (error: any) {
@@ -91,6 +102,31 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  const handleVerifyCode = async () => {
+    // Clear previous errors
+    setErrors({});
+
+    if (!resetCode.trim()) {
+      setShakeCode(true);
+      setTimeout(() => setShakeCode(false), 500);
+      setErrors({ code: 'Reset code is required' });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+
+    if (resetCode.trim().length !== 6) {
+      setShakeCode(true);
+      setTimeout(() => setShakeCode(false), 500);
+      setErrors({ code: 'Reset code must be 6 digits' });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+
+    // Move to password reset step
+    setStep('reset');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const handleResetPassword = async () => {
     // Clear previous errors
     setErrors({});
@@ -98,7 +134,7 @@ export default function ForgotPasswordScreen() {
     if (!newPassword.trim()) {
       setShakePassword(true);
       setTimeout(() => setShakePassword(false), 500);
-      setErrors({ password: 'Password is required' });
+      setErrors({ password: 'New password is required' });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
@@ -115,6 +151,7 @@ export default function ForgotPasswordScreen() {
     try {
       await apiClient.post('/auth/reset-password', {
         email: email.trim(),
+        resetCode: resetCode.trim(),
         newPassword
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -138,14 +175,12 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-white dark:bg-gray-900"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+      <KeyboardAvoidingContainer>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="w-full max-w-md self-center">
           {/* Back button */}
           <HapticTouchableOpacity
@@ -171,8 +206,10 @@ export default function ForgotPasswordScreen() {
           </Text>
           <Text className="text-base text-gray-600 dark:text-gray-200 mb-8 text-center">
             {step === 'email'
-              ? 'Enter your email address to reset your password'
-              : 'Enter your new password'
+              ? 'Enter your email address to receive a reset code'
+              : step === 'code'
+              ? 'Enter the 6-digit code sent to your email'
+              : 'Create your new password'
             }
           </Text>
 
@@ -211,8 +248,56 @@ export default function ForgotPasswordScreen() {
                   {loading ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text className="text-white text-base font-semibold">Continue</Text>
+                    <Text className="text-white text-base font-semibold">Send Reset Code</Text>
                   )}
+                </HapticTouchableOpacity>
+              </>
+            ) : step === 'code' ? (
+              <>
+                <FormInput
+                  label="Email"
+                  value={email}
+                  disabled
+                  leftIcon="mail-outline"
+                />
+
+                <ShakeAnimation shake={shakeCode}>
+                  <FormInput
+                    label="Reset Code"
+                    placeholder="Enter 6-digit code"
+                    value={resetCode}
+                    onChangeText={(value) => { setResetCode(value); clearError('code'); }}
+                    error={errors.code}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoFocus
+                    disabled={loading}
+                    leftIcon="key-outline"
+                    hint={__DEV__ && devResetCode ? `Dev code: ${devResetCode}` : 'Check your email for the code'}
+                    required
+                  />
+                </ShakeAnimation>
+
+                <HapticTouchableOpacity
+                  className={`bg-red-600 dark:bg-red-400 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
+                  onPress={handleVerifyCode}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="text-white text-base font-semibold">Verify Code</Text>
+                  )}
+                </HapticTouchableOpacity>
+
+                <HapticTouchableOpacity
+                  className="mt-4"
+                  onPress={() => { setStep('email'); setErrors({}); setResetCode(''); }}
+                  disabled={loading}
+                >
+                  <Text className="text-center text-gray-600 dark:text-gray-200 text-sm">
+                    Use different email
+                  </Text>
                 </HapticTouchableOpacity>
               </>
             ) : (
@@ -256,11 +341,11 @@ export default function ForgotPasswordScreen() {
 
                 <HapticTouchableOpacity
                   className="mt-4"
-                  onPress={() => { setStep('email'); setErrors({}); }}
+                  onPress={() => { setStep('code'); setErrors({}); setNewPassword(''); }}
                   disabled={loading}
                 >
                   <Text className="text-center text-gray-600 dark:text-gray-200 text-sm">
-                    Use different email
+                    Back to code verification
                   </Text>
                 </HapticTouchableOpacity>
               </>
@@ -268,6 +353,7 @@ export default function ForgotPasswordScreen() {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
+    </SafeAreaView>
   );
 }

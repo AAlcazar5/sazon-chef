@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Alert, TextInput, Modal, Animated } from 'react-native';
+import { View, Text, ScrollView, Alert, TextInput, Modal, Animated, Dimensions } from 'react-native';
 import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import LoadingState from '../../components/ui/LoadingState';
@@ -125,7 +125,7 @@ function CookbookFilterModal({
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <Animated.View
@@ -138,7 +138,7 @@ function CookbookFilterModal({
             transform: [{ translateY }],
           }}
         >
-          <SafeAreaView className="flex-1" edges={['bottom']}>
+          <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
             {/* Modal Header */}
             <View className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex-row items-center justify-between" style={{ minHeight: 60, paddingTop: insets.top }}>
               <HapticTouchableOpacity 
@@ -156,7 +156,8 @@ function CookbookFilterModal({
               </HapticTouchableOpacity>
             </View>
 
-            <ScrollView 
+            <ScrollView
+              scrollEventThrottle={16}
               className="flex-1 px-4 py-4"
               contentContainerStyle={{ paddingBottom: 20 }}
             >
@@ -387,6 +388,7 @@ export default function CookbookScreen() {
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'saved' | 'liked' | 'disliked'>('saved');
   const [savedUrl, setSavedUrl] = useState<string>('/recipes/saved');
+  
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('list');
   const DISPLAY_MODE_STORAGE_KEY = '@sazon_cookbook_view_mode';
   const [sortBy, setSortBy] = useState<'recent' | 'alphabetical' | 'cuisine' | 'matchScore' | 'cookTime'>('recent');
@@ -588,23 +590,17 @@ export default function CookbookScreen() {
   // Update API URL when view mode or collection selection changes
   useEffect(() => {
     const newUrl = getApiUrl();
-    console.log('📱 Cookbook: API URL changed:', newUrl);
     setApiUrl(newUrl);
   }, [viewMode, selectedCollectionIds]);
 
   const { data: recipesData, loading: apiLoading, error: apiError, refetch } = useApi(
     apiUrl,
-    { immediate: false } // Don't fetch immediately, we'll control it
+    { immediate: true, showErrorAlert: false } // Fetch immediately when URL is set
   );
+  
 
-  // Refetch when apiUrl changes (including collection filter changes)
-  useEffect(() => {
-    if (apiUrl) {
-      console.log('📱 Cookbook: API URL changed, refetching:', apiUrl);
-      refetch();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiUrl]); // refetch changes when apiUrl changes, so we don't need it in deps
+  // Note: With immediate: true, useApi will fetch automatically when apiUrl changes
+  // We don't need to manually refetch here, but we can add a refetch on focus
 
   // Truncate description to approximately 2 lines (80-100 characters)
   const truncateDescription = (text: string, maxLength: number = 100): string => {
@@ -615,16 +611,20 @@ export default function CookbookScreen() {
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('📱 Cookbook: Screen focused, refreshing data');
       loadCollections();
-      refetch();
-    }, [refetch])
+      // useApi with immediate: true will automatically fetch when apiUrl changes
+      // But we can force a refetch on focus to ensure fresh data
+      if (apiUrl) {
+        refetch().catch((err) => {
+          console.error('Error refetching recipes on focus:', err);
+        });
+      }
+    }, [refetch, apiUrl])
   );
 
   // Also refresh when needsRefresh is triggered (legacy - apiUrl change should handle it now)
   useEffect(() => {
     if (needsRefresh) {
-      console.log('📱 Cookbook: Needs refresh, fetching data');
       refetch();
       setNeedsRefresh(false);
     }
@@ -632,14 +632,24 @@ export default function CookbookScreen() {
 
   // Update local state when API data loads
   useEffect(() => {
-    if (recipesData) {
-      console.log(`📱 Cookbook: Received ${viewMode} recipes data`, recipesData.length);
-      setAllRecipes(recipesData); // Store all recipes
+    if (recipesData !== null && recipesData !== undefined) {
+      // Handle both array and object responses
+      let recipes: SavedRecipe[] = [];
+      if (Array.isArray(recipesData)) {
+        recipes = recipesData;
+      } else if (recipesData && typeof recipesData === 'object' && 'recipes' in recipesData) {
+        // Handle paginated response format
+        recipes = (recipesData as any).recipes || [];
+      } else {
+        console.warn('Unexpected recipesData format:', typeof recipesData);
+        recipes = [];
+      }
+      setAllRecipes(recipes); // Store all recipes
       setCurrentPage(0); // Reset pagination when data changes
       
       // Initialize feedback state based on view mode
       const initialFeedback: Record<string, { liked: boolean; disliked: boolean }> = {};
-      recipesData.forEach((recipe: SavedRecipe) => {
+      recipes.forEach((recipe: SavedRecipe) => {
         if (viewMode === 'liked') {
           initialFeedback[recipe.id] = { liked: true, disliked: false };
         } else if (viewMode === 'disliked') {
@@ -649,12 +659,20 @@ export default function CookbookScreen() {
         }
       });
       setUserFeedback(prev => ({ ...prev, ...initialFeedback }));
+      setAllRecipes(recipes);
+      setCurrentPage(0);
+    } else if (recipesData === null && !apiLoading) {
+      // Data was explicitly set to null (no recipes found)
+      setAllRecipes([]);
+      setCurrentPage(0);
     }
-  }, [recipesData, viewMode]);
+  }, [recipesData, viewMode, apiLoading, apiUrl]);
 
   // Apply cookbook filters (client-side) BEFORE sorting/searching
   const filteredByCookbookFilters = useMemo(() => {
-    if (!allRecipes.length) return [];
+    if (!allRecipes || !Array.isArray(allRecipes) || allRecipes.length === 0) {
+      return [];
+    }
 
     const {
       maxCookTime,
@@ -741,8 +759,8 @@ export default function CookbookScreen() {
         break;
       case 'matchScore':
         sorted.sort((a, b) => {
-          const scoreA = a.score?.matchPercentage || a.score?.total || 0;
-          const scoreB = b.score?.matchPercentage || b.score?.total || 0;
+          const scoreA = (a as any).score?.matchPercentage || (a as any).score?.total || 0;
+          const scoreB = (b as any).score?.matchPercentage || (b as any).score?.total || 0;
           return scoreB - scoreA; // Highest score first
         });
         break;
@@ -817,6 +835,7 @@ export default function CookbookScreen() {
   useEffect(() => {
     setSavedRecipes(pagedRecipes);
   }, [pagedRecipes]);
+
 
   // Fetch similar recipes based on the first recipe in the current page
   useEffect(() => {
@@ -965,8 +984,7 @@ export default function CookbookScreen() {
         setSavedUrl('/recipes/saved');
       }
     } catch (e) {
-      console.log('📱 Cookbook: Failed to load collections');
-    }
+      }
   };
 
   const handleSelectCollection = (collectionId: string | null) => {
@@ -1332,13 +1350,11 @@ export default function CookbookScreen() {
   };
 
   const handleRecipePress = (recipeId: string) => {
-    console.log('📱 Cookbook: Recipe pressed', recipeId);
     router.push(`../modal?id=${recipeId}&source=cookbook`);
   };
 
   // Long press handler to show action menu (matches home page behavior)
   const handleLongPress = (recipe: SavedRecipe) => {
-    console.log('📱 Cookbook: Long press on recipe', recipe.id);
     HapticPatterns.buttonPress();
     setActionMenuRecipe(recipe);
     setActionMenuVisible(true);
@@ -1346,7 +1362,6 @@ export default function CookbookScreen() {
 
   const handleRemoveRecipe = async (recipeId: string) => {
     try {
-      console.log('📱 Cookbook: Removing recipe', recipeId);
       await recipeApi.unsaveRecipe(recipeId);
       
       // Update local state immediately for better UX
@@ -1355,7 +1370,7 @@ export default function CookbookScreen() {
       
       Alert.alert('Success', 'Recipe removed from cookbook!');
     } catch (error: any) {
-      console.error('📱 Cookbook: Remove error', error);
+      console.error('Error removing recipe:', error);
       Alert.alert('Error', error.message || 'Failed to remove recipe');
     }
   };
@@ -1434,7 +1449,6 @@ export default function CookbookScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('📱 Cookbook: Deleting user recipe', recipeId);
               await recipeApi.deleteRecipe(recipeId);
               
               // Update local state immediately for better UX
@@ -1442,7 +1456,7 @@ export default function CookbookScreen() {
               
               Alert.alert('Success', 'Recipe deleted successfully!');
             } catch (error: any) {
-              console.error('📱 Cookbook: Delete error', error);
+              console.error('Error deleting recipe:', error);
               Alert.alert('Error', error.message || 'Failed to delete recipe');
             }
           }
@@ -1454,7 +1468,6 @@ export default function CookbookScreen() {
   const handleLike = async (recipeId: string) => {
     try {
       setFeedbackLoading(recipeId);
-      console.log('📱 Cookbook: Liking recipe', recipeId);
       
       // Update UI immediately
       setUserFeedback(prev => ({
@@ -1469,7 +1482,7 @@ export default function CookbookScreen() {
       
       Alert.alert('Liked!', 'We\'ll show you more recipes like this');
     } catch (error: any) {
-      console.error('📱 Cookbook: Like error', error);
+      console.error('Error liking recipe:', error);
       
       // Error haptic
       HapticPatterns.error();
@@ -1489,7 +1502,6 @@ export default function CookbookScreen() {
   const handleDislike = async (recipeId: string) => {
     try {
       setFeedbackLoading(recipeId);
-      console.log('📱 Cookbook: Disliking recipe', recipeId);
       
       // Update UI immediately
       setUserFeedback(prev => ({
@@ -1504,7 +1516,7 @@ export default function CookbookScreen() {
       
       Alert.alert('Noted', 'We\'ll show fewer recipes like this');
     } catch (error: any) {
-      console.error('📱 Cookbook: Dislike error', error);
+      console.error('Error disliking recipe:', error);
       
       // Error haptic
       HapticPatterns.error();
@@ -1522,9 +1534,9 @@ export default function CookbookScreen() {
   };
 
   // Loading state
-  if (apiLoading && savedRecipes.length === 0) {
+  if (apiLoading && savedRecipes.length === 0 && allRecipes.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top', 'bottom']}>
         <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
           <View className="mb-3 flex-row items-center">
             <Text className="text-2xl mr-2">📚</Text>
@@ -1540,7 +1552,7 @@ export default function CookbookScreen() {
   // Error state
   if (apiError && savedRecipes.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top', 'bottom']}>
         <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
           <View className="mb-3 flex-row items-center">
             <Text className="text-2xl mr-2">📚</Text>
@@ -1620,8 +1632,9 @@ export default function CookbookScreen() {
           
           {/* Quick Filter Chips */}
           <View className="px-4 pb-3">
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
+              scrollEventThrottle={16}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingRight: 16 }}
             >
@@ -1862,12 +1875,12 @@ export default function CookbookScreen() {
       {/* Cookbook Insights Modal (collapsed by default) */}
       <Modal
         visible={showInsightsModal}
-        animationType="slide"
+        animationType="fade"
         transparent
         onRequestClose={() => setShowInsightsModal(false)}
       >
         <View className="flex-1 bg-black/40 justify-end">
-          <View className="bg-white dark:bg-gray-900 rounded-t-2xl p-4 max-h-[80%]">
+          <View style={{ maxHeight: Dimensions.get('window').height * 0.8 }} className="bg-white dark:bg-gray-900 rounded-t-2xl p-4">
             <View className="flex-row items-start justify-between mb-3">
               <View className="flex-1 pr-3">
                 <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cookbook insights</Text>
@@ -1884,7 +1897,7 @@ export default function CookbookScreen() {
               </HapticTouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView scrollEventThrottle={16} showsVerticalScrollIndicator={false}>
               {renderCookbookInsightsContent()}
               <View style={{ height: 16 }} />
             </ScrollView>
@@ -1921,10 +1934,10 @@ export default function CookbookScreen() {
                 <Icon name={Icons.CLOSE} size={IconSizes.SM} color={isDark ? '#D1D5DB' : '#6B7280'} accessibilityLabel="Close sort modal" />
               </HapticTouchableOpacity>
             </View>
-            <ScrollView className="max-h-96">
+            <ScrollView style={{ maxHeight: Dimensions.get('window').height * 0.6 }}>
               {[
-                { value: 'recent' as const, label: 'Recently Added', icon: Icons.CLOCK_OUTLINE },
-                { value: 'alphabetical' as const, label: 'Alphabetical', icon: Icons.SORT_ALPHABETICAL },
+                { value: 'recent' as const, label: 'Recently Added', icon: Icons.TIME_OUTLINE },
+                { value: 'alphabetical' as const, label: 'Alphabetical', icon: Icons.SHOPPING_LIST },
                 { value: 'cuisine' as const, label: 'By Cuisine', icon: Icons.GLOBE },
                 { value: 'matchScore' as const, label: 'Match Score', icon: Icons.STAR },
                 { value: 'cookTime' as const, label: 'Cook Time', icon: Icons.COOK_TIME },
@@ -1959,7 +1972,7 @@ export default function CookbookScreen() {
       <Modal
         visible={showListPicker}
         transparent={true}
-        animationType="none"
+        animationType="fade"
         onRequestClose={() => setShowListPicker(false)}
       >
         <Animated.View 
@@ -1973,7 +1986,9 @@ export default function CookbookScreen() {
           >
             <HapticTouchableOpacity
               activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
+              onPress={() => {
+                // Prevent closing the modal when tapping inside content
+              }}
             >
               <Animated.View 
                 className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-sm shadow-lg"
@@ -1985,7 +2000,7 @@ export default function CookbookScreen() {
                   <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Select View & Collection</Text>
                 </View>
             
-            <ScrollView className="max-h-80">
+            <ScrollView style={{ maxHeight: Dimensions.get('window').height * 0.5 }}>
               {/* View Mode Options: Saved, Liked, Disliked */}
               <View className="px-2 pt-2">
                 <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-2">View Mode</Text>
@@ -2105,7 +2120,7 @@ export default function CookbookScreen() {
                                   'Enter a new name for this collection:',
                                   [
                                     { text: 'Cancel', style: 'cancel' },
-                                    { text: 'Save', onPress: async (newName) => {
+                                    { text: 'Save', onPress: async (newName?: string) => {
                                       if (newName && newName.trim()) {
                                         try {
                                           await collectionsApi.update(collection.id, newName.trim());
@@ -2141,7 +2156,7 @@ export default function CookbookScreen() {
                             'Enter a new name for this collection:',
                             [
                               { text: 'Cancel', style: 'cancel' },
-                              { text: 'Save', onPress: async (newName) => {
+                              { text: 'Save', onPress: async (newName?: string) => {
                                 if (newName && newName.trim()) {
                                   try {
                                     await collectionsApi.update(collection.id, newName.trim());
@@ -2231,8 +2246,8 @@ export default function CookbookScreen() {
         </View>
       )}
 
-      {filteredAndSortedRecipes.length === 0 ? (
-        // Empty state
+      {!apiLoading && allRecipes.length === 0 && !apiError && recipesData === null ? (
+        // No recipes found (but API call succeeded with null/empty response)
         <>
           {viewMode === 'saved' && (
             <AnimatedEmptyState
@@ -2262,6 +2277,26 @@ export default function CookbookScreen() {
             />
           )}
         </>
+      ) : filteredAndSortedRecipes.length === 0 && allRecipes.length > 0 ? (
+        // Filters/search returned no results, but we have recipes
+        <AnimatedEmptyState
+          config={CookbookEmptyStates.noSearchResults}
+          title=""
+          onAction={() => {
+            setSearchQuery('');
+            setCookbookFilters({
+              maxCookTime: null,
+              difficulty: [],
+              mealPrepOnly: false,
+              highProtein: false,
+              lowCal: false,
+              budget: false,
+              onePot: false,
+            });
+            setCurrentPage(0);
+            HapticPatterns.buttonPress();
+          }}
+        />
       ) : searchQuery.trim().length > 0 && filteredAndSortedRecipes.length === 0 ? (
         // Empty state - search returned no results
         <AnimatedEmptyState
@@ -2273,29 +2308,23 @@ export default function CookbookScreen() {
             HapticPatterns.buttonPress();
           }}
         />
-      ) : (
-        // Recipes list
+      ) : (allRecipes.length > 0 && !apiLoading) ? (
+        // Recipes list (show if we have recipes and not loading)
         <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ paddingTop: 0, paddingBottom: Spacing['3xl'] }}
-          refreshControl={
-            <AnimatedRefreshControl 
-              refreshing={refreshing} 
-              onRefresh={handleRefresh}
-              tintColor={isDark ? DarkColors.primary : Colors.primary}
-              colors={[isDark ? DarkColors.primary : Colors.primary]}
-              progressViewOffset={0}
-            />
-          }
-        >
+          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingTop: 0, paddingBottom: 300 }}
+            refreshControl={
+              <AnimatedRefreshControl 
+                refreshing={refreshing} 
+                onRefresh={handleRefresh}
+                tintColor={isDark ? DarkColors.primary : Colors.primary}
+                colors={[isDark ? DarkColors.primary : Colors.primary]}
+                progressViewOffset={0}
+              />
+            }
+            showsVerticalScrollIndicator={true}
+          >
           <View className="px-4">
-            <View className="mb-3">
-              <Text className="text-gray-700 dark:text-gray-300 text-lg font-semibold">
-                {viewMode === 'saved' && `${filteredAndSortedRecipes.length} saved recipes`}
-                {viewMode === 'liked' && `${filteredAndSortedRecipes.length} liked recipes`}
-                {viewMode === 'disliked' && `${filteredAndSortedRecipes.length} disliked recipes`}
-              </Text>
-            </View>
 
             {/* Pagination summary */}
             {filteredAndSortedRecipes.length > 0 && (
@@ -2306,60 +2335,72 @@ export default function CookbookScreen() {
             {displayMode === 'grid' ? (
               // Grid View - 2 Column Layout
               <View className="flex-row flex-wrap" style={{ marginHorizontal: -Spacing.sm }}>
-                {savedRecipes.map((recipe) => {
-                  const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-                  const isFeedbackLoading = feedbackLoading === recipe.id;
+                {(savedRecipes.length > 0 || allRecipes.length > 0) ? (
+                  (savedRecipes.length > 0 ? savedRecipes : allRecipes.slice(0, RECIPES_PER_PAGE)).map((recipe) => {
+                    const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
+                    const isFeedbackLoading = feedbackLoading === recipe.id;
 
-                  return (
-                  <View key={recipe.id} style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.lg }}>
-                    <RecipeCard
-                      recipe={recipe as any}
-                      variant="grid"
-                      onPress={handleRecipePress}
-                      onLongPress={() => handleLongPress(recipe)}
-                      onLike={handleLike}
-                      onDislike={handleDislike}
-                      onSave={handleSaveFromCookbook}
-                      feedback={feedback}
-                      isFeedbackLoading={isFeedbackLoading}
-                      isDark={isDark}
-                    />
+                    return (
+                      <View key={recipe.id} style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.lg }}>
+                        <RecipeCard
+                          recipe={recipe as any}
+                          variant="grid"
+                          onPress={handleRecipePress}
+                          onLongPress={() => handleLongPress(recipe)}
+                          onLike={handleLike}
+                          onDislike={handleDislike}
+                          onSave={handleSaveFromCookbook}
+                          feedback={feedback}
+                          isFeedbackLoading={isFeedbackLoading}
+                          isDark={isDark}
+                        />
                       </View>
-                  );
-                })}
-                      </View>
+                    );
+                  })
+                ) : (
+                  <View className="w-full py-8 items-center">
+                    <Text className="text-gray-500 dark:text-gray-400">No recipes on this page</Text>
+                  </View>
+                )}
+              </View>
             ) : (
               // List View - With animations (matches home page)
               <>
-              {savedRecipes.map((recipe, index) => {
-                const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-                const isFeedbackLoading = feedbackLoading === recipe.id;
+                {(savedRecipes.length > 0 || allRecipes.length > 0) ? (
+                  (savedRecipes.length > 0 ? savedRecipes : allRecipes.slice(0, RECIPES_PER_PAGE)).map((recipe, index) => {
+                    const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
+                    const isFeedbackLoading = feedbackLoading === recipe.id;
 
-                return (
-                  <AnimatedRecipeCard
-                    key={recipe.id ?? `${index}`}
-                    index={index}
-                    recipeId={recipe.id}
-                    animatedIds={animatedRecipeIds}
-                    onAnimated={(id) => setAnimatedRecipeIds(prev => new Set(prev).add(id))}
-                  >
-                    <RecipeCard
-                      recipe={recipe as any}
-                      variant="list"
-                      onPress={handleRecipePress}
-                      onLongPress={() => handleLongPress(recipe)}
-                      onLike={handleLike}
-                      onDislike={handleDislike}
-                      onSave={handleSaveFromCookbook}
-                      feedback={feedback}
-                      isFeedbackLoading={isFeedbackLoading}
-                      isDark={isDark}
-                      showDescription={true}
-                      className="mb-4"
-                    />
-                  </AnimatedRecipeCard>
-                );
-              })}
+                    return (
+                      <AnimatedRecipeCard
+                        key={recipe.id ?? `${index}`}
+                        index={index}
+                        recipeId={recipe.id}
+                        animatedIds={animatedRecipeIds}
+                        onAnimated={(id) => setAnimatedRecipeIds(prev => new Set(prev).add(id))}
+                      >
+                        <RecipeCard
+                          recipe={recipe as any}
+                          variant="list"
+                          onPress={handleRecipePress}
+                          onLongPress={() => handleLongPress(recipe)}
+                          onLike={handleLike}
+                          onDislike={handleDislike}
+                          onSave={handleSaveFromCookbook}
+                          feedback={feedback}
+                          isFeedbackLoading={isFeedbackLoading}
+                          isDark={isDark}
+                          showDescription={true}
+                          className="mb-4"
+                        />
+                      </AnimatedRecipeCard>
+                    );
+                  })
+                ) : (
+                  <View className="py-8 items-center">
+                    <Text className="text-gray-500 dark:text-gray-400">No recipes on this page</Text>
+                  </View>
+                )}
               </>
             )}
           </View>
@@ -2446,40 +2487,43 @@ export default function CookbookScreen() {
           
           {/* Similar Recipes Carousel */}
           {similarRecipes.length > 0 && (
-            <View className="px-4 mt-8 mb-6">
-              <HapticTouchableOpacity
-                onPress={() => {
-                  setSimilarRecipesCollapsed(!similarRecipesCollapsed);
-                  HapticPatterns.buttonPress();
-                }}
-                className="mb-3 flex-row items-center justify-between"
-              >
-                <View className="flex-row items-center flex-1">
-                  <View className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
-                    <Text className="text-lg">💡</Text>
+            <View className="mt-8 mb-12">
+              <View className="px-4">
+                <HapticTouchableOpacity
+                  onPress={() => {
+                    setSimilarRecipesCollapsed(!similarRecipesCollapsed);
+                    HapticPatterns.buttonPress();
+                  }}
+                  className="mb-3 flex-row items-center justify-between"
+                >
+                  <View className="flex-row items-center flex-1">
+                    <View className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
+                      <Text className="text-lg">💡</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-lg font-semibold text-gray-900 dark:text-white">
+                        You might also like
+                      </Text>
+                      <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {similarRecipes.length} recipe{similarRecipes.length !== 1 ? 's' : ''}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-900 dark:text-white">
-                      You might also like
-                    </Text>
-                    <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {similarRecipes.length} recipe{similarRecipes.length !== 1 ? 's' : ''}
-                    </Text>
-                  </View>
-                </View>
-                <Icon 
-                  name={similarRecipesCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
-                  size={IconSizes.SM} 
-                  color={isDark ? '#9CA3AF' : '#6B7280'}
-                  accessibilityLabel={similarRecipesCollapsed ? 'Expand section' : 'Collapse section'}
-                />
-              </HapticTouchableOpacity>
-              
+                  <Icon
+                    name={similarRecipesCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
+                    size={IconSizes.SM}
+                    color={isDark ? '#9CA3AF' : '#6B7280'}
+                    accessibilityLabel={similarRecipesCollapsed ? 'Expand section' : 'Collapse section'}
+                  />
+                </HapticTouchableOpacity>
+              </View>
+
               {!similarRecipesCollapsed && (
                 <ScrollView
                   horizontal
+                  scrollEventThrottle={16}
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingRight: Spacing.lg }}
+                  contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 20 }}
                   decelerationRate="fast"
                   snapToInterval={292}
                   snapToAlignment="start"
@@ -2497,7 +2541,8 @@ export default function CookbookScreen() {
                           onLongPress={() => handleLongPress(recipe)}
                           onLike={handleLike}
                           onDislike={handleDislike}
-                          onSave={handleSaveFromCookbook}
+                          onDelete={viewMode === 'saved' ? handleRemoveRecipe : undefined}
+                          onSave={viewMode !== 'saved' ? handleSaveFromCookbook : undefined}
                           feedback={feedback}
                           isFeedbackLoading={isFeedbackLoading}
                           isDark={isDark}
@@ -2506,27 +2551,24 @@ export default function CookbookScreen() {
                       </View>
                     );
                   })}
-        </ScrollView>
-      )}
+                </ScrollView>
+              )}
             </View>
           )}
-          
-          {/* Show recipe count when there's only one page */}
-          {/* When only one page, the summary above covers it */}
         </ScrollView>
-      )}
+      ) : null}
 
       {/* Collection Save Picker Modal */}
       <Modal
         visible={savePickerVisible}
-        animationType="slide"
+        animationType="fade"
         transparent
         onRequestClose={() => setSavePickerVisible(false)}
       >
         <View className="flex-1 bg-black/40 justify-end">
-          <View className="bg-white dark:bg-gray-800 rounded-t-2xl p-4 max-h-[70%]">
+          <View style={{ maxHeight: Dimensions.get('window').height * 0.7 }} className="bg-white dark:bg-gray-800 rounded-t-2xl p-4">
             <Text className="text-lg font-semibold mb-3 dark:text-gray-100">Save to Collection</Text>
-            <ScrollView className="mb-3">
+            <ScrollView scrollEventThrottle={16} className="mb-3">
               {collections.map((c) => (
                 <HapticTouchableOpacity
                   key={c.id}

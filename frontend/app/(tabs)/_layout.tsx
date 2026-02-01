@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, Modal, Animated, Dimensions, TextInput, Platform } from 'react-native';
+import { View, Text, Modal, Animated, Dimensions, TextInput } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedBadge from '../../components/ui/AnimatedBadge';
 import { router, usePathname, useSegments } from 'expo-router';
@@ -16,12 +16,11 @@ import { Colors, DarkColors } from '../../constants/Colors';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Spacing, ComponentSpacing, Gap } from '../../constants/Spacing';
 import { Duration } from '../../constants/Animations';
-import { useColorScheme } from 'nativewind';
 
 export default function TabLayout() {
-  const { colors } = useTheme();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  console.log('[TabLayout] Rendering');
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const segments = useSegments();
@@ -126,7 +125,8 @@ export default function TabLayout() {
   };
 
   return (
-    <View style={{ flex: 1, margin: 0, padding: 0 }}>
+    <View style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#F97316',
@@ -143,12 +143,6 @@ export default function TabLayout() {
           fontWeight: FontWeight.medium,
         },
       }}>
-        <Tabs.Screen
-          name="add"
-          options={{
-            href: null, // Hide from tab bar
-          }}
-        />
       <Tabs.Screen
         name="index"
         options={{
@@ -158,6 +152,12 @@ export default function TabLayout() {
           ),
         }}
       />
+        <Tabs.Screen
+          name="add"
+          options={{
+            href: null, // Hide from tab bar
+          }}
+        />
       <Tabs.Screen
         name="cookbook"
         options={{
@@ -195,6 +195,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+      </View>
 
       {/* Search Bar + Plus Button Above Tab Bar */}
       <View
@@ -228,7 +229,8 @@ export default function TabLayout() {
                   console.log('📍 Current segments:', segments);
                   
                   // Check if we're already on the index tab
-                  const isOnIndexTab = pathname === '/(tabs)/index' || pathname === '/index' || pathname === '/' || segments[segments.length - 1] === 'index';
+                  const lastSegment = segments[segments.length - 1] as string;
+                  const isOnIndexTab = pathname === '/(tabs)/index' || pathname === '/index' || pathname === '/' || lastSegment === 'index' || pathname === '/(tabs)';
                   
                   if (isOnIndexTab) {
                     // If already on index tab, just update params
@@ -237,11 +239,10 @@ export default function TabLayout() {
                   } else {
                     // Navigate to index tab
                     console.log('📍 Navigating to index tab');
-                    // Try the path format based on current segments
-                    const basePath = segments.length > 0 && segments[0] === '(tabs)' 
-                      ? 'index' 
-                      : '/(tabs)/index';
-                    router.push(`${basePath}?search=${encodeURIComponent(query)}`);
+                    router.push({
+                      pathname: '/(tabs)',
+                      params: { search: query },
+                    });
                   }
                 }
               }}

@@ -7,8 +7,7 @@ import Toast from '../../components/ui/Toast';
 import SkeletonLoader from '../../components/ui/SkeletonLoader';
 import MealCardSkeleton from '../../components/meal-plan/MealCardSkeleton';
 import WeeklyCalendarSkeleton from '../../components/meal-plan/WeeklyCalendarSkeleton';
-import { View, Text, ScrollView, Alert, Dimensions, TextInput, Modal, Animated, Image, Switch } from 'react-native';
-import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
+import { View, Text, ScrollView, Alert, Dimensions, TextInput, Modal, Animated, Image, Switch, RefreshControl, Platform } from 'react-native';
 import AnimatedProgressBar from '../../components/ui/AnimatedProgressBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -25,7 +24,7 @@ import { useColorScheme } from 'nativewind';
 import { useApi } from '../../hooks/useApi';
 import { mealPlanApi, aiRecipeApi, shoppingListApi, userApi, costTrackingApi, mealPrepApi } from '../../lib/api';
 import type { WeeklyPlan, DailySuggestion } from '../../types';
-import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, { useAnimatedStyle, useSharedValue, withSpring, withRepeat, withTiming, runOnJS } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
@@ -2506,6 +2505,7 @@ export default function MealPlanScreen() {
           showsVerticalScrollIndicator={false}
           snapToInterval={itemHeight}
           decelerationRate="fast"
+          nestedScrollEnabled={true}
           onScrollBeginDrag={() => setIsScrolling(true)}
           onMomentumScrollEnd={(event) => {
             setIsScrolling(false);
@@ -3235,7 +3235,7 @@ export default function MealPlanScreen() {
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Meal Plan</Text>
           <View className="w-8" />
         </View>
-        <ScrollView className="flex-1" contentContainerStyle={{ padding: Spacing.lg }}>
+        <ScrollView className="flex-1" contentContainerStyle={{ padding: Spacing.lg }} nestedScrollEnabled={true}>
           {/* Weekly Calendar Skeleton */}
           <WeeklyCalendarSkeleton />
           
@@ -3319,11 +3319,12 @@ export default function MealPlanScreen() {
         
         {/* Quick Action Badges */}
         <View className="px-4 pb-3">
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingRight: 16 }}
             style={{ flexGrow: 0 }}
+            nestedScrollEnabled={true}
           >
             <View className="flex-row items-center" style={{ gap: 8, flexWrap: 'nowrap' }}>
               {/* Create Full Day */}
@@ -3416,18 +3417,18 @@ export default function MealPlanScreen() {
         </View>
       </View>
 
-      <GestureHandlerRootView style={{ flex: 1 }}>
       <ScrollView
         ref={scrollViewRef}
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}
+        nestedScrollEnabled={true}
         onScroll={(event) => {
           scrollPositionRef.current = event.nativeEvent.contentOffset.y;
         }}
         scrollEventThrottle={16}
         refreshControl={
-          <AnimatedRefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={isDark ? DarkColors.primary : Colors.primary}
             colors={[isDark ? DarkColors.primary : Colors.primary]}
@@ -4134,14 +4135,14 @@ export default function MealPlanScreen() {
         {/* Conditional Meal Plan Views */}
         {viewMode === '24hour' && (
         <View className="px-4 mb-4" style={{ width: '100%' }}>
-          
-          <View className="space-y-1">
+
+          <View>
             {hours.map((hourData, index) => {
               const isDragOver = dragOverHour === hourData.hour && draggingMeal !== null;
-                
+
                 // Filter meals based on mealTypeFilter
                 const mealsForHour = hourlyMeals[hourData.hour] || [];
-                const filteredMeals = mealTypeFilter === 'all' 
+                const filteredMeals = mealTypeFilter === 'all'
                   ? mealsForHour
                   : mealsForHour.filter((meal) => {
                       if (mealTypeFilter === 'snacks') {
@@ -4149,14 +4150,14 @@ export default function MealPlanScreen() {
                       }
                       return meal.mealType === mealTypeFilter;
                     });
-                
+
                 // Don't render hour if no meals match filter and there are no meals at all (unless it's "all")
                 if (mealTypeFilter !== 'all' && filteredMeals.length === 0 && mealsForHour.length === 0) {
                   return null;
                 }
-              
+
               return (
-                <View key={index}>
+                <View key={index} style={{ marginBottom: 4 }}>
                   {/* Hour Header */}
                   <AnimatedHourHeader
                     hourData={hourData}
@@ -4503,7 +4504,6 @@ export default function MealPlanScreen() {
         </View>
 
       </ScrollView>
-      </GestureHandlerRootView>
 
       {/* Meal & Snack Selector Modal */}
       <Modal
@@ -4879,7 +4879,7 @@ export default function MealPlanScreen() {
                 <Text className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
                   Quick Templates
                 </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3" nestedScrollEnabled={true}>
                   <View className="flex-row space-x-2">
                     {quickTemplates.map((template, index) => (
                       <HapticTouchableOpacity
@@ -4993,7 +4993,7 @@ export default function MealPlanScreen() {
               </View>
             )}
 
-            <ScrollView className="max-h-96">
+            <ScrollView className="max-h-96" nestedScrollEnabled={true}>
               {swapSuggestions.length > 0 ? (
                 swapSuggestions.map((suggestion: any, index: number) => (
                   <HapticTouchableOpacity
@@ -5093,10 +5093,11 @@ export default function MealPlanScreen() {
                 </View>
                 
                 {/* Meals Content - Uses same approach as getMealsForDate */}
-                <ScrollView 
+                <ScrollView
                   style={{ maxHeight: 400 }}
                   contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
                   showsVerticalScrollIndicator={true}
+                  nestedScrollEnabled={true}
                 >
                   {(() => {
                     if (!selectedDayForModal || !(selectedDayForModal instanceof Date)) {
