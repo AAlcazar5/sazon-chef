@@ -81,6 +81,7 @@ import { usePerfectMatches } from '../../hooks/usePerfectMatches';
 import { useRecipeOfTheDay } from '../../hooks/useRecipeOfTheDay';
 import { usePersonalizedRecipes } from '../../hooks/usePersonalizedRecipes';
 import { useCollapsibleSections } from '../../hooks/useCollapsibleSections';
+import { useRecipeActions } from '../../hooks/useRecipeActions';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -109,6 +110,15 @@ export default function HomeScreen() {
   const interactions = useRecipeInteractions();
   const { userFeedback, feedbackLoading, actionMenuVisible, selectedRecipeForMenu } = interactions;
   const { setUserFeedback, setFeedbackLoading, openActionMenu, closeActionMenu, updateRecipeFeedback, initializeFeedback } = interactions;
+
+  // Recipe action handlers (meal plan, similar, healthify, report) - using extracted hook
+  const recipeActions = useRecipeActions({
+    selectedRecipe: selectedRecipeForMenu,
+    onClose: closeActionMenu,
+    showToast,
+    onSimilarRecipesFound: setSuggestedRecipes,
+  });
+  const { handleAddToMealPlan, handleViewSimilar, handleHealthify, handleReportIssue } = recipeActions;
 
   // View mode state (grid/list) - using extracted hook
   const { viewMode, setViewMode, recipesPerPage: RECIPES_PER_PAGE, isLoaded: viewModeLoaded } = useViewMode('list');
@@ -868,108 +878,6 @@ export default function HomeScreen() {
   const handleLongPress = (recipe: SuggestedRecipe) => {
     openActionMenu(recipe); // Hook handles setting recipe and showing menu
     HapticPatterns.buttonPressPrimary();
-  };
-
-  const handleAddToMealPlan = async () => {
-    if (!selectedRecipeForMenu) return;
-    
-    try {
-      // Show meal type picker
-      Alert.alert(
-        'Add to Meal Plan',
-        'Which meal would you like to add this to?',
-        [
-          { text: 'Breakfast', onPress: () => addRecipeToMealPlan('breakfast') },
-          { text: 'Lunch', onPress: () => addRecipeToMealPlan('lunch') },
-          { text: 'Dinner', onPress: () => addRecipeToMealPlan('dinner') },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
-    } catch (error) {
-      console.error('Error adding to meal plan:', error);
-      Alert.alert('Error', 'Failed to add recipe to meal plan');
-    }
-  };
-
-  const addRecipeToMealPlan = async (mealType: string) => {
-    if (!selectedRecipeForMenu) return;
-    
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      await mealPlanApi.addRecipeToMeal({
-        recipeId: selectedRecipeForMenu.id,
-        date: today,
-        mealType,
-      });
-      
-      HapticPatterns.success();
-      showToast(`Added to ${mealType}!`, 'success');
-      router.push('/(tabs)/meal-plan');
-    } catch (error: any) {
-      console.error('Error adding to meal plan:', error);
-      HapticPatterns.error();
-      Alert.alert('Error', error?.message || 'Failed to add recipe to meal plan');
-    }
-  };
-
-  const handleViewSimilar = async () => {
-    if (!selectedRecipeForMenu) return;
-    
-    try {
-      const response = await recipeApi.getSimilarRecipes(selectedRecipeForMenu.id, 10);
-      if (response.data && response.data.length > 0) {
-        setSuggestedRecipes(response.data);
-        showToast(`Found ${response.data.length} similar recipes`, 'success');
-        closeActionMenu();
-      } else {
-        Alert.alert('No Similar Recipes', 'We couldn\'t find any similar recipes at the moment.');
-      }
-    } catch (error) {
-      console.error('Error fetching similar recipes:', error);
-      Alert.alert('Error', 'Failed to load similar recipes');
-    }
-  };
-
-  const handleHealthify = async () => {
-    if (!selectedRecipeForMenu) return;
-    
-    try {
-      showToast('Healthifying recipe...', 'info');
-      const response = await recipeApi.healthifyRecipe(selectedRecipeForMenu.id);
-      
-      if (response.data) {
-        HapticPatterns.success();
-        showToast('Recipe healthified!', 'success');
-        router.push(`/modal?id=${response.data.id || selectedRecipeForMenu.id}`);
-        closeActionMenu();
-      }
-    } catch (error: any) {
-      console.error('Error healthifying recipe:', error);
-      HapticPatterns.error();
-      Alert.alert('Error', error?.message || 'Failed to healthify recipe');
-    }
-  };
-
-  const handleReportIssue = () => {
-    if (!selectedRecipeForMenu) return;
-    
-    Alert.alert(
-      'Report Issue',
-      'What issue would you like to report?',
-      [
-        { text: 'Incorrect Information', onPress: () => reportIssue('incorrect_info') },
-        { text: 'Missing Ingredients', onPress: () => reportIssue('missing_ingredients') },
-        { text: 'Wrong Instructions', onPress: () => reportIssue('wrong_instructions') },
-        { text: 'Other', onPress: () => reportIssue('other') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
-  const reportIssue = (issueType: string) => {
-    HapticPatterns.success();
-    showToast('Thank you for reporting! We\'ll look into it.', 'success');
-    closeActionMenu();
   };
 
   const handleRandomRecipe = async () => {
