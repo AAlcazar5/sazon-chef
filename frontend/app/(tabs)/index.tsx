@@ -47,6 +47,7 @@ import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
 import QuickFiltersBar from '../../components/home/QuickFiltersBar';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
+import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import {
   type UserFeedback,
   deduplicateRecipes,
@@ -167,7 +168,7 @@ export default function HomeScreen() {
   const [loadingRecipeOfTheDay, setLoadingRecipeOfTheDay] = useState(false);
 
   // Mood-based recommendations (Home Page 2.0)
-  const [selectedMood, setSelectedMood] = useState<{ id: string; label: string; emoji: string; color: string } | null>(null);
+  const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
 
   // Track if we're loading from filters to prevent useApi from interfering
@@ -1990,7 +1991,7 @@ export default function HomeScreen() {
 
   // Error state
   if (error && suggestedRecipes.length === 0) {
-    return <HomeErrorState error={error} onRetry={refetch} />;
+    return <HomeErrorState error={error as string} onRetry={refetch} />;
   }
 
   // Empty state
@@ -2094,42 +2095,17 @@ export default function HomeScreen() {
       />
 
       {/* Search Bar */}
-      <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2.5">
-          <Icon name={Icons.SEARCH} size={IconSizes.MD} color={isDark ? '#9CA3AF' : '#6B7280'} accessibilityLabel="Search" style={{ marginRight: 8 }} />
-          <TextInput
-            placeholder="Search recipes, ingredients, tags..."
-            placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              // Reset to first page when search changes
-              setCurrentPage(0);
-            }}
-            className="flex-1 text-gray-900 dark:text-gray-100 text-base"
-            style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
-            returnKeyType="search"
-            clearButtonMode="while-editing"
-          />
-          {searchQuery.length > 0 && (
-            <HapticTouchableOpacity
-              onPress={() => {
-                setSearchQuery('');
-                setCurrentPage(0);
-                HapticPatterns.buttonPress();
-              }}
-              className="ml-2"
-            >
-              <Icon name={Icons.CLOSE_CIRCLE} size={IconSizes.SM} color={isDark ? '#9CA3AF' : '#6B7280'} accessibilityLabel="Clear search" />
-            </HapticTouchableOpacity>
-          )}
-        </View>
-        {searchQuery.length > 0 && (
-          <Text className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-2 ml-1">
-            Results for "{searchQuery}"
-          </Text>
-        )}
-      </View>
+      <RecipeSearchBar
+        value={searchQuery}
+        onChangeText={(text) => {
+          setSearchQuery(text);
+          setCurrentPage(0);
+        }}
+        onClear={() => {
+          setSearchQuery('');
+          setCurrentPage(0);
+        }}
+      />
 
       {/* Main content area - FIXED: Removed AnimatedRefreshControl */}
       <ScrollView
@@ -2310,10 +2286,10 @@ export default function HomeScreen() {
                             borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
                           }}>
                             <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
-                            <Text style={{ 
-                              fontSize: 14, 
+                            <Text style={{
+                              fontSize: 14,
                               fontWeight: '600',
-                              color: isDark ? DarkColors.text : Colors.text,
+                              color: isDark ? DarkColors.text.primary : Colors.text.primary,
                               marginBottom: 4,
                               textAlign: 'center',
                             }}>
@@ -2526,263 +2502,63 @@ export default function HomeScreen() {
         {user?.id && (
           <>
             {/* Your Favorites Section */}
-            {likedRecipes.length > 0 && (() => {
-              const isCollapsed = collapsedSections['your-favorites'];
-              
-              return (
-                <View className="px-4 mb-6">
-                  <HapticTouchableOpacity
-                    onPress={() => toggleSection('your-favorites')}
-                    className="flex-row items-center justify-between mb-4"
-                    activeOpacity={0.7}
-                  >
-                    <View className="flex-row items-center flex-1">
-                      <Text className="text-2xl mr-2">❤️</Text>
-                      <View className="flex-1">
-                        <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          Your Favorites
-                        </Text>
-                        <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {likedRecipes.length} recipe{likedRecipes.length !== 1 ? 's' : ''} you've liked
-                        </Text>
-                      </View>
-                    </View>
-                        <Icon 
-                      name={isCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
-                          size={IconSizes.SM} 
-                      color={isDark ? '#9CA3AF' : '#6B7280'}
-                      accessibilityLabel={isCollapsed ? 'Expand section' : 'Collapse section'}
-                        />
-                      </HapticTouchableOpacity>
-                      
-                  {!isCollapsed && (
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ paddingRight: 16 }}
-                      decelerationRate="fast"
-                      snapToInterval={280}
-                      snapToAlignment="start"
-                    >
-                      {likedRecipes.map((recipe, index) => {
-                        const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-                        const isFeedbackLoading = feedbackLoading === recipe.id;
-                        
-                        return (
-                          <View key={recipe.id} style={{ width: 280, marginRight: 12 }}>
-                            <RecipeCard
-                              recipe={recipe}
-                              variant="carousel"
-                              onPress={handleRecipePress}
-                              onLongPress={handleLongPress}
-                              onLike={handleLike}
-                              onDislike={handleDislike}
-                              onSave={openSavePicker}
-                              feedback={feedback}
-                              isFeedbackLoading={isFeedbackLoading}
-                              isDark={isDark}
-                              showDescription={true}
-                            />
-                          </View>
-                        );
-                      })}
-                      {/* Refresh prompt when on last recipe */}
-                      {perfectMatchCurrentIndex >= perfectMatchSection.recipes.length - 1 && perfectMatchSection.recipes.length >= 5 && (
-                        <View style={{ width: 280, marginRight: 12, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                          <View style={{ 
-                            backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
-                            borderRadius: 12,
-                            padding: 16,
-                            alignItems: 'center',
-                            borderWidth: 1,
-                            borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
-                          }}>
-                            <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
-                            <Text style={{ 
-                              fontSize: 14, 
-                              fontWeight: '600',
-                              color: isDark ? DarkColors.text : Colors.text,
-                              marginBottom: 4,
-                              textAlign: 'center',
-                            }}>
-                              Want more recipes?
-                            </Text>
-                            <Text style={{ 
-                              fontSize: 12, 
-                              color: isDark ? '#9CA3AF' : '#6B7280',
-                              marginBottom: 12,
-                              textAlign: 'center',
-                            }}>
-                              Swipe to refresh and get new perfect matches
-                            </Text>
-                            <HapticTouchableOpacity
-                              onPress={() => {
-                                HapticPatterns.buttonPress();
-                                fetchPerfectMatches(true);
-                              }}
-                              disabled={refreshingPerfectMatches}
-                              style={{
-                                backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                                paddingHorizontal: 20,
-                                paddingVertical: 10,
-                                borderRadius: 8,
-                                opacity: refreshingPerfectMatches ? 0.7 : 1,
-                              }}
-                            >
-                              {refreshingPerfectMatches ? (
-                                <AnimatedActivityIndicator size="small" color="#FFFFFF" />
-                              ) : (
-                                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
-                                  Refresh Recipes
-                                </Text>
-                              )}
-                            </HapticTouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </ScrollView>
-                  )}
-                </View>
-              );
-            })()}
+            {likedRecipes.length > 0 && (
+              <RecipeCarouselSection
+                title="Your Favorites"
+                subtitle={`${likedRecipes.length} recipe${likedRecipes.length !== 1 ? 's' : ''} you've liked`}
+                emoji="❤️"
+                recipes={likedRecipes}
+                isCollapsed={collapsedSections['your-favorites']}
+                onToggleCollapse={() => toggleSection('your-favorites')}
+                isDark={isDark}
+                userFeedback={userFeedback}
+                feedbackLoading={feedbackLoading}
+                onRecipePress={handleRecipePress}
+                onRecipeLongPress={handleLongPress}
+                onLike={handleLike}
+                onDislike={handleDislike}
+                onSave={openSavePicker}
+              />
+            )}
 
             {/* Perfect Match for You Section */}
             {(() => {
               const perfectMatchSection = groupRecipesIntoSections.find(s => s.key === 'perfect-match');
               if (!perfectMatchSection) return null;
-              
-              const isCollapsed = collapsedSections['perfect-match'];
-              
+
               return (
-                <View className="px-4 mb-6">
-                      <HapticTouchableOpacity
-                    onPress={() => toggleSection('perfect-match')}
-                    className="flex-row items-center justify-between mb-4"
-                    activeOpacity={0.7}
-                  >
-                    <View className="flex-row items-center flex-1">
-                      <Text className="text-2xl mr-2">{perfectMatchSection.emoji}</Text>
-                      <View className="flex-1">
-              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {perfectMatchSection.title}
-                        </Text>
-                        <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {perfectMatchSection.recipes.length} recipe{perfectMatchSection.recipes.length !== 1 ? 's' : ''}
-            </Text>
-            </View>
-                    </View>
-                        <Icon 
-                      name={isCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
-                      size={IconSizes.SM}
-                      color={isDark ? '#9CA3AF' : '#6B7280'}
-                      accessibilityLabel={isCollapsed ? 'Expand section' : 'Collapse section'}
-                        />
-                      </HapticTouchableOpacity>
-                  
-                  {!isCollapsed && (
-                        <ScrollView
-                          ref={perfectMatchScrollViewRef}
-                          horizontal
-                          showsHorizontalScrollIndicator={false}
-                          contentContainerStyle={{ paddingRight: 16 }}
-                          decelerationRate="fast"
-                          snapToInterval={280}
-                          snapToAlignment="start"
-                          onScroll={(event) => {
-                            const { contentOffset } = event.nativeEvent;
-                            const scrollPosition = contentOffset.x;
-                            const cardWidth = 280 + 12; // card width + margin
-                            const currentIndex = Math.round(scrollPosition / cardWidth);
-                            setPerfectMatchCurrentIndex(currentIndex);
-                          }}
-                          scrollEventThrottle={100}
-                          onMomentumScrollEnd={(event) => {
-                            const { contentOffset } = event.nativeEvent;
-                            const scrollPosition = contentOffset.x;
-                            const cardWidth = 280 + 12;
-                            const currentIndex = Math.round(scrollPosition / cardWidth);
-                            setPerfectMatchCurrentIndex(currentIndex);
-                          }}
-                        >
-                      {perfectMatchSection.recipes.map((recipe) => {
-              const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-              const isFeedbackLoading = feedbackLoading === recipe.id;
-              
-                            return (
-                              <View key={recipe.id} style={{ width: 280, marginRight: 12 }}>
-                                <RecipeCard
-                                  recipe={recipe}
-                                  variant="carousel"
-                                  onPress={handleRecipePress}
-                                  onLongPress={handleLongPress}
-                                  onLike={handleLike}
-                                  onDislike={handleDislike}
-                                  onSave={openSavePicker}
-                                  feedback={feedback}
-                                  isFeedbackLoading={isFeedbackLoading}
-                                  isDark={isDark}
-                              showDescription={true}
-                                />
-                    </View>
-                            );
-                          })}
-                          {/* Refresh prompt when on last recipe */}
-                          {perfectMatchCurrentIndex >= perfectMatchSection.recipes.length - 1 && perfectMatchSection.recipes.length >= 5 && (
-                            <View style={{ width: 280, marginRight: 12, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                              <View style={{ 
-                                backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
-                                borderRadius: 12,
-                                padding: 16,
-                                alignItems: 'center',
-                                borderWidth: 1,
-                                borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
-                              }}>
-                                <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
-                                <Text style={{ 
-                                  fontSize: 14, 
-                                  fontWeight: '600',
-                                  color: isDark ? DarkColors.text : Colors.text,
-                                  marginBottom: 4,
-                                  textAlign: 'center',
-                                }}>
-                                  Want more recipes?
-                                </Text>
-                                <Text style={{ 
-                                  fontSize: 12, 
-                                  color: isDark ? '#9CA3AF' : '#6B7280',
-                                  marginBottom: 12,
-                                  textAlign: 'center',
-                                }}>
-                                  Swipe to refresh and get new perfect matches
-                                </Text>
-                                <HapticTouchableOpacity
-                                  onPress={() => {
-                                    HapticPatterns.buttonPress();
-                                    fetchPerfectMatches(true);
-                                  }}
-                                  disabled={refreshingPerfectMatches}
-                                  style={{
-                                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                                    paddingHorizontal: 20,
-                                    paddingVertical: 10,
-                                    borderRadius: 8,
-                                    opacity: refreshingPerfectMatches ? 0.7 : 1,
-                                  }}
-                                >
-                                  {refreshingPerfectMatches ? (
-                                    <AnimatedActivityIndicator size="small" color="#FFFFFF" />
-                                  ) : (
-                                    <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
-                                      Refresh Recipes
-                                    </Text>
-                                  )}
-                                </HapticTouchableOpacity>
-                              </View>
-                            </View>
-                          )}
-                        </ScrollView>
-                  )}
-                  </View>
+                <RecipeCarouselSection
+                  title={perfectMatchSection.title}
+                  emoji={perfectMatchSection.emoji}
+                  recipes={perfectMatchSection.recipes}
+                  isCollapsed={collapsedSections['perfect-match']}
+                  onToggleCollapse={() => toggleSection('perfect-match')}
+                  isDark={isDark}
+                  userFeedback={userFeedback}
+                  feedbackLoading={feedbackLoading}
+                  onRecipePress={handleRecipePress}
+                  onRecipeLongPress={handleLongPress}
+                  onLike={handleLike}
+                  onDislike={handleDislike}
+                  onSave={openSavePicker}
+                  scrollRef={perfectMatchScrollViewRef}
+                  onScroll={(event) => {
+                    const { contentOffset } = event.nativeEvent;
+                    const cardWidth = 280 + 12;
+                    const currentIndex = Math.round(contentOffset.x / cardWidth);
+                    setPerfectMatchCurrentIndex(currentIndex);
+                  }}
+                  onMomentumScrollEnd={(event) => {
+                    const { contentOffset } = event.nativeEvent;
+                    const cardWidth = 280 + 12;
+                    const currentIndex = Math.round(contentOffset.x / cardWidth);
+                    setPerfectMatchCurrentIndex(currentIndex);
+                  }}
+                  showRefreshPrompt={perfectMatchCurrentIndex >= perfectMatchSection.recipes.length - 1 && perfectMatchSection.recipes.length >= 5}
+                  refreshing={refreshingPerfectMatches}
+                  onRefresh={() => fetchPerfectMatches(true)}
+                  refreshPromptText="Swipe to refresh and get new perfect matches"
+                />
               );
             })()}
 
@@ -2790,69 +2566,23 @@ export default function HomeScreen() {
             {(() => {
               const mealPrepSection = groupRecipesIntoSections.find(s => s.key === 'meal-prep');
               if (!mealPrepSection) return null;
-              
-              const isCollapsed = collapsedSections['meal-prep'];
-              
+
               return (
-                <View className="px-4 mb-6">
-                  <HapticTouchableOpacity
-                    onPress={() => toggleSection('meal-prep')}
-                    className="flex-row items-center justify-between mb-4"
-                    activeOpacity={0.7}
-                  >
-                    <View className="flex-row items-center flex-1">
-                      <Text className="text-2xl mr-2">{mealPrepSection.emoji}</Text>
-                      <View className="flex-1">
-                        <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {mealPrepSection.title}
-                        </Text>
-                        <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {mealPrepSection.recipes.length} recipe{mealPrepSection.recipes.length !== 1 ? 's' : ''}
-                        </Text>
-                      </View>
-                    </View>
-                    <Icon 
-                      name={isCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
-                      size={IconSizes.SM} 
-                      color={isDark ? '#9CA3AF' : '#6B7280'}
-                      accessibilityLabel={isCollapsed ? 'Expand section' : 'Collapse section'}
-                    />
-                  </HapticTouchableOpacity>
-                  
-                  {!isCollapsed && (
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ paddingRight: 16 }}
-                      decelerationRate="fast"
-                      snapToInterval={280}
-                      snapToAlignment="start"
-                    >
-                      {mealPrepSection.recipes.map((recipe) => {
-                        const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-                        const isFeedbackLoading = feedbackLoading === recipe.id;
-                        
-                        return (
-                          <View key={recipe.id} style={{ width: 280, marginRight: 12 }}>
-                            <RecipeCard
-                              recipe={recipe}
-                              variant="carousel"
-                              onPress={handleRecipePress}
-                              onLongPress={handleLongPress}
-                              onLike={handleLike}
-                              onDislike={handleDislike}
-                              onSave={openSavePicker}
-                              feedback={feedback}
-                              isFeedbackLoading={isFeedbackLoading}
-                              isDark={isDark}
-                              showDescription={true}
-                            />
-                          </View>
-                        );
-                      })}
-                    </ScrollView>
-                  )}
-                </View>
+                <RecipeCarouselSection
+                  title={mealPrepSection.title}
+                  emoji={mealPrepSection.emoji}
+                  recipes={mealPrepSection.recipes}
+                  isCollapsed={collapsedSections['meal-prep']}
+                  onToggleCollapse={() => toggleSection('meal-prep')}
+                  isDark={isDark}
+                  userFeedback={userFeedback}
+                  feedbackLoading={feedbackLoading}
+                  onRecipePress={handleRecipePress}
+                  onRecipeLongPress={handleLongPress}
+                  onLike={handleLike}
+                  onDislike={handleDislike}
+                  onSave={openSavePicker}
+                />
               );
             })()}
 
