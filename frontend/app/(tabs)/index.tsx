@@ -48,6 +48,7 @@ import HomeEmptyState from '../../components/home/HomeEmptyState';
 import QuickFiltersBar from '../../components/home/QuickFiltersBar';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
+import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 import {
   type UserFeedback,
   deduplicateRecipes,
@@ -72,6 +73,7 @@ import { useTimeAwareMode } from '../../hooks/useTimeAwareMode';
 import { useRecipePagination } from '../../hooks/useRecipePagination';
 import { useRecipeInteractions } from '../../hooks/useRecipeInteractions';
 import { useRecipeFilters } from '../../hooks/useRecipeFilters';
+import { useCollectionSave } from '../../hooks/useCollectionSave';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -135,13 +137,23 @@ export default function HomeScreen() {
   const { filters, activeFilters, filtersLoaded, showFilterModal } = filterHook;
   const { setFilters, openFilterModal, closeFilterModal, handleFilterChange, updateActiveFilters, saveFilters, resetFilters } = filterHook;
   
-  // Collections state for save to collection
-  const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
-  const [savePickerVisible, setSavePickerVisible] = useState(false);
-  const [savePickerRecipeId, setSavePickerRecipeId] = useState<string | null>(null);
-  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
-  const [creatingCollection, setCreatingCollection] = useState(false);
-  const [newCollectionName, setNewCollectionName] = useState('');
+  // Collections state for save to collection - using extracted hook
+  const collectionSave = useCollectionSave({ userId: user?.id, source: 'home_screen' });
+  const {
+    collections,
+    savePickerVisible,
+    selectedCollectionIds,
+    creatingCollection,
+    newCollectionName,
+    setSelectedCollectionIds,
+    setCreatingCollection,
+    setNewCollectionName,
+    openSavePicker,
+    closeSavePicker,
+    handleSaveToCollections,
+    handleCreateCollection,
+    toggleCollectionSelection,
+  } = collectionSave;
 
   // First-time user guidance
   const [showFirstTimeTooltip, setShowFirstTimeTooltip] = useState(false);
@@ -1029,78 +1041,7 @@ export default function HomeScreen() {
     router.push(`../modal?id=${recipeId}`);
   };
 
-  const openSavePicker = async (recipeId: string) => {
-    try {
-      const res = await collectionsApi.list();
-      const cols = (Array.isArray(res.data) ? res.data : (res.data?.data || [])) as Array<{ id: string; name: string; isDefault?: boolean }>;
-      setCollections(cols);
-      setSavePickerRecipeId(recipeId);
-      setSelectedCollectionIds([]);
-      setSavePickerVisible(true);
-    } catch (e) {
-      console.log('⚠️  Failed to load collections');
-    }
-  };
-
-  const handleSaveToCollections = async () => {
-    if (!savePickerRecipeId) return;
-    
-    try {
-      // Save to cookbook with selected collections (multi-collection support)
-      await recipeApi.saveRecipe(savePickerRecipeId, selectedCollectionIds.length > 0 ? { collectionIds: selectedCollectionIds } : undefined);
-      
-      // Track save action
-      if (user?.id && savePickerRecipeId) {
-        analytics.trackRecipeInteraction('save', savePickerRecipeId, {
-          source: 'home_screen',
-          collectionCount: selectedCollectionIds.length,
-        });
-      }
-      
-      setSavePickerVisible(false);
-      setSavePickerRecipeId(null);
-      setSelectedCollectionIds([]);
-      Alert.alert('Saved', 'Recipe saved to cookbook!');
-    } catch (error: any) {
-      if (error.code === 'HTTP_409' || /already\s*saved/i.test(error.message)) {
-        // Already saved, try to move to collections
-        if (selectedCollectionIds.length > 0) {
-          try {
-            await collectionsApi.moveSavedRecipe(savePickerRecipeId, selectedCollectionIds);
-            Alert.alert('Moved', 'Recipe moved to collections!');
-          } catch (e) {
-            Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
-          }
-        } else {
-          Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
-        }
-      } else {
-        HapticPatterns.error();
-        Alert.alert('Error', error.message || 'Failed to save recipe');
-      }
-      setSavePickerVisible(false);
-      setSavePickerRecipeId(null);
-      setSelectedCollectionIds([]);
-    }
-  };
-
-  const handleCreateCollection = async () => {
-    const name = newCollectionName.trim();
-    if (!name) return;
-    try {
-      const res = await collectionsApi.create(name);
-      const created = (Array.isArray(res.data) ? null : (res.data?.data || res.data)) as { id: string; name: string; isDefault?: boolean } | null;
-      if (created) {
-        setCollections(prev => [created, ...prev]);
-        setSelectedCollectionIds(prev => [...prev, created.id]);
-        setNewCollectionName('');
-        setCreatingCollection(false);
-      }
-    } catch (e: any) {
-      HapticPatterns.error();
-      Alert.alert('Error', e?.message || 'Failed to create collection');
-    }
-  };
+  // Collection functions now provided by useCollectionSave hook
 
   // Long-press menu handlers
   const handleLongPress = (recipe: SuggestedRecipe) => {
@@ -2624,14 +2565,8 @@ export default function HomeScreen() {
         creatingCollection={creatingCollection}
         newCollectionName={newCollectionName}
         isDark={isDark}
-        onClose={() => setSavePickerVisible(false)}
-        onToggleCollection={(collectionId) => {
-          setSelectedCollectionIds(prev =>
-            prev.includes(collectionId)
-              ? prev.filter(id => id !== collectionId)
-              : [...prev, collectionId]
-          );
-        }}
+        onClose={closeSavePicker}
+        onToggleCollection={toggleCollectionSelection}
         onStartCreating={() => setCreatingCollection(true)}
         onChangeNewName={setNewCollectionName}
         onCreateCollection={handleCreateCollection}
@@ -2639,30 +2574,11 @@ export default function HomeScreen() {
       />
 
       {/* Random Recipe Generation Modal */}
-      <Modal
+      <RandomRecipeModal
         visible={showRandomModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowRandomModal(false)}
-      >
-        <View style={{ 
-          flex: 1, 
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', 
-          justifyContent: 'center', 
-          alignItems: 'center' 
-        }}>
-          <View style={{
-            backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-            borderRadius: BorderRadius.lg,
-            padding: Spacing.xl,
-            margin: Spacing.xl,
-            maxWidth: 300,
-            alignItems: 'center'
-          }}>
-            <LoadingState config={HomeLoadingStates.generatingRecipe} />
-          </View>
-        </View>
-      </Modal>
+        isDark={isDark}
+        onClose={() => setShowRandomModal(false)}
+      />
 
       {/* First-time user guidance tooltip */}
       <HelpTooltip
