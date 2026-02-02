@@ -77,6 +77,7 @@ import { useCollectionSave } from '../../hooks/useCollectionSave';
 import { useQuickMeals } from '../../hooks/useQuickMeals';
 import { usePerfectMatches } from '../../hooks/usePerfectMatches';
 import { useRecipeOfTheDay } from '../../hooks/useRecipeOfTheDay';
+import { usePersonalizedRecipes } from '../../hooks/usePersonalizedRecipes';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -125,11 +126,14 @@ export default function HomeScreen() {
   // Section collapse state
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   
-  // Personalized sections state
-  const [likedRecipes, setLikedRecipes] = useState<SuggestedRecipe[]>([]);
-  const [recentlyViewedRecipes, setRecentlyViewedRecipes] = useState<string[]>([]);
-  const [loadingPersonalized, setLoadingPersonalized] = useState(false);
-  
+  // Personalized sections state - using extracted hook
+  const {
+    likedRecipes,
+    recentlyViewedIds: recentlyViewedRecipes,
+    loading: loadingPersonalized,
+    addRecentlyViewed,
+  } = usePersonalizedRecipes({ userId: user?.id });
+
   // Filter state - using extracted hook
   const filterHook = useRecipeFilters();
   const { filters, activeFilters, filtersLoaded, showFilterModal } = filterHook;
@@ -285,38 +289,6 @@ export default function HomeScreen() {
   useEffect(() => {
     setCurrentPage(0); // Reset to first page when view mode changes
   }, [viewMode]);
-
-  // Load personalized data (liked recipes, recently viewed)
-  useEffect(() => {
-    const loadPersonalizedData = async () => {
-      if (!user?.id) return;
-      
-      try {
-        setLoadingPersonalized(true);
-        
-        // Load liked recipes
-        const likedResponse = await recipeApi.getLikedRecipes();
-        if (likedResponse.data && likedResponse.data.length > 0) {
-          setLikedRecipes(likedResponse.data.slice(0, 5)); // Top 5 liked recipes
-        }
-        
-        // Load recently viewed recipes from storage
-        const recentViewed = await AsyncStorage.getItem('@sazon_recently_viewed');
-        if (recentViewed) {
-          const recentIds = JSON.parse(recentViewed) as string[];
-          setRecentlyViewedRecipes(recentIds.slice(0, 5)); // Last 5 viewed
-        }
-      } catch (error) {
-        console.error('❌ Error loading personalized data:', error);
-      } finally {
-        setLoadingPersonalized(false);
-      }
-    };
-    
-    loadPersonalizedData();
-  }, [user?.id]);
-
-
 
   // Toggle view mode
   const handleToggleViewMode = (mode: 'grid' | 'list') => {
@@ -877,27 +849,12 @@ export default function HomeScreen() {
   }, [paginationInfo, currentPage, paginationLoading, fetchRecipesForPage]);
 
 
-  // Track recipe views for "Continue Cooking" section
-  const trackRecipeView = async (recipeId: string) => {
-    try {
-      const recent = await AsyncStorage.getItem('@sazon_recently_viewed');
-      const recentIds = recent ? JSON.parse(recent) as string[] : [];
-      
-      // Remove if already exists and add to front
-      const updated = [recipeId, ...recentIds.filter(id => id !== recipeId)].slice(0, 10);
-      await AsyncStorage.setItem('@sazon_recently_viewed', JSON.stringify(updated));
-      setRecentlyViewedRecipes(updated.slice(0, 5));
-    } catch (error) {
-      console.error('❌ Error tracking recipe view:', error);
-    }
-  };
-
   const handleRecipePress = (recipeId: string) => {
     console.log('📱 HomeScreen: Recipe pressed', recipeId);
-    
-    // Track recipe view for "Continue Cooking" section
-    trackRecipeView(recipeId);
-    
+
+    // Track recipe view for "Continue Cooking" section (using extracted hook)
+    addRecentlyViewed(recipeId);
+
     // Navigate to modal
     router.push(`../modal?id=${recipeId}`);
   };
