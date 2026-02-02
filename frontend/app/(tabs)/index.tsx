@@ -51,6 +51,7 @@ import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 import {
   type UserFeedback,
+  type RecipeSection,
   deduplicateRecipes,
   initializeFeedbackState,
   parseRecipeResponse,
@@ -59,6 +60,7 @@ import {
   getShadowStyle,
   getRecipePlaceholder,
   truncateDescription,
+  groupRecipesIntoSections,
 } from '../../utils/recipeUtils';
 import {
   CUISINE_OPTIONS,
@@ -78,6 +80,7 @@ import { useQuickMeals } from '../../hooks/useQuickMeals';
 import { usePerfectMatches } from '../../hooks/usePerfectMatches';
 import { useRecipeOfTheDay } from '../../hooks/useRecipeOfTheDay';
 import { usePersonalizedRecipes } from '../../hooks/usePersonalizedRecipes';
+import { useCollapsibleSections } from '../../hooks/useCollapsibleSections';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -123,9 +126,9 @@ export default function HomeScreen() {
   // Featured recipe swipe state (cycle through top 3)
   const [featuredRecipeIndex, setFeaturedRecipeIndex] = useState(0);
   
-  // Section collapse state
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  
+  // Section collapse state - using extracted hook
+  const { collapsedSections, toggleSection } = useCollapsibleSections();
+
   // Personalized sections state - using extracted hook
   const {
     likedRecipes,
@@ -1558,139 +1561,15 @@ export default function HomeScreen() {
   };
 
 
-  // Quick Meals section - always shows easy-to-make meals
-  const getQuickMealsSection = useMemo(() => {
-    return {
-      sectionTitle: 'Quick Meals',
-      emoji: '⚡',
-    };
-  }, []);
-
-  // Group recipes into contextual sections
-  const groupRecipesIntoSections = useMemo(() => {
-    if (suggestedRecipes.length <= 1) return [];
-    
-    const remainingRecipes = suggestedRecipes.slice(1);
-    const sections: Array<{ title: string; emoji: string; recipes: SuggestedRecipe[]; key: string; priority?: number }> = [];
-    const usedHighlightIds = new Set<string>();
-
-    const takeUnique = (
-      candidates: SuggestedRecipe[],
-      predicate: (r: SuggestedRecipe) => boolean,
-      maxCount: number
-    ) => {
-      const picked: SuggestedRecipe[] = [];
-      for (const r of candidates) {
-        if (picked.length >= maxCount) break;
-        if (usedHighlightIds.has(r.id)) continue;
-        if (!predicate(r)) continue;
-        usedHighlightIds.add(r.id);
-        picked.push(r);
-      }
-      return picked;
-    };
-    
-    // Quick Meals section - uses separately fetched quick meals (not from paginated results)
-    // Only show if not searching (search results should be focused)
-    if (!searchQuery && quickMealsRecipes.length > 0) {
-      // Filter out any recipes that are already in other sections
-      const availableQuickMeals = quickMealsRecipes.filter(r => !usedHighlightIds.has(r.id));
-      if (availableQuickMeals.length > 0) {
-        // Always show max 5 recipes
-        const quickMeals = availableQuickMeals.slice(0, 5);
-        quickMeals.forEach(r => usedHighlightIds.add(r.id));
-        
-        sections.push({
-          title: getQuickMealsSection.sectionTitle,
-          emoji: getQuickMealsSection.emoji,
-          recipes: quickMeals,
-          key: 'quick-meals',
-          priority: 10 // Lower priority - shows after Recipes for You
-        });
-      }
-    }
-    
-    // Perfect Match for You - uses separately fetched perfect match recipes (not from paginated results)
-    // Only show if not searching (search results should be focused)
-    if (!searchQuery && perfectMatchRecipes.length > 0) {
-      // Filter out any recipes that are already in other sections
-      const availablePerfectMatches = perfectMatchRecipes.filter(r => !usedHighlightIds.has(r.id));
-      if (availablePerfectMatches.length > 0) {
-        // Always show max 5 recipes, sorted by match percentage
-        const perfectMatches = availablePerfectMatches
-          .sort((a, b) => (b.score?.matchPercentage || 0) - (a.score?.matchPercentage || 0))
-          .slice(0, 5);
-        perfectMatches.forEach(r => usedHighlightIds.add(r.id));
-        
-        sections.push({
-          title: 'Perfect Match for You',
-          emoji: '⭐',
-          recipes: perfectMatches,
-          key: 'perfect-match'
-        });
-      }
-    }
-    
-    // Great for Meal Prep
-    const mealPrepRecipes = takeUnique(
-      remainingRecipes,
-      (r) => (r as any).mealPrepSuitable || (r as any).freezable || (r as any).batchFriendly,
-      10
-    );
-    if (mealPrepRecipes.length > 0 && !mealPrepMode) {
-      sections.push({
-        title: 'Great for Meal Prep',
-        emoji: '🍱',
-        recipes: mealPrepRecipes,
-        key: 'meal-prep'
-      });
-    }
-    
-    // High in Superfoods (health grade A or B)
-    const superfoodRecipes = takeUnique(
-      remainingRecipes,
-      (r) => r.healthGrade === 'A' || r.healthGrade === 'B',
-      10
-    );
-    if (superfoodRecipes.length > 0) {
-      sections.push({
-        title: 'High in Superfoods',
-        emoji: '🥗',
-        recipes: superfoodRecipes,
-        key: 'superfoods'
-      });
-    }
-
-    // Recipes for You - keep the full pool, but push highlight picks to the end
-    // so you don't see the same recipe as the first card in every section.
-    const recipesForYou = [
-      ...remainingRecipes.filter((r) => !usedHighlightIds.has(r.id)),
-      ...remainingRecipes.filter((r) => usedHighlightIds.has(r.id)),
-    ];
-    if (recipesForYou.length > 0) {
-      sections.push({
-        title: 'For You',
-        emoji: '🍳',
-        recipes: recipesForYou,
-        key: 'quick-easy',
-        priority: 5 // Shows before Quick Meals section
-      });
-    }
-    
-    // Sort sections by priority (Quick Meals first, then others)
-    sections.sort((a, b) => (a.priority || 99) - (b.priority || 99));
-    
-    return sections;
-  }, [suggestedRecipes, quickMealsRecipes, perfectMatchRecipes, mealPrepMode, isDark, getQuickMealsSection, viewMode, searchQuery]);
-
-  // Toggle section collapse
-  const toggleSection = (sectionKey: string) => {
-    setCollapsedSections(prev => ({
-      ...prev,
-      [sectionKey]: !prev[sectionKey]
-    }));
-    HapticPatterns.buttonPress();
-  };
+  // Group recipes into contextual sections - using extracted utility function
+  const recipeSections = useMemo(() => {
+    return groupRecipesIntoSections(suggestedRecipes, {
+      quickMealsRecipes,
+      perfectMatchRecipes,
+      mealPrepMode,
+      searchQuery,
+    });
+  }, [suggestedRecipes, quickMealsRecipes, perfectMatchRecipes, mealPrepMode, searchQuery]);
 
   // Truncate description to approximately 2-3 lines (100-120 characters)
   const truncateDescription = (text: string, maxLength: number = 120): string => {
@@ -1945,9 +1824,9 @@ export default function HomeScreen() {
         )}
 
         {/* Contextual Recipe Sections */}
-        {groupRecipesIntoSections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep').length > 0 && (
+        {recipeSections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep').length > 0 && (
           <View className="px-4">
-            {groupRecipesIntoSections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep').map((section) => {
+            {recipeSections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep').map((section) => {
               const isCollapsed = collapsedSections[section.key];
               const isQuickMeals = section.key === 'quick-meals';
               const isMealPrep = section.key === 'meal-prep';
@@ -2282,7 +2161,7 @@ export default function HomeScreen() {
 
             {/* Perfect Match for You Section */}
             {(() => {
-              const perfectMatchSection = groupRecipesIntoSections.find(s => s.key === 'perfect-match');
+              const perfectMatchSection = recipeSections.find(s => s.key === 'perfect-match');
               if (!perfectMatchSection) return null;
 
               return (
@@ -2323,7 +2202,7 @@ export default function HomeScreen() {
 
             {/* Great for Meal Prep Section */}
             {(() => {
-              const mealPrepSection = groupRecipesIntoSections.find(s => s.key === 'meal-prep');
+              const mealPrepSection = recipeSections.find(s => s.key === 'meal-prep');
               if (!mealPrepSection) return null;
 
               return (
