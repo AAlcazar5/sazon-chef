@@ -52,21 +52,10 @@ import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 import {
   type UserFeedback,
   type RecipeSection,
-  deduplicateRecipes,
   initializeFeedbackState,
   parseRecipeResponse,
-  getScoreColor,
-  getBorderColorFromScore,
-  getShadowStyle,
-  getRecipePlaceholder,
-  truncateDescription,
   groupRecipesIntoSections,
 } from '../../utils/recipeUtils';
-import {
-  CUISINE_OPTIONS,
-  DIETARY_OPTIONS,
-  DIFFICULTY_OPTIONS,
-} from '../../utils/filterUtils';
 
 // Extracted hooks
 import { useViewMode } from '../../hooks/useViewMode';
@@ -541,6 +530,15 @@ export default function HomeScreen() {
     }, [suggestedRecipes.length, loading])
   );
 
+  // Get macro filter params for API calls (Home Page 2.0)
+  const getMacroFilterParams = useCallback(() => {
+    const params: { minProtein?: number; maxCarbs?: number; maxCalories?: number } = {};
+    if (quickMacroFilters.highProtein) params.minProtein = 30;
+    if (quickMacroFilters.lowCarb) params.maxCarbs = 30;
+    if (quickMacroFilters.lowCalorie) params.maxCalories = 400;
+    return params;
+  }, [quickMacroFilters]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     setInitialRecipesLoaded(false); // Reset flag to allow reloading
@@ -762,15 +760,6 @@ export default function HomeScreen() {
     setPaginationLoading(false);
   };
 
-  // Get macro filter params for API calls (Home Page 2.0)
-  const getMacroFilterParams = () => {
-    const params: { minProtein?: number; maxCarbs?: number; maxCalories?: number } = {};
-    if (quickMacroFilters.highProtein) params.minProtein = 30;
-    if (quickMacroFilters.lowCarb) params.maxCarbs = 30;
-    if (quickMacroFilters.lowCalorie) params.maxCalories = 400;
-    return params;
-  };
-
   // Handler for quick macro filters (Home Page 2.0)
   const handleQuickMacroFilter = async (filterType: 'highProtein' | 'lowCarb' | 'lowCalorie') => {
     const newMacroFilters = {
@@ -913,14 +902,6 @@ export default function HomeScreen() {
     setPaginationLoading(false);
   };
 
-  const getScoreColor = (score: number) => {
-    // Return style object instead of className for dynamic colors
-    if (score >= 80) return { color: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen };
-    if (score >= 60) return { color: isDark ? DarkColors.primary : Colors.primary };
-    return { color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed };
-  };
-
-
   // Group recipes into contextual sections - using extracted utility function
   const recipeSections = useMemo(() => {
     return groupRecipesIntoSections(suggestedRecipes, {
@@ -931,57 +912,6 @@ export default function HomeScreen() {
     });
   }, [suggestedRecipes, quickMealsRecipes, perfectMatchRecipes, mealPrepMode, searchQuery]);
 
-  // Truncate description to approximately 2-3 lines (100-120 characters)
-  const truncateDescription = (text: string, maxLength: number = 120): string => {
-    if (!text || text.length <= maxLength) return text;
-    return text.substring(0, maxLength).trim() + '...';
-  };
-
-  // Get border color based on match score
-  const getBorderColorFromScore = (recipe: SuggestedRecipe) => {
-    const matchScore = recipe.score?.matchPercentage || 0;
-    const totalScore = recipe.score?.total || 0;
-    
-    // Use match percentage if available, otherwise use total score
-    const score = matchScore || totalScore;
-    
-    if (score >= 85) {
-      return isDark ? Colors.tertiaryGreen : Colors.tertiaryGreen;
-    } else if (score >= 70) {
-      return isDark ? Colors.primary : Colors.primary;
-    } else if (score >= 50) {
-      return isDark ? '#F59E0B' : '#F59E0B';
-    } else {
-      return isDark ? DarkColors.secondaryRed : Colors.secondaryRed;
-    }
-  };
-
-  // Get consistent shadow style for all cards
-  const getShadowStyle = (_recipe: SuggestedRecipe) => {
-    return {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0.3 : 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    };
-  };
-
-  const getRecipePlaceholder = (cuisine: string) => {
-    const placeholders: Record<string, { icon: string; color: string; bg: string }> = {
-      'Mediterranean': { icon: 'fish-outline', color: '#3B82F6', bg: '#DBEAFE' },
-      'Asian': { icon: 'restaurant-outline', color: Colors.secondaryRed, bg: '#FEE2E2' },
-      'Mexican': { icon: 'flame-outline', color: '#F59E0B', bg: '#FEF3C7' },
-      'Italian': { icon: 'pizza-outline', color: '#10B981', bg: '#D1FAE5' },
-      'American': { icon: 'fast-food-outline', color: '#6366F1', bg: '#E0E7FF' },
-      'Indian': { icon: 'restaurant-outline', color: '#F97316', bg: '#FFEDD5' },
-      'Thai': { icon: 'leaf-outline', color: '#14B8A6', bg: '#CCFBF1' },
-      'French': { icon: 'wine-outline', color: '#8B5CF6', bg: '#EDE9FE' },
-      'Japanese': { icon: 'fish-outline', color: '#EC4899', bg: '#FCE7F3' },
-      'Chinese': { icon: 'restaurant-outline', color: Colors.secondaryRed, bg: '#FEE2E2' },
-    };
-
-    return placeholders[cuisine] || { icon: 'restaurant-outline', color: '#9CA3AF', bg: '#F3F4F6' };
   // Loading state with skeleton loaders
   if ((loading || initialLoading) && suggestedRecipes.length === 0) {
     return <HomeLoadingState viewMode={viewMode} />;
@@ -1012,7 +942,6 @@ export default function HomeScreen() {
         onRefresh={refetch}
       />
     );
-  }
   }
 
   return (
