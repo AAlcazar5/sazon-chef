@@ -42,6 +42,9 @@ import MoodSelector, { MoodChip, MOODS, type Mood } from '../../components/ui/Mo
 
 // Extracted components and utilities
 import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel } from '../../components/home';
+import HomeLoadingState from '../../components/home/HomeLoadingState';
+import HomeErrorState from '../../components/home/HomeErrorState';
+import HomeEmptyState from '../../components/home/HomeEmptyState';
 import {
   type UserFeedback,
   deduplicateRecipes,
@@ -1978,325 +1981,37 @@ export default function HomeScreen() {
     };
 
     return placeholders[cuisine] || { icon: 'restaurant-outline', color: '#9CA3AF', bg: '#F3F4F6' };
-  };
-
   // Loading state with skeleton loaders
   if ((loading || initialLoading) && suggestedRecipes.length === 0) {
-    return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center flex-1">
-            <AnimatedLogoMascot 
-              expression="happy" 
-              size="xsmall" 
-              animationType="pulse"
-            />
-            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2 }} accessibilityRole="header">Sazon Chef</Text>
-        </View>
-            {/* View Mode Toggle Skeleton */}
-            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <View className="w-10 h-8 rounded bg-gray-200 dark:bg-gray-600" />
-              <View className="w-10 h-8 rounded bg-gray-200 dark:bg-gray-600 ml-1" />
-        </View>
-          </View>
-        </View>
-        {/* Quick Filter Chips Skeleton */}
-        <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <View className="flex-row" style={{ gap: 8 }}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <View key={i} className="h-9 w-20 rounded-full bg-gray-200 dark:bg-gray-700" />
-            ))}
-          </View>
-        </View>
-        
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
-          {/* Featured Recipe Skeleton */}
-          <View className="px-4 mb-4" style={{ marginTop: Spacing.xl }}>
-            <View className="flex-row items-center justify-between mb-4">
-              <View>
-                <View className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
-                <View className="h-3 w-32 rounded bg-gray-200 dark:bg-gray-700" />
-              </View>
-              <View className="h-9 w-20 rounded-lg bg-gray-200 dark:bg-gray-700" />
-            </View>
-            <RecipeCardSkeleton variant="featured" />
-          </View>
-
-          {/* More Suggestions Skeleton */}
-          <View className="px-4">
-            <View className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-700 mb-4" />
-            {viewMode === 'grid' ? (
-              <View className="flex-row flex-wrap" style={{ marginHorizontal: -Spacing.sm }}>
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <View key={i} style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.md }}>
-                    <RecipeCardSkeleton variant="grid" />
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <>
-          {[1, 2, 3].map((i) => (
-                  <RecipeCardSkeleton key={i} variant="list" />
-          ))}
-              </>
-            )}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    );
+    return <HomeLoadingState viewMode={viewMode} />;
   }
 
   // Error state
   if (error && suggestedRecipes.length === 0) {
-    return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <View className="flex-row items-center">
-            <AnimatedLogoMascot 
-              expression="supportive" 
-              size="xsmall" 
-              animationType="idle"
-            />
-            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2 }} accessibilityRole="header">Sazon Chef</Text>
-        </View>
-        </View>
-        <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }}>
-          <View className="flex-1 items-center justify-center p-8">
-            <LogoMascot 
-              expression="supportive" 
-              size="large"
-            />
-            <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-6 text-center">
-              {error.includes('network') || error.includes('Network') || error.includes('fetch') 
-                ? "Connection Problem" 
-                : error.includes('timeout') || error.includes('Timeout')
-                ? "Request Timed Out"
-                : error.includes('500') || error.includes('server')
-                ? "Server Error"
-                : "Oops! Something went wrong"}
-            </Text>
-            <Text className="text-gray-600 dark:text-gray-300 text-center mt-3 text-base leading-6 max-w-sm">
-              {error.includes('network') || error.includes('Network') || error.includes('fetch')
-                ? "We couldn't connect to our servers. Please check your internet connection."
-                : error.includes('timeout') || error.includes('Timeout')
-                ? "The request took too long to complete."
-                : error.includes('500') || error.includes('server')
-                ? "Our servers are experiencing some issues."
-                : "We couldn't load recipes right now."}
-            </Text>
-            
-            <View className="mt-6 w-full max-w-sm">
-              <Text className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center">
-                💡 What you can try:
-              </Text>
-              <View className="space-y-2">
-                {(error.includes('network') || error.includes('Network') || error.includes('fetch') 
-                  ? ["Check your Wi-Fi or mobile data connection", "Make sure you're connected to the internet", "Try again in a moment"]
-                  : error.includes('timeout') || error.includes('Timeout')
-                  ? ["Check your internet connection speed", "Try again in a moment", "Restart the app if the problem persists"]
-                  : error.includes('500') || error.includes('server')
-                  ? ["This is usually temporary", "Try again in a few moments", "We're working on fixing this"]
-                  : ["Pull down to refresh", "Check your internet connection", "Try again in a moment"]
-                ).map((suggestion, index) => (
-                  <View key={index} className="flex-row items-start bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-                    <Text className="text-gray-500 dark:text-gray-400 mr-2">•</Text>
-                    <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                      {suggestion}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-            
-            <View className="mt-8 w-full max-w-sm">
-              <HapticTouchableOpacity
-                onPress={() => {
-                  refetch();
-                  HapticPatterns.buttonPressPrimary();
-                }}
-                className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg"
-              >
-                <Text className="text-white font-semibold text-center">Try Again</Text>
-              </HapticTouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    );
+    return <HomeErrorState error={error} onRetry={refetch} />;
   }
 
   // Empty state
   if (suggestedRecipes.length === 0 && !loading && !loadingFromFilters && !initialLoading) {
-    const hasActiveFilters = activeFilters.length > 0 || mealPrepMode;
-    const hasCuisineFilters = filters.cuisines.length > 0;
-    const hasDietaryFilters = filters.dietaryRestrictions.length > 0;
-    const hasCookTimeFilter = filters.maxCookTime !== null && filters.maxCookTime !== undefined;
-    const hasDifficultyFilter = filters.difficulty.length > 0;
-    const hasSearchQuery = searchQuery && searchQuery.trim().length > 0;
-    
-    // Generate contextual title
-    let emptyStateTitle = "No recipes found";
-    if (hasSearchQuery) {
-      emptyStateTitle = `No recipes found for "${searchQuery}"`;
-    } else if (mealPrepMode) {
-      emptyStateTitle = "No meal prep recipes found";
-    } else if (hasActiveFilters) {
-      emptyStateTitle = "No recipes match your filters";
-    } else {
-      emptyStateTitle = "No recipes available";
-    }
-    
-    // Generate contextual description with suggestions
-    let emptyStateDescription = "";
-    const suggestions: string[] = [];
-    
-    if (hasSearchQuery) {
-      emptyStateDescription = `We couldn't find any recipes matching "${searchQuery}".`;
-      suggestions.push("Try a different search term");
-      suggestions.push("Check your spelling");
-      if (hasActiveFilters) {
-        suggestions.push("Remove some filters to broaden your search");
-      }
-    } else if (mealPrepMode) {
-      emptyStateDescription = "We couldn't find any recipes suitable for meal prep right now.";
-      suggestions.push("Disable meal prep mode to see all recipes");
-      suggestions.push("Try removing other filters");
-      suggestions.push("Check back later as we add more meal prep-friendly recipes");
-    } else if (hasActiveFilters) {
-      emptyStateDescription = "Your current filters are too restrictive.";
-      
-      if (hasCuisineFilters && filters.cuisines.length === 1) {
-        suggestions.push(`Try a different cuisine (currently: ${filters.cuisines[0]})`);
-      } else if (hasCuisineFilters) {
-        suggestions.push(`Try removing some cuisines (${filters.cuisines.length} selected)`);
-      }
-      
-      if (hasDietaryFilters && filters.dietaryRestrictions.length > 2) {
-        suggestions.push(`Try removing some dietary restrictions (${filters.dietaryRestrictions.length} selected)`);
-      }
-      
-      if (hasCookTimeFilter && filters.maxCookTime && filters.maxCookTime < 30) {
-        suggestions.push(`Try increasing cook time limit (currently: ${filters.maxCookTime} min)`);
-      }
-      
-      if (hasDifficultyFilter && filters.difficulty.length === 1) {
-        suggestions.push(`Try including other difficulty levels`);
-      }
-      
-      if (suggestions.length === 0) {
-        suggestions.push("Clear all filters to see more recipes");
-        suggestions.push("Try adjusting your preferences");
-      }
-    } else {
-      emptyStateDescription = "We couldn't find any recipes to suggest at the moment.";
-      suggestions.push("Pull down to refresh");
-      suggestions.push("Check your internet connection");
-      suggestions.push("Try again in a moment");
-    }
-    
-    const emptyStateExpression = mealPrepMode ? 'thinking' : (hasActiveFilters ? 'thinking' : 'curious');
-    
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <View className="flex-row items-center">
-            <AnimatedLogoMascot 
-              expression={emptyStateExpression} 
-              size="xsmall" 
-              animationType="idle"
-            />
-            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2 }} accessibilityRole="header">Sazon Chef</Text>
-        </View>
-        </View>
-        <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }}>
-          <View className="flex-1 items-center justify-center p-8">
-            <LogoMascot 
-              expression={emptyStateExpression} 
-              size="large"
-            />
-            <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-6 text-center">
-              {emptyStateTitle}
-            </Text>
-            <Text className="text-gray-600 dark:text-gray-300 text-center mt-3 text-base leading-6 max-w-sm">
-              {emptyStateDescription}
-            </Text>
-            
-            {/* Suggestions */}
-            {suggestions.length > 0 && (
-              <View className="mt-6 w-full max-w-sm">
-                <Text className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center">
-                  💡 Suggestions:
-                </Text>
-                <View className="space-y-2">
-                  {suggestions.slice(0, 3).map((suggestion, index) => (
-                    <View key={index} className="flex-row items-start bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-                      <Text className="text-gray-500 dark:text-gray-400 mr-2">•</Text>
-                      <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                        {suggestion}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-            
-            {/* Action Buttons */}
-            <View className="mt-8 w-full max-w-sm space-y-3">
-              {hasActiveFilters && (
-                <HapticTouchableOpacity
-                  onPress={() => {
-                    clearFilters();
-                    setMealPrepMode(false);
-                    HapticPatterns.buttonPressPrimary();
-                  }}
-                  className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg"
-                >
-                  <Text className="text-white font-semibold text-center">Clear All Filters</Text>
-                </HapticTouchableOpacity>
-              )}
-              
-              {mealPrepMode && (
-                <HapticTouchableOpacity
-                  onPress={() => {
-                    handleToggleMealPrepMode(false);
-                    HapticPatterns.buttonPressPrimary();
-                  }}
-                  className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg"
-                >
-                  <Text className="text-white font-semibold text-center">Disable Meal Prep Mode</Text>
-                </HapticTouchableOpacity>
-              )}
-              
-              {hasSearchQuery && (
-                <HapticTouchableOpacity
-                  onPress={() => {
-                    setSearchQuery('');
-                    refetch();
-                    HapticPatterns.buttonPressPrimary();
-                  }}
-                  className="bg-gray-200 dark:bg-gray-700 px-6 py-3 rounded-lg"
-                >
-                  <Text className="text-gray-900 dark:text-gray-100 font-semibold text-center">Clear Search</Text>
-                </HapticTouchableOpacity>
-              )}
-              
-              {!hasActiveFilters && !hasSearchQuery && (
-                <HapticTouchableOpacity
-                  onPress={() => {
-                    refetch();
-                    HapticPatterns.buttonPressPrimary();
-                  }}
-                  className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg"
-                >
-                  <Text className="text-white font-semibold text-center">Refresh Recipes</Text>
-                </HapticTouchableOpacity>
-              )}
-            </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+      <HomeEmptyState
+        filters={filters}
+        activeFilters={activeFilters}
+        mealPrepMode={mealPrepMode}
+        searchQuery={searchQuery}
+        onClearFilters={() => {
+          clearFilters();
+          setMealPrepMode(false);
+        }}
+        onDisableMealPrep={() => handleToggleMealPrepMode(false)}
+        onClearSearch={() => {
+          setSearchQuery('');
+          refetch();
+        }}
+        onRefresh={refetch}
+      />
     );
+  }
   }
 
   return (
