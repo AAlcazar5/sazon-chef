@@ -41,7 +41,7 @@ import { RecipeCard } from '../../components/recipe/RecipeCard';
 import MoodSelector, { MoodChip, MOODS, type Mood } from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel } from '../../components/home';
+import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, RecipeOfTheDayCard } from '../../components/home';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
@@ -1169,65 +1169,13 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#111827' : '#F9FAFB' }} edges={['top']}>
       {/* Header */}
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700" style={{ minHeight: 56 }}>
-        <View className="flex-row items-center justify-between" style={{ height: 28 }}>
-          <View className="flex-row items-center flex-1">
-          <HapticTouchableOpacity
-            onPress={() => router.push('/mascot-examples')}
-            activeOpacity={0.7}
-          >
-            <LogoMascot size="xsmall" />
-          </HapticTouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2, lineHeight: 28 }} accessibilityRole="header">Sazon Chef</Text>
-        </View>
-          {/* Time-Aware Mode Indicator (Home Page 2.0) */}
-          <HapticTouchableOpacity
-            onPress={handleToggleTimeAwareMode}
-            className={`flex-row items-center px-2 py-1 rounded-lg mr-2 ${
-              timeAwareMode ? '' : 'bg-gray-100 dark:bg-gray-700'
-            }`}
-            style={timeAwareMode ? {
-              backgroundColor: isDark ? `${Colors.primary}33` : `${Colors.primary}22`,
-            } : undefined}
-            accessibilityLabel={`${currentMealPeriod.label} time suggestions ${timeAwareMode ? 'enabled' : 'disabled'}`}
-          >
-            <Text className="text-sm">{currentMealPeriod.emoji}</Text>
-            <Text className={`text-xs font-medium ml-1 ${
-              timeAwareMode ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'
-            }`}>
-              {currentMealPeriod.label}
-            </Text>
-          </HapticTouchableOpacity>
-
-          {/* View Mode Toggle */}
-          <View className="flex-row items-center" style={{ gap: 8 }}>
-            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <HapticTouchableOpacity
-                onPress={() => handleToggleViewMode('list')}
-                className={`px-3 py-1.5 rounded ${viewMode === 'list' ? '' : ''}`}
-                style={viewMode === 'list' ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
-              >
-                <Ionicons
-                  name="list"
-                  size={18}
-                  color={viewMode === 'list' ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
-                />
-              </HapticTouchableOpacity>
-              <HapticTouchableOpacity
-                onPress={() => handleToggleViewMode('grid')}
-                className={`px-3 py-1.5 rounded ${viewMode === 'grid' ? '' : ''}`}
-                style={viewMode === 'grid' ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
-              >
-                <Ionicons
-                  name="grid"
-                  size={18}
-                  color={viewMode === 'grid' ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
-                />
-              </HapticTouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </View>
+      <HomeHeader
+        viewMode={viewMode}
+        onToggleViewMode={handleToggleViewMode}
+        currentMealPeriod={currentMealPeriod}
+        timeAwareMode={timeAwareMode}
+        onToggleTimeAwareMode={handleToggleTimeAwareMode}
+      />
 
       {/* Unified Filters & Meal Prep Section */}
       <QuickFiltersBar
@@ -1284,34 +1232,16 @@ export default function HomeScreen() {
 
         {/* Recipe of the Day (Home Page 2.0) */}
         {recipeOfTheDay && !searchQuery && !mealPrepMode && (
-          <View className="px-4 mb-6">
-            <View className="flex-row items-center mb-3">
-              <Text className="text-xl">🌟</Text>
-              <Text className="text-lg font-bold text-gray-900 dark:text-gray-100 ml-2">
-                Recipe of the Day
-              </Text>
-              <View className="ml-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: isDark ? `${Colors.primary}33` : `${Colors.primary}22` }}>
-                <Text className="text-xs font-medium" style={{ color: isDark ? Colors.primaryLight : Colors.primaryDark }}>
-                  Featured
-                </Text>
-              </View>
-            </View>
-            <RecipeCard
-              recipe={recipeOfTheDay}
-              variant="list"
-              onPress={handleRecipePress}
-              onLongPress={handleLongPress}
-              onLike={handleLike}
-              onDislike={handleDislike}
-              onSave={openSavePicker}
-              feedback={userFeedback[recipeOfTheDay.id] || { liked: false, disliked: false }}
-              isFeedbackLoading={feedbackLoading === recipeOfTheDay.id}
-              isDark={isDark}
-              showDescription={true}
-              showTopMatchBadge={true}
-              recommendationReason="Today's Pick"
-            />
-          </View>
+          <RecipeOfTheDayCard
+            recipe={recipeOfTheDay}
+            feedback={userFeedback[recipeOfTheDay.id] || { liked: false, disliked: false }}
+            isFeedbackLoading={feedbackLoading === recipeOfTheDay.id}
+            onPress={(recipe) => handleRecipePress(recipe.id)}
+            onLongPress={handleLongPress}
+            onLike={handleLike}
+            onDislike={handleDislike}
+            onSave={openSavePicker}
+          />
         )}
 
         {/* Today's Recommendation / Featured Recipe - First section after filters */}
