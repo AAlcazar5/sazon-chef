@@ -1186,6 +1186,52 @@
   * ✅ Utility functions centralized in `recipeUtils.ts` and `filterUtils.ts`
   * ✅ All components organized in `/components/home/` directory with barrel export
 
+* 🔄 **Additional Refactoring (Phases 17-21)** - **NEXT PRIORITY**
+  * 🔄 **Phase 17: Recipe Search Hook** (~120 lines) - HIGH PRIORITY
+    * 🔄 Create `useRecipeSearch.ts` hook
+    * 🔄 Extract `searchQuery` state and search submission logic
+    * 🔄 Extract URL param handling for search
+    * 🔄 Extract search useEffect (lines 371-413)
+    * 📍 Frontend: `/hooks/useRecipeSearch.ts` (~100 lines)
+    * **Impact:** Reduce index.tsx by ~120 lines → ~1,317 lines
+
+  * 🔄 **Phase 18: Initial Load Consolidation** (~200 lines) - HIGH PRIORITY
+    * 🔄 Create `useInitialRecipeLoad.ts` hook
+    * 🔄 Consolidate apply saved filters useEffect (lines 291-329)
+    * 🔄 Consolidate load meal prep recipes useEffect (lines 346-368)
+    * 🔄 Consolidate fetch initial recipes useEffect (lines 573-602)
+    * 🔄 Consolidate view mode change refetch useEffect (lines 605-636)
+    * 🔄 Extract `initialRecipesLoaded`, `loadingFromFilters`, `initialLoading` state
+    * 📍 Frontend: `/hooks/useInitialRecipeLoad.ts` (~180 lines)
+    * **Impact:** Reduce index.tsx by ~200 lines → ~1,117 lines ✅ **Meets target**
+
+  * 🔄 **Phase 19: Quick Macro Filters Hook** (~80 lines) - MEDIUM PRIORITY
+    * 🔄 Create `useQuickMacroFilters.ts` hook
+    * 🔄 Extract `quickMacroFilters` state (highProtein, lowCarb, lowCalorie)
+    * 🔄 Extract `getMacroFilterParams` useCallback
+    * 🔄 Extract `handleQuickMacroFilter` function
+    * 📍 Frontend: `/hooks/useQuickMacroFilters.ts` (~60 lines)
+    * **Impact:** Reduce index.tsx by ~80 lines → ~1,037 lines
+
+  * 🔄 **Phase 20: Recipe Sections Component** (~250 lines) - MEDIUM PRIORITY
+    * 🔄 Create `RecipeSectionsGrid.tsx` component
+    * 🔄 Extract large contextual sections JSX (lines 1032-1260)
+    * 🔄 Include grid/list view rendering logic
+    * 🔄 Include collapse/expand integration
+    * 🔄 Include inline pagination for "Recipes for You"
+    * 📍 Frontend: `/components/home/RecipeSectionsGrid.tsx` (~220 lines)
+    * **Impact:** Reduce index.tsx by ~250 lines → ~787 lines ✅ **Exceeds target**
+
+  * 🔄 **Phase 21: Welcome Effects Hook** (~50 lines) - LOW PRIORITY
+    * 🔄 Create `useWelcomeEffects.ts` hook
+    * 🔄 Extract welcome back notification useFocusEffect (lines 463-507)
+    * 🔄 Extract first-time guidance tooltip useFocusEffect (lines 510-531)
+    * 🔄 Extract `showFirstTimeTooltip` state
+    * 📍 Frontend: `/hooks/useWelcomeEffects.ts` (~45 lines)
+    * **Impact:** Reduce index.tsx by ~50 lines → ~737 lines ⭐ **Optimal**
+
+  * **Projected Final State:** ~737 lines (from original ~3,700) = **80% reduction**
+
 * 🔄 **State Management**
   * 🔄 Create `useHome` hook for centralized state
   * 🔄 Implement useReducer for complex state
