@@ -76,6 +76,7 @@ import { useRecipeFilters } from '../../hooks/useRecipeFilters';
 import { useCollectionSave } from '../../hooks/useCollectionSave';
 import { useQuickMeals } from '../../hooks/useQuickMeals';
 import { usePerfectMatches } from '../../hooks/usePerfectMatches';
+import { useRecipeOfTheDay } from '../../hooks/useRecipeOfTheDay';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -209,9 +210,8 @@ export default function HomeScreen() {
   // Time-aware suggestions toggle (Home Page 2.0) - using extracted hook
   const { timeAwareMode, setTimeAwareMode, toggleTimeAwareMode, currentMealPeriod, isLoaded: timeAwareLoaded } = useTimeAwareMode();
 
-  // Recipe of the Day (Home Page 2.0)
-  const [recipeOfTheDay, setRecipeOfTheDay] = useState<SuggestedRecipe | null>(null);
-  const [loadingRecipeOfTheDay, setLoadingRecipeOfTheDay] = useState(false);
+  // Recipe of the Day (Home Page 2.0) - using extracted hook
+  const { recipe: recipeOfTheDay, loading: loadingRecipeOfTheDay } = useRecipeOfTheDay();
 
   // Mood-based recommendations (Home Page 2.0)
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
@@ -285,26 +285,6 @@ export default function HomeScreen() {
   useEffect(() => {
     setCurrentPage(0); // Reset to first page when view mode changes
   }, [viewMode]);
-
-
-  // Fetch Recipe of the Day on mount (Home Page 2.0)
-  useEffect(() => {
-    const fetchRecipeOfTheDay = async () => {
-      try {
-        setLoadingRecipeOfTheDay(true);
-        const response = await recipeApi.getRecipeOfTheDay();
-        if (response.data?.recipe) {
-          setRecipeOfTheDay(response.data.recipe);
-          console.log('🌟 Recipe of the Day loaded:', response.data.recipe.title);
-        }
-      } catch (error: any) {
-        console.error('❌ Error fetching Recipe of the Day:', error);
-      } finally {
-        setLoadingRecipeOfTheDay(false);
-      }
-    };
-    fetchRecipeOfTheDay();
-  }, []);
 
   // Load personalized data (liked recipes, recently viewed)
   useEffect(() => {
