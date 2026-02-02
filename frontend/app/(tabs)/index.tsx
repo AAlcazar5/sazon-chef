@@ -357,55 +357,26 @@ export default function HomeScreen() {
   useEffect(() => {
     const loadMealPrepRecipes = async () => {
       if (mealPrepMode && filtersLoaded && activeFilters.length === 0 && !initialRecipesLoaded && !loadingFromFilters && !recipesData) {
-        try {
-          setLoadingFromFilters(true);
-          const response = await recipeApi.getAllRecipes({
-            page: 0,
-            limit: RECIPES_PER_PAGE,
-            mealPrepMode: true,
-            cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-            dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-            maxCookTime: filters.maxCookTime || undefined,
-            difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-            search: searchQuery || undefined,
-          });
+        setLoadingFromFilters(true);
+        const result = await fetchRecipes({
+          page: 0,
+          limit: RECIPES_PER_PAGE,
+          mealPrepMode: true,
+          cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+          dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+          maxCookTime: filters.maxCookTime || undefined,
+          difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+          search: searchQuery || undefined,
+        });
 
-          const responseData = response.data;
-          let recipes: SuggestedRecipe[];
-          let total: number;
-
-          if (responseData && responseData.recipes && responseData.pagination) {
-            recipes = responseData.recipes;
-            total = responseData.pagination.total;
-          } else if (Array.isArray(responseData)) {
-            recipes = responseData;
-            total = recipes.length;
-          } else {
-            console.error('❌ Unexpected API response format:', responseData);
-            setLoadingFromFilters(false);
-            return;
-          }
-
-          const deduplicated = deduplicateRecipes(recipes);
-          setTotalRecipes(total);
-          setAllRecipes(deduplicated);
-          setSuggestedRecipes(deduplicated);
-          setCurrentPage(0);
-          setInitialRecipesLoaded(true);
-          
-          const initialFeedback: Record<string, UserFeedback> = {};
-          deduplicated.forEach((recipe: SuggestedRecipe) => {
-            initialFeedback[recipe.id] = { liked: false, disliked: false };
-          });
-          setUserFeedback(initialFeedback);
-        } catch (error) {
-          console.error('❌ Error loading meal prep recipes:', error);
+        if (result) {
+          applyFetchResult(result);
         }
-          setLoadingFromFilters(false);
+        setLoadingFromFilters(false);
       }
     };
     loadMealPrepRecipes();
-  }, [mealPrepMode, filtersLoaded, activeFilters.length, initialRecipesLoaded, loadingFromFilters, recipesData, RECIPES_PER_PAGE, filters, searchQuery]);
+  }, [mealPrepMode, filtersLoaded, activeFilters.length, initialRecipesLoaded, loadingFromFilters, recipesData, RECIPES_PER_PAGE, filters, searchQuery, fetchRecipes, applyFetchResult]);
 
   // Handle search from URL params
   useEffect(() => {
@@ -414,60 +385,30 @@ export default function HomeScreen() {
         const query = searchParam.trim();
         setSearchQuery(query);
         console.log('🔍 Searching for:', query);
-        
-        try {
-          setLoadingFromFilters(true);
-          const response = await recipeApi.getAllRecipes({
-            page: 0,
-            limit: RECIPES_PER_PAGE,
-            search: query,
-            cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-            dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-            maxCookTime: filters.maxCookTime || undefined,
-            difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-            mealPrepMode: mealPrepMode,
-          });
 
-          const responseData = response.data;
-          let recipes: SuggestedRecipe[];
-          let total: number;
+        setLoadingFromFilters(true);
+        const result = await fetchRecipes({
+          page: 0,
+          limit: RECIPES_PER_PAGE,
+          search: query,
+          cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+          dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+          maxCookTime: filters.maxCookTime || undefined,
+          difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+          mealPrepMode: mealPrepMode,
+        });
 
-          if (responseData && responseData.recipes && responseData.pagination) {
-            recipes = responseData.recipes;
-            total = responseData.pagination.total;
-          } else if (Array.isArray(responseData)) {
-            recipes = responseData;
-            total = recipes.length;
-          } else {
-            console.error('❌ Unexpected API response format:', responseData);
-            setLoadingFromFilters(false);
-            return;
-          }
-
-          const deduplicated = deduplicateRecipes(recipes);
-          console.log('📱 HomeScreen: Search results', deduplicated.length);
-          setTotalRecipes(total);
-          setAllRecipes(deduplicated);
-          setSuggestedRecipes(deduplicated);
-          setCurrentPage(0);
-          
-          const initialFeedback: Record<string, UserFeedback> = {};
-          deduplicated.forEach((recipe: SuggestedRecipe) => {
-            initialFeedback[recipe.id] = { liked: false, disliked: false };
-          });
-          setUserFeedback(initialFeedback);
-          setInitialRecipesLoaded(true);
-          
-          // Show toast
+        if (result) {
+          applyFetchResult(result);
+          console.log('📱 HomeScreen: Search results', result.recipes.length);
           showToast(
-            deduplicated.length > 0 
-              ? `🔍 Found ${deduplicated.length} recipes matching "${query}"`
+            result.recipes.length > 0
+              ? `🔍 Found ${result.recipes.length} recipes matching "${query}"`
               : `😔 No recipes found for "${query}"`,
-            deduplicated.length > 0 ? 'success' : 'error',
+            result.recipes.length > 0 ? 'success' : 'error',
             2000
           );
-        } catch (error) {
-          console.error('❌ Error searching recipes:', error);
+        } else {
           showToast('❌ Failed to search recipes', 'error');
         }
         setLoadingFromFilters(false);
@@ -476,11 +417,11 @@ export default function HomeScreen() {
         setSearchQuery('');
       }
     };
-    
+
     if (filtersLoaded) {
       handleSearch();
     }
-  }, [searchParam, filtersLoaded, RECIPES_PER_PAGE, filters, mealPrepMode]);
+  }, [searchParam, filtersLoaded, RECIPES_PER_PAGE, filters, mealPrepMode, fetchRecipes, applyFetchResult, showToast]);
 
   // Toggle meal prep mode
   const handleToggleMealPrepMode = async (value: boolean) => {
@@ -497,54 +438,22 @@ export default function HomeScreen() {
     );
 
     // Refetch recipes with meal prep filter
-    try {
-      setLoadingFromFilters(true);
-      const response = await recipeApi.getAllRecipes({
-        page: 0,
-        limit: RECIPES_PER_PAGE,
-        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-        maxCookTime: filters.maxCookTime || undefined,
-        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-        mealPrepMode: value,
-        search: searchQuery || undefined, // Preserve search query
-      });
+    setLoadingFromFilters(true);
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+      dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+      maxCookTime: filters.maxCookTime || undefined,
+      difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+      mealPrepMode: value,
+      search: searchQuery || undefined,
+    });
 
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[];
-      let total: number;
-
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-        total = responseData.pagination.total;
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-        total = recipes.length;
-      } else {
-        console.error('❌ Unexpected API response format:', responseData);
-        setLoadingFromFilters(false);
-        return;
-      }
-
-      const deduplicated = deduplicateRecipes(recipes);
-      setTotalRecipes(total);
-      setAllRecipes(deduplicated);
-      setSuggestedRecipes(deduplicated);
-      setCurrentPage(0);
-
-      // Initialize feedback state
-      const initialFeedback: Record<string, UserFeedback> = {};
-      deduplicated.forEach((recipe: SuggestedRecipe) => {
-        initialFeedback[recipe.id] = { liked: false, disliked: false };
-      });
-      setUserFeedback(initialFeedback);
-      setInitialRecipesLoaded(true);
-      setLoadingFromFilters(false);
-    } catch (error: any) {
-      console.error('❌ Error fetching meal prep recipes:', error);
-      setLoadingFromFilters(false);
-      HapticPatterns.error();
+    if (result) {
+      applyFetchResult(result);
     }
+    setLoadingFromFilters(false);
   };
 
 
@@ -670,57 +579,21 @@ export default function HomeScreen() {
       // Only fetch from paginated API if no filters are active and not in meal prep mode
       if (activeFilters.length === 0 && !mealPrepMode && !loadingFromFilters) {
         setInitialLoading(true);
-        try {
-          console.log('📄 Fetching initial page of all recipes');
-          const response = await recipeApi.getAllRecipes({
-            page: 0,
-            limit: RECIPES_PER_PAGE,
-            search: searchQuery || undefined,
-            ...getMacroFilterParams(),
-            useTimeAwareDefaults: timeAwareMode,
-          });
+        console.log('📄 Fetching initial page of all recipes');
 
-          // Handle both new paginated format { recipes, pagination } and old array format
-          const responseData = response.data;
-          let recipes: SuggestedRecipe[];
-          let total: number;
+        const result = await fetchRecipes({
+          page: 0,
+          limit: RECIPES_PER_PAGE,
+          search: searchQuery || undefined,
+          ...getMacroFilterParams(),
+          useTimeAwareDefaults: timeAwareMode,
+        });
 
-          if (responseData && responseData.recipes && responseData.pagination) {
-            // New paginated format
-            recipes = responseData.recipes;
-            total = responseData.pagination.total;
-            console.log(`📄 Initial load (paginated): ${recipes.length} recipes, total in database: ${total}`);
-          } else if (Array.isArray(responseData)) {
-            // Old array format (fallback)
-            recipes = responseData;
-            total = recipes.length;
-            console.log(`📄 Initial load (array fallback): ${recipes.length} recipes`);
-          } else {
-            console.error('❌ Unexpected API response format:', responseData);
-            setInitialLoading(false);
-            return;
-          }
-
-          // Set total count from server
-          setTotalRecipes(total);
-
-          // Set initial recipes
-          setSuggestedRecipes(recipes);
-          setAllRecipes(recipes); // Keep for backward compatibility
-          setCurrentPage(0);
-          setInitialRecipesLoaded(true);
-
-          // Initialize feedback state
-          const initialFeedback: Record<string, UserFeedback> = {};
-          recipes.forEach((recipe: SuggestedRecipe) => {
-            initialFeedback[recipe.id] = { liked: false, disliked: false };
-          });
-          setUserFeedback(initialFeedback);
-        } catch (error: any) {
-          console.error('❌ Error fetching initial recipes:', error?.message || error);
-        } finally {
-          setInitialLoading(false);
+        if (result) {
+          applyFetchResult(result);
+          console.log(`📄 Initial load: ${result.recipes.length} recipes, total: ${result.total}`);
         }
+        setInitialLoading(false);
       } else {
         // If filters are active or in meal prep mode, we're not doing initial load
         setInitialLoading(false);
@@ -728,62 +601,38 @@ export default function HomeScreen() {
     };
 
     fetchInitialRecipes();
-  }, [filtersLoaded, activeFilters, mealPrepMode, loadingFromFilters, searchQuery]); // Removed RECIPES_PER_PAGE - viewMode change effect handles refetching
+  }, [filtersLoaded, activeFilters, mealPrepMode, loadingFromFilters, searchQuery, fetchRecipes, applyFetchResult, RECIPES_PER_PAGE, getMacroFilterParams, timeAwareMode]);
 
   // When view mode changes, refetch with new page size
   useEffect(() => {
     if (initialRecipesLoaded && totalRecipes > 0) {
-      // Reset to first page and refetch with new limit
       const newLimit = viewMode === 'grid' ? 21 : 11;
       console.log(`📄 View mode changed to ${viewMode}, refetching with limit ${newLimit}`);
-      
-      // Directly call API with new limit to avoid stale closure issues
+
       const refetchWithNewLimit = async () => {
         setPaginationLoading(true);
-        try {
-          const response = await recipeApi.getAllRecipes({
-            page: 0,
-            limit: newLimit,
-            cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-            dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-            maxCookTime: filters.maxCookTime || undefined,
-            difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-            mealPrepMode: mealPrepMode,
-            search: searchQuery || undefined
-          });
-          
-          const responseData = response.data;
-          let recipes: SuggestedRecipe[];
-          let total: number;
-          
-          if (responseData && responseData.recipes && responseData.pagination) {
-            recipes = responseData.recipes;
-            total = responseData.pagination.total;
-            console.log(`📄 View mode refetch: ${recipes.length} recipes, total: ${total}`);
-          } else if (Array.isArray(responseData)) {
-            recipes = responseData;
-            total = recipes.length;
-          } else {
-            console.error('❌ Unexpected API response format:', responseData);
-            setPaginationLoading(false);
-            return;
-          }
-          
-          setTotalRecipes(total);
-          setSuggestedRecipes(recipes);
+        const result = await fetchRecipes({
+          page: 0,
+          limit: newLimit,
+          cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+          dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+          maxCookTime: filters.maxCookTime || undefined,
+          difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+          mealPrepMode: mealPrepMode,
+          search: searchQuery || undefined,
+        });
+
+        if (result) {
+          setTotalRecipes(result.total);
+          setSuggestedRecipes(result.recipes);
           setCurrentPage(0);
           setAnimatedRecipeIds(new Set());
-          
-          // Initialize feedback for new recipes
-          setUserFeedback({ ...userFeedback, ...initializeFeedbackState(recipes) });
-        } catch (error: any) {
-          console.error('❌ Error refetching recipes:', error?.message || error);
-          // Don't show error to user, just log it - the search will handle its own fetching
-        } finally {
-          setPaginationLoading(false);
+          setUserFeedback({ ...userFeedback, ...result.feedback });
+          console.log(`📄 View mode refetch: ${result.recipes.length} recipes, total: ${result.total}`);
         }
+        setPaginationLoading(false);
       };
-      
+
       refetchWithNewLimit();
     }
   }, [viewMode]); // Only trigger on viewMode change, not searchQuery
