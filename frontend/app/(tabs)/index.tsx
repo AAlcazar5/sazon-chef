@@ -82,6 +82,7 @@ import { useRecipeOfTheDay } from '../../hooks/useRecipeOfTheDay';
 import { usePersonalizedRecipes } from '../../hooks/usePersonalizedRecipes';
 import { useCollapsibleSections } from '../../hooks/useCollapsibleSections';
 import { useRecipeActions } from '../../hooks/useRecipeActions';
+import { useRecipeFeedback } from '../../hooks/useRecipeFeedback';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -119,6 +120,16 @@ export default function HomeScreen() {
     onSimilarRecipesFound: setSuggestedRecipes,
   });
   const { handleAddToMealPlan, handleViewSimilar, handleHealthify, handleReportIssue } = recipeActions;
+
+  // Recipe feedback handlers (like/dislike) - using extracted hook
+  const recipeFeedback = useRecipeFeedback({
+    userId: user?.id,
+    source: 'home_screen',
+    setFeedbackLoading,
+    updateRecipeFeedback,
+    onRecipesUpdate: setSuggestedRecipes,
+  });
+  const { handleLike, handleDislike } = recipeFeedback;
 
   // View mode state (grid/list) - using extracted hook
   const { viewMode, setViewMode, recipesPerPage: RECIPES_PER_PAGE, isLoaded: viewModeLoaded } = useViewMode('list');
@@ -1376,88 +1387,6 @@ export default function HomeScreen() {
       Alert.alert('Error', 'Failed to clear filters. Please try again.');
     } finally {
       setPaginationLoading(false);
-    }
-  };
-
-  const handleLike = async (recipeId: string) => {
-    try {
-      setFeedbackLoading(recipeId);
-      console.log('📱 HomeScreen: Liking recipe', recipeId);
-      
-      // Update UI immediately (using hook function)
-      updateRecipeFeedback(recipeId, { liked: true, disliked: false });
-      
-      await recipeApi.likeRecipe(recipeId);
-      
-      // Track like action
-      if (user?.id) {
-        analytics.trackRecipeInteraction('like', recipeId, { source: 'home_screen' });
-      }
-      
-      // Update local state to reflect the like
-      setSuggestedRecipes(prev => prev.map(recipe => 
-        recipe.id === recipeId 
-          ? { ...recipe, score: { ...recipe.score, total: recipe.score.total + 5 } }
-          : recipe
-      ));
-      
-      // Success haptic
-      HapticPatterns.success();
-      
-      Alert.alert('Liked!', 'We\'ll show you more recipes like this');
-    } catch (error: any) {
-      console.error('📱 HomeScreen: Like error', error);
-      
-      // Error haptic
-      HapticPatterns.error();
-      
-      // Revert UI state on error (using hook function)
-      updateRecipeFeedback(recipeId, { liked: false, disliked: false });
-      
-      Alert.alert('Error', 'Failed to like recipe');
-    } finally {
-      setFeedbackLoading(null);
-    }
-  };
-
-  const handleDislike = async (recipeId: string) => {
-    try {
-      setFeedbackLoading(recipeId);
-      console.log('📱 HomeScreen: Disliking recipe', recipeId);
-      
-      // Update UI immediately (using hook function)
-      updateRecipeFeedback(recipeId, { liked: false, disliked: true });
-      
-      await recipeApi.dislikeRecipe(recipeId);
-      
-      // Track dislike action
-      if (user?.id) {
-        analytics.trackRecipeInteraction('dislike', recipeId, { source: 'home_screen' });
-      }
-      
-      // Update local state to reflect the dislike
-      setSuggestedRecipes(prev => prev.map(recipe => 
-        recipe.id === recipeId 
-          ? { ...recipe, score: { ...recipe.score, total: Math.max(0, recipe.score.total - 5) } }
-          : recipe
-      ));
-      
-      // Success haptic
-      HapticPatterns.success();
-      
-      Alert.alert('Noted', 'We\'ll show fewer recipes like this');
-    } catch (error: any) {
-      console.error('📱 HomeScreen: Dislike error', error);
-      
-      // Error haptic
-      HapticPatterns.error();
-      
-      // Revert UI state on error (using hook function)
-      updateRecipeFeedback(recipeId, { liked: false, disliked: false });
-      
-      Alert.alert('Error', 'Failed to dislike recipe');
-    } finally {
-      setFeedbackLoading(null);
     }
   };
 
