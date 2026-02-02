@@ -45,6 +45,8 @@ import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel } from '../../comp
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
+import QuickFiltersBar from '../../components/home/QuickFiltersBar';
+import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import {
   type UserFeedback,
   deduplicateRecipes,
@@ -2078,238 +2080,18 @@ export default function HomeScreen() {
       </View>
 
       {/* Unified Filters & Meal Prep Section */}
-      <View className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        {/* Header with Filter Button */}
-        <View className="px-4 pt-3 pb-2 flex-row items-center justify-between">
-          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">Filters & Preferences</Text>
-          <HapticTouchableOpacity 
-            onPress={handleFilterPress}
-            className="px-3 py-1.5 rounded-lg flex-row items-center"
-            style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryDark }}
-          >
-            <Icon name={Icons.RECIPE_FILTER} size={IconSizes.SM} color={isDark ? DarkColors.primary : '#FFFFFF'} accessibilityLabel="Advanced filters" />
-            <Text className="text-sm font-semibold ml-1.5" style={{ color: isDark ? DarkColors.primary : '#FFFFFF' }}>
-              Advanced
-            </Text>
-          </HapticTouchableOpacity>
-        </View>
-        
-        {/* Quick Filter Chips */}
-        <View className="px-4 pb-3">
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingRight: 16 }}
-          >
-            <View className="flex-row items-center" style={{ gap: 8 }}>
-              {/* Mood Filter (Home Page 2.0) */}
-              <HapticTouchableOpacity
-                onPress={() => setShowMoodSelector(true)}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  selectedMood ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={selectedMood ? {
-                  backgroundColor: `${selectedMood.color}22`,
-                  borderWidth: 1,
-                  borderColor: selectedMood.color,
-                } : undefined}
-              >
-                <Text className="text-base">{selectedMood?.emoji || '🎭'}</Text>
-                <Text className={`text-sm font-semibold ml-1.5`} style={selectedMood ? { color: selectedMood.color } : undefined}>
-                  {selectedMood?.label || 'Mood'}
-                </Text>
-                {selectedMood && (
-                  <HapticTouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation?.();
-                      handleMoodSelect(null);
-                    }}
-                    className="ml-1.5"
-                    hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }}
-                  >
-                    <Text style={{ color: selectedMood.color, fontSize: 12 }}>✕</Text>
-                  </HapticTouchableOpacity>
-                )}
-              </HapticTouchableOpacity>
-
-              {/* Quick (<30min) */}
-              <HapticTouchableOpacity
-                onPress={() => {
-                  const isActive = filters.maxCookTime === 30;
-                  handleQuickFilter('maxCookTime', isActive ? null : 30);
-                  HapticPatterns.buttonPress();
-                }}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  filters.maxCookTime === 30 ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={filters.maxCookTime === 30 ? {
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                } : undefined}
-              >
-                <Icon name={Icons.COOK_TIME} size={14} color={filters.maxCookTime === 30 ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')} accessibilityLabel="Quick" />
-                <Text className={`text-sm font-semibold ml-1.5 ${
-                  filters.maxCookTime === 30 ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  Quick
-                </Text>
-              </HapticTouchableOpacity>
-
-              {/* Easy Difficulty */}
-              <HapticTouchableOpacity
-                onPress={() => {
-                  const isActive = filters.difficulty.includes('Easy');
-                  handleQuickFilter('difficulty',
-                    isActive
-                      ? filters.difficulty.filter(d => d !== 'Easy')
-                      : [...filters.difficulty, 'Easy']
-                  );
-                  HapticPatterns.buttonPress();
-                }}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  filters.difficulty.includes('Easy') ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={filters.difficulty.includes('Easy') ? {
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                } : undefined}
-              >
-                <Text className="text-base">✨</Text>
-                <Text className={`text-sm font-semibold ml-1.5 ${
-                  filters.difficulty.includes('Easy') ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  Easy
-                </Text>
-              </HapticTouchableOpacity>
-
-              {/* High Protein (30g+) - Home Page 2.0 Macro Filter */}
-              <HapticTouchableOpacity
-                onPress={() => handleQuickMacroFilter('highProtein')}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  quickMacroFilters.highProtein ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={quickMacroFilters.highProtein ? {
-                  backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen,
-                } : undefined}
-              >
-                <Text className="text-base">💪</Text>
-                <Text className={`text-sm font-semibold ml-1.5 ${
-                  quickMacroFilters.highProtein ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  High Protein
-                </Text>
-              </HapticTouchableOpacity>
-
-              {/* Low Carb (<30g) - Home Page 2.0 Macro Filter */}
-              <HapticTouchableOpacity
-                onPress={() => handleQuickMacroFilter('lowCarb')}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  quickMacroFilters.lowCarb ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={quickMacroFilters.lowCarb ? {
-                  backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
-                } : undefined}
-              >
-                <Text className="text-base">🥩</Text>
-                <Text className={`text-sm font-semibold ml-1.5 ${
-                  quickMacroFilters.lowCarb ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  Low Carb
-                </Text>
-              </HapticTouchableOpacity>
-
-              {/* Low Calorie (<400) - Home Page 2.0 Macro Filter */}
-              <HapticTouchableOpacity
-                onPress={() => handleQuickMacroFilter('lowCalorie')}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  quickMacroFilters.lowCalorie ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={quickMacroFilters.lowCalorie ? {
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                } : undefined}
-              >
-                <Text className="text-base">🥗</Text>
-                <Text className={`text-sm font-semibold ml-1.5 ${
-                  quickMacroFilters.lowCalorie ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  Low Cal
-                </Text>
-              </HapticTouchableOpacity>
-
-              {/* Meal Prep */}
-              <HapticTouchableOpacity
-                onPress={() => {
-                  handleToggleMealPrepMode(!mealPrepMode);
-                  HapticPatterns.buttonPress();
-                }}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  mealPrepMode ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={mealPrepMode ? {
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                } : undefined}
-              >
-                <Text className="text-base">🍱</Text>
-                <Text className={`text-sm font-semibold ml-1.5 ${
-                  mealPrepMode ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  Meal Prep
-                </Text>
-              </HapticTouchableOpacity>
-
-              {/* Budget Friendly */}
-              <HapticTouchableOpacity
-                onPress={() => {
-                  const isActive = filters.dietaryRestrictions.includes('Budget-Friendly');
-                  handleQuickFilter('dietaryRestrictions',
-                    isActive
-                      ? filters.dietaryRestrictions.filter(d => d !== 'Budget-Friendly')
-                      : [...filters.dietaryRestrictions, 'Budget-Friendly']
-                  );
-                  HapticPatterns.buttonPress();
-                }}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  filters.dietaryRestrictions.includes('Budget-Friendly') ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={filters.dietaryRestrictions.includes('Budget-Friendly') ? {
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                } : undefined}
-              >
-                <Text className="text-base">💰</Text>
-                <Text className={`text-sm font-semibold ml-1.5 ${
-                  filters.dietaryRestrictions.includes('Budget-Friendly') ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  Budget
-                </Text>
-              </HapticTouchableOpacity>
-
-              {/* One Pot */}
-              <HapticTouchableOpacity
-                onPress={() => {
-                  const isActive = filters.dietaryRestrictions.includes('One-Pot');
-                  handleQuickFilter('dietaryRestrictions',
-                    isActive
-                      ? filters.dietaryRestrictions.filter(d => d !== 'One-Pot')
-                      : [...filters.dietaryRestrictions, 'One-Pot']
-                  );
-                  HapticPatterns.buttonPress();
-                }}
-                className={`px-4 py-2 rounded-full flex-row items-center ${
-                  filters.dietaryRestrictions.includes('One-Pot') ? '' : 'bg-gray-100 dark:bg-gray-700'
-                }`}
-                style={filters.dietaryRestrictions.includes('One-Pot') ? {
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                } : undefined}
-              >
-                <Text className="text-base">🍲</Text>
-                <Text className={`text-sm font-semibold ml-1.5 ${
-                  filters.dietaryRestrictions.includes('One-Pot') ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  One Pot
-                </Text>
-              </HapticTouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </View>
+      <QuickFiltersBar
+        selectedMood={selectedMood}
+        onMoodPress={() => setShowMoodSelector(true)}
+        onClearMood={() => handleMoodSelect(null)}
+        filters={filters}
+        quickMacroFilters={quickMacroFilters}
+        mealPrepMode={mealPrepMode}
+        handleQuickFilter={handleQuickFilter}
+        handleQuickMacroFilter={handleQuickMacroFilter}
+        handleToggleMealPrepMode={handleToggleMealPrepMode}
+        onAdvancedFilterPress={handleFilterPress}
+      />
 
       {/* Search Bar */}
       <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -3105,69 +2887,26 @@ export default function HomeScreen() {
       />
 
       {/* Collection Save Picker Modal */}
-      <Modal
+      <CollectionPickerModal
         visible={savePickerVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setSavePickerVisible(false)}
-      >
-        <View className="flex-1 bg-black/40 justify-end">
-          <View className="bg-white dark:bg-gray-800 rounded-t-2xl p-4 max-h-[70%]">
-            <Text className="text-lg font-semibold mb-3 dark:text-gray-100">Save to Collection</Text>
-            <ScrollView className="mb-3">
-              {collections.map((c) => (
-                <HapticTouchableOpacity
-                  key={c.id}
-                  onPress={() => {
-                    setSelectedCollectionIds(prev => 
-                      prev.includes(c.id) 
-                        ? prev.filter(id => id !== c.id)
-                        : [...prev, c.id]
-                    );
-                  }}
-                  className="flex-row items-center py-3 border-b border-gray-100 dark:border-gray-700"
-                >
-                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? '' : 'border-gray-300 dark:border-gray-600'}`} style={selectedCollectionIds.includes(c.id) ? {
-                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                    borderColor: isDark ? DarkColors.primary : Colors.primary
-                  } : undefined}>
-                    {selectedCollectionIds.includes(c.id) && (
-                      <Icon name={Icons.CHECKMARK} size={IconSizes.XS} color="white" accessibilityLabel="Selected" style={{ position: 'absolute', top: 1, left: 1 }} />
-                    )}
-                  </View>
-                  <Text className="text-gray-900 dark:text-gray-100 flex-1">{c.name}</Text>
-                </HapticTouchableOpacity>
-              ))}
-              {creatingCollection ? (
-                <View className="flex-row items-center py-3">
-                  <TextInput
-                    value={newCollectionName}
-                    onChangeText={setNewCollectionName}
-                    placeholder="New collection name"
-                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mr-2 dark:bg-gray-700 dark:text-gray-100"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 dark:bg-orange-600 px-3 py-2 rounded-lg">
-                    <Text className="text-white font-semibold">Create</Text>
-                  </HapticTouchableOpacity>
-                </View>
-              ) : (
-                <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
-                  <Text className="font-medium" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>+ Create new collection</Text>
-                </HapticTouchableOpacity>
-              )}
-            </ScrollView>
-            <View className="flex-row justify-end space-x-3">
-              <HapticTouchableOpacity onPress={() => setSavePickerVisible(false)} className="px-4 py-3">
-                <Text className="text-gray-700 dark:text-gray-100">Cancel</Text>
-              </HapticTouchableOpacity>
-              <HapticTouchableOpacity onPress={handleSaveToCollections} className="px-4 py-3 rounded-lg" style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}>
-                <Text className="text-white font-semibold">Save</Text>
-              </HapticTouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        collections={collections}
+        selectedCollectionIds={selectedCollectionIds}
+        creatingCollection={creatingCollection}
+        newCollectionName={newCollectionName}
+        isDark={isDark}
+        onClose={() => setSavePickerVisible(false)}
+        onToggleCollection={(collectionId) => {
+          setSelectedCollectionIds(prev =>
+            prev.includes(collectionId)
+              ? prev.filter(id => id !== collectionId)
+              : [...prev, collectionId]
+          );
+        }}
+        onStartCreating={() => setCreatingCollection(true)}
+        onChangeNewName={setNewCollectionName}
+        onCreateCollection={handleCreateCollection}
+        onSave={handleSaveToCollections}
+      />
 
       {/* Random Recipe Generation Modal */}
       <Modal
