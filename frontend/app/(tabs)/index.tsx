@@ -41,7 +41,7 @@ import { RecipeCard } from '../../components/recipe/RecipeCard';
 import MoodSelector, { MoodChip, MOODS, type Mood } from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, RecipeOfTheDayCard } from '../../components/home';
+import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, RecipeOfTheDayCard, MealPrepModeHeader, PaginationControls } from '../../components/home';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
@@ -1060,21 +1060,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={true}
       >
         {/* Meal Prep Mode Header */}
-        {mealPrepMode && (
-          <View className="px-4 pt-4 pb-2">
-            <View className={`rounded-xl p-4 border ${isDark ? 'border-orange-800' : 'border-orange-200'}`} style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight }}>
-              <View className="flex-row items-center mb-2">
-                <Text className="text-2xl mr-2">🍱</Text>
-                <Text className="text-lg font-semibold" style={{ color: isDark ? DarkColors.primaryDark : Colors.primaryDark }}>
-                  Meal Prep Mode Active
-          </Text>
-              </View>
-              <Text className="text-sm" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>
-                Showing recipes suitable for batch cooking, freezing, and weekly meal prep
-              </Text>
-            </View>
-          </View>
-        )}
+        {mealPrepMode && <MealPrepModeHeader />}
 
         {/* Spacer to replace pt-6 */}
         <View style={{ height: Spacing.xl }} />
@@ -1325,98 +1311,16 @@ export default function HomeScreen() {
                       )}
                       
                       {/* Inline Pagination for Recipes for You section */}
-                      {isRecipesForYou && totalRecipes > 0 && paginationInfo.hasMultiplePages && (
-                        <View className="mt-6">
-                          {/* Recipe count summary */}
-                          <Text className="text-center text-sm text-gray-500 dark:text-gray-400 mb-3">
-                            Showing {currentPage * suggestedRecipes.length + 1}-{Math.min(currentPage * suggestedRecipes.length + suggestedRecipes.length, totalRecipes)} of {totalRecipes} recipes
-                          </Text>
-                          
-                          <View className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
-                            <TouchableOpacity
-                              onPress={handlePrevPage}
-                              disabled={paginationInfo.isFirstPage || paginationLoading}
-                              activeOpacity={0.7}
-                              style={{
-                                paddingHorizontal: 16,
-                                paddingVertical: 8,
-                                borderRadius: 8,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                opacity: (paginationInfo.isFirstPage || paginationLoading) ? 0.5 : 1,
-                                backgroundColor: (paginationInfo.isFirstPage || paginationLoading)
-                                  ? (isDark ? '#374151' : '#F3F4F6')
-                                  : (isDark ? DarkColors.primary : Colors.primary),
-                                minWidth: 100,
-                              }}
-                            >
-                              <Icon 
-                                name={Icons.CHEVRON_BACK} 
-                                size={IconSizes.SM} 
-                                color={(paginationInfo.isFirstPage || paginationLoading) ? (isDark ? '#6B7280' : '#9CA3AF') : '#FFFFFF'} 
-                                accessibilityLabel="Previous page"
-                              />
-                              <Text 
-                                style={{ 
-                                  fontSize: FontSize.base,
-                                  fontWeight: '600',
-                                  marginLeft: 4,
-                                  color: (paginationInfo.isFirstPage || paginationLoading) ? (isDark ? '#6B7280' : '#9CA3AF') : '#FFFFFF' 
-                                }}
-                              >
-                                Previous
-                              </Text>
-                            </TouchableOpacity>
-
-                            {/* Page Indicator */}
-                            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                              {paginationLoading ? (
-                                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
-                              ) : (
-                                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  Page {currentPage + 1} of {paginationInfo.totalPages}
-                                </Text>
-                              )}
-                            </View>
-
-                            <TouchableOpacity
-                              onPress={handleNextPage}
-                              disabled={paginationInfo.isLastPage || paginationLoading}
-                              activeOpacity={0.7}
-                              style={{
-                                paddingHorizontal: 16,
-                                paddingVertical: 8,
-                                borderRadius: 8,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                opacity: (paginationInfo.isLastPage || paginationLoading) ? 0.5 : 1,
-                                backgroundColor: (paginationInfo.isLastPage || paginationLoading)
-                                  ? (isDark ? '#374151' : '#F3F4F6')
-                                  : (isDark ? DarkColors.primary : Colors.primary),
-                                minWidth: 100,
-                              }}
-                            >
-                              <Text 
-                                style={{ 
-                                  fontSize: FontSize.base,
-                                  fontWeight: '600',
-                                  marginRight: 4,
-                                  color: (paginationInfo.isLastPage || paginationLoading) ? (isDark ? '#6B7280' : '#9CA3AF') : '#FFFFFF' 
-                                }}
-                              >
-                                Next
-                              </Text>
-                              <Icon 
-                                name={Icons.CHEVRON_FORWARD} 
-                                size={IconSizes.SM} 
-                                color={(paginationInfo.isLastPage || paginationLoading) ? (isDark ? '#6B7280' : '#9CA3AF') : '#FFFFFF'} 
-                                accessibilityLabel="Next page"
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
+                      {isRecipesForYou && (
+                        <PaginationControls
+                          currentPage={currentPage}
+                          totalItems={totalRecipes}
+                          itemsShown={suggestedRecipes.length}
+                          paginationInfo={paginationInfo}
+                          isLoading={paginationLoading}
+                          onPrevPage={handlePrevPage}
+                          onNextPage={handleNextPage}
+                        />
                       )}
                     </Animated.View>
                   )}

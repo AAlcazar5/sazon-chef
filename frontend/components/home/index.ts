@@ -7,3 +7,5 @@ export { default as HomeHeader } from './HomeHeader';
 export { default as RecipeOfTheDayCard } from './RecipeOfTheDayCard';
 export { default as QuickFiltersBar } from './QuickFiltersBar';
 export { default as FeaturedRecipeCarousel } from './FeaturedRecipeCarousel';
+export { default as MealPrepModeHeader } from './MealPrepModeHeader';
+export { default as PaginationControls } from './PaginationControls';
