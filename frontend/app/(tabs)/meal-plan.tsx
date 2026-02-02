@@ -10,6 +10,9 @@ import WeeklyCalendarSkeleton from '../../components/meal-plan/WeeklyCalendarSke
 import DraggableMealCard from '../../components/meal-plan/DraggableMealCard';
 import AnimatedHourHeader from '../../components/meal-plan/AnimatedHourHeader';
 import CostAnalysisSection from '../../components/meal-plan/CostAnalysisSection';
+import MealSnackSelectorModal from '../../components/meal-plan/MealSnackSelectorModal';
+import DayMealsModal from '../../components/meal-plan/DayMealsModal';
+import MealNotesModal from '../../components/meal-plan/MealNotesModal';
 import { View, Text, ScrollView, Alert, Dimensions, TextInput, Modal, Animated, Image, Switch, RefreshControl, Platform } from 'react-native';
 import AnimatedProgressBar from '../../components/ui/AnimatedProgressBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -2991,229 +2994,26 @@ export default function MealPlanScreen() {
       </ScrollView>
 
       {/* Meal & Snack Selector Modal */}
-      <Modal
+      <MealSnackSelectorModal
         visible={showMealSnackSelector}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => {
+        generationType={generationType}
+        selectedMeals={selectedMeals}
+        selectedSnacks={selectedSnacks}
+        maxTotalPrepTime={maxTotalPrepTime}
+        maxWeeklyBudget={maxWeeklyBudget}
+        targetMacros={targetMacros}
+        isDark={isDark}
+        onClose={() => {
           setShowMealSnackSelector(false);
           setGenerationType(null);
         }}
-      >
-        <View className="flex-1 bg-black bg-opacity-50 justify-end">
-          <View className="bg-white dark:bg-gray-800 rounded-t-3xl p-6">
-            <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Select Meals & Snacks
-            </Text>
-            <View className="mb-4 p-3 rounded-lg" style={{ backgroundColor: isDark ? `${Colors.primaryLight}20` : Colors.primaryLight }}>
-              <Text className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-                💡 Recommended for {targetMacros.calories} calories/day:
-              </Text>
-              <Text className="text-sm text-gray-600 dark:text-gray-400">
-                {calculateRecommendedMealsAndSnacks(targetMacros.calories).meals} meals, {calculateRecommendedMealsAndSnacks(targetMacros.calories).snacks} snacks
-              </Text>
-            </View>
-            <Text className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              Choose how many meals and snacks to create for {generationType === 'fullDay' ? 'today' : 'each day this week'}. You can adjust these values.
-            </Text>
-
-            {/* Meals Selector */}
-            <View className="mb-6">
-              <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
-                Number of Meals
-              </Text>
-              <View className="flex-row justify-between">
-                {[0, 1, 2, 3, 4].map((count) => (
-                  <HapticTouchableOpacity
-                    key={count}
-                    onPress={() => setSelectedMeals(count)}
-                    className={`flex-1 mx-1 py-4 rounded-lg border-2 ${
-                      selectedMeals === count
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
-                    }`}
-                    style={
-                      selectedMeals === count
-                        ? { borderColor: isDark ? DarkColors.primary : Colors.primary }
-                        : undefined
-                    }
-                  >
-                    <Text
-                      className={`text-center text-lg font-semibold ${
-                        selectedMeals === count
-                          ? 'text-orange-600 dark:text-orange-400'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                      style={
-                        selectedMeals === count
-                          ? { color: isDark ? DarkColors.primary : Colors.primary }
-                          : undefined
-                      }
-                    >
-                      {count}
-                    </Text>
-                  </HapticTouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Snacks Selector */}
-            <View className="mb-6">
-              <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
-                Number of Snacks/Dessert
-              </Text>
-              <View className="flex-row justify-between">
-                {[0, 1, 2, 3, 4].map((count) => (
-                  <HapticTouchableOpacity
-                    key={count}
-                    onPress={() => setSelectedSnacks(count)}
-                    className={`flex-1 mx-1 py-4 rounded-lg border-2 ${
-                      selectedSnacks === count
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
-                    }`}
-                    style={
-                      selectedSnacks === count
-                        ? { borderColor: isDark ? DarkColors.primary : Colors.primary }
-                        : undefined
-                    }
-                  >
-                    <Text
-                      className={`text-center text-lg font-semibold ${
-                        selectedSnacks === count
-                          ? 'text-orange-600 dark:text-orange-400'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                      style={
-                        selectedSnacks === count
-                          ? { color: isDark ? DarkColors.primary : Colors.primary }
-                          : undefined
-                      }
-                    >
-                      {count}
-                    </Text>
-                  </HapticTouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Total Prep Time Selector */}
-            <View className="mb-6">
-              <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
-                Max Total Prep Time
-              </Text>
-              <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Keep total meal prep time under this limit for {generationType === 'fullDay' ? 'today' : 'each day'}
-              </Text>
-              <View className="flex-row justify-between flex-wrap">
-                {[30, 45, 60, 90, 120].map((minutes) => (
-                  <HapticTouchableOpacity
-                    key={minutes}
-                    onPress={() => setMaxTotalPrepTime(minutes)}
-                    className={`flex-1 mx-1 py-3 rounded-lg border-2 mb-2 ${
-                      maxTotalPrepTime === minutes
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
-                    }`}
-                    style={
-                      maxTotalPrepTime === minutes
-                        ? { borderColor: isDark ? DarkColors.primary : Colors.primary }
-                        : undefined
-                    }
-                  >
-                    <Text
-                      className={`text-center text-sm font-semibold ${
-                        maxTotalPrepTime === minutes
-                          ? 'text-orange-600 dark:text-orange-400'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                      style={
-                        maxTotalPrepTime === minutes
-                          ? { color: isDark ? DarkColors.primary : Colors.primary }
-                          : undefined
-                      }
-                    >
-                      {minutes} min
-                    </Text>
-                  </HapticTouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Weekly Budget Selector */}
-            <View className="mb-6">
-              <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
-                Max Weekly Budget
-              </Text>
-              <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Keep total meal plan cost under this amount for {generationType === 'fullDay' ? 'today' : 'the week'}
-              </Text>
-              <View className="flex-row justify-between flex-wrap">
-                {[50, 75, 100, 150, 200, 250].map((amount) => (
-                  <HapticTouchableOpacity
-                    key={amount}
-                    onPress={() => setMaxWeeklyBudget(amount)}
-                    className={`flex-1 mx-1 py-3 rounded-lg border-2 mb-2 ${
-                      maxWeeklyBudget === amount
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
-                    }`}
-                    style={
-                      maxWeeklyBudget === amount
-                        ? { borderColor: isDark ? DarkColors.primary : Colors.primary }
-                        : undefined
-                    }
-                  >
-                    <Text
-                      className={`text-center text-sm font-semibold ${
-                        maxWeeklyBudget === amount
-                          ? 'text-orange-600 dark:text-orange-400'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                      style={
-                        maxWeeklyBudget === amount
-                          ? { color: isDark ? DarkColors.primary : Colors.primary }
-                          : undefined
-                      }
-                    >
-                      ${amount}
-                    </Text>
-                  </HapticTouchableOpacity>
-                ))}
-              </View>
-              <HapticTouchableOpacity
-                onPress={() => setMaxWeeklyBudget(null)}
-                className="mt-2 py-2 px-4 rounded-lg border border-gray-300 dark:border-gray-600"
-              >
-                <Text className="text-center text-sm text-gray-600 dark:text-gray-400">
-                  No Budget Limit
-                </Text>
-              </HapticTouchableOpacity>
-            </View>
-
-            {/* Action Buttons */}
-            <View className="flex-row space-x-3">
-              <HapticTouchableOpacity
-                onPress={() => {
-                  setShowMealSnackSelector(false);
-                  setGenerationType(null);
-                }}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
-              >
-                <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
-              </HapticTouchableOpacity>
-              
-              <HapticTouchableOpacity
-                onPress={handleConfirmMealSnackSelection}
-                className="flex-1 py-3 px-4 rounded-lg"
-                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                <Text className="text-white font-medium text-center">Create</Text>
-              </HapticTouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onConfirm={handleConfirmMealSnackSelection}
+        setSelectedMeals={setSelectedMeals}
+        setSelectedSnacks={setSelectedSnacks}
+        setMaxTotalPrepTime={setMaxTotalPrepTime}
+        setMaxWeeklyBudget={setMaxWeeklyBudget}
+        calculateRecommendedMealsAndSnacks={calculateRecommendedMealsAndSnacks}
+      />
 
       {/* Time Picker Modal */}
       {showTimePickerModal && recipeId && recipeTitle && (
@@ -3325,131 +3125,18 @@ export default function MealPlanScreen() {
       )}
 
       {/* Meal Notes Modal - Enhanced */}
-      <Modal
+      <MealNotesModal
         visible={showNotesModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={handleCloseNotesModal}
-      >
-        <View className="flex-1 bg-black bg-opacity-50">
-          <View className="flex-1 justify-end">
-            <View className="bg-white dark:bg-gray-800 rounded-t-3xl max-h-[85%]">
-              {/* Header */}
-              <View className="flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-                <View className="flex-1">
-                  <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                    Meal Notes
-                  </Text>
-                  {editingMealName && (
-                    <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {editingMealName}
-                    </Text>
-                  )}
-                </View>
-                <HapticTouchableOpacity 
-                  onPress={handleCloseNotesModal}
-                  className="p-2"
-                >
-                  <Icon 
-                    name={Icons.CLOSE} 
-                    size={IconSizes.LG} 
-                    color={isDark ? DarkColors.text.primary : Colors.text.primary} 
-                    accessibilityLabel="Close"
-                  />
-                </HapticTouchableOpacity>
-              </View>
-              
-              {/* Quick Templates */}
-              <View className="px-6 pt-4 pb-2">
-                <Text className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                  Quick Templates
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3" nestedScrollEnabled={true}>
-                  <View className="flex-row space-x-2">
-                    {quickTemplates.map((template, index) => (
-                      <HapticTouchableOpacity
-                        key={index}
-                        onPress={() => {
-                          HapticPatterns.buttonPress();
-                          insertTemplate(template.text);
-                        }}
-                        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
-                        style={{ backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }}
-                      >
-                        <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                          {template.label}
-                        </Text>
-                      </HapticTouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-              
-              {/* Text Input */}
-              <View className="px-6 pb-4">
-                <TextInput
-                  value={editingNotes}
-                  onChangeText={setEditingNotes}
-                  placeholder="Add notes about this meal... (e.g., taste, modifications, prep tips)"
-                  placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
-                  multiline
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 text-gray-900 dark:text-gray-100"
-                  style={{ 
-                    minHeight: 200,
-                    maxHeight: 300,
-                    textAlignVertical: 'top',
-                    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-                    fontSize: FontSize.base,
-                    lineHeight: 22,
-                    color: isDark ? DarkColors.text.primary : Colors.text.primary
-                  }}
-                />
-                
-                {/* Character Count & Formatting Tools */}
-                <View className="flex-row items-center justify-between mt-2">
-                  <View className="flex-row items-center space-x-3">
-                    <HapticTouchableOpacity
-                      onPress={() => {
-                        HapticPatterns.buttonPress();
-                        insertBulletPoint();
-                      }}
-                      className="px-3 py-1.5 rounded-lg"
-                      style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}
-                    >
-                      <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-                        • Bullet
-                      </Text>
-                    </HapticTouchableOpacity>
-                  </View>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
-                    {editingNotes.length} characters
-                  </Text>
-                </View>
-              </View>
-              
-              {/* Action Buttons */}
-              <View className="px-6 pb-6 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <View className="flex-row space-x-3">
-                  <HapticTouchableOpacity 
-                    onPress={handleCloseNotesModal}
-                    className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
-                  >
-                    <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
-                  </HapticTouchableOpacity>
-                  
-                  <HapticTouchableOpacity 
-                    onPress={handleSaveNotes}
-                    className="flex-1 py-3 px-4 rounded-lg"
-                    style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-                  >
-                    <Text className="text-white font-medium text-center">Save Notes</Text>
-                  </HapticTouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        editingMealName={editingMealName}
+        editingNotes={editingNotes}
+        quickTemplates={quickTemplates}
+        isDark={isDark}
+        onClose={handleCloseNotesModal}
+        onSave={handleSaveNotes}
+        onNotesChange={setEditingNotes}
+        onInsertBulletPoint={insertBulletPoint}
+        onInsertTemplate={insertTemplate}
+      />
 
       {/* Meal Swap Suggestions Modal */}
       <Modal
@@ -3528,233 +3215,17 @@ export default function MealPlanScreen() {
       </Modal>
 
       {/* Day's Meals at a Glance Modal */}
-      {showDayMealsModal && selectedDayForModal && (
-        <Modal
-          visible={showDayMealsModal}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => {
-            setShowDayMealsModal(false);
-            setSelectedDayForModal(null);
-          }}
-        >
-          <View className="flex-1 bg-black/50 justify-center items-center px-4">
-            <View className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden w-full" style={{ maxHeight: '80%', maxWidth: '100%' }}>
-                {/* Header */}
-                <View className="flex-row items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700">
-                  <View className="flex-1">
-                    <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                      {"📅 Day's Meals at a Glance"}
-                    </Text>
-                    <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {selectedDayForModal instanceof Date 
-                        ? selectedDayForModal.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-                        : 'Selected Day'}
-                    </Text>
-                    {selectedDayForModal instanceof Date && isToday(selectedDayForModal) && (
-                      <View className="mt-1">
-                        <View className="px-2 py-0.5 rounded-full self-start" style={{ backgroundColor: isDark ? '#EF444433' : Colors.secondaryRedLight }}>
-                          <Text className="text-xs font-semibold" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>
-                            {"Today"}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                  <HapticTouchableOpacity 
-                    onPress={() => {
-                      setShowDayMealsModal(false);
-                      setSelectedDayForModal(null);
-                    }}
-                    className="p-2 -mr-2"
-                  >
-                    <Icon 
-                      name={Icons.CLOSE} 
-                      size={IconSizes.LG} 
-                      color={isDark ? DarkColors.text.primary : Colors.text.primary} 
-                      accessibilityLabel="Close"
-                    />
-                  </HapticTouchableOpacity>
-                </View>
-                
-                {/* Meals Content - Uses same approach as getMealsForDate */}
-                <ScrollView
-                  style={{ maxHeight: 400 }}
-                  contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
-                  showsVerticalScrollIndicator={true}
-                  nestedScrollEnabled={true}
-                >
-                  {(() => {
-                    if (!selectedDayForModal || !(selectedDayForModal instanceof Date)) {
-                      return (
-                        <View className="py-8 items-center">
-                          <Text className="text-gray-500 dark:text-gray-400 text-center">
-                            {"Invalid date selected"}
-                          </Text>
-                        </View>
-                      );
-                    }
-                    
-                    // Use the same approach as getMealsForDate
-                    const dateStr = selectedDayForModal.toISOString().split('T')[0];
-                    const dayMeals = weeklyPlan?.weeklyPlan?.[dateStr]?.meals || {};
-                    const allMeals: Array<any> = [];
-                    
-                    // Extract meals - match the calendar's counting logic (check if meal exists, then get recipe)
-                    if (dayMeals.breakfast) {
-                      // Try nested recipe first, then direct structure
-                      const recipe = dayMeals.breakfast.recipe || dayMeals.breakfast;
-                      if (recipe && (recipe.id || recipe.title || recipe.name || recipe.calories)) {
-                        allMeals.push({
-                          id: recipe.id,
-                          mealType: 'Breakfast',
-                          name: recipe.title || recipe.name || 'Breakfast',
-                          calories: recipe.calories,
-                          cookTime: recipe.cookTime,
-                          isCompleted: dayMeals.breakfast.isCompleted || false,
-                        });
-                      }
-                    }
-                    
-                    if (dayMeals.lunch) {
-                      const recipe = dayMeals.lunch.recipe || dayMeals.lunch;
-                      if (recipe && (recipe.id || recipe.title || recipe.name || recipe.calories)) {
-                        allMeals.push({
-                          id: recipe.id,
-                          mealType: 'Lunch',
-                          name: recipe.title || recipe.name || 'Lunch',
-                          calories: recipe.calories,
-                          cookTime: recipe.cookTime,
-                          isCompleted: dayMeals.lunch.isCompleted || false,
-                        });
-                      }
-                    }
-                    
-                    if (dayMeals.dinner) {
-                      const recipe = dayMeals.dinner.recipe || dayMeals.dinner;
-                      if (recipe && (recipe.id || recipe.title || recipe.name || recipe.calories)) {
-                        allMeals.push({
-                          id: recipe.id,
-                          mealType: 'Dinner',
-                          name: recipe.title || recipe.name || 'Dinner',
-                          calories: recipe.calories,
-                          cookTime: recipe.cookTime,
-                          isCompleted: dayMeals.dinner.isCompleted || false,
-                        });
-                      }
-                    }
-                    
-                    if (dayMeals.snacks && Array.isArray(dayMeals.snacks)) {
-                      dayMeals.snacks.forEach((snack: any) => {
-                        const recipe = snack?.recipe || snack;
-                        if (recipe && (recipe.id || recipe.title || recipe.name || recipe.calories)) {
-                          allMeals.push({
-                            id: recipe.id,
-                            mealType: 'Snack',
-                            name: recipe.title || recipe.name || 'Snack',
-                            calories: recipe.calories,
-                            cookTime: recipe.cookTime,
-                            isCompleted: snack.isCompleted || false,
-                          });
-                        }
-                      });
-                    }
-
-                    if (allMeals.length === 0) {
-                      return (
-                        <View className="py-8 items-center px-4">
-                          <Text className="text-gray-500 dark:text-gray-400 text-center mb-2">
-                            {"No meals planned for this day"}
-                          </Text>
-                          <Text className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                            {`Date: ${dateStr}`}
-                          </Text>
-                          {weeklyPlan && (
-                            <Text className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">
-                              {`Weekly plan has ${Object.keys(weeklyPlan.weeklyPlan || {}).length} days`}
-                            </Text>
-                          )}
-                        </View>
-                      );
-                    }
-
-                    return (
-                      <View>
-                        <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                          {`${allMeals.length} meal${allMeals.length !== 1 ? 's' : ''} planned`}
-                        </Text>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                          {allMeals.map((meal, index) => {
-                            const mealColors: Record<string, { bg: string; text: string }> = {
-                              'Breakfast': { bg: isDark ? '#FF914D33' : Colors.primaryLight, text: isDark ? DarkColors.primary : Colors.primary },
-                              'Lunch': { bg: isDark ? '#10B98133' : Colors.tertiaryGreenLight, text: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen },
-                              'Dinner': { bg: isDark ? '#EF444433' : Colors.secondaryRedLight, text: isDark ? DarkColors.secondaryRed : Colors.secondaryRed },
-                              'Snack': { bg: isDark ? '#374151' : '#F3F4F6', text: isDark ? '#9CA3AF' : '#4B5563' },
-                            };
-                            const colors = mealColors[meal.mealType] || mealColors['Snack'];
-                            const isEven = index % 2 === 0;
-                            
-                            return (
-                              <HapticTouchableOpacity
-                                key={`modal-meal-${meal.id || index}`}
-                                onPress={() => {
-                                  if (meal.id) {
-                                    HapticPatterns.buttonPress();
-                                    router.push(`/modal?id=${meal.id}&source=meal-plan`);
-                                    setShowDayMealsModal(false);
-                                    setSelectedDayForModal(null);
-                                  }
-                                }}
-                                activeOpacity={0.7}
-                                style={{ 
-                                  width: '47%',
-                                  padding: 14,
-                                  borderRadius: 12,
-                                  backgroundColor: colors.bg,
-                                  marginRight: isEven ? '6%' : 0,
-                                  marginBottom: 12,
-                                }}
-                              >
-                                <Text className="text-xs font-semibold mb-1" style={{ color: colors.text }}>
-                                  {meal.mealType}
-                                </Text>
-                                <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2" numberOfLines={2}>
-                                  {meal.name}
-                                </Text>
-                                <View className="flex-row items-center">
-                                  {meal.calories && (
-                                    <Text className="text-xs text-gray-600 dark:text-gray-400 mr-2">
-                                      {`${meal.calories} cal`}
-                                    </Text>
-                                  )}
-                                  {meal.cookTime && (
-                                    <Text className="text-xs text-gray-500 dark:text-gray-400">
-                                      {meal.cookTime < 60 ? `${meal.cookTime}m` : `${Math.floor(meal.cookTime / 60)}h ${meal.cookTime % 60}m`}
-                                    </Text>
-                                  )}
-                                </View>
-                                {meal.isCompleted && (
-                                  <View style={{ position: 'absolute', top: 8, right: 8 }}>
-                                    <Icon name={Icons.CHECKMARK_CIRCLE} size={16} color={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen} />
-                                  </View>
-                                )}
-                                {meal.id && (
-                                  <View style={{ position: 'absolute', bottom: 8, right: 8 }}>
-                                    <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.XS} color={colors.text} accessibilityLabel="View recipe" />
-                                  </View>
-                                )}
-                              </HapticTouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      </View>
-                    );
-                  })()}
-                </ScrollView>
-            </View>
-          </View>
-        </Modal>
-      )}
+      <DayMealsModal
+        visible={showDayMealsModal}
+        selectedDay={selectedDayForModal}
+        weeklyPlan={weeklyPlan}
+        isDark={isDark}
+        onClose={() => {
+          setShowDayMealsModal(false);
+          setSelectedDayForModal(null);
+        }}
+        isToday={isToday}
+      />
 
       {/* Shopping List Name Modal */}
       <Modal
