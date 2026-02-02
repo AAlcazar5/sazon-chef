@@ -74,6 +74,8 @@ import { useRecipePagination } from '../../hooks/useRecipePagination';
 import { useRecipeInteractions } from '../../hooks/useRecipeInteractions';
 import { useRecipeFilters } from '../../hooks/useRecipeFilters';
 import { useCollectionSave } from '../../hooks/useCollectionSave';
+import { useQuickMeals } from '../../hooks/useQuickMeals';
+import { usePerfectMatches } from '../../hooks/usePerfectMatches';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -91,12 +93,7 @@ export default function HomeScreen() {
   const [showRandomModal, setShowRandomModal] = useState(false);
   
   const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
-  const [quickMealsRecipes, setQuickMealsRecipes] = useState<SuggestedRecipe[]>([]); // Separate state for quick meals
-  const [perfectMatchRecipes, setPerfectMatchRecipes] = useState<SuggestedRecipe[]>([]); // Separate state for perfect match recipes
-  const [quickMealsCurrentIndex, setQuickMealsCurrentIndex] = useState(0); // Track which recipe user is viewing
-  const [perfectMatchCurrentIndex, setPerfectMatchCurrentIndex] = useState(0); // Track which recipe user is viewing
-  const [refreshingQuickMeals, setRefreshingQuickMeals] = useState(false);
-  const [refreshingPerfectMatches, setRefreshingPerfectMatches] = useState(false);
+  // Quick meals and perfect matches state managed by extracted hooks (defined after filters/mealPrepMode)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
   const [initialRecipesLoaded, setInitialRecipesLoaded] = useState(false); // Track if we've loaded initial recipes
 
@@ -160,6 +157,43 @@ export default function HomeScreen() {
 
   // Meal prep mode state - using extracted hook
   const { mealPrepMode, setMealPrepMode, toggleMealPrepMode, isLoaded: mealPrepLoaded } = useMealPrepMode();
+
+  // Quick meals hook (≤30 min recipes) - using extracted hook
+  const quickMeals = useQuickMeals({
+    filters: {
+      cuisines: filters.cuisines,
+      dietaryRestrictions: filters.dietaryRestrictions,
+      mealPrepMode,
+    },
+    enabled: filtersLoaded && !searchQuery,
+  });
+  const {
+    recipes: quickMealsRecipes,
+    currentIndex: quickMealsCurrentIndex,
+    refreshing: refreshingQuickMeals,
+    scrollViewRef: quickMealsScrollViewRef,
+    fetch: fetchQuickMeals,
+    setCurrentIndex: setQuickMealsCurrentIndex,
+  } = quickMeals;
+
+  // Perfect matches hook (≥85% match) - using extracted hook
+  const perfectMatches = usePerfectMatches({
+    filters: {
+      cuisines: filters.cuisines,
+      dietaryRestrictions: filters.dietaryRestrictions,
+      maxCookTime: filters.maxCookTime,
+      mealPrepMode,
+    },
+    enabled: filtersLoaded && !searchQuery,
+  });
+  const {
+    recipes: perfectMatchRecipes,
+    currentIndex: perfectMatchCurrentIndex,
+    refreshing: refreshingPerfectMatches,
+    scrollViewRef: perfectMatchScrollViewRef,
+    fetch: fetchPerfectMatches,
+    setCurrentIndex: setPerfectMatchCurrentIndex,
+  } = perfectMatches;
 
   // Quick macro filters (Home Page 2.0)
   const [quickMacroFilters, setQuickMacroFilters] = useState<{
@@ -771,162 +805,9 @@ export default function HomeScreen() {
     }
   }, [viewMode]); // Only trigger on viewMode change, not searchQuery
 
-  // Refs to track current recipes for loadMore functionality
-  const quickMealsRecipesRef = useRef<SuggestedRecipe[]>([]);
-  const perfectMatchRecipesRef = useRef<SuggestedRecipe[]>([]);
-  
-  // Refs for ScrollView components to control scroll position
-  const quickMealsScrollViewRef = useRef<ScrollView>(null);
-  const perfectMatchScrollViewRef = useRef<ScrollView>(null);
-  
-  // Update refs when recipes change
+  // Fetch quick meals and perfect matches when filters change - hooks handle actual fetching
   useEffect(() => {
-    quickMealsRecipesRef.current = quickMealsRecipes;
-  }, [quickMealsRecipes]);
-  
-  useEffect(() => {
-    perfectMatchRecipesRef.current = perfectMatchRecipes;
-  }, [perfectMatchRecipes]);
-
-  // Fetch quick meals separately (independent of pagination)
-  const fetchQuickMeals = useCallback(async (refresh: boolean = false) => {
-    try {
-      if (refresh) {
-        setRefreshingQuickMeals(true);
-      }
-      
-      // Use a random page to get variety when refreshing
-      const page = refresh ? Math.floor(Math.random() * 10) : 0;
-      console.log(`⚡ Fetching quick meals (≤30 min)... ${refresh ? 'refreshing' : 'initial'}`);
-      
-      const response = await recipeApi.getAllRecipes({
-        page,
-        limit: 5, // Only get 5 recipes
-        maxCookTime: 30, // Only recipes ≤ 30 minutes
-        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-        mealPrepMode: mealPrepMode,
-      });
-      
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[] = [];
-      
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-      }
-      
-      // Filter to ensure all are actually ≤ 30 minutes
-      const quickMeals = recipes.filter(r => r.cookTime && r.cookTime <= 30).slice(0, 5);
-      
-      // Avoid duplicates with existing recipes
-      if (refresh && quickMealsRecipesRef.current.length > 0) {
-        const existingIds = new Set(quickMealsRecipesRef.current.map(r => r.id));
-        const uniqueMeals = quickMeals.filter(r => !existingIds.has(r.id));
-        
-        // If we got duplicates, try fetching from a different page
-        if (uniqueMeals.length < 3 && quickMeals.length === 5) {
-          // Retry with different page
-          const retryPage = (page + 1) % 10;
-          const retryResponse = await recipeApi.getAllRecipes({
-            page: retryPage,
-            limit: 5,
-            maxCookTime: 30,
-            cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-            dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-            mealPrepMode: mealPrepMode,
-          });
-          const retryData = retryResponse.data;
-          const retryRecipes = Array.isArray(retryData) ? retryData : (retryData?.recipes || []);
-          const retryMeals = retryRecipes.filter((r: SuggestedRecipe) => r.cookTime && r.cookTime <= 30 && !existingIds.has(r.id)).slice(0, 5);
-          setQuickMealsRecipes(retryMeals.length > 0 ? retryMeals : quickMeals);
-        } else {
-          setQuickMealsRecipes(uniqueMeals.length > 0 ? uniqueMeals : quickMeals);
-        }
-      } else {
-        setQuickMealsRecipes(quickMeals);
-      }
-      
-      // Reset scroll position
-      setQuickMealsCurrentIndex(0);
-      // Scroll to first card after a brief delay to ensure state is updated
-      setTimeout(() => {
-        quickMealsScrollViewRef.current?.scrollTo({ x: 0, animated: true });
-      }, 100);
-      console.log(`⚡ Found ${quickMeals.length} quick meals`);
-    } catch (error) {
-      console.error('❌ Error fetching quick meals:', error);
-      if (!refresh) {
-        setQuickMealsRecipes([]);
-      }
-    } finally {
-      if (refresh) {
-        setRefreshingQuickMeals(false);
-      }
-    }
-  }, [filters.cuisines, filters.dietaryRestrictions, mealPrepMode]);
-
-  // Fetch perfect match recipes separately (independent of pagination)
-  const fetchPerfectMatches = useCallback(async (refresh: boolean = false) => {
-    try {
-      if (refresh) {
-        setRefreshingPerfectMatches(true);
-      }
-      
-      console.log(`⭐ Fetching perfect match recipes (≥85% match)... ${refresh ? 'refreshing' : 'initial'}`);
-      // Use suggested recipes endpoint which includes scoring
-      const response = await recipeApi.getSuggestedRecipes({
-        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-        maxCookTime: filters.maxCookTime || undefined,
-        mealPrepMode: mealPrepMode,
-        offset: refresh ? Math.floor(Math.random() * 50) : 0, // Random offset when refreshing for variety
-      });
-      
-      const recipes: SuggestedRecipe[] = Array.isArray(response.data) ? response.data : [];
-      
-      // Filter for recipes with matchPercentage >= 85
-      const perfectMatches = recipes.filter(r => 
-        r.score?.matchPercentage && r.score.matchPercentage >= 85
-      );
-      
-      // Sort by match percentage and take top 5
-      const sortedMatches = perfectMatches
-        .sort((a, b) => (b.score?.matchPercentage || 0) - (a.score?.matchPercentage || 0))
-        .slice(0, 5);
-      
-      // Avoid duplicates with existing recipes
-      if (refresh && perfectMatchRecipesRef.current.length > 0) {
-        const existingIds = new Set(perfectMatchRecipesRef.current.map(r => r.id));
-        const uniqueMatches = sortedMatches.filter(r => !existingIds.has(r.id));
-        setPerfectMatchRecipes(uniqueMatches.length > 0 ? uniqueMatches : sortedMatches);
-      } else {
-        setPerfectMatchRecipes(sortedMatches);
-      }
-      
-      // Reset scroll position
-      setPerfectMatchCurrentIndex(0);
-      // Scroll to first card after a brief delay to ensure state is updated
-      setTimeout(() => {
-        perfectMatchScrollViewRef.current?.scrollTo({ x: 0, animated: true });
-      }, 100);
-      console.log(`⭐ Found ${sortedMatches.length} perfect match recipes`);
-    } catch (error) {
-      console.error('❌ Error fetching perfect match recipes:', error);
-      if (!refresh) {
-        setPerfectMatchRecipes([]);
-      }
-    } finally {
-      if (refresh) {
-        setRefreshingPerfectMatches(false);
-      }
-    }
-  }, [filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, mealPrepMode]);
-
-  // Fetch quick meals and perfect matches when filters are loaded and when filters/meal prep mode changes
-  useEffect(() => {
-    if (filtersLoaded && !searchQuery) { // Only fetch when not searching
+    if (filtersLoaded && !searchQuery) {
       fetchQuickMeals();
       fetchPerfectMatches();
     }
