@@ -84,6 +84,7 @@ import { useCollapsibleSections } from '../../hooks/useCollapsibleSections';
 import { useRecipeActions } from '../../hooks/useRecipeActions';
 import { useRecipeFeedback } from '../../hooks/useRecipeFeedback';
 import { useRandomRecipe } from '../../hooks/useRandomRecipe';
+import { useRecipeFetcher, type RecipeFetchResult } from '../../hooks/useRecipeFetcher';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -176,6 +177,23 @@ export default function HomeScreen() {
     generateRandomRecipe: handleRandomRecipe,
     closeModal: closeRandomModal,
   } = randomRecipe;
+
+  // Centralized recipe fetcher - using extracted hook
+  const { fetchRecipes } = useRecipeFetcher();
+
+  // Helper to apply fetch results to state
+  const applyFetchResult = useCallback((result: RecipeFetchResult, options?: { resetPage?: boolean }) => {
+    const { resetPage = true } = options || {};
+    setTotalRecipes(result.total);
+    setSuggestedRecipes(result.recipes);
+    setAllRecipes(result.recipes);
+    if (resetPage) {
+      setCurrentPage(0);
+    }
+    // Merge new feedback with existing (hook expects direct object, not functional update)
+    setUserFeedback({ ...userFeedback, ...result.feedback });
+    setInitialRecipesLoaded(true);
+  }, [userFeedback, setUserFeedback]);
 
   // Collections state for save to collection - using extracted hook
   const collectionSave = useCollectionSave({ userId: user?.id, source: 'home_screen' });
@@ -621,51 +639,23 @@ export default function HomeScreen() {
     setAllRecipes([]);
 
     // Use shuffle mode for pull-to-discover (Home Page 2.0)
-    try {
-      const response = await recipeApi.getAllRecipes({
-        page: 0,
-        limit: RECIPES_PER_PAGE,
-        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-        maxCookTime: filters.maxCookTime || undefined,
-        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-        mealPrepMode: mealPrepMode,
-        search: searchQuery || undefined,
-        ...getMacroFilterParams(),
-        useTimeAwareDefaults: timeAwareMode,
-        shuffle: true, // Enable shuffle for fresh discovery on pull
-      });
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+      dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+      maxCookTime: filters.maxCookTime || undefined,
+      difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+      mealPrepMode: mealPrepMode,
+      search: searchQuery || undefined,
+      ...getMacroFilterParams(),
+      useTimeAwareDefaults: timeAwareMode,
+      shuffle: true, // Enable shuffle for fresh discovery on pull
+    });
 
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[];
-      let total: number;
-
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-        total = responseData.pagination.total;
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-        total = recipes.length;
-      } else {
-        console.error('❌ Unexpected API response format:', responseData);
-        setRefreshing(false);
-        return;
-      }
-
-      setTotalRecipes(total);
-      setSuggestedRecipes(recipes);
-      setAllRecipes(recipes);
-      setInitialRecipesLoaded(true);
-
-      const initialFeedback: Record<string, UserFeedback> = {};
-      recipes.forEach((recipe: SuggestedRecipe) => {
-        initialFeedback[recipe.id] = { liked: false, disliked: false };
-      });
-      setUserFeedback(initialFeedback);
-    } catch (error: any) {
-      console.error('❌ Error refreshing recipes:', error);
+    if (result) {
+      applyFetchResult(result);
     }
-
     setRefreshing(false);
   };
 
@@ -808,67 +798,35 @@ export default function HomeScreen() {
 
   // Fetch recipes for a specific page from the server
   const fetchRecipesForPage = useCallback(async (page: number) => {
+    console.log(`📄 Fetching page ${page + 1} with ${RECIPES_PER_PAGE} recipes per page`);
+
     setPaginationLoading(true);
-    try {
-      console.log(`📄 Fetching page ${page + 1} with ${RECIPES_PER_PAGE} recipes per page`);
-      const response = await recipeApi.getAllRecipes({
-        page,
-        limit: RECIPES_PER_PAGE,
-        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-        maxCookTime: filters.maxCookTime || undefined,
-        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-        mealPrepMode: mealPrepMode,
-        search: searchQuery || undefined
-      });
-      
-      // Handle both new paginated format and old array format
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[];
-      let total: number;
-      
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-        total = responseData.pagination.total;
-        console.log(`📄 Received ${recipes.length} recipes, total: ${total}`);
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-        total = recipes.length;
-        console.log(`📄 Received ${recipes.length} recipes (array fallback)`);
-      } else {
-        console.error('❌ Unexpected API response format:', responseData);
-        setPaginationLoading(false);
-        return;
-      }
-      
-      // Update total count from server
-      setTotalRecipes(total);
-      
-      // Set recipes for this page
-      setSuggestedRecipes(recipes);
+    const result = await fetchRecipes({
+      page,
+      limit: RECIPES_PER_PAGE,
+      cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+      dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+      maxCookTime: filters.maxCookTime || undefined,
+      difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+      mealPrepMode: mealPrepMode,
+      search: searchQuery || undefined,
+    });
+
+    if (result) {
+      // Update state for pagination (don't reset page)
+      setTotalRecipes(result.total);
+      setSuggestedRecipes(result.recipes);
       setCurrentPage(page);
-      
-      // Reset animated IDs for new page
       setAnimatedRecipeIds(new Set());
-      
-      // Initialize feedback state for new recipes
-      const newFeedback: Record<string, UserFeedback> = { ...userFeedback };
-      recipes.forEach((recipe: SuggestedRecipe) => {
-        if (!newFeedback[recipe.id]) {
-          newFeedback[recipe.id] = { liked: false, disliked: false };
-        }
-      });
-      setUserFeedback(newFeedback);
-      
-      // Scroll to top
+      // Merge new feedback with existing (hook expects direct object, not functional update)
+      setUserFeedback({ ...userFeedback, ...result.feedback });
       HapticPatterns.buttonPress();
-    } catch (error: any) {
-      console.error('❌ Error fetching recipes for page:', error?.message || error);
+      console.log(`📄 Received ${result.recipes.length} recipes, total: ${result.total}`);
+    } else {
       Alert.alert('Error', 'Failed to load recipes. Please try again.');
-    } finally {
-      setPaginationLoading(false);
     }
-  }, [RECIPES_PER_PAGE, searchQuery, userFeedback, filters, mealPrepMode]);
+    setPaginationLoading(false);
+  }, [RECIPES_PER_PAGE, searchQuery, filters, mealPrepMode, fetchRecipes, userFeedback, setUserFeedback]);
 
   // Pagination handlers - fetch from server
   const handlePrevPage = useCallback(() => {
@@ -929,60 +887,30 @@ export default function HomeScreen() {
     setShowMoodSelector(false);
 
     // Fetch recipes with mood filter
-    try {
-      setPaginationLoading(true);
-      const response = await recipeApi.getAllRecipes({
-        page: 0,
-        limit: RECIPES_PER_PAGE,
-        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-        maxCookTime: filters.maxCookTime || undefined,
-        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-        mealPrepMode: mealPrepMode,
-        search: searchQuery || undefined,
-        ...getMacroFilterParams(),
-        useTimeAwareDefaults: timeAwareMode,
-        mood: mood?.id,
-      });
+    setPaginationLoading(true);
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+      dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+      maxCookTime: filters.maxCookTime || undefined,
+      difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+      mealPrepMode: mealPrepMode,
+      search: searchQuery || undefined,
+      ...getMacroFilterParams(),
+      useTimeAwareDefaults: timeAwareMode,
+      mood: mood?.id,
+    });
 
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[];
-      let total: number;
-
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-        total = responseData.pagination.total;
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-        total = recipes.length;
-      } else {
-        console.error('❌ Unexpected API response format:', responseData);
-        setPaginationLoading(false);
-        return;
-      }
-
-      setTotalRecipes(total);
-      setSuggestedRecipes(recipes);
-      setAllRecipes(recipes);
-      setCurrentPage(0);
-
-      const initialFeedback: Record<string, UserFeedback> = {};
-      recipes.forEach((recipe: SuggestedRecipe) => {
-        initialFeedback[recipe.id] = { liked: false, disliked: false };
-      });
-      setUserFeedback(initialFeedback);
-
+    if (result) {
+      applyFetchResult(result);
       if (mood) {
-        console.log(`🎭 Mood filter applied: ${mood.label}, got ${recipes.length} recipes`);
+        console.log(`🎭 Mood filter applied: ${mood.label}, got ${result.recipes.length} recipes`);
       } else {
         console.log('🎭 Mood filter cleared');
       }
-    } catch (error: any) {
-      console.error('❌ Error applying mood filter:', error);
-      HapticPatterns.error();
-    } finally {
-      setPaginationLoading(false);
     }
+    setPaginationLoading(false);
   };
 
   // Get macro filter params for API calls (Home Page 2.0)
@@ -1003,66 +931,38 @@ export default function HomeScreen() {
     setQuickMacroFilters(newMacroFilters);
     HapticPatterns.buttonPress();
 
+    // Build macro params from new filter state
+    const macroParams: { minProtein?: number; maxCarbs?: number; maxCalories?: number } = {};
+    if (newMacroFilters.highProtein) macroParams.minProtein = 30;
+    if (newMacroFilters.lowCarb) macroParams.maxCarbs = 30;
+    if (newMacroFilters.lowCalorie) macroParams.maxCalories = 400;
+
     // Apply filter immediately
-    try {
-      setPaginationLoading(true);
-      const macroParams: { minProtein?: number; maxCarbs?: number; maxCalories?: number } = {};
-      if (newMacroFilters.highProtein) macroParams.minProtein = 30;
-      if (newMacroFilters.lowCarb) macroParams.maxCarbs = 30;
-      if (newMacroFilters.lowCalorie) macroParams.maxCalories = 400;
+    setPaginationLoading(true);
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+      dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+      maxCookTime: filters.maxCookTime || undefined,
+      difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+      mealPrepMode: mealPrepMode,
+      search: searchQuery || undefined,
+      ...macroParams,
+      useTimeAwareDefaults: timeAwareMode,
+    });
 
-      const response = await recipeApi.getAllRecipes({
-        page: 0,
-        limit: RECIPES_PER_PAGE,
-        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-        maxCookTime: filters.maxCookTime || undefined,
-        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-        mealPrepMode: mealPrepMode,
-        search: searchQuery || undefined,
-        ...macroParams,
-        useTimeAwareDefaults: timeAwareMode,
-      });
-
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[];
-      let total: number;
-
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-        total = responseData.pagination.total;
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-        total = recipes.length;
-      } else {
-        console.error('❌ Unexpected API response format:', responseData);
-        setPaginationLoading(false);
-        return;
-      }
-
-      setTotalRecipes(total);
-      setSuggestedRecipes(recipes);
-      setAllRecipes(recipes);
-      setCurrentPage(0);
-
-      const initialFeedback: Record<string, UserFeedback> = {};
-      recipes.forEach((recipe: SuggestedRecipe) => {
-        initialFeedback[recipe.id] = { liked: false, disliked: false };
-      });
-      setUserFeedback(initialFeedback);
-    } catch (error: any) {
-      console.error('❌ Error applying quick macro filter:', error);
-      HapticPatterns.error();
-    } finally {
-      setPaginationLoading(false);
+    if (result) {
+      applyFetchResult(result);
     }
+    setPaginationLoading(false);
   };
 
   // Quick filter handler that applies filters immediately
   const handleQuickFilter = async (type: keyof FilterState, value: string | number | null | string[]) => {
     // Update filters first
     const newFilters = { ...filters };
-    
+
     if (type === 'maxCookTime') {
       newFilters.maxCookTime = value as number | null;
     } else {
@@ -1079,67 +979,34 @@ export default function HomeScreen() {
         }
       }
     }
-    
+
     // Update state and save (using hook functions)
     setFilters(newFilters);
     await saveFilters(); // Hook will save the updated filters
     updateActiveFilters(); // Hook will recompute active filter labels
-    
+
     // Apply filters to API call using paginated endpoint
-    try {
-      setPaginationLoading(true);
-      // Use RECIPES_PER_PAGE which is already calculated based on viewMode
-      console.log(`🔍 Applying filter with viewMode: ${viewMode}, RECIPES_PER_PAGE: ${RECIPES_PER_PAGE}`);
-      
-      const response = await recipeApi.getAllRecipes({
-        page: 0,
-        limit: RECIPES_PER_PAGE,
-        cuisines: newFilters.cuisines.length > 0 ? newFilters.cuisines : undefined,
-        dietaryRestrictions: newFilters.dietaryRestrictions.length > 0 ? newFilters.dietaryRestrictions : undefined,
-        maxCookTime: newFilters.maxCookTime || undefined,
-        difficulty: newFilters.difficulty.length > 0 ? newFilters.difficulty[0] : undefined,
-        mealPrepMode: mealPrepMode,
-        search: searchQuery || undefined,
-        ...getMacroFilterParams(),
-        useTimeAwareDefaults: timeAwareMode,
-      });
-      
-      // Handle paginated response format
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[];
-      let total: number;
-      
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-        total = responseData.pagination.total;
-        console.log(`✅ Filter applied: Received ${recipes.length} recipes (expected ${RECIPES_PER_PAGE}), total: ${total}`);
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-        total = recipes.length;
-        console.log(`✅ Filter applied: Received ${recipes.length} recipes (array format), total: ${total}`);
-      } else {
-        console.error('❌ Unexpected API response format:', responseData);
-        setPaginationLoading(false);
-        return;
-      }
-      
-      setTotalRecipes(total);
-      setSuggestedRecipes(recipes);
-      setAllRecipes(recipes);
-      setCurrentPage(0);
-      
-      // Initialize feedback state for new recipes
-      const initialFeedback: Record<string, UserFeedback> = {};
-      recipes.forEach((recipe: SuggestedRecipe) => {
-        initialFeedback[recipe.id] = { liked: false, disliked: false };
-      });
-      setUserFeedback(initialFeedback);
-    } catch (error: any) {
-      console.error('❌ Error applying quick filter:', error);
-      HapticPatterns.error();
-    } finally {
-      setPaginationLoading(false);
+    console.log(`🔍 Applying filter with viewMode: ${viewMode}, RECIPES_PER_PAGE: ${RECIPES_PER_PAGE}`);
+
+    setPaginationLoading(true);
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      cuisines: newFilters.cuisines.length > 0 ? newFilters.cuisines : undefined,
+      dietaryRestrictions: newFilters.dietaryRestrictions.length > 0 ? newFilters.dietaryRestrictions : undefined,
+      maxCookTime: newFilters.maxCookTime || undefined,
+      difficulty: newFilters.difficulty.length > 0 ? newFilters.difficulty[0] : undefined,
+      mealPrepMode: mealPrepMode,
+      search: searchQuery || undefined,
+      ...getMacroFilterParams(),
+      useTimeAwareDefaults: timeAwareMode,
+    });
+
+    if (result) {
+      applyFetchResult(result);
+      console.log(`✅ Filter applied: Received ${result.recipes.length} recipes, total: ${result.total}`);
     }
+    setPaginationLoading(false);
   };
 
   const applyFilters = async () => {
@@ -1147,119 +1014,54 @@ export default function HomeScreen() {
     updateActiveFilters();
     await saveFilters();
     closeFilterModal();
-    
+
     // Apply filters to API call using paginated endpoint
     console.log('🔍 Filters applied:', filters);
-    
-    try {
-      setPaginationLoading(true);
-      // Use RECIPES_PER_PAGE which is already calculated based on viewMode
-      console.log(`🔍 Applying filters with viewMode: ${viewMode}, RECIPES_PER_PAGE: ${RECIPES_PER_PAGE}`);
-      
-      const response = await recipeApi.getAllRecipes({
-        page: 0,
-        limit: RECIPES_PER_PAGE,
-        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
-        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
-        maxCookTime: filters.maxCookTime || undefined,
-        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
-        mealPrepMode: mealPrepMode,
-        search: searchQuery || undefined
-      });
-      
-      // Handle paginated response format
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[];
-      let total: number;
-      
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-        total = responseData.pagination.total;
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-        total = recipes.length;
-      } else {
-        console.error('❌ Unexpected API response format:', responseData);
-        setPaginationLoading(false);
-        return;
-      }
-      
-      setTotalRecipes(total);
-      setSuggestedRecipes(recipes);
-      setAllRecipes(recipes);
-      setCurrentPage(0);
-      
-      // Initialize feedback state for new recipes
-      const initialFeedback: Record<string, UserFeedback> = {};
-      recipes.forEach((recipe: SuggestedRecipe) => {
-        initialFeedback[recipe.id] = { liked: false, disliked: false };
-      });
-      setUserFeedback(initialFeedback);
-      
-      console.log('✅ Filtered recipes loaded:', recipes.length, 'total:', total);
-    } catch (error: any) {
-      console.error('❌ Error applying filters:', error);
-      HapticPatterns.error();
+    console.log(`🔍 Applying filters with viewMode: ${viewMode}, RECIPES_PER_PAGE: ${RECIPES_PER_PAGE}`);
+
+    setPaginationLoading(true);
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+      dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+      maxCookTime: filters.maxCookTime || undefined,
+      difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+      mealPrepMode: mealPrepMode,
+      search: searchQuery || undefined,
+    });
+
+    if (result) {
+      applyFetchResult(result);
+      console.log('✅ Filtered recipes loaded:', result.recipes.length, 'total:', result.total);
+    } else {
       Alert.alert('Error', 'Failed to apply filters. Please try again.');
-    } finally {
-      setPaginationLoading(false);
     }
+    setPaginationLoading(false);
   };
 
   const clearFilters = async () => {
     // Reset filters using hook function (handles storage and state)
     await resetFilters();
-    
+
     // Reload original recipes without filters using paginated endpoint
-    try {
-      setPaginationLoading(true);
-      // Use RECIPES_PER_PAGE which is already calculated based on viewMode
-      console.log(`🔍 Clearing filters with viewMode: ${viewMode}, RECIPES_PER_PAGE: ${RECIPES_PER_PAGE}`);
-      
-      const response = await recipeApi.getAllRecipes({
-        page: 0,
-        limit: RECIPES_PER_PAGE,
-        mealPrepMode: mealPrepMode,
-        search: searchQuery || undefined
-      });
-      
-      // Handle paginated response format
-      const responseData = response.data;
-      let recipes: SuggestedRecipe[];
-      let total: number;
-      
-      if (responseData && responseData.recipes && responseData.pagination) {
-        recipes = responseData.recipes;
-        total = responseData.pagination.total;
-      } else if (Array.isArray(responseData)) {
-        recipes = responseData;
-        total = recipes.length;
-      } else {
-        console.error('❌ Unexpected API response format:', responseData);
-        setPaginationLoading(false);
-        return;
-      }
-      
-      setTotalRecipes(total);
-      setSuggestedRecipes(recipes);
-      setAllRecipes(recipes);
-      setCurrentPage(0);
-      
-      // Initialize feedback state for new recipes
-      const initialFeedback: Record<string, UserFeedback> = {};
-      recipes.forEach((recipe: SuggestedRecipe) => {
-        initialFeedback[recipe.id] = { liked: false, disliked: false };
-      });
-      setUserFeedback(initialFeedback);
-      
-      console.log('✅ Filters cleared, original recipes loaded:', recipes.length, 'total:', total);
-    } catch (error: any) {
-      console.error('❌ Error clearing filters:', error);
-      HapticPatterns.error();
+    console.log(`🔍 Clearing filters with viewMode: ${viewMode}, RECIPES_PER_PAGE: ${RECIPES_PER_PAGE}`);
+
+    setPaginationLoading(true);
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      mealPrepMode: mealPrepMode,
+      search: searchQuery || undefined,
+    });
+
+    if (result) {
+      applyFetchResult(result);
+      console.log('✅ Filters cleared, original recipes loaded:', result.recipes.length, 'total:', result.total);
+    } else {
       Alert.alert('Error', 'Failed to clear filters. Please try again.');
-    } finally {
-      setPaginationLoading(false);
     }
+    setPaginationLoading(false);
   };
 
   const getScoreColor = (score: number) => {
