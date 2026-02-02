@@ -83,6 +83,7 @@ import { usePersonalizedRecipes } from '../../hooks/usePersonalizedRecipes';
 import { useCollapsibleSections } from '../../hooks/useCollapsibleSections';
 import { useRecipeActions } from '../../hooks/useRecipeActions';
 import { useRecipeFeedback } from '../../hooks/useRecipeFeedback';
+import { useRandomRecipe } from '../../hooks/useRandomRecipe';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -94,11 +95,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   
-  // Animation for random recipe button
-  const randomButtonScale = useRef(new Animated.Value(1)).current;
-  const randomButtonOpacity = useRef(new Animated.Value(1)).current;
-  const [showRandomModal, setShowRandomModal] = useState(false);
-  
+  // Random recipe state managed by extracted hook (defined after filters)
+
   const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
   // Quick meals and perfect matches state managed by extracted hooks (defined after filters/mealPrepMode)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
@@ -162,7 +160,23 @@ export default function HomeScreen() {
   const filterHook = useRecipeFilters();
   const { filters, activeFilters, filtersLoaded, showFilterModal } = filterHook;
   const { setFilters, openFilterModal, closeFilterModal, handleFilterChange, updateActiveFilters, saveFilters, resetFilters } = filterHook;
-  
+
+  // Random recipe generation - using extracted hook
+  // Note: onRefresh is set up via ref later since it's defined after this hook
+  const onRefreshRef = useRef<(() => void) | null>(null);
+  const randomRecipe = useRandomRecipe({
+    filters,
+    userId: user?.id,
+    onRefresh: () => onRefreshRef.current?.(),
+  });
+  const {
+    showModal: showRandomModal,
+    buttonScale: randomButtonScale,
+    buttonOpacity: randomButtonOpacity,
+    generateRandomRecipe: handleRandomRecipe,
+    closeModal: closeRandomModal,
+  } = randomRecipe;
+
   // Collections state for save to collection - using extracted hook
   const collectionSave = useCollectionSave({ userId: user?.id, source: 'home_screen' });
   const {
@@ -655,6 +669,9 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  // Set up ref for random recipe hook's onRefresh callback
+  onRefreshRef.current = onRefresh;
+
   // Fetch initial page of all recipes on mount (server-side pagination)
   useEffect(() => {
     const fetchInitialRecipes = async () => {
@@ -889,151 +906,6 @@ export default function HomeScreen() {
   const handleLongPress = (recipe: SuggestedRecipe) => {
     openActionMenu(recipe); // Hook handles setting recipe and showing menu
     HapticPatterns.buttonPressPrimary();
-  };
-
-  const handleRandomRecipe = async () => {
-    try {
-      console.log('🤖 HomeScreen: Generating AI recipe with filters:', filters);
-      
-      // Animate button press - scale down then expand with fade
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(randomButtonScale, {
-            toValue: 0.95,
-            duration: Duration.instant,
-            useNativeDriver: true,
-          }),
-          Animated.timing(randomButtonOpacity, {
-            toValue: 0.8,
-            duration: Duration.instant,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.spring(randomButtonScale, {
-            toValue: 1.1,
-            ...Spring.bouncy,
-          }),
-          Animated.timing(randomButtonOpacity, {
-            toValue: 1,
-            duration: Duration.normal,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.timing(randomButtonScale, {
-          toValue: 1,
-          duration: Duration.normal,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      
-      // Show loading modal (no title, just subtext)
-      setShowRandomModal(true);
-      
-      // Pass active filters to AI generation for more targeted recipes
-      const params: any = {};
-      
-      // If user has filtered to specific cuisines, pick one randomly from the filtered list
-      if (filters.cuisines.length > 0) {
-        const randomCuisine = filters.cuisines[Math.floor(Math.random() * filters.cuisines.length)];
-        params.cuisine = randomCuisine;
-        console.log('🎲 Using filtered cuisine:', randomCuisine);
-      }
-      
-      // If user has filtered by max cook time, respect that
-      if (filters.maxCookTime) {
-        params.maxCookTime = filters.maxCookTime;
-        console.log('⏱️ Respecting max cook time:', filters.maxCookTime);
-      }
-      
-      // Note: Dietary restrictions are handled by the backend via saved user preferences
-      // The AI will automatically respect the user's dietary restrictions from onboarding
-      
-      const response = await aiRecipeApi.generateRecipe(params);
-      const aiRecipe = response.data.recipe;
-      
-      console.log('✅ HomeScreen: AI recipe generated', aiRecipe.title);
-      
-      // Track AI recipe generation
-      if (user?.id) {
-        analytics.trackFeatureUsage('ai_recipe_generation', {
-          source: 'home_screen',
-          cuisine: params.cuisine,
-          maxCookTime: params.maxCookTime,
-        });
-      }
-      
-      // Success haptic feedback to let user know it's ready
-      HapticPatterns.success();
-      
-      // Dismiss modal immediately when recipe is ready
-      setShowRandomModal(false);
-      
-      // Auto-navigate after a brief delay
-      setTimeout(() => {
-        router.push(`../modal?id=${aiRecipe.id}`);
-      }, 500);
-      
-    } catch (error: any) {
-      console.error('❌ HomeScreen: Error generating AI recipe', error);
-      
-      // Dismiss the loading modal
-      setShowRandomModal(false);
-      
-      // Check if it's a quota/billing error
-      const isQuotaError = error.code === 'insufficient_quota' || 
-                          error.message?.includes('quota') || 
-                          error.message?.includes('429');
-      
-      // Fallback to existing random recipe from database if AI fails
-      if (isQuotaError) {
-        try {
-          console.log('🔄 Falling back to random recipe from database...');
-          const fallbackResponse = await recipeApi.getRandomRecipe();
-          const fallbackRecipe = fallbackResponse.data;
-          
-          HapticPatterns.success();
-          
-          // Show info alert and navigate to the recipe
-          Alert.alert(
-            'Using Existing Recipe',
-            'AI generation is temporarily unavailable. Here\'s a great recipe from our collection!',
-            [],
-            { cancelable: false }
-          );
-          
-          setTimeout(() => {
-            router.push(`../modal?id=${fallbackRecipe.id}`);
-          }, 1500);
-          
-          return; // Exit early, we got a fallback recipe
-        } catch (fallbackError: any) {
-          console.error('❌ Fallback also failed:', fallbackError);
-          // Continue to show error below
-        }
-      }
-      
-      const isTimeout = error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR';
-      const message = isQuotaError
-        ? 'AI recipe generation is temporarily unavailable due to quota limits. Try again later or browse our existing recipes!'
-        : isTimeout 
-        ? 'The recipe took too long to generate. This is usually temporary - try again!' 
-        : 'Unable to generate a recipe right now. Please check your connection and try again.';
-      
-      Alert.alert(
-        'Generation Failed',
-        message,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Retry', onPress: () => handleRandomRecipe() },
-          // Add option to browse existing recipes
-          { text: 'Browse Recipes', onPress: () => {
-            // Refresh suggestions to show existing recipes
-            onRefresh();
-          }}
-        ]
-      );
-    }
   };
 
   // Filter functions
@@ -2111,7 +1983,7 @@ export default function HomeScreen() {
       <RandomRecipeModal
         visible={showRandomModal}
         isDark={isDark}
-        onClose={() => setShowRandomModal(false)}
+        onClose={closeRandomModal}
       />
 
       {/* First-time user guidance tooltip */}
