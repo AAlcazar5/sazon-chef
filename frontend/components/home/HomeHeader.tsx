@@ -3,7 +3,6 @@
 
 import { View, Text } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { LogoMascot } from '../mascot';
@@ -23,6 +22,8 @@ interface HomeHeaderProps {
   timeAwareMode: boolean;
   /** Called when time-aware mode is toggled */
   onToggleTimeAwareMode: () => void;
+  /** Called when the mascot logo is pressed — scrolls to top */
+  onMascotPress: () => void;
 }
 
 /**
@@ -35,6 +36,7 @@ export default function HomeHeader({
   currentMealPeriod,
   timeAwareMode,
   onToggleTimeAwareMode,
+  onMascotPress,
 }: HomeHeaderProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -48,7 +50,7 @@ export default function HomeHeader({
         {/* Logo and Branding */}
         <View className="flex-row items-center flex-1">
           <HapticTouchableOpacity
-            onPress={() => router.push('/mascot-examples')}
+            onPress={onMascotPress}
             activeOpacity={0.7}
           >
             <LogoMascot size="xsmall" />

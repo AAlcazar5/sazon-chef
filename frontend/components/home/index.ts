@@ -9,3 +9,4 @@ export { default as QuickFiltersBar } from './QuickFiltersBar';
 export { default as FeaturedRecipeCarousel } from './FeaturedRecipeCarousel';
 export { default as MealPrepModeHeader } from './MealPrepModeHeader';
 export { default as PaginationControls } from './PaginationControls';
+export { default as RecipeSectionsGrid } from './RecipeSectionsGrid';

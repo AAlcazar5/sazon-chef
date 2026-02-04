@@ -30,10 +30,12 @@ app.use(helmet());
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8081',
+  origin: process.env.NODE_ENV === 'production'
+    ? (process.env.FRONTEND_URL || 'http://localhost:8081')
+    : true, // Allow all origins in development (device/emulator/browser)
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-data-sharing-enabled', 'x-analytics-enabled', 'x-location-services-enabled']
 }));
 
 // Logging middleware

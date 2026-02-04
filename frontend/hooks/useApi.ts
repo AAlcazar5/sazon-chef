@@ -58,13 +58,17 @@ export function useApi<T = any>(
       }
       
     } catch (err: any) {
+      const isNetworkError = !err.response && !!err.request;
       const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred';
       setError(errorMessage);
-      
-      console.error(`❌ useApi: Error fetching ${url}:`, errorMessage, err);
-      
-      // Show alert if configured to do so
-      if (options.showErrorAlert !== false) {
+
+      if (!isNetworkError) {
+        console.error(`❌ useApi: Error fetching ${url}:`, errorMessage, err);
+      }
+
+      // Show alert if configured to do so, but skip for network errors
+      // (the interceptor already normalizes these; callers use the returned error state)
+      if (options.showErrorAlert !== false && !isNetworkError) {
         Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
       }
       
@@ -107,10 +111,13 @@ export function useApiPost<T = any, D = any>(): {
       return response.data;
       
     } catch (err: any) {
+      const isNetworkError = !err.response && !!err.request;
       const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred';
       setError(errorMessage);
-      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
-      console.error('API POST Error:', err);
+      if (!isNetworkError) {
+        Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
+        console.error('API POST Error:', err);
+      }
       return null;
       
     } finally {
@@ -143,9 +150,12 @@ export function useApiManual<T = any>(): {
       return response.data;
       
     } catch (err: any) {
+      const isNetworkError = !err.response && !!err.request;
       const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred';
       setError(errorMessage);
-      console.error('API Manual Error:', err);
+      if (!isNetworkError) {
+        console.error('API Manual Error:', err);
+      }
       return null;
       
     } finally {
