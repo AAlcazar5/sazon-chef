@@ -17,7 +17,7 @@ interface RecipeOfTheDayCardProps {
   /** Whether feedback is loading */
   isFeedbackLoading: boolean;
   /** Called when recipe is pressed */
-  onPress: (recipe: SuggestedRecipe) => void;
+  onPress: (recipeId: string) => void;
   /** Called when recipe is long-pressed */
   onLongPress: (recipe: SuggestedRecipe) => void;
   /** Called when like button is pressed */

@@ -166,7 +166,10 @@ api.interceptors.response.use(
       // Don't log expected user errors (bad credentials, validation errors, not found)
       const isExpectedUserError = statusCode === 400 || statusCode === 401 || statusCode === 404;
 
-      if (!isAlreadySaved && !isExpected404 && !isQuotaError && !isExpectedUserError) {
+      // Network errors (no response received) are handled gracefully below — no need to log
+      const isNetworkError = !error.response && !!error.request;
+
+      if (!isAlreadySaved && !isExpected404 && !isQuotaError && !isExpectedUserError && !isNetworkError) {
         console.error('❌ Response Error:', raw || error.message);
       } else if (isAlreadySaved) {
         console.log('ℹ️  Response Conflict (already saved)');

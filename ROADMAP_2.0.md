@@ -1187,57 +1187,51 @@
   * ✅ All components organized in `/components/home/` directory with barrel export
 
 * 🔄 **Additional Refactoring (Phases 17-21)** - **NEXT PRIORITY**
-  * 🔄 **Phase 17: Recipe Search Hook** (~120 lines) - HIGH PRIORITY
-    * 🔄 Create `useRecipeSearch.ts` hook
-    * 🔄 Extract `searchQuery` state and search submission logic
-    * 🔄 Extract URL param handling for search
-    * 🔄 Extract search useEffect (lines 371-413)
-    * 📍 Frontend: `/hooks/useRecipeSearch.ts` (~100 lines)
-    * **Impact:** Reduce index.tsx by ~120 lines → ~1,317 lines
+  * ✅ **Phase 17: Recipe Search Hook** (~40 lines extracted)
+    * ✅ Created `useRecipeSearch.ts` hook — owns `searchQuery` state, `useLocalSearchParams` extraction, and URL-param search `useEffect`
+    * ✅ Exposes `{ searchQuery, handleSearchChange, clearSearch }`
+    * ✅ Wired into `index.tsx` between `useMealPrepMode()` and `useQuickMeals()`; removed inline search state, URL-param effect, and inline `RecipeSearchBar`/`HomeEmptyState` callbacks
+    * 📍 Frontend: `/hooks/useRecipeSearch.ts`
 
-  * 🔄 **Phase 18: Initial Load Consolidation** (~200 lines) - HIGH PRIORITY
-    * 🔄 Create `useInitialRecipeLoad.ts` hook
-    * 🔄 Consolidate apply saved filters useEffect (lines 291-329)
-    * 🔄 Consolidate load meal prep recipes useEffect (lines 346-368)
-    * 🔄 Consolidate fetch initial recipes useEffect (lines 573-602)
-    * 🔄 Consolidate view mode change refetch useEffect (lines 605-636)
-    * 🔄 Extract `initialRecipesLoaded`, `loadingFromFilters`, `initialLoading` state
-    * 📍 Frontend: `/hooks/useInitialRecipeLoad.ts` (~180 lines)
-    * **Impact:** Reduce index.tsx by ~200 lines → ~1,117 lines ✅ **Meets target**
+  * ✅ **Phase 18: Initial Load Consolidation** (~130 lines extracted)
+    * ✅ Created `useInitialRecipeLoad.ts` hook — consolidates 4 effects: saved-filter apply, meal-prep initial load, initial page fetch, and view-mode refetch
+    * ✅ Hook owns `initialLoading` state; receives `loadingFromFilters`/`initialRecipesLoaded` as options (shared with event handlers in index.tsx)
+    * ✅ Refactored `applySavedFilters` to use `fetchRecipes`+`applyFetchResult` (removed direct `recipeApi` call); refactored `viewModeRefetch` to use `applyFetchResult`+`setAnimatedRecipeIds`
+    * ✅ Cleaned up dead imports: `recipeApi`, `aiRecipeApi`, `collectionsApi`, `mealPlanApi`, `parseRecipeResponse`, `initializeFeedbackState`
+    * 📍 Frontend: `/hooks/useInitialRecipeLoad.ts`
 
-  * 🔄 **Phase 19: Quick Macro Filters Hook** (~80 lines) - MEDIUM PRIORITY
-    * 🔄 Create `useQuickMacroFilters.ts` hook
-    * 🔄 Extract `quickMacroFilters` state (highProtein, lowCarb, lowCalorie)
-    * 🔄 Extract `getMacroFilterParams` useCallback
-    * 🔄 Extract `handleQuickMacroFilter` function
-    * 📍 Frontend: `/hooks/useQuickMacroFilters.ts` (~60 lines)
-    * **Impact:** Reduce index.tsx by ~80 lines → ~1,037 lines
+  * ✅ **Phase 19: Quick Macro Filters Hook** (~40 lines extracted)
+    * ✅ Created `useQuickMacroFilters.ts` hook — owns `quickMacroFilters` state, `getMacroFilterParams`, and `handleQuickMacroFilter`
+    * ✅ Extracted shared `buildMacroParams` helper to avoid duplicating the protein/carb/calorie threshold logic
+    * ✅ Exposes `{ quickMacroFilters, getMacroFilterParams, handleQuickMacroFilter }`
+    * 📍 Frontend: `/hooks/useQuickMacroFilters.ts`
 
-  * 🔄 **Phase 20: Recipe Sections Component** (~250 lines) - MEDIUM PRIORITY
-    * 🔄 Create `RecipeSectionsGrid.tsx` component
-    * 🔄 Extract large contextual sections JSX (lines 1032-1260)
-    * 🔄 Include grid/list view rendering logic
-    * 🔄 Include collapse/expand integration
-    * 🔄 Include inline pagination for "Recipes for You"
-    * 📍 Frontend: `/components/home/RecipeSectionsGrid.tsx` (~220 lines)
-    * **Impact:** Reduce index.tsx by ~250 lines → ~787 lines ✅ **Exceeds target**
+  * ✅ **Phase 20: Recipe Sections Component** (~231 lines extracted)
+    * ✅ Created `RecipeSectionsGrid.tsx` — self-contained component rendering all contextual recipe sections
+    * ✅ Handles carousel (Quick Meals / Meal Prep), grid (2-col), and list (swipeable CardStack + AnimatedRecipeCard) views
+    * ✅ Includes collapse/expand via `collapsedSections` + `onToggleSection`; inline `PaginationControls` for "Recipes for You"
+    * ✅ Added to barrel export (`components/home/index.ts`); cleaned up 7 dead imports from index.tsx
+    * 📍 Frontend: `/components/home/RecipeSectionsGrid.tsx`
 
-  * 🔄 **Phase 21: Welcome Effects Hook** (~50 lines) - LOW PRIORITY
-    * 🔄 Create `useWelcomeEffects.ts` hook
-    * 🔄 Extract welcome back notification useFocusEffect (lines 463-507)
-    * 🔄 Extract first-time guidance tooltip useFocusEffect (lines 510-531)
-    * 🔄 Extract `showFirstTimeTooltip` state
-    * 📍 Frontend: `/hooks/useWelcomeEffects.ts` (~45 lines)
-    * **Impact:** Reduce index.tsx by ~50 lines → ~737 lines ⭐ **Optimal**
+  * ✅ **Phase 21: Welcome Effects Hook** (~50 lines) - COMPLETE
+    * ✅ Created `useWelcomeEffects.ts` — owns welcome-back toast (24 h away check + day-count message), analytics screen-view on focus, and first-time guidance tooltip lifecycle
+    * ✅ Extracted both `useFocusEffect` blocks and `showFirstTimeTooltip` state; `dismissFirstTimeTooltip` callback persists seen-flag and wires directly to `HelpTooltip onDismiss`
+    * ✅ Removed dead imports: `useFocusEffect`, `AsyncStorage`, `analytics`
+    * 📍 Frontend: `/hooks/useWelcomeEffects.ts`
 
-  * **Projected Final State:** ~737 lines (from original ~3,700) = **80% reduction**
+  * ✅ **Phase 22: Mood Selector Hook + Dead Code Cleanup** - COMPLETE
+    * ✅ Created `useMoodSelector.ts` — owns `selectedMood`/`showMoodSelector` state and the `handleMoodSelect` fetch-on-select flow
+    * ✅ Exposes `openMoodSelector`/`closeMoodSelector` callbacks; wired directly into `QuickFiltersBar` and `MoodSelector` modal props
+    * ✅ Removed dead `allRecipes` state (declared + set but never read); trimmed unused `MoodChip`/`MOODS`/`Mood` imports
+    * 📍 Frontend: `/hooks/useMoodSelector.ts`
 
 * 🔄 **State Management**
-  * 🔄 Create `useHome` hook for centralized state
-  * 🔄 Implement useReducer for complex state
-  * 🔄 Separate data state from UI state
-  * 🔄 Optimize re-renders with proper memoization
-  * 📍 Frontend: New home state management architecture
+  * ✅ Phase 22: useMoodSelector hook extracted
+  * ✅ Phase 23: useFilterActions hook — `handleQuickFilter`, `applyFilters`, `clearFilters` extracted (~100 lines)
+  * ✅ Phase 24: usePaginationActions hook — `fetchRecipesForPage`, `handlePrevPage`, `handleNextPage` extracted (~50 lines)
+  * ✅ Dead import sweep — removed 25+ unused imports (RN components, constants, utilities, mascot, accessibility helpers)
+  * 📍 Frontend: `/hooks/useFilterActions.ts`, `/hooks/usePaginationActions.ts`
+  * **Current state:** index.tsx at 804 lines (from original ~3,700) = **78% reduction**
 
 * 🔄 **API Optimization**
   * 🔄 Combine multiple section fetches into single request
