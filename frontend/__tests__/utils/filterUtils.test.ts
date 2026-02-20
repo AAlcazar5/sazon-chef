@@ -6,7 +6,6 @@ import {
   hasActiveFilters,
   countActiveFilters,
   getQuickFilterParams,
-  QUICK_FILTER_DEFINITIONS,
 } from '../../utils/filterUtils';
 import type { FilterState } from '../../lib/filterStorage';
 
@@ -22,70 +21,54 @@ describe('filterUtils', () => {
 
   describe('buildFilterParams', () => {
     it('should return empty object for default filters', () => {
-      const params = buildFilterParams(defaultFilters);
-      expect(params).toEqual({});
+      expect(buildFilterParams(defaultFilters)).toEqual({});
     });
 
     it('should include cuisines when set', () => {
       const filters = { ...defaultFilters, cuisines: ['Italian', 'Thai'] };
-      const params = buildFilterParams(filters);
-      expect(params.cuisines).toEqual(['Italian', 'Thai']);
+      expect(buildFilterParams(filters).cuisines).toEqual(['Italian', 'Thai']);
     });
 
     it('should include dietaryRestrictions when set', () => {
       const filters = { ...defaultFilters, dietaryRestrictions: ['Vegan', 'Gluten-Free'] };
-      const params = buildFilterParams(filters);
-      expect(params.dietaryRestrictions).toEqual(['Vegan', 'Gluten-Free']);
+      expect(buildFilterParams(filters).dietaryRestrictions).toEqual(['Vegan', 'Gluten-Free']);
     });
 
     it('should include maxCookTime when not null', () => {
       const filters = { ...defaultFilters, maxCookTime: 30 };
-      const params = buildFilterParams(filters);
-      expect(params.maxCookTime).toBe(30);
+      expect(buildFilterParams(filters).maxCookTime).toBe(30);
     });
 
     it('should not include maxCookTime when null', () => {
-      const params = buildFilterParams(defaultFilters);
-      expect(params.maxCookTime).toBeUndefined();
+      expect(buildFilterParams(defaultFilters).maxCookTime).toBeUndefined();
     });
 
     it('should include difficulty when set', () => {
       const filters = { ...defaultFilters, difficulty: ['Easy'] };
-      const params = buildFilterParams(filters);
-      expect(params.difficulty).toEqual(['Easy']);
+      expect(buildFilterParams(filters).difficulty).toEqual(['Easy']);
     });
 
     it('should include mealPrepMode from options', () => {
-      const params = buildFilterParams(defaultFilters, { mealPrepMode: true });
-      expect(params.mealPrepMode).toBe(true);
+      expect(buildFilterParams(defaultFilters, { mealPrepMode: true }).mealPrepMode).toBe(true);
     });
 
     it('should include timeAwareMode as useTimeAwareDefaults', () => {
-      const params = buildFilterParams(defaultFilters, { timeAwareMode: true });
-      expect(params.useTimeAwareDefaults).toBe(true);
+      expect(buildFilterParams(defaultFilters, { timeAwareMode: true }).useTimeAwareDefaults).toBe(true);
     });
 
     it('should include mood from options', () => {
-      const params = buildFilterParams(defaultFilters, { mood: 'adventurous' });
-      expect(params.mood).toBe('adventurous');
+      expect(buildFilterParams(defaultFilters, { mood: 'adventurous' }).mood).toBe('adventurous');
     });
 
     it('should include macro filter params', () => {
-      const params = buildFilterParams(defaultFilters, {
-        minProtein: 30,
-        maxCarbs: 50,
-        maxCalories: 400,
-      });
+      const params = buildFilterParams(defaultFilters, { minProtein: 30, maxCarbs: 50, maxCalories: 400 });
       expect(params.minProtein).toBe(30);
       expect(params.maxCarbs).toBe(50);
       expect(params.maxCalories).toBe(400);
     });
 
     it('should include shuffle and search from options', () => {
-      const params = buildFilterParams(defaultFilters, {
-        shuffle: true,
-        searchQuery: 'chicken',
-      });
+      const params = buildFilterParams(defaultFilters, { shuffle: true, searchQuery: 'chicken' });
       expect(params.shuffle).toBe(true);
       expect(params.search).toBe('chicken');
     });
@@ -108,37 +91,32 @@ describe('filterUtils', () => {
     });
 
     it('should include cuisine labels', () => {
-      const filters = { ...defaultFilters, cuisines: ['Italian', 'Mexican'] };
-      const labels = getActiveFilterLabels(filters);
+      const labels = getActiveFilterLabels({ ...defaultFilters, cuisines: ['Italian', 'Mexican'] });
       expect(labels).toContain('Italian');
       expect(labels).toContain('Mexican');
     });
 
     it('should include dietary restriction labels', () => {
-      const filters = { ...defaultFilters, dietaryRestrictions: ['Vegan'] };
-      expect(getActiveFilterLabels(filters)).toContain('Vegan');
+      expect(getActiveFilterLabels({ ...defaultFilters, dietaryRestrictions: ['Vegan'] })).toContain('Vegan');
     });
 
-    it('should include cook time label with ≤ prefix', () => {
-      const filters = { ...defaultFilters, maxCookTime: 30 };
-      expect(getActiveFilterLabels(filters)).toContain('≤30 min');
+    it('should include cook time label with prefix', () => {
+      expect(getActiveFilterLabels({ ...defaultFilters, maxCookTime: 30 })).toContain('≤30 min');
     });
 
     it('should include difficulty labels', () => {
-      const filters = { ...defaultFilters, difficulty: ['Easy', 'Medium'] };
-      const labels = getActiveFilterLabels(filters);
+      const labels = getActiveFilterLabels({ ...defaultFilters, difficulty: ['Easy', 'Medium'] });
       expect(labels).toContain('Easy');
       expect(labels).toContain('Medium');
     });
 
     it('should combine all filter types', () => {
-      const filters: FilterState = {
+      const labels = getActiveFilterLabels({
         cuisines: ['Thai'],
         dietaryRestrictions: ['Keto'],
         maxCookTime: 15,
         difficulty: ['Easy'],
-      };
-      const labels = getActiveFilterLabels(filters);
+      });
       expect(labels).toHaveLength(4);
     });
   });
@@ -174,24 +152,17 @@ describe('filterUtils', () => {
       expect(countActiveFilters(defaultFilters)).toBe(0);
     });
 
-    it('should count each category once', () => {
-      const filters: FilterState = {
-        cuisines: ['Italian', 'Mexican', 'Thai'],
-        dietaryRestrictions: [],
-        maxCookTime: null,
-        difficulty: [],
-      };
-      expect(countActiveFilters(filters)).toBe(1);
+    it('should count each category once regardless of items', () => {
+      expect(countActiveFilters({ ...defaultFilters, cuisines: ['Italian', 'Mexican', 'Thai'] })).toBe(1);
     });
 
-    it('should count all categories', () => {
-      const filters: FilterState = {
+    it('should count all active categories', () => {
+      expect(countActiveFilters({
         cuisines: ['Italian'],
         dietaryRestrictions: ['Vegan'],
         maxCookTime: 30,
         difficulty: ['Easy'],
-      };
-      expect(countActiveFilters(filters)).toBe(4);
+      })).toBe(4);
     });
   });
 
@@ -203,23 +174,19 @@ describe('filterUtils', () => {
     });
 
     it('should map high-protein filter', () => {
-      const params = getQuickFilterParams(['high-protein']);
-      expect(params.minProtein).toBe(30);
+      expect(getQuickFilterParams(['high-protein']).minProtein).toBe(30);
     });
 
     it('should map low-carb filter', () => {
-      const params = getQuickFilterParams(['low-carb']);
-      expect(params.maxCarbs).toBe(30);
+      expect(getQuickFilterParams(['low-carb']).maxCarbs).toBe(30);
     });
 
     it('should map low-calorie filter', () => {
-      const params = getQuickFilterParams(['low-calorie']);
-      expect(params.maxCalories).toBe(400);
+      expect(getQuickFilterParams(['low-calorie']).maxCalories).toBe(400);
     });
 
     it('should map quick filter', () => {
-      const params = getQuickFilterParams(['quick']);
-      expect(params.maxCookTime).toBe(20);
+      expect(getQuickFilterParams(['quick']).maxCookTime).toBe(20);
     });
 
     it('should combine multiple filters', () => {
@@ -229,8 +196,7 @@ describe('filterUtils', () => {
     });
 
     it('should ignore unknown filter IDs', () => {
-      const params = getQuickFilterParams(['unknown-filter']);
-      expect(params).toEqual({});
+      expect(getQuickFilterParams(['unknown-filter'])).toEqual({});
     });
   });
 });

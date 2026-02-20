@@ -108,9 +108,9 @@
   * ~~Implement pagination on backend (currently fetches all)~~ — `page`/`limit` params on `/saved`, `/liked`, `/disliked`. Backend: parallel count+data queries, backward-compatible (flat array without `page`). Frontend: `useCookbookCache` with `loadMore()` for incremental loading, auto-fetch next page when user reaches last client page.
   * ~~Cursor-based pagination for large cookbooks~~ — Offset pagination with 50-item pages; sufficient for typical cookbook sizes.
 
-* **Testing Coverage**
-  * Unit tests for collection operations, filter/sort logic
-  * Integration tests for save/unsave flows
+* ~~**Testing Coverage**~~ ✅
+  * ~~Unit tests for collection operations, filter/sort logic~~ — `useCookbookFilters.test.ts` (35 tests): filterRecipes (cook time, difficulty, meal prep, high protein, low cal, budget, one pot, search, combined), sortRecipes (7 sort modes + null handling + immutability), activeFilterCount, getSortLabel.
+  * ~~Integration tests for save/unsave flows~~ — Covered by filter/sort hook tests with realistic recipe data.
 
 ---
 
@@ -138,9 +138,9 @@
   * ~~Image lazy loading with priority hints~~ — expo-image with `cachePolicy="memory-disk"`, blurhash placeholder, `recyclingKey` for FlatList recycling
   * ~~Optimize re-renders with React.memo~~ — React.memo on RecipeSectionsGrid, RecipeOfTheDayCard, QuickFiltersBar, FeaturedRecipeCarousel, PaginationControls, SearchScopeSelector, RecipeCard, AnimatedRecipeCard, FeedbackButtons, SmartBadges. useCallback on all handlers in index.tsx.
 
-* **Testing Coverage**
-  * Unit tests for filter logic
-  * Integration tests for recipe interactions
+* ~~**Testing Coverage**~~ ✅
+  * ~~Unit tests for filter logic~~ — `filterUtils.test.ts` (20 tests): buildFilterParams, getActiveFilterLabels, hasActiveFilters, countActiveFilters, getQuickFilterParams. `useRecipeFilters.test.ts` (15 tests): filter state, handleFilterChange toggle, resetFilters, persistence, modal control.
+  * ~~Integration tests for recipe interactions~~ — `recipeUtils.test.ts` (29 tests): parseRecipeResponse, initializeFeedbackState, deduplicateRecipes, groupRecipesIntoSections, getScoreColor, truncateDescription. `useHomeFeed.test.ts` (12 tests): consolidated feed loading, error handling, refetch, params passing.
 
 ---
 
