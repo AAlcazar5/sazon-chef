@@ -15,6 +15,8 @@ interface QuickMealsFilters {
 interface UseQuickMealsOptions {
   filters: QuickMealsFilters;
   enabled?: boolean;
+  /** Pre-fetched data from consolidated home feed — skips initial fetch if provided */
+  initialData?: SuggestedRecipe[];
 }
 
 interface UseQuickMealsReturn {
@@ -30,10 +32,10 @@ interface UseQuickMealsReturn {
 }
 
 export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsReturn {
-  const { filters, enabled = true } = options;
+  const { filters, enabled = true, initialData } = options;
 
-  // State
-  const [recipes, setRecipes] = useState<SuggestedRecipe[]>([]);
+  // State — seed with initialData if provided
+  const [recipes, setRecipes] = useState<SuggestedRecipe[]>(initialData || []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -45,6 +47,13 @@ export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsRetur
   useEffect(() => {
     recipesRef.current = recipes;
   }, [recipes]);
+
+  // Update state when initialData changes (from home feed)
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setRecipes(initialData);
+    }
+  }, [initialData]);
 
   // Fetch quick meals (≤30 minutes)
   const fetch = useCallback(async (refresh: boolean = false) => {

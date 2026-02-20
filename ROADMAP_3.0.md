@@ -1,6 +1,6 @@
-# 🚀 **Sazon Chef - Roadmap 3.0: Growth, Monetization & Scale**
+# 🚀 **Sazon Chef - Roadmap 3.0: Growth, Monetization & Scale + Advanced Features**
 
-*This roadmap focuses on analytics, machine learning optimization, monetization through subscriptions, and preparing Sazon Chef for scale and app store launch.*
+*This roadmap covers two areas: (1) Advanced feature enhancements moved from [ROADMAP_2.0](ROADMAP_2.0.md), and (2) analytics, ML optimization, monetization, and scale preparation.*
 
 ---
 
@@ -8,6 +8,16 @@
 
 | Section | Focus Area | Priority Items |
 |---------|------------|----------------|
+| **Advanced Features (from 2.0)** | | |
+| Group 24 | Shopping List Advanced | Nutrition preview, collaborative lists, budget, voice/barcode |
+| Group 25 | Meal Plan Advanced | AI generation, calendar sync, family planning, analytics |
+| Group 26 | Cookbook Advanced | Smart collections, import/export, cooking mode, social |
+| Group 27 | Home Page Advanced | Fridge mode, gamification, social, accessibility |
+| Group 28 | Profile Advanced | Health integrations, family profiles, security, GDPR |
+| Group 29 | Quick Actions Advanced | Contextual menus, voice commands, barcode scanning |
+| Group 30 | Search Advanced | NLP/voice/photo search, semantic search, operators |
+| Group 31 | AI Nutrition Assistant | Chat interface, gap analysis, smart recommendations |
+| **Growth & Scale** | | |
 | Group 19 | Algorithm Optimization & ML | Performance analytics, A/B testing, ML recommendations |
 | Group 19b | Advanced Analytics Platform | User behavior tracking, funnel analysis, dashboards |
 | Group 20 | Stripe Integration & Subscriptions | Payment processing, subscription tiers, paywalls |
@@ -1234,3 +1244,361 @@ Features designed to drive organic growth, improve user acquisition, and increas
 | NPS Score | >50 | In-app surveys |
 | App Store Rating | >4.5 | App Store/Play Store |
 | Referral Rate | >15% | Referral tracking |
+
+---
+
+# **Advanced Features (Moved from Roadmap 2.0)**
+
+*These features were originally part of Roadmap 2.0 but require significant infrastructure, new services, or third-party integrations. They build on the essential improvements in [ROADMAP_2.0.md](ROADMAP_2.0.md).*
+
+---
+
+### **Group 24: Shopping List Advanced** 🛒
+
+#### Smart Health Integration 🥗
+* **Nutrition Preview Panel** — Macro/micronutrient summary of entire shopping list, real-time calculation, Sazon nudges ("Your cart is low in Vitamin C"), collapsible panel
+  * 📍 Backend: New endpoint `GET /api/shopping-lists/:id/nutrition-summary`
+* **Dietary Compliance Checker** — Auto-flag items conflicting with dietary profile, warning badges, suggest alternatives, override with confirmation
+  * 📍 Backend: `POST /api/shopping-lists/:id/compliance-check`
+* **Recipe-Linked Context** — Show which recipes need each item, "If you skip this, 2 recipes affected", filter by recipe, "Complete recipe" action
+
+#### Smart Store Optimization 🏪
+* **Aisle Mapping** — User-customizable store layouts, drag-and-drop ordering, pre-configured common stores
+  * 📍 Database: `StoreLayout` model with `AisleMapping`
+* **Multi-Store Splitting** — Recommend where to buy, "Costco vs Grocery" auto-splitting, price comparison
+* **Store-Specific Lists** — Separate optimized lists per store, one-tap split, merge back
+
+#### Collaborative Shopping 👥
+* **Shared Lists** — Share via invite link, permission levels (view/edit/purchase), real-time sync, see who did what
+  * 📍 Database: `ShoppingListShare` model, Backend: WebSocket sync
+* **Assign Items** — Assign to people, filter by assignee, push notifications
+* **Activity Feed** — Who purchased what/when, comments, @mentions
+
+#### Smart Quantity Suggestions 📊
+* **Household-Based Quantities** — Auto-suggest based on household size and past purchases
+* **Smart Scaling** — Scale recipes from shopping list, freshness warnings for perishables
+* **Bulk vs Regular** — Suggest bulk buying for frequent items, cost-per-unit comparison
+
+#### Budget Tracking 💰
+* **Budget Management** — Set weekly/monthly budget, running total, alerts, visual progress bar
+  * 📍 Database: `GroceryBudget` model
+* **Price History & Trends** — Track prices, "Milk was cheaper last week", trend graphs
+* **Category Spending** — Spending by category, compare to previous periods
+
+#### Input Improvements 🎤
+* **Voice Input** — "Add 2 pounds of chicken breast", continuous voice mode
+* **Barcode Scanning** — Scan barcodes, auto-fill via Open Food Facts API
+* **NLP Parsing** — "milk, eggs, and a dozen oranges" → 3 items
+* **Photo Recognition** — OCR handwritten lists, scan receipts for prices
+
+#### Other
+* **Substitution Suggestions** — Alternatives when unavailable, dietary-compatible, user preference rules
+* **Smart Sync** — Background sync, indicators, conflict resolution for shared lists
+* **Real Shopping App Integration** — OAuth2 for Instacart/Walmart/Kroger, product matching, bidirectional sync
+
+---
+
+### **Group 25: Meal Plan Advanced** 📅
+
+#### Smart Planning & AI 🤖
+* **AI-Powered Plan Generation** — Full week from macro goals, dietary restrictions, variety enforcement, budget-aware
+  * 📍 Backend: Complete TODO in `mealPlanController.ts:249`
+* **Smart Suggestions** — Based on pantry, expiring ingredients, past favorites, time-aware
+* **Goal-Based Planning Modes** — Cut/Bulk/Maintenance/Performance modes affecting all suggestions
+  * 📍 Database: Add `planningMode` to MealPlan
+* **Flexible Macro Targets** — Weekly targets, high/low days (carb cycling), rollover macros
+
+#### Leftover & Ingredient Optimization 🥡
+* **Leftover Tracking** — Mark "makes leftovers", auto-suggest for next day, portion/expiry tracking
+* **Ingredient Overlap** — Analyze shared ingredients, "Buy once, use multiple times"
+* **Batch Cooking** — Identify batch-cook recipes, optimal order, equipment scheduling
+
+#### Calendar & Scheduling 📆
+* **Calendar Sync** — Google/Apple Calendar, cook time reminders, shopping reminders
+* **Cook Time Scheduling** — Set meal time, calculate start time, push notifications
+* **Meal Reminders** — Enhanced thawing reminders, customizable timing
+* **Busy Day Detection** — Calendar integration, auto-suggest quick meals
+
+#### Family Planning 👨‍👩‍👧‍👦
+* **Household Profiles** — Family members with individual preferences, portions, kids' profiles
+  * 📍 Database: `HouseholdMember` model
+* **Portion Scaling Per Person** — Adult vs child, per-person macros
+* **Shared Meal Planning** — Collaborative editing with real-time sync
+
+#### Eating Out & Flexibility 🍽️
+* **Restaurant Logging** — Log meals eaten out, search menus, manual macro entry
+* **Flexible Slots** — Skip meal (IF support), combine meals (brunch), custom times
+* **Cheat Meal Planning** — Designate cheat meals, auto-adjust surrounding meals
+
+#### Analytics & Insights 📊
+* **History** — Past weeks, nutrition comparison, streak tracking, completion trends
+* **Variety Scoring** — Score on variety, warn about repetition
+* **Nutrition Trends** — Weekly/monthly macro trends, micronutrient tracking
+* **Cost Tracking** — Spending trends, cost per calorie, budget vs actual
+
+#### UI/UX Improvements 🎨
+* **Simplified Daily View** — Focus mode with large cards and minimal distractions
+* **Enhanced Drag & Drop** — Visual drop zones, cross-day drag, batch move, undo
+* **Better Empty States** — Guided first-time experience, quick-add from recent
+* **Compact Week Overview** — Full week at a glance, color-coded by macro balance
+
+---
+
+### **Group 26: Cookbook Advanced** 📚
+
+#### Smart Collections 🧠
+* **Rules-Based Smart Collections** — Auto-populate by criteria (">30g protein", "<20 min"), AND/OR logic, live updating
+  * 📍 Database: `SmartCollection` model with rules JSON
+* **Built-in Smart Collections** — "Quick & Easy", "Highly Rated", "Not Cooked Recently", "Seasonal", "Weekend Projects"
+* **Meal Type Auto-Collections** — Auto-sort by breakfast/lunch/dinner/snack
+
+#### Batch Operations 📦
+* **Multi-Select Mode** — Checkboxes, select all, bulk action toolbar
+* **Batch Move/Delete/Export** — Move to collections, bulk delete with undo, export to PDF
+
+#### Recipe Import & Export 📤
+* **Import from URL** — Paste URL, support major recipe sites, AI extraction
+* **Import from Photo** — OCR ingredients/instructions, AI cleanup
+* **Export to PDF** — Beautiful recipe cards, include notes/rating, collection as book
+* **Share as Image** — Shareable cards, Instagram/Pinterest optimized
+* **Collection Backup** — JSON export/import for cross-device sync
+
+#### Recipe Modifications ✏️
+* **Personal Modifications** — Save modified versions, "My Version" badge, compare original
+* **Substitution Tracking** — Record swaps, rate success
+* **Recipe Versioning** — Change history, restore previous versions
+
+#### Photo Gallery 📸
+* **Personal Photos** — Multiple photos per recipe, before/after, with cooking date
+* **Photo Feed** — Chronological cooking photos, filter by recipe/date/collection
+
+#### Social & Sharing 👥
+* **Share Collections** — Shareable links, public/private, view-only or copyable
+* **Follow Users** — Friends' collections, "Popular in your network"
+* **Collaboration** — Invite contributors, permission levels, activity log
+
+#### Discovery 🔍
+* **"You Might Like"** — AI recommendations based on cookbook
+* **Duplicate Detection** — Warn on similar, find/merge duplicates
+* **Recipe Comparison** — Side-by-side (ingredients, macros, time)
+* **Gap Analysis** — "Missing breakfast ideas", cuisine diversity suggestions
+
+#### Cooking Mode 👨‍🍳
+* **Hands-Free** — Large text, voice commands ("Next step"), keep screen awake, step progress
+* **Built-in Timers** — From recipe instructions, multiple concurrent, notifications
+* **Ingredient Checklist** — Check off as you prep, scale for servings
+
+---
+
+### **Group 27: Home Page Advanced** 🏠
+
+#### Smart Discovery 🧠
+* **"What's in Your Fridge"** — Input ingredients, get matching recipes, "Missing 1-2" filter, barcode scan
+* **Weather-Aware** — Hot → salads, cold → soups, rainy → baking (weather API integration)
+* **Budget Mode** — Budget-friendly toggle, cost per serving filter
+* **Leftover Mode** — Recipes using common leftovers, connect to meal plan
+
+#### Personalized Sections 📱
+* **Dynamic Ordering** — Learn from engagement, pin/hide sections, "Customize Home"
+* **Trending Recipes** — "Popular this week" based on community saves/likes
+* **Seasonal Highlights** — Seasonal ingredients, holiday sections, auto-rotate
+* **"Because You Liked X"** — Personalized recommendation explanations
+* **Recently Cooked** — "Cook again?" section with meal plan integration
+
+#### Cuisine & Ingredient Exploration 🌍
+* **Cuisine Journey** — Guided experience (starter → advanced), essential pantry items, progress tracking
+* **Ingredient Spotlight** — Deep dives, nutrition info, storage tips, substitutions
+* **Technique Tutorials** — Skill-based progression with recipes
+* **Dietary Deep Dives** — "Keto starter pack" curated collections
+
+#### Gamification 🎮
+* **Cooking Streaks** — Consecutive days, milestones, streak notifications
+* **Weekly Challenges** — "Try 3 new cuisines", progress tracking, badges
+* **Achievements** — "100 recipes tried", "Cuisine explorer", display on profile
+* **Stats Dashboard** — Total cooked, favorite cuisines, consistency calendar
+
+#### Enhanced Interactions 👆
+* **Gesture Shortcuts** — Double-tap save, pinch toggle view, customizable gestures
+* **Infinite Scroll** — Alternative to pagination, "Back to top" button
+* **Quick Actions Bar** — Floating bar on scroll (filter, search, random)
+* **Enhanced Cards** — 3D touch preview, card flip for macros, swipe to save
+
+#### Social 👥
+* **Activity Feed** — See friends' cooking, recipe recs from friends
+* **Share to Home** — Friends share recipes to your feed
+* **Recipe Reviews** — Community reviews, "I made this" verified
+
+#### Accessibility ♿
+* **Screen Reader** — Full VoiceOver/TalkBack, meaningful labels, logical focus
+* **Visual** — High contrast, Dynamic Type, reduced motion, color blind friendly
+* **Motor** — Larger targets, disable swipes, one-handed mode
+
+---
+
+### **Group 28: Profile Advanced** 👤
+
+#### Health & Fitness 💪
+* **Apple Health / Google Fit** — Sync weight, steps, nutrition; two-way sync
+* **Body Measurements** — Track waist/chest/hips/arms/thighs, progress charts
+* **Progress Photos** — Upload with date, side-by-side comparison, timeline
+* **Weight Goal Tracking** — Target + deadline, projected completion, milestones
+* **Fitness Trackers** — Fitbit, Garmin, Whoop; adjust macros based on activity
+
+#### Enhanced Preferences ⚙️
+* **Dietary Severity** — "Strict" vs "Prefer to Avoid", life-threatening allergy flag
+* **Cooking Skill Level** — Affects difficulty recs, "level up" tracking
+* **Kitchen Equipment** — Filter recipes by appliances user has
+* **Time Availability** — Per-day cooking time, auto-suggest quick meals on busy days
+* **Shopping Preferences** — Preferred stores, organic/brand preferences
+* **Ingredient Discovery** — "Try new ingredients" toggle, "New to you" badge
+
+#### Notifications 🔔
+* **Custom Reminders** — Hydration, snack time, meal prep, grocery, weight logging
+* **Smart Notifications** — "Haven't logged weight in 7 days", "Streak about to break"
+* **Granular Preferences** — Per-type enable/disable, quiet hours, weekend schedules
+
+#### Family & Household 👨‍👩‍👧‍👦
+* **Family Profiles** — Per-person preferences/restrictions/macros, kids' profiles
+* **Household Meal Planning** — "Everyone can eat this" filter, aggregate restrictions
+* **Shared Shopping** — Family members see same lists, real-time sync
+
+#### Social 👥
+* **Public Profile** — Optional public page with favorites and achievements
+* **Follow System** — Follow users, see public collections, activity feed
+* **Referral Program** — Unique codes, track signups, rewards
+* **Achievement Sharing** — Share to social media, shareable images
+
+#### Security 🔐
+* **Two-Factor Auth** — TOTP (Google Authenticator), SMS backup, recovery codes
+* **Login History** — Active sessions, device info, "Log out everywhere"
+* **Account Linking** — Multiple auth providers, merge accounts
+* **Biometric Lock** — Face ID / Touch ID
+* **Password Strength** — Enhanced meter, breach detection (HIBP)
+
+#### Data & Privacy 📊
+* **GDPR Export** — Full data export (JSON + PDF)
+* **Granular Privacy** — Control cloud sync, local-only mode, selective data deletion
+* **Data Dashboard** — Activity heatmap, nutrition trends, usage stats
+* **Import Data** — From other recipe apps, MyFitnessPal, CSV
+
+#### Personalization 🎯
+* **AI Nutrition Insights** — Weekly AI-generated eating analysis
+* **Goal Setting** — Time-bound goals with progress and celebrations
+* **Seasonal Goals** — "Summer cut" / "Winter bulk" presets
+* **Personalized Tips** — Context-aware, learn from dismissed tips
+
+---
+
+### **Group 29: Quick Actions Advanced** ➕
+
+#### Customization ⚙️
+* **Customizable Actions** — Choose 6 from 15+ pool, drag to reorder
+* **Recent Actions** — Show recently used at top, learn from patterns
+* **Favorite Actions** — Pin favorites, always appear first
+* **Action Badges** — "5 items" on shopping, "Dinner not planned" on meal plan
+
+#### Contextual Actions 🎯
+* **Screen-Aware** — Different actions per screen
+* **Time-Based** — Morning: "Log Breakfast", Evening: "Plan tomorrow"
+* **Smart Suggestions** — AI-suggested based on patterns
+
+#### Advanced Input 🎤
+* **Voice Commands** — "Add chicken to shopping list", "Start 10 minute timer"
+* **Barcode Scanner** — Scan products, add to list, find recipes
+* **Receipt Scanner** — OCR receipts, extract items/prices
+* **Gesture Shortcuts** — Swipe up → camera, swipe left → meal log
+
+#### Expanded Library 📚
+* Recipe: Generate AI Recipe, Import from URL, Scan from Photo
+* Tracking: Log Water, Log Exercise, Log Measurements, Progress Photo
+* Social: Share What I'm Cooking, Invite Friend
+
+#### UI Enhancements 🎨
+* **Radial Menu** — Circular menu alternative, drag to select
+* **Mini FAB** — Smaller FAB that expands, icon-only
+* **FAB Position** — Left/right, adjustable, hide per screen
+
+---
+
+### **Group 30: Search Advanced** 🔍
+
+#### AI Search 🤖
+* **NLP Queries** — "Quick chicken dinner under 30 minutes", AI-powered understanding
+* **Semantic Search** — "Comfort food" → hearty dishes, "Date night" → impressive recipes
+* **Conversational** — Follow-up: "Make it vegetarian", refinement: "But quicker"
+* **Category Shortcuts** — "quick:", "cuisine:italian", "time:<30"
+
+#### Voice & Visual 🎤
+* **Voice Search** — Microphone button, speak query, real-time transcription
+* **Photo Search** — Photo of dish → find similar recipes
+* **Ingredient Photo** — Photo of ingredients → suggest recipes
+
+#### Advanced Features ⚡
+* **Saved Searches** — Save filter combos, name them, quick access
+* **Boolean Operators** — AND, OR, NOT, parentheses
+* **Fuzzy Matching** — Handle typos, "Did you mean...?"
+* **Ingredient-Based** — Multi-ingredient input, include/exclude
+
+#### Results Enhancement 📊
+* **Faceted Results** — Counts by category, click to filter
+* **Sorting** — Relevance, Match %, Cook Time, Rating
+* **Rich Previews** — Image + cook time + match % in dropdown
+* **Better No Results** — Similar searches, related recipes, "Remove filters"
+
+#### UI & Analytics 🎨
+* **Full-Screen Mode** — Expand on focus, more room for suggestions
+* **Visual Query Builder** — Drag-and-drop filter building
+* **Search Analytics** — Track popular/zero-result searches, conversion rate
+* **Personalized Ranking** — Learn from behavior, boost similar recipes
+
+---
+
+### **Group 31: AI Nutrition Assistant** 🤖💬
+
+*An AI-powered assistant for chatting about meal history, nutrition insights, and personalized recommendations.*
+
+#### Core Chat Interface 💬
+* **AI Chat Screen** — Conversational UI with Sazon mascot, typing indicators, accessible via FAB/profile
+  * 📍 Frontend: New `/chat` screen
+* **Natural Language** — "How can I add more fiber?", "What am I eating too much of?", "Show protein this week"
+* **Contextual Responses** — AI analyzes actual meal history, references specific meals
+* **Quick Actions** — "Analyze my week", "Find gaps", "Suggest recipes"
+
+#### Nutritional Gap Analysis 📊
+* **"What Am I Missing?"** — Detect deficient nutrients, compare to daily values
+* **Macro Trends** — Visual charts over time, identify patterns
+* **Ingredient Frequency** — Most-eaten ingredients, over-reliance detection
+* **Dietary Balance Score** — Weekly/monthly rating (variety, nutrients, macros)
+
+#### Smart Recommendations 🍽️
+* **Gap-Filling Recipes** — "5 recipes to hit your iron goals"
+* **"More Like This"** — Similar to past favorites from history
+* **Complement Suggestions** — "What to eat for dinner to balance today?"
+* **Avoid Repetition** — Detect patterns, suggest new recipes in preferred cuisines
+
+#### Health Goals 🎯
+* **Goal Progress** — "Am I on track for weight loss?", meal-goal correlation
+* **"What If" Scenarios** — Simulate dietary changes, project impact
+* **Plans from Chat** — "Create a high-protein plan", one-tap apply to meal plan
+
+#### Meal History 🔍
+* **Search Past Meals** — "When did I last eat salmon?", "What did I eat Tuesday?"
+* **History Timeline** — Visual calendar, color-coded adherence
+* **Recipe Recall** — "That chicken recipe with lemon sauce?"
+
+#### Proactive Insights 💡
+* **Daily Summary** — End-of-day notification with nutrition recap
+* **Weekly Digest** — AI report: trends, wins, improvements, next-week recs
+* **Smart Alerts** — "Red meat 5 days in a row", "Great protein streak!"
+* **Seasonal** — "Winter → more Vitamin D", seasonal tips
+
+#### Voice & Privacy
+* **Voice Chat** — Speak questions, voice responses, hands-free while cooking
+* **On-Device Processing** — Basic analysis without cloud AI
+* **Data Transparency** — "What data do you know about me?"
+* **Conversation History** — Save/delete past conversations
+
+#### Technical Implementation
+* **AI Integration** — Existing multi-provider (Claude/OpenAI/Gemini), streaming responses
+* **Database** — `ChatConversation`, `ChatMessage`, `NutritionInsight`, `MealHistoryIndex`
+* **API** — `POST /api/chat/message`, `GET /api/chat/history`, `GET /api/nutrition/insights`, `GET /api/nutrition/gaps`

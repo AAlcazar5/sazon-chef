@@ -140,6 +140,25 @@ export interface SuggestedRecipe extends Recipe {
 
 export interface SavedRecipe extends Recipe {
   savedDate: string;
+  notes?: string | null;
+  rating?: number | null;
+  cookCount?: number;
+  lastCooked?: string | null;
+  collections?: { id: string; name: string }[];
+}
+
+// Collection Types
+
+export interface Collection {
+  id: string;
+  name: string;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  isPinned?: boolean;
+  isDefault?: boolean;
+  sortOrder?: number;
+  recipeCount?: number;
+  updatedAt?: string;
 }
 
 // User & Preferences Types
@@ -164,10 +183,27 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  profilePictureUrl?: string;
   macroGoals: MacroGoals;
   preferences: UserPreferences;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProfilePreset {
+  id: string;
+  name: string;
+  description?: string | null;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  activityLevel?: string | null;
+  fitnessGoal?: string | null;
+  maxDailyFoodBudget?: number | null;
+  currency?: string | null;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface NotificationHistoryEntry {
@@ -318,6 +354,7 @@ export interface ShoppingListItem {
   category?: string;
   purchased: boolean;
   notes?: string;
+  price?: number;
   recipeId?: string;
   recipe?: Recipe;
   createdAt: string;
@@ -347,6 +384,80 @@ export interface SupportedShoppingApp {
   name: string;
   displayName: string;
   requiresAuth: boolean;
+}
+
+export interface PurchaseHistoryItem {
+  id: string;
+  userId: string;
+  itemName: string;
+  quantity: string;
+  category?: string;
+  purchaseCount: number;
+  lastPurchasedAt: string;
+  isFavorite: boolean;
+  lastPrice?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PantryItem {
+  id: string;
+  userId: string;
+  name: string;
+  category?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MealPlanTemplate {
+  id: string;
+  userId: string | null;
+  name: string;
+  description: string | null;
+  goal: string | null;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+  meals: TemplateMeal[];
+}
+
+export interface TemplateMeal {
+  id: string;
+  templateId: string;
+  dayIndex: number;
+  mealType: string;
+  recipeId: string | null;
+  recipe?: any;
+  customName: string | null;
+  customCalories: number | null;
+  customProtein: number | null;
+  customCarbs: number | null;
+  customFat: number | null;
+}
+
+export interface QuickMealLogData {
+  name: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  calories: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  notes?: string;
+}
+
+export interface RecurringMeal {
+  id: string;
+  mealType: string;
+  daysOfWeek: string;
+  recipeId?: string | null;
+  recipe?: { id: string; title: string; imageUrl?: string; calories?: number; protein?: number; carbs?: number; fat?: number } | null;
+  title?: string | null;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface IngredientCost {

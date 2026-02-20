@@ -35,6 +35,8 @@ interface RecipeCardProps {
   showSwipeIndicators?: boolean;
   swipeIndicatorCount?: number;
   swipeIndicatorIndex?: number;
+  /** Optional footer rendered inside the card, between content and action buttons */
+  footer?: React.ReactNode;
 }
 
 // Helper to truncate description
@@ -44,7 +46,7 @@ const truncateDescription = (text: string | undefined, maxLength: number): strin
   return text.slice(0, maxLength).trim() + '...';
 };
 
-export const RecipeCard: React.FC<RecipeCardProps> = ({
+const RecipeCardComponent: React.FC<RecipeCardProps> = ({
   recipe,
   variant = 'list',
   onPress,
@@ -66,6 +68,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
   showSwipeIndicators = false,
   swipeIndicatorCount = 0,
   swipeIndicatorIndex = 0,
+  footer,
 }) => {
   const [imageError, setImageError] = React.useState(false);
   const [imageLoading, setImageLoading] = React.useState(true);
@@ -148,12 +151,13 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
         {/* Hero Recipe Image */}
         {recipe.imageUrl && recipe.imageUrl.trim() !== '' && !imageError ? (
           <View style={{ position: 'relative' }}>
-            <Image 
+            <Image
               source={{ uri: recipe.imageUrl.trim() }}
               style={{ width: '100%', height: finalImageHeight }}
               contentFit="cover"
               transition={Duration.normal}
               cachePolicy="memory-disk"
+              recyclingKey={recipe.id}
               placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
               onLoad={() => {
                 setImageLoading(false);
@@ -674,13 +678,16 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
 
             {/* Description - Unified template for list, carousel, and grid */}
             {showDescription && recipe.description && (
-              <Text 
-                className={useListStyle ? "text-gray-600 dark:text-gray-300 text-base" : "text-gray-600 dark:text-gray-300 text-xs"} 
+              <Text
+                className={useListStyle ? "text-gray-600 dark:text-gray-300 text-base" : "text-gray-600 dark:text-gray-300 text-xs"}
                 numberOfLines={2}
               >
                 {recipe.description}
               </Text>
             )}
+
+            {/* Optional footer (e.g. star rating, cook count) */}
+            {footer}
           </View>
 
           {/* Action Buttons */}
@@ -733,3 +740,5 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
     </View>
   );
 };
+
+export const RecipeCard = React.memo(RecipeCardComponent);

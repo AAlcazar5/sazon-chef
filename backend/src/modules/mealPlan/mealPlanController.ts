@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { aiRecipeService } from '../../services/aiRecipeService';
 
 // Get daily meal suggestions
 export const getDailySuggestion = async (req: Request, res: Response) => {
@@ -239,39 +240,202 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
   }
 };
 
-// Generate new meal plan
+// Generate new meal plan with AI-powered recipe generation
 export const generateMealPlan = async (req: Request, res: Response) => {
   try {
-      const userId = getUserId(req);
-    const { preferences } = req.body;
-    
-    // For now, create an empty meal plan
-    // TODO: Implement AI-powered meal plan generation
-    const startDate = new Date();
-    const endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-    
+    const userId = getUserId(req);
+    const {
+      days = 7,
+      startDate: startDateStr,
+      mealsPerDay = ['breakfast', 'lunch', 'dinner', 'snack'],
+      maxTotalPrepTime = 60,
+      maxDailyBudget,
+    } = req.body;
+
+    console.log('🍽️ Generate Meal Plan:', { userId, days, mealsPerDay, maxTotalPrepTime, maxDailyBudget });
+
+    // Fetch user data for AI personalization (same pattern as aiRecipeController.generateDailyPlan)
+    const [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([
+      prisma.userPreferences.findUnique({
+        where: { userId },
+        include: {
+          likedCuisines: true,
+          dietaryRestrictions: true,
+          bannedIngredients: true,
+          preferredSuperfoods: true,
+        },
+      }),
+      prisma.macroGoals.findUnique({
+        where: { userId },
+      }),
+      prisma.userPhysicalProfile.findUnique({
+        where: { userId },
+      }),
+      prisma.recipeFeedback.findMany({
+        where: { userId },
+        include: {
+          recipe: {
+            include: {
+              ingredients: true,
+            },
+          },
+        },
+        take: 50,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    // Process feedback into liked/disliked recipe patterns
+    const likedRecipes = feedbackData
+      .filter(f => f.liked)
+      .slice(0, 10)
+      .map(f => ({
+        title: f.recipe.title,
+        cuisine: f.recipe.cuisine,
+        ingredients: f.recipe.ingredients.map((i: { text: string }) => i.text.toLowerCase()),
+        cookTime: f.recipe.cookTime,
+      }));
+
+    const dislikedRecipes = feedbackData
+      .filter(f => f.disliked)
+      .slice(0, 10)
+      .map(f => ({
+        title: f.recipe.title,
+        cuisine: f.recipe.cuisine,
+        ingredients: f.recipe.ingredients.map((i: { text: string }) => i.text.toLowerCase()),
+        cookTime: f.recipe.cookTime,
+      }));
+
+    // Build user preferences for AI
+    const userPrefs = preferences
+      ? {
+          likedCuisines: preferences.likedCuisines.map(c => c.name),
+          dietaryRestrictions: preferences.dietaryRestrictions.map(d => d.name),
+          bannedIngredients: preferences.bannedIngredients.map(b => b.name),
+          preferredSuperfoods: preferences.preferredSuperfoods?.map(sf => sf.category) || [],
+          spiceLevel: preferences.spiceLevel || 'medium',
+          cookTimePreference: preferences.cookTimePreference || 30,
+        }
+      : undefined;
+
+    // Create meal plan
+    const startDate = startDateStr ? new Date(startDateStr) : new Date();
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
+
     const mealPlan = await prisma.mealPlan.create({
       data: {
         userId,
-        name: 'Generated Meal Plan',
+        name: 'AI Generated Plan',
         startDate,
         endDate,
-        isActive: true
-      }
+        isActive: true,
+      },
     });
 
+    // Generate meals for each day
+    const cuisines = ['Italian', 'Mexican', 'Asian', 'Mediterranean', 'American', 'Indian', 'Thai'];
+    const daysResult: any[] = [];
+    const totalNutrition = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+    for (let dayIndex = 0; dayIndex < days; dayIndex++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + dayIndex);
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const dayCuisine = cuisines[dayIndex % cuisines.length];
+
+      console.log(`📅 Day ${dayIndex + 1}/${days} (${dateStr}) — cuisine: ${dayCuisine}`);
+
+      try {
+        // Generate daily meal plan via AI
+        const generatedPlan = await aiRecipeService.generateDailyMealPlan(
+          {
+            userId,
+            userPreferences: userPrefs
+              ? { ...userPrefs, likedCuisines: [dayCuisine] }
+              : undefined,
+            macroGoals: macroGoals
+              ? { calories: macroGoals.calories, protein: macroGoals.protein, carbs: macroGoals.carbs, fat: macroGoals.fat }
+              : undefined,
+            physicalProfile: physicalProfile
+              ? { gender: physicalProfile.gender, age: physicalProfile.age, activityLevel: physicalProfile.activityLevel, fitnessGoal: physicalProfile.fitnessGoal }
+              : undefined,
+            cuisineOverride: dayCuisine,
+            userFeedback: (likedRecipes.length > 0 || dislikedRecipes.length > 0)
+              ? { likedRecipes, dislikedRecipes }
+              : undefined,
+          },
+          {
+            mealsToGenerate: mealsPerDay as Array<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert'>,
+            maxTotalPrepTime,
+            maxDailyBudget,
+          }
+        );
+
+        // Save generated recipes and create meal rows
+        const dayMeals: any = {};
+        const mealTypes = Object.keys(generatedPlan) as Array<keyof typeof generatedPlan>;
+
+        for (const mealType of mealTypes) {
+          const recipe = generatedPlan[mealType];
+          if (!recipe) continue;
+
+          // Save recipe to database
+          const savedRecipe = await aiRecipeService.saveGeneratedRecipe(recipe, userId);
+
+          // Create meal row linking to the saved recipe
+          await prisma.meal.create({
+            data: {
+              mealPlanId: mealPlan.id,
+              date: currentDate,
+              mealType,
+              recipeId: savedRecipe.id,
+            },
+          });
+
+          dayMeals[mealType] = {
+            id: savedRecipe.id,
+            title: recipe.title,
+            description: recipe.description,
+            cuisine: recipe.cuisine,
+            cookTime: recipe.cookTime,
+            difficulty: recipe.difficulty,
+            servings: recipe.servings,
+            calories: recipe.calories,
+            protein: recipe.protein,
+            carbs: recipe.carbs,
+            fat: recipe.fat,
+            imageUrl: (savedRecipe as any).imageUrl,
+          };
+
+          totalNutrition.calories += recipe.calories || 0;
+          totalNutrition.protein += recipe.protein || 0;
+          totalNutrition.carbs += recipe.carbs || 0;
+          totalNutrition.fat += recipe.fat || 0;
+        }
+
+        daysResult.push({ date: dateStr, meals: dayMeals });
+        console.log(`✅ Day ${dayIndex + 1} complete: ${Object.keys(dayMeals).length} meals`);
+      } catch (dayError: any) {
+        console.error(`❌ Day ${dayIndex + 1} generation failed:`, dayError.message);
+        daysResult.push({ date: dateStr, meals: {}, error: dayError.message });
+      }
+    }
+
     res.json({
-      message: 'Meal plan generated successfully',
+      success: true,
       mealPlan: {
         id: mealPlan.id,
         name: mealPlan.name,
         startDate: mealPlan.startDate,
-        endDate: mealPlan.endDate
-      }
+        endDate: mealPlan.endDate,
+      },
+      days: daysResult,
+      totalNutrition,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating meal plan:', error);
-    res.status(500).json({ error: 'Failed to generate meal plan' });
+    res.status(500).json({ error: 'Failed to generate meal plan', details: error.message });
   }
 };
 
@@ -364,6 +528,76 @@ export const addRecipeToMeal = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error adding recipe to meal:', error);
     res.status(500).json({ error: 'Failed to add recipe to meal plan' });
+  }
+};
+
+// Quick log a meal (no recipe required)
+export const quickLogMeal = async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const { name, mealType, calories, protein, carbs, fat, notes } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Meal name is required' });
+    }
+    if (calories == null || calories < 0) {
+      return res.status(400).json({ error: 'Calories is required and must be >= 0' });
+    }
+    const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+    if (!mealType || !validMealTypes.includes(mealType)) {
+      return res.status(400).json({ error: 'Valid mealType is required (breakfast, lunch, dinner, snack)' });
+    }
+
+    // Find or create active meal plan for current week
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - dayOfWeek);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    let mealPlan = await prisma.mealPlan.findFirst({
+      where: {
+        userId,
+        isActive: true,
+        startDate: { lte: today },
+        endDate: { gte: today },
+      },
+    });
+
+    if (!mealPlan) {
+      mealPlan = await prisma.mealPlan.create({
+        data: {
+          userId,
+          name: 'My Meal Plan',
+          startDate: weekStart,
+          endDate: weekEnd,
+          isActive: true,
+        },
+      });
+    }
+
+    const meal = await prisma.meal.create({
+      data: {
+        mealPlanId: mealPlan.id,
+        date: today,
+        mealType,
+        customName: name.trim(),
+        customCalories: Math.round(calories),
+        customProtein: protein != null ? parseFloat(protein) : null,
+        customCarbs: carbs != null ? parseFloat(carbs) : null,
+        customFat: fat != null ? parseFloat(fat) : null,
+        notes: notes || null,
+        isCompleted: true,
+        completedAt: today,
+      },
+    });
+
+    res.json({ message: 'Meal logged successfully', meal });
+  } catch (error) {
+    console.error('Error quick logging meal:', error);
+    res.status(500).json({ error: 'Failed to log meal' });
   }
 };
 

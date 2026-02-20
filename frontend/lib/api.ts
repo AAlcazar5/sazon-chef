@@ -15,7 +15,7 @@ interface ApiError {
 
 // Create axios instance with default configuration
 // Android emulator uses 10.0.2.2 to access host localhost
-const getBaseURL = () => {
+export const getBaseURL = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl;
 
@@ -504,16 +504,61 @@ export const recipeApi = {
     return apiClient.get('/recipes/recipe-of-the-day');
   },
 
-  getSavedRecipes: () => {
-    return apiClient.get('/recipes/saved');
+  // Consolidated home feed (replaces 7 separate API calls)
+  getHomeFeed: (options?: {
+    page?: number;
+    limit?: number;
+    cuisines?: string[];
+    dietaryRestrictions?: string[];
+    maxCookTime?: number;
+    difficulty?: string;
+    mealPrepMode?: boolean;
+    search?: string;
+    shuffle?: boolean;
+    useTimeAwareDefaults?: boolean;
+    mood?: string;
+    minProtein?: number;
+    maxCarbs?: number;
+    maxCalories?: number;
+  }) => {
+    const params: any = {};
+    if (options?.page !== undefined) params.page = options.page;
+    if (options?.limit !== undefined) params.limit = options.limit;
+    if (options?.cuisines && options.cuisines.length > 0) params.cuisines = options.cuisines.join(',');
+    if (options?.dietaryRestrictions && options.dietaryRestrictions.length > 0) params.dietaryRestrictions = options.dietaryRestrictions.join(',');
+    if (options?.maxCookTime) params.maxCookTime = options.maxCookTime;
+    if (options?.difficulty) params.difficulty = options.difficulty;
+    if (options?.mealPrepMode !== undefined) params.mealPrepMode = options.mealPrepMode ? 'true' : 'false';
+    if (options?.search) params.search = options.search;
+    if (options?.shuffle) params.shuffle = 'true';
+    if (options?.useTimeAwareDefaults) params.useTimeAwareDefaults = 'true';
+    if (options?.mood) params.mood = options.mood;
+    if (options?.minProtein !== undefined) params.minProtein = options.minProtein;
+    if (options?.maxCarbs !== undefined) params.maxCarbs = options.maxCarbs;
+    if (options?.maxCalories !== undefined) params.maxCalories = options.maxCalories;
+    return apiClient.get('/recipes/home-feed', { params });
   },
 
-  getLikedRecipes: () => {
-    return apiClient.get('/recipes/liked');
+  getSavedRecipes: (options?: { page?: number; limit?: number; collectionId?: string }) => {
+    const params: any = {};
+    if (options?.page !== undefined) params.page = options.page;
+    if (options?.limit !== undefined) params.limit = options.limit;
+    if (options?.collectionId) params.collectionId = options.collectionId;
+    return apiClient.get('/recipes/saved', { params });
   },
 
-  getDislikedRecipes: () => {
-    return apiClient.get('/recipes/disliked');
+  getLikedRecipes: (options?: { page?: number; limit?: number }) => {
+    const params: any = {};
+    if (options?.page !== undefined) params.page = options.page;
+    if (options?.limit !== undefined) params.limit = options.limit;
+    return apiClient.get('/recipes/liked', { params });
+  },
+
+  getDislikedRecipes: (options?: { page?: number; limit?: number }) => {
+    const params: any = {};
+    if (options?.page !== undefined) params.page = options.page;
+    if (options?.limit !== undefined) params.limit = options.limit;
+    return apiClient.get('/recipes/disliked', { params });
   },
 
   likeRecipe: (id: string) => {
@@ -552,17 +597,45 @@ export const recipeApi = {
 
   healthifyRecipe: (id: string) => {
     return apiClient.post(`/recipes/${id}/healthify`);
-  }
+  },
+
+  // Cookbook Quick Wins
+  updateSavedMeta: (id: string, data: { notes?: string | null; rating?: number | null }) => {
+    return apiClient.put(`/recipes/${id}/saved-meta`, data);
+  },
+
+  recordView: (id: string) => {
+    return apiClient.post(`/recipes/${id}/view`);
+  },
+
+  getRecentlyViewed: (limit?: number) => {
+    return apiClient.get('/recipes/recently-viewed', { params: { limit: limit || 50 } });
+  },
+
+  recordCook: (id: string, notes?: string) => {
+    return apiClient.post(`/recipes/${id}/cook`, notes ? { notes } : undefined);
+  },
+
+  getCookingHistory: (id: string) => {
+    return apiClient.get(`/recipes/${id}/cooking-history`);
+  },
 };
 // Collections API
 export const collectionsApi = {
   list: () => apiClient.get('/recipes/collections'),
-  create: (data: string | { name: string; coverImageUrl?: string }) => {
+  create: (data: string | { name: string; description?: string; coverImageUrl?: string }) => {
     const body = typeof data === 'string' ? { name: data } : data;
     return apiClient.post('/recipes/collections', body);
   },
-  update: (id: string, name: string) => apiClient.put(`/recipes/collections/${id}`, { name }),
+  update: (id: string, data: { name?: string; description?: string | null; coverImageUrl?: string | null; isPinned?: boolean }) =>
+    apiClient.put(`/recipes/collections/${id}`, data),
   remove: (id: string) => apiClient.delete(`/recipes/collections/${id}`),
+  togglePin: (id: string) => apiClient.patch(`/recipes/collections/${id}/pin`),
+  reorder: (order: { id: string; sortOrder: number }[]) =>
+    apiClient.put('/recipes/collections/reorder', { order }),
+  duplicate: (id: string) => apiClient.post(`/recipes/collections/${id}/duplicate`),
+  merge: (sourceIds: string[], targetId: string) =>
+    apiClient.post('/recipes/collections/merge', { sourceIds, targetId }),
   moveSavedRecipe: (recipeId: string, collectionIds: string[]) =>
     apiClient.patch(`/recipes/${recipeId}/move-to-collection`, { collectionIds }),
 };
@@ -856,6 +929,40 @@ export const userApi = {
   applyCalculatedMacros: () => {
     return apiClient.post('/user/apply-calculated-macros');
   },
+
+  // Profile picture
+  uploadProfilePicture: (imageUri: string) => {
+    const formData = new FormData();
+    formData.append('profilePicture', {
+      uri: imageUri,
+      type: 'image/jpeg',
+      name: 'profile-picture.jpg',
+    } as any);
+    return apiClient.upload('/user/profile-picture', formData);
+  },
+
+  deleteProfilePicture: () => {
+    return apiClient.delete('/user/profile-picture');
+  },
+
+  // Profile presets
+  getPresets: () => apiClient.get('/user/presets'),
+
+  createPreset: (data: { name: string; description?: string }) => {
+    return apiClient.post('/user/presets', data);
+  },
+
+  updatePreset: (id: string, data: { name?: string; description?: string }) => {
+    return apiClient.put(`/user/presets/${id}`, data);
+  },
+
+  deletePreset: (id: string) => {
+    return apiClient.delete(`/user/presets/${id}`);
+  },
+
+  applyPreset: (id: string) => {
+    return apiClient.post(`/user/presets/${id}/apply`);
+  },
 };
 
 export const mealPlanApi = {
@@ -868,8 +975,14 @@ export const mealPlanApi = {
     return apiClient.get('/meal-plan/weekly', { params });
   },
 
-  generateMealPlan: (preferences: any) => {
-    return apiClient.post('/meal-plan/generate', preferences);
+  generateMealPlan: (params: {
+    days?: number;
+    startDate?: string;
+    mealsPerDay?: string[];
+    maxTotalPrepTime?: number;
+    maxDailyBudget?: number;
+  }) => {
+    return apiClient.post('/meal-plan/generate', params);
   },
 
   getMealHistory: (params?: { startDate?: string; endDate?: string }) => {
@@ -878,6 +991,10 @@ export const mealPlanApi = {
 
   addRecipeToMeal: (data: { mealPlanId?: string; recipeId: string; date: string; mealType: string }) => {
     return apiClient.post('/meal-plan/add-recipe', data);
+  },
+
+  quickLogMeal: (data: { name: string; mealType: string; calories: number; protein?: number; carbs?: number; fat?: number; notes?: string }) => {
+    return apiClient.post('/meal-plan/quick-log', data);
   },
 
   // Meal enhancement methods
@@ -895,6 +1012,63 @@ export const mealPlanApi = {
 
   getWeeklyNutritionSummary: (params?: { startDate?: string; endDate?: string }) => {
     return apiClient.get('/meal-plan/weekly-nutrition', { params });
+  },
+
+  // Templates
+  getTemplates: () => {
+    return apiClient.get('/meal-plan/templates');
+  },
+
+  createTemplate: (data: { name: string; description?: string; goal?: string; mealPlanId: string }) => {
+    return apiClient.post('/meal-plan/templates', data);
+  },
+
+  applyTemplate: (templateId: string, data: { startDate: string }) => {
+    return apiClient.post(`/meal-plan/templates/${templateId}/apply`, data);
+  },
+
+  deleteTemplate: (templateId: string) => {
+    return apiClient.delete(`/meal-plan/templates/${templateId}`);
+  },
+
+  // Duplicate meals
+  duplicateMeals: (data: {
+    mode: 'week' | 'day' | 'meal';
+    targetStartDate: string;
+    sourceDate?: string;
+    targetDate?: string;
+    sourceMealId?: string;
+    targetDates?: string[];
+    targetMealType?: string;
+  }) => {
+    return apiClient.post('/meal-plan/duplicate', data);
+  },
+
+  // Recurring meals
+  getRecurringMeals: () => {
+    return apiClient.get('/meal-plan/recurring');
+  },
+  createRecurringMeal: (data: { mealType: string; daysOfWeek: string; recipeId?: string; title?: string; calories?: number; protein?: number; carbs?: number; fat?: number }) => {
+    return apiClient.post('/meal-plan/recurring', data);
+  },
+  updateRecurringMeal: (id: string, data: any) => {
+    return apiClient.put(`/meal-plan/recurring/${id}`, data);
+  },
+  deleteRecurringMeal: (id: string) => {
+    return apiClient.delete(`/meal-plan/recurring/${id}`);
+  },
+  applyRecurringMeals: (weekStartDate: string) => {
+    return apiClient.post('/meal-plan/recurring/apply', { weekStartDate });
+  },
+};
+
+// Search 2.0 API
+export const searchApi = {
+  getAutoCompleteSuggestions: (query: string, limit: number = 10) => {
+    return apiClient.get('/recipes/autocomplete', { params: { q: query, limit } });
+  },
+  getPopularSearches: (limit: number = 5) => {
+    return apiClient.get('/recipes/popular-searches', { params: { limit } });
   },
 };
 
@@ -992,11 +1166,11 @@ export const shoppingListApi = {
     return apiClient.delete(`/shopping-lists/${id}`);
   },
 
-  addItem: (listId: string, data: { name: string; quantity?: string; category?: string; isCompleted?: boolean }) => {
+  addItem: (listId: string, data: { name: string; quantity?: string; category?: string; isCompleted?: boolean; price?: number; notes?: string }) => {
     return apiClient.post(`/shopping-lists/${listId}/items`, data);
   },
 
-  updateItem: (listId: string, itemId: string, data: { name?: string; quantity?: string; category?: string; purchased?: boolean; isCompleted?: boolean }) => {
+  updateItem: (listId: string, itemId: string, data: { name?: string; quantity?: string; category?: string; purchased?: boolean; isCompleted?: boolean; price?: number | null; notes?: string | null }) => {
     // Map isCompleted to purchased for backward compatibility
     const mappedData = { ...data };
     if (mappedData.isCompleted !== undefined) {
@@ -1006,7 +1180,7 @@ export const shoppingListApi = {
     return apiClient.put(`/shopping-lists/${listId}/items/${itemId}`, mappedData);
   },
 
-  batchUpdateItems: (listId: string, updates: Array<{ itemId: string; purchased?: boolean; name?: string; quantity?: string; category?: string | null; notes?: string | null }>) => {
+  batchUpdateItems: (listId: string, updates: Array<{ itemId: string; purchased?: boolean; name?: string; quantity?: string; category?: string | null; notes?: string | null; price?: number | null }>) => {
     return apiClient.put(`/shopping-lists/${listId}/items/batch`, { updates });
   },
 
@@ -1020,6 +1194,18 @@ export const shoppingListApi = {
 
   generateFromMealPlan: (data: { startDate?: string; endDate?: string; recipeIds?: string[]; name?: string }) => {
     return apiClient.post('/shopping-lists/generate-from-meal-plan', data);
+  },
+
+  getPurchaseHistory: (params?: { limit?: number; favorites?: boolean; since?: string }) => {
+    return apiClient.get('/shopping-lists/purchase-history', { params });
+  },
+
+  getRecentPurchases: (days?: number) => {
+    return apiClient.get('/shopping-lists/purchase-history/recent', { params: { days: days || 7 } });
+  },
+
+  togglePurchaseHistoryFavorite: (id: string) => {
+    return apiClient.put(`/shopping-lists/purchase-history/${id}/favorite`);
   },
 };
 
@@ -1142,6 +1328,15 @@ export const scannerApi = {
   scanBarcode: (barcode: string) => {
     return apiClient.post('/scanner/scan-barcode', { barcode });
   },
+};
+
+// Pantry API
+export const pantryApi = {
+  getAll: () => apiClient.get('/pantry'),
+  addItem: (data: { name: string; category?: string }) => apiClient.post('/pantry', data),
+  addMany: (items: Array<{ name: string; category?: string }>) => apiClient.post('/pantry/bulk', { items }),
+  removeItem: (id: string) => apiClient.delete(`/pantry/${id}`),
+  removeByName: (name: string) => apiClient.delete(`/pantry/by-name/${encodeURIComponent(name)}`),
 };
 
 export type { ApiResponse, ApiError };

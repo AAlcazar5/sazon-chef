@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, TouchableOpacity, useColorScheme } from 'react-native';
 import { useState } from 'react';
 import * as Haptics from 'expo-haptics';
@@ -20,7 +21,7 @@ interface FeedbackState {
   disliked: boolean;
 }
 
-export default function FeedbackButtons({ 
+function FeedbackButtons({
   recipeId, 
   onLike, 
   onDislike, 
@@ -130,3 +131,5 @@ export default function FeedbackButtons({
     </View>
   );
 }
+
+export default React.memo(FeedbackButtons);

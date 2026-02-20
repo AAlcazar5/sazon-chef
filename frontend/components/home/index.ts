@@ -10,3 +10,7 @@ export { default as FeaturedRecipeCarousel } from './FeaturedRecipeCarousel';
 export { default as MealPrepModeHeader } from './MealPrepModeHeader';
 export { default as PaginationControls } from './PaginationControls';
 export { default as RecipeSectionsGrid } from './RecipeSectionsGrid';
+export { default as SearchScopeSelector } from './SearchScopeSelector';
+export type { SearchScope } from './SearchScopeSelector';
+export { default as SurpriseMeModal } from './SurpriseMeModal';
+export type { SurpriseFilters } from './SurpriseMeModal';

@@ -32,7 +32,7 @@ interface SmartBadgesProps {
   forceIncludeIds?: string[];
 }
 
-export default function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBadge = false, hideInfoBadge = false, noWrap = false, sizeVariant = 'default', forceIncludeIds = [] }: SmartBadgesProps) {
+function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBadge = false, hideInfoBadge = false, noWrap = false, sizeVariant = 'default', forceIncludeIds = [] }: SmartBadgesProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -377,4 +377,6 @@ export default function SmartBadges({ recipe, maxVisible = 3, variant = 'list', 
     </>
   );
 }
+
+export default React.memo(SmartBadges);
 

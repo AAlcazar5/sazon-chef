@@ -11,6 +11,8 @@ const MAX_ITEMS = 5;
 
 interface UsePersonalizedRecipesOptions {
   userId?: string;
+  /** Pre-fetched liked recipes from consolidated home feed — skips API call if provided */
+  initialLikedRecipes?: SuggestedRecipe[];
 }
 
 interface UsePersonalizedRecipesReturn {
@@ -22,9 +24,9 @@ interface UsePersonalizedRecipesReturn {
 }
 
 export function usePersonalizedRecipes(options: UsePersonalizedRecipesOptions = {}): UsePersonalizedRecipesReturn {
-  const { userId } = options;
+  const { userId, initialLikedRecipes } = options;
 
-  const [likedRecipes, setLikedRecipes] = useState<SuggestedRecipe[]>([]);
+  const [likedRecipes, setLikedRecipes] = useState<SuggestedRecipe[]>(initialLikedRecipes || []);
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -34,13 +36,18 @@ export function usePersonalizedRecipes(options: UsePersonalizedRecipesOptions = 
     try {
       setLoading(true);
 
-      // Load liked recipes from API
-      const likedResponse = await recipeApi.getLikedRecipes();
-      if (likedResponse.data && likedResponse.data.length > 0) {
-        setLikedRecipes(likedResponse.data.slice(0, MAX_ITEMS));
+      // Only fetch liked recipes from API if not provided via initialData
+      if (!initialLikedRecipes || initialLikedRecipes.length === 0) {
+        const likedResponse = await recipeApi.getLikedRecipes();
+        const likedData = likedResponse.data;
+        // Handle both paginated { recipes: [] } and flat array responses
+        const recipes = Array.isArray(likedData) ? likedData : (likedData?.recipes || []);
+        if (recipes.length > 0) {
+          setLikedRecipes(recipes.slice(0, MAX_ITEMS));
+        }
       }
 
-      // Load recently viewed recipe IDs from storage
+      // Always load recently viewed recipe IDs from AsyncStorage (local-only)
       const recentViewed = await AsyncStorage.getItem(RECENTLY_VIEWED_KEY);
       if (recentViewed) {
         const recentIds = JSON.parse(recentViewed) as string[];
@@ -51,7 +58,14 @@ export function usePersonalizedRecipes(options: UsePersonalizedRecipesOptions = 
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, initialLikedRecipes]);
+
+  // Update liked recipes when initialData changes
+  useEffect(() => {
+    if (initialLikedRecipes && initialLikedRecipes.length > 0) {
+      setLikedRecipes(initialLikedRecipes);
+    }
+  }, [initialLikedRecipes]);
 
   // Add a recipe to recently viewed
   const addRecentlyViewed = useCallback(async (recipeId: string) => {

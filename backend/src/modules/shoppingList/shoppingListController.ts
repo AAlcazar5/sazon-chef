@@ -5,6 +5,39 @@ import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 
+/**
+ * Record a purchase to history. Uses upsert to increment count on duplicates.
+ * Non-blocking -- errors are logged but don't fail the caller.
+ */
+async function recordPurchase(userId: string, itemName: string, quantity: string, category: string | null, price?: number | null) {
+  const normalizedName = itemName.toLowerCase().trim();
+  try {
+    await prisma.purchaseHistory.upsert({
+      where: {
+        userId_itemName: { userId, itemName: normalizedName },
+      },
+      create: {
+        userId,
+        itemName: normalizedName,
+        quantity,
+        category,
+        purchaseCount: 1,
+        lastPurchasedAt: new Date(),
+        lastPrice: price ?? null,
+      },
+      update: {
+        purchaseCount: { increment: 1 },
+        lastPurchasedAt: new Date(),
+        quantity,
+        category,
+        ...(price != null ? { lastPrice: price } : {}),
+      },
+    });
+  } catch (error) {
+    console.error('[PURCHASE_HISTORY] Error recording purchase:', error);
+  }
+}
+
 export const shoppingListController = {
   /**
    * Get all shopping lists for a user
@@ -235,7 +268,7 @@ export const shoppingListController = {
     try {
       const userId = getUserId(req);
       const { id } = req.params;
-      const { name, quantity, category, notes } = req.body;
+      const { name, quantity, category, notes, price } = req.body;
 
       if (!name || !quantity) {
         return res.status(400).json({ error: 'Name and quantity are required' });
@@ -256,6 +289,7 @@ export const shoppingListController = {
           quantity,
           category,
           notes,
+          price: price ?? null,
         },
       });
 
@@ -274,7 +308,7 @@ export const shoppingListController = {
     try {
       const userId = getUserId(req);
       const { listId, itemId } = req.params;
-      const { name, quantity, category, purchased, notes } = req.body;
+      const { name, quantity, category, purchased, notes, price } = req.body;
 
       const shoppingList = await prisma.shoppingList.findFirst({
         where: { id: listId, userId },
@@ -300,8 +334,15 @@ export const shoppingListController = {
           ...(category !== undefined && { category }),
           ...(purchased !== undefined && { purchased }),
           ...(notes !== undefined && { notes }),
+          ...(price !== undefined && { price }),
         },
       });
+
+      // Record to purchase history when item is newly marked as purchased
+      if (purchased === true && !item.purchased) {
+        const finalPrice = price !== undefined ? price : item.price;
+        recordPurchase(userId, item.name, item.quantity, item.category, finalPrice);
+      }
 
       res.json(updated);
     } catch (error: any) {
@@ -344,9 +385,10 @@ export const shoppingListController = {
           id: { in: itemIds },
           shoppingListId: listId,
         },
-        select: { id: true },
+        select: { id: true, name: true, quantity: true, category: true, purchased: true, price: true },
       });
 
+      const existingItemMap = new Map(existingItems.map(item => [item.id, item]));
       const existingItemIds = new Set(existingItems.map(item => item.id));
       const missingItemIds = itemIds.filter(id => !existingItemIds.has(id));
 
@@ -359,7 +401,7 @@ export const shoppingListController = {
       const validUpdates = updates.filter((u: { itemId: string }) => existingItemIds.has(u.itemId));
       
       const updateResults = await Promise.allSettled(
-        validUpdates.map(async (update: { itemId: string; purchased?: boolean; name?: string; quantity?: string; category?: string | null; notes?: string | null }) => {
+        validUpdates.map(async (update: { itemId: string; purchased?: boolean; name?: string; quantity?: string; category?: string | null; notes?: string | null; price?: number | null }) => {
           try {
             const { itemId, ...data } = update;
             
@@ -370,6 +412,7 @@ export const shoppingListController = {
             if (data.quantity !== undefined) updateData.quantity = data.quantity;
             if (data.category !== undefined) updateData.category = data.category;
             if (data.notes !== undefined) updateData.notes = data.notes;
+            if (data.price !== undefined) updateData.price = data.price;
 
             return await prisma.shoppingListItem.update({
               where: { id: itemId },
@@ -400,8 +443,16 @@ export const shoppingListController = {
         console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Updated ${updatedItems.length} items, ${missingItemIds.length} items were missing`);
       }
 
-      // Return success even if some items were missing or failed (partial success)
-      // This allows the frontend to handle gracefully
+      // Record purchases for items newly marked as purchased
+      for (const update of validUpdates) {
+        if (update.purchased === true) {
+          const originalItem = existingItemMap.get(update.itemId);
+          if (originalItem && !originalItem.purchased) {
+            const finalPrice = update.price !== undefined ? update.price : originalItem.price;
+            recordPurchase(userId, originalItem.name, originalItem.quantity, originalItem.category, finalPrice);
+          }
+        }
+      }
 
       const duration = Date.now() - startTime;
       console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Success - Duration: ${duration}ms - Updated: ${updatedItems.length} items, Missing: ${missingItemIds.length}, Failed: ${failedUpdates.length}`);
@@ -571,6 +622,19 @@ export const shoppingListController = {
         });
       }
 
+      // Exclude pantry items (staples user always has on hand)
+      const pantryItems = await prisma.pantryItem.findMany({
+        where: { userId },
+        select: { name: true },
+      });
+      const pantrySet = new Set(pantryItems.map(p => p.name.toLowerCase().trim()));
+
+      for (const ingredientName of ingredientQuantities.keys()) {
+        if (pantrySet.has(ingredientName.toLowerCase().trim())) {
+          ingredientQuantities.delete(ingredientName);
+        }
+      }
+
       // Calculate smart purchase quantities and add items to shopping list
       const itemsToCreate: Array<{
         shoppingListId: string;
@@ -582,13 +646,13 @@ export const shoppingListController = {
       for (const [ingredientName, quantities] of ingredientQuantities.entries()) {
         // Aggregate quantities
         const aggregated = aggregateQuantities(ingredientName, quantities);
-        
+
         // Calculate how much to actually buy (based on package sizes)
         const purchaseInfo = calculatePurchaseQuantity(aggregated);
-        
+
         // Format quantity display
         const displayQuantity = purchaseInfo.displayText;
-        
+
         itemsToCreate.push({
           shoppingListId: shoppingList.id,
           name: ingredientName.charAt(0).toUpperCase() + ingredientName.slice(1),
@@ -724,6 +788,19 @@ export const shoppingListController = {
           });
         }
 
+        // Exclude pantry items (staples user always has on hand)
+        const pantryItems = await prisma.pantryItem.findMany({
+          where: { userId },
+          select: { name: true },
+        });
+        const pantrySet = new Set(pantryItems.map(p => p.name.toLowerCase().trim()));
+
+        for (const ingredientName of ingredientQuantities.keys()) {
+          if (pantrySet.has(ingredientName.toLowerCase().trim())) {
+            ingredientQuantities.delete(ingredientName);
+          }
+        }
+
         // Calculate smart purchase quantities for each ingredient
         const itemsToCreate: Array<{
           shoppingListId: string;
@@ -735,13 +812,13 @@ export const shoppingListController = {
         for (const [ingredientName, quantities] of ingredientQuantities.entries()) {
           // Aggregate quantities
           const aggregated = aggregateQuantities(ingredientName, quantities);
-          
+
           // Calculate how much to actually buy (based on package sizes)
           const purchaseInfo = calculatePurchaseQuantity(aggregated);
-          
+
           // Format quantity display
           const displayQuantity = purchaseInfo.displayText;
-          
+
           itemsToCreate.push({
             shoppingListId: shoppingList.id,
             name: ingredientName.charAt(0).toUpperCase() + ingredientName.slice(1),
@@ -995,6 +1072,19 @@ export const shoppingListController = {
         });
       }
 
+      // Exclude pantry items (staples user always has on hand)
+      const pantryItemsForExclusion = await prisma.pantryItem.findMany({
+        where: { userId },
+        select: { name: true },
+      });
+      const pantrySetForExclusion = new Set(pantryItemsForExclusion.map(p => p.name.toLowerCase().trim()));
+
+      for (const ingredientName of ingredientQuantities.keys()) {
+        if (pantrySetForExclusion.has(ingredientName.toLowerCase().trim())) {
+          ingredientQuantities.delete(ingredientName);
+        }
+      }
+
       // Calculate smart purchase quantities for each ingredient
       const itemsToCreate: Array<{
         shoppingListId: string;
@@ -1006,13 +1096,13 @@ export const shoppingListController = {
       for (const [ingredientName, quantities] of ingredientQuantities.entries()) {
         // Aggregate quantities
         const aggregated = aggregateQuantities(ingredientName, quantities);
-        
+
         // Calculate how much to actually buy (based on package sizes)
         const purchaseInfo = calculatePurchaseQuantity(aggregated);
-        
+
         // Format quantity display
         const displayQuantity = purchaseInfo.displayText;
-        
+
         itemsToCreate.push({
           shoppingListId: shoppingList.id,
           name: ingredientName.charAt(0).toUpperCase() + ingredientName.slice(1),
@@ -1095,6 +1185,94 @@ export const shoppingListController = {
     } catch (error: any) {
       console.error('Error generating shopping list from meal plan:', error);
       res.status(500).json({ error: 'Failed to generate shopping list from meal plan' });
+    }
+  },
+
+  /**
+   * Get purchase history for a user
+   * GET /api/shopping-lists/purchase-history
+   * Query: ?limit=20&favorites=true&since=2025-01-01
+   */
+  async getPurchaseHistory(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const limit = parseInt(req.query.limit as string) || 20;
+      const favoritesOnly = req.query.favorites === 'true';
+      const since = req.query.since ? new Date(req.query.since as string) : undefined;
+
+      const where: any = { userId };
+      if (favoritesOnly) where.isFavorite = true;
+      if (since) where.lastPurchasedAt = { gte: since };
+
+      const items = await prisma.purchaseHistory.findMany({
+        where,
+        orderBy: [
+          { isFavorite: 'desc' },
+          { purchaseCount: 'desc' },
+          { lastPurchasedAt: 'desc' },
+        ],
+        take: limit,
+      });
+
+      res.json(items);
+    } catch (error: any) {
+      console.error('Error getting purchase history:', error);
+      res.status(500).json({ error: 'Failed to get purchase history' });
+    }
+  },
+
+  /**
+   * Get items purchased in the last N days
+   * GET /api/shopping-lists/purchase-history/recent?days=7
+   */
+  async getRecentPurchases(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const days = parseInt(req.query.days as string) || 7;
+      const since = new Date();
+      since.setDate(since.getDate() - days);
+
+      const items = await prisma.purchaseHistory.findMany({
+        where: {
+          userId,
+          lastPurchasedAt: { gte: since },
+        },
+        orderBy: { lastPurchasedAt: 'desc' },
+      });
+
+      res.json(items);
+    } catch (error: any) {
+      console.error('Error getting recent purchases:', error);
+      res.status(500).json({ error: 'Failed to get recent purchases' });
+    }
+  },
+
+  /**
+   * Toggle favorite status on a purchase history item
+   * PUT /api/shopping-lists/purchase-history/:id/favorite
+   */
+  async togglePurchaseHistoryFavorite(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const item = await prisma.purchaseHistory.findFirst({
+        where: { id, userId },
+      });
+
+      if (!item) {
+        return res.status(404).json({ error: 'Purchase history item not found' });
+      }
+
+      const updated = await prisma.purchaseHistory.update({
+        where: { id },
+        data: { isFavorite: !item.isFavorite },
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error toggling purchase history favorite:', error);
+      res.status(500).json({ error: 'Failed to toggle favorite' });
     }
   },
 };

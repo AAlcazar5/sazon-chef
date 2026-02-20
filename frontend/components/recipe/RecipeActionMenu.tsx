@@ -17,6 +17,10 @@ interface RecipeActionMenuProps {
   onHealthify?: () => void;
   onReportIssue?: () => void;
   onShare?: () => void;
+  onAddNotes?: () => void;
+  onRate?: () => void;
+  onMarkCooked?: () => void;
+  onAddToCollection?: () => void;
 }
 
 export default function RecipeActionMenu({
@@ -28,6 +32,10 @@ export default function RecipeActionMenu({
   onHealthify,
   onReportIssue,
   onShare,
+  onAddNotes,
+  onRate,
+  onMarkCooked,
+  onAddToCollection,
 }: RecipeActionMenuProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -84,6 +92,13 @@ export default function RecipeActionMenu({
       color: Colors.primary,
       onPress: () => handleAction(onAddToMealPlan),
     },
+    ...(onAddToCollection ? [{
+      id: 'add-to-collection',
+      label: 'Add to Collection',
+      icon: Icons.BOOKMARK_OUTLINE,
+      color: Colors.primary,
+      onPress: () => handleAction(onAddToCollection),
+    }] : []),
     {
       id: 'share',
       label: 'Share Recipe',
@@ -105,6 +120,27 @@ export default function RecipeActionMenu({
       color: Colors.tertiaryGreen,
       onPress: () => handleAction(onHealthify),
     },
+    ...(onAddNotes ? [{
+      id: 'add-notes',
+      label: 'Add Notes',
+      icon: Icons.NOTE_OUTLINE,
+      color: Colors.primary,
+      onPress: () => handleAction(onAddNotes),
+    }] : []),
+    ...(onRate ? [{
+      id: 'rate',
+      label: 'Rate Recipe',
+      icon: Icons.STAR_OUTLINE,
+      color: Colors.primary,
+      onPress: () => handleAction(onRate),
+    }] : []),
+    ...(onMarkCooked ? [{
+      id: 'mark-cooked',
+      label: 'Mark as Cooked',
+      icon: Icons.RESTAURANT_OUTLINE,
+      color: Colors.tertiaryGreen,
+      onPress: () => handleAction(onMarkCooked),
+    }] : []),
     {
       id: 'report-issue',
       label: 'Report Issue',
