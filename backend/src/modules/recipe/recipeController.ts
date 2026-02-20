@@ -4181,10 +4181,25 @@ export const recipeController = {
         instructions: { orderBy: { step: 'asc' as const } },
       };
 
+      // Build filter-aware ROTD where clause (respects active filters)
+      const rotdWhere: any = { isUserCreated: false, imageUrl: { not: null } };
+      if (where.cuisine) rotdWhere.cuisine = where.cuisine;
+      if (where.cookTime) rotdWhere.cookTime = where.cookTime;
+      if (where.mealType) rotdWhere.mealType = where.mealType;
+      if (andConditions.length > 0) rotdWhere.AND = [...andConditions];
+
+      // Build nested recipe filter for liked recipes (Prisma relation filtering)
+      const likedRecipeFilter: any = {};
+      if (where.cuisine) likedRecipeFilter.cuisine = where.cuisine;
+      if (where.cookTime) likedRecipeFilter.cookTime = where.cookTime;
+      if (where.mealType) likedRecipeFilter.mealType = where.mealType;
+      if (andConditions.length > 0) likedRecipeFilter.AND = [...andConditions];
+      const hasLikedFilter = Object.keys(likedRecipeFilter).length > 0;
+
       const [rotdCandidates, allMainRecipes, totalCount, quickMealRecipes, likedEntries, popularSearchData] = await Promise.all([
-        // Recipe of the Day candidates
+        // Recipe of the Day candidates (filtered by active filters)
         prisma.recipe.findMany({
-          where: { isUserCreated: false, imageUrl: { not: null } },
+          where: rotdWhere,
           include: recipeInclude,
           orderBy: [{ healthScore: 'desc' }, { qualityScore: 'desc' }],
           take: 100,
@@ -4202,9 +4217,13 @@ export const recipeController = {
           include: recipeInclude,
           take: 20,
         }),
-        // Liked recipes (max 5)
+        // Liked recipes (max 5, filtered by active filters)
         prisma.recipeFeedback.findMany({
-          where: { userId, liked: true },
+          where: {
+            userId,
+            liked: true,
+            ...(hasLikedFilter ? { recipe: likedRecipeFilter } : {}),
+          },
           include: { recipe: { include: recipeInclude } },
           orderBy: { createdAt: 'desc' },
           take: 5,

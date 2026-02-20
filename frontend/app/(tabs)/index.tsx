@@ -46,7 +46,6 @@ import { useRecipeFilters } from '../../hooks/useRecipeFilters';
 import { useCollectionSave } from '../../hooks/useCollectionSave';
 import { useQuickMeals } from '../../hooks/useQuickMeals';
 import { usePerfectMatches } from '../../hooks/usePerfectMatches';
-import { useRecipeOfTheDay } from '../../hooks/useRecipeOfTheDay';
 import { usePersonalizedRecipes } from '../../hooks/usePersonalizedRecipes';
 import { useCollapsibleSections } from '../../hooks/useCollapsibleSections';
 import { useRecipeActions } from '../../hooks/useRecipeActions';
@@ -314,8 +313,10 @@ export default function HomeScreen() {
   // Time-aware suggestions toggle (Home Page 2.0) - using extracted hook
   const { timeAwareMode, setTimeAwareMode, toggleTimeAwareMode, currentMealPeriod, isLoaded: timeAwareLoaded } = useTimeAwareMode();
 
-  // Recipe of the Day (Home Page 2.0) - using extracted hook
-  const { recipe: recipeOfTheDay, loading: loadingRecipeOfTheDay } = useRecipeOfTheDay({ initialData: homeFeed.recipeOfTheDay });
+  // Recipe of the Day — pulled directly from home feed so it always reflects current filters.
+  // Bypasses the useRecipeOfTheDay intermediate state to prevent stale values after refetch.
+  const recipeOfTheDay = homeFeed.recipeOfTheDay;
+  const loadingRecipeOfTheDay = homeFeed.loading && !homeFeed.recipeOfTheDay;
 
   // Use consolidated home feed data instead of separate useApi('/recipes/suggested')
   const recipesData = homeFeed.suggestedRecipes.length > 0 ? homeFeed.suggestedRecipes : null;
@@ -502,8 +503,7 @@ export default function HomeScreen() {
     setInitialRecipesLoaded(false); // Reset flag to allow reloading
     setCurrentPage(0);
 
-    // Use shuffle mode for pull-to-discover (Home Page 2.0)
-    const result = await fetchRecipes({
+    const filterParams = {
       page: 0,
       limit: RECIPES_PER_PAGE,
       cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
@@ -514,8 +514,14 @@ export default function HomeScreen() {
       search: searchQuery || undefined,
       ...getMacroFilterParams(),
       useTimeAwareDefaults: timeAwareMode,
-      shuffle: true, // Enable shuffle for fresh discovery on pull
-    });
+      mood: selectedMood?.id || undefined,
+    };
+
+    // Refetch both main recipes (with shuffle) and home feed sections in parallel
+    const [result] = await Promise.all([
+      fetchRecipes({ ...filterParams, shuffle: true }),
+      homeFeed.refetch(filterParams),
+    ]);
 
     if (result) {
       applyFetchResult(result);
@@ -526,21 +532,52 @@ export default function HomeScreen() {
   // Set up ref for random recipe hook's onRefresh callback
   onRefreshRef.current = onRefresh;
 
-  // Fetch quick meals and perfect matches when filters change - hooks handle actual fetching
-  // Skip initial fetch when homeFeed already provided data (initialData in hooks)
-  const homeFeedInitialRef = useRef(true);
+  // Re-fetch entire home feed when filters change so ALL sections (Quick Meals, Perfect Matches,
+  // Liked Recipes, Recipe of the Day) reflect the active filters — not just the main grid.
+  const homeFeedFilterKeyRef = useRef<string>('');
+  const homeFeedDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (filtersLoaded && !searchQuery) {
-      // Skip the first trigger if homeFeed already provided initial data
-      if (homeFeedInitialRef.current && (homeFeed.quickMeals.length > 0 || homeFeed.perfectMatches.length > 0)) {
-        homeFeedInitialRef.current = false;
-        return;
-      }
-      homeFeedInitialRef.current = false;
-      fetchQuickMeals();
-      fetchPerfectMatches();
-    }
-  }, [filtersLoaded, filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, mealPrepMode, searchQuery, fetchQuickMeals, fetchPerfectMatches]);
+    if (!filtersLoaded || !initialRecipesLoaded) return;
+
+    const macros = getMacroFilterParams();
+    const currentKey = JSON.stringify({
+      c: filters.cuisines,
+      d: filters.dietaryRestrictions,
+      t: filters.maxCookTime,
+      df: filters.difficulty,
+      mp: mealPrepMode,
+      mood: selectedMood?.id,
+      ta: timeAwareMode,
+      ...macros,
+    });
+
+    // Skip if filters haven't actually changed (including initial mount)
+    if (currentKey === homeFeedFilterKeyRef.current) return;
+    homeFeedFilterKeyRef.current = currentKey;
+
+    // Debounce to avoid excessive refetches during rapid toggling
+    if (homeFeedDebounceRef.current) clearTimeout(homeFeedDebounceRef.current);
+    homeFeedDebounceRef.current = setTimeout(() => {
+      homeFeed.refetch({
+        page: 0,
+        limit: RECIPES_PER_PAGE,
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        maxCookTime: filters.maxCookTime || undefined,
+        difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+        mealPrepMode,
+        mood: selectedMood?.id || undefined,
+        useTimeAwareDefaults: timeAwareMode,
+        ...macros,
+      });
+    }, 300);
+
+    return () => {
+      if (homeFeedDebounceRef.current) clearTimeout(homeFeedDebounceRef.current);
+    };
+  }, [filtersLoaded, initialRecipesLoaded, filters.cuisines, filters.dietaryRestrictions,
+      filters.maxCookTime, filters.difficulty, mealPrepMode, selectedMood, timeAwareMode,
+      quickMacroFilters, getMacroFilterParams, homeFeed.refetch, RECIPES_PER_PAGE]);
 
   const handleRecipePress = useCallback((recipeId: string) => {
     console.log('📱 HomeScreen: Recipe pressed', recipeId);
