@@ -423,7 +423,8 @@ export default function CookbookScreen() {
   }, [serverHasMore, loadingMore, paginationInfo.isLastPage, filteredAndSortedRecipes.length, loadMore]);
 
 
-  // Fetch similar recipes based on the first recipe in the current page
+  // Fetch similar recipes based on the first recipe in the current page,
+  // then apply active cookbook filters so the carousel stays consistent with the main list
   useEffect(() => {
     const fetchSimilarRecipes = async () => {
       if (pagedRecipes.length === 0) {
@@ -441,10 +442,35 @@ export default function CookbookScreen() {
       try {
         const response = await recipeApi.getSimilarRecipes(baseRecipe.id, 10);
         if (response.data && Array.isArray(response.data)) {
-          // Filter out recipes that are already in the cookbook
           const cookbookRecipeIds = new Set(allRecipes.map(r => r.id));
-          const filtered = response.data.filter((recipe: SavedRecipe) => !cookbookRecipeIds.has(recipe.id));
-          setSimilarRecipes(filtered.slice(0, 10)); // Limit to 10
+          const normDiff = (d: unknown) => String(d || '').trim().toLowerCase();
+
+          const filtered = response.data
+            .filter((recipe: SavedRecipe) => !cookbookRecipeIds.has(recipe.id))
+            .filter((recipe: SavedRecipe) => {
+              const anyR = recipe as any;
+              // Apply the same cookbook filters as the main list
+              if (cookbookFilters.maxCookTime && (recipe.cookTime || 0) > cookbookFilters.maxCookTime) return false;
+              if (cookbookFilters.difficulty.length > 0) {
+                const allowed = new Set(cookbookFilters.difficulty.map(x => x.toLowerCase()));
+                if (!allowed.has(normDiff(anyR.difficulty))) return false;
+              }
+              if (cookbookFilters.mealPrepOnly) {
+                if (!anyR.mealPrepSuitable && !anyR.freezable && !anyR.batchFriendly) return false;
+              }
+              if (cookbookFilters.highProtein && (Number(recipe.protein) || 0) < 25) return false;
+              if (cookbookFilters.lowCal && (Number(recipe.calories) || 0) > 400) return false;
+              if (cookbookFilters.budget) {
+                const cost = Number(anyR.estimatedCostPerServing);
+                if (!Number.isFinite(cost) || cost > 3) return false;
+              }
+              if (cookbookFilters.onePot) {
+                const tags = Array.isArray(anyR.tags) ? anyR.tags.map((t: any) => String(t).toLowerCase()) : [];
+                if (!anyR.onePot && !anyR.isOnePot && !tags.includes('one-pot') && !tags.includes('one pot')) return false;
+              }
+              return true;
+            });
+          setSimilarRecipes(filtered.slice(0, 10));
         } else {
           setSimilarRecipes([]);
         }
@@ -455,7 +481,7 @@ export default function CookbookScreen() {
     };
 
     fetchSimilarRecipes();
-  }, [pagedRecipes, allRecipes]);
+  }, [pagedRecipes, allRecipes, cookbookFilters]);
   
   // Reset pagination when display mode changes (grid/list)
   useEffect(() => {
