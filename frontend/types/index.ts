@@ -355,6 +355,7 @@ export interface ShoppingListItem {
   purchased: boolean;
   notes?: string;
   price?: number;
+  photoUrl?: string;
   recipeId?: string;
   recipe?: Recipe;
   createdAt: string;

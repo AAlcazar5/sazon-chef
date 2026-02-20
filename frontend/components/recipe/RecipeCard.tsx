@@ -39,6 +39,8 @@ interface RecipeCardProps {
   footer?: React.ReactNode;
 }
 
+import { optimizedImageUrl } from '../../utils/imageUtils';
+
 // Helper to truncate description
 const truncateDescription = (text: string | undefined, maxLength: number): string => {
   if (!text) return '';
@@ -152,7 +154,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
         {recipe.imageUrl && recipe.imageUrl.trim() !== '' && !imageError ? (
           <View style={{ position: 'relative' }}>
             <Image
-              source={{ uri: recipe.imageUrl.trim() }}
+              source={{ uri: optimizedImageUrl(recipe.imageUrl.trim()) }}
               style={{ width: '100%', height: finalImageHeight }}
               contentFit="cover"
               transition={Duration.normal}
@@ -432,7 +434,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
         {recipe.imageUrl && recipe.imageUrl.trim() !== '' && !imageError ? (
           <View style={{ position: 'relative' }}>
             <Image
-              source={{ uri: recipe.imageUrl.trim() }}
+              source={{ uri: optimizedImageUrl(recipe.imageUrl.trim()) }}
               style={{ width: '100%', height: finalImageHeight }}
               contentFit="cover"
               transition={Duration.normal}

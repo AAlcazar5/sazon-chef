@@ -48,6 +48,7 @@
     "@types/uuid": "^10.0.0",
     "axios": "^1.13.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.9.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.3",

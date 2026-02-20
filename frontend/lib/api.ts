@@ -1170,7 +1170,7 @@ export const shoppingListApi = {
     return apiClient.post(`/shopping-lists/${listId}/items`, data);
   },
 
-  updateItem: (listId: string, itemId: string, data: { name?: string; quantity?: string; category?: string; purchased?: boolean; isCompleted?: boolean; price?: number | null; notes?: string | null }) => {
+  updateItem: (listId: string, itemId: string, data: { name?: string; quantity?: string; category?: string; purchased?: boolean; isCompleted?: boolean; price?: number | null; notes?: string | null; photoUrl?: string | null }) => {
     // Map isCompleted to purchased for backward compatibility
     const mappedData = { ...data };
     if (mappedData.isCompleted !== undefined) {
@@ -1186,6 +1186,12 @@ export const shoppingListApi = {
 
   deleteItem: (listId: string, itemId: string) => {
     return apiClient.delete(`/shopping-lists/${listId}/items/${itemId}`);
+  },
+
+  uploadItemPhoto: (imageUri: string) => {
+    const formData = new FormData();
+    formData.append('photo', { uri: imageUri, type: 'image/jpeg', name: 'item-photo.jpg' } as any);
+    return apiClient.upload<{ url: string }>('/upload/item-photo', formData);
   },
 
   generateFromRecipes: (recipeIds: string[], name?: string) => {

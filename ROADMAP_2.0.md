@@ -8,9 +8,9 @@
 
 | Section | Focus Area | Status |
 |---------|------------|--------|
-| Group 18 | Shopping List 2.0 | Refactoring ✅, Quick wins ✅, Offline ✅ |
+| Group 18 | Shopping List 2.0 | Refactoring ✅, Quick wins ✅, Offline ✅, Item Photos ✅ |
 | Group 18b | Meal Plan 2.0 | Refactoring ✅, Templates ✅, Duplicate ✅, Swaps ✅, Recurring ✅, TODOs 7/7 ✅, Perf ✅, Testing ✅ |
-| Group 18c | Cookbook 2.0 | Refactoring ✅, Notes ✅, Ratings ✅, Recently Viewed ✅, Cooking History ✅, Collections ✅, Perf ✅, API Pagination ✅ |
+| Group 18c | Cookbook 2.0 | Refactoring ✅, Notes ✅, Ratings ✅, Recently Viewed ✅, Cooking History ✅, Collections ✅, Perf ✅, API Pagination ✅, State Management ✅ |
 | Group 18d | Home Page 2.0 | Refactoring ✅, Quick wins ✅, Perf ✅, API Consolidation ✅ |
 | Group 18e | Profile 2.0 | Refactoring ✅, Quick wins ✅ |
 | Group 18f | Quick Actions 2.0 | ✅ COMPLETE |
@@ -31,14 +31,8 @@
 
 #### 🔄 Quick Wins (Remaining)
 
-* **Item Photos** (deferred)
-  * Attach photos to items (product photo, location in store)
-  * 📍 Database: Add `photoUrl` field to `ShoppingListItem`
-  * 📍 Requires: Cloud storage setup (S3/Cloudinary)
+* ~~**Item Photos**~~ ✅ — `photoUrl String?` on `ShoppingListItem`. Cloudinary upload via `POST /api/upload/item-photo` (multer memoryStorage → Cloudinary, `sazon/shopping-items` folder, 800px max). Photo picker in Edit Item modal (gallery only, 1:1 crop). Upload-on-select flow with loading indicator. Thumbnail (40×40) shown on item rows. Remove photo button. Add `CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET` to `backend/.env`.
 
-#### 🔄 State Management
-
-* 🔄 Consider Zustand or Jotai for shopping list state
 
 ---
 
@@ -100,8 +94,8 @@
 
 #### 🔄 Technical Debt
 
-* **State Management**
-  * Create `useCookbook` hook for centralized data fetching
+* ~~**State Management**~~ ✅
+  * ~~Create `useCookbook` hook for centralized data fetching~~ — `useCookbook.ts` composes `useCookbookCache` + `useCookbookFilters`. Exposes `displayedRecipes` (filtered + sorted), all cache actions (loadRecipes, loadMore, mutations, flushSyncQueue), and all filter/display state in one import.
   * ~~Optimize re-renders with proper memoization~~ ✅ — React.memo on CookbookRecipeList, CookbookHeader, SimilarRecipesCarousel. useCallback on all handlers in cookbook.tsx. FlatList virtualization in CookbookRecipeList (grid: numColumns=2, list: animated). Optimistic like/dislike already present.
 
 * ~~**API Optimization**~~ ✅

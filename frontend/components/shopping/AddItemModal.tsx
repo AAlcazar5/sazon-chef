@@ -1,8 +1,9 @@
 // frontend/components/shopping/AddItemModal.tsx
 // Add item and edit quantity modals
 
-import { View, Text, TextInput, Modal } from 'react-native';
+import { View, Text, TextInput, Modal, Image, Alert } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import * as ImagePicker from 'expo-image-picker';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import Icon from '../ui/Icon';
@@ -17,6 +18,7 @@ interface AddItemModalProps {
   dispatch: React.Dispatch<any>;
   onAddItem: () => void;
   onSaveQuantity: () => void;
+  onPickItemPhoto: (imageUri: string) => void;
   purchaseHistoryPriceMap: Map<string, number>;
 }
 
@@ -25,6 +27,7 @@ export default function AddItemModal({
   dispatch,
   onAddItem,
   onSaveQuantity,
+  onPickItemPhoto,
   purchaseHistoryPriceMap,
 }: AddItemModalProps) {
   const { colorScheme } = useColorScheme();
@@ -33,6 +36,23 @@ export default function AddItemModal({
   const editItemLastPrice = state.selectedItem
     ? purchaseHistoryPriceMap.get(state.selectedItem.name.toLowerCase().trim())
     : undefined;
+
+  const handlePickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo access to attach item photos.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!result.canceled && result.assets[0]) {
+      onPickItemPhoto(result.assets[0].uri);
+    }
+  };
 
   return (
     <>
@@ -170,6 +190,39 @@ export default function AddItemModal({
                   numberOfLines={2}
                   style={{ minHeight: 60, textAlignVertical: 'top' }}
                 />
+
+                {/* Photo picker */}
+                <View className="flex-row items-center mb-4" style={{ gap: 12 }}>
+                  {state.editingPhotoUrl ? (
+                    <Image
+                      source={{ uri: state.editingPhotoUrl }}
+                      style={{ width: 64, height: 64, borderRadius: 8 }}
+                    />
+                  ) : null}
+                  <HapticTouchableOpacity
+                    onPress={handlePickPhoto}
+                    disabled={state.uploadingPhoto}
+                    className="flex-row items-center px-4 py-2.5 rounded-lg border"
+                    style={{ borderColor: isDark ? '#4B5563' : '#D1D5DB', gap: 8 }}
+                  >
+                    {state.uploadingPhoto ? (
+                      <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
+                    ) : (
+                      <Icon name={Icons.CAMERA_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Add photo" />
+                    )}
+                    <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>
+                      {state.editingPhotoUrl ? 'Change Photo' : 'Add Photo'}
+                    </Text>
+                  </HapticTouchableOpacity>
+                  {state.editingPhotoUrl && (
+                    <HapticTouchableOpacity
+                      onPress={() => dispatch({ type: 'UPDATE', payload: { editingPhotoUrl: null } })}
+                      className="p-2"
+                    >
+                      <Icon name={Icons.CLOSE} size={IconSizes.SM} color="#6B7280" accessibilityLabel="Remove photo" />
+                    </HapticTouchableOpacity>
+                  )}
+                </View>
 
                 <View className="flex-row" style={{ gap: 8 }}>
                   <HapticTouchableOpacity

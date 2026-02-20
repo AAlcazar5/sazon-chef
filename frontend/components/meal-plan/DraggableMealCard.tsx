@@ -3,6 +3,7 @@
 
 import React, { useEffect } from 'react';
 import { View, Text, Image, Switch } from 'react-native';
+import { optimizedImageUrl } from '../../utils/imageUtils';
 import { useColorScheme } from 'nativewind';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, {
@@ -341,7 +342,7 @@ function DraggableMealCard({
           {meal.imageUrl && (
             <View className="mb-3 rounded-lg overflow-hidden" style={{ height: 120 }}>
               <Image
-                source={{ uri: meal.imageUrl }}
+                source={{ uri: optimizedImageUrl(meal.imageUrl) }}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
                 accessibilityLabel={`${meal.name} image`}
