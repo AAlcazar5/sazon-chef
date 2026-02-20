@@ -23,6 +23,7 @@ model User {
   // Password reset fields
   resetCode       String? // 6-digit code for password reset
   resetCodeExpiry DateTime? // When the reset code expires
+  profilePictureUrl String? // URL to uploaded profile picture
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -49,6 +50,15 @@ model User {
   // Weight tracking
   weightLogs              WeightLog[]
   weightGoals             WeightGoal[]
+  purchaseHistory         PurchaseHistory[]
+  pantryItems             PantryItem[]
+  mealPlanTemplates       MealPlanTemplate[]
+  recipeViews             RecipeView[]
+  cookingLogs             CookingLog[]
+  recurringMeals          RecurringMeal[]
+  notificationSettings    NotificationSettings?
+  profilePresets          ProfilePreset[]
+  searchQueries           SearchQuery[]
 
   @@map("users")
 }
@@ -248,6 +258,10 @@ model Recipe {
   mealPrepPortions  MealPrepPortion[] // Meal prep portion tracking
   mealPrepTemplates MealPrepTemplate[] // Meal prep templates
   shoppingListItems ShoppingListItem[] // Shopping list items from this recipe
+  templateMeals     TemplateMeal[] // Meals in meal plan templates
+  recipeViews       RecipeView[]
+  cookingLogs       CookingLog[]
+  recurringMeals    RecurringMeal[]
 
   // Performance indexes for recipe queries
   @@index([isUserCreated])
@@ -312,6 +326,10 @@ model SavedRecipe {
 
   savedDate DateTime @default(now())
 
+  // Cookbook Quick Wins
+  notes  String? // Personal notes ("needs more garlic", "kids loved it")
+  rating Int?    // Personal 1-5 star rating
+
   // Many-to-many relationship with collections via RecipeCollection
   recipeCollections RecipeCollection[]
 
@@ -319,14 +337,45 @@ model SavedRecipe {
   @@map("saved_recipes")
 }
 
+model RecipeView {
+  id       String   @id @default(cuid())
+  recipeId String
+  userId   String
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  viewedAt DateTime @default(now())
+
+  @@unique([recipeId, userId])
+  @@index([userId, viewedAt])
+  @@map("recipe_views")
+}
+
+model CookingLog {
+  id       String   @id @default(cuid())
+  recipeId String
+  userId   String
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cookedAt DateTime @default(now())
+  notes    String?
+
+  @@index([userId, recipeId])
+  @@index([userId, cookedAt])
+  @@map("cooking_logs")
+}
+
 model Collection {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  coverImageUrl String?
+  isPinned      Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Many-to-many relationship with recipes via RecipeCollection
   recipeCollections RecipeCollection[]
@@ -404,10 +453,90 @@ model Meal {
   rating Int?
   notes  String?
 
+  isFromRecurring   Boolean @default(false)
+  recurringMealId   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("meals")
+}
+
+// Meal Plan Templates (Group 18b)
+model MealPlanTemplate {
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  goal        String? // "weight_loss", "muscle_gain", "balanced", "budget", null=custom
+  isSystem    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  meals TemplateMeal[]
+
+  @@map("meal_plan_templates")
+}
+
+model TemplateMeal {
+  id         String           @id @default(cuid())
+  templateId String
+  template   MealPlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  dayIndex Int    // 0-6 (relative day offset within the week)
+  mealType String // "breakfast", "lunch", "dinner", "snack"
+  recipeId String?
+  recipe   Recipe? @relation(fields: [recipeId], references: [id])
+
+  customName        String?
+  customDescription String?
+  customCalories    Int?
+  customProtein     Float?
+  customCarbs       Float?
+  customFat         Float?
+
+  createdAt DateTime @default(now())
+
+  @@map("template_meals")
+}
+
+// Recurring Meals (Group 18b)
+model RecurringMeal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealType    String   // "breakfast" | "lunch" | "dinner" | "snack"
+  daysOfWeek  String   // Comma-separated day indices: "1,2,3,4,5" = Mon-Fri
+  recipeId    String?
+  recipe      Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  title       String?  // Custom meal title (when no recipe)
+  calories    Int?
+  protein     Float?
+  carbs       Float?
+  fat         Float?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, isActive])
+  @@map("recurring_meals")
+}
+
+// Search Query Tracking (Group 18g - Search 2.0)
+model SearchQuery {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query       String
+  resultCount Int      @default(0)
+  searchedAt  DateTime @default(now())
+
+  @@index([userId, searchedAt])
+  @@index([query, searchedAt])
+  @@map("search_queries")
 }
 
 // Meal Prep Portion Tracking (Phase 6, Group 14)
@@ -555,12 +684,47 @@ model ShoppingListItem {
   category       String?
   purchased      Boolean      @default(false)
   notes          String?
+  price          Float?
   recipeId       String?
   recipe         Recipe?      @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@map("shopping_list_items")
+}
+
+model PurchaseHistory {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemName        String
+  quantity        String   @default("1")
+  category        String?
+  purchaseCount   Int      @default(1)
+  lastPurchasedAt DateTime @default(now())
+  isFavorite      Boolean  @default(false)
+  lastPrice       Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, itemName])
+  @@index([userId, purchaseCount])
+  @@index([userId, isFavorite])
+  @@map("purchase_history")
+}
+
+model PantryItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  category  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("pantry_items")
 }
 
 model ShoppingAppIntegration {
@@ -626,4 +790,52 @@ model WeightGoal {
 
   @@index([userId, isActive])
   @@map("weight_goals")
+}
+
+model NotificationSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  mealReminders     Boolean @default(true)
+  mealReminderTimes String  @default("08:00,12:00,18:00") // Comma-separated HH:mm times
+  newRecipes        Boolean @default(true)
+  goalUpdates       Boolean @default(false)
+  goalUpdateDay     String  @default("Monday")
+  goalUpdateTime    String  @default("09:00")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_settings")
+}
+
+model ProfilePreset {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+
+  // Macro snapshot
+  calories Int
+  protein  Int
+  carbs    Int
+  fat      Int
+
+  // Preference snapshot
+  activityLevel      String?
+  fitnessGoal        String?
+  maxDailyFoodBudget Float?
+  currency           String? @default("USD")
+
+  isActive Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId, isActive])
+  @@map("profile_presets")
 }

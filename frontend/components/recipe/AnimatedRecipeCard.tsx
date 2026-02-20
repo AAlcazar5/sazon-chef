@@ -10,7 +10,7 @@ interface AnimatedRecipeCardProps {
   scrollY?: Animated.Value; // For parallax effect
 }
 
-export default function AnimatedRecipeCard({
+function AnimatedRecipeCard({
   children,
   index,
   recipeId,
@@ -89,4 +89,6 @@ export default function AnimatedRecipeCard({
     </Animated.View>
   );
 }
+
+export default React.memo(AnimatedRecipeCard);
 

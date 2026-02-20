@@ -12,10 +12,12 @@ interface CollectionCardProps {
   collection: {
     id: string;
     name: string;
+    description?: string | null;
     isDefault?: boolean;
+    isPinned?: boolean;
     recipeCount?: number;
     updatedAt?: string;
-    coverImageUrl?: string;
+    coverImageUrl?: string | null;
   };
   isSelected?: boolean;
   onPress: () => void;
@@ -103,6 +105,15 @@ export default function CollectionCard({
           }}
         />
         
+        {/* Pin Badge */}
+        {collection.isPinned && !isSelected && (
+          <View className="absolute top-3 right-3">
+            <View className="w-6 h-6 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+              <Icon name={Icons.PIN} size={12} color={Colors.primary} accessibilityLabel="Pinned" />
+            </View>
+          </View>
+        )}
+
         {/* Selected Indicator */}
         {isSelected && (
           <View className="absolute top-3 right-3">
@@ -154,7 +165,16 @@ export default function CollectionCard({
 
       {/* Collection Info */}
       <View className="p-3">
-        <View className="flex-row items-center justify-between mb-2">
+        {collection.description ? (
+          <Text
+            className="text-xs mb-2"
+            numberOfLines={2}
+            style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}
+          >
+            {collection.description}
+          </Text>
+        ) : null}
+        <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
             <Icon name={Icons.COOKBOOK} size={IconSizes.XS} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} accessibilityLabel="Recipe count" />
             <Text className="text-sm font-semibold ml-1.5" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>

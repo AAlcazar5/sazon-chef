@@ -12,6 +12,7 @@
     "start": "node dist/server.js",
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
     "seed:clear": "CLEAR_DB=true ts-node -r tsconfig-paths/register prisma/seed.ts",
+    "seed:templates": "ts-node prisma/seedTemplates.ts",
     "seed:local": "ts-node -r tsconfig-paths/register scripts/seed-local-recipes.ts",
     "seed:ai": "ts-node -r tsconfig-paths/register scripts/seed-ai-recipes.ts",
     "seed:100": "ts-node -r tsconfig-paths/register scripts/seed-100-recipes.ts",

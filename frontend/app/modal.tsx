@@ -123,6 +123,8 @@ export default function RecipeModal() {
         const response = await recipeApi.getRecipe(id as string);
         console.log('📱 Modal: Received recipe data', response.data);
         setRecipe(response.data);
+        // Record view (non-blocking)
+        recipeApi.recordView(id as string).catch(() => {});
       } catch (err: any) {
         // Don't fail the modal if it's just a quota error - recipe should still load
         const isQuotaError = err?.code === 'insufficient_quota' || 

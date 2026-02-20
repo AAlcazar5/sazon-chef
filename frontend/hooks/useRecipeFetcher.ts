@@ -22,6 +22,7 @@ export interface RecipeFetchParams {
   useTimeAwareDefaults?: boolean;
   mood?: string;
   shuffle?: boolean;
+  scope?: 'all' | 'saved' | 'liked';
 }
 
 export interface RecipeFetchResult {
@@ -106,6 +107,9 @@ export function useRecipeFetcher(options?: UseRecipeFetcherOptions): UseRecipeFe
       }
       if (params.shuffle) {
         apiParams.shuffle = params.shuffle;
+      }
+      if (params.scope && params.scope !== 'all') {
+        apiParams.scope = params.scope;
       }
 
       console.log('📄 Fetching recipes with params:', apiParams);

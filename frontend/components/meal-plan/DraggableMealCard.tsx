@@ -41,13 +41,14 @@ interface DraggableMealCardProps {
   isSwapExpanded?: boolean;
   isLoadingSwap?: boolean;
   onSwapMeal?: (mealId: string, newRecipe: any, currentMeal: any) => void;
+  onSetRecurring?: (meal: any) => void;
 }
 
 /**
  * Draggable meal card component with swipe actions
  * Supports drag-and-drop, swipe to complete/delete, and inline swap suggestions
  */
-export default function DraggableMealCard({
+function DraggableMealCard({
   meal,
   hour,
   mealIndex,
@@ -70,6 +71,7 @@ export default function DraggableMealCard({
   isSwapExpanded,
   isLoadingSwap,
   onSwapMeal,
+  onSetRecurring,
 }: DraggableMealCardProps) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -352,6 +354,15 @@ export default function DraggableMealCard({
             <View className="flex-1">
               <View className="flex-row items-center">
                 <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{meal.name}</Text>
+                {meal.isFromRecurring && (
+                  <Icon
+                    name={Icons.SYNC_OUTLINE}
+                    size={14}
+                    color={isDark ? '#9CA3AF' : '#6B7280'}
+                    accessibilityLabel="Recurring meal"
+                    style={{ marginLeft: 6 }}
+                  />
+                )}
                 <Reanimated.View style={checkmarkAnimatedStyle}>
                   {isCompleted && (
                     <Icon
@@ -458,6 +469,19 @@ export default function DraggableMealCard({
                         size={16}
                         color={isSwapExpanded ? (isDark ? DarkColors.primary : Colors.primary) : '#9CA3AF'}
                         accessibilityLabel="Swap meal"
+                      />
+                    </HapticTouchableOpacity>
+                  )}
+                  {onSetRecurring && (
+                    <HapticTouchableOpacity
+                      onPress={() => onSetRecurring(meal)}
+                      className="mr-2"
+                    >
+                      <Icon
+                        name={Icons.REFRESH}
+                        size={16}
+                        color="#9CA3AF"
+                        accessibilityLabel="Set as recurring"
                       />
                     </HapticTouchableOpacity>
                   )}
@@ -578,3 +602,6 @@ export default function DraggableMealCard({
     </GestureDetector>
   );
 }
+
+
+export default React.memo(DraggableMealCard);

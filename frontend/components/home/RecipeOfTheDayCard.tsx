@@ -1,3 +1,4 @@
+import React from 'react';
 // frontend/components/home/RecipeOfTheDayCard.tsx
 // Recipe of the Day featured card component
 
@@ -32,7 +33,7 @@ interface RecipeOfTheDayCardProps {
  * Recipe of the Day featured card component
  * Displays a special featured recipe with prominent styling
  */
-export default function RecipeOfTheDayCard({
+function RecipeOfTheDayCard({
   recipe,
   feedback,
   isFeedbackLoading,
@@ -87,3 +88,5 @@ export default function RecipeOfTheDayCard({
     </View>
   );
 }
+
+export default React.memo(RecipeOfTheDayCard);

@@ -2,6 +2,7 @@
 // Custom hook for managing AI generation state and modals
 
 import { useState, Dispatch, SetStateAction } from 'react';
+import type { MealPlanTemplate } from '../types';
 
 interface SuccessMessage {
   title: string;
@@ -73,6 +74,26 @@ interface UseGenerationStateReturn {
   setShowShoppingListNameModal: Dispatch<SetStateAction<boolean>>;
   /** Set shopping list name */
   setShoppingListName: Dispatch<SetStateAction<string>>;
+
+  // Template state
+  showTemplatePickerModal: boolean;
+  showSaveTemplateModal: boolean;
+  templates: MealPlanTemplate[];
+  loadingTemplates: boolean;
+  applyingTemplate: boolean;
+  savingTemplate: boolean;
+  setShowTemplatePickerModal: Dispatch<SetStateAction<boolean>>;
+  setShowSaveTemplateModal: Dispatch<SetStateAction<boolean>>;
+  setTemplates: Dispatch<SetStateAction<MealPlanTemplate[]>>;
+  setLoadingTemplates: Dispatch<SetStateAction<boolean>>;
+  setApplyingTemplate: Dispatch<SetStateAction<boolean>>;
+  setSavingTemplate: Dispatch<SetStateAction<boolean>>;
+
+  // Duplicate state
+  duplicating: boolean;
+  showDuplicateModal: boolean;
+  setDuplicating: Dispatch<SetStateAction<boolean>>;
+  setShowDuplicateModal: Dispatch<SetStateAction<boolean>>;
 }
 
 /**
@@ -107,6 +128,18 @@ export function useGenerationState(): UseGenerationStateReturn {
   const [showShoppingListNameModal, setShowShoppingListNameModal] = useState(false);
   const [shoppingListName, setShoppingListName] = useState('');
 
+  // Template state
+  const [showTemplatePickerModal, setShowTemplatePickerModal] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templates, setTemplates] = useState<MealPlanTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Duplicate state
+  const [duplicating, setDuplicating] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
   return {
     generatingPlan,
     showMealSnackSelector,
@@ -140,5 +173,23 @@ export function useGenerationState(): UseGenerationStateReturn {
     setShoppingListSuccessMessage,
     setShowShoppingListNameModal,
     setShoppingListName,
+    // Template state
+    showTemplatePickerModal,
+    showSaveTemplateModal,
+    templates,
+    loadingTemplates,
+    applyingTemplate,
+    savingTemplate,
+    setShowTemplatePickerModal,
+    setShowSaveTemplateModal,
+    setTemplates,
+    setLoadingTemplates,
+    setApplyingTemplate,
+    setSavingTemplate,
+    // Duplicate state
+    duplicating,
+    showDuplicateModal,
+    setDuplicating,
+    setShowDuplicateModal,
   };
 }

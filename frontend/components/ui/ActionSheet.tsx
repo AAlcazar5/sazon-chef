@@ -18,6 +18,7 @@ export interface ActionSheetItem {
   onPress: () => void;
   color?: string;
   destructive?: boolean;
+  subtitle?: string;
 }
 
 interface ActionSheetProps {
@@ -174,6 +175,23 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                     >
                       {item.label}
                     </Text>
+                    {item.subtitle ? (
+                      <View style={{
+                        backgroundColor: isDark ? 'rgba(249, 115, 22, 0.2)' : '#FFF7ED',
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 12,
+                        marginRight: 4,
+                      }}>
+                        <Text style={{
+                          fontSize: FontSize.xs,
+                          fontWeight: FontWeight.semibold as any,
+                          color: Colors.primary,
+                        }}>
+                          {item.subtitle}
+                        </Text>
+                      </View>
+                    ) : null}
                     <Ionicons
                       name="chevron-forward"
                       size={20}

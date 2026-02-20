@@ -121,6 +121,18 @@ export async function getUserBehaviorData(userId: string) {
   }
 }
 
+// Non-blocking search query recording for analytics
+async function recordSearchQuery(userId: string, query: string, resultCount: number) {
+  try {
+    await prisma.searchQuery.create({
+      data: { userId, query: query.trim().toLowerCase(), resultCount },
+    });
+  } catch (error) {
+    // Non-blocking — don't fail the search if logging fails
+    console.error('⚠️ Failed to record search query:', error);
+  }
+}
+
 export const recipeController = {
   /**
    * OPTIMIZED: Get recipes with tiered scoring approach
@@ -642,6 +654,11 @@ export const recipeController = {
 
       console.log(`📊 Found ${recipes.length} of ${total} total recipes (page ${page + 1}, limit ${limit}), sorted by match percentage`);
 
+      // Track search query for analytics (non-blocking)
+      if (search && typeof search === 'string' && search.trim().length > 0) {
+        recordSearchQuery(userId, search, recipes.length).catch(() => {});
+      }
+
       res.json({
         recipes: recipesWithVariedImages,
         pagination: {
@@ -900,15 +917,16 @@ export const recipeController = {
       const dataSharingEnabled = isDataSharingEnabledFromRequest(req);
       
       // Extract filter parameters from query
-      const { 
-        cuisines, 
-        dietaryRestrictions, 
-        maxCookTime, 
+      const {
+        cuisines,
+        dietaryRestrictions,
+        maxCookTime,
         difficulty,
         includeAI,
         maxCost,
         mealPrepMode, // Filter by meal prep suitability
-        search // Search query for title/description
+        search, // Search query for title/description
+        scope, // Search scope: 'all' | 'saved' | 'liked'
       } = req.query;
       
       console.log('🔍 Filter parameters:', { cuisines, dietaryRestrictions, maxCookTime, difficulty });
@@ -1370,6 +1388,32 @@ export const recipeController = {
         }
       }
 
+      // Apply search scope filter (saved / liked)
+      if (scope === 'saved' || scope === 'liked') {
+        let scopeRecipeIds: Set<string>;
+        if (scope === 'saved') {
+          const savedRecords = await (prisma as any).savedRecipe.findMany({
+            where: { userId },
+            select: { recipeId: true },
+          });
+          scopeRecipeIds = new Set(savedRecords.map((r: any) => r.recipeId));
+        } else {
+          const likedRecords = await (prisma as any).recipeFeedback.findMany({
+            where: { userId, liked: true },
+            select: { recipeId: true },
+          });
+          scopeRecipeIds = new Set(likedRecords.map((r: any) => r.recipeId));
+        }
+        const before = searchFilteredRecipes.length;
+        searchFilteredRecipes = searchFilteredRecipes.filter(r => scopeRecipeIds.has(r.id));
+        console.log(`🔎 Scope "${scope}" filter: ${before} → ${searchFilteredRecipes.length} recipes`);
+
+        if (searchFilteredRecipes.length === 0) {
+          console.log(`❌ No recipes found for scope "${scope}"`);
+          return res.json([]);
+        }
+      }
+
       // Get user behavioral data for scoring (only if data sharing enabled)
       let userBehavior = null;
       if (dataSharingEnabled) {
@@ -1386,7 +1430,7 @@ export const recipeController = {
           mealHistory: [],
         };
       }
-      
+
       // Get current temporal context
       const { getCurrentTemporalContext, calculateTemporalScore, analyzeUserTemporalPatterns } = require('@/utils/temporalScoring');
       let temporalContext = getCurrentTemporalContext();
@@ -1869,6 +1913,11 @@ export const recipeController = {
           console.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} suggested recipes`);
         }
 
+        // Track search query for analytics (non-blocking)
+        if (search && typeof search === 'string' && (search as string).trim().length > 0) {
+          recordSearchQuery(userId, search as string, finalRecipes.length).catch(() => {});
+        }
+
         res.json(recipesWithVariedImages);
     } catch (error: any) {
       console.error('❌ Error in getSuggestedRecipes:', error);
@@ -1909,59 +1958,81 @@ export const recipeController = {
     try {
       console.log('📚 GET /api/recipes/saved called');
       const userId = getUserId(req);
-      const { collectionId } = req.query as { collectionId?: string };
-      
+      const { collectionId, page: pageParam, limit: limitParam } = req.query as { collectionId?: string; page?: string; limit?: string };
+      const paginated = pageParam !== undefined;
+      const page = paginated ? Math.max(0, parseInt(pageParam as string, 10) || 0) : 0;
+      const limit = paginated ? Math.min(100, Math.max(1, parseInt(limitParam as string, 10) || 50)) : 0;
+
       // Support multiple collection IDs via comma-separated list
       const collectionIds = collectionId
         ? (collectionId as string).split(',').filter(Boolean)
         : [];
 
+      const includeClause = {
+        recipe: {
+          include: {
+            ingredients: { orderBy: { order: 'asc' as const } },
+            instructions: { orderBy: { step: 'asc' as const } }
+          }
+        },
+        recipeCollections: {
+          include: { collection: true }
+        }
+      };
+
       let savedRecipes;
-      
+      let total = 0;
+
       if (collectionIds.length > 0) {
         // Filter by collections using join table
         const savedRecipeIds = await (prisma as any).recipeCollection.findMany({
           where: { collectionId: { in: collectionIds } },
           select: { savedRecipeId: true }
         });
-        
+
         const uniqueSavedRecipeIds = [...new Set(savedRecipeIds.map((rc: any) => String(rc.savedRecipeId)))] as string[];
-        
-        savedRecipes = await (prisma as any).savedRecipe.findMany({
-          where: { 
-            userId,
-            id: { in: uniqueSavedRecipeIds }
-          },
-        include: {
-          recipe: {
-            include: {
-              ingredients: { orderBy: { order: 'asc' } },
-              instructions: { orderBy: { step: 'asc' } }
-            }
-            },
-            recipeCollections: {
-              include: { collection: true }
-          }
-        },
-        orderBy: { savedDate: 'desc' }
-      });
+        const whereClause = { userId, id: { in: uniqueSavedRecipeIds } };
+
+        if (paginated) {
+          [savedRecipes, total] = await Promise.all([
+            (prisma as any).savedRecipe.findMany({
+              where: whereClause,
+              include: includeClause,
+              orderBy: { savedDate: 'desc' },
+              skip: page * limit,
+              take: limit,
+            }),
+            (prisma as any).savedRecipe.count({ where: whereClause }),
+          ]);
+        } else {
+          savedRecipes = await (prisma as any).savedRecipe.findMany({
+            where: whereClause,
+            include: includeClause,
+            orderBy: { savedDate: 'desc' },
+          });
+        }
       } else {
         // Get all saved recipes (All collection)
-        savedRecipes = await (prisma as any).savedRecipe.findMany({
-        where: { userId },
-        include: {
-          recipe: {
-            include: {
-              ingredients: { orderBy: { order: 'asc' } },
-              instructions: { orderBy: { step: 'asc' } }
-            }
-            },
-            recipeCollections: {
-              include: { collection: true }
-          }
-        },
-        orderBy: { savedDate: 'desc' }
-      });
+        const whereClause = { userId };
+
+        if (paginated) {
+          [savedRecipes, total] = await Promise.all([
+            (prisma as any).savedRecipe.findMany({
+              where: whereClause,
+              include: includeClause,
+              orderBy: { savedDate: 'desc' },
+              skip: page * limit,
+              take: limit,
+            }),
+            (prisma as any).savedRecipe.count({ where: whereClause }),
+          ]);
+        } else {
+          savedRecipes = await (prisma as any).savedRecipe.findMany({
+            where: whereClause,
+            include: includeClause,
+            orderBy: { savedDate: 'desc' },
+          });
+        }
       }
 
       console.log(`📚 Found ${savedRecipes.length} saved recipes`);
@@ -2038,6 +2109,18 @@ export const recipeController = {
         externalWeight: 0.05,
       };
       
+      // Batch fetch cooking stats for all saved recipe IDs
+      const recipeIds = savedRecipes.map((s: any) => s.recipeId);
+      const cookingStats = await (prisma as any).cookingLog.groupBy({
+        by: ['recipeId'],
+        where: { userId, recipeId: { in: recipeIds } },
+        _count: { id: true },
+        _max: { cookedAt: true },
+      });
+      const cookingStatsMap = new Map<string, { cookCount: number; lastCooked: Date | null }>(
+        cookingStats.map((s: any) => [s.recipeId, { cookCount: s._count.id, lastCooked: s._max.cookedAt }])
+      );
+
       // Calculate scores for each saved recipe
       const recipesWithScores = await Promise.all(savedRecipes.map(async (saved: any) => {
         const recipe = saved.recipe;
@@ -2100,9 +2183,14 @@ export const recipeController = {
             externalScore.total * weights.externalWeight
           );
           
+          const cookStats = cookingStatsMap.get(recipe.id);
           return {
             ...recipe,
             savedDate: saved.savedDate.toISOString().split('T')[0],
+            notes: saved.notes || null,
+            rating: saved.rating || null,
+            cookCount: cookStats?.cookCount || 0,
+            lastCooked: cookStats?.lastCooked?.toISOString() || null,
             collections: (saved.recipeCollections || []).map((rc: any) => rc.collection),
             healthGrade: healthGrade.grade,
             score: {
@@ -2123,16 +2211,27 @@ export const recipeController = {
           };
         } catch (error) {
           console.error(`❌ Error calculating score for recipe ${recipe.id}:`, error);
-          // Return recipe without score if calculation fails
+          const cookStats = cookingStatsMap.get(recipe.id);
           return {
             ...recipe,
             savedDate: saved.savedDate.toISOString().split('T')[0],
+            notes: saved.notes || null,
+            rating: saved.rating || null,
+            cookCount: cookStats?.cookCount || 0,
+            lastCooked: cookStats?.lastCooked?.toISOString() || null,
             collections: (saved.recipeCollections || []).map((rc: any) => rc.collection)
           };
         }
       }));
 
-      res.json(recipesWithScores);
+      if (paginated) {
+        res.json({
+          recipes: recipesWithScores,
+          pagination: { total, page, limit, hasMore: (page + 1) * limit < total },
+        });
+      } else {
+        res.json(recipesWithScores);
+      }
     } catch (error: any) {
       console.error('❌ Get saved recipes error:', error);
       res.status(500).json({ error: 'Failed to fetch saved recipes' });
@@ -2145,25 +2244,44 @@ export const recipeController = {
       console.log('👍 GET /api/recipes/liked called');
       const userId = getUserId(req);
       const { collectionId } = req.query;
-      
-      // Get all liked recipes
-      const feedbackEntries = await prisma.recipeFeedback.findMany({
-        where: { 
-          userId,
-          liked: true
-        },
-        include: {
-          recipe: {
-        include: {
-          ingredients: { orderBy: { order: 'asc' } },
-          instructions: { orderBy: { step: 'asc' } }
-        }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
+      const { page: pageParam, limit: limitParam } = req.query as { page?: string; limit?: string };
+      const paginated = pageParam !== undefined;
+      const page = paginated ? Math.max(0, parseInt(pageParam as string, 10) || 0) : 0;
+      const limit = paginated ? Math.min(100, Math.max(1, parseInt(limitParam as string, 10) || 50)) : 0;
 
-      console.log(`👍 Found ${feedbackEntries.length} liked recipes`);
+      const whereClause = { userId, liked: true };
+      const includeClause = {
+        recipe: {
+          include: {
+            ingredients: { orderBy: { order: 'asc' as const } },
+            instructions: { orderBy: { step: 'asc' as const } }
+          }
+        }
+      };
+
+      let feedbackEntries;
+      let total = 0;
+
+      if (paginated) {
+        [feedbackEntries, total] = await Promise.all([
+          prisma.recipeFeedback.findMany({
+            where: whereClause,
+            include: includeClause,
+            orderBy: { createdAt: 'desc' },
+            skip: page * limit,
+            take: limit,
+          }),
+          prisma.recipeFeedback.count({ where: whereClause }),
+        ]);
+      } else {
+        feedbackEntries = await prisma.recipeFeedback.findMany({
+          where: whereClause,
+          include: includeClause,
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+
+      console.log(`👍 Found ${feedbackEntries.length} liked recipes${paginated ? ` (page ${page}, total ${total})` : ''}`);
       
       // Import scoring functions
       const { calculateRecipeScore } = require('@/utils/scoring');
@@ -2305,7 +2423,14 @@ export const recipeController = {
         console.log(`📁 Found ${recipes.length} liked recipes in specified collections`);
       }
 
-      res.json(recipes);
+      if (paginated) {
+        res.json({
+          recipes,
+          pagination: { total, page, limit, hasMore: (page + 1) * limit < total },
+        });
+      } else {
+        res.json(recipes);
+      }
     } catch (error: any) {
       console.error('❌ Get liked recipes error:', error);
       res.status(500).json({ error: 'Failed to fetch liked recipes' });
@@ -2318,25 +2443,44 @@ export const recipeController = {
       console.log('👎 GET /api/recipes/disliked called');
       const userId = getUserId(req);
       const { collectionId } = req.query;
-      
-      // Get all disliked recipes
-      const feedbackEntries = await prisma.recipeFeedback.findMany({
-        where: { 
-          userId,
-          disliked: true
-        },
-        include: {
-          recipe: {
-            include: {
-              ingredients: { orderBy: { order: 'asc' } },
-              instructions: { orderBy: { step: 'asc' } }
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
+      const { page: pageParam, limit: limitParam } = req.query as { page?: string; limit?: string };
+      const paginated = pageParam !== undefined;
+      const page = paginated ? Math.max(0, parseInt(pageParam as string, 10) || 0) : 0;
+      const limit = paginated ? Math.min(100, Math.max(1, parseInt(limitParam as string, 10) || 50)) : 0;
 
-      console.log(`👎 Found ${feedbackEntries.length} disliked recipes`);
+      const whereClause = { userId, disliked: true };
+      const includeClause = {
+        recipe: {
+          include: {
+            ingredients: { orderBy: { order: 'asc' as const } },
+            instructions: { orderBy: { step: 'asc' as const } }
+          }
+        }
+      };
+
+      let feedbackEntries;
+      let total = 0;
+
+      if (paginated) {
+        [feedbackEntries, total] = await Promise.all([
+          prisma.recipeFeedback.findMany({
+            where: whereClause,
+            include: includeClause,
+            orderBy: { createdAt: 'desc' },
+            skip: page * limit,
+            take: limit,
+          }),
+          prisma.recipeFeedback.count({ where: whereClause }),
+        ]);
+      } else {
+        feedbackEntries = await prisma.recipeFeedback.findMany({
+          where: whereClause,
+          include: includeClause,
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+
+      console.log(`👎 Found ${feedbackEntries.length} disliked recipes${paginated ? ` (page ${page}, total ${total})` : ''}`);
       
       // Import scoring functions
       const { calculateRecipeScore } = require('@/utils/scoring');
@@ -2416,7 +2560,14 @@ export const recipeController = {
         console.log(`📁 Found ${recipes.length} disliked recipes in specified collections`);
       }
 
-      res.json(recipes);
+      if (paginated) {
+        res.json({
+          recipes,
+          pagination: { total, page, limit, hasMore: (page + 1) * limit < total },
+        });
+      } else {
+        res.json(recipes);
+      }
     } catch (error: any) {
       console.error('❌ Get disliked recipes error:', error);
       res.status(500).json({ error: 'Failed to fetch disliked recipes' });
@@ -2546,9 +2697,15 @@ export const recipeController = {
       const userId = getUserId(req);
       const collections = await (prisma as any).collection.findMany({
         where: { userId },
-        orderBy: [{ isDefault: 'desc' }, { name: 'asc' }]
+        orderBy: [{ isPinned: 'desc' }, { sortOrder: 'asc' }, { isDefault: 'desc' }, { name: 'asc' }],
+        include: { _count: { select: { recipeCollections: true } } },
       });
-      res.json({ success: true, data: collections });
+      const result = collections.map((c: any) => ({
+        ...c,
+        recipeCount: c._count?.recipeCollections || 0,
+        _count: undefined,
+      }));
+      res.json({ success: true, data: result });
     } catch (error: any) {
       console.error('❌ Get collections error:', error);
       res.status(500).json({ error: 'Failed to fetch collections' });
@@ -2559,13 +2716,14 @@ export const recipeController = {
   async createCollection(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      const { name } = req.body as { name: string };
+      const { name, description, coverImageUrl } = req.body as { name: string; description?: string; coverImageUrl?: string };
       if (!name) return res.status(400).json({ error: 'Name is required' });
-      const collection = await (prisma as any).collection.create({ data: { userId, name, isDefault: false } });
+      const collection = await (prisma as any).collection.create({
+        data: { userId, name, description: description || null, coverImageUrl: coverImageUrl || null, isDefault: false },
+      });
       res.json({ success: true, data: collection });
     } catch (error: any) {
       console.error('❌ Create collection error:', error);
-      // Handle unique constraint on (userId, name)
       if (error?.code === 'P2002') {
         return res.status(409).json({ error: 'Collection already exists' });
       }
@@ -2573,13 +2731,20 @@ export const recipeController = {
     }
   },
 
-  // Collections: update
+  // Collections: update (partial — only provided fields are updated)
   async updateCollection(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
       const { id } = req.params;
-      const { name } = req.body as { name?: string };
-      const updated = await (prisma as any).collection.update({ where: { id }, data: { name } });
+      const { name, description, coverImageUrl, isPinned } = req.body as {
+        name?: string; description?: string | null; coverImageUrl?: string | null; isPinned?: boolean;
+      };
+      const data: any = {};
+      if (name !== undefined) data.name = name;
+      if (description !== undefined) data.description = description;
+      if (coverImageUrl !== undefined) data.coverImageUrl = coverImageUrl;
+      if (isPinned !== undefined) data.isPinned = isPinned;
+      const updated = await (prisma as any).collection.update({ where: { id }, data });
       res.json({ success: true, data: updated });
     } catch (error: any) {
       console.error('❌ Update collection error:', error);
@@ -2647,6 +2812,132 @@ export const recipeController = {
     } catch (error: any) {
       console.error('❌ Move saved recipe error:', error);
       res.status(500).json({ error: 'Failed to move recipe to collection' });
+    }
+  },
+
+  // Collections: toggle pin
+  async togglePinCollection(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const collection = await (prisma as any).collection.findFirst({ where: { id, userId } });
+      if (!collection) return res.status(404).json({ error: 'Collection not found' });
+      const updated = await (prisma as any).collection.update({
+        where: { id },
+        data: { isPinned: !collection.isPinned },
+      });
+      res.json({ success: true, data: updated });
+    } catch (error: any) {
+      console.error('❌ Toggle pin collection error:', error);
+      res.status(500).json({ error: 'Failed to toggle pin' });
+    }
+  },
+
+  // Collections: reorder
+  async reorderCollections(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { order } = req.body as { order: { id: string; sortOrder: number }[] };
+      if (!order || !Array.isArray(order)) return res.status(400).json({ error: 'Order array is required' });
+      await Promise.all(
+        order.map(({ id, sortOrder }) =>
+          (prisma as any).collection.updateMany({ where: { id, userId }, data: { sortOrder } })
+        )
+      );
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('❌ Reorder collections error:', error);
+      res.status(500).json({ error: 'Failed to reorder collections' });
+    }
+  },
+
+  // Collections: duplicate
+  async duplicateCollection(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const source = await (prisma as any).collection.findFirst({
+        where: { id, userId },
+        include: { recipeCollections: true },
+      });
+      if (!source) return res.status(404).json({ error: 'Collection not found' });
+
+      const newCollection = await (prisma as any).collection.create({
+        data: {
+          userId,
+          name: `${source.name} (Copy)`,
+          description: source.description,
+          coverImageUrl: source.coverImageUrl,
+          isDefault: false,
+        },
+      });
+
+      // Copy all recipe associations
+      if (source.recipeCollections.length > 0) {
+        await (prisma as any).recipeCollection.createMany({
+          data: source.recipeCollections.map((rc: any) => ({
+            savedRecipeId: rc.savedRecipeId,
+            collectionId: newCollection.id,
+            addedAt: new Date(),
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      res.json({ success: true, data: { ...newCollection, recipeCount: source.recipeCollections.length } });
+    } catch (error: any) {
+      console.error('❌ Duplicate collection error:', error);
+      if (error?.code === 'P2002') {
+        return res.status(409).json({ error: 'A collection with that name already exists' });
+      }
+      res.status(500).json({ error: 'Failed to duplicate collection' });
+    }
+  },
+
+  // Collections: merge (move recipes from sources into target, delete sources)
+  async mergeCollections(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { sourceIds, targetId } = req.body as { sourceIds: string[]; targetId: string };
+      if (!sourceIds?.length || !targetId) return res.status(400).json({ error: 'sourceIds and targetId are required' });
+      if (sourceIds.includes(targetId)) return res.status(400).json({ error: 'Target cannot be a source' });
+
+      // Verify all collections belong to user
+      const collections = await (prisma as any).collection.findMany({
+        where: { id: { in: [...sourceIds, targetId] }, userId },
+      });
+      if (collections.length !== sourceIds.length + 1) {
+        return res.status(404).json({ error: 'One or more collections not found' });
+      }
+
+      // Get all recipe associations from source collections
+      const sourceAssociations = await (prisma as any).recipeCollection.findMany({
+        where: { collectionId: { in: sourceIds } },
+      });
+
+      // Move each to target (skip duplicates)
+      for (const assoc of sourceAssociations) {
+        try {
+          await (prisma as any).recipeCollection.create({
+            data: { savedRecipeId: assoc.savedRecipeId, collectionId: targetId, addedAt: new Date() },
+          });
+        } catch (e: any) {
+          if (e.code !== 'P2002') throw e;
+        }
+      }
+
+      // Delete source recipe associations and collections
+      await (prisma as any).recipeCollection.deleteMany({ where: { collectionId: { in: sourceIds } } });
+      await (prisma as any).collection.deleteMany({ where: { id: { in: sourceIds }, userId } });
+
+      const updated = await (prisma as any).collection.findUnique({
+        where: { id: targetId },
+        include: { _count: { select: { recipeCollections: true } } },
+      });
+      res.json({ success: true, data: { ...updated, recipeCount: updated._count?.recipeCollections || 0, _count: undefined } });
+    } catch (error: any) {
+      console.error('❌ Merge collections error:', error);
+      res.status(500).json({ error: 'Failed to merge collections' });
     }
   },
 
@@ -3468,6 +3759,634 @@ export const recipeController = {
     } catch (error: any) {
       console.error('❌ Error in getSimilarRecipes:', error);
       res.status(500).json({ error: 'Failed to fetch similar recipes', details: error.message });
+    }
+  },
+
+  // Update saved recipe notes/rating
+  async updateSavedMeta(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { notes, rating } = req.body as { notes?: string | null; rating?: number | null };
+
+      if (rating !== undefined && rating !== null) {
+        if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+          return res.status(400).json({ error: 'Rating must be an integer between 1 and 5' });
+        }
+      }
+
+      const savedRecipe = await prisma.savedRecipe.findFirst({
+        where: { userId, recipeId: id }
+      });
+
+      if (!savedRecipe) {
+        return res.status(404).json({ error: 'Saved recipe not found' });
+      }
+
+      const updated = await prisma.savedRecipe.update({
+        where: { id: savedRecipe.id },
+        data: {
+          ...(notes !== undefined ? { notes } : {}),
+          ...(rating !== undefined ? { rating } : {}),
+        }
+      });
+
+      console.log('✅ Saved recipe meta updated:', { recipeId: id, notes: !!updated.notes, rating: updated.rating });
+      res.json({ message: 'Updated successfully', notes: updated.notes, rating: updated.rating });
+    } catch (error: any) {
+      console.error('❌ Update saved meta error:', error);
+      res.status(500).json({ error: 'Failed to update saved recipe metadata' });
+    }
+  },
+
+  // Record recipe view
+  async recordView(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+
+      await (prisma as any).recipeView.upsert({
+        where: { recipeId_userId: { recipeId: id, userId } },
+        create: { recipeId: id, userId, viewedAt: new Date() },
+        update: { viewedAt: new Date() },
+      });
+
+      console.log('👁️ Recipe view recorded:', id);
+      res.json({ message: 'View recorded' });
+    } catch (error: any) {
+      console.error('❌ Record view error:', error);
+      res.status(500).json({ error: 'Failed to record view' });
+    }
+  },
+
+  // Get recently viewed recipes
+  async getRecentlyViewed(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const limit = Math.min(50, parseInt(req.query.limit as string) || 50);
+
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+      const views = await (prisma as any).recipeView.findMany({
+        where: {
+          userId,
+          viewedAt: { gte: cutoffDate },
+        },
+        include: {
+          recipe: {
+            include: {
+              ingredients: { orderBy: { order: 'asc' } },
+              instructions: { orderBy: { step: 'asc' } },
+            }
+          }
+        },
+        orderBy: { viewedAt: 'desc' },
+        take: limit,
+      });
+
+      const recipes = views.map((v: any) => ({
+        ...v.recipe,
+        viewedAt: v.viewedAt.toISOString(),
+      }));
+
+      console.log(`👁️ Found ${recipes.length} recently viewed recipes`);
+      res.json(recipes);
+    } catch (error: any) {
+      console.error('❌ Get recently viewed error:', error);
+      res.status(500).json({ error: 'Failed to get recently viewed recipes' });
+    }
+  },
+
+  // Record cooking session
+  async recordCook(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { notes } = req.body as { notes?: string };
+
+      await (prisma as any).cookingLog.create({
+        data: { recipeId: id, userId, notes: notes || null },
+      });
+
+      console.log('🍳 Cook recorded for recipe:', id);
+      res.json({ message: 'Cook recorded' });
+    } catch (error: any) {
+      console.error('❌ Record cook error:', error);
+      res.status(500).json({ error: 'Failed to record cook' });
+    }
+  },
+
+  // Get cooking history for a recipe
+  async getCookingHistory(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+
+      const logs = await (prisma as any).cookingLog.findMany({
+        where: { recipeId: id, userId },
+        orderBy: { cookedAt: 'desc' },
+      });
+
+      res.json({
+        recipeId: id,
+        cookCount: logs.length,
+        lastCooked: logs.length > 0 ? logs[0].cookedAt.toISOString() : null,
+        history: logs.map((l: any) => ({
+          id: l.id,
+          cookedAt: l.cookedAt.toISOString(),
+          notes: l.notes,
+        })),
+      });
+    } catch (error: any) {
+      console.error('❌ Get cooking history error:', error);
+      res.status(500).json({ error: 'Failed to get cooking history' });
+    }
+  },
+
+  // ─── Search 2.0 ──────────────────────────────────────────────────────
+
+  /** GET /api/recipes/autocomplete?q=...&limit=10 */
+  async getAutoCompleteSuggestions(req: Request, res: Response) {
+    try {
+      const query = (req.query.q as string)?.trim();
+      const limit = Math.min(10, parseInt(req.query.limit as string) || 10);
+
+      if (!query || query.length < 2) {
+        return res.json({ suggestions: [] });
+      }
+
+      const queryLower = query.toLowerCase();
+
+      // Run 3 queries in parallel for speed
+      // SQLite LIKE is already case-insensitive for ASCII, no mode needed
+      const [recipeTitles, cuisineMatches, ingredientMatches] = await Promise.all([
+        prisma.recipe.findMany({
+          where: {
+            isUserCreated: false,
+            title: { contains: query },
+          },
+          select: { title: true, cuisine: true },
+          take: 5,
+        }),
+
+        prisma.recipe.findMany({
+          where: {
+            isUserCreated: false,
+            cuisine: { contains: query },
+          },
+          select: { cuisine: true },
+          distinct: ['cuisine'],
+          take: 3,
+        }),
+
+        prisma.recipeIngredient.findMany({
+          where: { text: { contains: query } },
+          select: { text: true },
+          take: 20,
+        }),
+      ]);
+
+      const suggestions: Array<{
+        type: 'recipe' | 'cuisine' | 'ingredient';
+        text: string;
+        highlight: { start: number; end: number };
+        metadata?: { cuisine?: string };
+      }> = [];
+
+      // Add recipe title suggestions
+      const seenTitles = new Set<string>();
+      for (const recipe of recipeTitles) {
+        const titleLower = recipe.title.toLowerCase();
+        if (seenTitles.has(titleLower)) continue;
+        seenTitles.add(titleLower);
+        const idx = titleLower.indexOf(queryLower);
+        if (idx !== -1) {
+          suggestions.push({
+            type: 'recipe',
+            text: recipe.title,
+            highlight: { start: idx, end: idx + query.length },
+            metadata: { cuisine: recipe.cuisine },
+          });
+        }
+      }
+
+      // Add cuisine suggestions
+      for (const c of cuisineMatches) {
+        const idx = c.cuisine.toLowerCase().indexOf(queryLower);
+        if (idx !== -1) {
+          suggestions.push({
+            type: 'cuisine',
+            text: c.cuisine,
+            highlight: { start: idx, end: idx + query.length },
+          });
+        }
+      }
+
+      // Add ingredient suggestions (extract base ingredient name)
+      const seenIngredients = new Set<string>();
+      for (const ing of ingredientMatches) {
+        // Strip leading quantities/units: "1cup Broccoli Florets" → "Broccoli Florets"
+        const normalized = ing.text
+          .replace(/^[\d./\s]+(cup|cups|tbsp|tsp|oz|lb|lbs|g|kg|ml|l|piece|pieces|clove|cloves|can|cans|bunch|bunches|pinch|dash|handful|slice|slices|sprig|sprigs|head|heads|stalk|stalks|medium|large|small)\s*/gi, '')
+          .trim()
+          .split(',')[0]
+          .trim();
+        if (!normalized || normalized.length < 2) continue;
+
+        const normalizedLower = normalized.toLowerCase();
+        if (seenIngredients.has(normalizedLower)) continue;
+        seenIngredients.add(normalizedLower);
+
+        const idx = normalizedLower.indexOf(queryLower);
+        if (idx !== -1) {
+          suggestions.push({
+            type: 'ingredient',
+            text: normalized,
+            highlight: { start: idx, end: idx + query.length },
+          });
+        }
+        if (seenIngredients.size >= 5) break;
+      }
+
+      res.json({ suggestions: suggestions.slice(0, limit) });
+    } catch (error: any) {
+      console.error('❌ Auto-complete error:', error);
+      res.status(500).json({ error: 'Failed to fetch suggestions' });
+    }
+  },
+
+  /** GET /api/recipes/popular-searches?limit=5 */
+  async getPopularSearches(req: Request, res: Response) {
+    try {
+      const limit = Math.min(10, parseInt(req.query.limit as string) || 5);
+
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const popular = await prisma.searchQuery.groupBy({
+        by: ['query'],
+        where: {
+          searchedAt: { gte: sevenDaysAgo },
+          resultCount: { gt: 0 },
+        },
+        _count: { query: true },
+        orderBy: { _count: { query: 'desc' } },
+        take: limit,
+      });
+
+      res.json({
+        popularSearches: popular.map((s) => ({
+          query: s.query,
+          count: s._count.query,
+        })),
+      });
+    } catch (error: any) {
+      console.error('❌ Popular searches error:', error);
+      res.status(500).json({ error: 'Failed to fetch popular searches' });
+    }
+  },
+
+  /**
+   * Consolidated Home Feed endpoint
+   * Replaces 7 separate API calls with a single request
+   * Returns: recipeOfTheDay, suggestedRecipes, quickMeals, perfectMatches, likedRecipes, popularSearches
+   */
+  async getHomeFeed(req: Request, res: Response) {
+    try {
+      console.log('🏠 GET /api/recipes/home-feed called');
+      const userId = getUserId(req);
+
+      // Parse filter params (same as getRecipes)
+      const page = Math.max(0, parseInt(req.query.page as string) || 0);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
+      const offset = page * limit;
+      const cuisines = req.query.cuisines as string;
+      const maxCookTime = req.query.maxCookTime as string;
+      const difficulty = req.query.difficulty as string;
+      const mealPrepMode = req.query.mealPrepMode as string;
+      const search = req.query.search as string;
+      const shuffle = req.query.shuffle as string;
+      const useTimeAwareDefaults = req.query.useTimeAwareDefaults as string;
+      const mood = req.query.mood as string;
+      const minProtein = req.query.minProtein as string;
+      const maxCarbs = req.query.maxCarbs as string;
+      const maxCalories = req.query.maxCalories as string;
+      const dietaryRestrictions = req.query.dietaryRestrictions as string;
+
+      // Check data sharing
+      const { isDataSharingEnabledFromRequest } = require('@/utils/privacyHelper');
+      const dataSharingEnabled = isDataSharingEnabledFromRequest(req);
+
+      // 1. Fetch user context ONCE (shared across all scoring)
+      let userPreferences: any = null;
+      let macroGoals: any = null;
+      let physicalProfile: any = null;
+      let userBehavior: any = null;
+
+      if (dataSharingEnabled) {
+        [userPreferences, macroGoals, physicalProfile, userBehavior] = await Promise.all([
+          prisma.userPreferences.findFirst({
+            where: { userId },
+            include: {
+              bannedIngredients: true,
+              likedCuisines: true,
+              dietaryRestrictions: true,
+              preferredSuperfoods: true,
+            },
+          }),
+          prisma.macroGoals.findFirst({ where: { userId } }),
+          prisma.userPhysicalProfile.findFirst({ where: { userId } }),
+          getUserBehaviorData(userId),
+        ]);
+      } else {
+        userBehavior = { likedRecipes: [], dislikedRecipes: [], savedRecipes: [], consumedRecipes: [] };
+      }
+
+      // 2. Build where clause for main recipes (same as getRecipes)
+      const where: any = { isUserCreated: false };
+      const andConditions: any[] = [];
+
+      if (cuisines && typeof cuisines === 'string') {
+        where.cuisine = { in: cuisines.split(',').map((c: string) => c.trim()) };
+      }
+      if (maxCookTime && !isNaN(Number(maxCookTime))) {
+        where.cookTime = { lte: Number(maxCookTime) };
+      }
+      if (difficulty && typeof difficulty === 'string') {
+        const diff = difficulty.toLowerCase();
+        const cookTimeFilter: any = where.cookTime ? { ...where.cookTime } : {};
+        if (diff === 'easy') cookTimeFilter.lte = Math.min(cookTimeFilter.lte ?? Number.MAX_SAFE_INTEGER, 30);
+        else if (diff === 'medium') { cookTimeFilter.gte = Math.max(cookTimeFilter.gte ?? 0, 31); cookTimeFilter.lte = Math.min(cookTimeFilter.lte ?? Number.MAX_SAFE_INTEGER, 45); }
+        else if (diff === 'hard') cookTimeFilter.gte = Math.max(cookTimeFilter.gte ?? 0, 46);
+        if (Object.keys(cookTimeFilter).length > 0) where.cookTime = cookTimeFilter;
+      }
+      if (mealPrepMode === 'true' || mealPrepMode === '1') {
+        andConditions.push({ mealPrepScore: { gte: 60 } });
+      }
+      if (minProtein && !isNaN(Number(minProtein))) andConditions.push({ protein: { gte: Number(minProtein) } });
+      if (maxCarbs && !isNaN(Number(maxCarbs))) andConditions.push({ carbs: { lte: Number(maxCarbs) } });
+      if (maxCalories && !isNaN(Number(maxCalories))) andConditions.push({ calories: { lte: Number(maxCalories) } });
+      if (dietaryRestrictions && typeof dietaryRestrictions === 'string') {
+        // Apply dietary restriction filtering if needed
+      }
+      if (useTimeAwareDefaults === 'true') {
+        const { getCurrentTemporalContext } = require('@/utils/temporalScoring');
+        const tc = getCurrentTemporalContext();
+        const mealTypeMap: Record<string, string> = { breakfast: 'breakfast', lunch: 'lunch', dinner: 'dinner', snack: 'snack' };
+        if (mealTypeMap[tc.mealPeriod]) where.mealType = mealTypeMap[tc.mealPeriod];
+      }
+      if (mood) {
+        const moodCriteria: Record<string, any> = {
+          lazy: { maxCookTime: 20 },
+          healthy: { maxCalories: 500, minProtein: 20 },
+          adventurous: { cuisines: ['Thai', 'Indian', 'Japanese', 'Korean', 'Vietnamese', 'Ethiopian', 'Moroccan', 'Greek', 'Turkish'] },
+          indulgent: {},
+          comfort: { cuisines: ['American', 'Italian', 'Mexican', 'French', 'Chinese'] },
+          energetic: { minProtein: 30, maxCookTime: 30 },
+        };
+        const criteria = moodCriteria[mood];
+        if (criteria) {
+          if (criteria.maxCookTime && !where.cookTime) where.cookTime = { lte: criteria.maxCookTime };
+          if (criteria.maxCalories) andConditions.push({ calories: { lte: criteria.maxCalories } });
+          if (criteria.minProtein) andConditions.push({ protein: { gte: criteria.minProtein } });
+          if (criteria.cuisines && !where.cuisine) where.cuisine = { in: criteria.cuisines };
+        }
+      }
+      if (search) {
+        andConditions.push({
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        });
+      }
+      if (andConditions.length > 0) where.AND = andConditions;
+
+      // Quick meals where clause (same base filters but cookTime <= 30)
+      const quickMealsWhere: any = { ...where, cookTime: { lte: 30 } };
+      // Remove any conflicting cookTime from andConditions
+      if (quickMealsWhere.AND) {
+        quickMealsWhere.AND = quickMealsWhere.AND.filter((c: any) => !c.cookTime);
+      }
+
+      // 3. Run ALL data queries in parallel
+      const today = new Date();
+      const dateSeed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const recipeInclude = {
+        ingredients: { orderBy: { order: 'asc' as const } },
+        instructions: { orderBy: { step: 'asc' as const } },
+      };
+
+      const [rotdCandidates, allMainRecipes, totalCount, quickMealRecipes, likedEntries, popularSearchData] = await Promise.all([
+        // Recipe of the Day candidates
+        prisma.recipe.findMany({
+          where: { isUserCreated: false, imageUrl: { not: null } },
+          include: recipeInclude,
+          orderBy: [{ healthScore: 'desc' }, { qualityScore: 'desc' }],
+          take: 100,
+        }),
+        // Main recipes (all for scoring, then paginate)
+        prisma.recipe.findMany({
+          where,
+          include: recipeInclude,
+        }),
+        // Total count for pagination
+        prisma.recipe.count({ where }),
+        // Quick meals (≤30 min, max 10 candidates to score)
+        prisma.recipe.findMany({
+          where: quickMealsWhere,
+          include: recipeInclude,
+          take: 20,
+        }),
+        // Liked recipes (max 5)
+        prisma.recipeFeedback.findMany({
+          where: { userId, liked: true },
+          include: { recipe: { include: recipeInclude } },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        }),
+        // Popular searches
+        prisma.searchQuery.groupBy({
+          by: ['query'],
+          where: { searchedAt: { gte: sevenDaysAgo }, resultCount: { gt: 0 } },
+          _count: { query: true },
+          orderBy: { _count: { query: 'desc' } },
+          take: 5,
+        }),
+      ]);
+
+      // 4. Set up scoring context (shared across all recipes)
+      const { getCurrentTemporalContext, calculateTemporalScore, analyzeUserTemporalPatterns } = require('@/utils/temporalScoring');
+      const { calculateRecipeScore } = require('@/utils/scoring');
+      const { calculateBehavioralScore } = require('@/utils/behavioralScoring');
+      const { calculateEnhancedScore } = require('@/utils/enhancedScoring');
+      const { calculateDiscriminatoryScore, getUserPreferencesForScoring } = require('../../utils/discriminatoryScoring');
+      const { calculateHealthGoalMatch } = require('@/utils/healthGoalScoring');
+      const { calculateHealthGrade } = require('@/utils/healthGrade');
+
+      const temporalContext = getCurrentTemporalContext();
+      const userTemporalPatterns = analyzeUserTemporalPatterns(userBehavior.consumedRecipes || []);
+      const userPrefsForScoring = await getUserPreferencesForScoring(userId);
+      const likedCuisineSet = new Set((userPreferences?.likedCuisines || []).map((c: any) => (c.name || '').toLowerCase()));
+
+      const cookTimeContext = {
+        availableTime: 30,
+        timeOfDay: (temporalContext.mealPeriod === 'breakfast' ? 'morning' :
+                    temporalContext.mealPeriod === 'lunch' ? 'afternoon' :
+                    temporalContext.mealPeriod === 'dinner' ? 'evening' : 'night') as 'morning' | 'afternoon' | 'evening' | 'night',
+        dayOfWeek: (temporalContext.isWeekend ? 'weekend' : 'weekday') as 'weekday' | 'weekend',
+        urgency: 'medium' as const,
+      };
+      const userKitchenProfile = {
+        cookingSkill: 'intermediate' as const,
+        preferredCookTime: 30,
+        kitchenEquipment: ['stovetop', 'oven', 'microwave', 'refrigerator', 'freezer', 'knife', 'cutting board', 'mixing bowl', 'measuring cups', 'measuring spoons', 'whisk', 'spatula', 'tongs'],
+        dietaryRestrictions: [] as string[],
+        budget: 'medium' as const,
+      };
+
+      const weights = {
+        discriminatoryWeight: 0.60,
+        baseScoreWeight: 0.25,
+        healthGoalWeight: 0.15,
+      };
+
+      // Score a recipe using shared context
+      function scoreRecipe(recipe: any) {
+        try {
+          const behavioralScore = (() => { try { return calculateBehavioralScore(recipe, userBehavior); } catch { return { total: 0 }; } })();
+          const temporalScore = (() => { try { return calculateTemporalScore(recipe, temporalContext, userTemporalPatterns); } catch { return { total: 0 }; } })();
+          const enhancedScore = (() => { try { return calculateEnhancedScore(recipe, cookTimeContext, userKitchenProfile); } catch { return { total: 0 }; } })();
+          const discriminatoryScore = (() => { try { return userPrefsForScoring ? calculateDiscriminatoryScore(recipe, userPrefsForScoring) : { total: 50, breakdown: {} }; } catch { return { total: 50, breakdown: {} }; } })();
+          const healthGoalScore = (() => { try { return calculateHealthGoalMatch(recipe, physicalProfile?.fitnessGoal || null, macroGoals ? { calories: macroGoals.calories, protein: macroGoals.protein, carbs: macroGoals.carbs, fat: macroGoals.fat } : null); } catch { return { total: 50 }; } })();
+          const healthGrade = (() => { try { return calculateHealthGrade(recipe); } catch { return { grade: 'C', score: 50 }; } })();
+          const baseScore = (() => { try { return calculateRecipeScore(recipe, userPreferences, macroGoals, behavioralScore.total, temporalScore.total); } catch { return { total: 50, macroScore: 50, tasteScore: 50 }; } })();
+
+          const internalScore = Math.round(
+            discriminatoryScore.total * weights.discriminatoryWeight +
+            baseScore.total * weights.baseScoreWeight +
+            healthGoalScore.total * weights.healthGoalWeight
+          );
+
+          const isLikedCuisine = likedCuisineSet.has((recipe.cuisine || '').toLowerCase());
+          const cuisineBoost = isLikedCuisine ? 12 : 0;
+          const hasImage = !!recipe.imageUrl;
+          const ingredientCount = Array.isArray(recipe.ingredients) ? recipe.ingredients.length : 0;
+          const instructionCount = Array.isArray(recipe.instructions) ? recipe.instructions.length : 0;
+          let qualityBoost = 0;
+          if (hasImage) qualityBoost += 2;
+          if (ingredientCount >= 5) qualityBoost += 1;
+          if (instructionCount >= 4) qualityBoost += 2;
+
+          const finalScore = Math.round(Math.min(100, internalScore + cuisineBoost + qualityBoost));
+
+          return {
+            ...recipe,
+            score: {
+              total: finalScore,
+              matchPercentage: finalScore,
+              macroScore: baseScore.macroScore,
+              tasteScore: baseScore.tasteScore,
+              behavioralScore: behavioralScore.total,
+              temporalScore: temporalScore.total,
+              enhancedScore: enhancedScore.total,
+              discriminatoryScore: discriminatoryScore.total,
+              healthGoalScore: healthGoalScore.total,
+              healthGrade: healthGrade.grade,
+              healthGradeScore: healthGrade.score,
+            },
+          };
+        } catch {
+          return {
+            ...recipe,
+            score: { total: 50, matchPercentage: 50, macroScore: 50, tasteScore: 50, behavioralScore: 0, temporalScore: 0, enhancedScore: 0, discriminatoryScore: 50, healthGoalScore: 50, healthGrade: 'C', healthGradeScore: 50 },
+          };
+        }
+      }
+
+      // 5. Score all main recipes and sort
+      const scoredMainRecipes = allMainRecipes.map(scoreRecipe);
+      scoredMainRecipes.sort((a: any, b: any) => (b.score?.matchPercentage || 0) - (a.score?.matchPercentage || 0));
+
+      // Shuffle mode for pull-to-discover
+      if (shuffle === 'true') {
+        for (let i = scoredMainRecipes.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.pow(Math.random(), 0.7) * (i + 1));
+          [scoredMainRecipes[i], scoredMainRecipes[j]] = [scoredMainRecipes[j], scoredMainRecipes[i]];
+        }
+      }
+
+      // Paginate main recipes
+      const paginatedRecipes = varyImageUrlsForPage(scoredMainRecipes.slice(offset, offset + limit), offset);
+
+      // 6. Score and sort quick meals
+      const scoredQuickMeals = quickMealRecipes
+        .filter((r: any) => r.cookTime && r.cookTime <= 30)
+        .map(scoreRecipe)
+        .sort((a: any, b: any) => (b.score?.matchPercentage || 0) - (a.score?.matchPercentage || 0))
+        .slice(0, 5);
+
+      // 7. Extract perfect matches from scored main recipes (≥85% match, top 5)
+      const perfectMatches = scoredMainRecipes
+        .filter((r: any) => r.score?.matchPercentage >= 85)
+        .slice(0, 5);
+
+      // 8. Recipe of the Day (date-seeded selection)
+      let recipeOfTheDay = null;
+      if (rotdCandidates.length > 0) {
+        const selectedIndex = dateSeed % rotdCandidates.length;
+        const rotdRaw = rotdCandidates[selectedIndex];
+        const healthGrade = (() => { try { return calculateHealthGrade(rotdRaw); } catch { return { grade: 'B', score: 70 }; } })();
+        recipeOfTheDay = {
+          ...rotdRaw,
+          healthGrade: healthGrade?.grade || 'B',
+          isRecipeOfTheDay: true,
+          selectedDate: today.toISOString().split('T')[0],
+        };
+      }
+
+      // 9. Format liked recipes
+      const likedRecipes = likedEntries.map((entry: any) => {
+        const recipe = entry.recipe;
+        return scoreRecipe(recipe);
+      });
+
+      // 10. Format popular searches
+      const popularSearches = popularSearchData.map((s: any) => ({
+        query: s.query,
+        count: s._count.query,
+      }));
+
+      // Track search query for analytics (non-blocking)
+      if (search && typeof search === 'string' && search.trim().length > 0) {
+        recordSearchQuery(userId, search, paginatedRecipes.length).catch(() => {});
+      }
+
+      console.log(`🏠 Home feed: ${paginatedRecipes.length} suggested, ${scoredQuickMeals.length} quick, ${perfectMatches.length} perfect, ${likedRecipes.length} liked, ROTD: ${recipeOfTheDay?.title || 'none'}`);
+
+      res.json({
+        recipeOfTheDay,
+        suggestedRecipes: paginatedRecipes,
+        quickMeals: scoredQuickMeals,
+        perfectMatches,
+        likedRecipes,
+        popularSearches,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          hasNextPage: offset + paginatedRecipes.length < totalCount,
+          hasPrevPage: page > 0,
+        },
+      });
+    } catch (error: any) {
+      console.error('❌ Error in getHomeFeed:', error);
+      res.status(500).json({ error: 'Failed to fetch home feed', details: error.message });
     }
   },
 };

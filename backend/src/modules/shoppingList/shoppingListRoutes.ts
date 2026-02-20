@@ -11,6 +11,11 @@ router.post('/generate-from-recipes', shoppingListController.generateFromRecipes
 // Generate shopping list from meal plan (must come before /:id routes)
 router.post('/generate-from-meal-plan', shoppingListController.generateFromMealPlan);
 
+// Purchase history routes (must come before /:id routes)
+router.get('/purchase-history', shoppingListController.getPurchaseHistory);
+router.get('/purchase-history/recent', shoppingListController.getRecentPurchases);
+router.put('/purchase-history/:id/favorite', shoppingListController.togglePurchaseHistoryFavorite);
+
 // Shopping list routes
 router.get('/', shoppingListController.getShoppingLists);
 router.post('/', shoppingListController.createShoppingList);

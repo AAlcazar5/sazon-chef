@@ -1,3 +1,4 @@
+import React from 'react';
 // frontend/components/home/FeaturedRecipeCarousel.tsx
 // Featured recipe carousel with top 3 recipes and swipe functionality
 
@@ -77,7 +78,7 @@ function getRecommendationReason(recipe: SuggestedRecipe): string {
  * Featured recipe carousel component
  * Shows top 3 recipes with swipe navigation
  */
-export default function FeaturedRecipeCarousel({
+function FeaturedRecipeCarousel({
   recipes,
   currentIndex,
   onIndexChange,
@@ -206,3 +207,5 @@ export default function FeaturedRecipeCarousel({
     </View>
   );
 }
+
+export default React.memo(FeaturedRecipeCarousel);

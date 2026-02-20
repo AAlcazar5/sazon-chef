@@ -16,6 +16,8 @@ interface PerfectMatchFilters {
 interface UsePerfectMatchesOptions {
   filters: PerfectMatchFilters;
   enabled?: boolean;
+  /** Pre-fetched data from consolidated home feed — skips initial fetch if provided */
+  initialData?: SuggestedRecipe[];
 }
 
 interface UsePerfectMatchesReturn {
@@ -31,10 +33,10 @@ interface UsePerfectMatchesReturn {
 }
 
 export function usePerfectMatches(options: UsePerfectMatchesOptions): UsePerfectMatchesReturn {
-  const { filters, enabled = true } = options;
+  const { filters, enabled = true, initialData } = options;
 
-  // State
-  const [recipes, setRecipes] = useState<SuggestedRecipe[]>([]);
+  // State — seed with initialData if provided
+  const [recipes, setRecipes] = useState<SuggestedRecipe[]>(initialData || []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -46,6 +48,13 @@ export function usePerfectMatches(options: UsePerfectMatchesOptions): UsePerfect
   useEffect(() => {
     recipesRef.current = recipes;
   }, [recipes]);
+
+  // Update state when initialData changes (from home feed)
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setRecipes(initialData);
+    }
+  }, [initialData]);
 
   // Fetch perfect match recipes (≥85% match score)
   const fetch = useCallback(async (refresh: boolean = false) => {

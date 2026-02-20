@@ -1,3 +1,4 @@
+import React from 'react';
 // frontend/components/home/PaginationControls.tsx
 // Pagination controls for recipe lists
 
@@ -36,7 +37,7 @@ interface PaginationControlsProps {
 /**
  * Pagination controls component with Previous/Next buttons and page indicator
  */
-export default function PaginationControls({
+function PaginationControls({
   currentPage,
   totalItems,
   itemsShown,
@@ -186,3 +187,5 @@ export default function PaginationControls({
     </View>
   );
 }
+
+export default React.memo(PaginationControls);

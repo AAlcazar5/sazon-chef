@@ -1,3 +1,4 @@
+import React from 'react';
 // frontend/components/home/QuickFiltersBar.tsx
 // Quick filters bar with mood, macro filters, and meal prep toggle
 
@@ -43,7 +44,7 @@ interface QuickFiltersBarProps {
  * Quick filters bar component for the home screen
  * Includes mood selector, macro filters, and meal prep toggle
  */
-export default function QuickFiltersBar({
+function QuickFiltersBar({
   selectedMood,
   onMoodPress,
   onClearMood,
@@ -294,3 +295,5 @@ export default function QuickFiltersBar({
     </View>
   );
 }
+
+export default React.memo(QuickFiltersBar);

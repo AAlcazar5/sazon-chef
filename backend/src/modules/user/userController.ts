@@ -3,6 +3,41 @@ import { prisma } from '@/lib/prisma';
 import { authenticateToken } from '../auth/authMiddleware';
 import { decrypt } from '@/utils/encryption';
 import { getUserId } from '@/utils/authHelper';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads', 'profile-pictures');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for profile picture uploads
+const profilePictureStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, _file, cb) => {
+    const userId = (req as any).user?.id || 'unknown';
+    const ext = path.extname(_file.originalname) || '.jpg';
+    cb(null, `${userId}${ext}`);
+  },
+});
+
+const profilePictureUpload = multer({
+  storage: profilePictureStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
+
+export const uploadProfilePictureMiddleware = profilePictureUpload.single('profilePicture');
 
 export const userController = {
   // Get user profile
@@ -20,6 +55,7 @@ export const userController = {
           emailEncrypted: true,
           nameEncrypted: true,
           provider: true,
+          profilePictureUrl: true,
           createdAt: true,
           updatedAt: true,
           preferences: {
@@ -307,12 +343,32 @@ export const userController = {
   // Get user notifications settings
   async getNotifications(req: Request, res: Response) {
     try {
-      // TODO: Implement notifications settings
-      // For now, return default settings
+      const userId = getUserId(req);
+
+      const settings = await prisma.notificationSettings.findUnique({
+        where: { userId },
+      });
+
+      if (!settings) {
+        return res.json({
+          mealReminders: true,
+          mealReminderTimes: ['08:00', '12:00', '18:00'],
+          newRecipes: true,
+          goalUpdates: false,
+          goalUpdateDay: 'Monday',
+          goalUpdateTime: '09:00',
+        });
+      }
+
       res.json({
-        mealReminders: true,
-        newRecipes: true,
-        goalUpdates: false
+        mealReminders: settings.mealReminders,
+        mealReminderTimes: settings.mealReminderTimes
+          ? settings.mealReminderTimes.split(',').filter(Boolean)
+          : [],
+        newRecipes: settings.newRecipes,
+        goalUpdates: settings.goalUpdates,
+        goalUpdateDay: settings.goalUpdateDay,
+        goalUpdateTime: settings.goalUpdateTime,
       });
     } catch (error) {
       console.error('Get notifications error:', error);
@@ -323,19 +379,53 @@ export const userController = {
   // Update user notifications settings
   async updateNotifications(req: Request, res: Response) {
     try {
-      // TODO: Implement notifications settings storage
-      const { mealReminders, newRecipes, goalUpdates } = req.body;
-      
-      // For now, just return the updated settings
-      const updatedSettings = {
-        mealReminders: mealReminders ?? true,
-        newRecipes: newRecipes ?? true,
-        goalUpdates: goalUpdates ?? false
-      };
-      
-      res.json({ 
-        message: 'Notification settings updated successfully', 
-        notifications: updatedSettings 
+      const userId = getUserId(req);
+      const {
+        mealReminders,
+        mealReminderTimes,
+        newRecipes,
+        goalUpdates,
+        goalUpdateDay,
+        goalUpdateTime,
+      } = req.body;
+
+      const timesString = Array.isArray(mealReminderTimes)
+        ? mealReminderTimes.join(',')
+        : '08:00,12:00,18:00';
+
+      const settings = await prisma.notificationSettings.upsert({
+        where: { userId },
+        update: {
+          mealReminders: mealReminders ?? true,
+          mealReminderTimes: timesString,
+          newRecipes: newRecipes ?? true,
+          goalUpdates: goalUpdates ?? false,
+          goalUpdateDay: goalUpdateDay ?? 'Monday',
+          goalUpdateTime: goalUpdateTime ?? '09:00',
+        },
+        create: {
+          userId,
+          mealReminders: mealReminders ?? true,
+          mealReminderTimes: timesString,
+          newRecipes: newRecipes ?? true,
+          goalUpdates: goalUpdates ?? false,
+          goalUpdateDay: goalUpdateDay ?? 'Monday',
+          goalUpdateTime: goalUpdateTime ?? '09:00',
+        },
+      });
+
+      res.json({
+        message: 'Notification settings updated successfully',
+        notifications: {
+          mealReminders: settings.mealReminders,
+          mealReminderTimes: settings.mealReminderTimes
+            ? settings.mealReminderTimes.split(',').filter(Boolean)
+            : [],
+          newRecipes: settings.newRecipes,
+          goalUpdates: settings.goalUpdates,
+          goalUpdateDay: settings.goalUpdateDay,
+          goalUpdateTime: settings.goalUpdateTime,
+        },
       });
     } catch (error) {
       console.error('Update notifications error:', error);
@@ -747,7 +837,7 @@ export const userController = {
         where: { preferenceId: preferences.id }
       });
       
-      res.json({ 
+      res.json({
         message: 'Preferred superfoods updated successfully',
         preferredSuperfoods: updated
       });
@@ -755,5 +845,60 @@ export const userController = {
       console.error('Update preferred superfoods error:', error);
       res.status(500).json({ error: 'Failed to update preferred superfoods' });
     }
-  }
+  },
+
+  // Upload profile picture
+  async uploadProfilePicture(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image file provided' });
+      }
+
+      const profilePictureUrl = `/uploads/profile-pictures/${req.file.filename}`;
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { profilePictureUrl },
+      });
+
+      res.json({
+        message: 'Profile picture uploaded successfully',
+        profilePictureUrl,
+      });
+    } catch (error) {
+      console.error('Upload profile picture error:', error);
+      res.status(500).json({ error: 'Failed to upload profile picture' });
+    }
+  },
+
+  // Delete profile picture
+  async deleteProfilePicture(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { profilePictureUrl: true },
+      });
+
+      if (user?.profilePictureUrl) {
+        const filePath = path.join(process.cwd(), user.profilePictureUrl);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { profilePictureUrl: null },
+      });
+
+      res.json({ message: 'Profile picture removed successfully' });
+    } catch (error) {
+      console.error('Delete profile picture error:', error);
+      res.status(500).json({ error: 'Failed to remove profile picture' });
+    }
+  },
 };

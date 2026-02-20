@@ -1,22 +1,25 @@
-import { View, Text, ScrollView, Alert, Animated } from 'react-native';
+import { View, Text, ScrollView, Alert, Animated, Modal } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
-import { useApi } from '../../hooks/useApi';
+import { Ionicons } from '@expo/vector-icons';
+
 import type { FilterState } from '../../lib/filterStorage';
 import type { SuggestedRecipe } from '../../types';
 import { useToast } from '../../contexts/ToastContext';
 import HelpTooltip from '../../components/ui/HelpTooltip';
 import { Spacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
+import { Colors, DarkColors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
 import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
 import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, RecipeOfTheDayCard, MealPrepModeHeader, RecipeSectionsGrid } from '../../components/home';
+import SearchScopeSelector, { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
@@ -24,6 +27,9 @@ import QuickFiltersBar from '../../components/home/QuickFiltersBar';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
+import RecipeRoulette from '../../components/recipe/RecipeRoulette';
+import { SurpriseMeModal, type SurpriseFilters } from '../../components/home';
+import { Accelerometer } from 'expo-sensors';
 import {
   type UserFeedback,
   type RecipeSection,
@@ -54,6 +60,7 @@ import { useWelcomeEffects } from '../../hooks/useWelcomeEffects';
 import { useMoodSelector } from '../../hooks/useMoodSelector';
 import { useFilterActions } from '../../hooks/useFilterActions';
 import { usePaginationActions } from '../../hooks/usePaginationActions';
+import { useHomeFeed } from '../../hooks/useHomeFeed';
 
 export default function HomeScreen() {
   console.log('[HomeScreen] Component rendering');
@@ -61,6 +68,7 @@ export default function HomeScreen() {
   const isDark = colorScheme === 'dark';
   const { showToast } = useToast();
   const { user } = useAuth();
+  const { openRoulette } = useLocalSearchParams<{ openRoulette?: string }>();
   const [refreshing, setRefreshing] = useState(false);
 
   // Random recipe state managed by extracted hook (defined after filters)
@@ -69,6 +77,13 @@ export default function HomeScreen() {
   // Quick meals and perfect matches state managed by extracted hooks (defined after filters/mealPrepMode)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
   const [initialRecipesLoaded, setInitialRecipesLoaded] = useState(false); // Track if we've loaded initial recipes
+
+  // Recipe Roulette state
+  const [showRouletteModal, setShowRouletteModal] = useState(false);
+  const [rouletteRecipes, setRouletteRecipes] = useState<SuggestedRecipe[]>([]);
+  const [rouletteLoading, setRouletteLoading] = useState(false);
+  const [showSurpriseModal, setShowSurpriseModal] = useState(false);
+  const lastSurpriseFiltersRef = useRef<SurpriseFilters>({});
 
   // Main content scroll ref (used for scroll-to-top on mascot press)
   const mainScrollRef = useRef<ScrollView>(null);
@@ -116,13 +131,19 @@ export default function HomeScreen() {
   // Section collapse state - using extracted hook
   const { collapsedSections, toggleSection } = useCollapsibleSections();
 
+  // Consolidated home feed — replaces 7 separate API calls with 1
+  const homeFeed = useHomeFeed({
+    page: 0,
+    limit: RECIPES_PER_PAGE,
+  });
+
   // Personalized sections state - using extracted hook
   const {
     likedRecipes,
     recentlyViewedIds: recentlyViewedRecipes,
     loading: loadingPersonalized,
     addRecentlyViewed,
-  } = usePersonalizedRecipes({ userId: user?.id });
+  } = usePersonalizedRecipes({ userId: user?.id, initialLikedRecipes: homeFeed.likedRecipes });
 
   // Filter state - using extracted hook
   const filterHook = useRecipeFilters();
@@ -185,6 +206,9 @@ export default function HomeScreen() {
   // Track if we're loading from filters to prevent useApi from interfering
   const [loadingFromFilters, setLoadingFromFilters] = useState(false);
 
+  // Search scope state (All / Saved / Liked)
+  const [searchScope, setSearchScope] = useState<SearchScope>('all');
+
   // Search state - using extracted hook
   const { searchQuery, handleSearchChange, clearSearch } = useRecipeSearch({
     filtersLoaded,
@@ -198,6 +222,56 @@ export default function HomeScreen() {
     resetPage: () => setCurrentPage(0),
   });
 
+  // Search submit handler — triggers actual recipe fetch with current query + scope
+  const handleSubmitSearch = useCallback(async (query: string) => {
+    if (!query.trim()) return;
+    setLoadingFromFilters(true);
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      search: query.trim(),
+      cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+      dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+      maxCookTime: filters.maxCookTime || undefined,
+      difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+      mealPrepMode,
+      scope: searchScope !== 'all' ? searchScope : undefined,
+    });
+    if (result) {
+      applyFetchResult(result);
+      showToast(
+        result.recipes.length > 0
+          ? `Found ${result.recipes.length} recipes matching "${query.trim()}"`
+          : `No recipes found for "${query.trim()}"`,
+        result.recipes.length > 0 ? 'success' : 'error',
+        2000,
+      );
+    }
+    setLoadingFromFilters(false);
+  }, [filters, mealPrepMode, searchScope, RECIPES_PER_PAGE, fetchRecipes, applyFetchResult, showToast, setLoadingFromFilters]);
+
+  // Scope change handler — re-fetches with new scope
+  const handleScopeChange = useCallback(async (newScope: SearchScope) => {
+    setSearchScope(newScope);
+    if (!searchQuery.trim()) return;
+    setLoadingFromFilters(true);
+    const result = await fetchRecipes({
+      page: 0,
+      limit: RECIPES_PER_PAGE,
+      search: searchQuery.trim(),
+      cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+      dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+      maxCookTime: filters.maxCookTime || undefined,
+      difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+      mealPrepMode,
+      scope: newScope !== 'all' ? newScope : undefined,
+    });
+    if (result) {
+      applyFetchResult(result);
+    }
+    setLoadingFromFilters(false);
+  }, [searchQuery, filters, mealPrepMode, RECIPES_PER_PAGE, fetchRecipes, applyFetchResult, setLoadingFromFilters]);
+
   // Quick meals hook (≤30 min recipes) - using extracted hook
   const quickMeals = useQuickMeals({
     filters: {
@@ -206,6 +280,7 @@ export default function HomeScreen() {
       mealPrepMode,
     },
     enabled: filtersLoaded && !searchQuery,
+    initialData: homeFeed.quickMeals,
   });
   const {
     recipes: quickMealsRecipes,
@@ -225,6 +300,7 @@ export default function HomeScreen() {
       mealPrepMode,
     },
     enabled: filtersLoaded && !searchQuery,
+    initialData: homeFeed.perfectMatches,
   });
   const {
     recipes: perfectMatchRecipes,
@@ -239,10 +315,13 @@ export default function HomeScreen() {
   const { timeAwareMode, setTimeAwareMode, toggleTimeAwareMode, currentMealPeriod, isLoaded: timeAwareLoaded } = useTimeAwareMode();
 
   // Recipe of the Day (Home Page 2.0) - using extracted hook
-  const { recipe: recipeOfTheDay, loading: loadingRecipeOfTheDay } = useRecipeOfTheDay();
+  const { recipe: recipeOfTheDay, loading: loadingRecipeOfTheDay } = useRecipeOfTheDay({ initialData: homeFeed.recipeOfTheDay });
 
-  // Use the useApi hook for fetching suggested recipes (only when no filters)
-  const { data: recipesData, loading, error, refetch } = useApi('/recipes/suggested');
+  // Use consolidated home feed data instead of separate useApi('/recipes/suggested')
+  const recipesData = homeFeed.suggestedRecipes.length > 0 ? homeFeed.suggestedRecipes : null;
+  const loading = homeFeed.loading;
+  const error = homeFeed.error;
+  const refetch = homeFeed.refetch;
 
   // Quick macro filters (highProtein, lowCarb, lowCalorie) - using extracted hook
   const { quickMacroFilters, getMacroFilterParams, handleQuickMacroFilter } = useQuickMacroFilters({
@@ -354,14 +433,14 @@ export default function HomeScreen() {
   }, [viewMode]);
 
   // Toggle view mode
-  const handleToggleViewMode = (mode: 'grid' | 'list') => {
+  const handleToggleViewMode = useCallback((mode: 'grid' | 'list') => {
     setViewMode(mode); // Hook handles persistence automatically
     HapticPatterns.buttonPress();
-  };
+  }, [setViewMode]);
 
 
   // Toggle meal prep mode
-  const handleToggleMealPrepMode = async (value: boolean) => {
+  const handleToggleMealPrepMode = useCallback(async (value: boolean) => {
     setMealPrepMode(value); // Hook handles persistence automatically
     HapticPatterns.buttonPress();
 
@@ -391,8 +470,19 @@ export default function HomeScreen() {
       applyFetchResult(result);
     }
     setLoadingFromFilters(false);
-  };
+  }, [setMealPrepMode, showToast, fetchRecipes, filters, searchQuery, applyFetchResult]);
 
+
+  // Seed main recipe grid from consolidated home feed data (replaces old useApi effect)
+  useEffect(() => {
+    if (homeFeed.suggestedRecipes.length > 0 && !initialRecipesLoaded && !loadingFromFilters) {
+      setSuggestedRecipes(homeFeed.suggestedRecipes);
+      if (homeFeed.pagination) {
+        setTotalRecipes(homeFeed.pagination.total);
+      }
+      setInitialRecipesLoaded(true);
+    }
+  }, [homeFeed.suggestedRecipes, homeFeed.pagination?.total]);
 
   // IMPORTANT:
   // We intentionally do NOT overwrite filtered/paginated results with `/recipes/suggested`.
@@ -437,14 +527,22 @@ export default function HomeScreen() {
   onRefreshRef.current = onRefresh;
 
   // Fetch quick meals and perfect matches when filters change - hooks handle actual fetching
+  // Skip initial fetch when homeFeed already provided data (initialData in hooks)
+  const homeFeedInitialRef = useRef(true);
   useEffect(() => {
     if (filtersLoaded && !searchQuery) {
+      // Skip the first trigger if homeFeed already provided initial data
+      if (homeFeedInitialRef.current && (homeFeed.quickMeals.length > 0 || homeFeed.perfectMatches.length > 0)) {
+        homeFeedInitialRef.current = false;
+        return;
+      }
+      homeFeedInitialRef.current = false;
       fetchQuickMeals();
       fetchPerfectMatches();
     }
   }, [filtersLoaded, filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, mealPrepMode, searchQuery, fetchQuickMeals, fetchPerfectMatches]);
 
-  const handleRecipePress = (recipeId: string) => {
+  const handleRecipePress = useCallback((recipeId: string) => {
     console.log('📱 HomeScreen: Recipe pressed', recipeId);
 
     // Track recipe view for "Continue Cooking" section (using extracted hook)
@@ -452,30 +550,140 @@ export default function HomeScreen() {
 
     // Navigate to modal
     router.push(`../modal?id=${recipeId}`);
-  };
+  }, [addRecentlyViewed]);
 
   // Collection functions now provided by useCollectionSave hook
 
   // Long-press menu handlers
-  const handleLongPress = (recipe: SuggestedRecipe) => {
+  const handleLongPress = useCallback((recipe: SuggestedRecipe) => {
     openActionMenu(recipe); // Hook handles setting recipe and showing menu
     HapticPatterns.buttonPressPrimary();
-  };
+  }, [openActionMenu]);
 
   // Filter functions
-  const handleFilterPress = () => {
+  const handleFilterPress = useCallback(() => {
     openFilterModal();
-  };
+  }, [openFilterModal]);
 
 
   // Toggle time-aware mode (Home Page 2.0)
-  const handleToggleTimeAwareMode = () => {
+  const handleToggleTimeAwareMode = useCallback(() => {
     toggleTimeAwareMode(); // Hook handles state and persistence automatically
     HapticPatterns.buttonPress();
 
     // Refresh recipes with new setting
     onRefresh();
-  };
+  }, [toggleTimeAwareMode, onRefresh]);
+
+  // Recipe Roulette handlers
+  const handleOpenRoulette = useCallback(async () => {
+    HapticPatterns.buttonPress();
+    setRouletteLoading(true);
+    setShowRouletteModal(true);
+
+    try {
+      // Fetch a diverse set of recipes for roulette (use shuffle mode)
+      const result = await fetchRecipes({
+        page: 0,
+        limit: 20, // Get 20 recipes for roulette
+        cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+        dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+        shuffle: true, // Enable shuffle for variety
+      });
+
+      if (result) {
+        setRouletteRecipes(result.recipes);
+      } else {
+        setRouletteRecipes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching roulette recipes:', error);
+      showToast('Failed to load recipes for roulette', 'error');
+      setRouletteRecipes([]);
+    } finally {
+      setRouletteLoading(false);
+    }
+  }, [filters.cuisines, filters.dietaryRestrictions, fetchRecipes, showToast]);
+
+  const handleCloseRoulette = useCallback(() => {
+    setShowRouletteModal(false);
+    setRouletteRecipes([]);
+    // Optionally refresh the main recipe feed
+    onRefresh();
+  }, [onRefresh]);
+
+  const handleRouletteLike = useCallback(async (recipeId: string) => {
+    await handleLike(recipeId);
+  }, [handleLike]);
+
+  const handleRoulettePass = useCallback(async (recipeId: string) => {
+    await handleDislike(recipeId);
+  }, [handleDislike]);
+
+  // Surprise Me with filters
+  const handleSurprise = useCallback(async (surpriseFilters: SurpriseFilters) => {
+    lastSurpriseFiltersRef.current = surpriseFilters;
+    setShowSurpriseModal(false);
+    setRouletteLoading(true);
+    setShowRouletteModal(true);
+
+    try {
+      const fetchParams: any = {
+        page: 0,
+        limit: 20,
+        shuffle: true,
+      };
+      if (surpriseFilters.cuisine) {
+        fetchParams.cuisines = [surpriseFilters.cuisine];
+      } else if (filters.cuisines.length > 0) {
+        fetchParams.cuisines = filters.cuisines;
+      }
+      if (filters.dietaryRestrictions.length > 0) {
+        fetchParams.dietaryRestrictions = filters.dietaryRestrictions;
+      }
+      if (surpriseFilters.maxCookTime) {
+        fetchParams.maxCookTime = surpriseFilters.maxCookTime;
+      }
+
+      const result = await fetchRecipes(fetchParams);
+      setRouletteRecipes(result ? result.recipes : []);
+    } catch (error) {
+      console.error('Error fetching surprise recipes:', error);
+      showToast('Failed to load recipes', 'error');
+      setRouletteRecipes([]);
+    } finally {
+      setRouletteLoading(false);
+    }
+  }, [filters.cuisines, filters.dietaryRestrictions, fetchRecipes, showToast]);
+
+  // Reshuffle with same filters
+  const handleReshuffle = useCallback(() => {
+    handleSurprise(lastSurpriseFiltersRef.current);
+  }, [handleSurprise]);
+
+  // FAB "Surprise Me!" param consumption
+  useEffect(() => {
+    if (openRoulette === 'true') {
+      setShowSurpriseModal(true);
+      router.setParams({ openRoulette: '' });
+    }
+  }, [openRoulette]);
+
+  // Shake to discover - opens surprise modal
+  useEffect(() => {
+    let lastShakeTime = 0;
+    const subscription = Accelerometer.addListener(({ x, y, z }) => {
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+      const now = Date.now();
+      if (magnitude > 1.8 && now - lastShakeTime > 2000) {
+        lastShakeTime = now;
+        HapticPatterns.rouletteSpin();
+        setShowSurpriseModal(true);
+      }
+    });
+    Accelerometer.setUpdateInterval(200);
+    return () => subscription.remove();
+  }, []);
 
   // Group recipes into contextual sections - using extracted utility function
   const recipeSections = useMemo(() => {
@@ -549,8 +757,59 @@ export default function HomeScreen() {
       <RecipeSearchBar
         value={searchQuery}
         onChangeText={handleSearchChange}
-        onClear={clearSearch}
+        onClear={() => { clearSearch(); setSearchScope('all'); }}
+        onSubmitSearch={handleSubmitSearch}
+        onSelectSuggestion={handleSubmitSearch}
+        initialPopularSearches={homeFeed.popularSearches}
       />
+
+      {/* Search Scope Selector (visible when searching) */}
+      {searchQuery.trim().length > 0 && (
+        <SearchScopeSelector
+          activeScope={searchScope}
+          onScopeChange={handleScopeChange}
+        />
+      )}
+
+      {/* Recipe Roulette Button */}
+      {!searchQuery && (
+        <View className="px-4 pt-3 pb-2">
+          <HapticTouchableOpacity
+            onPress={() => setShowSurpriseModal(true)}
+            className="flex-row items-center justify-between p-4 rounded-xl shadow-sm border"
+            style={{
+              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+              borderColor: isDark ? '#374151' : '#E5E7EB',
+            }}
+          >
+            <View className="flex-row items-center flex-1">
+              <View
+                className="rounded-full p-3 mr-3"
+                style={{
+                  backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight,
+                }}
+              >
+                <Text className="text-2xl">🎰</Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Recipe Roulette
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">
+                  Swipe through recipes Tinder-style
+                </Text>
+              </View>
+            </View>
+            <View className="ml-2">
+              <Ionicons
+                name="chevron-forward"
+                size={24}
+                color={isDark ? '#9CA3AF' : '#6B7280'}
+              />
+            </View>
+          </HapticTouchableOpacity>
+        </View>
+      )}
 
       {/* Main content area - FIXED: Removed AnimatedRefreshControl */}
       <ScrollView
@@ -800,6 +1059,74 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
           onReportIssue={handleReportIssue}
         />
       )}
+
+      {/* Recipe Roulette Modal */}
+      <Modal
+        visible={showRouletteModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={handleCloseRoulette}
+      >
+        {rouletteLoading ? (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: isDark ? '#111827' : '#F9FAFB',
+            }}
+          >
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Loading recipes...
+            </Text>
+            <Text className="text-sm text-gray-500 dark:text-gray-400">
+              Get ready to swipe!
+            </Text>
+          </View>
+        ) : rouletteRecipes.length > 0 ? (
+          <RecipeRoulette
+            recipes={rouletteRecipes}
+            onLike={handleRouletteLike}
+            onPass={handleRoulettePass}
+            onClose={handleCloseRoulette}
+            onReshuffle={handleReshuffle}
+            initialIndex={0}
+          />
+        ) : (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: isDark ? '#111827' : '#F9FAFB',
+              padding: 24,
+            }}
+          >
+            <Text className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 text-center">
+              No Recipes Available
+            </Text>
+            <Text className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
+              We couldn't load any recipes for roulette right now.
+            </Text>
+            <HapticTouchableOpacity
+              onPress={handleCloseRoulette}
+              className="px-6 py-3 rounded-xl"
+              style={{
+                backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+              }}
+            >
+              <Text className="text-white font-semibold text-base">Close</Text>
+            </HapticTouchableOpacity>
+          </View>
+        )}
+      </Modal>
+
+      {/* Surprise Me Modal */}
+      <SurpriseMeModal
+        visible={showSurpriseModal}
+        onClose={() => setShowSurpriseModal(false)}
+        onSurprise={handleSurprise}
+      />
     </SafeAreaView>
   );
 }

@@ -12,9 +12,15 @@ interface UseRecipeOfTheDayReturn {
   refetch: () => Promise<void>;
 }
 
-export function useRecipeOfTheDay(): UseRecipeOfTheDayReturn {
-  const [recipe, setRecipe] = useState<SuggestedRecipe | null>(null);
-  const [loading, setLoading] = useState(false);
+interface UseRecipeOfTheDayOptions {
+  /** Pre-fetched data from consolidated home feed — skips API call if provided */
+  initialData?: SuggestedRecipe | null;
+}
+
+export function useRecipeOfTheDay(options: UseRecipeOfTheDayOptions = {}): UseRecipeOfTheDayReturn {
+  const { initialData } = options;
+  const [recipe, setRecipe] = useState<SuggestedRecipe | null>(initialData ?? null);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   const fetchRecipeOfTheDay = useCallback(async () => {
@@ -34,10 +40,20 @@ export function useRecipeOfTheDay(): UseRecipeOfTheDayReturn {
     }
   }, []);
 
-  // Fetch on mount
+  // Update state when initialData changes (from home feed)
   useEffect(() => {
-    fetchRecipeOfTheDay();
-  }, [fetchRecipeOfTheDay]);
+    if (initialData !== undefined) {
+      setRecipe(initialData);
+      setLoading(false);
+    }
+  }, [initialData]);
+
+  // Only fetch on mount if no initialData provided
+  useEffect(() => {
+    if (initialData === undefined) {
+      fetchRecipeOfTheDay();
+    }
+  }, [fetchRecipeOfTheDay, initialData]);
 
   return {
     recipe,

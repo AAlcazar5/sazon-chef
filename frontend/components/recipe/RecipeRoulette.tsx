@@ -34,6 +34,7 @@ interface RecipeRouletteProps {
   onLike: (recipeId: string) => void;
   onPass: (recipeId: string) => void;
   onClose: () => void;
+  onReshuffle?: () => void;
   initialIndex?: number;
 }
 
@@ -42,6 +43,7 @@ export default function RecipeRoulette({
   onLike,
   onPass,
   onClose,
+  onReshuffle,
   initialIndex = 0,
 }: RecipeRouletteProps) {
   const { colorScheme } = useColorScheme();
@@ -76,19 +78,10 @@ export default function RecipeRoulette({
     const listener = position.addListener(({ x }) => {
       const absX = Math.abs(x);
       const progress = Math.min(absX / SWIPE_THRESHOLD, 1);
-      
-      // Scale up next card as current card moves away
-      Animated.timing(nextCardScale, {
-        toValue: 0.95 + progress * 0.05,
-        duration: 0,
-        useNativeDriver: true,
-      }).start();
-      
-      Animated.timing(nextCardOpacity, {
-        toValue: 0.7 + progress * 0.3,
-        duration: 0,
-        useNativeDriver: true,
-      }).start();
+
+      // Scale up next card as current card moves away (use setValue for immediate updates)
+      nextCardScale.setValue(0.95 + progress * 0.05);
+      nextCardOpacity.setValue(0.7 + progress * 0.3);
 
       // Show indicators
       if (x > 50) {
@@ -137,14 +130,12 @@ export default function RecipeRoulette({
             useNativeDriver: false,
           }).start();
           
-          // Run native driver animations in parallel
-          Animated.parallel([
-            Animated.timing(opacity, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
+          // Run opacity animation (must use same driver as position since they're on same component)
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: false,
+          }).start(() => {
             // Call appropriate handler
             if (direction === 'right') {
               onLike(currentRecipe.id);
@@ -170,15 +161,15 @@ export default function RecipeRoulette({
             useNativeDriver: false,
           }).start();
           
-          // Run native driver animations in parallel
+          // Run rotation and opacity animations (must use same driver as position)
           Animated.parallel([
             Animated.spring(rotation, {
               toValue: 0,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.spring(opacity, {
               toValue: 1,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
           ]).start();
         }
@@ -200,12 +191,31 @@ export default function RecipeRoulette({
           <Text style={[styles.emptyText, { color: isDark ? DarkColors.text : Colors.text }]}>
             You've seen all recipes!
           </Text>
-          <TouchableOpacity
-            onPress={onClose}
-            style={[styles.closeButton, { backgroundColor: isDark ? DarkColors.primary : Colors.primary }]}
-          >
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            {onReshuffle && (
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setCurrentIndex(0);
+                  onReshuffle();
+                }}
+                style={[styles.closeButton, {
+                  backgroundColor: isDark ? '#374151' : '#F3F4F6',
+                  flex: 1,
+                }]}
+              >
+                <Text style={[styles.closeButtonText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>
+                  Shuffle Again
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={onClose}
+              style={[styles.closeButton, { backgroundColor: isDark ? DarkColors.primary : Colors.primary, flex: 1 }]}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -243,6 +253,7 @@ export default function RecipeRoulette({
         {...panResponder.panHandlers}
         style={[
           styles.card,
+          styles.currentCard,
           {
             transform: [
               { translateX: position.x },
@@ -432,6 +443,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 24,
     overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -440,11 +452,17 @@ const styles = StyleSheet.create({
   },
   nextCard: {
     zIndex: 1,
+    elevation: 5,
+  },
+  currentCard: {
+    zIndex: 2,
+    elevation: 10,
   },
   cardContent: {
     flex: 1,
     borderRadius: 24,
     overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
   },
   imageContainer: {
     width: '100%',
@@ -557,7 +575,7 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 20,
     left: 0,
     right: 0,
     flexDirection: 'row',

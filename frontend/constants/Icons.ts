@@ -122,6 +122,7 @@ export const Icons = {
   LOCATION_OUTLINE: 'location-outline' as IconName,
   SYNC: 'sync' as IconName,
   SYNC_OUTLINE: 'sync-outline' as IconName,
+  CLOUD_OFFLINE_OUTLINE: 'cloud-offline-outline' as IconName,
   MERGE_LISTS: 'git-merge' as IconName,
   MERGE_LISTS_OUTLINE: 'git-merge-outline' as IconName,
   MAP: 'map' as IconName,
@@ -139,6 +140,12 @@ export const Icons = {
   ARROW_BACK: 'arrow-back' as IconName,
   ARROW_FORWARD: 'arrow-forward' as IconName,
   
+  // Collections
+  PIN: 'pin' as IconName,
+  PIN_OUTLINE: 'pin-outline' as IconName,
+  COPY: 'copy' as IconName,
+  COPY_OUTLINE: 'copy-outline' as IconName,
+
   // Misc
   LINK: 'link' as IconName,
   LINK_OUTLINE: 'link-outline' as IconName,

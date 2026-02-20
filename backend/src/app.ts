@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
 import { recipeRoutes } from '@modules/recipe/recipeRoutes';
 import { userRoutes } from '@modules/user/userRoutes';
 import { healthMetricsRoutes } from '@modules/healthMetrics/healthMetricsRoutes';
@@ -16,6 +17,7 @@ import shoppingListRoutes from '@modules/shoppingList/shoppingListRoutes';
 import shoppingAppRoutes from '@modules/shoppingList/shoppingAppRoutes';
 import costTrackingRoutes from '@modules/costTracking/costTrackingRoutes';
 import ingredientAvailabilityRoutes from '@modules/ingredientAvailability/ingredientAvailabilityRoutes';
+import pantryRoutes from '@modules/pantry/pantryRoutes';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 
@@ -44,6 +46,9 @@ app.use(morgan('combined'));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files (profile pictures, etc.)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Rate limiting (applied to all routes)
 app.use('/api', apiLimiter);
@@ -74,6 +79,7 @@ app.use('/api/shopping-lists', shoppingListRoutes);
 app.use('/api/shopping-apps', shoppingAppRoutes);
 app.use('/api/cost-tracking', costTrackingRoutes);
 app.use('/api/ingredient-availability', ingredientAvailabilityRoutes);
+app.use('/api/pantry', pantryRoutes);
 
 // 404 handler for undefined routes
 app.use('*', (req: Request, res: Response) => {

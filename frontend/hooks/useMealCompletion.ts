@@ -87,53 +87,53 @@ export function useMealCompletion({
    * Handle meal completion toggle with celebration
    */
   const handleToggleMealCompletion = async (mealId: string, isCompleted: boolean) => {
-    try {
-      await mealPlanApi.updateMealCompletion(mealId, isCompleted);
-      setMealCompletionStatus(prev => ({
-        ...prev,
-        [mealId]: isCompleted,
-      }));
+    // Optimistic update — toggle UI immediately for instant feedback
+    setMealCompletionStatus(prev => ({
+      ...prev,
+      [mealId]: isCompleted,
+    }));
+    HapticPatterns.success();
 
-      if (isCompleted) {
-        // Find the meal name for celebration message
-        // Check hourlyMeals first (24-hour view)
-        let meal = Object.values(hourlyMeals)
-          .flat()
-          .find(m => m.mealPlanMealId === mealId);
+    if (isCompleted) {
+      // Find the meal name for celebration message
+      let meal = Object.values(hourlyMeals)
+        .flat()
+        .find(m => m.mealPlanMealId === mealId);
 
-        // If not found, check weeklyPlan (compact/collapsible views)
-        if (!meal && weeklyPlan?.weeklyPlan) {
-          const allMeals: any[] = [];
-          Object.values(weeklyPlan.weeklyPlan).forEach((day: any) => {
-            if (day?.meals) {
-              if (day.meals.breakfast?.recipe) allMeals.push(day.meals.breakfast.recipe);
-              if (day.meals.lunch?.recipe) allMeals.push(day.meals.lunch.recipe);
-              if (day.meals.dinner?.recipe) allMeals.push(day.meals.dinner.recipe);
-              if (day.meals.snacks) {
-                day.meals.snacks.forEach((snack: any) => {
-                  if (snack?.recipe) allMeals.push(snack.recipe);
-                });
-              }
+      if (!meal && weeklyPlan?.weeklyPlan) {
+        const allMeals: any[] = [];
+        Object.values(weeklyPlan.weeklyPlan).forEach((day: any) => {
+          if (day?.meals) {
+            if (day.meals.breakfast?.recipe) allMeals.push(day.meals.breakfast.recipe);
+            if (day.meals.lunch?.recipe) allMeals.push(day.meals.lunch.recipe);
+            if (day.meals.dinner?.recipe) allMeals.push(day.meals.dinner.recipe);
+            if (day.meals.snacks) {
+              day.meals.snacks.forEach((snack: any) => {
+                if (snack?.recipe) allMeals.push(snack.recipe);
+              });
             }
-          });
-          meal = allMeals.find(m => m.mealPlanMealId === mealId);
-        }
-
-        const mealName = meal?.name || meal?.title || 'Meal';
-
-        // Show celebration
-        setCelebrationMessage(`🎉 ${mealName} completed!`);
-        setShowCelebrationToast(true);
-
-        // Auto-hide toast after 2 seconds
-        setTimeout(() => {
-          setShowCelebrationToast(false);
-        }, 2000);
+          }
+        });
+        meal = allMeals.find(m => m.mealPlanMealId === mealId);
       }
 
-      HapticPatterns.success();
+      const mealName = meal?.name || meal?.title || 'Meal';
+      setCelebrationMessage(`🎉 ${mealName} completed!`);
+      setShowCelebrationToast(true);
+      setTimeout(() => setShowCelebrationToast(false), 2000);
+    }
+
+    // Fire API in background, revert on failure
+    try {
+      await mealPlanApi.updateMealCompletion(mealId, isCompleted);
     } catch (error: any) {
       console.error('Error updating meal completion:', error);
+      // Revert optimistic update
+      setMealCompletionStatus(prev => ({
+        ...prev,
+        [mealId]: !isCompleted,
+      }));
+      HapticPatterns.error();
       Alert.alert('Error', 'Failed to update meal completion status');
     }
   };

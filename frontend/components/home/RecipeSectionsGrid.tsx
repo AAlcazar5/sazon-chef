@@ -57,7 +57,7 @@ interface RecipeSectionsGridProps {
   onNextPage: () => void;
 }
 
-export default function RecipeSectionsGrid({
+function RecipeSectionsGrid({
   sections,
   collapsedSections,
   onToggleSection,
@@ -310,3 +310,5 @@ export default function RecipeSectionsGrid({
     </View>
   );
 }
+
+export default React.memo(RecipeSectionsGrid);
