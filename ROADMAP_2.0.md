@@ -9,7 +9,7 @@
 | Section | Focus Area | Status |
 |---------|------------|--------|
 | Group 18 | Shopping List 2.0 | Refactoring ✅, Quick wins ✅, Offline ✅ |
-| Group 18b | Meal Plan 2.0 | Refactoring ✅, Templates ✅, Duplicate ✅, Swaps ✅, Recurring ✅, TODOs 7/7 ✅, Perf ✅ |
+| Group 18b | Meal Plan 2.0 | Refactoring ✅, Templates ✅, Duplicate ✅, Swaps ✅, Recurring ✅, TODOs 7/7 ✅, Perf ✅, Testing ✅ |
 | Group 18c | Cookbook 2.0 | Refactoring ✅, Notes ✅, Ratings ✅, Recently Viewed ✅, Cooking History ✅, Collections ✅, Perf ✅, API Pagination ✅ |
 | Group 18d | Home Page 2.0 | Refactoring ✅, Quick wins ✅, Perf ✅, API Consolidation ✅ |
 | Group 18e | Profile 2.0 | Refactoring ✅, Quick wins ✅ |
@@ -69,9 +69,9 @@
   * React.memo on 8 components (DraggableMealCard, TimelineView, CompactMealView, CollapsibleWeekView, WeeklyCalendar, DailyMacrosSummary, ViewModeSelector, TotalPrepTimeCard)
   * useMemo/useCallback for expensive computations and handlers in meal-plan.tsx
 
-* **Testing Coverage**
-  * Unit tests for all meal plan utilities
-  * Integration tests for meal plan CRUD
+* ~~**Testing Coverage**~~ ✅
+  * ~~Unit tests for all meal plan utilities~~ — `batchCookingTime.test.ts` (estimateBatchCookingTime, formatTimeEstimate, getTimeSavingsMessage), `mealPrepTags.test.ts` (getMealPrepTags, getPrimaryMealPrepCategory, getMealPrepSuitabilityBadge), `recipeScaling.test.ts` (scaleRecipe, ingredient parsing, amount formatting), `mealHistoryUtils.test.ts` (calculateMealHistoryStats, getFavoriteCuisines, getMostConsumedRecipes, getWeeklyPattern, getNutritionalInsights, formatMealHistoryData — 20 tests). Created `utils/mealHistoryUtils.ts` source file.
+  * ~~Integration tests for meal plan CRUD~~ — `useMealPlanUI.test.ts` (formatDate, formatDateRange, isToday, isSelected, groupMealsByType, formatTime, getMacroProgress, getMacroColor, hours/mealTypeToHour — 30 tests), `useMealCompletion.test.ts` (handleToggleMealCompletion optimistic update + revert, celebration toast, handleOpenNotes, handleSaveNotes, insertBulletPoint, insertTemplate — 25 tests).
 
 ---
 
