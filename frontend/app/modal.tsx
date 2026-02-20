@@ -14,6 +14,7 @@ import { useApi } from '../hooks/useApi';
 import { recipeApi, collectionsApi, shoppingListApi, costTrackingApi, shoppingAppApi } from '../lib/api';
 import type { Recipe } from '../types';
 import { ScaledRecipe } from '../utils/recipeScaling';
+import { optimizedImageUrl } from '../utils/imageUtils';
 import { generateStorageInstructions, getStorageMethods } from '../utils/storageInstructions';
 import { getMealPrepTags } from '../utils/mealPrepTags';
 import * as Haptics from 'expo-haptics';
@@ -1154,7 +1155,7 @@ export default function RecipeModal() {
                       >
                       {similarRecipe.imageUrl && (
                         <Image
-                          source={{ uri: similarRecipe.imageUrl }}
+                          source={{ uri: optimizedImageUrl(similarRecipe.imageUrl) }}
                           className="w-full h-32"
                           resizeMode="cover"
                         />

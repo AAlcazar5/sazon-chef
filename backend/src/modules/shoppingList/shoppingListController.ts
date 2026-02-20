@@ -308,7 +308,7 @@ export const shoppingListController = {
     try {
       const userId = getUserId(req);
       const { listId, itemId } = req.params;
-      const { name, quantity, category, purchased, notes, price } = req.body;
+      const { name, quantity, category, purchased, notes, price, photoUrl } = req.body;
 
       const shoppingList = await prisma.shoppingList.findFirst({
         where: { id: listId, userId },
@@ -335,6 +335,7 @@ export const shoppingListController = {
           ...(purchased !== undefined && { purchased }),
           ...(notes !== undefined && { notes }),
           ...(price !== undefined && { price }),
+          ...(photoUrl !== undefined && { photoUrl }),
         },
       });
 

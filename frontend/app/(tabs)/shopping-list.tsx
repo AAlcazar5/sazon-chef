@@ -74,6 +74,7 @@ export default function ShoppingListScreen() {
     handleFABPress,
     handleTogglePurchased,
     handleSaveQuantity,
+    handlePickItemPhoto,
     handleMarkSelectedComplete,
     handleMarkAllComplete,
     handleUndoMarkAllComplete,
@@ -793,6 +794,7 @@ export default function ShoppingListScreen() {
         dispatch={dispatch}
         onAddItem={handleAddItem}
         onSaveQuantity={handleSaveQuantity}
+        onPickItemPhoto={handlePickItemPhoto}
         purchaseHistoryPriceMap={purchaseHistoryPriceMap}
       />
     </SafeAreaView>

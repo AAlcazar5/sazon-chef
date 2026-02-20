@@ -1,7 +1,7 @@
 // frontend/components/shopping/ShoppingListItem.tsx
 // Individual shopping list item component
 
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -120,6 +120,12 @@ export default function ShoppingListItem({
               <Icon name={Icons.CHECKMARK} size={checkmarkSize} color="white" accessibilityLabel="Purchased" />
             )}
           </View>
+        )}
+        {item.photoUrl && !inStoreMode && !selectionMode && (
+          <Image
+            source={{ uri: item.photoUrl }}
+            style={{ width: 40, height: 40, borderRadius: 6, marginLeft: 10 }}
+          />
         )}
         <View className="ml-4 flex-1">
           <View className="flex-row items-center">

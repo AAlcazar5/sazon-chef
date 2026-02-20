@@ -22,6 +22,7 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import SmartBadges from './SmartBadges';
 import type { SuggestedRecipe } from '../../types';
+import { optimizedImageUrl } from '../../utils/imageUtils';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH * 0.9;
@@ -348,7 +349,7 @@ function RecipeCardContent({
       {recipe.imageUrl && (
         <View style={styles.imageContainer}>
           <ExpoImage
-            source={{ uri: recipe.imageUrl }}
+            source={{ uri: optimizedImageUrl(recipe.imageUrl) }}
             style={styles.recipeImage}
             contentFit="cover"
             transition={200}

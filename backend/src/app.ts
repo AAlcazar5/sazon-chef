@@ -18,6 +18,7 @@ import shoppingAppRoutes from '@modules/shoppingList/shoppingAppRoutes';
 import costTrackingRoutes from '@modules/costTracking/costTrackingRoutes';
 import ingredientAvailabilityRoutes from '@modules/ingredientAvailability/ingredientAvailabilityRoutes';
 import pantryRoutes from '@modules/pantry/pantryRoutes';
+import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 
@@ -80,6 +81,7 @@ app.use('/api/shopping-apps', shoppingAppRoutes);
 app.use('/api/cost-tracking', costTrackingRoutes);
 app.use('/api/ingredient-availability', ingredientAvailabilityRoutes);
 app.use('/api/pantry', pantryRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // 404 handler for undefined routes
 app.use('*', (req: Request, res: Response) => {

@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { View, Text, Image } from 'react-native';
+import { optimizedImageUrl } from '../../utils/imageUtils';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
@@ -103,7 +104,7 @@ function CompactMealView({
                     >
                       {meal.imageUrl ? (
                         <Image
-                          source={{ uri: meal.imageUrl }}
+                          source={{ uri: optimizedImageUrl(meal.imageUrl) }}
                           className="w-16 h-16 rounded-lg mr-3"
                           style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}
                         />

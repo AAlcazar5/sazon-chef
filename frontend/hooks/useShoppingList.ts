@@ -32,6 +32,8 @@ export interface ShoppingListState {
   editingQuantity: string;
   editingPrice: string;
   editingNotes: string;
+  editingPhotoUrl: string | null;
+  uploadingPhoto: boolean;
   updatingQuantity: boolean;
 
   showListPicker: boolean;
@@ -101,6 +103,8 @@ const initialState: ShoppingListState = {
   editingQuantity: '',
   editingPrice: '',
   editingNotes: '',
+  editingPhotoUrl: null,
+  uploadingPhoto: false,
   updatingQuantity: false,
 
   showListPicker: false,
@@ -221,6 +225,7 @@ function shoppingListReducer(state: ShoppingListState, action: ShoppingListActio
         editingQuantity: action.item.quantity || '',
         editingPrice: action.item.price != null ? action.item.price.toString() : '',
         editingNotes: action.item.notes || '',
+        editingPhotoUrl: action.item.photoUrl || null,
         showEditQuantityModal: true,
       };
 
@@ -231,6 +236,7 @@ function shoppingListReducer(state: ShoppingListState, action: ShoppingListActio
         editingQuantity: '',
         editingPrice: '',
         editingNotes: '',
+        editingPhotoUrl: null,
         selectedItem: null,
       };
 
@@ -1304,6 +1310,7 @@ export function useShoppingList() {
         quantity: state.editingQuantity.trim() || undefined,
         price: priceValue !== null && !isNaN(priceValue) && priceValue >= 0 ? priceValue : null,
         notes: state.editingNotes.trim() || null,
+        photoUrl: state.editingPhotoUrl,
       });
       await loadShoppingListDetails(state.selectedList.id);
       dispatch({ type: 'CLOSE_EDIT_QUANTITY_MODAL' });
@@ -1314,7 +1321,23 @@ export function useShoppingList() {
     } finally {
       dispatch({ type: 'UPDATE', payload: { updatingQuantity: false } });
     }
-  }, [state.selectedList, state.selectedItem, state.editingQuantity, state.editingPrice, state.editingNotes, loadShoppingListDetails]);
+  }, [state.selectedList, state.selectedItem, state.editingQuantity, state.editingPrice, state.editingNotes, state.editingPhotoUrl, loadShoppingListDetails]);
+
+  const handlePickItemPhoto = useCallback(async (imageUri: string) => {
+    dispatch({ type: 'UPDATE', payload: { uploadingPhoto: true } });
+    try {
+      const response = await shoppingListApi.uploadItemPhoto(imageUri);
+      const url = response.data?.url;
+      if (url) {
+        dispatch({ type: 'UPDATE', payload: { editingPhotoUrl: url } });
+      }
+    } catch (error) {
+      console.error('Error uploading item photo:', error);
+      Alert.alert('Upload Failed', 'Could not upload the photo. Please try again.');
+    } finally {
+      dispatch({ type: 'UPDATE', payload: { uploadingPhoto: false } });
+    }
+  }, []);
 
   const handleMarkSelectedComplete = useCallback(async () => {
     if (!state.selectedList || state.selectedItems.length === 0) return;
@@ -1753,6 +1776,7 @@ export function useShoppingList() {
     handleFABPress,
     handleTogglePurchased,
     handleSaveQuantity,
+    handlePickItemPhoto,
     handleMarkSelectedComplete,
     handleMarkAllComplete,
     handleUndoMarkAllComplete,
