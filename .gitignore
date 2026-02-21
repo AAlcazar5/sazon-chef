@@ -263,6 +263,7 @@ backend/prisma/dev.db
 *.md
 !README.md
 !CLAUDE.md
+!AGENTS.md
 
 # Security documentation
 Security.md
