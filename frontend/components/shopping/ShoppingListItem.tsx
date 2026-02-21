@@ -1,8 +1,9 @@
 // frontend/components/shopping/ShoppingListItem.tsx
-// Individual shopping list item component
+// Individual shopping list item component — simplified view
+// Default: checkbox + name + qty/price (right-aligned). Tap row → edit modal.
+// In-store: larger checkboxes + "Can't find" button.
 
-import { View, Text, Image } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
@@ -39,44 +40,49 @@ export default function ShoppingListItem({
   onToggleSelection,
   onLongPress,
   onCantFind,
-  onAddToPantry,
 }: ShoppingListItemProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const checkboxSize = inStoreMode ? 36 : 28;
-  const checkmarkSize = inStoreMode ? 24 : 18;
+  const checkboxSize = inStoreMode ? 36 : 26;
+  const checkmarkSize = inStoreMode ? 24 : 16;
+
+  const handlePress = () => {
+    if (selectionMode) {
+      onToggleSelection(item.id);
+    } else {
+      // Tap row → edit modal (not toggle purchased)
+      onEditQuantity(item);
+    }
+  };
+
+  const handleCheckboxPress = () => {
+    if (selectionMode) {
+      onToggleSelection(item.id);
+    } else {
+      onTogglePurchased(item);
+    }
+  };
 
   return (
     <View
-      className={`flex-row items-center justify-between rounded-xl mb-3 ${
-        item.purchased ? 'bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'
-      } ${selectionMode && isSelected ? 'border-2' : ''} ${!item.purchased ? 'border border-gray-200 dark:border-gray-700' : ''}`}
+      className={`flex-row items-center rounded-xl mb-2 ${
+        item.purchased ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
+      } ${selectionMode && isSelected ? 'border-2' : 'border border-gray-100 dark:border-gray-700'}`}
       style={[
-        { padding: inStoreMode ? 18 : 16 },
+        { paddingVertical: inStoreMode ? 14 : 12, paddingHorizontal: inStoreMode ? 16 : 14 },
         selectionMode && isSelected ? {
           borderColor: isDark ? DarkColors.primary : Colors.primary,
           backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight,
         } : item.purchased ? {
-          opacity: 0.6,
+          opacity: 0.5,
         } : undefined,
       ]}
     >
+      {/* Checkbox */}
       <HapticTouchableOpacity
-        onPress={() => {
-          if (selectionMode) {
-            onToggleSelection(item.id);
-          } else {
-            onTogglePurchased(item);
-          }
-        }}
-        onLongPress={() => {
-          if (!selectionMode) {
-            onLongPress(item.id);
-          }
-        }}
-        className="flex-1 flex-row items-center"
-        style={inStoreMode ? { minHeight: 44 } : undefined}
+        onPress={handleCheckboxPress}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         {selectionMode ? (
           <View
@@ -105,10 +111,10 @@ export default function ShoppingListItem({
               width: checkboxSize,
               height: checkboxSize,
               borderRadius: checkboxSize / 2,
-              borderWidth: inStoreMode ? 3 : 2.5,
+              borderWidth: inStoreMode ? 3 : 2,
               borderColor: item.purchased
                 ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
-                : '#D1D5DB',
+                : (isDark ? '#4B5563' : '#D1D5DB'),
               backgroundColor: item.purchased
                 ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
                 : 'transparent',
@@ -121,119 +127,67 @@ export default function ShoppingListItem({
             )}
           </View>
         )}
-        {item.photoUrl && !inStoreMode && !selectionMode && (
-          <Image
-            source={{ uri: item.photoUrl }}
-            style={{ width: 40, height: 40, borderRadius: 6, marginLeft: 10 }}
-          />
-        )}
-        <View className="ml-4 flex-1">
-          <View className="flex-row items-center">
-            <Text
-              className={`font-semibold ${
-                item.purchased
-                  ? 'text-gray-500 dark:text-gray-400 line-through'
-                  : 'text-gray-900 dark:text-gray-100'
-              }`}
-              style={{ fontSize: inStoreMode ? 18 : 16 }}
-            >
-              {item.name}
-            </Text>
-            {isPantryItem && !inStoreMode && (
-              <View
-                className="ml-1.5 px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: isDark ? '#1E3A2F' : '#ECFDF5' }}
-              >
-                <Text style={{ fontSize: 10, color: isDark ? '#6EE7B7' : '#065F46', fontWeight: '600' }}>
-                  PANTRY
-                </Text>
-              </View>
-            )}
-          </View>
-          {item.quantity && (
-            <Text className={`mt-1 ${
-              item.purchased
-                ? 'text-gray-500 dark:text-gray-400'
-                : 'text-gray-600 dark:text-gray-400'
-            }`} style={{ fontSize: inStoreMode ? 15 : 14 }}>
-              {item.quantity}
-            </Text>
-          )}
-          {item.price != null && item.price > 0 && (
-            <Text
-              className={`mt-0.5 ${
-                item.purchased
-                  ? 'text-gray-500 dark:text-gray-400'
-                  : 'text-green-600 dark:text-green-400'
-              }`}
-              style={{ fontSize: inStoreMode ? 15 : 14, fontWeight: '600' }}
-            >
-              ${item.price.toFixed(2)}
-            </Text>
-          )}
-          {item.notes && !inStoreMode && (
-            <Text
-              className="mt-0.5 text-gray-500 dark:text-gray-400 italic"
-              style={{ fontSize: 13 }}
-              numberOfLines={1}
-            >
-              {item.notes}
-            </Text>
-          )}
-          {item.recipe && !groupByRecipe && !inStoreMode && (
-            <HapticTouchableOpacity
-              onPress={() => router.push(`/recipe/${item.recipeId}` as any)}
-              className="flex-row items-center mt-1"
-            >
-              <Icon name={Icons.RESTAURANT_OUTLINE} size={12} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="View recipe" style={{ marginRight: 4 }} />
-              <Text className="text-xs" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>
-                {item.recipe.title}
-              </Text>
-            </HapticTouchableOpacity>
-          )}
-        </View>
       </HapticTouchableOpacity>
-      {!selectionMode && !inStoreMode && (
-        <View className="flex-row items-center">
-          {!isPantryItem && onAddToPantry && (
-            <HapticTouchableOpacity
-              onPress={() => onAddToPantry(item.name, item.category)}
-              className="p-2"
-            >
-              <Icon
-                name={Icons.HOME_OUTLINE}
-                size={IconSizes.MD}
-                color={isDark ? '#6EE7B7' : '#059669'}
-                accessibilityLabel="Add to pantry"
-              />
-            </HapticTouchableOpacity>
-          )}
-          <HapticTouchableOpacity
-            onPress={() => onEditQuantity(item)}
-            className="p-2 ml-1"
+
+      {/* Name — tappable to open edit modal */}
+      <HapticTouchableOpacity
+        onPress={handlePress}
+        onLongPress={() => {
+          if (!selectionMode) onLongPress(item.id);
+        }}
+        className="flex-1 ml-3"
+        style={inStoreMode ? { minHeight: 40 } : undefined}
+      >
+        <Text
+          className={`font-medium ${
+            item.purchased
+              ? 'text-gray-400 dark:text-gray-500 line-through'
+              : 'text-gray-900 dark:text-gray-100'
+          }`}
+          style={{ fontSize: inStoreMode ? 17 : 15 }}
+          numberOfLines={1}
+        >
+          {item.name}
+        </Text>
+      </HapticTouchableOpacity>
+
+      {/* Right side: qty + price */}
+      <View className="items-end ml-2" style={{ minWidth: 60 }}>
+        {item.quantity && (
+          <Text
+            className={`text-xs ${
+              item.purchased ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'
+            }`}
+            numberOfLines={1}
           >
-            <Icon
-              name={Icons.EDIT_OUTLINE}
-              size={IconSizes.MD}
-              color={isDark ? "#9CA3AF" : "#6B7280"}
-              accessibilityLabel="Edit quantity"
-            />
-          </HapticTouchableOpacity>
-        </View>
-      )}
+            {item.quantity}
+          </Text>
+        )}
+        {item.price != null && item.price > 0 && (
+          <Text
+            className={`text-xs font-semibold ${
+              item.purchased ? 'text-gray-400 dark:text-gray-500' : 'text-green-600 dark:text-green-400'
+            }`}
+          >
+            ${item.price.toFixed(2)}
+          </Text>
+        )}
+      </View>
+
+      {/* In-store: Can't Find button */}
       {!selectionMode && inStoreMode && !item.purchased && !isCantFind && (
         <HapticTouchableOpacity
           onPress={() => onCantFind?.(item.id)}
-          className="px-3 py-2 rounded-lg ml-2"
+          className="px-2.5 py-1.5 rounded-lg ml-2"
           style={{ backgroundColor: isDark ? '#374151' : '#F3F4F6' }}
         >
           <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            Can't find
+            Skip
           </Text>
         </HapticTouchableOpacity>
       )}
       {inStoreMode && isCantFind && (
-        <View className="px-3 py-2 rounded-lg ml-2" style={{ backgroundColor: isDark ? '#7C2D12' : '#FEF2F2' }}>
+        <View className="px-2.5 py-1.5 rounded-lg ml-2" style={{ backgroundColor: isDark ? '#7C2D12' : '#FEF2F2' }}>
           <Text className="text-xs font-medium" style={{ color: isDark ? '#FCA5A5' : '#DC2626' }}>
             Skipped
           </Text>

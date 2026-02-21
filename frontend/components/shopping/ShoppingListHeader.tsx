@@ -1,10 +1,11 @@
 // frontend/components/shopping/ShoppingListHeader.tsx
-// Header with list picker and actions (edit, delete, merge, create)
+// Simplified header with list picker, "+" add button, and "..." overflow menu
 
 import { View, Text, ScrollView, TextInput, Modal, Animated } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
+import ActionSheet, { ActionSheetItem } from '../ui/ActionSheet';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -21,6 +22,12 @@ interface ShoppingListHeaderProps {
   onDeleteList: () => void;
   onCreateList: () => void;
   onSaveNewList: () => void;
+  onAddItem: () => void;
+  onToggleHidePurchased: () => void;
+  onToggleGroupByRecipe: () => void;
+  onToggleInStoreMode: () => void;
+  onMarkAllComplete: () => void;
+  onUndoMarkAllComplete: () => void;
   listPickerScale: Animated.Value;
   listPickerOpacity: Animated.Value;
   editNameScale: Animated.Value;
@@ -38,6 +45,12 @@ export default function ShoppingListHeader({
   onDeleteList,
   onCreateList,
   onSaveNewList,
+  onAddItem,
+  onToggleHidePurchased,
+  onToggleGroupByRecipe,
+  onToggleInStoreMode,
+  onMarkAllComplete,
+  onUndoMarkAllComplete,
   listPickerScale,
   listPickerOpacity,
   editNameScale,
@@ -48,10 +61,86 @@ export default function ShoppingListHeader({
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  const currentItems = state.selectedList?.items || [];
+  const hasPurchasedItems = currentItems.some(item => item.purchased);
+  const hasRecipeItems = currentItems.some(item => item.recipeId);
+  const allPurchased = currentItems.length > 0 && currentItems.every(item => item.purchased);
+
+  // Build overflow menu items
+  const overflowItems: ActionSheetItem[] = [];
+
+  if (state.selectedList) {
+    overflowItems.push({
+      label: 'Edit List Name',
+      icon: 'create-outline',
+      onPress: onEditName,
+    });
+
+    overflowItems.push({
+      label: 'Create New List',
+      icon: 'add-circle-outline',
+      onPress: onCreateList,
+    });
+
+    if (state.shoppingLists.length > 1) {
+      overflowItems.push({
+        label: 'Merge Lists',
+        icon: 'git-merge-outline',
+        onPress: () => dispatch({ type: 'UPDATE', payload: { showMergeModal: true } }),
+      });
+    }
+
+    if (currentItems.length > 0) {
+      if (hasPurchasedItems) {
+        overflowItems.push({
+          label: state.hidePurchased ? 'Show Purchased Items ✓' : 'Hide Purchased Items',
+          icon: state.hidePurchased ? 'eye-outline' : 'eye-off-outline',
+          onPress: onToggleHidePurchased,
+        });
+      }
+
+      if (hasRecipeItems) {
+        overflowItems.push({
+          label: state.groupByRecipe ? 'Group by Recipe ✓' : 'Group by Recipe',
+          icon: 'restaurant-outline',
+          onPress: onToggleGroupByRecipe,
+        });
+      }
+
+      overflowItems.push({
+        label: state.inStoreMode ? 'In-Store Mode ✓' : 'In-Store Mode',
+        icon: 'storefront-outline',
+        onPress: onToggleInStoreMode,
+      });
+
+      if (state.showUndoButton) {
+        overflowItems.push({
+          label: 'Undo Mark All Complete',
+          icon: 'arrow-undo-outline',
+          onPress: onUndoMarkAllComplete,
+        });
+      } else if (!allPurchased) {
+        overflowItems.push({
+          label: 'Mark All Complete',
+          icon: 'checkmark-done-outline',
+          onPress: onMarkAllComplete,
+        });
+      }
+    }
+
+    overflowItems.push({
+      label: 'Delete List',
+      icon: 'trash-outline',
+      onPress: onDeleteList,
+      destructive: true,
+      color: 'red',
+    });
+  }
+
   return (
     <>
-      {/* Page Title */}
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700" style={{ minHeight: 56 }}>
+      {/* Page Title + Actions */}
+      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-gray-700">
         <View className="flex-row items-center justify-between" style={{ height: 28 }}>
           <View className="flex-row items-center flex-1">
             <Text className="text-2xl mr-2" style={{ lineHeight: 28 }}>🛒</Text>
@@ -60,7 +149,7 @@ export default function ShoppingListHeader({
         </View>
       </View>
 
-      {/* List Selector and Actions */}
+      {/* List Selector + Add + Overflow */}
       <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <View className="flex-row items-center" style={{ gap: 8 }}>
           <HapticTouchableOpacity
@@ -78,43 +167,36 @@ export default function ShoppingListHeader({
 
           {state.selectedList && (
             <>
+              {/* Add Item Button */}
               <HapticTouchableOpacity
-                onPress={onEditName}
-                className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg"
+                onPress={onAddItem}
+                className="p-3 rounded-lg"
+                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
+                accessibilityLabel="Add item"
               >
-                <Icon name={Icons.EDIT_OUTLINE} size={IconSizes.MD} color={isDark ? "white" : "#6B7280"} accessibilityLabel="Edit list name" />
+                <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Add item" />
               </HapticTouchableOpacity>
+
+              {/* Overflow Menu Button */}
               <HapticTouchableOpacity
-                onPress={onDeleteList}
+                onPress={() => dispatch({ type: 'UPDATE', payload: { showOverflowMenu: true } })}
                 className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg"
+                accessibilityLabel="More options"
               >
-                <Icon name={Icons.DELETE_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} accessibilityLabel="Delete list" />
+                <Icon name={Icons.MORE} size={IconSizes.MD} color={isDark ? 'white' : '#6B7280'} accessibilityLabel="More options" />
               </HapticTouchableOpacity>
             </>
           )}
-
-          {state.shoppingLists.length > 1 && (
-            <HapticTouchableOpacity
-              onPress={() => dispatch({ type: 'UPDATE', payload: { showMergeModal: true } })}
-              className="p-3 rounded-lg"
-              style={{ backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenLight }}
-            >
-              <Icon name={Icons.MERGE_LISTS_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen} accessibilityLabel="Merge lists" />
-            </HapticTouchableOpacity>
-          )}
-
-          <HapticTouchableOpacity
-            onPress={() => {
-              HapticPatterns.buttonPressPrimary();
-              onCreateList();
-            }}
-            className="p-3 rounded-lg"
-            style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-          >
-            <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Create new list" />
-          </HapticTouchableOpacity>
         </View>
       </View>
+
+      {/* Overflow Action Sheet */}
+      <ActionSheet
+        visible={state.showOverflowMenu || false}
+        onClose={() => dispatch({ type: 'UPDATE', payload: { showOverflowMenu: false } })}
+        items={overflowItems}
+        title="List Options"
+      />
 
       {/* List Picker Modal */}
       <Modal
