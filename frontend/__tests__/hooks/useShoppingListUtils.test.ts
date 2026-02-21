@@ -90,41 +90,34 @@ describe('Shopping List Utilities', () => {
 
 describe('In-Store Mode State', () => {
   it('should define inStoreMode in initial state', () => {
-    // Verify the state interface includes inStoreMode
     const initialState = {
       inStoreMode: false,
       hidePurchased: false,
-      headerCollapsed: false,
     };
 
     expect(initialState.inStoreMode).toBe(false);
   });
 
-  it('should auto-hide purchased and collapse header when entering in-store mode', () => {
-    // Simulating the toggleInStoreMode behavior
+  it('should auto-hide purchased when entering in-store mode', () => {
     const enteringInStoreMode = true;
     const newState = {
       inStoreMode: enteringInStoreMode,
-      ...(enteringInStoreMode ? { hidePurchased: true, headerCollapsed: true } : {}),
+      ...(enteringInStoreMode ? { hidePurchased: true } : {}),
     };
 
     expect(newState.inStoreMode).toBe(true);
     expect(newState.hidePurchased).toBe(true);
-    expect(newState.headerCollapsed).toBe(true);
   });
 
-  it('should not change hidePurchased/headerCollapsed when exiting in-store mode', () => {
+  it('should preserve hidePurchased when exiting in-store mode', () => {
     const exitingInStoreMode = false;
-    const prevState = { hidePurchased: true, headerCollapsed: true };
+    const prevState = { hidePurchased: true };
     const newState = {
       inStoreMode: exitingInStoreMode,
-      ...(exitingInStoreMode ? {} : {}),
       ...prevState,
     };
 
     expect(newState.inStoreMode).toBe(false);
-    // Previous state preserved
     expect(newState.hidePurchased).toBe(true);
-    expect(newState.headerCollapsed).toBe(true);
   });
 });

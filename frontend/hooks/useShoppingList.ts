@@ -3,7 +3,7 @@
 // Consolidates 29 useState hooks into a single reducer
 
 import { useReducer, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Alert, Animated, Easing } from 'react-native';
+import { Alert, Animated } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { shoppingListApi, shoppingAppApi, mealPlanApi, pantryApi } from '../lib/api';
 import { shoppingListCache } from '../lib/shoppingListCache';
@@ -63,7 +63,6 @@ export interface ShoppingListState {
 
   groupByRecipe: boolean;
   hidePurchased: boolean;
-  headerCollapsed: boolean;
   generatingFromMealPlan: boolean;
   inStoreMode: boolean;
 
@@ -82,6 +81,9 @@ export interface ShoppingListState {
 
   // In-store mode
   cantFindItems: string[];
+
+  // Overflow menu
+  showOverflowMenu: boolean;
 }
 
 const initialState: ShoppingListState = {
@@ -134,7 +136,6 @@ const initialState: ShoppingListState = {
 
   groupByRecipe: false,
   hidePurchased: false,
-  headerCollapsed: false,
   generatingFromMealPlan: false,
   inStoreMode: false,
 
@@ -149,6 +150,8 @@ const initialState: ShoppingListState = {
   cacheAge: null,
 
   cantFindItems: [],
+
+  showOverflowMenu: false,
 };
 
 // ─── Actions ────────────────────────────────────────────────────────────
@@ -441,14 +444,6 @@ export function useShoppingList() {
   const { isConnected, isInternetReachable } = useNetworkStatus();
   const isOnline = isConnected && isInternetReachable;
   const wasOffline = useRef(false);
-
-  // Animation refs
-  const fabScale = useRef(new Animated.Value(1)).current;
-  const fabRotation = useRef(new Animated.Value(0)).current;
-  const headerHeight = useRef(new Animated.Value(1)).current;
-  const scrollY = useRef(0);
-  const lastScrollY = useRef(0);
-  const manualHeaderToggle = useRef(false);
 
   // Modal animation refs
   const listPickerScale = useRef(new Animated.Value(0)).current;
@@ -782,16 +777,6 @@ export function useShoppingList() {
       loadQuickSuggestions();
     }
   }, [state.selectedList?.id]);
-
-  // Header collapse animation
-  useEffect(() => {
-    Animated.timing(headerHeight, {
-      toValue: state.headerCollapsed ? 0 : 1,
-      duration: 500,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [state.headerCollapsed]);
 
   // Modal animations
   const animateModal = useCallback((
@@ -1225,19 +1210,9 @@ export function useShoppingList() {
       return;
     }
 
-    Animated.sequence([
-      Animated.timing(fabRotation, { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.timing(fabRotation, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start();
-
-    Animated.sequence([
-      Animated.spring(fabScale, { toValue: 0.9, friction: 3, tension: 40, useNativeDriver: true }),
-      Animated.spring(fabScale, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }),
-    ]).start();
-
     HapticPatterns.buttonPressPrimary();
     dispatch({ type: 'UPDATE', payload: { showAddItemModal: true } });
-  }, [state.selectedList, fabRotation, fabScale]);
+  }, [state.selectedList]);
 
   const handleTogglePurchased = useCallback(async (item: ShoppingListItem) => {
     if (!state.selectedList) return;
@@ -1524,44 +1499,10 @@ export function useShoppingList() {
     dispatch({ type: 'UPDATE', payload: { refreshing: false } });
   }, [state.selectedList, loadShoppingLists, loadIntegrations, loadShoppingListDetails]);
 
-  const handleScroll = useCallback((event: any) => {
-    // Don't auto-collapse if user manually toggled header recently
-    if (manualHeaderToggle.current) {
-      scrollY.current = event.nativeEvent.contentOffset.y;
-      lastScrollY.current = event.nativeEvent.contentOffset.y;
-      return;
-    }
-
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const scrollDifference = currentScrollY - lastScrollY.current;
-
-    if (Math.abs(scrollDifference) > 15) {
-      if (scrollDifference > 0 && !state.headerCollapsed && currentScrollY > 80) {
-        dispatch({ type: 'UPDATE', payload: { headerCollapsed: true } });
-      } else if (scrollDifference < 0 && state.headerCollapsed && currentScrollY < 150) {
-        dispatch({ type: 'UPDATE', payload: { headerCollapsed: false } });
-      }
-    }
-
-    lastScrollY.current = currentScrollY;
-    scrollY.current = currentScrollY;
-  }, [state.headerCollapsed]);
-
   const toggleHidePurchased = useCallback(() => {
     dispatch({ type: 'UPDATE', payload: { hidePurchased: !state.hidePurchased } });
     HapticPatterns.buttonPress();
   }, [state.hidePurchased]);
-
-  const toggleHeaderCollapsed = useCallback(() => {
-    dispatch({ type: 'UPDATE', payload: { headerCollapsed: !state.headerCollapsed } });
-    HapticPatterns.buttonPress();
-
-    // Disable auto-collapse for 3 seconds after manual toggle
-    manualHeaderToggle.current = true;
-    setTimeout(() => {
-      manualHeaderToggle.current = false;
-    }, 3000);
-  }, [state.headerCollapsed]);
 
   const toggleGroupByRecipe = useCallback(() => {
     dispatch({ type: 'UPDATE', payload: { groupByRecipe: !state.groupByRecipe } });
@@ -1573,8 +1514,7 @@ export function useShoppingList() {
       type: 'UPDATE',
       payload: {
         inStoreMode: entering,
-        // Auto-hide purchased and collapse header when entering in-store mode
-        ...(entering ? { hidePurchased: true, headerCollapsed: true } : {}),
+        ...(entering ? { hidePurchased: true } : {}),
       },
     });
     if (!entering) {
@@ -1750,9 +1690,6 @@ export function useShoppingList() {
     pantrySet,
 
     // Animation values
-    fabScale,
-    fabRotation,
-    headerHeight,
     listPickerScale,
     listPickerOpacity,
     editNameScale,
@@ -1784,9 +1721,7 @@ export function useShoppingList() {
     handleSyncToApp,
     handleSyncBidirectional,
     handleRefresh,
-    handleScroll,
     toggleHidePurchased,
-    toggleHeaderCollapsed,
     toggleGroupByRecipe,
     toggleInStoreMode,
     handleCantFind,
