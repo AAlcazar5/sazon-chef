@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import AnimatedText from '../components/ui/AnimatedText';
 import LoadingState from '../components/ui/LoadingState';
+import SkeletonLoader from '../components/ui/SkeletonLoader';
 import LogoMascot from '../components/mascot/LogoMascot';
 import MealPrepScalingModal from '../components/recipe/MealPrepScalingModal';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -26,6 +27,30 @@ const getTextContent = (item: any): string => {
   if (item && typeof item === 'object' && 'text' in item) return item.text;
   return String(item);
 };
+
+// Module-level recipe detail cache — persists across modal opens within the same session
+const RECIPE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const recipeDetailCache = new Map<string, { data: any; cachedAt: number }>();
+
+function getCachedRecipe(id: string) {
+  const entry = recipeDetailCache.get(id);
+  if (!entry) return null;
+  if (Date.now() - entry.cachedAt > RECIPE_CACHE_TTL) {
+    recipeDetailCache.delete(id);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCachedRecipe(id: string, data: any) {
+  // Simple LRU eviction: if over 50 entries, remove oldest 25
+  if (recipeDetailCache.size >= 50) {
+    const entries = [...recipeDetailCache.entries()];
+    entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
+    entries.slice(0, 25).forEach(([key]) => recipeDetailCache.delete(key));
+  }
+  recipeDetailCache.set(id, { data, cachedAt: Date.now() });
+}
 
 export default function RecipeModal() {
   const { id, source } = useLocalSearchParams();
@@ -111,29 +136,41 @@ export default function RecipeModal() {
     }
   }, [pickerVisible]);
 
-  // Fetch recipe data when modal opens
+  // Fetch recipe data when modal opens (with module-level cache)
   useEffect(() => {
     const fetchRecipe = async () => {
       if (!id) return;
-      
+
+      // Check module-level cache first — zero network call for recently viewed recipes
+      const cached = getCachedRecipe(id as string);
+      if (cached) {
+        console.log('📱 Modal: Serving recipe from cache', id);
+        setRecipe(cached);
+        setLoading(false);
+        // Still record view non-blocking even on cache hit
+        recipeApi.recordView(id as string).catch(() => {});
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
         console.log('📱 Modal: Fetching recipe', id);
-        
+
         const response = await recipeApi.getRecipe(id as string);
         console.log('📱 Modal: Received recipe data', response.data);
+        setCachedRecipe(id as string, response.data);
         setRecipe(response.data);
         // Record view (non-blocking)
         recipeApi.recordView(id as string).catch(() => {});
       } catch (err: any) {
         // Don't fail the modal if it's just a quota error - recipe should still load
-        const isQuotaError = err?.code === 'insufficient_quota' || 
-          err?.message?.includes('quota') || 
+        const isQuotaError = err?.code === 'insufficient_quota' ||
+          err?.message?.includes('quota') ||
           err?.message?.includes('Too many requests');
         if (!isQuotaError) {
-        console.error('📱 Modal: Error fetching recipe', err);
-        setError(err.message || 'Failed to load recipe');
+          console.error('📱 Modal: Error fetching recipe', err);
+          setError(err.message || 'Failed to load recipe');
         } else {
           // For quota errors, just log quietly - the recipe might still be cached or available
           console.log('📱 Modal: Recipe fetch hit quota limit, continuing anyway');
@@ -538,7 +575,7 @@ export default function RecipeModal() {
   // TODO: Replace with actual user ID check when auth is implemented
   const isUserRecipe = recipe && (recipe as any).isUserCreated === true;
 
-  // Loading state
+  // Loading state — skeleton that matches the modal layout for better perceived speed
   if (loading) {
     return (
       <Animated.View
@@ -548,24 +585,43 @@ export default function RecipeModal() {
           opacity: modalOpacity,
         }}
       >
-      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
-        <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <HapticTouchableOpacity 
-            onPress={() => router.back()}
-            className="p-2"
-          >
-            <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
-          </HapticTouchableOpacity>
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
-          <View className="w-8" />
-        </View>
-        <LoadingState
-          message="Loading recipe..."
-          expression="thinking"
-          size="large"
-          fullScreen
-        />
-      </SafeAreaView>
+        <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+          <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
+              <Ionicons name="close" size={24} color={isDark ? '#E5E7EB' : '#374151'} />
+            </HapticTouchableOpacity>
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
+            <View className="w-8" />
+          </View>
+          <ScrollView>
+            {/* Hero image skeleton */}
+            <SkeletonLoader width="100%" height={220} borderRadius={0} isDark={isDark} />
+            <View className="p-4">
+              {/* Title */}
+              <SkeletonLoader width="75%" height={26} borderRadius={6} isDark={isDark} style={{ marginBottom: 8 }} />
+              {/* Subtitle / cuisine */}
+              <SkeletonLoader width="45%" height={16} borderRadius={4} isDark={isDark} style={{ marginBottom: 20 }} />
+              {/* Macro pills row */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                {[1, 2, 3, 4].map(i => (
+                  <SkeletonLoader key={i} width={72} height={36} borderRadius={18} isDark={isDark} />
+                ))}
+              </View>
+              {/* Section heading */}
+              <SkeletonLoader width="40%" height={18} borderRadius={4} isDark={isDark} style={{ marginBottom: 12 }} />
+              {/* Ingredient lines */}
+              {[90, 75, 85, 65, 80].map((w, i) => (
+                <SkeletonLoader key={i} width={`${w}%`} height={14} borderRadius={4} isDark={isDark} style={{ marginBottom: 8 }} />
+              ))}
+              {/* Instructions heading */}
+              <SkeletonLoader width="40%" height={18} borderRadius={4} isDark={isDark} style={{ marginTop: 16, marginBottom: 12 }} />
+              {/* Instruction blocks */}
+              {[100, 90, 95].map((w, i) => (
+                <SkeletonLoader key={i} width={`${w}%`} height={14} borderRadius={4} isDark={isDark} style={{ marginBottom: 8 }} />
+              ))}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
       </Animated.View>
     );
   }

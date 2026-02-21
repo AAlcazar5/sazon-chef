@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard } from 'react-native';
+import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedBadge from '../../components/ui/AnimatedBadge';
 import { router, usePathname, useSegments } from 'expo-router';
@@ -241,11 +241,13 @@ export default function TabLayout() {
         tabBarActiveTintColor: '#F97316',
         headerShown: false,
         tabBarStyle: {
-            backgroundColor: colors.background,
-            borderTopWidth: 0,
-          height: ComponentSpacing.tabBar.height,
-            paddingBottom: ComponentSpacing.tabBar.paddingBottom,
+          backgroundColor: colors.background,
+          borderTopWidth: 0,
+          height: ComponentSpacing.tabBar.height + insets.bottom,
+          paddingBottom: Math.max(ComponentSpacing.tabBar.paddingBottom, insets.bottom),
           paddingTop: ComponentSpacing.tabBar.paddingTop,
+          // Prevent Android elevation from clipping tab bar corners
+          ...(Platform.OS === 'android' && { elevation: 0 }),
         },
         tabBarLabelStyle: {
           fontSize: FontSize.sm,
@@ -313,7 +315,7 @@ export default function TabLayout() {
           left: 0,
           right: 0,
           backgroundColor: colors.background,
-          bottom: 55,
+          bottom: 55 + insets.bottom,
           paddingVertical: Spacing.md,
           paddingHorizontal: Spacing.lg,
           zIndex: 10,
@@ -322,7 +324,7 @@ export default function TabLayout() {
         <View className="flex-row items-center" style={{ gap: Gap.md }}>
           {/* Search Bar */}
           <View className="flex-1" style={{ position: 'relative' }}>
-            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
+            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 border border-gray-200 dark:border-gray-600" style={{ height: 40 }}>
               <Ionicons name="search-outline" size={20} color={colors.text.secondary} style={{ marginRight: Spacing.sm }} />
               <TextInput
                 ref={searchInputRef}
@@ -344,7 +346,7 @@ export default function TabLayout() {
                   }
                 }}
                 className="flex-1 text-gray-900 dark:text-gray-100"
-                style={{ fontSize: FontSize.md, color: colors.text.primary }}
+                style={{ fontSize: FontSize.md, color: colors.text.primary, paddingVertical: 0 }}
               />
               {searchQuery.length > 0 && (
                 <HapticTouchableOpacity

@@ -35,6 +35,7 @@ class RecommendationCacheService {
     MEAL_SUGGESTIONS: 5 * 60 * 1000, // 5 minutes
     USER_PREFERENCES: 30 * 60 * 1000, // 30 minutes
     BEHAVIORAL_DATA: 15 * 60 * 1000, // 15 minutes
+    HOME_FEED: 3 * 60 * 1000, // 3 minutes
   };
 
   /**
@@ -129,6 +130,22 @@ class RecommendationCacheService {
   }
 
   /**
+   * Cache full home feed response per user + filter key (skip when shuffle=true)
+   */
+  async getHomeFeedData<T>(
+    userId: string,
+    filterKey: string,
+    fetchFn: () => Promise<T>
+  ): Promise<T> {
+    return cacheService.getOrSet(
+      'home_feed',
+      { userId, filterKey },
+      fetchFn,
+      this.CACHE_TTL.HOME_FEED
+    );
+  }
+
+  /**
    * Invalidate user-specific caches
    */
   invalidateUserCache(userId: string): void {
@@ -138,7 +155,8 @@ class RecommendationCacheService {
       'daily_suggestions',
       'meal_suggestions',
       'user_preferences',
-      'behavioral_data'
+      'behavioral_data',
+      'home_feed'
     ];
 
     prefixes.forEach(prefix => {

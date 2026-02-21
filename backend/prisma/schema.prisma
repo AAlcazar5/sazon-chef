@@ -314,6 +314,8 @@ model RecipeFeedback {
   createdAt DateTime @default(now())
 
   @@unique([recipeId, userId])
+  @@index([userId, liked])
+  @@index([userId, disliked])
   @@map("recipe_feedback")
 }
 
@@ -334,6 +336,7 @@ model SavedRecipe {
   recipeCollections RecipeCollection[]
 
   @@unique([recipeId, userId])
+  @@index([userId, savedDate])
   @@map("saved_recipes")
 }
 
@@ -408,6 +411,8 @@ model MealHistory {
   consumed Boolean  @default(false)
   feedback String? // liked, disliked, null
 
+  @@index([userId, consumed])
+  @@index([userId, date])
   @@map("meal_history")
 }
 
@@ -691,6 +696,8 @@ model ShoppingListItem {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  @@index([shoppingListId])
+  @@index([shoppingListId, purchased])
   @@map("shopping_list_items")
 }
 

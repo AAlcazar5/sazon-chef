@@ -48,17 +48,12 @@ export const shoppingListController = {
       const userId = getUserId(req);
       console.log(`[SHOPPING_LIST] GET /api/shopping-lists - User: ${userId}`);
 
-      // Try without items first to isolate the issue
-      let shoppingLists = await prisma.shoppingList.findMany({
+      // Single query — include items to avoid N+1 (one query per list)
+      const shoppingLists = await prisma.shoppingList.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-      });
-
-      // Fetch items for each list
-      shoppingLists = await Promise.all(
-        shoppingLists.map(async (list) => {
-          const items = await prisma.shoppingListItem.findMany({
-            where: { shoppingListId: list.id },
+        include: {
+          items: {
             include: {
               recipe: {
                 select: {
@@ -69,10 +64,9 @@ export const shoppingListController = {
               },
             },
             orderBy: { createdAt: 'asc' },
-          });
-          return { ...list, items };
-        })
-      );
+          },
+        },
+      });
 
       console.log(`[SHOPPING_LIST] GET /api/shopping-lists - Success - Found ${shoppingLists.length} lists`);
       res.json(shoppingLists);
