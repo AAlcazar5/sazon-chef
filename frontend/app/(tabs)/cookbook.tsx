@@ -4,7 +4,7 @@ import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import LoadingState from '../../components/ui/LoadingState';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { recipeApi, collectionsApi } from '../../lib/api';
 import { useCookbookCache } from '../../hooks/useCookbookCache';
@@ -82,6 +82,9 @@ export default function CookbookScreen() {
   // Similar recipes carousel state
   const [similarRecipes, setSimilarRecipes] = useState<SavedRecipe[]>([]);
   const [similarRecipesCollapsed, setSimilarRecipesCollapsed] = useState(false);
+  // Track last fetched base recipe ID to avoid redundant API calls when only filters change
+  const lastSimilarBaseIdRef = useRef<string | null>(null);
+  const rawSimilarRecipesRef = useRef<SavedRecipe[]>([]);
 
   // Animation state for recipe cards (matches home page behavior)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
@@ -423,65 +426,59 @@ export default function CookbookScreen() {
   }, [serverHasMore, loadingMore, paginationInfo.isLastPage, filteredAndSortedRecipes.length, loadMore]);
 
 
-  // Fetch similar recipes based on the first recipe in the current page,
-  // then apply active cookbook filters so the carousel stays consistent with the main list
+  // Filter raw similar recipes: only exclude ones already in the user's cookbook.
+  // Cookbook filters are intentionally NOT applied here — "You might also like" is a
+  // discovery section and should always show regardless of active filters.
+  const applyFiltersToSimilarRecipes = useCallback((raw: SavedRecipe[]) => {
+    const cookbookRecipeIds = new Set(allRecipes.map(r => r.id));
+    return raw
+      .filter((recipe: SavedRecipe) => !cookbookRecipeIds.has(recipe.id))
+      .slice(0, 10);
+  }, [allRecipes]);
+
+  // Fetch similar recipes based on the first recipe in the current page.
+  // Skips the network call when only filters change (base recipe ID unchanged).
   useEffect(() => {
     const fetchSimilarRecipes = async () => {
       if (pagedRecipes.length === 0) {
         setSimilarRecipes([]);
+        lastSimilarBaseIdRef.current = null;
+        rawSimilarRecipesRef.current = [];
         return;
       }
 
-      // Use the first recipe as the base for similar recipes
       const baseRecipe = pagedRecipes[0];
       if (!baseRecipe?.id) {
         setSimilarRecipes([]);
         return;
       }
 
+      // If the base recipe hasn't changed, just re-apply filters without a network call
+      if (baseRecipe.id === lastSimilarBaseIdRef.current) {
+        setSimilarRecipes(applyFiltersToSimilarRecipes(rawSimilarRecipesRef.current));
+        return;
+      }
+
+      lastSimilarBaseIdRef.current = baseRecipe.id;
+
       try {
         const response = await recipeApi.getSimilarRecipes(baseRecipe.id, 10);
         if (response.data && Array.isArray(response.data)) {
-          const cookbookRecipeIds = new Set(allRecipes.map(r => r.id));
-          const normDiff = (d: unknown) => String(d || '').trim().toLowerCase();
-
-          const filtered = response.data
-            .filter((recipe: SavedRecipe) => !cookbookRecipeIds.has(recipe.id))
-            .filter((recipe: SavedRecipe) => {
-              const anyR = recipe as any;
-              // Apply the same cookbook filters as the main list
-              if (cookbookFilters.maxCookTime && (recipe.cookTime || 0) > cookbookFilters.maxCookTime) return false;
-              if (cookbookFilters.difficulty.length > 0) {
-                const allowed = new Set(cookbookFilters.difficulty.map(x => x.toLowerCase()));
-                if (!allowed.has(normDiff(anyR.difficulty))) return false;
-              }
-              if (cookbookFilters.mealPrepOnly) {
-                if (!anyR.mealPrepSuitable && !anyR.freezable && !anyR.batchFriendly) return false;
-              }
-              if (cookbookFilters.highProtein && (Number(recipe.protein) || 0) < 25) return false;
-              if (cookbookFilters.lowCal && (Number(recipe.calories) || 0) > 400) return false;
-              if (cookbookFilters.budget) {
-                const cost = Number(anyR.estimatedCostPerServing);
-                if (!Number.isFinite(cost) || cost > 3) return false;
-              }
-              if (cookbookFilters.onePot) {
-                const tags = Array.isArray(anyR.tags) ? anyR.tags.map((t: any) => String(t).toLowerCase()) : [];
-                if (!anyR.onePot && !anyR.isOnePot && !tags.includes('one-pot') && !tags.includes('one pot')) return false;
-              }
-              return true;
-            });
-          setSimilarRecipes(filtered.slice(0, 10));
+          rawSimilarRecipesRef.current = response.data;
+          setSimilarRecipes(applyFiltersToSimilarRecipes(response.data));
         } else {
+          rawSimilarRecipesRef.current = [];
           setSimilarRecipes([]);
         }
       } catch (error) {
         console.error('Error fetching similar recipes:', error);
+        rawSimilarRecipesRef.current = [];
         setSimilarRecipes([]);
       }
     };
 
     fetchSimilarRecipes();
-  }, [pagedRecipes, allRecipes, cookbookFilters]);
+  }, [pagedRecipes, applyFiltersToSimilarRecipes]);
   
   // Reset pagination when display mode changes (grid/list)
   useEffect(() => {

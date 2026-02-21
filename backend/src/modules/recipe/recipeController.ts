@@ -5,6 +5,8 @@ import { healthifyService } from '@/services/healthifyService';
 import { getUserId } from '@/utils/authHelper';
 import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
 import { varyImageUrlsForPage } from '@/utils/runtimeImageVariation';
+import { recommendationCache } from '@/utils/recommendationCache';
+import { cacheService } from '@/utils/cacheService';
 
 // Note: Request.user type is declared in authMiddleware.ts
 // This ensures consistency across the application
@@ -13,57 +15,77 @@ import { varyImageUrlsForPage } from '@/utils/runtimeImageVariation';
 export async function getUserBehaviorData(userId: string) {
   try {
     console.log('🔍 Fetching user behavioral data for:', userId);
-    
-    // Get liked recipes
-    const likedRecipes = await prisma.recipeFeedback.findMany({
-      where: { userId, liked: true },
-      include: { 
-        recipe: {
-          include: {
-            ingredients: { orderBy: { order: 'asc' } }
-          }
-        }
-      }
-    });
-    
-    // Get disliked recipes
-    const dislikedRecipes = await prisma.recipeFeedback.findMany({
-      where: { userId, disliked: true },
-      include: { 
-        recipe: {
-          include: {
-            ingredients: { orderBy: { order: 'asc' } }
-          }
-        }
-      }
-    });
-    
-    // Get saved recipes
-    const savedRecipes = await prisma.savedRecipe.findMany({
-      where: { userId },
-      include: { 
-        recipe: {
-          include: {
-            ingredients: { orderBy: { order: 'asc' } }
-          }
-        }
-      }
-    });
-    
-    // Get consumed recipes (meal history)
-    const consumedRecipes = await prisma.mealHistory.findMany({
-      where: { userId, consumed: true },
-      include: { 
-        recipe: {
-          include: {
-            ingredients: { orderBy: { order: 'asc' } }
-          }
-        }
-      }
-    });
-    
+
+    // Run all 4 queries in parallel; cap at 100 most recent each to bound data size
+    const [likedRecipes, dislikedRecipes, savedRecipes, consumedRecipes] = await Promise.all([
+      prisma.recipeFeedback.findMany({
+        where: { userId, liked: true },
+        select: {
+          recipeId: true,
+          createdAt: true,
+          recipe: {
+            select: {
+              cuisine: true, cookTime: true, calories: true,
+              protein: true, carbs: true, fat: true,
+              ingredients: { select: { text: true, order: true }, orderBy: { order: 'asc' } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+      prisma.recipeFeedback.findMany({
+        where: { userId, disliked: true },
+        select: {
+          recipeId: true,
+          createdAt: true,
+          recipe: {
+            select: {
+              cuisine: true, cookTime: true, calories: true,
+              protein: true, carbs: true, fat: true,
+              ingredients: { select: { text: true, order: true }, orderBy: { order: 'asc' } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+      prisma.savedRecipe.findMany({
+        where: { userId },
+        select: {
+          recipeId: true,
+          savedDate: true,
+          recipe: {
+            select: {
+              cuisine: true, cookTime: true, calories: true,
+              protein: true, carbs: true, fat: true,
+              ingredients: { select: { text: true, order: true }, orderBy: { order: 'asc' } },
+            },
+          },
+        },
+        orderBy: { savedDate: 'desc' },
+        take: 100,
+      }),
+      prisma.mealHistory.findMany({
+        where: { userId, consumed: true },
+        select: {
+          recipeId: true,
+          date: true,
+          recipe: {
+            select: {
+              cuisine: true, cookTime: true, calories: true,
+              protein: true, carbs: true, fat: true,
+              ingredients: { select: { text: true, order: true }, orderBy: { order: 'asc' } },
+            },
+          },
+        },
+        orderBy: { date: 'desc' },
+        take: 100,
+      }),
+    ]);
+
     console.log(`📊 Behavioral data found: ${likedRecipes.length} liked, ${dislikedRecipes.length} disliked, ${savedRecipes.length} saved, ${consumedRecipes.length} consumed`);
-    
+
     return {
       likedRecipes: likedRecipes.map((feedback: any) => ({
         recipeId: feedback.recipeId,
@@ -399,7 +421,7 @@ export const recipeController = {
       // Get user behavioral data for scoring (only if data sharing enabled)
       let userBehavior = null;
       if (dataSharingEnabled) {
-        userBehavior = await getUserBehaviorData(userId);
+        userBehavior = await recommendationCache.getBehavioralData(userId, () => getUserBehaviorData(userId));
       } else {
         userBehavior = {
           likedRecipes: [],
@@ -411,30 +433,33 @@ export const recipeController = {
           mealHistory: [],
         };
       }
-      
+
       // Get current temporal context
       const { getCurrentTemporalContext, calculateTemporalScore, analyzeUserTemporalPatterns } = require('@/utils/temporalScoring');
       const temporalContext = getCurrentTemporalContext();
       const userTemporalPatterns = analyzeUserTemporalPatterns(userBehavior.consumedRecipes);
-      
+
       // Import scoring functions
       const { calculateRecipeScore } = require('@/utils/scoring');
-      const { calculateBehavioralScore } = require('@/utils/behavioralScoring');
+      const { calculateBehavioralScoreFromProfile, buildUserTasteProfile } = require('@/utils/behavioralScoring');
       const { calculateEnhancedScore } = require('@/utils/enhancedScoring');
-      const { calculateDiscriminatoryScore, getUserPreferencesForScoring } = require('../../utils/discriminatoryScoring');
+      const { calculateDiscriminatoryScore } = require('../../utils/discriminatoryScoring');
       const { calculateHealthGoalMatch } = require('@/utils/healthGoalScoring');
       const { calculateHealthGrade } = require('@/utils/healthGrade');
-      
+
+      // Pre-compute user taste profile once (avoids O(n_interactions) per recipe)
+      const userTasteProfile = buildUserTasteProfile(userBehavior);
+
       // Create enhanced scoring context
       const cookTimeContext = {
         availableTime: 30,
-        timeOfDay: (temporalContext.mealPeriod === 'breakfast' ? 'morning' : 
-                   temporalContext.mealPeriod === 'lunch' ? 'afternoon' : 
+        timeOfDay: (temporalContext.mealPeriod === 'breakfast' ? 'morning' :
+                   temporalContext.mealPeriod === 'lunch' ? 'afternoon' :
                    temporalContext.mealPeriod === 'dinner' ? 'evening' : 'night') as 'morning' | 'afternoon' | 'evening' | 'night',
         dayOfWeek: (temporalContext.isWeekend ? 'weekend' : 'weekday') as 'weekday' | 'weekend',
         urgency: 'medium' as const
       };
-      
+
       const userKitchenProfile = {
         cookingSkill: 'intermediate' as const,
         preferredCookTime: 30,
@@ -446,11 +471,17 @@ export const recipeController = {
         dietaryRestrictions: [],
         budget: 'medium' as const
       };
-      
-      // Get user preferences for discriminatory scoring
-      const userPrefsForScoring = await getUserPreferencesForScoring(userId);
+
+      // Build scoring prefs from already-loaded userPreferences (avoids redundant DB call)
+      const userPrefsForScoring = userPreferences ? {
+        likedCuisines: (userPreferences.likedCuisines || []).map((c: any) => c.name),
+        bannedIngredients: (userPreferences.bannedIngredients || []).map((i: any) => i.name),
+        dietaryRestrictions: (userPreferences.dietaryRestrictions || []).map((d: any) => d.name),
+        cookTimePreference: (userPreferences as any).cookTimePreference,
+        spiceLevel: (userPreferences as any).spiceLevel,
+      } : null;
       const likedCuisineSet = new Set((userPreferences?.likedCuisines || []).map((c: any) => (c.name || '').toLowerCase()));
-      
+
       // Use default weights
       const weights = {
         discriminatoryWeight: 0.60,
@@ -464,23 +495,24 @@ export const recipeController = {
       // Get total count
       const total = await prisma.recipe.count({ where });
       
-      // Fetch all matching recipes (without pagination) so we can score and sort them
-      // We'll apply pagination after sorting by match percentage
+      // Fetch matching recipes for scoring (capped at 300 candidates), then paginate after sorting
       const allRawRecipes = await prisma.recipe.findMany({
         where,
         include: {
           ingredients: { orderBy: { order: 'asc' } },
-          instructions: { orderBy: { step: 'asc' } }
-        }
+          // Instructions omitted from list view — modal re-fetches full detail
+        },
+        take: 300,
+        orderBy: [{ healthScore: 'desc' }, { createdAt: 'desc' }],
       });
 
-      // Calculate scores for each recipe
+      // Calculate scores for each recipe (behavioral scoring uses pre-built profile for O(1) per recipe)
       const allRecipesWithScores = await Promise.all(allRawRecipes.map(async (recipe: any) => {
         try {
-          // Calculate behavioral score
+          // Calculate behavioral score using pre-computed profile (much faster than passing full userBehavior)
           let behavioralScore;
           try {
-            behavioralScore = calculateBehavioralScore(recipe, userBehavior);
+            behavioralScore = calculateBehavioralScoreFromProfile(recipe, userTasteProfile);
           } catch (error) {
             console.warn('⚠️ Error calculating behavioral score:', error);
             behavioralScore = { total: 0 };
@@ -855,7 +887,7 @@ export const recipeController = {
     try {
       const { id } = req.params;
       console.log(`🍳 GET /api/recipes/${id} called`);
-      
+
       const recipe = await prisma.recipe.findUnique({
         where: { id },
         include: {
@@ -863,12 +895,20 @@ export const recipeController = {
           instructions: { orderBy: { step: 'asc' } }
         }
       });
-      
+
       if (!recipe) {
         console.log('❌ Recipe not found:', id);
         return res.status(404).json({ error: 'Recipe not found' });
       }
-      
+
+      // ETag support — recipes rarely change after creation, so 304 on match is effectively free
+      const etag = `"${(recipe as any).updatedAt?.getTime?.() || Date.now()}"`;
+      res.setHeader('ETag', etag);
+      res.setHeader('Cache-Control', 'private, max-age=300'); // 5 min browser cache
+      if (req.headers['if-none-match'] === etag) {
+        return res.status(304).end();
+      }
+
       // GUIDELINE #2: Trigger Unsplash download event when recipe is viewed
       if (recipe.unsplashDownloadLocation) {
         const { imageService } = await import('../../services/imageService');
@@ -876,15 +916,15 @@ export const recipeController = {
           console.error('⚠️  Failed to trigger Unsplash download:', err);
         });
       }
-      
+
       // Calculate health grade for the recipe
       const { calculateHealthGrade } = require('@/utils/healthGrade');
       const healthGrade = calculateHealthGrade(recipe);
-      
+
       // Calculate nutritional analysis (Phase 6, Group 12)
       const { performNutritionalAnalysis } = require('@/utils/nutritionalAnalysis');
       const nutritionalAnalysis = performNutritionalAnalysis(recipe);
-      
+
       console.log('✅ Recipe found:', recipe.title);
       res.json({
         ...recipe,
@@ -1417,7 +1457,7 @@ export const recipeController = {
       // Get user behavioral data for scoring (only if data sharing enabled)
       let userBehavior = null;
       if (dataSharingEnabled) {
-        userBehavior = await getUserBehaviorData(userId);
+        userBehavior = await recommendationCache.getBehavioralData(userId, () => getUserBehaviorData(userId));
       } else {
         // Use empty behavior data when data sharing is disabled
         userBehavior = {
@@ -1476,8 +1516,14 @@ export const recipeController = {
         budget: 'medium' as const
       };
 
-      // Get user preferences for discriminatory scoring
-      const userPrefsForScoring = await getUserPreferencesForScoring(userId);
+      // Build scoring prefs from already-loaded userPreferences (avoids redundant DB call)
+      const userPrefsForScoring = userPreferences ? {
+        likedCuisines: (userPreferences.likedCuisines || []).map((c: any) => c.name),
+        bannedIngredients: (userPreferences.bannedIngredients || []).map((i: any) => i.name),
+        dietaryRestrictions: (userPreferences.dietaryRestrictions || []).map((d: any) => d.name),
+        cookTimePreference: (userPreferences as any).cookTimePreference,
+        spiceLevel: (userPreferences as any).spiceLevel,
+      } : null;
       console.log('🔍 User preferences for scoring:', userPrefsForScoring);
       const likedCuisineSet = new Set((userPreferences?.likedCuisines || []).map((c: any) => (c.name || '').toLowerCase()));
       
@@ -2056,8 +2102,8 @@ export const recipeController = {
         })
       ]);
 
-      // Get user behavioral data for scoring
-      const userBehavior = await getUserBehaviorData(userId);
+      // Get user behavioral data for scoring (cached, 15-min TTL)
+      const userBehavior = await recommendationCache.getBehavioralData(userId, () => getUserBehaviorData(userId));
       
       // Get current temporal context
       const { getCurrentTemporalContext, calculateTemporalScore, analyzeUserTemporalPatterns } = require('@/utils/temporalScoring');
@@ -2095,8 +2141,14 @@ export const recipeController = {
         budget: 'medium' as const
       };
 
-      // Get user preferences for discriminatory scoring
-      const userPrefsForScoring = await getUserPreferencesForScoring(userId);
+      // Build scoring prefs from already-loaded userPreferences (avoids redundant DB call)
+      const userPrefsForScoring = userPreferences ? {
+        likedCuisines: (userPreferences.likedCuisines || []).map((c: any) => c.name),
+        bannedIngredients: (userPreferences.bannedIngredients || []).map((i: any) => i.name),
+        dietaryRestrictions: (userPreferences.dietaryRestrictions || []).map((d: any) => d.name),
+        cookTimePreference: (userPreferences as any).cookTimePreference,
+        spiceLevel: (userPreferences as any).spiceLevel,
+      } : null;
 
       // Use default weights for saved recipes (simpler than suggested recipes)
       const weights = {
@@ -2290,22 +2342,26 @@ export const recipeController = {
       const { calculateDiscriminatoryScore, getUserPreferencesForScoring } = require('../../utils/discriminatoryScoring');
       
       // Get user preferences for scoring
-      const userPreferences = await prisma.userPreferences.findUnique({
-        where: { userId },
-        include: { likedCuisines: true }
-      });
-      
-      const macroGoals = await prisma.macroGoals.findFirst({
-        where: { userId },
-        orderBy: { createdAt: 'desc' }
-      });
-      
-      const physicalProfile = await prisma.userPhysicalProfile.findFirst({
-        where: { userId },
-        orderBy: { updatedAt: 'desc' }
-      });
-      
-      const userPrefsForScoring = userPreferences ? getUserPreferencesForScoring(userPreferences) : null;
+      const [userPreferences, macroGoals, physicalProfile] = await Promise.all([
+        prisma.userPreferences.findUnique({
+          where: { userId },
+          include: {
+            likedCuisines: true,
+            bannedIngredients: true,
+            dietaryRestrictions: true,
+          },
+        }),
+        prisma.macroGoals.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' } }),
+        prisma.userPhysicalProfile.findFirst({ where: { userId }, orderBy: { updatedAt: 'desc' } }),
+      ]);
+
+      const userPrefsForScoring = userPreferences ? {
+        likedCuisines: (userPreferences.likedCuisines || []).map((c: any) => c.name),
+        bannedIngredients: (userPreferences.bannedIngredients || []).map((i: any) => i.name),
+        dietaryRestrictions: (userPreferences.dietaryRestrictions || []).map((d: any) => d.name),
+        cookTimePreference: (userPreferences as any).cookTimePreference,
+        spiceLevel: (userPreferences as any).spiceLevel,
+      } : null;
       const likedCuisineSet = new Set((userPreferences?.likedCuisines || []).map((c: any) => (c.name || '').toLowerCase()));
       
       let recipes = await Promise.all(feedbackEntries.map(async (entry: any) => {
@@ -2656,6 +2712,8 @@ export const recipeController = {
         }
       }
 
+      // Invalidate behavioral cache so next request reflects saved recipe
+      recommendationCache.invalidateUserCache(userId);
       console.log('✅ Recipe saved successfully');
       res.json({ message: 'Recipe saved successfully' });
     } catch (error: any) {
@@ -2683,6 +2741,8 @@ export const recipeController = {
         where: { userId, recipeId: id }
       });
 
+      // Invalidate behavioral cache
+      recommendationCache.invalidateUserCache(userId);
       console.log('✅ Recipe unsaved successfully');
       res.json({ message: 'Recipe unsaved successfully' });
     } catch (error: any) {
@@ -3153,6 +3213,8 @@ export const recipeController = {
         });
       }
 
+      // Invalidate behavioral cache so next request reflects new feedback
+      recommendationCache.invalidateUserCache(userId);
       console.log('✅ Recipe liked successfully');
       res.json({ message: 'Recipe liked successfully' });
     } catch (error: any) {
@@ -3182,6 +3244,8 @@ export const recipeController = {
         });
       }
 
+      // Invalidate behavioral cache so next request reflects new feedback
+      recommendationCache.invalidateUserCache(userId);
       console.log('✅ Recipe disliked successfully');
       res.json({ message: 'Recipe disliked successfully' });
     } catch (error: any) {
@@ -3869,6 +3933,8 @@ export const recipeController = {
         data: { recipeId: id, userId, notes: notes || null },
       });
 
+      // Invalidate behavioral cache so consumed recipe data is refreshed
+      recommendationCache.invalidateUserCache(userId);
       console.log('🍳 Cook recorded for recipe:', id);
       res.json({ message: 'Cook recorded' });
     } catch (error: any) {
@@ -4074,9 +4140,26 @@ export const recipeController = {
       const maxCalories = req.query.maxCalories as string;
       const dietaryRestrictions = req.query.dietaryRestrictions as string;
 
+      // Build a stable filter key (sorted) for cache lookup — skip cache on shuffle (non-deterministic)
+      const isShuffleRequest = shuffle === 'true';
+      const filterKey = JSON.stringify(
+        [cuisines, maxCookTime, difficulty, mealPrepMode, search, useTimeAwareDefaults,
+         mood, minProtein, maxCarbs, maxCalories, dietaryRestrictions, page, limit]
+          .map(v => v || '')
+      );
+
       // Check data sharing
       const { isDataSharingEnabledFromRequest } = require('@/utils/privacyHelper');
       const dataSharingEnabled = isDataSharingEnabledFromRequest(req);
+
+      // Return cached home feed if available (cache key = userId + filterKey, skipped on shuffle)
+      if (!isShuffleRequest) {
+        const cached = cacheService.get<any>(`home_feed:${userId}:${filterKey}`);
+        if (cached) {
+          console.log('📦 Home feed cache HIT');
+          return res.json(cached);
+        }
+      }
 
       // 1. Fetch user context ONCE (shared across all scoring)
       let userPreferences: any = null;
@@ -4097,7 +4180,7 @@ export const recipeController = {
           }),
           prisma.macroGoals.findFirst({ where: { userId } }),
           prisma.userPhysicalProfile.findFirst({ where: { userId } }),
-          getUserBehaviorData(userId),
+          recommendationCache.getBehavioralData(userId, () => getUserBehaviorData(userId)),
         ]);
       } else {
         userBehavior = { likedRecipes: [], dislikedRecipes: [], savedRecipes: [], consumedRecipes: [] };
@@ -4176,9 +4259,9 @@ export const recipeController = {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+      // List views don't need instructions — the modal re-fetches full detail including instructions
       const recipeInclude = {
         ingredients: { orderBy: { order: 'asc' as const } },
-        instructions: { orderBy: { step: 'asc' as const } },
       };
 
       // Build filter-aware ROTD where clause (respects active filters)
@@ -4204,10 +4287,12 @@ export const recipeController = {
           orderBy: [{ healthScore: 'desc' }, { qualityScore: 'desc' }],
           take: 100,
         }),
-        // Main recipes (all for scoring, then paginate)
+        // Main recipes: cap at 300 candidates for scoring, then paginate
         prisma.recipe.findMany({
           where,
           include: recipeInclude,
+          take: 300,
+          orderBy: [{ healthScore: 'desc' }, { createdAt: 'desc' }],
         }),
         // Total count for pagination
         prisma.recipe.count({ where }),
@@ -4241,7 +4326,7 @@ export const recipeController = {
       // 4. Set up scoring context (shared across all recipes)
       const { getCurrentTemporalContext, calculateTemporalScore, analyzeUserTemporalPatterns } = require('@/utils/temporalScoring');
       const { calculateRecipeScore } = require('@/utils/scoring');
-      const { calculateBehavioralScore } = require('@/utils/behavioralScoring');
+      const { calculateBehavioralScoreFromProfile, buildUserTasteProfile } = require('@/utils/behavioralScoring');
       const { calculateEnhancedScore } = require('@/utils/enhancedScoring');
       const { calculateDiscriminatoryScore, getUserPreferencesForScoring } = require('../../utils/discriminatoryScoring');
       const { calculateHealthGoalMatch } = require('@/utils/healthGoalScoring');
@@ -4249,7 +4334,16 @@ export const recipeController = {
 
       const temporalContext = getCurrentTemporalContext();
       const userTemporalPatterns = analyzeUserTemporalPatterns(userBehavior.consumedRecipes || []);
-      const userPrefsForScoring = await getUserPreferencesForScoring(userId);
+      // Pre-compute user taste profile once (avoids O(n_interactions) work per recipe)
+      const userTasteProfile = buildUserTasteProfile(userBehavior);
+      // Build scoring prefs from already-loaded userPreferences (avoids redundant DB call)
+      const userPrefsForScoring = userPreferences ? {
+        likedCuisines: (userPreferences.likedCuisines || []).map((c: any) => c.name),
+        bannedIngredients: (userPreferences.bannedIngredients || []).map((i: any) => i.name),
+        dietaryRestrictions: (userPreferences.dietaryRestrictions || []).map((d: any) => d.name),
+        cookTimePreference: (userPreferences as any).cookTimePreference,
+        spiceLevel: (userPreferences as any).spiceLevel,
+      } : null;
       const likedCuisineSet = new Set((userPreferences?.likedCuisines || []).map((c: any) => (c.name || '').toLowerCase()));
 
       const cookTimeContext = {
@@ -4277,7 +4371,7 @@ export const recipeController = {
       // Score a recipe using shared context
       function scoreRecipe(recipe: any) {
         try {
-          const behavioralScore = (() => { try { return calculateBehavioralScore(recipe, userBehavior); } catch { return { total: 0 }; } })();
+          const behavioralScore = (() => { try { return calculateBehavioralScoreFromProfile(recipe, userTasteProfile); } catch { return { total: 0 }; } })();
           const temporalScore = (() => { try { return calculateTemporalScore(recipe, temporalContext, userTemporalPatterns); } catch { return { total: 0 }; } })();
           const enhancedScore = (() => { try { return calculateEnhancedScore(recipe, cookTimeContext, userKitchenProfile); } catch { return { total: 0 }; } })();
           const discriminatoryScore = (() => { try { return userPrefsForScoring ? calculateDiscriminatoryScore(recipe, userPrefsForScoring) : { total: 50, breakdown: {} }; } catch { return { total: 50, breakdown: {} }; } })();
@@ -4387,7 +4481,7 @@ export const recipeController = {
 
       console.log(`🏠 Home feed: ${paginatedRecipes.length} suggested, ${scoredQuickMeals.length} quick, ${perfectMatches.length} perfect, ${likedRecipes.length} liked, ROTD: ${recipeOfTheDay?.title || 'none'}`);
 
-      res.json({
+      const feedResponse = {
         recipeOfTheDay,
         suggestedRecipes: paginatedRecipes,
         quickMeals: scoredQuickMeals,
@@ -4402,7 +4496,14 @@ export const recipeController = {
           hasNextPage: offset + paginatedRecipes.length < totalCount,
           hasPrevPage: page > 0,
         },
-      });
+      };
+
+      // Cache the result for 3 minutes (skip for shuffle requests)
+      if (!isShuffleRequest) {
+        cacheService.set(`home_feed:${userId}:${filterKey}`, feedResponse, 3 * 60 * 1000);
+      }
+
+      res.json(feedResponse);
     } catch (error: any) {
       console.error('❌ Error in getHomeFeed:', error);
       res.status(500).json({ error: 'Failed to fetch home feed', details: error.message });

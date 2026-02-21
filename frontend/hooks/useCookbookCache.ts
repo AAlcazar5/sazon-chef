@@ -45,6 +45,7 @@ export function useCookbookCache(): UseCookbookCacheReturn {
   const currentViewModeRef = useRef<ViewMode>('saved');
   const currentPageRef = useRef(0);
   const currentCollectionIdsRef = useRef<string[] | undefined>(undefined);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Check for pending sync on mount
   useEffect(() => {
@@ -56,6 +57,11 @@ export function useCookbookCache(): UseCookbookCacheReturn {
   // ── Load Recipes (cache-first) ─────────────────────────────────────
 
   const loadRecipes = useCallback(async (viewMode: ViewMode, collectionIds?: string[]) => {
+    // Cancel any in-flight request from a previous call
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     currentViewModeRef.current = viewMode;
     currentPageRef.current = 0;
     currentCollectionIdsRef.current = collectionIds;
@@ -83,17 +89,21 @@ export function useCookbookCache(): UseCookbookCacheReturn {
       try {
         let response;
         const paginationOpts = { page: 0, limit: PAGE_SIZE };
+        const signal = controller.signal;
 
         if (viewMode === 'liked') {
-          response = await recipeApi.getLikedRecipes(paginationOpts);
+          response = await recipeApi.getLikedRecipes(paginationOpts, { signal });
         } else if (viewMode === 'disliked') {
-          response = await recipeApi.getDislikedRecipes(paginationOpts);
+          response = await recipeApi.getDislikedRecipes(paginationOpts, { signal });
         } else {
           response = await recipeApi.getSavedRecipes({
             ...paginationOpts,
             collectionId: collectionIds?.join(','),
-          });
+          }, { signal });
         }
+
+        // If this request was aborted, ignore results
+        if (signal.aborted) return;
 
         const data = response.data;
 
@@ -125,7 +135,16 @@ export function useCookbookCache(): UseCookbookCacheReturn {
           );
         }
         setRecipes(filtered);
-      } catch (error) {
+      } catch (error: any) {
+        // Ignore aborted/cancelled requests
+        // Axios on React Native can report 'CLIENT_ERROR' with message 'cancelled' when aborted
+        if (
+          controller.signal.aborted ||
+          error?.name === 'AbortError' ||
+          error?.code === 'ERR_CANCELED' ||
+          error?.message === 'cancelled' ||
+          error?.message === 'Request aborted'
+        ) return;
         console.error('Error fetching cookbook recipes:', error);
         if (!cached) {
           setRecipes([]);

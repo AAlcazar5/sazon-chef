@@ -32,9 +32,6 @@ export function useApi<T = any>(
       
       console.log(`🔵 useApi: Fetching ${url}`);
       const response = await api.get(url, {
-        // Force fresh data by adding cache-busting parameter
-        params: { _t: Date.now() },
-        // Ensure we get the response even if cached
         validateStatus: (status) => status < 500
       });
       

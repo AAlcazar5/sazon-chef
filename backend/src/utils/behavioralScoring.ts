@@ -56,6 +56,157 @@ export interface BehavioralScore {
   total: number;
 }
 
+/**
+ * Pre-computed user taste profile.
+ * Build once before the recipe scoring loop, then pass to calculateBehavioralScoreFromProfile
+ * to avoid O(n_interactions) work per recipe.
+ */
+export interface UserTasteProfile {
+  // Cuisine counts: positive (liked/saved/consumed) and negative (disliked)
+  positiveCuisineCounts: Record<string, number>;
+  negativeCuisineCounts: Record<string, number>;
+  // Average cook time for positive interactions
+  avgPositiveCookTime: number;
+  avgNegativeCookTime: number;
+  // Average macros from liked recipes
+  avgLikedMacros: { calories: number; protein: number; carbs: number; fat: number } | null;
+  // Ingredient preference counts
+  likedIngredientCounts: Record<string, number>;
+  dislikedIngredientCounts: Record<string, number>;
+  // Recency bonus (same for all recipes, computed once)
+  recencyBonus: number;
+  hasData: boolean;
+}
+
+/** Build a UserTasteProfile from UserBehaviorData. Call once per request before the recipe loop. */
+export function buildUserTasteProfile(userBehavior: UserBehaviorData): UserTasteProfile {
+  const { likedRecipes, dislikedRecipes, savedRecipes, consumedRecipes } = userBehavior;
+  const hasData = likedRecipes.length + dislikedRecipes.length + savedRecipes.length + consumedRecipes.length > 0;
+
+  if (!hasData) {
+    return {
+      positiveCuisineCounts: {}, negativeCuisineCounts: {},
+      avgPositiveCookTime: 0, avgNegativeCookTime: 0,
+      avgLikedMacros: null,
+      likedIngredientCounts: {}, dislikedIngredientCounts: {},
+      recencyBonus: 50,
+      hasData: false,
+    };
+  }
+
+  // Cuisine counts
+  const positiveCuisineCounts: Record<string, number> = {};
+  const negativeCuisineCounts: Record<string, number> = {};
+  for (const r of likedRecipes) positiveCuisineCounts[r.cuisine] = (positiveCuisineCounts[r.cuisine] || 0) + 1;
+  for (const r of savedRecipes) positiveCuisineCounts[r.cuisine] = (positiveCuisineCounts[r.cuisine] || 0) + 1;
+  for (const r of consumedRecipes) positiveCuisineCounts[r.cuisine] = (positiveCuisineCounts[r.cuisine] || 0) + 1;
+  for (const r of dislikedRecipes) negativeCuisineCounts[r.cuisine] = (negativeCuisineCounts[r.cuisine] || 0) + 1;
+
+  // Cook time averages
+  const positiveCookTimes = [...likedRecipes, ...savedRecipes, ...consumedRecipes].map(r => r.cookTime);
+  const negativeCookTimes = dislikedRecipes.map(r => r.cookTime);
+  const avgPositiveCookTime = positiveCookTimes.length > 0
+    ? positiveCookTimes.reduce((s, v) => s + v, 0) / positiveCookTimes.length : 0;
+  const avgNegativeCookTime = negativeCookTimes.length > 0
+    ? negativeCookTimes.reduce((s, v) => s + v, 0) / negativeCookTimes.length : 0;
+
+  // Macro averages from liked recipes
+  let avgLikedMacros: UserTasteProfile['avgLikedMacros'] = null;
+  if (likedRecipes.length > 0) {
+    avgLikedMacros = {
+      calories: likedRecipes.reduce((s, r) => s + r.calories, 0) / likedRecipes.length,
+      protein: likedRecipes.reduce((s, r) => s + r.protein, 0) / likedRecipes.length,
+      carbs: likedRecipes.reduce((s, r) => s + r.carbs, 0) / likedRecipes.length,
+      fat: likedRecipes.reduce((s, r) => s + r.fat, 0) / likedRecipes.length,
+    };
+  }
+
+  // Ingredient counts
+  const likedIngredientCounts: Record<string, number> = {};
+  const dislikedIngredientCounts: Record<string, number> = {};
+  for (const r of likedRecipes) for (const i of r.ingredients) {
+    const t = i.text.toLowerCase();
+    likedIngredientCounts[t] = (likedIngredientCounts[t] || 0) + 1;
+  }
+  for (const r of dislikedRecipes) for (const i of r.ingredients) {
+    const t = i.text.toLowerCase();
+    dislikedIngredientCounts[t] = (dislikedIngredientCounts[t] || 0) + 1;
+  }
+
+  // Recency bonus (computed once — same value for all recipes in a request)
+  const now = Date.now();
+  const recentThreshold = 7 * 24 * 60 * 60 * 1000;
+  const recentActivity =
+    likedRecipes.filter(r => now - new Date(r.createdAt).getTime() < recentThreshold).length +
+    savedRecipes.filter(r => now - new Date(r.savedDate).getTime() < recentThreshold).length +
+    consumedRecipes.filter(r => now - new Date(r.date).getTime() < recentThreshold).length;
+  const recencyBonus = recentActivity >= 5 ? 100 : recentActivity >= 3 ? 80 : recentActivity >= 1 ? 60 : 50;
+
+  return {
+    positiveCuisineCounts, negativeCuisineCounts,
+    avgPositiveCookTime, avgNegativeCookTime,
+    avgLikedMacros,
+    likedIngredientCounts, dislikedIngredientCounts,
+    recencyBonus,
+    hasData: true,
+  };
+}
+
+/** Fast per-recipe behavioral scoring using a pre-computed UserTasteProfile. */
+export function calculateBehavioralScoreFromProfile(recipe: any, profile: UserTasteProfile): BehavioralScore {
+  if (!profile.hasData) {
+    return { cuisinePreference: 50, cookTimePreference: 50, macroPreference: 50, ingredientPreference: 50, recencyBonus: 50, total: 50 };
+  }
+
+  // Cuisine preference (O(1) lookup)
+  let cuisinePreference = 50;
+  const pos = profile.positiveCuisineCounts[recipe.cuisine] || 0;
+  const neg = profile.negativeCuisineCounts[recipe.cuisine] || 0;
+  if (pos + neg > 0) cuisinePreference = Math.round((pos / (pos + neg)) * 100);
+
+  // Cook time preference (O(1) math)
+  let cookTimePreference = 50;
+  if (profile.avgPositiveCookTime > 0) {
+    const diff = Math.abs(recipe.cookTime - profile.avgPositiveCookTime);
+    const max = Math.max(profile.avgPositiveCookTime, recipe.cookTime);
+    cookTimePreference = max > 0 ? Math.max(0, Math.round(100 - (diff / max) * 100)) : 50;
+  }
+
+  // Macro preference (O(1) math)
+  let macroPreference = 50;
+  if (profile.avgLikedMacros) {
+    const m = profile.avgLikedMacros;
+    const calDiff = m.calories > 0 ? Math.abs(recipe.calories - m.calories) / m.calories : 0;
+    const protDiff = m.protein > 0 ? Math.abs(recipe.protein - m.protein) / m.protein : 0;
+    const carbDiff = m.carbs > 0 ? Math.abs(recipe.carbs - m.carbs) / m.carbs : 0;
+    const fatDiff = m.fat > 0 ? Math.abs(recipe.fat - m.fat) / m.fat : 0;
+    macroPreference = Math.max(0, Math.round(100 - ((calDiff + protDiff + carbDiff + fatDiff) / 4) * 100));
+  }
+
+  // Ingredient preference (O(n_recipe_ingredients) — much smaller than O(n_user_interactions))
+  let ingredientPreference = 50;
+  if (recipe.ingredients && recipe.ingredients.length > 0) {
+    let totalScore = 0;
+    for (const ing of recipe.ingredients) {
+      const key = (ing.text || '').toLowerCase();
+      const l = profile.likedIngredientCounts[key] || 0;
+      const d = profile.dislikedIngredientCounts[key] || 0;
+      totalScore += l + d > 0 ? (l / (l + d)) * 100 : 50;
+    }
+    ingredientPreference = Math.round(totalScore / recipe.ingredients.length);
+  }
+
+  const total = Math.round(
+    cuisinePreference * 0.3 +
+    cookTimePreference * 0.2 +
+    macroPreference * 0.3 +
+    ingredientPreference * 0.15 +
+    profile.recencyBonus * 0.05
+  );
+
+  return { cuisinePreference, cookTimePreference, macroPreference, ingredientPreference, recencyBonus: profile.recencyBonus, total };
+}
+
 export function calculateBehavioralScore(
   recipe: any,
   userBehavior: UserBehaviorData

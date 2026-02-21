@@ -930,12 +930,13 @@ export default function HomeScreen() {
         {user?.id && (
           <>
             {/* Your Favorites Section */}
-            {likedRecipes.length > 0 && (
+            {(likedRecipes.length > 0 || loading) && (
               <RecipeCarouselSection
                 title="Your Favorites"
                 subtitle={`${likedRecipes.length} recipe${likedRecipes.length !== 1 ? 's' : ''} you've liked`}
                 emoji="❤️"
                 recipes={likedRecipes}
+                isLoading={loading}
                 isCollapsed={collapsedSections['your-favorites']}
                 onToggleCollapse={() => toggleSection('your-favorites')}
                 isDark={isDark}
@@ -952,13 +953,14 @@ export default function HomeScreen() {
             {/* Perfect Match for You Section */}
             {(() => {
               const perfectMatchSection = recipeSections.find(s => s.key === 'perfect-match');
-              if (!perfectMatchSection) return null;
+              if (!perfectMatchSection && !loading) return null;
 
               return (
                 <RecipeCarouselSection
-                  title={perfectMatchSection.title}
-                  emoji={perfectMatchSection.emoji}
-                  recipes={perfectMatchSection.recipes}
+                  title={perfectMatchSection?.title || 'Perfect Match'}
+                  emoji={perfectMatchSection?.emoji || '🎯'}
+                  recipes={perfectMatchSection?.recipes || []}
+                  isLoading={loading}
                   isCollapsed={collapsedSections['perfect-match']}
                   onToggleCollapse={() => toggleSection('perfect-match')}
                   isDark={isDark}
@@ -982,7 +984,7 @@ export default function HomeScreen() {
                     const currentIndex = Math.round(contentOffset.x / cardWidth);
                     setPerfectMatchCurrentIndex(currentIndex);
                   }}
-                  showRefreshPrompt={perfectMatchCurrentIndex >= perfectMatchSection.recipes.length - 1 && perfectMatchSection.recipes.length >= 5}
+                  showRefreshPrompt={!!perfectMatchSection && perfectMatchCurrentIndex >= perfectMatchSection.recipes.length - 1 && perfectMatchSection.recipes.length >= 5}
                   refreshing={refreshingPerfectMatches}
                   onRefresh={() => fetchPerfectMatches(true)}
                   refreshPromptText="Swipe to refresh and get new perfect matches"
@@ -993,13 +995,14 @@ export default function HomeScreen() {
             {/* Great for Meal Prep Section */}
             {(() => {
               const mealPrepSection = recipeSections.find(s => s.key === 'meal-prep');
-              if (!mealPrepSection) return null;
+              if (!mealPrepSection && !loading) return null;
 
               return (
                 <RecipeCarouselSection
-                  title={mealPrepSection.title}
-                  emoji={mealPrepSection.emoji}
-                  recipes={mealPrepSection.recipes}
+                  title={mealPrepSection?.title || 'Great for Meal Prep'}
+                  emoji={mealPrepSection?.emoji || '🥗'}
+                  recipes={mealPrepSection?.recipes || []}
+                  isLoading={loading}
                   isCollapsed={collapsedSections['meal-prep']}
                   onToggleCollapse={() => toggleSection('meal-prep')}
                   isDark={isDark}

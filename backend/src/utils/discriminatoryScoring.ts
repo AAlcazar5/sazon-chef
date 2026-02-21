@@ -138,34 +138,34 @@ function calculateSpiceMatch(recipe: any, userPreferences: UserPreferences): num
 
 // Helper function to get user preferences from database
 export async function getUserPreferencesForScoring(userId: string) {
-  const { PrismaClient } = require('@prisma/client');
-  const prisma = new PrismaClient();
-  
+  const { prisma } = require('@/lib/prisma');
+
   try {
     const preferences = await prisma.userPreferences.findFirst({
       where: { userId },
-      include: {
-        likedCuisines: true,
-        bannedIngredients: true,
-        dietaryRestrictions: true
-      }
+      select: {
+        cookTimePreference: true,
+        spiceLevel: true,
+        likedCuisines: { select: { name: true } },
+        bannedIngredients: { select: { name: true } },
+        dietaryRestrictions: { select: { name: true } },
+      },
     });
-    
+
     if (!preferences) {
       return null;
     }
-    
+
     return {
       likedCuisines: preferences.likedCuisines.map((c: any) => c.name),
       bannedIngredients: preferences.bannedIngredients.map((i: any) => i.name),
       dietaryRestrictions: preferences.dietaryRestrictions.map((d: any) => d.name),
       cookTimePreference: preferences.cookTimePreference,
-      spiceLevel: preferences.spiceLevel
+      spiceLevel: preferences.spiceLevel,
     };
   } catch (error) {
     console.error('Error fetching user preferences:', error);
     return null;
-  } finally {
-    await prisma.$disconnect();
   }
+  // No $disconnect — using shared singleton Prisma client
 }

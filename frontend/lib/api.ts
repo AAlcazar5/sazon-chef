@@ -141,6 +141,17 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Silently pass through aborted/cancelled requests — no logging needed
+    const isCancelled = error?.code === 'ERR_CANCELED' ||
+      error?.name === 'AbortError' ||
+      error?.name === 'CanceledError' ||
+      error?.message === 'canceled' ||
+      error?.message === 'cancelled';
+    if (isCancelled) {
+      const apiError: ApiError = { message: 'cancelled', code: 'CLIENT_ERROR' };
+      return Promise.reject(apiError);
+    }
+
     if (__DEV__) {
       // Don't surface noisy errors for benign conflicts (already saved) or expected 404s
       const statusCode = error.response?.status;
@@ -539,26 +550,26 @@ export const recipeApi = {
     return apiClient.get('/recipes/home-feed', { params });
   },
 
-  getSavedRecipes: (options?: { page?: number; limit?: number; collectionId?: string }) => {
+  getSavedRecipes: (options?: { page?: number; limit?: number; collectionId?: string }, config?: { signal?: AbortSignal }) => {
     const params: any = {};
     if (options?.page !== undefined) params.page = options.page;
     if (options?.limit !== undefined) params.limit = options.limit;
     if (options?.collectionId) params.collectionId = options.collectionId;
-    return apiClient.get('/recipes/saved', { params });
+    return apiClient.get('/recipes/saved', { params, signal: config?.signal });
   },
 
-  getLikedRecipes: (options?: { page?: number; limit?: number }) => {
+  getLikedRecipes: (options?: { page?: number; limit?: number }, config?: { signal?: AbortSignal }) => {
     const params: any = {};
     if (options?.page !== undefined) params.page = options.page;
     if (options?.limit !== undefined) params.limit = options.limit;
-    return apiClient.get('/recipes/liked', { params });
+    return apiClient.get('/recipes/liked', { params, signal: config?.signal });
   },
 
-  getDislikedRecipes: (options?: { page?: number; limit?: number }) => {
+  getDislikedRecipes: (options?: { page?: number; limit?: number }, config?: { signal?: AbortSignal }) => {
     const params: any = {};
     if (options?.page !== undefined) params.page = options.page;
     if (options?.limit !== undefined) params.limit = options.limit;
-    return apiClient.get('/recipes/disliked', { params });
+    return apiClient.get('/recipes/disliked', { params, signal: config?.signal });
   },
 
   likeRecipe: (id: string) => {

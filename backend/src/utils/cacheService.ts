@@ -168,7 +168,7 @@ class CacheService {
 // Create singleton instance
 export const cacheService = new CacheService({
   ttl: 5 * 60 * 1000, // 5 minutes default
-  maxSize: 100
+  maxSize: 500
 });
 
 // Clean expired entries every 10 minutes

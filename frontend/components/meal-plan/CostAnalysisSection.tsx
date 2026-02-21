@@ -97,47 +97,6 @@ function CostAnalysisSection({
         </View>
       ) : null}
 
-      {/* Cost by Meal Type */}
-      {costAnalysis.costByMealType ? (
-        <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-          <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            {"Cost by Meal Type"}
-          </Text>
-          {[
-            { key: 'breakfast', label: 'Breakfast', color: isDark ? DarkColors.primary : Colors.primary },
-            { key: 'lunch', label: 'Lunch', color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed },
-            { key: 'dinner', label: 'Dinner', color: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen },
-            { key: 'snacks', label: 'Snacks', color: isDark ? DarkColors.accent : Colors.accent },
-          ].map((mealType) => {
-            const cost = costAnalysis.costByMealType[mealType.key] || 0;
-            const percentage = costAnalysis.totalCost > 0 ? (cost / costAnalysis.totalCost) * 100 : 0;
-            const allCosts = Object.values(costAnalysis.costByMealType || {}) as number[];
-            const maxCost = allCosts.length > 0 ? Math.max(...allCosts) : 0;
-            const barWidth = maxCost > 0 ? (cost / maxCost) * 100 : 0;
-
-            return (
-              <View key={mealType.key} className="mb-3">
-                <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-sm text-gray-700 dark:text-gray-300">{mealType.label}</Text>
-                  <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {`$${cost.toFixed(2)} (${percentage.toFixed(0)}%)`}
-                  </Text>
-                </View>
-                <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
-                  <View
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${barWidth}%`,
-                      backgroundColor: mealType.color,
-                    }}
-                  />
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      ) : null}
-
       {/* Budget Progress */}
       {maxWeeklyBudget ? (
         <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
