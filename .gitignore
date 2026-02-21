@@ -259,8 +259,10 @@ cython_debug/
 backend/.env
 backend/prisma/dev.db
 
-# Personal roadmap (for development use only)
-ROADMAP.md
+# Personal roadmap and documentation (for development use only)
+*.md
+!README.md
+!CLAUDE.md
 
 # Security documentation
 Security.md
