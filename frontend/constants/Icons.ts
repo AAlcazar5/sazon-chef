@@ -73,6 +73,10 @@ export const Icons = {
   BARCODE_OUTLINE: 'barcode-outline' as IconName,
   SCAN: 'scan' as IconName,
   SCAN_OUTLINE: 'scan-outline' as IconName,
+  MIC: 'mic' as IconName,
+  MIC_OUTLINE: 'mic-outline' as IconName,
+  MIC_OFF: 'mic-off' as IconName,
+  MIC_OFF_OUTLINE: 'mic-off-outline' as IconName,
   
   // Settings
   SETTINGS: 'settings' as IconName,

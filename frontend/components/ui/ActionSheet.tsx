@@ -1,10 +1,11 @@
 // frontend/components/ui/ActionSheet.tsx
 // Action sheet modal for quick actions
 
-import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
 import { FontSize, FontWeight } from '../../constants/Typography';
@@ -31,6 +32,7 @@ interface ActionSheetProps {
 export default function ActionSheet({ visible, onClose, items, title }: ActionSheetProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   // Animation for slide from bottom
   const opacity = useRef(new Animated.Value(0)).current;
@@ -109,6 +111,8 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                 {
                   backgroundColor: isDark ? DarkColors.surface : Colors.surface,
                   transform: [{ translateY }],
+                  maxHeight: '85%',
+                  paddingBottom: Math.max(insets.bottom, Spacing.lg),
                 },
               ]}
               accessibilityRole="menu"
@@ -129,7 +133,12 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
               )}
 
               {/* Action Items */}
-              <View style={styles.itemsContainer}>
+              <ScrollView
+                style={styles.scrollContainer}
+                contentContainerStyle={styles.itemsContainer}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
                 {items.map((item, index) => (
                   <TouchableOpacity
                     key={index}
@@ -199,7 +208,7 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                     />
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
 
               {/* Cancel Button */}
               <TouchableOpacity
@@ -253,6 +262,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semibold,
   },
+  scrollContainer: {
+    flexShrink: 1,
+  },
   itemsContainer: {
     paddingHorizontal: ComponentSpacing.actionSheet.padding,
     paddingVertical: Spacing.sm,
@@ -280,7 +292,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+    marginTop: Spacing.sm,
     paddingVertical: Spacing.lg,
     borderRadius: BorderRadius.lg,
     alignItems: 'center',

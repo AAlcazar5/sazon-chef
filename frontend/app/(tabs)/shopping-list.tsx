@@ -59,6 +59,7 @@ export default function ShoppingListScreen() {
     handleDeleteList,
     handleConfirmMerge,
     handleAddItem,
+    handleAddMultipleItems,
     handleQuickAddSuggestion,
     handleGenerateFromMealPlan,
     handleFABPress,
@@ -433,6 +434,7 @@ export default function ShoppingListScreen() {
         state={state}
         dispatch={dispatch}
         onAddItem={handleAddItem}
+        onAddMultipleItems={handleAddMultipleItems}
         onSaveQuantity={handleSaveQuantity}
         onPickItemPhoto={handlePickItemPhoto}
         purchaseHistoryPriceMap={purchaseHistoryPriceMap}

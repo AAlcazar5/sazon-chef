@@ -3,16 +3,18 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 // Scanner screen for ingredient scanning and food recognition (Phase 6, Group 13)
 
 import { View, Text, Alert, ActivityIndicator, ScrollView, Image } from 'react-native';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { CameraView, CameraType, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { scannerApi } from '../lib/api';
+import { scannerApi, shoppingListApi } from '../lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import LoadingState from '../components/ui/LoadingState';
 import { Colors, DarkColors } from '../constants/Colors';
+import Icon from '../components/ui/Icon';
+import { Icons } from '../constants/Icons';
 
 type ScannerMode = 'food' | 'barcode';
 
@@ -53,6 +55,73 @@ export default function ScannerScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const [barcodeScanned, setBarcodeScanned] = useState(false);
+  const [addingToList, setAddingToList] = useState(false);
+
+  const getItemNameFromResult = useCallback((): string => {
+    if (!result) return '';
+    if ('productName' in result) {
+      // Barcode result — use product name, strip brand prefix if present
+      const name = result.productName;
+      if (result.brand && name.toLowerCase().startsWith(result.brand.toLowerCase())) {
+        return name.slice(result.brand.length).trim();
+      }
+      return name;
+    }
+    if ('foods' in result && result.foods.length > 0) {
+      return result.foods[0].name;
+    }
+    return '';
+  }, [result]);
+
+  const handleAddToShoppingList = useCallback(async () => {
+    const itemName = getItemNameFromResult();
+    if (!itemName) return;
+
+    try {
+      setAddingToList(true);
+      // Get user's shopping lists
+      const listsResponse = await shoppingListApi.getShoppingLists();
+      const lists = listsResponse.data?.shoppingLists || listsResponse.data || [];
+
+      if (!lists.length) {
+        // Create a new list and add the item
+        await shoppingListApi.createShoppingList({
+          name: 'My Shopping List',
+          items: [{ name: itemName, quantity: '1' }],
+        });
+      } else {
+        // Add to the first (most recent/active) list
+        const targetList = lists[0];
+        await shoppingListApi.addItem(targetList.id, {
+          name: itemName,
+          quantity: '1',
+        });
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Added!', `"${itemName}" added to your shopping list.`);
+    } catch (error: any) {
+      console.error('Error adding to shopping list:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', 'Failed to add item to shopping list.');
+    } finally {
+      setAddingToList(false);
+    }
+  }, [getItemNameFromResult]);
+
+  const handleFindRecipes = useCallback(() => {
+    const itemName = getItemNameFromResult();
+    if (!itemName) return;
+
+    // Strip qualifiers like "organic", "fresh", etc. for a cleaner search
+    const cleanName = itemName
+      .replace(/\b(organic|fresh|frozen|canned|dried|raw|cooked|whole|natural|pure)\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.replace(`/?search=${encodeURIComponent(cleanName)}` as any);
+  }, [getItemNameFromResult]);
 
   // Request camera permission on mount
   useEffect(() => {
@@ -371,8 +440,33 @@ export default function ScannerScreen() {
               </View>
             )}
 
-            {/* Action Buttons */}
-            <View className="mt-6 space-y-2">
+            {/* Smart Action Buttons */}
+            <View className="mt-6" style={{ gap: 10 }}>
+              <HapticTouchableOpacity
+                onPress={handleAddToShoppingList}
+                disabled={addingToList}
+                className="bg-green-600 py-3 rounded-lg flex-row items-center justify-center"
+                style={{ gap: 8 }}
+              >
+                {addingToList ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Icon name={Icons.CART} size={20} color="white" />
+                )}
+                <Text className="text-white text-center font-semibold">
+                  {addingToList ? 'Adding...' : 'Add to Shopping List'}
+                </Text>
+              </HapticTouchableOpacity>
+
+              <HapticTouchableOpacity
+                onPress={handleFindRecipes}
+                className="bg-orange-500 py-3 rounded-lg flex-row items-center justify-center"
+                style={{ gap: 8 }}
+              >
+                <Icon name={Icons.SEARCH} size={20} color="white" />
+                <Text className="text-white text-center font-semibold">Find Recipes</Text>
+              </HapticTouchableOpacity>
+
               <HapticTouchableOpacity
                 onPress={reset}
                 className="bg-red-600 dark:bg-red-400 py-3 rounded-lg"
