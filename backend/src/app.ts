@@ -20,6 +20,7 @@ import ingredientAvailabilityRoutes from '@modules/ingredientAvailability/ingred
 import pantryRoutes from '@modules/pantry/pantryRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
+import { searchRoutes } from '@modules/search/searchRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 
 // Import types for Express
@@ -82,6 +83,7 @@ app.use('/api/cost-tracking', costTrackingRoutes);
 app.use('/api/ingredient-availability', ingredientAvailabilityRoutes);
 app.use('/api/pantry', pantryRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/search', searchRoutes);
 
 // 404 handler for undefined routes
 app.use('*', (req: Request, res: Response) => {

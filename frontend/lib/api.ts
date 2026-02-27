@@ -1081,6 +1081,9 @@ export const searchApi = {
   getPopularSearches: (limit: number = 5) => {
     return apiClient.get('/recipes/popular-searches', { params: { limit } });
   },
+  naturalLanguageSearch: (query: string) => {
+    return apiClient.post('/search/natural', { query });
+  },
 };
 
 // AI Recipe API

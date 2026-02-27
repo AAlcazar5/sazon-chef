@@ -264,6 +264,7 @@ backend/prisma/dev.db
 !README.md
 !CLAUDE.md
 !AGENTS.md
+plans/
 
 # Security documentation
 Security.md

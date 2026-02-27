@@ -130,14 +130,6 @@ export default function TabLayout() {
       color: 'red',
     },
     {
-      label: "Today's Meals",
-      icon: 'calendar-outline',
-      onPress: () => {
-        router.push('/(tabs)/meal-plan' as any);
-      },
-      color: 'blue',
-    },
-    {
       label: 'Log a Meal',
       icon: 'nutrition-outline',
       onPress: () => {

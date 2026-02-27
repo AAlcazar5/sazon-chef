@@ -3,7 +3,7 @@
 // Edit quantity modal remains unchanged
 
 import { View, Text, TextInput, Modal, Image, Alert, ScrollView } from 'react-native';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -14,6 +14,10 @@ import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
 import { ShoppingListItem, PurchaseHistoryItem, PantryItem } from '../../types';
 import type { ShoppingListState } from '../../hooks/useShoppingList';
+import { isMultiItemInput, parseShoppingInput, extractEmbeddedQuantity } from '../../lib/shoppingItemParser';
+import { VoiceMicButton } from '../voice';
+import { useVoiceInput } from '../../hooks/useVoiceInput';
+import type { ParsedVoiceIntent, AddToListIntent } from '../../lib/voiceIntentParser';
 
 type AddItemTab = 'add' | 'buyAgain' | 'pantry';
 
@@ -21,6 +25,7 @@ interface AddItemModalProps {
   state: ShoppingListState;
   dispatch: React.Dispatch<any>;
   onAddItem: () => void;
+  onAddMultipleItems: (items: Array<{ name: string; quantity: string }>) => void;
   onSaveQuantity: () => void;
   onPickItemPhoto: (imageUri: string) => void;
   purchaseHistoryPriceMap: Map<string, number>;
@@ -36,6 +41,7 @@ export default function AddItemModal({
   state,
   dispatch,
   onAddItem,
+  onAddMultipleItems,
   onSaveQuantity,
   onPickItemPhoto,
   purchaseHistoryPriceMap,
@@ -49,6 +55,64 @@ export default function AddItemModal({
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [activeTab, setActiveTab] = useState<AddItemTab>('add');
+
+  const multiItemDetected = useMemo(
+    () => isMultiItemInput(state.newItemName),
+    [state.newItemName]
+  );
+
+  const parsedItems = useMemo(
+    () => multiItemDetected ? parseShoppingInput(state.newItemName) : [],
+    [multiItemDetected, state.newItemName]
+  );
+
+  // Auto-populate quantity field when user types a single item with embedded quantity
+  const handleItemNameChange = useCallback((text: string) => {
+    dispatch({ type: 'UPDATE', payload: { newItemName: text } });
+
+    // Only auto-extract for single-item input (not multi-item)
+    if (!isMultiItemInput(text)) {
+      const extracted = extractEmbeddedQuantity(text);
+      if (extracted && !state.newItemQuantity) {
+        dispatch({ type: 'UPDATE', payload: { newItemQuantity: extracted.quantity } });
+      }
+    }
+  }, [dispatch, state.newItemQuantity]);
+
+  const handleAdd = useCallback(() => {
+    if (multiItemDetected && parsedItems.length > 1) {
+      onAddMultipleItems(parsedItems);
+    } else {
+      onAddItem();
+    }
+  }, [multiItemDetected, parsedItems, onAddMultipleItems, onAddItem]);
+
+  // Voice input for adding items
+  const handleVoiceIntent = useCallback((intent: ParsedVoiceIntent) => {
+    if (intent.type === 'ADD_TO_LIST') {
+      const addIntent = intent as AddToListIntent;
+      if (addIntent.items.length === 1) {
+        dispatch({ type: 'UPDATE', payload: { newItemName: addIntent.items[0].name, newItemQuantity: addIntent.items[0].quantity } });
+      } else if (addIntent.items.length > 1) {
+        onAddMultipleItems(addIntent.items);
+      }
+    } else if (intent.type === 'UNKNOWN' && intent.rawText) {
+      // Treat unknown as item name
+      dispatch({ type: 'UPDATE', payload: { newItemName: intent.rawText } });
+    }
+  }, [dispatch, onAddMultipleItems]);
+
+  const { isListening, startListening, stopListening, isAvailable: voiceAvailable } = useVoiceInput({
+    onIntent: handleVoiceIntent,
+  });
+
+  const handleMicPress = useCallback(() => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }, [isListening, startListening, stopListening]);
 
   const editItemLastPrice = state.selectedItem
     ? purchaseHistoryPriceMap.get(state.selectedItem.name.toLowerCase().trim())
@@ -185,21 +249,45 @@ export default function AddItemModal({
                   </View>
                 )}
 
-                <TextInput
-                  placeholder="Item name"
-                  value={state.newItemName}
-                  onChangeText={(text) => dispatch({ type: 'UPDATE', payload: { newItemName: text } })}
-                  className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-lg mb-3 text-gray-900 dark:text-gray-100"
-                  placeholderTextColor="#9CA3AF"
-                  autoFocus={true}
-                />
-                <TextInput
-                  placeholder="Quantity (e.g., 2 cups, 1 lb)"
-                  value={state.newItemQuantity}
-                  onChangeText={(text) => dispatch({ type: 'UPDATE', payload: { newItemQuantity: text } })}
-                  className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-lg mb-3 text-gray-900 dark:text-gray-100"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <View className="flex-row items-center mb-1" style={{ gap: 8 }}>
+                  <TextInput
+                    placeholder="Item name (or multiple: milk, eggs, bread)"
+                    value={state.newItemName}
+                    onChangeText={handleItemNameChange}
+                    className="flex-1 bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-lg text-gray-900 dark:text-gray-100"
+                    placeholderTextColor="#9CA3AF"
+                    autoFocus={true}
+                  />
+                  {voiceAvailable && (
+                    <VoiceMicButton
+                      isListening={isListening}
+                      onPress={handleMicPress}
+                      size="small"
+                    />
+                  )}
+                </View>
+
+                {/* Multi-item detection hint */}
+                {multiItemDetected && parsedItems.length > 1 && (
+                  <View className="flex-row items-center mb-2 ml-1">
+                    <Icon name={Icons.INFO} size={14} color={isDark ? '#60A5FA' : '#3B82F6'} accessibilityLabel="Info" style={{ marginRight: 4 }} />
+                    <Text className="text-xs" style={{ color: isDark ? '#60A5FA' : '#3B82F6' }}>
+                      {parsedItems.length} items detected — tap Add to add all
+                    </Text>
+                  </View>
+                )}
+
+                {/* Hide quantity field when multi-item detected */}
+                {!multiItemDetected && (
+                  <TextInput
+                    placeholder="Quantity (e.g., 2 cups, 1 lb)"
+                    value={state.newItemQuantity}
+                    onChangeText={(text) => dispatch({ type: 'UPDATE', payload: { newItemQuantity: text } })}
+                    className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-lg mb-3 text-gray-900 dark:text-gray-100"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                )}
+                {multiItemDetected && <View className="mb-2" />}
 
                 {/* Quantity Suggestions */}
                 {state.quantitySuggestions.length > 0 && (
@@ -239,11 +327,15 @@ export default function AddItemModal({
                     <Text className="text-center font-semibold text-gray-700 dark:text-gray-100">Cancel</Text>
                   </HapticTouchableOpacity>
                   <HapticTouchableOpacity
-                    onPress={onAddItem}
+                    onPress={handleAdd}
                     className="flex-1 py-3 rounded-lg"
                     style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
                   >
-                    <Text className="text-center font-semibold text-white">Add</Text>
+                    <Text className="text-center font-semibold text-white">
+                      {multiItemDetected && parsedItems.length > 1
+                        ? `Add ${parsedItems.length} Items`
+                        : 'Add'}
+                    </Text>
                   </HapticTouchableOpacity>
                 </View>
               </View>

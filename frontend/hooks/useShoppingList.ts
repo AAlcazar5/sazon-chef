@@ -1136,6 +1136,28 @@ export function useShoppingList() {
     }
   }, [state.selectedList, state.newItemName, state.newItemQuantity, currentItems, loadShoppingListDetails]);
 
+  const handleAddMultipleItems = useCallback(async (items: Array<{ name: string; quantity: string }>) => {
+    if (!state.selectedList || items.length === 0) return;
+
+    try {
+      const promises = items.map(item => {
+        const category = categorizeItem(item.name);
+        return shoppingListApi.addItem(state.selectedList!.id, {
+          name: item.name.trim(),
+          quantity: item.quantity,
+          category,
+        });
+      });
+      await Promise.all(promises);
+      dispatch({ type: 'CLOSE_ADD_ITEM_MODAL' });
+      await loadShoppingListDetails(state.selectedList.id);
+      HapticPatterns.success();
+    } catch (error: any) {
+      console.error('Error adding multiple items:', error);
+      Alert.alert('Error', 'Failed to add some items');
+    }
+  }, [state.selectedList, loadShoppingListDetails]);
+
   const handleQuickAddSuggestion = useCallback(async (suggestion: string) => {
     if (!state.selectedList) return;
 
@@ -1708,6 +1730,7 @@ export function useShoppingList() {
     handleDeleteList,
     handleConfirmMerge,
     handleAddItem,
+    handleAddMultipleItems,
     handleQuickAddSuggestion,
     handleGenerateFromMealPlan,
     handleFABPress,
