@@ -1276,8 +1276,22 @@ export default function RecipeModal() {
           </Text>
         </HapticTouchableOpacity>
 
+        {/* Start Cooking Button */}
+        <HapticTouchableOpacity
+          onPress={() => {
+            if (!recipe) return;
+            router.push({ pathname: '/cooking', params: { id: recipe.id } } as any);
+          }}
+          disabled={!recipe}
+          hapticStyle="medium"
+          className="bg-orange-500 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center"
+        >
+          <Ionicons name="restaurant-outline" size={20} color="white" style={{ marginRight: 8 }} />
+          <Text className="text-white font-semibold text-lg">Start Cooking</Text>
+        </HapticTouchableOpacity>
+
         {/* Add to Shopping List Button - Available for all recipes */}
-        <HapticTouchableOpacity 
+        <HapticTouchableOpacity
           onPress={handleAddToShoppingList}
           disabled={addingToShoppingList || !recipe}
           hapticStyle="medium"

@@ -39,6 +39,7 @@ router.delete('/collections/:id', recipeController.deleteCollection);
 
 // Recipe actions - specific routes before parameterized
 router.post('/generate', recipeController.generateRecipe);
+router.post('/import-url', recipeController.importRecipeFromUrl);
 
 // External data enrichment - specific routes before parameterized
 router.post('/enrich/batch', recipeController.batchEnrichRecipes);

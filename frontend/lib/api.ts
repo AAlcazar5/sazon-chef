@@ -598,6 +598,10 @@ export const recipeApi = {
     return apiClient.post('/recipes', data);
   },
 
+  importRecipeFromUrl: (url: string) => {
+    return apiClient.post('/recipes/import-url', { url });
+  },
+
   updateRecipe: (id: string, data: any) => {
     return apiClient.put(`/recipes/${id}`, data);
   },

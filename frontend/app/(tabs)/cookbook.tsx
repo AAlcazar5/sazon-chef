@@ -33,6 +33,7 @@ import {
   StarRating,
   RecipeNotesModal,
   MarkCookedModal,
+  ImportFromUrlModal,
   type CookbookFilters,
   type CollectionSortMode,
 } from '../../components/cookbook';
@@ -106,6 +107,9 @@ export default function CookbookScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [mergeModalVisible, setMergeModalVisible] = useState(false);
+
+  // Import from URL state
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
@@ -867,6 +871,7 @@ export default function CookbookScreen() {
           setSearchQuery(text);
           setCurrentPage(0);
         }}
+        onImportPress={() => setShowImportModal(true)}
       />
 
       {/* Offline / sync status banner */}
@@ -1213,6 +1218,16 @@ export default function CookbookScreen() {
           lastCooked={cookRecipe.lastCooked}
         />
       )}
+
+      {/* Import from URL Modal */}
+      <ImportFromUrlModal
+        visible={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => {
+          setShowImportModal(false);
+          setNeedsRefresh(true);
+        }}
+      />
     </SafeAreaView>
   );
 }

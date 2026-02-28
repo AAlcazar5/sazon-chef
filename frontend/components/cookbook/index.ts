@@ -16,6 +16,7 @@ export { default as CollectionSavePicker } from './CollectionSavePicker';
 export { default as StarRating } from './StarRating';
 export { default as RecipeNotesModal } from './RecipeNotesModal';
 export { default as MarkCookedModal } from './MarkCookedModal';
+export { default as ImportFromUrlModal } from './ImportFromUrlModal';
 
 // Re-export types
 export type {
