@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -22,50 +23,126 @@ import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { searchRoutes } from '@modules/search/searchRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
+import { prisma } from '@/lib/prisma';
+import { cacheService } from '@/utils/cacheService';
 
-// Import types for Express
 import type { Request, Response, NextFunction } from 'express';
 
-// Create Express application
+// ─── Sentry ──────────────────────────────────────────────────────────────────
+// Initialise early so it can capture errors from all subsequent code.
+// SENTRY_DSN must be set in env to enable error tracking; safe to omit in dev.
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    integrations: [Sentry.expressIntegration()],
+  });
+}
+
+// ─── Allowed origins ─────────────────────────────────────────────────────────
+// In production, list every origin that is allowed to call the API.
+// Expo Go uses exp:// or exps://; EAS builds use the custom scheme or HTTPS.
+const ALLOWED_ORIGINS: (string | RegExp)[] = [
+  // Explicit env var (e.g. https://sazonchef.com)
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  // Expo Go on LAN (any port)
+  /^exp:\/\//,
+  /^exps:\/\//,
+  // Local dev / Metro bundler
+  /^http:\/\/localhost(:\d+)?$/,
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+];
+
+// ─── App ─────────────────────────────────────────────────────────────────────
 const app = express();
 
-// Security middleware
+// Sentry v8+: request context is captured automatically via expressIntegration
+
+// Security headers
 app.use(helmet());
 
-// CORS configuration
+// CORS
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? (process.env.FRONTEND_URL || 'http://localhost:8081')
-    : true, // Allow all origins in development (device/emulator/browser)
+  origin: (origin, callback) => {
+    // Allow server-to-server requests (no Origin header) and all origins in dev
+    if (!origin || process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    const allowed = ALLOWED_ORIGINS.some((o) =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    if (allowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-data-sharing-enabled', 'x-analytics-enabled', 'x-location-services-enabled']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-data-sharing-enabled',
+    'x-analytics-enabled',
+    'x-location-services-enabled',
+  ],
 }));
 
-// Logging middleware
+// HTTP logging
 app.use(morgan('combined'));
 
-// Body parsing middleware
+// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files (profile pictures, etc.)
+// Static uploads (profile pictures, etc.)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Rate limiting (applied to all routes)
+// Rate limiting on all /api routes
 app.use('/api', apiLimiter);
 
-// Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'OK',
+// ─── Health checks ───────────────────────────────────────────────────────────
+
+// Simple liveness probe (kept at /health for backward compat with startup logs)
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'OK', uptime: process.uptime() });
+});
+
+// Full readiness probe — checks DB + cache, returns response time
+app.get('/api/health', async (_req: Request, res: Response) => {
+  const start = Date.now();
+
+  let dbStatus: 'ok' | 'error' = 'ok';
+  let dbLatencyMs: number | null = null;
+
+  try {
+    const dbStart = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    dbLatencyMs = Date.now() - dbStart;
+  } catch {
+    dbStatus = 'error';
+  }
+
+  const cacheStats = cacheService.getStats();
+
+  const responseTimeMs = Date.now() - start;
+  const isHealthy = dbStatus === 'ok';
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    uptime: Math.floor(process.uptime()),
+    environment: process.env.NODE_ENV || 'development',
+    responseTimeMs,
+    services: {
+      database: { status: dbStatus, latencyMs: dbLatencyMs },
+      cache: { status: 'ok', size: cacheStats.size, maxSize: cacheStats.maxSize },
+    },
   });
 });
 
-// API routes
+// ─── API routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/user', userRoutes);
@@ -85,53 +162,36 @@ app.use('/api/pantry', pantryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/search', searchRoutes);
 
-// 404 handler for undefined routes
+// ─── Error handlers ──────────────────────────────────────────────────────────
+
+// 404
 app.use('*', (req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'Route not found',
-    path: req.originalUrl,
-    method: req.method
-  });
+  res.status(404).json({ error: 'Route not found', path: req.originalUrl, method: req.method });
 });
 
-// Global error handler
-app.use((error: any, req: Request, res: Response, next: NextFunction) => {
+// Sentry v8+: setupExpressErrorHandler adds a Sentry error handler before the generic one
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
+
+// Generic error handler
+app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Global error handler:', error);
 
-  // Prisma errors
   if (error.code?.startsWith('P')) {
-    return res.status(400).json({
-      error: 'Database error',
-      message: 'An error occurred while processing your request'
-    });
+    return res.status(400).json({ error: 'Database error', message: 'An error occurred while processing your request' });
   }
-
-  // JWT errors (for future auth)
   if (error.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      error: 'Invalid token',
-      message: 'Please provide a valid authentication token'
-    });
+    return res.status(401).json({ error: 'Invalid token', message: 'Please provide a valid authentication token' });
   }
-
-  // Validation errors (for future validation)
   if (error.name === 'ValidationError') {
-    return res.status(400).json({
-      error: 'Validation failed',
-      details: error.details
-    });
+    return res.status(400).json({ error: 'Validation failed', details: error.details });
   }
 
-  // Default error response
   const statusCode = error.status || error.statusCode || 500;
-  const message = error.message || 'Internal server error';
-
   res.status(statusCode).json({
-    error: message,
-    ...(process.env.NODE_ENV === 'development' && {
-      stack: error.stack,
-      details: error.details
-    })
+    error: error.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
   });
 });
 
