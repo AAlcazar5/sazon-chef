@@ -264,6 +264,7 @@ model Recipe {
   recurringMeals    RecurringMeal[]
 
   // Performance indexes for recipe queries
+  @@index([userId])
   @@index([isUserCreated])
   @@index([cuisine])
   @@index([mealType])
@@ -432,6 +433,8 @@ model MealPlan {
 
   meals Meal[]
 
+  @@index([userId, isActive])
+  @@index([userId, startDate])
   @@map("meal_plans")
 }
 
@@ -677,6 +680,7 @@ model ShoppingList {
 
   items ShoppingListItem[]
 
+  @@index([userId, isActive])
   @@map("shopping_lists")
 }
 
