@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { healthifyService } from '@/services/healthifyService';
+import { importRecipeFromUrl as importFromUrl, RecipeImportError } from '@/services/recipeImportService';
 import { getUserId } from '@/utils/authHelper';
 import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
 import { varyImageUrlsForPage } from '@/utils/runtimeImageVariation';
@@ -4507,6 +4508,89 @@ export const recipeController = {
     } catch (error: any) {
       console.error('❌ Error in getHomeFeed:', error);
       res.status(500).json({ error: 'Failed to fetch home feed', details: error.message });
+    }
+  },
+
+  // Import recipe from URL (JSON-LD → AI fallback)
+  async importRecipeFromUrl(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { url } = req.body || {};
+
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: 'URL is required' });
+      }
+
+      console.log('🔗 [importRecipe] Importing from URL:', url);
+
+      const imported = await importFromUrl(url.trim());
+
+      // Normalize ingredients + instructions for Prisma
+      const ingredientsCreate = imported.ingredients.map((text, index) => ({
+        text,
+        order: index + 1,
+      }));
+
+      const created = await prisma.recipe.create({
+        data: {
+          userId,
+          isUserCreated: true,
+          source: 'url-import',
+          sourceUrl: imported.sourceUrl,
+          sourceName: imported.sourceName,
+          title: imported.title,
+          description: imported.description,
+          cookTime: imported.cookTime,
+          servings: imported.servings,
+          cuisine: imported.cuisine,
+          mealType: imported.mealType,
+          difficulty: 'medium',
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          imageUrl: imported.imageUrl,
+          ingredients: { create: ingredientsCreate },
+        },
+        include: { ingredients: true },
+      });
+
+      // Create instructions separately (avoids nested create constraints)
+      await Promise.all(
+        imported.instructions.map((text, index) =>
+          prisma.recipeInstruction.create({
+            data: { recipeId: created.id, step: index + 1, text },
+          })
+        )
+      );
+
+      // Auto-save to cookbook
+      await prisma.savedRecipe.create({
+        data: { userId, recipeId: created.id, savedDate: new Date() },
+      });
+
+      const full = await prisma.recipe.findUnique({
+        where: { id: created.id },
+        include: { ingredients: true, instructions: true },
+      });
+
+      console.log('✅ [importRecipe] Imported and saved:', full?.title);
+      res.json({ success: true, data: full });
+    } catch (error: any) {
+      if (error instanceof RecipeImportError) {
+        const statusMap = {
+          INVALID_URL: 400,
+          FETCH_FAILED: 422,
+          PARSE_FAILED: 422,
+          EXTRACTION_FAILED: 500,
+        };
+        return res.status(statusMap[error.code] || 500).json({
+          error: error.message,
+          code: error.code,
+        });
+      }
+      console.error('❌ [importRecipe] Error:', error);
+      res.status(500).json({ error: 'Failed to import recipe', details: error.message });
     }
   },
 };

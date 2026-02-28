@@ -31,6 +31,8 @@ interface CookbookHeaderProps {
   onSearchFocus?: () => void;
   /** Called when search input is blurred */
   onSearchBlur?: () => void;
+  /** Called when import from URL button is pressed */
+  onImportPress?: () => void;
 }
 
 /**
@@ -46,6 +48,7 @@ function CookbookHeader({
   onSearchChange,
   onSearchFocus,
   onSearchBlur,
+  onImportPress,
 }: CookbookHeaderProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -86,6 +89,21 @@ function CookbookHeader({
               My Cookbook
             </Text>
           </View>
+          {/* Import from URL */}
+          {onImportPress && (
+            <HapticTouchableOpacity
+              onPress={() => { onImportPress(); HapticPatterns.buttonPress(); }}
+              className="mr-2 p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700"
+              accessibilityLabel="Import recipe from URL"
+            >
+              <Icon
+                name={Icons.LINK_OUTLINE}
+                size={IconSizes.SM}
+                color={isDark ? DarkColors.primary : Colors.primary}
+              />
+            </HapticTouchableOpacity>
+          )}
+
           {/* View Mode Toggle */}
           <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
             <HapticTouchableOpacity
@@ -293,7 +311,7 @@ function QuickFilterChip({ label, emoji, icon, isActive, onPress, isDark }: Quic
     >
       {icon && !emoji && (
         <Icon
-          name={icon}
+          name={icon as any}
           size={14}
           color={isActive ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
           accessibilityLabel={label}

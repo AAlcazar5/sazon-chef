@@ -117,6 +117,7 @@ function RootLayoutNav() {
               <Stack.Screen name="edit-preferences" />
               <Stack.Screen name="recipe-form" />
               <Stack.Screen name="scanner-results" />
+              <Stack.Screen name="cooking" />
               <Stack.Screen name="edit-budget" />
               <Stack.Screen name="onboarding" />
               <Stack.Screen
