@@ -126,6 +126,9 @@ interface UseMealPlanActionsProps {
   setManagerModalVisible: Dispatch<SetStateAction<boolean>>;
   recurringRules: RecurringMeal[];
   setRecurringRules: Dispatch<SetStateAction<RecurringMeal[]>>;
+
+  // Goal mode state (from useGenerationState)
+  planningMode: 'cut' | 'maintain' | 'build';
 }
 
 interface UseMealPlanActionsReturn {
@@ -195,6 +198,10 @@ interface UseMealPlanActionsReturn {
   handleToggleRecurringActive: (ruleId: string, isActive: boolean) => void;
   /** Applies recurring rules to current week */
   handleApplyRecurring: () => Promise<void>;
+  /** One-tap streamlined "Plan My Week" with goal mode */
+  handlePlanMyWeek: (mode: 'cut' | 'maintain' | 'build') => Promise<void>;
+  /** Regenerate a single day in the current plan */
+  handleRegenerateDay: (date: Date) => void;
 }
 
 // ─── Hook ───────────────────────────────────────────────────────────────
@@ -257,6 +264,7 @@ export function useMealPlanActions({
   setManagerModalVisible,
   recurringRules,
   setRecurringRules,
+  planningMode,
 }: UseMealPlanActionsProps): UseMealPlanActionsReturn {
 
   // Load target macros from user profile on mount
@@ -414,6 +422,7 @@ export function useMealPlanActions({
         mealsPerDay,
         maxTotalPrepTime,
         maxDailyBudget: maxWeeklyBudget ? maxWeeklyBudget / 7 : undefined,
+        planningMode,
       });
 
       if (response.data?.success) {
@@ -1649,6 +1658,94 @@ export function useMealPlanActions({
     }
   };
 
+  // ─── "Plan My Week" — streamlined one-tap flow ──────────────────────
+  const handlePlanMyWeek = async (mode: 'cut' | 'maintain' | 'build') => {
+    if (generatingPlan) return;
+    setGeneratingPlan(true);
+
+    try {
+      const recommendations = calculateRecommendedMealsAndSnacks(targetMacros.calories);
+      const weekStart = weekDates[0];
+      const startDateStr = weekStart.toISOString().split('T')[0];
+
+      const mealsPerDay: string[] = [];
+      const mealTypes = ['breakfast', 'lunch', 'dinner'];
+      for (let i = 0; i < Math.min(recommendations.meals, mealTypes.length); i++) {
+        mealsPerDay.push(mealTypes[i]);
+      }
+      for (let i = 0; i < recommendations.snacks; i++) {
+        mealsPerDay.push('snack');
+      }
+
+      const response = await mealPlanApi.generateMealPlan({
+        days: 7,
+        startDate: startDateStr,
+        mealsPerDay,
+        maxTotalPrepTime: 60,
+        planningMode: mode,
+      });
+
+      if (response.data?.success) {
+        HapticPatterns.success();
+        const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
+        setSuccessMessage({
+          title: 'Your Week is Planned!',
+          message: `${modeLabel} mode — all 7 days ready.`,
+        });
+        setShowSuccessModal(true);
+        await loadMealPlan();
+      } else {
+        throw new Error(response.data?.error || 'Plan generation failed');
+      }
+    } catch (error: any) {
+      console.error('Error in Plan My Week:', error.message);
+      Alert.alert('Generation Failed', 'Could not generate your meal plan. Please try again.');
+    } finally {
+      setGeneratingPlan(false);
+    }
+  };
+
+  // ─── Regenerate a single day ──────────────────────────────────────────
+  const handleRegenerateDay = (date: Date) => {
+    // Find the active meal plan ID from the weekly plan
+    const mealPlanId = weeklyPlan?.mealPlanId || weeklyPlan?.id;
+    if (!mealPlanId) {
+      Alert.alert('No Plan', 'Generate a weekly plan first before regenerating a day.');
+      return;
+    }
+
+    const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    Alert.alert(
+      'Regenerate Day',
+      `Replace all meals for ${dateStr} with new AI-generated meals?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Regenerate',
+          onPress: async () => {
+            setGeneratingPlan(true);
+            try {
+              const isoDate = date.toISOString().split('T')[0];
+              await mealPlanApi.regenerateDay({ mealPlanId, date: isoDate });
+              HapticPatterns.success();
+              await loadMealPlan();
+              setSuccessMessage({
+                title: 'Day Regenerated!',
+                message: `Fresh meals for ${dateStr}.`,
+              });
+              setShowSuccessModal(true);
+            } catch (error: any) {
+              console.error('Error regenerating day:', error.message);
+              Alert.alert('Regeneration Failed', 'Could not regenerate this day. Please try again.');
+            } finally {
+              setGeneratingPlan(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return {
     handleGenerateWeeklyPlan,
     saveMealsToBackend,
@@ -1683,5 +1780,7 @@ export function useMealPlanActions({
     handleDeleteRecurringRule,
     handleToggleRecurringActive,
     handleApplyRecurring,
+    handlePlanMyWeek,
+    handleRegenerateDay,
   };
 }

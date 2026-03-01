@@ -46,6 +46,8 @@ import {
   DuplicateModal,
   RecurringMealModal,
   RecurringMealsManagerModal,
+  MealPlanEmptyState,
+  GoalModeSelector,
 } from '../../components/meal-plan';
 import type { RecurringMeal } from '../../types';
 
@@ -108,6 +110,7 @@ export default function MealPlanScreen() {
     setMealCompletionStatus,
     setMealNotes,
     setWeeklyPlan,
+    cookedRecipeIds,
   } = useMealPlanData({
     selectedDate,
     isMountedRef,
@@ -190,6 +193,8 @@ export default function MealPlanScreen() {
     showDuplicateModal,
     setDuplicating,
     setShowDuplicateModal,
+    planningMode,
+    setPlanningMode,
   } = useGenerationState();
 
   // Use meal swap hook
@@ -269,6 +274,8 @@ export default function MealPlanScreen() {
     handleDeleteRecurringRule,
     handleToggleRecurringActive,
     handleApplyRecurring,
+    handlePlanMyWeek,
+    handleRegenerateDay,
   } = useMealPlanActions({
     hourlyMeals,
     weeklyPlan,
@@ -322,6 +329,7 @@ export default function MealPlanScreen() {
     setManagerModalVisible,
     recurringRules,
     setRecurringRules,
+    planningMode,
   });
 
   // Use shopping list generation hook
@@ -480,6 +488,12 @@ export default function MealPlanScreen() {
               </View>
             </ScrollView>
           </>
+        ) : Object.keys(hourlyMeals).length === 0 && !weeklyPlan ? (
+          <MealPlanEmptyState
+            isDark={isDark}
+            generatingPlan={generatingPlan}
+            onPlanMyWeek={handlePlanMyWeek}
+          />
         ) : (
           <>
         <MealPlanHeader
@@ -544,6 +558,7 @@ export default function MealPlanScreen() {
             onPreviousWeek={handlePreviousWeek}
             onNextWeek={handleNextWeek}
             onShowDayMeals={handleShowDayMeals}
+            onRegenerateDay={handleRegenerateDay}
           />
 
           <ThawingReminders thawingReminders={thawingReminders} isDark={isDark} />
@@ -593,6 +608,7 @@ export default function MealPlanScreen() {
               onGetSwapSuggestions={handleGetSwapSuggestions}
               onSwapMeal={handleSwapMeal}
               onSetRecurring={handleSetRecurring}
+              cookedRecipeIds={cookedRecipeIds}
             />
           )}
 
@@ -606,6 +622,7 @@ export default function MealPlanScreen() {
               onAddMealToHour={handleAddMealToHour}
               onRemoveMeal={handleRemoveMeal}
               onGenerateFullDay={handleGenerateFullDay}
+              cookedRecipeIds={cookedRecipeIds}
             />
           )}
 
@@ -618,6 +635,7 @@ export default function MealPlanScreen() {
               getMealsForDate={getMealsForDate}
               onSelectDate={setSelectedDate}
               onToggleDay={handleToggleDay}
+              cookedRecipeIds={cookedRecipeIds}
             />
           )}
 
@@ -658,6 +676,8 @@ export default function MealPlanScreen() {
           maxWeeklyBudget={maxWeeklyBudget}
           targetMacros={targetMacros}
           isDark={isDark}
+          planningMode={planningMode}
+          setPlanningMode={setPlanningMode}
           onClose={() => {
             setShowMealSnackSelector(false);
             setGenerationType(null);

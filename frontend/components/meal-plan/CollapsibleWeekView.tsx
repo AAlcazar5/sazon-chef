@@ -11,6 +11,7 @@ import AnimatedEmptyState from '../ui/AnimatedEmptyState';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { MealPlanEmptyStates } from '../../constants/EmptyStates';
+import SurpriseBadge from './SurpriseBadge';
 
 interface CollapsibleWeekViewProps {
   /** Week dates array (7 days) */
@@ -27,6 +28,8 @@ interface CollapsibleWeekViewProps {
   onSelectDate: (date: Date) => void;
   /** Toggle expanded state for a day */
   onToggleDay: (dateStr: string) => void;
+  /** Set of recipe IDs the user has cooked before */
+  cookedRecipeIds?: Set<string>;
 }
 
 function CollapsibleWeekView({
@@ -37,6 +40,7 @@ function CollapsibleWeekView({
   getMealsForDate,
   onSelectDate,
   onToggleDay,
+  cookedRecipeIds,
 }: CollapsibleWeekViewProps) {
   return (
     <View className="px-4 mb-4" style={{ width: '100%' }}>
@@ -117,9 +121,16 @@ function CollapsibleWeekView({
                               </View>
                             )}
                             <View className="flex-1">
-                              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                {meal.title || meal.name}
-                              </Text>
+                              <View className="flex-row items-center">
+                                <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                  {meal.title || meal.name}
+                                </Text>
+                                {cookedRecipeIds && (
+                                  <View style={{ marginLeft: 6 }}>
+                                    <SurpriseBadge recipeId={meal.id} cookedRecipeIds={cookedRecipeIds} isDark={isDark} />
+                                  </View>
+                                )}
+                              </View>
                               <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                                 {meal.mealType} • {meal.calories} cal
                               </Text>

@@ -18,6 +18,7 @@ import PulsingLoader from '../ui/PulsingLoader';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import SurpriseBadge from './SurpriseBadge';
 
 interface DraggableMealCardProps {
   meal: any;
@@ -43,6 +44,7 @@ interface DraggableMealCardProps {
   isLoadingSwap?: boolean;
   onSwapMeal?: (mealId: string, newRecipe: any, currentMeal: any) => void;
   onSetRecurring?: (meal: any) => void;
+  cookedRecipeIds?: Set<string>;
 }
 
 /**
@@ -73,6 +75,7 @@ function DraggableMealCard({
   isLoadingSwap,
   onSwapMeal,
   onSetRecurring,
+  cookedRecipeIds,
 }: DraggableMealCardProps) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -355,6 +358,11 @@ function DraggableMealCard({
             <View className="flex-1">
               <View className="flex-row items-center">
                 <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{meal.name}</Text>
+                {cookedRecipeIds && (
+                  <View style={{ marginLeft: 6 }}>
+                    <SurpriseBadge recipeId={meal.id} cookedRecipeIds={cookedRecipeIds} isDark={isDark} />
+                  </View>
+                )}
                 {meal.isFromRecurring && (
                   <Icon
                     name={Icons.SYNC_OUTLINE}

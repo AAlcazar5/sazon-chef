@@ -3,6 +3,7 @@
 
 import { useState, Dispatch, SetStateAction } from 'react';
 import type { MealPlanTemplate } from '../types';
+import type { GoalMode } from '../components/meal-plan/GoalModeSelector';
 
 interface SuccessMessage {
   title: string;
@@ -94,6 +95,10 @@ interface UseGenerationStateReturn {
   showDuplicateModal: boolean;
   setDuplicating: Dispatch<SetStateAction<boolean>>;
   setShowDuplicateModal: Dispatch<SetStateAction<boolean>>;
+
+  // Goal mode state
+  planningMode: GoalMode;
+  setPlanningMode: Dispatch<SetStateAction<GoalMode>>;
 }
 
 /**
@@ -139,6 +144,9 @@ export function useGenerationState(): UseGenerationStateReturn {
   // Duplicate state
   const [duplicating, setDuplicating] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
+  // Goal mode state
+  const [planningMode, setPlanningMode] = useState<GoalMode>('maintain');
 
   return {
     generatingPlan,
@@ -191,5 +199,8 @@ export function useGenerationState(): UseGenerationStateReturn {
     showDuplicateModal,
     setDuplicating,
     setShowDuplicateModal,
+    // Goal mode state
+    planningMode,
+    setPlanningMode,
   };
 }

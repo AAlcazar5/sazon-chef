@@ -996,8 +996,21 @@ export const mealPlanApi = {
     mealsPerDay?: string[];
     maxTotalPrepTime?: number;
     maxDailyBudget?: number;
+    planningMode?: 'cut' | 'maintain' | 'build';
   }) => {
     return apiClient.post('/meal-plan/generate', params);
+  },
+
+  regenerateDay: (params: {
+    mealPlanId: string;
+    date: string;
+    mealsPerDay?: string[];
+  }) => {
+    return apiClient.post('/meal-plan/regenerate-day', params);
+  },
+
+  getCookedRecipeIds: () => {
+    return apiClient.get('/meal-plan/cooked-recipe-ids');
   },
 
   getMealHistory: (params?: { startDate?: string; endDate?: string }) => {

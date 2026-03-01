@@ -49,3 +49,9 @@ export { default as RecurringMealsManagerModal } from './RecurringMealsManagerMo
 
 // Quick Actions
 export { default as QuickMealLogModal } from './QuickMealLogModal';
+
+// Group 4: Meal Plan Advanced
+export { default as GoalModeSelector } from './GoalModeSelector';
+export type { GoalMode } from './GoalModeSelector';
+export { default as MealPlanEmptyState } from './MealPlanEmptyState';
+export { default as SurpriseBadge } from './SurpriseBadge';
