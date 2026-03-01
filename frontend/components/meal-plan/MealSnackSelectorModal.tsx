@@ -5,6 +5,7 @@ import React from 'react';
 import { View, Text, Modal } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Colors, DarkColors } from '../../constants/Colors';
+import GoalModeSelector, { GoalMode } from './GoalModeSelector';
 
 interface MealSnackSelectorModalProps {
   visible: boolean;
@@ -15,6 +16,8 @@ interface MealSnackSelectorModalProps {
   maxWeeklyBudget: number | null;
   targetMacros: { calories: number };
   isDark: boolean;
+  planningMode: GoalMode;
+  setPlanningMode: (mode: GoalMode) => void;
   onClose: () => void;
   onConfirm: () => void;
   setSelectedMeals: (count: number) => void;
@@ -33,6 +36,8 @@ function MealSnackSelectorModal({
   maxWeeklyBudget,
   targetMacros,
   isDark,
+  planningMode,
+  setPlanningMode,
   onClose,
   onConfirm,
   setSelectedMeals,
@@ -64,6 +69,20 @@ function MealSnackSelectorModal({
           <Text className="text-sm text-gray-600 dark:text-gray-400 mb-6">
             Choose how many meals and snacks to create for {generationType === 'fullDay' ? 'today' : 'each day this week'}. You can adjust these values.
           </Text>
+
+          {/* Goal Mode Selector (weekly only) */}
+          {generationType === 'weekly' && (
+            <View className="mb-6">
+              <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
+                Goal Mode
+              </Text>
+              <GoalModeSelector
+                selectedMode={planningMode}
+                onSelect={setPlanningMode}
+                isDark={isDark}
+              />
+            </View>
+          )}
 
           {/* Meals Selector */}
           <View className="mb-6">

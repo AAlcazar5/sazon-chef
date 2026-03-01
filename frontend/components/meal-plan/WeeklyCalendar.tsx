@@ -30,6 +30,8 @@ interface WeeklyCalendarProps {
   onNextWeek: () => void;
   /** Show day meals modal */
   onShowDayMeals: (date: Date) => void;
+  /** Regenerate a single day (long press) */
+  onRegenerateDay?: (date: Date) => void;
 }
 
 function WeeklyCalendar({
@@ -43,6 +45,7 @@ function WeeklyCalendar({
   onPreviousWeek,
   onNextWeek,
   onShowDayMeals,
+  onRegenerateDay,
 }: WeeklyCalendarProps) {
   return (
     <View className="px-4 mb-4">
@@ -102,6 +105,11 @@ function WeeklyCalendar({
                   }
                 } catch (error) {
                   console.error('Error selecting date:', error);
+                }
+              }}
+              onLongPress={() => {
+                if (onRegenerateDay && mealsCount > 0) {
+                  onRegenerateDay(new Date(date));
                 }
               }}
               className={`flex-1 mx-1 rounded-lg p-3 ${

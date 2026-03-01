@@ -56,6 +56,7 @@ interface TimelineViewProps {
   onSwapMeal: (mealId: string, newRecipe: any, currentMeal: any) => void;
   /** Set meal as recurring */
   onSetRecurring?: (meal: any) => void;
+  cookedRecipeIds?: Set<string>;
 }
 
 function TimelineView({
@@ -81,6 +82,7 @@ function TimelineView({
   onGetSwapSuggestions,
   onSwapMeal,
   onSetRecurring,
+  cookedRecipeIds,
 }: TimelineViewProps) {
   // Memoize filtered hours to avoid recalculating on every render
   const filteredHours = useMemo(() => {
@@ -191,6 +193,7 @@ function TimelineView({
                   isLoadingSwap={meal.mealPlanMealId ? loadingSwapSuggestions === meal.mealPlanMealId : false}
                   onSwapMeal={onSwapMeal}
                   onSetRecurring={onSetRecurring}
+                  cookedRecipeIds={cookedRecipeIds}
                 />
               );
             })}
@@ -204,7 +207,7 @@ function TimelineView({
     loadingSwapSuggestions, mealSwapSuggestions, isDark,
     onAddMealToHour, onDragStart, onDragEnd, onDragOver,
     onMoveMeal, onRemoveMeal, onToggleComplete, onOpenNotes,
-    onGetSwapSuggestions, onSwapMeal, onSetRecurring,
+    onGetSwapSuggestions, onSwapMeal, onSetRecurring, cookedRecipeIds,
   ]);
 
   return (

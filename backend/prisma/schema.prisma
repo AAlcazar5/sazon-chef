@@ -422,9 +422,10 @@ model MealPlan {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name      String?
-  startDate DateTime
-  endDate   DateTime
+  name         String?
+  planningMode String?  // 'cut' | 'maintain' | 'build'
+  startDate    DateTime
+  endDate      DateTime
 
   isActive Boolean @default(true)
 

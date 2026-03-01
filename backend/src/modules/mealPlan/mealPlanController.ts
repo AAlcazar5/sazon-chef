@@ -240,6 +240,125 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
   }
 };
 
+// ─── Goal-Based Macro Helpers ─────────────────────────────────────────────
+
+function mapFitnessGoalToMode(fitnessGoal?: string | null): string {
+  switch (fitnessGoal) {
+    case 'lose_weight': return 'cut';
+    case 'gain_muscle':
+    case 'gain_weight': return 'build';
+    case 'maintain': return 'maintain';
+    default: return 'maintain';
+  }
+}
+
+function adjustMacrosForGoalMode(
+  baseMacros: { calories: number; protein: number; carbs: number; fat: number },
+  planningMode: string | null | undefined,
+  physicalProfile?: { fitnessGoal?: string } | null,
+): { calories: number; protein: number; carbs: number; fat: number } {
+  const mode = planningMode || mapFitnessGoalToMode(physicalProfile?.fitnessGoal);
+
+  switch (mode) {
+    case 'cut':
+      return {
+        calories: Math.round(baseMacros.calories * 0.82),
+        protein: Math.round(baseMacros.protein * 1.15),
+        carbs: Math.round(baseMacros.carbs * 0.75),
+        fat: Math.round(baseMacros.fat * 0.85),
+      };
+    case 'build':
+      return {
+        calories: Math.round(baseMacros.calories * 1.12),
+        protein: Math.round(baseMacros.protein * 1.2),
+        carbs: Math.round(baseMacros.carbs * 1.15),
+        fat: Math.round(baseMacros.fat * 1.0),
+      };
+    case 'maintain':
+    default:
+      return { ...baseMacros };
+  }
+}
+
+// ─── Shared User Data Fetcher ─────────────────────────────────────────────
+
+async function fetchUserPlanningContext(userId: string) {
+  const [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([
+    prisma.userPreferences.findUnique({
+      where: { userId },
+      include: {
+        likedCuisines: true,
+        dietaryRestrictions: true,
+        bannedIngredients: true,
+        preferredSuperfoods: true,
+      },
+    }),
+    prisma.macroGoals.findUnique({
+      where: { userId },
+    }),
+    prisma.userPhysicalProfile.findUnique({
+      where: { userId },
+    }),
+    prisma.recipeFeedback.findMany({
+      where: { userId },
+      include: {
+        recipe: {
+          include: {
+            ingredients: true,
+          },
+        },
+      },
+      take: 50,
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
+
+  const likedRecipes = feedbackData
+    .filter(f => f.liked)
+    .slice(0, 10)
+    .map(f => ({
+      title: f.recipe.title,
+      cuisine: f.recipe.cuisine,
+      ingredients: f.recipe.ingredients.map((i: { text: string }) => i.text.toLowerCase()),
+      cookTime: f.recipe.cookTime,
+    }));
+
+  const dislikedRecipes = feedbackData
+    .filter(f => f.disliked)
+    .slice(0, 10)
+    .map(f => ({
+      title: f.recipe.title,
+      cuisine: f.recipe.cuisine,
+      ingredients: f.recipe.ingredients.map((i: { text: string }) => i.text.toLowerCase()),
+      cookTime: f.recipe.cookTime,
+    }));
+
+  const userPrefs = preferences
+    ? {
+        likedCuisines: preferences.likedCuisines.map(c => c.name),
+        dietaryRestrictions: preferences.dietaryRestrictions.map(d => d.name),
+        bannedIngredients: preferences.bannedIngredients.map(b => b.name),
+        preferredSuperfoods: preferences.preferredSuperfoods?.map(sf => sf.category) || [],
+        spiceLevel: preferences.spiceLevel || 'medium',
+        cookTimePreference: preferences.cookTimePreference || 30,
+      }
+    : undefined;
+
+  const baseMacros = macroGoals
+    ? { calories: macroGoals.calories, protein: macroGoals.protein, carbs: macroGoals.carbs, fat: macroGoals.fat }
+    : { calories: 2000, protein: 150, carbs: 200, fat: 67 };
+
+  const physProfileData = physicalProfile
+    ? { gender: physicalProfile.gender, age: physicalProfile.age, activityLevel: physicalProfile.activityLevel, fitnessGoal: physicalProfile.fitnessGoal }
+    : undefined;
+
+  const userFeedback = (likedRecipes.length > 0 || dislikedRecipes.length > 0)
+    ? { likedRecipes, dislikedRecipes }
+    : undefined;
+
+  return { userPrefs, baseMacros, physicalProfile, physProfileData, userFeedback };
+}
+
 // Generate new meal plan with AI-powered recipe generation
 export const generateMealPlan = async (req: Request, res: Response) => {
   try {
@@ -250,83 +369,28 @@ export const generateMealPlan = async (req: Request, res: Response) => {
       mealsPerDay = ['breakfast', 'lunch', 'dinner', 'snack'],
       maxTotalPrepTime = 60,
       maxDailyBudget,
+      planningMode,
     } = req.body;
 
-    console.log('🍽️ Generate Meal Plan:', { userId, days, mealsPerDay, maxTotalPrepTime, maxDailyBudget });
+    console.log('🍽️ Generate Meal Plan:', { userId, days, mealsPerDay, maxTotalPrepTime, maxDailyBudget, planningMode });
 
-    // Fetch user data for AI personalization (same pattern as aiRecipeController.generateDailyPlan)
-    const [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([
-      prisma.userPreferences.findUnique({
-        where: { userId },
-        include: {
-          likedCuisines: true,
-          dietaryRestrictions: true,
-          bannedIngredients: true,
-          preferredSuperfoods: true,
-        },
-      }),
-      prisma.macroGoals.findUnique({
-        where: { userId },
-      }),
-      prisma.userPhysicalProfile.findUnique({
-        where: { userId },
-      }),
-      prisma.recipeFeedback.findMany({
-        where: { userId },
-        include: {
-          recipe: {
-            include: {
-              ingredients: true,
-            },
-          },
-        },
-        take: 50,
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+    const { userPrefs, baseMacros, physicalProfile, physProfileData, userFeedback } = await fetchUserPlanningContext(userId);
 
-    // Process feedback into liked/disliked recipe patterns
-    const likedRecipes = feedbackData
-      .filter(f => f.liked)
-      .slice(0, 10)
-      .map(f => ({
-        title: f.recipe.title,
-        cuisine: f.recipe.cuisine,
-        ingredients: f.recipe.ingredients.map((i: { text: string }) => i.text.toLowerCase()),
-        cookTime: f.recipe.cookTime,
-      }));
-
-    const dislikedRecipes = feedbackData
-      .filter(f => f.disliked)
-      .slice(0, 10)
-      .map(f => ({
-        title: f.recipe.title,
-        cuisine: f.recipe.cuisine,
-        ingredients: f.recipe.ingredients.map((i: { text: string }) => i.text.toLowerCase()),
-        cookTime: f.recipe.cookTime,
-      }));
-
-    // Build user preferences for AI
-    const userPrefs = preferences
-      ? {
-          likedCuisines: preferences.likedCuisines.map(c => c.name),
-          dietaryRestrictions: preferences.dietaryRestrictions.map(d => d.name),
-          bannedIngredients: preferences.bannedIngredients.map(b => b.name),
-          preferredSuperfoods: preferences.preferredSuperfoods?.map(sf => sf.category) || [],
-          spiceLevel: preferences.spiceLevel || 'medium',
-          cookTimePreference: preferences.cookTimePreference || 30,
-        }
-      : undefined;
+    // Adjust macros based on goal mode
+    const adjustedMacros = adjustMacrosForGoalMode(baseMacros, planningMode, physicalProfile);
+    console.log('📊 Macro adjustment:', { planningMode, baseMacros, adjustedMacros });
 
     // Create meal plan
     const startDate = startDateStr ? new Date(startDateStr) : new Date();
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
 
+    const modeName = planningMode ? `${planningMode.charAt(0).toUpperCase() + planningMode.slice(1)} Plan` : 'AI Generated Plan';
     const mealPlan = await prisma.mealPlan.create({
       data: {
         userId,
-        name: 'AI Generated Plan',
+        name: modeName,
+        planningMode: planningMode || null,
         startDate,
         endDate,
         isActive: true,
@@ -354,16 +418,10 @@ export const generateMealPlan = async (req: Request, res: Response) => {
             userPreferences: userPrefs
               ? { ...userPrefs, likedCuisines: [dayCuisine] }
               : undefined,
-            macroGoals: macroGoals
-              ? { calories: macroGoals.calories, protein: macroGoals.protein, carbs: macroGoals.carbs, fat: macroGoals.fat }
-              : undefined,
-            physicalProfile: physicalProfile
-              ? { gender: physicalProfile.gender, age: physicalProfile.age, activityLevel: physicalProfile.activityLevel, fitnessGoal: physicalProfile.fitnessGoal }
-              : undefined,
+            macroGoals: adjustedMacros,
+            physicalProfile: physProfileData,
             cuisineOverride: dayCuisine,
-            userFeedback: (likedRecipes.length > 0 || dislikedRecipes.length > 0)
-              ? { likedRecipes, dislikedRecipes }
-              : undefined,
+            userFeedback,
           },
           {
             mealsToGenerate: mealsPerDay as Array<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert'>,
@@ -427,6 +485,7 @@ export const generateMealPlan = async (req: Request, res: Response) => {
       mealPlan: {
         id: mealPlan.id,
         name: mealPlan.name,
+        planningMode: mealPlan.planningMode,
         startDate: mealPlan.startDate,
         endDate: mealPlan.endDate,
       },
@@ -436,6 +495,141 @@ export const generateMealPlan = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error generating meal plan:', error);
     res.status(500).json({ error: 'Failed to generate meal plan', details: error.message });
+  }
+};
+
+// Regenerate a single day in an existing meal plan
+export const regenerateSingleDay = async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const { mealPlanId, date, mealsPerDay } = req.body;
+
+    if (!mealPlanId || !date) {
+      return res.status(400).json({ error: 'mealPlanId and date are required' });
+    }
+
+    // Verify the meal plan belongs to the user
+    const mealPlan = await prisma.mealPlan.findFirst({
+      where: { id: mealPlanId, userId },
+    });
+    if (!mealPlan) {
+      return res.status(404).json({ error: 'Meal plan not found' });
+    }
+
+    const targetDate = new Date(date);
+    const dayStart = new Date(targetDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(targetDate);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    // Delete existing meals for that day
+    await prisma.meal.deleteMany({
+      where: {
+        mealPlanId,
+        date: { gte: dayStart, lte: dayEnd },
+      },
+    });
+
+    // Fetch user context
+    const { userPrefs, baseMacros, physicalProfile, physProfileData, userFeedback } = await fetchUserPlanningContext(userId);
+
+    // Apply goal mode from the stored plan
+    const adjustedMacros = adjustMacrosForGoalMode(baseMacros, mealPlan.planningMode, physicalProfile);
+
+    // Get existing meals in the plan (for variety enforcement)
+    const existingMeals = await prisma.meal.findMany({
+      where: { mealPlanId },
+      include: { recipe: true },
+    });
+    const previousMealTitles = existingMeals
+      .filter(m => m.recipe)
+      .map(m => m.recipe!.title);
+
+    // Pick a cuisine that differs from surrounding days
+    const cuisines = ['Italian', 'Mexican', 'Asian', 'Mediterranean', 'American', 'Indian', 'Thai'];
+    const existingCuisines = existingMeals.filter(m => m.recipe).map(m => m.recipe!.cuisine);
+    const availableCuisines = cuisines.filter(c => !existingCuisines.includes(c));
+    const dayCuisine = availableCuisines.length > 0
+      ? availableCuisines[Math.floor(Math.random() * availableCuisines.length)]
+      : cuisines[Math.floor(Math.random() * cuisines.length)];
+
+    const mealsToGenerate = mealsPerDay || ['breakfast', 'lunch', 'dinner', 'snack'];
+
+    console.log(`🔄 Regenerating day ${date} in plan ${mealPlanId} — cuisine: ${dayCuisine}`);
+
+    const generatedPlan = await aiRecipeService.generateDailyMealPlan(
+      {
+        userId,
+        userPreferences: userPrefs
+          ? { ...userPrefs, likedCuisines: [dayCuisine] }
+          : undefined,
+        macroGoals: adjustedMacros,
+        physicalProfile: physProfileData,
+        cuisineOverride: dayCuisine,
+        userFeedback,
+      },
+      {
+        mealsToGenerate: mealsToGenerate as Array<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert'>,
+      }
+    );
+
+    // Save generated recipes and create meal rows
+    const dayMeals: any = {};
+    const mealTypes = Object.keys(generatedPlan) as Array<keyof typeof generatedPlan>;
+
+    for (const mealType of mealTypes) {
+      const recipe = generatedPlan[mealType];
+      if (!recipe) continue;
+
+      const savedRecipe = await aiRecipeService.saveGeneratedRecipe(recipe, userId);
+
+      await prisma.meal.create({
+        data: {
+          mealPlanId,
+          date: targetDate,
+          mealType,
+          recipeId: savedRecipe.id,
+        },
+      });
+
+      dayMeals[mealType] = {
+        id: savedRecipe.id,
+        title: recipe.title,
+        description: recipe.description,
+        cuisine: recipe.cuisine,
+        cookTime: recipe.cookTime,
+        difficulty: recipe.difficulty,
+        servings: recipe.servings,
+        calories: recipe.calories,
+        protein: recipe.protein,
+        carbs: recipe.carbs,
+        fat: recipe.fat,
+        imageUrl: (savedRecipe as any).imageUrl,
+      };
+    }
+
+    console.log(`✅ Day ${date} regenerated: ${Object.keys(dayMeals).length} meals`);
+
+    res.json({ success: true, date, meals: dayMeals });
+  } catch (error: any) {
+    console.error('Error regenerating day:', error);
+    res.status(500).json({ error: 'Failed to regenerate day', details: error.message });
+  }
+};
+
+// Get distinct recipe IDs the user has cooked (for "Surprise Me" badge)
+export const getCookedRecipeIds = async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const cooked = await prisma.cookingLog.findMany({
+      where: { userId },
+      select: { recipeId: true },
+      distinct: ['recipeId'],
+    });
+    res.json({ cookedRecipeIds: cooked.map(c => c.recipeId) });
+  } catch (error) {
+    console.error('Error getting cooked recipe IDs:', error);
+    res.status(500).json({ error: 'Failed to get cooked recipe IDs' });
   }
 };
 

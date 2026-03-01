@@ -817,7 +817,7 @@ export default function CookbookScreen() {
   // Loading state (only on first load with no cached data)
   if (cacheLoading && savedRecipes.length === 0 && allRecipes.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
         <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
           <View className="mb-3 flex-row items-center">
             <Text className="text-2xl mr-2">📚</Text>
@@ -833,7 +833,7 @@ export default function CookbookScreen() {
   // Offline with no cached data
   if (isOffline && allRecipes.length === 0 && !cacheLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
         <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
           <View className="mb-3 flex-row items-center">
             <Text className="text-2xl mr-2">📚</Text>

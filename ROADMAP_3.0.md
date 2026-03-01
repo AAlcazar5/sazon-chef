@@ -10,7 +10,7 @@
 |-------|------------|-----------|
 | **Group 1** | Smart Input | ✅ 0h |
 | **Group 2** | Cookbook & Cooking | ✅ 0h |
-| **Group 3** | Infrastructure & Scaling | 8h |
+| **Group 3** | Infrastructure & Scaling | ✅ codeable done · 🔄 infra pending |
 | **Group 4** | Meal Plan Advanced | 12h |
 | **Group 5** | Profile Advanced | 8h |
 | **Group 6** | Growth & Marketing | 9h |
@@ -48,43 +48,45 @@
 
 ---
 
-### **Group 3: Infrastructure & Scaling** 🏗️
+### **Group 3: Infrastructure & Scaling** 🏗️ ✅ CODEABLE PARTS COMPLETE
 
 *Infrastructure should be invisible. Users never think about it — but they feel it when it breaks. Rule: instrument first, optimize when numbers demand it. Don't pre-optimize for scale you don't have yet.*
 
 #### Security (Non-Negotiable) 🔒
-* **Rate Limiting** — Per-user and per-endpoint limits; tier-based (free vs Premium). Prevent abuse and runaway AI costs.
+* ✅ **Rate Limiting** — Per-user and per-endpoint limits; tier-based (free vs Premium). Prevent abuse and runaway AI costs.
   * 📍 Backend: `express-rate-limit` middleware, tiered by subscription status
-* **Input Validation & Sanitization** — All user inputs validated server-side. SQL injection and XSS prevention via Prisma parameterized queries + helmet.js security headers.
-  * 📍 Backend: `helmet` + `zod` schema validation on all routes
-* **CORS Configuration** — Lock down to known app origins only. No wildcard in production.
-* **DDoS Protection** — Cloudflare free tier in front of the API server. Bot detection on auth endpoints.
+* ✅ **Input Validation & Sanitization** — All user inputs validated server-side. SQL injection and XSS prevention via Prisma parameterized queries + helmet.js security headers.
+  * 📍 Backend: `helmet` + `zod` schema validation on all routes — `zodValidate()` middleware factory + schemas in `src/middleware/`
+* ✅ **CORS Configuration** — Lock down to known app origins only. No wildcard in production.
+  * 📍 Regex-based allowlist: `FRONTEND_URL` env var + `exp://`, `exps://`, localhost for Expo Go/EAS
+* 🔄 **DDoS Protection** — Cloudflare free tier in front of the API server. Bot detection on auth endpoints. *(infra — set up Cloudflare DNS)*
 
 #### Caching (High Impact, Low Effort) ⚡
-* **Redis via Upstash** — Serverless Redis (zero infra to manage). Cache recipe feeds, recommendation results, and subscription status checks. TTL-based invalidation — no event bus complexity.
+* 🔄 **Redis via Upstash** — Serverless Redis (zero infra to manage). Cache recipe feeds, recommendation results, and subscription status checks. TTL-based invalidation — no event bus complexity.
   * 📍 Backend: `ioredis` client + cache middleware wrapping expensive endpoints
   * Cache targets: home feed (5 min TTL), recipe search results (2 min TTL), user subscription status (10 min TTL)
-* **Image Performance** — Cloudinary already integrated for item photos. Extend to recipe images: auto WebP conversion, responsive sizes, lazy load on scroll.
+  * *(needs Upstash account + `UPSTASH_REDIS_URL` env var — stub in `.env.example`)*
+* 🔄 **Image Performance** — Cloudinary already integrated for item photos. Extend to recipe images: auto WebP conversion, responsive sizes, lazy load on scroll.
   * 📍 Frontend: `expo-image` with `contentFit="cover"` and `cachePolicy="memory-disk"` (already used — just ensure consistency across app)
 
 #### Monitoring (Know Before Users Do) 👀
-* **Error Tracking** — Sentry for both backend (Node) and frontend (Expo/React Native). Alert on new error types and spike in error rate. Zero config after install.
-  * 📍 `@sentry/node` + `@sentry/react-native`
-* **Health Check Endpoint** — `GET /api/health` returns DB status, cache status, and response time. Used by uptime monitor.
-  * 📍 Backend: Single endpoint, plain JSON, no auth required
-* **Uptime Monitoring** — BetterUptime or UptimeRobot (free tier) pings `/api/health` every 60s. Alerts via Slack/email on downtime.
+* ✅ **Error Tracking** — Sentry backend (`@sentry/node`) wired up. Gated on `SENTRY_DSN` env var — safe to deploy without it.
+  * 📍 `@sentry/node` done; `@sentry/react-native` (frontend) — pending
+* ✅ **Health Check Endpoint** — `GET /api/health` returns DB status, cache status, and response time. Used by uptime monitor.
+  * 📍 Backend: done — also keeps simple liveness probe at `GET /health`
+* 🔄 **Uptime Monitoring** — BetterUptime or UptimeRobot (free tier) pings `/api/health` every 60s. Alerts via Slack/email on downtime. *(external service setup)*
 
 #### Deployment & CI/CD 🚀
-* **GitHub Actions Pipeline** — On push to `main`: run tests → build → deploy to production. On PR: run tests only. No manual deploys.
-  * 📍 `.github/workflows/deploy.yml`
-* **Staging Environment** — Mirror of production. All PRs deployed to staging first. Test Stripe webhooks, push notifications, and AI integrations against real services.
-* **Secrets Management** — All env vars in GitHub Secrets and production host env. Never in code. `.env.example` documents required vars.
+* ✅ **GitHub Actions Pipeline** — On push to `main`: run tests + tsc. On PR: run tests only.
+  * 📍 `.github/workflows/ci.yml` — backend + frontend jobs
+* 🔄 **Staging Environment** — Mirror of production. All PRs deployed to staging first. *(infra — needs hosting account)*
+* ✅ **Secrets Management** — `.env.example` documents all required vars. Add secrets to GitHub Secrets + production host env.
 
 #### Database (Optimize What You Have) 🗄️
-* **Indexes on Hot Queries** — Add indexes for the queries that run on every page load: recipe lookups by userId, meal plan by userId+weekStart, shopping list by userId.
-  * 📍 Prisma schema: `@@index([userId])` on all user-scoped models
-* **Backup** — Automated daily database backups to cloud storage. Retention: 7 days. Test restore quarterly.
-  * 📍 Simple cron job dumping SQLite → S3/Cloudflare R2
+* ✅ **Indexes on Hot Queries** — Added indexes for page-load queries: recipe by userId, meal plan by userId+startDate+isActive, shopping list by userId+isActive.
+  * 📍 Prisma schema updated + `npx prisma db push` applied
+* 🔄 **Backup** — Automated daily database backups to cloud storage. Retention: 7 days. Test restore quarterly.
+  * 📍 Simple cron job dumping SQLite → S3/Cloudflare R2 *(needs cloud storage account)*
 
 ---
 

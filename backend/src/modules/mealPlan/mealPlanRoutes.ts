@@ -3,6 +3,8 @@ import {
   getDailySuggestion,
   getWeeklyPlan,
   generateMealPlan,
+  regenerateSingleDay,
+  getCookedRecipeIds,
   getMealHistory,
   addRecipeToMeal,
   quickLogMeal,
@@ -53,6 +55,8 @@ router.post('/duplicate', duplicateMeals);
 router.get('/daily', getDailySuggestion);
 router.get('/weekly', getWeeklyPlan);
 router.post('/generate', generateMealPlan);
+router.post('/regenerate-day', regenerateSingleDay);
+router.get('/cooked-recipe-ids', getCookedRecipeIds);
 router.get('/history', getMealHistory);
 router.post('/add-recipe', addRecipeToMeal);
 router.post('/quick-log', quickLogMeal);

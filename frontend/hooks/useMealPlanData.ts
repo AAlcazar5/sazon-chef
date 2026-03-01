@@ -1,7 +1,7 @@
 // frontend/hooks/useMealPlanData.ts
 // Custom hook for managing meal plan data loading and state
 
-import { useState, useRef, Dispatch, SetStateAction } from 'react';
+import { useState, useRef, Dispatch, SetStateAction, MutableRefObject } from 'react';
 import { mealPlanApi, mealPrepApi } from '../lib/api';
 import type { WeeklyPlan, DailySuggestion } from '../types';
 
@@ -64,6 +64,8 @@ interface UseMealPlanDataReturn {
   setMealNotes: Dispatch<SetStateAction<Record<string, string>>>;
   /** Update weekly plan (supports functional updates) */
   setWeeklyPlan: Dispatch<SetStateAction<any | null>>;
+  /** Set of recipe IDs the user has cooked (for "Surprise Me" badge) */
+  cookedRecipeIds: Set<string>;
 }
 
 /**
@@ -109,8 +111,21 @@ export function useMealPlanData({
   const [loadingThawingReminders, setLoadingThawingReminders] = useState(false);
   const [mealCompletionStatus, setMealCompletionStatus] = useState<Record<string, boolean>>({});
   const [mealNotes, setMealNotes] = useState<Record<string, string>>({});
+  const [cookedRecipeIds, setCookedRecipeIds] = useState<Set<string>>(new Set());
 
   const weekDates = getWeekDates(selectedDate);
+
+  // Fetch cooked recipe IDs once on mount (for "Surprise Me" badge)
+  const cookedLoadedRef = useRef(false);
+  if (!cookedLoadedRef.current) {
+    cookedLoadedRef.current = true;
+    mealPlanApi.getCookedRecipeIds()
+      .then((res: any) => {
+        const ids = res.data?.cookedRecipeIds || [];
+        setCookedRecipeIds(new Set(ids));
+      })
+      .catch((err: any) => console.error('Failed to load cooked recipe IDs:', err));
+  }
 
   /**
    * Load thawing reminders for upcoming days
@@ -308,5 +323,6 @@ export function useMealPlanData({
     setMealCompletionStatus,
     setMealNotes,
     setWeeklyPlan,
+    cookedRecipeIds,
   };
 }

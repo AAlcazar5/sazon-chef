@@ -11,6 +11,7 @@ import AnimatedEmptyState from '../ui/AnimatedEmptyState';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { MealPlanEmptyStates } from '../../constants/EmptyStates';
+import SurpriseBadge from './SurpriseBadge';
 import type { GroupedMeals } from '../../hooks/useMealPlanUI';
 
 interface CompactMealViewProps {
@@ -30,6 +31,8 @@ interface CompactMealViewProps {
   onRemoveMeal: (hour: number, mealIndex: number) => void;
   /** Generate full day meals */
   onGenerateFullDay: () => void;
+  /** Set of recipe IDs the user has cooked before */
+  cookedRecipeIds?: Set<string>;
 }
 
 const MEAL_TYPES = [
@@ -58,6 +61,7 @@ function CompactMealView({
   onAddMealToHour,
   onRemoveMeal,
   onGenerateFullDay,
+  cookedRecipeIds,
 }: CompactMealViewProps) {
   return (
     <View className="px-4 mb-4" style={{ width: '100%' }}>
@@ -114,9 +118,16 @@ function CompactMealView({
                         </View>
                       )}
                       <View className="flex-1">
-                        <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                          {meal.name || meal.title}
-                        </Text>
+                        <View className="flex-row items-center">
+                          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                            {meal.name || meal.title}
+                          </Text>
+                          {cookedRecipeIds && (
+                            <View style={{ marginLeft: 6 }}>
+                              <SurpriseBadge recipeId={meal.id} cookedRecipeIds={cookedRecipeIds} isDark={isDark} />
+                            </View>
+                          )}
+                        </View>
                         <Text className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           {formatTime(hour, 0)} • {meal.calories} cal
                         </Text>
