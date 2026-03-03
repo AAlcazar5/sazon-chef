@@ -9,6 +9,11 @@ jest.mock('../../lib/api', () => ({
     put: jest.fn(),
   },
   setAuthToken: jest.fn(),
+  setLogoutCallback: jest.fn(),
+  notificationsApi: {
+    registerToken: jest.fn(),
+    unregisterToken: jest.fn(),
+  },
 }));
 jest.mock('expo-secure-store');
 
