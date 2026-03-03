@@ -12,6 +12,17 @@ import { cacheService } from '@/utils/cacheService';
 // Note: Request.user type is declared in authMiddleware.ts
 // This ensures consistency across the application
 
+// Map user's 4-level skill to scoring system's 3-level
+function mapSkillLevel(level: string | null | undefined): 'beginner' | 'intermediate' | 'advanced' {
+  switch (level) {
+    case 'beginner': return 'beginner';
+    case 'home_cook': return 'intermediate';
+    case 'confident':
+    case 'chef': return 'advanced';
+    default: return 'intermediate';
+  }
+}
+
 // Helper function to get user behavioral data
 export async function getUserBehaviorData(userId: string) {
   try {
@@ -462,7 +473,7 @@ export const recipeController = {
       };
 
       const userKitchenProfile = {
-        cookingSkill: 'intermediate' as const,
+        cookingSkill: mapSkillLevel((userPreferences as any)?.cookingSkillLevel),
         preferredCookTime: 30,
         kitchenEquipment: [
           'stovetop', 'oven', 'microwave', 'refrigerator', 'freezer',
@@ -1506,7 +1517,7 @@ export const recipeController = {
       };
       
       const userKitchenProfile = {
-        cookingSkill: 'intermediate' as const,
+        cookingSkill: mapSkillLevel((userPreferences as any)?.cookingSkillLevel),
         preferredCookTime: 30,
         kitchenEquipment: [
           'stovetop', 'oven', 'microwave', 'refrigerator', 'freezer',
@@ -2131,7 +2142,7 @@ export const recipeController = {
       };
       
       const userKitchenProfile = {
-        cookingSkill: 'intermediate' as const,
+        cookingSkill: mapSkillLevel((userPreferences as any)?.cookingSkillLevel),
         preferredCookTime: 30,
         kitchenEquipment: [
           'stovetop', 'oven', 'microwave', 'refrigerator', 'freezer',
@@ -4356,7 +4367,7 @@ export const recipeController = {
         urgency: 'medium' as const,
       };
       const userKitchenProfile = {
-        cookingSkill: 'intermediate' as const,
+        cookingSkill: mapSkillLevel((userPreferences as any)?.cookingSkillLevel),
         preferredCookTime: 30,
         kitchenEquipment: ['stovetop', 'oven', 'microwave', 'refrigerator', 'freezer', 'knife', 'cutting board', 'mixing bowl', 'measuring cups', 'measuring spoons', 'whisk', 'spatula', 'tongs'],
         dietaryRestrictions: [] as string[],

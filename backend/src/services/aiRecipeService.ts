@@ -9,10 +9,15 @@ interface RecipeGenerationParams {
   userPreferences?: {
     likedCuisines: string[];
     dietaryRestrictions: string[];
+    strictDietaryRestrictions?: string[];
+    preferToAvoidRestrictions?: string[];
     bannedIngredients: string[];
-    preferredSuperfoods?: string[]; // Superfood category IDs (e.g., 'beans', 'oliveOil', 'salmon')
+    preferredSuperfoods?: string[];
     spiceLevel?: string;
     cookTimePreference?: number;
+    cookingSkillLevel?: string | null;
+    weekdayCookTime?: number | null;
+    weekendCookTime?: number | null;
   };
   macroGoals?: {
     calories: number;
@@ -543,13 +548,23 @@ export class AIRecipeService {
     // Updated when user completes onboarding or updates preferences
     // ============================================
     
-    // Dietary restrictions
-    if (params.userPreferences?.dietaryRestrictions && params.userPreferences.dietaryRestrictions.length > 0) {
+    // Dietary restrictions — strict vs prefer_avoid
+    const strictRestrictions = params.userPreferences?.strictDietaryRestrictions || params.userPreferences?.dietaryRestrictions || [];
+    const preferToAvoid = params.userPreferences?.preferToAvoidRestrictions || [];
+    if (strictRestrictions.length > 0) {
       parts.push(
         ``,
-        `DIETARY RESTRICTIONS (from user profile):`,
-        `The recipe MUST comply with: ${params.userPreferences.dietaryRestrictions.join(', ')}.`,
+        `STRICT DIETARY RESTRICTIONS (from user profile):`,
+        `The recipe MUST comply with: ${strictRestrictions.join(', ')}.`,
         `Do NOT include any ingredients that violate these restrictions.`
+      );
+    }
+    if (preferToAvoid.length > 0) {
+      parts.push(
+        ``,
+        `DIETARY PREFERENCES (prefer to avoid):`,
+        `Try to avoid these if possible, but they are not strict requirements: ${preferToAvoid.join(', ')}.`,
+        `If used, note them in the recipe description.`
       );
     }
 

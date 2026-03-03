@@ -1,5 +1,5 @@
 // frontend/components/profile/CulinaryPreferencesCard.tsx
-// Culinary preferences display card with tags and recipe roulette button
+// Culinary preferences display card with tags, skill level, cooking time budgets, and dietary severity
 
 import { View, Text } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -8,7 +8,14 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
-import type { UserProfile } from '../../types';
+import type { UserProfile, CookingSkillLevel } from '../../types';
+
+const SKILL_LABELS: Record<CookingSkillLevel, string> = {
+  beginner: 'Beginner',
+  home_cook: 'Home Cook',
+  confident: 'Confident',
+  chef: 'Chef',
+};
 
 interface CulinaryPreferencesCardProps {
   profile: UserProfile | null;
@@ -55,6 +62,42 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
         </HapticTouchableOpacity>
       ) : (
         <View className="space-y-3">
+          {/* Dietary Restrictions with Severity */}
+          <View>
+            <Text className="text-sm mb-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Dietary Restrictions</Text>
+            <View className="flex-row flex-wrap">
+              {prefs.dietaryRestrictions && prefs.dietaryRestrictions.length > 0 ? (
+                prefs.dietaryRestrictions.map((restriction: any, index: number) => {
+                  const name = typeof restriction === 'string' ? restriction : restriction.name;
+                  const severity = typeof restriction === 'string' ? 'strict' : (restriction.severity || 'strict');
+                  const capitalized = name.replace(/\b\w/g, (char: string) => char.toUpperCase());
+                  const isStrict = severity === 'strict';
+                  return (
+                    <View
+                      key={index}
+                      className="px-2 py-1 rounded-full mr-2 mb-2 flex-row items-center"
+                      style={{
+                        backgroundColor: isStrict
+                          ? (isDark ? Colors.secondaryRedLight : Colors.secondaryRedLight)
+                          : (isDark ? '#D97706' : '#F59E0B'),
+                      }}
+                    >
+                      <Text className="text-xs" style={{ color: '#FFFFFF' }}>
+                        {capitalized}
+                      </Text>
+                      <Text className="text-[10px] ml-1 opacity-80" style={{ color: '#FFFFFF' }}>
+                        {isStrict ? '(strict)' : '(avoid)'}
+                      </Text>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text className="text-xs" style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}>None set</Text>
+              )}
+            </View>
+          </View>
+
+          {/* Banned Ingredients */}
           <View>
             <Text className="text-sm mb-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Banned Ingredients</Text>
             <View className="flex-row flex-wrap">
@@ -76,6 +119,7 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
             </View>
           </View>
 
+          {/* Liked Cuisines */}
           <View>
             <Text className="text-sm mb-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Liked Cuisines</Text>
             <View className="flex-row flex-wrap">
@@ -97,6 +141,7 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
             </View>
           </View>
 
+          {/* Preferred Superfoods */}
           <View>
             <Text className="text-sm mb-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Preferred Superfoods</Text>
             <View className="flex-row flex-wrap">
@@ -118,12 +163,33 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
             </View>
           </View>
 
+          {/* Cooking Skill Level */}
+          <View className="flex-row justify-between items-center">
+            <Text className="text-gray-600 dark:text-gray-200">Cooking Skill</Text>
+            <Text className="font-semibold text-gray-900 dark:text-gray-100">
+              {prefs.cookingSkillLevel ? SKILL_LABELS[prefs.cookingSkillLevel as CookingSkillLevel] || prefs.cookingSkillLevel : 'Not set'}
+            </Text>
+          </View>
+
+          {/* Max Cook Time */}
           <View className="flex-row justify-between items-center">
             <Text className="text-gray-600 dark:text-gray-200">Max Cook Time</Text>
             <Text className="font-semibold text-gray-900 dark:text-gray-100">
               {prefs.cookTimePreference ? `${prefs.cookTimePreference} min` : 'Not set'}
             </Text>
           </View>
+
+          {/* Weekday / Weekend Cook Time */}
+          {(prefs.weekdayCookTime || prefs.weekendCookTime) && (
+            <View className="flex-row justify-between items-center">
+              <Text className="text-gray-600 dark:text-gray-200">Cook Time Budget</Text>
+              <Text className="font-semibold text-gray-900 dark:text-gray-100">
+                {prefs.weekdayCookTime ? `${prefs.weekdayCookTime}m` : '—'} weekday
+                {' · '}
+                {prefs.weekendCookTime ? `${prefs.weekendCookTime}m` : '—'} weekend
+              </Text>
+            </View>
+          )}
         </View>
       )}
     </View>

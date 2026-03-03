@@ -11,8 +11,8 @@
 | **Group 1** | Smart Input | ✅ 0h |
 | **Group 2** | Cookbook & Cooking | ✅ 0h |
 | **Group 3** | Infrastructure & Scaling | ✅ codeable done · 🔄 infra pending |
-| **Group 4** | Meal Plan Advanced | 12h |
-| **Group 5** | Profile Advanced | 8h |
+| **Group 4** | Meal Plan Advanced | ✅ 0h |
+| **Group 5** | Profile Advanced | ✅ 0h |
 | **Group 6** | Growth & Marketing | 9h |
 | **Group 7** | Stripe Integration & Subscriptions | 19h |
 | **Group 8** | Revenue Optimization | 3h |
@@ -90,7 +90,7 @@
 
 ---
 
-### **Group 4: Meal Plan Advanced** 📅
+### **Group 4: Meal Plan Advanced** 📅 ✅ COMPLETE
 
 #### AI-Powered Plan Generation 🤖
 
@@ -108,7 +108,7 @@
 
 ---
 
-### **Group 5: Profile Advanced** 👤
+### **Group 5: Profile Advanced** 👤 ✅ COMPLETE
 
 #### Dietary Preferences — The Safety Layer 🛡️
 

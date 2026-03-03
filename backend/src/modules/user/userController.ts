@@ -200,7 +200,10 @@ export const userController = {
         dietaryRestrictions,
         preferredSuperfoods,
         cookTimePreference,
-        spiceLevel
+        spiceLevel,
+        cookingSkillLevel,
+        weekdayCookTime,
+        weekendCookTime,
       } = req.body;
       
       // First, get existing preferences to handle updates
@@ -216,7 +219,10 @@ export const userController = {
 
       const updateData: any = {
         ...(cookTimePreference && { cookTimePreference }),
-        ...(spiceLevel && { spiceLevel })
+        ...(spiceLevel && { spiceLevel }),
+        ...(cookingSkillLevel !== undefined && { cookingSkillLevel }),
+        ...(weekdayCookTime !== undefined && { weekdayCookTime }),
+        ...(weekendCookTime !== undefined && { weekendCookTime }),
       };
 
       // Handle relational updates if provided
@@ -237,7 +243,12 @@ export const userController = {
       if (dietaryRestrictions) {
         updateData.dietaryRestrictions = {
           deleteMany: {},
-          create: dietaryRestrictions.map((name: string) => ({ name }))
+          create: dietaryRestrictions.map((item: string | { name: string; severity?: string }) => {
+            if (typeof item === 'string') {
+              return { name: item, severity: 'strict' };
+            }
+            return { name: item.name, severity: item.severity || 'strict' };
+          })
         };
       }
 
@@ -255,9 +266,17 @@ export const userController = {
           userId,
           cookTimePreference: cookTimePreference || 30,
           spiceLevel: spiceLevel || 'medium',
+          cookingSkillLevel: cookingSkillLevel || null,
+          weekdayCookTime: weekdayCookTime ?? null,
+          weekendCookTime: weekendCookTime ?? null,
           bannedIngredients: { create: bannedIngredients?.map((name: string) => ({ name })) || [] },
           likedCuisines: { create: likedCuisines?.map((name: string) => ({ name })) || [] },
-          dietaryRestrictions: { create: dietaryRestrictions?.map((name: string) => ({ name })) || [] },
+          dietaryRestrictions: {
+            create: dietaryRestrictions?.map((item: string | { name: string; severity?: string }) => {
+              if (typeof item === 'string') return { name: item, severity: 'strict' };
+              return { name: item.name, severity: item.severity || 'strict' };
+            }) || []
+          },
           preferredSuperfoods: { create: preferredSuperfoods?.map((category: string) => ({ category })) || [] }
         },
         include: {
@@ -357,6 +376,11 @@ export const userController = {
           goalUpdates: false,
           goalUpdateDay: 'Monday',
           goalUpdateTime: '09:00',
+          shoppingReminders: true,
+          weeklyInsights: true,
+          quietHoursStart: null,
+          quietHoursEnd: null,
+          weekendsOff: false,
         });
       }
 
@@ -369,6 +393,11 @@ export const userController = {
         goalUpdates: settings.goalUpdates,
         goalUpdateDay: settings.goalUpdateDay,
         goalUpdateTime: settings.goalUpdateTime,
+        shoppingReminders: settings.shoppingReminders,
+        weeklyInsights: settings.weeklyInsights,
+        quietHoursStart: settings.quietHoursStart,
+        quietHoursEnd: settings.quietHoursEnd,
+        weekendsOff: settings.weekendsOff,
       });
     } catch (error) {
       console.error('Get notifications error:', error);
@@ -387,31 +416,35 @@ export const userController = {
         goalUpdates,
         goalUpdateDay,
         goalUpdateTime,
+        shoppingReminders,
+        weeklyInsights,
+        quietHoursStart,
+        quietHoursEnd,
+        weekendsOff,
       } = req.body;
 
       const timesString = Array.isArray(mealReminderTimes)
         ? mealReminderTimes.join(',')
         : '08:00,12:00,18:00';
 
+      const notifData = {
+        mealReminders: mealReminders ?? true,
+        mealReminderTimes: timesString,
+        newRecipes: newRecipes ?? true,
+        goalUpdates: goalUpdates ?? false,
+        goalUpdateDay: goalUpdateDay ?? 'Monday',
+        goalUpdateTime: goalUpdateTime ?? '09:00',
+        shoppingReminders: shoppingReminders ?? true,
+        weeklyInsights: weeklyInsights ?? true,
+        quietHoursStart: quietHoursStart ?? null,
+        quietHoursEnd: quietHoursEnd ?? null,
+        weekendsOff: weekendsOff ?? false,
+      };
+
       const settings = await prisma.notificationSettings.upsert({
         where: { userId },
-        update: {
-          mealReminders: mealReminders ?? true,
-          mealReminderTimes: timesString,
-          newRecipes: newRecipes ?? true,
-          goalUpdates: goalUpdates ?? false,
-          goalUpdateDay: goalUpdateDay ?? 'Monday',
-          goalUpdateTime: goalUpdateTime ?? '09:00',
-        },
-        create: {
-          userId,
-          mealReminders: mealReminders ?? true,
-          mealReminderTimes: timesString,
-          newRecipes: newRecipes ?? true,
-          goalUpdates: goalUpdates ?? false,
-          goalUpdateDay: goalUpdateDay ?? 'Monday',
-          goalUpdateTime: goalUpdateTime ?? '09:00',
-        },
+        update: notifData,
+        create: { userId, ...notifData },
       });
 
       res.json({
@@ -425,6 +458,11 @@ export const userController = {
           goalUpdates: settings.goalUpdates,
           goalUpdateDay: settings.goalUpdateDay,
           goalUpdateTime: settings.goalUpdateTime,
+          shoppingReminders: settings.shoppingReminders,
+          weeklyInsights: settings.weeklyInsights,
+          quietHoursStart: settings.quietHoursStart,
+          quietHoursEnd: settings.quietHoursEnd,
+          weekendsOff: settings.weekendsOff,
         },
       });
     } catch (error) {
