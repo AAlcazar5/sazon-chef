@@ -337,10 +337,19 @@ async function fetchUserPlanningContext(userId: string) {
     ? {
         likedCuisines: preferences.likedCuisines.map(c => c.name),
         dietaryRestrictions: preferences.dietaryRestrictions.map(d => d.name),
+        strictDietaryRestrictions: preferences.dietaryRestrictions
+          .filter(d => d.severity === 'strict')
+          .map(d => d.name),
+        preferToAvoidRestrictions: preferences.dietaryRestrictions
+          .filter(d => d.severity === 'prefer_avoid')
+          .map(d => d.name),
         bannedIngredients: preferences.bannedIngredients.map(b => b.name),
         preferredSuperfoods: preferences.preferredSuperfoods?.map(sf => sf.category) || [],
         spiceLevel: preferences.spiceLevel || 'medium',
         cookTimePreference: preferences.cookTimePreference || 30,
+        cookingSkillLevel: preferences.cookingSkillLevel || null,
+        weekdayCookTime: preferences.weekdayCookTime || null,
+        weekendCookTime: preferences.weekendCookTime || null,
       }
     : undefined;
 

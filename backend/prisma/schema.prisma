@@ -76,6 +76,11 @@ model UserPreferences {
   cookTimePreference  Int // in minutes
   spiceLevel          String? // mild, medium, spicy
 
+  // Cooking context (Group 5: Profile Advanced)
+  cookingSkillLevel   String? // beginner | home_cook | confident | chef
+  weekdayCookTime     Int?    // max cooking minutes on weekdays
+  weekendCookTime     Int?    // max cooking minutes on weekends
+
   // Cost tracking & budget preferences (Phase 6, Group 13)
   maxRecipeCost      Float? // Maximum cost per recipe
   maxMealCost        Float? // Maximum cost per meal
@@ -118,6 +123,7 @@ model DietaryRestriction {
   preference   UserPreferences? @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
   preferenceId String?
   name         String
+  severity     String           @default("strict") // strict | prefer_avoid
 
   @@map("dietary_restrictions")
 }
@@ -816,6 +822,13 @@ model NotificationSettings {
   goalUpdates       Boolean @default(false)
   goalUpdateDay     String  @default("Monday")
   goalUpdateTime    String  @default("09:00")
+
+  // Group 5: Enhanced notification controls
+  shoppingReminders Boolean @default(true)
+  weeklyInsights    Boolean @default(true)
+  quietHoursStart   String? // HH:mm, e.g. "22:00"
+  quietHoursEnd     String? // HH:mm, e.g. "08:00"
+  weekendsOff       Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -321,6 +321,103 @@ export default function NotificationsCard({
               </View>
             )}
           </View>
+
+          {/* Shopping Reminders */}
+          <View className="flex-row justify-between items-center">
+            <View className="flex-1 mr-3">
+              <Text className="text-gray-900 dark:text-gray-100 font-medium">Shopping Reminders</Text>
+              <Text className="text-gray-500 dark:text-gray-200 text-sm">When your list is ready</Text>
+            </View>
+            <View className="flex-row items-center">
+              {updatingNotification === 'shoppingReminders' && (
+                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+              )}
+              <Switch
+                value={notifications.shoppingReminders ?? true}
+                onValueChange={() => onToggleNotification('shoppingReminders')}
+                disabled={updatingNotification !== null}
+                trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
+                thumbColor={(notifications.shoppingReminders ?? true) ? '#FFFFFF' : '#F3F4F6'}
+              />
+            </View>
+          </View>
+
+          {/* Weekly Insights */}
+          <View className="flex-row justify-between items-center">
+            <View className="flex-1 mr-3">
+              <Text className="text-gray-900 dark:text-gray-100 font-medium">Weekly Insights</Text>
+              <Text className="text-gray-500 dark:text-gray-200 text-sm">Your week at a glance</Text>
+            </View>
+            <View className="flex-row items-center">
+              {updatingNotification === 'weeklyInsights' && (
+                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+              )}
+              <Switch
+                value={notifications.weeklyInsights ?? true}
+                onValueChange={() => onToggleNotification('weeklyInsights')}
+                disabled={updatingNotification !== null}
+                trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
+                thumbColor={(notifications.weeklyInsights ?? true) ? '#FFFFFF' : '#F3F4F6'}
+              />
+            </View>
+          </View>
+
+          {/* Quiet Hours */}
+          <View>
+            <View className="flex-row justify-between items-center">
+              <View className="flex-1 mr-3">
+                <Text className="text-gray-900 dark:text-gray-100 font-medium">Quiet Hours</Text>
+                <Text className="text-gray-500 dark:text-gray-200 text-sm">No notifications during set hours</Text>
+              </View>
+              <View className="flex-row items-center">
+                {updatingNotification === 'quietHoursStart' && (
+                  <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+                )}
+                <Switch
+                  value={!!(notifications.quietHoursStart && notifications.quietHoursEnd)}
+                  onValueChange={() => {
+                    if (notifications.quietHoursStart && notifications.quietHoursEnd) {
+                      // Disable quiet hours
+                      onToggleNotification('quietHoursStart');
+                    } else {
+                      // Enable with defaults 10pm-8am
+                      onToggleNotification('quietHoursStart');
+                    }
+                  }}
+                  disabled={updatingNotification !== null}
+                  trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
+                  thumbColor={(notifications.quietHoursStart && notifications.quietHoursEnd) ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+            </View>
+            {notifications.quietHoursStart && notifications.quietHoursEnd && (
+              <View className="mt-2 ml-1">
+                <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatTime(notifications.quietHoursStart)} — {formatTime(notifications.quietHoursEnd)}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Weekends Off */}
+          <View className="flex-row justify-between items-center">
+            <View className="flex-1 mr-3">
+              <Text className="text-gray-900 dark:text-gray-100 font-medium">Weekends Off</Text>
+              <Text className="text-gray-500 dark:text-gray-200 text-sm">No notifications on weekends</Text>
+            </View>
+            <View className="flex-row items-center">
+              {updatingNotification === 'weekendsOff' && (
+                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+              )}
+              <Switch
+                value={notifications.weekendsOff ?? false}
+                onValueChange={() => onToggleNotification('weekendsOff')}
+                disabled={updatingNotification !== null}
+                trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
+                thumbColor={(notifications.weekendsOff ?? false) ? '#FFFFFF' : '#F3F4F6'}
+              />
+            </View>
+          </View>
         </View>
       </View>
 

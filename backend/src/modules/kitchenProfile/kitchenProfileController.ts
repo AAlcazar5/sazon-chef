@@ -3,6 +3,16 @@ import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/utils/authHelper';
 
+function mapSkillLevel(level: string | null | undefined): 'beginner' | 'intermediate' | 'advanced' {
+  switch (level) {
+    case 'beginner': return 'beginner';
+    case 'home_cook': return 'intermediate';
+    case 'confident':
+    case 'chef': return 'advanced';
+    default: return 'intermediate';
+  }
+}
+
 export const kitchenProfileController = {
   // Get user's kitchen profile
   async getKitchenProfile(req: Request, res: Response) {
@@ -18,7 +28,7 @@ export const kitchenProfileController = {
       // Default kitchen profile
       const defaultProfile = {
         availableIngredients: [],
-        cookingSkill: 'intermediate',
+        cookingSkill: mapSkillLevel((userPreferences as any)?.cookingSkillLevel),
         preferredCookTime: 30,
         kitchenEquipment: [
           'stovetop', 'oven', 'microwave', 'refrigerator', 'freezer',
@@ -204,7 +214,7 @@ export const kitchenProfileController = {
       // Default kitchen profile for now
       const userKitchenProfile = {
         availableIngredients: [],
-        cookingSkill: 'intermediate' as const,
+        cookingSkill: mapSkillLevel((userPreferences as any)?.cookingSkillLevel),
         preferredCookTime: 30,
         kitchenEquipment: [
           'stovetop', 'oven', 'microwave', 'refrigerator', 'freezer',
@@ -251,10 +261,15 @@ export const kitchenProfileController = {
         limit = '10'
       } = req.query;
       
+      // Get user's cooking skill preference
+      const userPreferences = await prisma.userPreferences.findFirst({
+        where: { userId }
+      });
+
       // Get user's kitchen profile
       const userKitchenProfile = {
         availableIngredients: [],
-        cookingSkill: 'intermediate' as const,
+        cookingSkill: mapSkillLevel((userPreferences as any)?.cookingSkillLevel),
         preferredCookTime: parseInt(availableTime as string),
         kitchenEquipment: [
           'stovetop', 'oven', 'microwave', 'refrigerator', 'freezer',

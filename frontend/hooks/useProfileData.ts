@@ -54,6 +54,11 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
     goalUpdates: false,
     goalUpdateDay: 'Monday',
     goalUpdateTime: '09:00',
+    shoppingReminders: true,
+    weeklyInsights: true,
+    quietHoursStart: null,
+    quietHoursEnd: null,
+    weekendsOff: false,
   });
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [updatingNotification, setUpdatingNotification] = useState<keyof UserNotifications | null>(null);
@@ -585,7 +590,20 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
     if (updatingNotification) return;
 
     const previousNotifications = { ...notifications };
-    const updatedNotifications = { ...notifications, [key]: !notifications[key] };
+    let updatedNotifications = { ...notifications };
+
+    // Special handling for quiet hours toggle
+    if (key === 'quietHoursStart') {
+      if (notifications.quietHoursStart && notifications.quietHoursEnd) {
+        // Disable quiet hours
+        updatedNotifications = { ...updatedNotifications, quietHoursStart: null, quietHoursEnd: null };
+      } else {
+        // Enable with defaults 10pm-8am
+        updatedNotifications = { ...updatedNotifications, quietHoursStart: '22:00', quietHoursEnd: '08:00' };
+      }
+    } else {
+      updatedNotifications = { ...updatedNotifications, [key]: !notifications[key] };
+    }
 
     setUpdatingNotification(key);
     setNotifications(updatedNotifications);

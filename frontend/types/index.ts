@@ -170,13 +170,23 @@ export interface MacroGoals {
   fat: number;
 }
 
+export interface DietaryRestrictionItem {
+  name: string;
+  severity: 'strict' | 'prefer_avoid';
+}
+
+export type CookingSkillLevel = 'beginner' | 'home_cook' | 'confident' | 'chef';
+
 export interface UserPreferences {
   bannedIngredients: string[];
   likedCuisines: string[];
-  dietaryRestrictions: string[];
+  dietaryRestrictions: (string | DietaryRestrictionItem)[];
   cookTimePreference: number; // in minutes
   healthGoals?: string[]; // e.g., ['weight-loss', 'muscle-gain', 'maintenance']
   spiceLevel?: 'mild' | 'medium' | 'spicy';
+  cookingSkillLevel?: CookingSkillLevel;
+  weekdayCookTime?: number; // max minutes on weekdays
+  weekendCookTime?: number; // max minutes on weekends
 }
 
 export interface UserProfile {
@@ -220,6 +230,11 @@ export interface UserNotifications {
   goalUpdates: boolean;
   goalUpdateDay?: string; // Day of week for goal updates (e.g., "Monday")
   goalUpdateTime?: string; // Time for goal updates in HH:mm format
+  shoppingReminders: boolean;
+  weeklyInsights: boolean;
+  quietHoursStart?: string | null; // HH:mm
+  quietHoursEnd?: string | null; // HH:mm
+  weekendsOff: boolean;
   // History tracking
   lastMealReminderSent?: string; // ISO timestamp
   lastNewRecipeSent?: string; // ISO timestamp
@@ -514,9 +529,12 @@ export interface RecipeFormData {
 export interface UserPreferencesFormData {
   bannedIngredients: string[];
   likedCuisines: string[];
-  dietaryRestrictions: string[];
+  dietaryRestrictions: (string | DietaryRestrictionItem)[];
   cookTimePreference: number;
   healthGoals?: string[];
+  cookingSkillLevel?: CookingSkillLevel;
+  weekdayCookTime?: number;
+  weekendCookTime?: number;
   spiceLevel?: 'mild' | 'medium' | 'spicy';
 }
 

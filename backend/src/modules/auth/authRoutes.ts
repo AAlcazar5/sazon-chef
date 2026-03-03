@@ -19,6 +19,7 @@ router.post('/reset-password', authLimiter, authController.resetPassword);
 router.get('/profile', authenticateToken, authController.getProfile);
 router.put('/profile', authenticateToken, authController.updateProfile);
 router.put('/password', authenticateToken, authController.changePassword);
+router.delete('/account', authenticateToken, authController.deleteAccount);
 router.post('/social/link', authenticateToken, linkSocialAccount);
 router.delete('/social/unlink', authenticateToken, unlinkSocialAccount);
 

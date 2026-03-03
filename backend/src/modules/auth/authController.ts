@@ -620,6 +620,53 @@ export const authController = {
    * Reset password with email (simplified for development)
    * POST /api/auth/reset-password
    */
+  /**
+   * Delete user account and all associated data
+   * DELETE /api/auth/account
+   * Apple guideline 5.1.1 requires in-app account deletion
+   */
+  async deleteAccount(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      const userId = req.user.id;
+
+      // Verify user exists
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // Delete user — all child models have onDelete: Cascade
+      await prisma.user.delete({
+        where: { id: userId }
+      });
+
+      res.json({
+        success: true,
+        message: 'Account and all associated data have been permanently deleted'
+      });
+    } catch (error: any) {
+      console.error('Delete account error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete account. Please try again.'
+      });
+    }
+  },
+
   async resetPassword(req: Request, res: Response) {
     try {
       const { email, resetCode, newPassword } = req.body;
