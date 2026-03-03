@@ -40,7 +40,7 @@ describe('Meal History Controller', () => {
         date: '2024-01-01',
         feedback: 'delicious'
       },
-      user: { id: 'user-1' }
+      user: { id: 'user-1', email: 'user1@example.com' }
     };
     
     mockRes = {

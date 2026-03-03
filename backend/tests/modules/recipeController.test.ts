@@ -35,7 +35,7 @@ describe('Recipe Controller', () => {
     mockReq = {
       params: {},
       body: {},
-      user: { id: 'test-user-id' }
+      user: { id: 'test-user-id', email: 'test@example.com' }
     };
     
     mockRes = {
