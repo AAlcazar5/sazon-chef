@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { app } from './app';
 import { initializeAutoBackup } from './utils/autoBackup';
 import { prisma } from '@/lib/prisma';
+import { startNotificationScheduler, stopNotificationScheduler } from './services/notificationScheduler';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -11,6 +12,9 @@ const gracefulShutdown = async (signal: string) => {
   console.log(`\nReceived ${signal}. Starting graceful shutdown...`);
   
   try {
+    // Stop notification scheduler
+    stopNotificationScheduler();
+
     // Close the Express server
     server.close(() => {
       console.log('HTTP server closed.');
@@ -53,7 +57,12 @@ const server = app.listen(PORT, HOST, async () => {
     
     // Initialize automatic recipe backups
     await initializeAutoBackup();
-    
+
+    // Start notification scheduler (hourly trigger checks)
+    if (process.env.NODE_ENV !== 'test') {
+      startNotificationScheduler();
+    }
+
     console.log(`🚀 Sazon Chef API server running on http://${HOST}:${PORT}`);
     console.log(`📊 Health check available at http://${HOST}:${PORT}/health`);
     console.log(`🍳 Recipes API available at http://${HOST}:${PORT}/api/recipes`);

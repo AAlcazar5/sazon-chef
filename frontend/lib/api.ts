@@ -1376,4 +1376,13 @@ export const pantryApi = {
   removeByName: (name: string) => apiClient.delete(`/pantry/by-name/${encodeURIComponent(name)}`),
 };
 
+// ─── Push Notifications (Group 6) ────────────────────────────────────────────
+
+export const notificationsApi = {
+  registerToken: (token: string, platform: string) =>
+    apiClient.post('/notifications/register-token', { token, platform }),
+  unregisterToken: (token: string) =>
+    apiClient.delete('/notifications/unregister-token', { data: { token } }),
+};
+
 export type { ApiResponse, ApiError };

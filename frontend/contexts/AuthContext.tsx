@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { api, setAuthToken, setLogoutCallback } from '../lib/api';
+import { api, setAuthToken, setLogoutCallback, notificationsApi } from '../lib/api';
 import { analytics } from '../utils/analytics';
 
 interface User {
@@ -224,6 +224,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    // Unregister push token before clearing auth (non-blocking)
+    // Skip in Expo Go where remote push isn't supported
+    try {
+      const ExpoConstants = await import('expo-constants');
+      if (ExpoConstants.default?.appOwnership !== 'expo') {
+        const Notifications = await import('expo-notifications');
+        const projectId = ExpoConstants.default?.expoConfig?.extra?.eas?.projectId;
+        const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
+        await notificationsApi.unregisterToken(tokenResult.data);
+      }
+    } catch {
+      // Non-blocking — cleanup failure is fine
+    }
+
     await clearStoredAuth();
   };
 

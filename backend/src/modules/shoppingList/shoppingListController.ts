@@ -4,6 +4,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { notificationTriggerService } from '../../services/notificationTriggerService';
 
 /**
  * Record a purchase to history. Uses upsert to increment count on duplicates.
@@ -1177,6 +1178,9 @@ export const shoppingListController = {
           mealsCount: mealPlan.meals.length,
         },
       });
+
+      // Fire-and-forget: notify user their shopping list is ready
+      notificationTriggerService.onShoppingListReady(userId, items.length).catch(console.error);
     } catch (error: any) {
       console.error('Error generating shopping list from meal plan:', error);
       res.status(500).json({ error: 'Failed to generate shopping list from meal plan' });

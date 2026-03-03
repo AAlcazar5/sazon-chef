@@ -108,7 +108,28 @@ const createPrismaMock = () => ({
       findFirst: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-    }
+    },
+    pushToken: {
+      upsert: jest.fn(),
+      deleteMany: jest.fn(),
+      findMany: jest.fn(),
+    },
+    notificationSettings: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      upsert: jest.fn(),
+    },
+    mealPlan: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    cookingLog: {
+      count: jest.fn(),
+    },
   }
 });
 
@@ -141,6 +162,29 @@ jest.mock('@modules/mealHistory/mealHistoryRoutes', () => ({
 }));
 jest.mock('@modules/aiRecipe/aiRecipeRoutes', () => ({
   default: mockRouter
+}));
+jest.mock('@modules/notifications/notificationsRoutes', () => ({
+  notificationsRoutes: mockRouter
+}));
+
+// Mock expo-server-sdk (ESM module that Jest can't transform)
+jest.mock('expo-server-sdk', () => {
+  const mockExpo = {
+    chunkPushNotifications: jest.fn((messages: any[]) => [messages]),
+    sendPushNotificationsAsync: jest.fn().mockResolvedValue([{ status: 'ok' }]),
+  };
+  const ExpoClass = jest.fn(() => mockExpo);
+  (ExpoClass as any).isExpoPushToken = jest.fn(() => true);
+  return { __esModule: true, default: ExpoClass };
+});
+
+// Mock resend (email service — not configured in test env)
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({
+    emails: {
+      send: jest.fn().mockResolvedValue({ id: 'test-email-id' }),
+    },
+  })),
 }));
 
 // Global test timeout

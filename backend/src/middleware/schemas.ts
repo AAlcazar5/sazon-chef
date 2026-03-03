@@ -58,3 +58,10 @@ export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   profilePictureUrl: z.string().url().optional().or(z.literal('')),
 });
+
+// ─── Push Notifications ──────────────────────────────────────────────────────
+
+export const registerTokenSchema = z.object({
+  token: z.string().min(1, 'Push token is required'),
+  platform: z.enum(['ios', 'android']),
+});
