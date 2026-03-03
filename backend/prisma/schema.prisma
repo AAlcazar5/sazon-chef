@@ -59,6 +59,10 @@ model User {
   notificationSettings    NotificationSettings?
   profilePresets          ProfilePreset[]
   searchQueries           SearchQuery[]
+  pushTokens              PushToken[]
+
+  // Group 6: Email verification
+  emailVerified           Boolean  @default(false)
 
   @@map("users")
 }
@@ -864,4 +868,18 @@ model ProfilePreset {
   @@unique([userId, name])
   @@index([userId, isActive])
   @@map("profile_presets")
+}
+
+// Push notification device tokens (Group 6: Growth & Marketing)
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String   // "ios" | "android"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("push_tokens")
 }

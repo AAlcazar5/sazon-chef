@@ -10,6 +10,7 @@ import { ToastProvider } from '../contexts/ToastContext';
 import SplashScreen from '../components/ui/SplashScreen';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Duration } from '../constants/Animations';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import '../global.css';
 
 function RootLayoutNav() {
@@ -18,6 +19,9 @@ function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
   const { isAuthenticated, isLoading } = useAuth();
+
+  // Register for push notifications when authenticated
+  usePushNotifications();
 
   console.log('[Layout] RootLayoutNav rendering with state:', { showSplash, isOnboardingComplete, isLoading, isAuthenticated, segments });
 

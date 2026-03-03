@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import * as bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { encrypt, decrypt } from '@/utils/encryption';
+import { emailService } from '@/services/emailService';
 
 // Note: Request.user type is declared in authMiddleware.ts
 
@@ -129,6 +130,9 @@ export const authController = {
         user: decryptedUser,
         token
       });
+
+      // Fire-and-forget: send welcome email
+      emailService.sendWelcome(email, name).catch(console.error);
     } catch (error: any) {
       console.error('Registration error:', error);
       res.status(500).json({
@@ -599,14 +603,15 @@ export const authController = {
       console.log(`Password reset code for ${email}: ${resetCode}`);
       console.log(`Code expires at: ${resetCodeExpiry}`);
 
-      // TODO: In production, send email with reset code
-      // For development, return the code in the response
       res.json({
         success: true,
         message: 'A password reset code has been sent to your email.',
-        // Only in development - remove in production
+        // Only in development - return the code for testing
         ...(process.env.NODE_ENV === 'development' && { resetCode, expiresAt: resetCodeExpiry })
       });
+
+      // Fire-and-forget: send password reset email
+      emailService.sendPasswordReset(email, resetCode).catch(console.error);
     } catch (error: any) {
       console.error('Request password reset error:', error);
       res.status(500).json({
@@ -799,6 +804,50 @@ export const authController = {
         success: false,
         error: 'An unexpected error occurred. Please try again.'
       });
+    }
+  },
+
+  /**
+   * Verify email address via token
+   * GET /api/auth/verify-email/:token
+   */
+  async verifyEmail(req: Request, res: Response) {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.status(400).json({ success: false, error: 'Verification token is required' });
+      }
+
+      // Find user by reset code repurposed as verification token
+      // In a production system you'd use a separate verification token table,
+      // but for now we use a simple approach: the token is the user ID + timestamp hash
+      const user = await prisma.user.findFirst({
+        where: { resetCode: token },
+      });
+
+      if (!user) {
+        return res.status(400).json({ success: false, error: 'Invalid or expired verification link' });
+      }
+
+      // Check expiry (reuse resetCodeExpiry)
+      if (user.resetCodeExpiry && new Date() > user.resetCodeExpiry) {
+        return res.status(400).json({ success: false, error: 'Verification link has expired' });
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerified: true,
+          resetCode: null,
+          resetCodeExpiry: null,
+        },
+      });
+
+      res.json({ success: true, message: 'Email verified successfully!' });
+    } catch (error: any) {
+      console.error('Email verification error:', error);
+      res.status(500).json({ success: false, error: 'Verification failed. Please try again.' });
     }
   }
 };

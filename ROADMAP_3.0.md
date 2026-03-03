@@ -13,7 +13,7 @@
 | **Group 3** | Infrastructure & Scaling | ✅ codeable done · 🔄 infra pending |
 | **Group 4** | Meal Plan Advanced | ✅ 0h |
 | **Group 5** | Profile Advanced | ✅ 0h |
-| **Group 6** | Growth & Marketing | 9h |
+| **Group 6** | Growth & Marketing | ✅ 0h |
 | **Group 7** | Stripe Integration & Subscriptions | 19h |
 | **Group 8** | Revenue Optimization | 3h |
 | **Group 9** | App Store Launch | 15h |
@@ -142,33 +142,36 @@
 
 ---
 
-### **Group 6: Growth & Marketing** 📈
+### **Group 6: Growth & Marketing** 📈 ✅ COMPLETE
 
 #### Push Notifications 📬
-* **Infrastructure** — Expo Push Notifications + Firebase Cloud Messaging (FCM) for delivery. Device token registered silently on first login.
+* ✅ **Infrastructure** — Expo Push Notifications via `expo-server-sdk`. Device token registered silently on login.
   * 📍 Backend: `POST /api/notifications/register-token` → upsert `PushToken { userId, token, platform, updatedAt }`
-  * 📍 Backend: `notificationService.ts` — single service that all triggers call
+  * 📍 Backend: `pushNotificationService.ts` + `notificationTriggerService.ts` — single service that all triggers call
+  * 📍 Frontend: `usePushNotifications` hook in `_layout.tsx` — auto-registers on auth, handles notification taps with deep linking
 
-* **Useful triggers (condition-based, not scheduled):**
+* ✅ **Useful triggers (condition-based, not scheduled):**
 
   | Trigger | Condition | Message |
   |---------|-----------|---------|
   | Plan reminder | Thursday evening, no plan for next week | "Want me to plan next week? Takes 10 seconds." |
-  | Expiry alert | Item in shopping list marked with expiry in < 2 days | "Chicken thighs expire soon — here are 3 quick recipes." |
+  | Expiry alert | Meal prep portions expiring in < 2 days | "Expiring soon — use them before they go!" |
   | List ready | Meal plan generation creates a shopping list | "Your shopping list is ready — 12 items." |
-  | Trial ending | 3 days before trial expiration | "Your free trial ends in 3 days — keep access to [feature]." |
-  | Weekly digest | Sunday morning, if user was active that week | "Your week at a glance — tap to see your nutrition summary." |
+  | Trial ending | 3 days before trial expiration | Stubbed (Group 7 dependency) |
+  | Weekly digest | Sunday morning, if user was active that week | "Your week at a glance — you cooked N meals!" |
 
-* **Quiet hours** — No notification fires during 10pm–8am.
+* ✅ **Quiet hours** — Respects `quietHoursStart`/`quietHoursEnd` + `weekendsOff` from NotificationSettings.
+* ✅ **Scheduler** — `notificationScheduler.ts` runs hourly interval, dispatches triggers based on day/hour.
 
 #### Email 📧
-* **Transactional (must ship before launch):**
-  * Password reset, email verification, payment receipt, subscription change/cancellation
-  * 📍 Backend: Resend (simpler API than SendGrid, better deliverability, generous free tier)
-  * 📍 Templates: React Email — component-based, version-controlled, easy to update
+* ✅ **Transactional (must ship before launch):**
+  * Password reset (wired into `requestPasswordReset`), email verification, welcome email
+  * Payment receipt, subscription change/cancellation — stubbed for Group 7
+  * 📍 Backend: Resend (`resend` npm package), gated on `RESEND_API_KEY` — logs to console in dev
+  * 📍 Templates: `backend/src/emails/templates.ts` — Sazon-branded HTML email templates
 
-* **Welcome Email (Day 0):**
-  * One email on signup. What Sazon does, one screenshot, one CTA: "Plan your first week →"
+* ✅ **Welcome Email (Day 0):**
+  * Sent on registration (fire-and-forget). Intro + "Plan your first week" CTA.
 
 ---
 

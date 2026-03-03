@@ -22,6 +22,7 @@ import pantryRoutes from '@modules/pantry/pantryRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { searchRoutes } from '@modules/search/searchRoutes';
+import { notificationsRoutes } from '@modules/notifications/notificationsRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 import { prisma } from '@/lib/prisma';
 import { cacheService } from '@/utils/cacheService';
@@ -161,6 +162,7 @@ app.use('/api/ingredient-availability', ingredientAvailabilityRoutes);
 app.use('/api/pantry', pantryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 
