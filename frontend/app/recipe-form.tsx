@@ -838,7 +838,7 @@ export default function RecipeFormScreen() {
         <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
           <View className="flex-row justify-between items-center mb-3">
             <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Ingredients *</Text>
-            <HapticTouchableOpacity onPress={addIngredient} className="p-2">
+            <HapticTouchableOpacity testID="add-ingredient-btn" onPress={addIngredient} className="p-2">
               <Ionicons name="add-circle" size={24} color={Colors.secondaryRed} />
             </HapticTouchableOpacity>
           </View>
@@ -855,7 +855,7 @@ export default function RecipeFormScreen() {
                 />
               </View>
               {ingredients.length > 1 && (
-                <HapticTouchableOpacity onPress={() => removeIngredient(index)} className="p-2">
+                <HapticTouchableOpacity testID={`remove-ingredient-${index}`} onPress={() => removeIngredient(index)} className="p-2">
                   <Ionicons name="remove-circle" size={24} color={Colors.secondaryRed} />
                 </HapticTouchableOpacity>
               )}
@@ -867,7 +867,7 @@ export default function RecipeFormScreen() {
         <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
           <View className="flex-row justify-between items-center mb-3">
             <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Instructions *</Text>
-            <HapticTouchableOpacity onPress={addInstruction} className="p-2">
+            <HapticTouchableOpacity testID="add-step-btn" onPress={addInstruction} className="p-2">
               <Ionicons name="add-circle" size={24} color={Colors.secondaryRed} />
             </HapticTouchableOpacity>
           </View>
@@ -889,7 +889,7 @@ export default function RecipeFormScreen() {
                   />
                 </View>
                 {instructions.length > 1 && (
-                  <HapticTouchableOpacity onPress={() => removeInstruction(index)} className="p-2 mt-6">
+                  <HapticTouchableOpacity testID={`remove-instruction-${index}`} onPress={() => removeInstruction(index)} className="p-2 mt-6">
                     <Ionicons name="remove-circle" size={24} color={Colors.secondaryRed} />
                   </HapticTouchableOpacity>
                 )}

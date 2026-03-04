@@ -34,6 +34,7 @@ jest.mock('expo-router', () => ({
   useRouter: jest.fn(() => mockRouter),
   router: mockRouter,
   useSegments: jest.fn(() => []),
+  useLocalSearchParams: jest.fn(() => ({})),
   useFocusEffect: jest.fn((callback) => {
     // Call the callback immediately for testing
     if (typeof callback === 'function') {
@@ -41,6 +42,56 @@ jest.mock('expo-router', () => ({
     }
   }),
   Stack: ({ children }: any) => children,
+}));
+
+// Mock expo-image (native module not available in tests)
+jest.mock('expo-image', () => ({
+  Image: function MockImage() { return null; },
+}));
+
+// Mock expo-linear-gradient (native module not available in tests)
+jest.mock('expo-linear-gradient', () => ({
+  LinearGradient: function MockLinearGradient(props) {
+    return props.children || null;
+  },
+}));
+
+// Mock react-native-safe-area-context (displayName required by react-native-css-interop)
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaProvider: function MockSafeAreaProvider(props) { return props.children || null; },
+  SafeAreaView: function MockSafeAreaView(props) { return props.children || null; },
+  useSafeAreaInsets: jest.fn(() => ({ top: 0, bottom: 0, left: 0, right: 0 })),
+  useSafeAreaFrame: jest.fn(() => ({ x: 0, y: 0, width: 375, height: 812 })),
+  withSafeAreaInsets: function(Component) { return Component; },
+}));
+
+// Mock expo-auth-session (used by utils/socialAuth.ts at module level)
+jest.mock('expo-auth-session', () => ({
+  makeRedirectUri: jest.fn(() => 'sazon://auth/callback'),
+  AuthRequest: jest.fn().mockImplementation(() => ({
+    promptAsync: jest.fn(),
+  })),
+  ResponseType: { Token: 'token', Code: 'code' },
+  Scope: { EMAIL: 'email', FULL_NAME: 'name' },
+  useAuthRequest: jest.fn(() => [null, null, jest.fn()]),
+}));
+
+// Mock expo-web-browser (used by utils/socialAuth.ts at module level)
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
+  openAuthSessionAsync: jest.fn(),
+}));
+
+// Mock ThemeContext globally (used by Icon and many other components)
+jest.mock('./contexts/ThemeContext', () => ({
+  useTheme: jest.fn(() => ({
+    isDark: false,
+    themeMode: 'light',
+    colors: {},
+    setThemeMode: jest.fn(),
+    toggleTheme: jest.fn(),
+  })),
+  ThemeProvider: function MockThemeProvider(props) { return props.children; },
 }));
 
 // Note: jest-expo already mocks react-native, so we don't need to mock it here

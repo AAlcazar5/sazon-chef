@@ -718,6 +718,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
 
             <View className="flex-row items-center">
               <HapticTouchableOpacity
+                testID="like-button"
                 onPress={() => onLike?.(recipe.id)}
                 disabled={isFeedbackLoading}
                 className={`p-1.5 rounded-full mr-1.5 border ${feedback.liked ? '' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}
@@ -727,6 +728,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                 <Icon name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} size={14} color={feedback.liked ? "#FFFFFF" : (isDark ? "#D1D5DB" : "#4B5563")} />
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
+                testID="dislike-button"
                 onPress={() => onDislike?.(recipe.id)}
                 disabled={isFeedbackLoading}
                 className={`p-1.5 rounded-full border ${feedback.disliked ? '' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}

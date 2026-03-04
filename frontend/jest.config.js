@@ -9,6 +9,12 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // Redirect nativewind/react-native-css-interop JSX runtime to React's standard runtime
+    // This prevents wrap-jsx from crashing in tests when component types are undefined
+    '^nativewind/jsx-runtime$': require.resolve('react/jsx-runtime'),
+    '^nativewind/jsx-dev-runtime$': require.resolve('react/jsx-dev-runtime'),
+    '^react-native-css-interop/jsx-runtime$': require.resolve('react/jsx-runtime'),
+    '^react-native-css-interop/jsx-dev-runtime$': require.resolve('react/jsx-dev-runtime'),
   },
   collectCoverageFrom: [
     'app/**/*.{ts,tsx}',

@@ -55,7 +55,7 @@ describe('LoginScreen', () => {
     fireEvent.press(getByText('Sign In'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please enter both email and password');
+      expect(getByText('Email is required')).toBeTruthy();
     });
   });
 
@@ -67,7 +67,7 @@ describe('LoginScreen', () => {
     fireEvent.press(getByText('Sign In'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please enter a valid email address');
+      expect(getByText('Please enter a valid email address')).toBeTruthy();
     });
   });
 
@@ -79,7 +79,7 @@ describe('LoginScreen', () => {
     fireEvent.press(getByText('Sign In'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Password must be at least 8 characters');
+      expect(getByText('Password must be at least 8 characters')).toBeTruthy();
     });
   });
 
@@ -109,7 +109,7 @@ describe('LoginScreen', () => {
     fireEvent.press(getByText('Sign In'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Login Failed', 'Invalid credentials');
+      expect(getByText('Invalid credentials')).toBeTruthy();
     });
   });
 

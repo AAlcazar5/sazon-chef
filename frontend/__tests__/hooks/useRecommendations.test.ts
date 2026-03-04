@@ -1,5 +1,5 @@
 // frontend/__tests__/hooks/useRecommendations.test.ts
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react-native';
 import { useRecommendations } from '../../hooks/useRecommendations';
 
 // Mock the API

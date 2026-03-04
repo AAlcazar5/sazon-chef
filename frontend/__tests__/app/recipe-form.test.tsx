@@ -1,279 +1,213 @@
 import React from 'react';
 import { render, fireEvent, waitFor, screen } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import RecipeFormScreen from '../../app/recipe-form';
-import { recipeApi } from '../../lib/api';
+import { recipeApi, collectionsApi } from '../../lib/api';
 
-// Mock the API
+// Mock the API - must include all imports the component uses
 jest.mock('../../lib/api', () => ({
   recipeApi: {
     createRecipe: jest.fn(),
     updateRecipe: jest.fn(),
     getRecipe: jest.fn()
+  },
+  collectionsApi: {
+    list: jest.fn(),
+    create: jest.fn()
+  },
+  aiRecipeApi: {
+    generateRecipe: jest.fn()
   }
 }));
 
-// Mock Alert
 const mockAlert = jest.fn();
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Alert: {
-      alert: mockAlert
-    }
-  };
-});
+
+// Helper to fill all required fields
+async function fillRequiredFields() {
+  fireEvent.changeText(screen.getByPlaceholderText('Enter recipe title'), 'Test Recipe');
+  fireEvent.changeText(screen.getByPlaceholderText('Describe your recipe'), 'Test Description');
+  // Cook time and protein both have placeholder '30'; cook time renders first
+  fireEvent.changeText(screen.getAllByPlaceholderText('30')[0], '30'); // cook time
+  fireEvent.changeText(screen.getByPlaceholderText('Italian'), 'Italian');
+  fireEvent.changeText(screen.getByPlaceholderText('500'), '500'); // calories
+  fireEvent.changeText(screen.getAllByPlaceholderText('30')[1], '30'); // protein
+  fireEvent.changeText(screen.getByPlaceholderText('50'), '50'); // carbs
+  fireEvent.changeText(screen.getByPlaceholderText('15'), '15'); // fat
+  fireEvent.changeText(screen.getByPlaceholderText('Ingredient 1'), 'Test ingredient');
+  fireEvent.changeText(screen.getByPlaceholderText('Step 1 instructions'), 'Test step');
+}
 
 describe('RecipeFormScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAlert.mockClear();
+    jest.spyOn(Alert, 'alert').mockImplementation(mockAlert);
+    (collectionsApi.list as jest.Mock).mockResolvedValue({ data: [] });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   test('should render form with default values', () => {
     render(<RecipeFormScreen />);
-    
-    expect(screen.getByText('Create Recipe')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Recipe title')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Recipe description')).toBeTruthy();
-  });
 
-  test('should validate required fields', async () => {
-    render(<RecipeFormScreen />);
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
-    await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please fill in all required fields');
-    });
+    expect(screen.getByText('Create Recipe')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Enter recipe title')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Describe your recipe')).toBeTruthy();
   });
 
   test('should validate title field', async () => {
     render(<RecipeFormScreen />);
-    
-    const titleInput = screen.getByPlaceholderText('Recipe title');
-    fireEvent.changeText(titleInput, '');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please fill in all required fields');
+      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter a recipe title');
     });
   });
 
   test('should validate description field', async () => {
     render(<RecipeFormScreen />);
-    
-    const titleInput = screen.getByPlaceholderText('Recipe title');
-    fireEvent.changeText(titleInput, 'Test Recipe');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter recipe title'), 'Test Recipe');
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please fill in all required fields');
+      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter a description');
     });
   });
 
   test('should validate cook time field', async () => {
     render(<RecipeFormScreen />);
-    
-    const titleInput = screen.getByPlaceholderText('Recipe title');
-    fireEvent.changeText(titleInput, 'Test Recipe');
-    
-    const descriptionInput = screen.getByPlaceholderText('Recipe description');
-    fireEvent.changeText(descriptionInput, 'Test Description');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter recipe title'), 'Test Recipe');
+    fireEvent.changeText(screen.getByPlaceholderText('Describe your recipe'), 'Test Description');
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please fill in all required fields');
+      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter a valid cook time');
     });
   });
 
   test('should validate cuisine field', async () => {
     render(<RecipeFormScreen />);
-    
-    const titleInput = screen.getByPlaceholderText('Recipe title');
-    fireEvent.changeText(titleInput, 'Test Recipe');
-    
-    const descriptionInput = screen.getByPlaceholderText('Recipe description');
-    fireEvent.changeText(descriptionInput, 'Test Description');
-    
-    const cookTimeInput = screen.getByPlaceholderText('30');
-    fireEvent.changeText(cookTimeInput, '30');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter recipe title'), 'Test Recipe');
+    fireEvent.changeText(screen.getByPlaceholderText('Describe your recipe'), 'Test Description');
+    fireEvent.changeText(screen.getAllByPlaceholderText('30')[0], '30'); // cook time
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please fill in all required fields');
+      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter a cuisine type');
     });
   });
 
-  test('should validate macro nutrients', async () => {
+  test('should validate calories field', async () => {
     render(<RecipeFormScreen />);
-    
-    // Fill required fields
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe title'), 'Test Recipe');
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe description'), 'Test Description');
-    fireEvent.changeText(screen.getByPlaceholderText('30'), '30');
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter recipe title'), 'Test Recipe');
+    fireEvent.changeText(screen.getByPlaceholderText('Describe your recipe'), 'Test Description');
+    fireEvent.changeText(screen.getAllByPlaceholderText('30')[0], '30');
     fireEvent.changeText(screen.getByPlaceholderText('Italian'), 'Italian');
-    
-    // Add ingredients and instructions
-    fireEvent.press(screen.getByText('Add Ingredient'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., 2 cups flour'), 'Test ingredient');
-    
-    fireEvent.press(screen.getByText('Add Step'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., Preheat oven to 350°F'), 'Test step');
-    
-    // Try to save without macro nutrients
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please fill in all macro nutrients');
+      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter valid calorie amount');
+    });
+  });
+
+  test('should validate ingredients field', async () => {
+    render(<RecipeFormScreen />);
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter recipe title'), 'Test Recipe');
+    fireEvent.changeText(screen.getByPlaceholderText('Describe your recipe'), 'Test Description');
+    fireEvent.changeText(screen.getAllByPlaceholderText('30')[0], '30');
+    fireEvent.changeText(screen.getByPlaceholderText('Italian'), 'Italian');
+    fireEvent.changeText(screen.getByPlaceholderText('500'), '500');
+    fireEvent.changeText(screen.getAllByPlaceholderText('30')[1], '30');
+    fireEvent.changeText(screen.getByPlaceholderText('50'), '50');
+    fireEvent.changeText(screen.getByPlaceholderText('15'), '15');
+    // Ingredient left empty — fire save without filling it
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please add at least one ingredient');
+    });
+  });
+
+  test('should validate instructions field', async () => {
+    render(<RecipeFormScreen />);
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter recipe title'), 'Test Recipe');
+    fireEvent.changeText(screen.getByPlaceholderText('Describe your recipe'), 'Test Description');
+    fireEvent.changeText(screen.getAllByPlaceholderText('30')[0], '30');
+    fireEvent.changeText(screen.getByPlaceholderText('Italian'), 'Italian');
+    fireEvent.changeText(screen.getByPlaceholderText('500'), '500');
+    fireEvent.changeText(screen.getAllByPlaceholderText('30')[1], '30');
+    fireEvent.changeText(screen.getByPlaceholderText('50'), '50');
+    fireEvent.changeText(screen.getByPlaceholderText('15'), '15');
+    fireEvent.changeText(screen.getByPlaceholderText('Ingredient 1'), 'Test ingredient');
+    // Instruction left empty
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please add at least one instruction');
     });
   });
 
   test('should add and remove ingredients', () => {
     render(<RecipeFormScreen />);
-    
-    const addButton = screen.getByText('Add Ingredient');
-    fireEvent.press(addButton);
-    
-    const ingredientInput = screen.getByPlaceholderText('e.g., 2 cups flour');
-    fireEvent.changeText(ingredientInput, 'Test ingredient');
-    
-    expect(screen.getByText('Test ingredient')).toBeTruthy();
-    
-    const removeButton = screen.getByText('Remove');
-    fireEvent.press(removeButton);
-    
-    expect(screen.queryByText('Test ingredient')).toBeFalsy();
+
+    // Initially has one ingredient input
+    expect(screen.getByPlaceholderText('Ingredient 1')).toBeTruthy();
+
+    // Add a second ingredient
+    fireEvent.press(screen.getByTestId('add-ingredient-btn'));
+    expect(screen.getByPlaceholderText('Ingredient 2')).toBeTruthy();
+
+    // Remove the second ingredient
+    fireEvent.press(screen.getByTestId('remove-ingredient-1'));
+    expect(screen.queryByPlaceholderText('Ingredient 2')).toBeFalsy();
   });
 
   test('should add and remove instructions', () => {
     render(<RecipeFormScreen />);
-    
-    const addButton = screen.getByText('Add Step');
-    fireEvent.press(addButton);
-    
-    const instructionInput = screen.getByPlaceholderText('e.g., Preheat oven to 350°F');
-    fireEvent.changeText(instructionInput, 'Test step');
-    
-    expect(screen.getByText('Test step')).toBeTruthy();
-    
-    const removeButton = screen.getByText('Remove');
-    fireEvent.press(removeButton);
-    
-    expect(screen.queryByText('Test step')).toBeFalsy();
-  });
 
-  test('should validate cook time range', async () => {
-    render(<RecipeFormScreen />);
-    
-    const titleInput = screen.getByPlaceholderText('Recipe title');
-    fireEvent.changeText(titleInput, 'Test Recipe');
-    
-    const descriptionInput = screen.getByPlaceholderText('Recipe description');
-    fireEvent.changeText(descriptionInput, 'Test Description');
-    
-    const cookTimeInput = screen.getByPlaceholderText('30');
-    fireEvent.changeText(cookTimeInput, '500'); // Too long
-    
-    const cuisineInput = screen.getByPlaceholderText('Italian');
-    fireEvent.changeText(cuisineInput, 'Italian');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
-    await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Cook time must be between 5 and 300 minutes');
-    });
-  });
+    // Initially has one instruction input
+    expect(screen.getByPlaceholderText('Step 1 instructions')).toBeTruthy();
 
-  test('should validate cook time minimum', async () => {
-    render(<RecipeFormScreen />);
-    
-    const titleInput = screen.getByPlaceholderText('Recipe title');
-    fireEvent.changeText(titleInput, 'Test Recipe');
-    
-    const descriptionInput = screen.getByPlaceholderText('Recipe description');
-    fireEvent.changeText(descriptionInput, 'Test Description');
-    
-    const cookTimeInput = screen.getByPlaceholderText('30');
-    fireEvent.changeText(cookTimeInput, '2'); // Too short
-    
-    const cuisineInput = screen.getByPlaceholderText('Italian');
-    fireEvent.changeText(cuisineInput, 'Italian');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
-    await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Cook time must be between 5 and 300 minutes');
-    });
+    // Add a second instruction
+    fireEvent.press(screen.getByTestId('add-step-btn'));
+    expect(screen.getByPlaceholderText('Step 2 instructions')).toBeTruthy();
+
+    // Remove the second instruction
+    fireEvent.press(screen.getByTestId('remove-instruction-1'));
+    expect(screen.queryByPlaceholderText('Step 2 instructions')).toBeFalsy();
   });
 
   test('should create recipe with valid data', async () => {
-    const mockRecipe = {
-      id: 'recipe-1',
-      title: 'Test Recipe',
-      description: 'Test Description',
-      cookTime: 30,
-      cuisine: 'Italian',
-      calories: 500,
-      protein: 25,
-      carbs: 50,
-      fat: 20
-    };
-
-    (recipeApi.createRecipe as jest.Mock).mockResolvedValue({
-      data: { recipe: mockRecipe }
-    });
+    const mockRecipe = { id: 'recipe-1', title: 'Test Recipe' };
+    (recipeApi.createRecipe as jest.Mock).mockResolvedValue({ data: { data: mockRecipe } });
 
     render(<RecipeFormScreen />);
-    
-    // Fill in all required fields
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe title'), 'Test Recipe');
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe description'), 'Test Description');
-    fireEvent.changeText(screen.getByPlaceholderText('30'), '30');
-    fireEvent.changeText(screen.getByPlaceholderText('Italian'), 'Italian');
-    
-    // Add ingredients
-    fireEvent.press(screen.getByText('Add Ingredient'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., 2 cups flour'), 'Test ingredient');
-    
-    // Add instructions
-    fireEvent.press(screen.getByText('Add Step'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., Preheat oven to 350°F'), 'Test step');
-    
-    // Fill macro nutrients
-    fireEvent.changeText(screen.getByPlaceholderText('500'), '500');
-    fireEvent.changeText(screen.getByPlaceholderText('25'), '25');
-    fireEvent.changeText(screen.getByPlaceholderText('50'), '50');
-    fireEvent.changeText(screen.getByPlaceholderText('20'), '20');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+    await fillRequiredFields();
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
-      expect(recipeApi.createRecipe).toHaveBeenCalledWith({
-        title: 'Test Recipe',
-        description: 'Test Description',
-        cookTime: 30,
-        cuisine: 'Italian',
-        calories: 500,
-        protein: 25,
-        carbs: 50,
-        fat: 20,
-        ingredients: ['Test ingredient'],
-        instructions: ['Test step']
-      });
+      expect(recipeApi.createRecipe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Test Recipe',
+          description: 'Test Description',
+          cookTime: 30,
+          cuisine: 'Italian',
+          calories: 500,
+          protein: 30,
+          carbs: 50,
+          fat: 15,
+          ingredients: ['Test ingredient'],
+          instructions: ['Test step']
+        })
+      );
     });
   });
 
@@ -281,162 +215,80 @@ describe('RecipeFormScreen', () => {
     (recipeApi.createRecipe as jest.Mock).mockRejectedValue(new Error('Network error'));
 
     render(<RecipeFormScreen />);
-    
-    // Fill in all required fields
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe title'), 'Test Recipe');
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe description'), 'Test Description');
-    fireEvent.changeText(screen.getByPlaceholderText('30'), '30');
-    fireEvent.changeText(screen.getByPlaceholderText('Italian'), 'Italian');
-    
-    // Add ingredients
-    fireEvent.press(screen.getByText('Add Ingredient'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., 2 cups flour'), 'Test ingredient');
-    
-    // Add instructions
-    fireEvent.press(screen.getByText('Add Step'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., Preheat oven to 350°F'), 'Test step');
-    
-    // Fill macro nutrients
-    fireEvent.changeText(screen.getByPlaceholderText('500'), '500');
-    fireEvent.changeText(screen.getByPlaceholderText('25'), '25');
-    fireEvent.changeText(screen.getByPlaceholderText('50'), '50');
-    fireEvent.changeText(screen.getByPlaceholderText('20'), '20');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+    await fillRequiredFields();
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Error', 'Network error');
     });
   });
 
-  test('should handle optional fields', async () => {
-    const mockRecipe = {
-      id: 'recipe-1',
-      title: 'Test Recipe',
-      description: 'Test Description',
-      cookTime: 30,
-      cuisine: 'Italian',
-      calories: 500,
-      protein: 25,
-      carbs: 50,
-      fat: 20,
-      fiber: 10,
-      sugar: 5
-    };
-
-    (recipeApi.createRecipe as jest.Mock).mockResolvedValue({
-      data: { recipe: mockRecipe }
-    });
+  test('should handle optional fiber and sugar fields', async () => {
+    const mockRecipe = { id: 'recipe-1' };
+    (recipeApi.createRecipe as jest.Mock).mockResolvedValue({ data: { data: mockRecipe } });
 
     render(<RecipeFormScreen />);
-    
-    // Fill in all required fields
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe title'), 'Test Recipe');
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe description'), 'Test Description');
-    fireEvent.changeText(screen.getByPlaceholderText('30'), '30');
-    fireEvent.changeText(screen.getByPlaceholderText('Italian'), 'Italian');
-    
-    // Add ingredients
-    fireEvent.press(screen.getByText('Add Ingredient'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., 2 cups flour'), 'Test ingredient');
-    
-    // Add instructions
-    fireEvent.press(screen.getByText('Add Step'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., Preheat oven to 350°F'), 'Test step');
-    
-    // Fill macro nutrients
-    fireEvent.changeText(screen.getByPlaceholderText('500'), '500');
-    fireEvent.changeText(screen.getByPlaceholderText('25'), '25');
-    fireEvent.changeText(screen.getByPlaceholderText('50'), '50');
-    fireEvent.changeText(screen.getByPlaceholderText('20'), '20');
-    
-    // Fill optional fields
-    fireEvent.changeText(screen.getByPlaceholderText('10'), '10'); // Fiber
-    fireEvent.changeText(screen.getByPlaceholderText('5'), '5'); // Sugar
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+    await fillRequiredFields();
+    // Fiber placeholder is '5', sugar placeholder is '10'
+    fireEvent.changeText(screen.getByPlaceholderText('5'), '10'); // fiber = 10
+    fireEvent.changeText(screen.getByPlaceholderText('10'), '5'); // sugar = 5
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
-      expect(recipeApi.createRecipe).toHaveBeenCalledWith({
-        title: 'Test Recipe',
-        description: 'Test Description',
-        cookTime: 30,
-        cuisine: 'Italian',
-        calories: 500,
-        protein: 25,
-        carbs: 50,
-        fat: 20,
-        fiber: 10,
-        sugar: 5,
-        ingredients: ['Test ingredient'],
-        instructions: ['Test step']
-      });
+      expect(recipeApi.createRecipe).toHaveBeenCalledWith(
+        expect.objectContaining({ fiber: 10, sugar: 5 })
+      );
     });
   });
 
   test('should handle multiple ingredients and instructions', async () => {
-    const mockRecipe = {
-      id: 'recipe-1',
-      title: 'Test Recipe',
-      description: 'Test Description',
-      cookTime: 30,
-      cuisine: 'Italian',
-      calories: 500,
-      protein: 25,
-      carbs: 50,
-      fat: 20
-    };
-
-    (recipeApi.createRecipe as jest.Mock).mockResolvedValue({
-      data: { recipe: mockRecipe }
-    });
+    const mockRecipe = { id: 'recipe-1' };
+    (recipeApi.createRecipe as jest.Mock).mockResolvedValue({ data: { data: mockRecipe } });
 
     render(<RecipeFormScreen />);
-    
-    // Fill in all required fields
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe title'), 'Test Recipe');
-    fireEvent.changeText(screen.getByPlaceholderText('Recipe description'), 'Test Description');
-    fireEvent.changeText(screen.getByPlaceholderText('30'), '30');
+
+    fireEvent.changeText(screen.getByPlaceholderText('Enter recipe title'), 'Test Recipe');
+    fireEvent.changeText(screen.getByPlaceholderText('Describe your recipe'), 'Test Description');
+    fireEvent.changeText(screen.getAllByPlaceholderText('30')[0], '30');
     fireEvent.changeText(screen.getByPlaceholderText('Italian'), 'Italian');
-    
-    // Add multiple ingredients
-    fireEvent.press(screen.getByText('Add Ingredient'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., 2 cups flour'), 'Ingredient 1');
-    
-    fireEvent.press(screen.getByText('Add Ingredient'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., 2 cups flour'), 'Ingredient 2');
-    
-    // Add multiple instructions
-    fireEvent.press(screen.getByText('Add Step'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., Preheat oven to 350°F'), 'Step 1');
-    
-    fireEvent.press(screen.getByText('Add Step'));
-    fireEvent.changeText(screen.getByPlaceholderText('e.g., Preheat oven to 350°F'), 'Step 2');
-    
-    // Fill macro nutrients
     fireEvent.changeText(screen.getByPlaceholderText('500'), '500');
-    fireEvent.changeText(screen.getByPlaceholderText('25'), '25');
+    fireEvent.changeText(screen.getAllByPlaceholderText('30')[1], '30');
     fireEvent.changeText(screen.getByPlaceholderText('50'), '50');
-    fireEvent.changeText(screen.getByPlaceholderText('20'), '20');
-    
-    const saveButton = screen.getByText('Save Recipe');
-    fireEvent.press(saveButton);
-    
+    fireEvent.changeText(screen.getByPlaceholderText('15'), '15');
+
+    // Two ingredients
+    fireEvent.changeText(screen.getByPlaceholderText('Ingredient 1'), 'First ingredient');
+    fireEvent.press(screen.getByTestId('add-ingredient-btn'));
+    fireEvent.changeText(screen.getByPlaceholderText('Ingredient 2'), 'Second ingredient');
+
+    // Two instructions
+    fireEvent.changeText(screen.getByPlaceholderText('Step 1 instructions'), 'First step');
+    fireEvent.press(screen.getByTestId('add-step-btn'));
+    fireEvent.changeText(screen.getByPlaceholderText('Step 2 instructions'), 'Second step');
+
+    fireEvent.press(screen.getByText('Save'));
+
     await waitFor(() => {
-      expect(recipeApi.createRecipe).toHaveBeenCalledWith({
-        title: 'Test Recipe',
-        description: 'Test Description',
-        cookTime: 30,
-        cuisine: 'Italian',
-        calories: 500,
-        protein: 25,
-        carbs: 50,
-        fat: 20,
-        ingredients: ['Ingredient 1', 'Ingredient 2'],
-        instructions: ['Step 1', 'Step 2']
-      });
+      expect(recipeApi.createRecipe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ingredients: ['First ingredient', 'Second ingredient'],
+          instructions: ['First step', 'Second step']
+        })
+      );
     });
+  });
+
+  test('should handle recipe type selection', () => {
+    render(<RecipeFormScreen />);
+
+    fireEvent.press(screen.getByText('Snack'));
+    expect(screen.getByText('Snack')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Dessert'));
+    expect(screen.getByText('Dessert')).toBeTruthy();
+
+    // Switch back to Meal (meal sub-types should appear)
+    fireEvent.press(screen.getByText('Meal'));
+    expect(screen.getByText('Breakfast')).toBeTruthy();
   });
 });

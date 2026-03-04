@@ -166,6 +166,42 @@ jest.mock('@modules/aiRecipe/aiRecipeRoutes', () => ({
 jest.mock('@modules/notifications/notificationsRoutes', () => ({
   notificationsRoutes: mockRouter
 }));
+jest.mock('@modules/auth/authRoutes', () => ({
+  authRoutes: mockRouter
+}));
+jest.mock('@modules/healthMetrics/healthMetricsRoutes', () => ({
+  healthMetricsRoutes: mockRouter
+}));
+jest.mock('@modules/weightGoal/weightGoalRoutes', () => ({
+  weightGoalRoutes: mockRouter
+}));
+jest.mock('@modules/mealPrep/mealPrepRoutes', () => ({
+  mealPrepRoutes: mockRouter
+}));
+jest.mock('@modules/scanner/scannerRoutes', () => ({
+  scannerRoutes: mockRouter
+}));
+jest.mock('@modules/search/searchRoutes', () => ({
+  searchRoutes: mockRouter
+}));
+jest.mock('@modules/shoppingList/shoppingListRoutes', () => ({
+  default: mockRouter
+}));
+jest.mock('@modules/shoppingList/shoppingAppRoutes', () => ({
+  default: mockRouter
+}));
+jest.mock('@modules/costTracking/costTrackingRoutes', () => ({
+  default: mockRouter
+}));
+jest.mock('@modules/ingredientAvailability/ingredientAvailabilityRoutes', () => ({
+  default: mockRouter
+}));
+jest.mock('@modules/pantry/pantryRoutes', () => ({
+  default: mockRouter
+}));
+jest.mock('@modules/upload/uploadRoute', () => ({
+  default: mockRouter
+}));
 
 // Mock expo-server-sdk (ESM module that Jest can't transform)
 jest.mock('expo-server-sdk', () => {

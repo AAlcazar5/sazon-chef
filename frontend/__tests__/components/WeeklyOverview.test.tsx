@@ -75,16 +75,16 @@ const WeeklyOverview = ({ weekDates, selectedDate, onDateSelect, isToday, isSele
 
 describe('WeeklyOverview Component', () => {
   const mockWeekDates = [
-    new Date('2024-01-01'), // Monday
-    new Date('2024-01-02'), // Tuesday
-    new Date('2024-01-03'), // Wednesday
-    new Date('2024-01-04'), // Thursday
-    new Date('2024-01-05'), // Friday
-    new Date('2024-01-06'), // Saturday
-    new Date('2024-01-07')  // Sunday
+    new Date(2024, 0, 1), // Monday
+    new Date(2024, 0, 2), // Tuesday
+    new Date(2024, 0, 3), // Wednesday
+    new Date(2024, 0, 4), // Thursday
+    new Date(2024, 0, 5), // Friday
+    new Date(2024, 0, 6), // Saturday
+    new Date(2024, 0, 7)  // Sunday
   ];
 
-  const mockSelectedDate = new Date('2024-01-03');
+  const mockSelectedDate = new Date(2024, 0, 3);
   const mockOnDateSelect = jest.fn();
   const mockIsToday = jest.fn((date) => date.getDate() === 3);
   const mockIsSelected = jest.fn((date) => date.getDate() === 3);
@@ -158,13 +158,13 @@ describe('WeeklyOverview Component', () => {
       />
     );
 
-    expect(getByTestId('day-name-0')).toHaveTextContent('Mon');
-    expect(getByTestId('day-name-1')).toHaveTextContent('Tue');
-    expect(getByTestId('day-name-2')).toHaveTextContent('Wed');
-    expect(getByTestId('day-name-3')).toHaveTextContent('Thu');
-    expect(getByTestId('day-name-4')).toHaveTextContent('Fri');
-    expect(getByTestId('day-name-5')).toHaveTextContent('Sat');
-    expect(getByTestId('day-name-6')).toHaveTextContent('Sun');
+    expect(getByTestId('day-name-0').props.children).toBe('Mon');
+    expect(getByTestId('day-name-1').props.children).toBe('Tue');
+    expect(getByTestId('day-name-2').props.children).toBe('Wed');
+    expect(getByTestId('day-name-3').props.children).toBe('Thu');
+    expect(getByTestId('day-name-4').props.children).toBe('Fri');
+    expect(getByTestId('day-name-5').props.children).toBe('Sat');
+    expect(getByTestId('day-name-6').props.children).toBe('Sun');
   });
 
   it('should show correct day numbers', () => {
@@ -178,13 +178,13 @@ describe('WeeklyOverview Component', () => {
       />
     );
 
-    expect(getByTestId('day-number-0')).toHaveTextContent('1');
-    expect(getByTestId('day-number-1')).toHaveTextContent('2');
-    expect(getByTestId('day-number-2')).toHaveTextContent('3');
-    expect(getByTestId('day-number-3')).toHaveTextContent('4');
-    expect(getByTestId('day-number-4')).toHaveTextContent('5');
-    expect(getByTestId('day-number-5')).toHaveTextContent('6');
-    expect(getByTestId('day-number-6')).toHaveTextContent('7');
+    expect(getByTestId('day-number-0').props.children).toBe(1);
+    expect(getByTestId('day-number-1').props.children).toBe(2);
+    expect(getByTestId('day-number-2').props.children).toBe(3);
+    expect(getByTestId('day-number-3').props.children).toBe(4);
+    expect(getByTestId('day-number-4').props.children).toBe(5);
+    expect(getByTestId('day-number-5').props.children).toBe(6);
+    expect(getByTestId('day-number-6').props.children).toBe(7);
   });
 
   it('should show correct month abbreviations', () => {
@@ -200,7 +200,7 @@ describe('WeeklyOverview Component', () => {
 
     // All dates are in January 2024
     for (let i = 0; i < 7; i++) {
-      expect(getByTestId(`day-month-${i}`)).toHaveTextContent('Jan');
+      expect(getByTestId(`day-month-${i}`).props.children).toBe('Jan');
     }
   });
 
@@ -215,16 +215,16 @@ describe('WeeklyOverview Component', () => {
       />
     );
 
-    // Day 3 is today and selected
-    expect(getByTestId('today-indicator-2')).toBeTruthy();
-    
-    // Other days should have appropriate indicators
+    // All 2024 dates are in the past (we are now past 2024)
+    // Past days (not today) show past-indicator
     expect(getByTestId('past-indicator-0')).toBeTruthy();
     expect(getByTestId('past-indicator-1')).toBeTruthy();
-    expect(getByTestId('future-indicator-3')).toBeTruthy();
-    expect(getByTestId('future-indicator-4')).toBeTruthy();
-    expect(getByTestId('future-indicator-5')).toBeTruthy();
-    expect(getByTestId('future-indicator-6')).toBeTruthy();
+    expect(getByTestId('past-indicator-3')).toBeTruthy();
+    expect(getByTestId('past-indicator-4')).toBeTruthy();
+    expect(getByTestId('past-indicator-5')).toBeTruthy();
+    expect(getByTestId('past-indicator-6')).toBeTruthy();
+    // Day 2 (Jan 3) is "today" AND selected — today-indicator only shows when isToday && !isSelected
+    // So no indicator renders for index 2 (isCurrentDay=true, isSelected=true)
   });
 
   it('should render legend with all indicators', () => {
