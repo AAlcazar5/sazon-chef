@@ -1,6 +1,14 @@
 import { AIRecipeService } from '../../src/services/aiRecipeService';
 
-// Mock OpenAI
+// Mock AIProviderManager to prevent "No AI providers configured" error
+jest.mock('../../src/services/aiProviders/AIProviderManager', () => ({
+  AIProviderManager: jest.fn().mockImplementation(() => ({
+    generateRecipe: jest.fn().mockResolvedValue({}),
+    getAvailableProviders: jest.fn().mockReturnValue(['mock']),
+  }))
+}));
+
+// Mock OpenAI (kept for legacy compatibility, not used by service)
 jest.mock('openai', () => {
   return {
     __esModule: true,
@@ -49,7 +57,7 @@ describe('AIRecipeService - Prompt Engineering', () => {
   let aiService: AIRecipeService;
 
   beforeEach(() => {
-    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.ANTHROPIC_API_KEY = 'test-key';
     aiService = new AIRecipeService();
   });
 

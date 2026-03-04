@@ -4,7 +4,14 @@ import { aiRecipeService } from '../../src/services/aiRecipeService';
 import { prisma } from '../../src/lib/prisma';
 
 // Mock dependencies
-jest.mock('../../src/services/aiRecipeService');
+jest.mock('../../src/services/aiRecipeService', () => ({
+  aiRecipeService: {
+    generateRecipe: jest.fn(),
+    saveGeneratedRecipe: jest.fn(),
+    generateDailyMealPlan: jest.fn(),
+    generateBatchCookingRecommendations: jest.fn(),
+  }
+}));
 jest.mock('../../src/lib/prisma', () => ({
   prisma: {
     userPreferences: {

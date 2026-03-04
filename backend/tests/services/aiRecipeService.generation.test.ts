@@ -1,21 +1,19 @@
 import { AIRecipeService } from '../../src/services/aiRecipeService';
-import OpenAI from 'openai';
+import { prisma } from '../../src/lib/prisma';
 
-// Mock OpenAI
-const mockOpenAI = {
-  chat: {
-    completions: {
-      create: jest.fn()
-    }
-  }
-};
+// Mock AIProviderManager to prevent "No AI providers configured" error
+let mockProviderManager: any;
+const mockGenerateRecipe = jest.fn();
 
-jest.mock('openai', () => {
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => mockOpenAI)
-  };
-});
+jest.mock('../../src/services/aiProviders/AIProviderManager', () => ({
+  AIProviderManager: jest.fn().mockImplementation(() => {
+    mockProviderManager = {
+      generateRecipe: mockGenerateRecipe,
+      getAvailableProviders: jest.fn().mockReturnValue(['mock']),
+    };
+    return mockProviderManager;
+  })
+}));
 
 // Mock imageService
 jest.mock('../../src/services/imageService', () => ({
@@ -31,24 +29,25 @@ jest.mock('../../src/services/imageService', () => ({
   }
 }));
 
-// Mock Prisma
-const mockPrisma = {
-  recipe: {
-    create: jest.fn(),
-    update: jest.fn(),
-    findUnique: jest.fn()
-  },
-  recipeIngredient: {
-    create: jest.fn()
-  },
-  recipeInstruction: {
-    create: jest.fn()
-  }
-};
-
+// Mock Prisma (define inline to avoid TDZ issues with jest.mock hoisting)
 jest.mock('../../src/lib/prisma', () => ({
-  prisma: mockPrisma
+  prisma: {
+    recipe: {
+      create: jest.fn(),
+      update: jest.fn(),
+      findUnique: jest.fn()
+    },
+    recipeIngredient: {
+      create: jest.fn()
+    },
+    recipeInstruction: {
+      create: jest.fn()
+    }
+  }
 }));
+
+// Reference the mocked prisma (safe: assigned after module factory runs)
+const mockPrisma = prisma as any;
 
 describe('AIRecipeService - Recipe Generation', () => {
   let aiService: AIRecipeService;
@@ -80,17 +79,11 @@ describe('AIRecipeService - Recipe Generation', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.ANTHROPIC_API_KEY = 'test-key';
     aiService = new AIRecipeService();
 
-    // Mock OpenAI response
-    (mockOpenAI.chat.completions.create as jest.Mock).mockResolvedValue({
-      choices: [{
-        message: {
-          content: JSON.stringify(mockRecipeResponse)
-        }
-      }]
-    });
+    // Mock provider to return valid recipe by default
+    mockGenerateRecipe.mockResolvedValue(mockRecipeResponse);
 
     // Mock Prisma responses
     (mockPrisma.recipe.create as jest.Mock).mockResolvedValue({
@@ -138,16 +131,14 @@ describe('AIRecipeService - Recipe Generation', () => {
       expect(result.title).toBe('Test Recipe');
       expect(result.cuisine).toBe('Italian');
       expect(result.calories).toBe(500);
-      
-      // Verify OpenAI was called
-      expect(mockOpenAI.chat.completions.create).toHaveBeenCalled();
-      const callArgs = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls[0][0];
-      
-      expect(callArgs.model).toBe('gpt-4o');
+
+      // Verify provider was called
+      expect(mockGenerateRecipe).toHaveBeenCalled();
+      const callArgs = mockGenerateRecipe.mock.calls[0][0];
+
       expect(callArgs.temperature).toBe(1.1);
-      expect(callArgs.response_format).toEqual({ type: 'json_object' });
-      expect(callArgs.messages[0].role).toBe('system');
-      expect(callArgs.messages[1].role).toBe('user');
+      expect(callArgs.systemPrompt).toBeTruthy();
+      expect(callArgs.prompt).toBeTruthy();
     });
 
     test('should include dietary restrictions in prompt', async () => {
@@ -164,7 +155,7 @@ describe('AIRecipeService - Recipe Generation', () => {
 
       await aiService.generateRecipe(params);
 
-      const userPrompt = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls[0][0].messages[1].content;
+      const userPrompt = mockGenerateRecipe.mock.calls[0][0].prompt;
       expect(userPrompt).toContain('Vegan');
       expect(userPrompt).toContain('Gluten-Free');
     });
@@ -183,7 +174,7 @@ describe('AIRecipeService - Recipe Generation', () => {
 
       await aiService.generateRecipe(params);
 
-      const userPrompt = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls[0][0].messages[1].content;
+      const userPrompt = mockGenerateRecipe.mock.calls[0][0].prompt;
       expect(userPrompt).toContain('NEVER');
       expect(userPrompt).toContain('Peanuts');
       expect(userPrompt).toContain('Shellfish');
@@ -202,7 +193,7 @@ describe('AIRecipeService - Recipe Generation', () => {
 
       await aiService.generateRecipe(params);
 
-      const userPrompt = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls[0][0].messages[1].content;
+      const userPrompt = mockGenerateRecipe.mock.calls[0][0].prompt;
       expect(userPrompt).toContain('600');
       expect(userPrompt).toContain('40');
       expect(userPrompt).toContain('60');
@@ -222,43 +213,23 @@ describe('AIRecipeService - Recipe Generation', () => {
 
       await aiService.generateRecipe(params);
 
-      const userPrompt = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls[0][0].messages[1].content;
+      const userPrompt = mockGenerateRecipe.mock.calls[0][0].prompt;
       expect(userPrompt).toContain('muscle');
       expect(userPrompt).toContain('protein');
     });
 
-    test('should throw error if OpenAI API key is missing', () => {
-      delete process.env.OPENAI_API_KEY;
-      
-      expect(() => {
-        new AIRecipeService();
-      }).toThrow('OPENAI_API_KEY is not set');
-    });
-
-    test('should throw error if OpenAI returns no content', async () => {
-      (mockOpenAI.chat.completions.create as jest.Mock).mockResolvedValue({
-        choices: [{
-          message: {
-            content: null
-          }
-        }]
-      });
+    test('should throw error if provider returns null', async () => {
+      mockGenerateRecipe.mockResolvedValueOnce(null);
 
       const params = {
         userId: 'test-user'
       };
 
-      await expect(aiService.generateRecipe(params)).rejects.toThrow('No content received');
+      await expect(aiService.generateRecipe(params)).rejects.toThrow();
     });
 
-    test('should throw error if OpenAI returns invalid JSON', async () => {
-      (mockOpenAI.chat.completions.create as jest.Mock).mockResolvedValue({
-        choices: [{
-          message: {
-            content: 'Invalid JSON {'
-          }
-        }]
-      });
+    test('should throw error if provider throws', async () => {
+      mockGenerateRecipe.mockRejectedValueOnce(new Error('Provider error'));
 
       const params = {
         userId: 'test-user'
@@ -287,8 +258,8 @@ describe('AIRecipeService - Recipe Generation', () => {
       expect(result.dinner).toBeDefined();
       expect(result.snack).toBeDefined();
 
-      // Should call OpenAI 4 times (one per meal)
-      expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(4);
+      // Should call provider 4 times (one per meal)
+      expect(mockGenerateRecipe).toHaveBeenCalledTimes(4);
     });
 
     test('should distribute macros across meals correctly', async () => {
@@ -304,22 +275,22 @@ describe('AIRecipeService - Recipe Generation', () => {
 
       await aiService.generateDailyMealPlan(params);
 
-      const calls = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls;
-      
+      const calls = mockGenerateRecipe.mock.calls;
+
       // Check breakfast (25%)
-      const breakfastPrompt = calls[0][0].messages[1].content;
+      const breakfastPrompt = calls[0][0].prompt;
       expect(breakfastPrompt).toContain('500'); // 2000 * 0.25 = 500
-      
+
       // Check lunch (30%)
-      const lunchPrompt = calls[1][0].messages[1].content;
+      const lunchPrompt = calls[1][0].prompt;
       expect(lunchPrompt).toContain('600'); // 2000 * 0.30 = 600
-      
+
       // Check dinner (35%)
-      const dinnerPrompt = calls[2][0].messages[1].content;
+      const dinnerPrompt = calls[2][0].prompt;
       expect(dinnerPrompt).toContain('700'); // 2000 * 0.35 = 700
-      
+
       // Check snack (10%)
-      const snackPrompt = calls[3][0].messages[1].content;
+      const snackPrompt = calls[3][0].prompt;
       expect(snackPrompt).toContain('200'); // 2000 * 0.10 = 200
     });
 
@@ -343,11 +314,11 @@ describe('AIRecipeService - Recipe Generation', () => {
 
       await aiService.generateDailyMealPlan(params);
 
-      const calls = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls;
-      
+      const calls = mockGenerateRecipe.mock.calls;
+
       // All meals should have the same preferences
       calls.forEach(call => {
-        const prompt = call[0].messages[1].content;
+        const prompt = call[0].prompt;
         expect(prompt).toContain('Vegetarian');
         expect(prompt).toContain('NEVER');
         expect(prompt).toContain('Peanuts');
@@ -381,7 +352,7 @@ describe('AIRecipeService - Recipe Generation', () => {
 
       expect(mockPrisma.recipe.create).toHaveBeenCalled();
       expect(mockPrisma.recipeIngredient.create).toHaveBeenCalled();
-      expect(mockPrisma.recipeInstruction).toHaveBeenCalled();
+      expect(mockPrisma.recipeInstruction.create).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
 

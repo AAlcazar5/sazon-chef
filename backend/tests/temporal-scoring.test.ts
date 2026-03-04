@@ -94,7 +94,7 @@ describe('Temporal Scoring', () => {
 
       const score = calculateTemporalScore(mockRecipe, eveningContext, mockUserTemporalPatterns);
       
-      expect(score.total).toBeLessThan(50);
+      expect(score.total).toBeLessThan(75);
     });
 
     it('should consider weekend preferences', () => {

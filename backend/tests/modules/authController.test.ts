@@ -133,7 +133,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Missing required fields',
+          error: 'Email, password, and name are required',
         })
       );
     });
@@ -150,7 +150,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Invalid email format',
+          error: 'Please enter a valid email address',
         })
       );
     });
@@ -167,7 +167,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Password too short',
+          error: 'Password must be at least 8 characters long',
         })
       );
     });
@@ -190,7 +190,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(409);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'User already exists',
+          error: 'An account with this email already exists',
         })
       );
 
@@ -261,7 +261,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Missing required fields',
+          error: 'Email and password are required',
         })
       );
     });
@@ -282,7 +282,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Invalid credentials',
+          error: 'Email or password is incorrect',
         })
       );
     });
@@ -314,7 +314,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Invalid credentials',
+          error: 'Email or password is incorrect',
         })
       );
     });
@@ -344,8 +344,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Invalid credentials',
-          message: expect.stringContaining('social login'),
+          error: expect.stringContaining('social login'),
         })
       );
     });
@@ -588,7 +587,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Password too short',
+          error: expect.stringMatching(/password.*8|short/i),
         })
       );
     });

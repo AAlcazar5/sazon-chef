@@ -1,6 +1,12 @@
 import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
-import RecipeCard from '../../components/recipe/RecipeCard';
+import { RecipeCard } from '../../components/recipe/RecipeCard';
+
+// Mock ThemeContext (required by Icon component)
+jest.mock('../../contexts/ThemeContext', () => ({
+  useTheme: () => ({ isDark: false, theme: 'light' }),
+  ThemeProvider: ({ children }: any) => children,
+}));
 
 // Mock the API
 jest.mock('../../lib/api', () => ({
@@ -12,11 +18,23 @@ jest.mock('../../lib/api', () => ({
   }
 }));
 
-// Mock Haptics
+// Mock Haptics (include ImpactFeedbackStyle + NotificationFeedbackType for module-level access)
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
-  selectionAsync: jest.fn()
+  selectionAsync: jest.fn(),
+  ImpactFeedbackStyle: {
+    Light: 'light',
+    Medium: 'medium',
+    Heavy: 'heavy',
+    Soft: 'soft',
+    Rigid: 'rigid',
+  },
+  NotificationFeedbackType: {
+    Success: 'success',
+    Warning: 'warning',
+    Error: 'error',
+  },
 }));
 
 describe('RecipeCard', () => {
@@ -77,9 +95,9 @@ describe('RecipeCard', () => {
       />
     );
 
-    expect(screen.getByText('25g')).toBeTruthy(); // Protein
-    expect(screen.getByText('50g')).toBeTruthy(); // Carbs
-    expect(screen.getByText('20g')).toBeTruthy(); // Fat
+    expect(screen.getByText('25g pro')).toBeTruthy(); // Protein
+    expect(screen.getByText('50g carb')).toBeTruthy(); // Carbs
+    expect(screen.getByText('20g fat')).toBeTruthy(); // Fat
   });
 
   test('should display score information', () => {
@@ -215,7 +233,8 @@ describe('RecipeCard', () => {
     );
 
     expect(screen.getByText('0 cal')).toBeTruthy();
-    expect(screen.getByText('0 min')).toBeTruthy();
+    // 0g macros are rendered as labels
+    expect(screen.getByText('0g pro')).toBeTruthy();
   });
 
   test('should handle very high values', () => {

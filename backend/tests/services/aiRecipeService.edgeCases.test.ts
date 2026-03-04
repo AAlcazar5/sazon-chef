@@ -1,21 +1,19 @@
 import { AIRecipeService } from '../../src/services/aiRecipeService';
-import OpenAI from 'openai';
+import { prisma } from '../../src/lib/prisma';
 
-// Mock OpenAI
-const mockOpenAI = {
-  chat: {
-    completions: {
-      create: jest.fn()
-    }
-  }
-};
+// Mock AIProviderManager to prevent "No AI providers configured" error
+let mockProviderManager: any;
+const mockGenerateRecipe = jest.fn();
 
-jest.mock('openai', () => {
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => mockOpenAI)
-  };
-});
+jest.mock('../../src/services/aiProviders/AIProviderManager', () => ({
+  AIProviderManager: jest.fn().mockImplementation(() => {
+    mockProviderManager = {
+      generateRecipe: mockGenerateRecipe,
+      getAvailableProviders: jest.fn().mockReturnValue(['mock']),
+    };
+    return mockProviderManager;
+  })
+}));
 
 // Mock imageService
 jest.mock('../../src/services/imageService', () => ({
@@ -31,32 +29,54 @@ jest.mock('../../src/services/imageService', () => ({
   }
 }));
 
-// Mock Prisma
-const mockPrisma = {
-  recipe: {
-    create: jest.fn(),
-    update: jest.fn(),
-    findUnique: jest.fn()
-  },
-  recipeIngredient: {
-    create: jest.fn()
-  },
-  recipeInstruction: {
-    create: jest.fn()
-  }
-};
-
+// Mock Prisma (define inline to avoid TDZ issues with jest.mock hoisting)
 jest.mock('../../src/lib/prisma', () => ({
-  prisma: mockPrisma
+  prisma: {
+    recipe: {
+      create: jest.fn(),
+      update: jest.fn(),
+      findUnique: jest.fn()
+    },
+    recipeIngredient: {
+      create: jest.fn()
+    },
+    recipeInstruction: {
+      create: jest.fn()
+    }
+  }
 }));
+
+// Reference the mocked prisma (safe: assigned after module factory runs)
+const mockPrisma = prisma as any;
 
 describe('AIRecipeService - Edge Cases', () => {
   let aiService: AIRecipeService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.ANTHROPIC_API_KEY = 'test-key';
     aiService = new AIRecipeService();
+    // Default: provider returns a valid recipe for generateRecipe calls
+    mockGenerateRecipe.mockResolvedValue({
+      title: 'Test Recipe',
+      description: 'A valid test recipe description',
+      cuisine: 'Italian',
+      cookTime: 30,
+      difficulty: 'medium' as const,
+      servings: 1,
+      calories: 500,
+      protein: 30,
+      carbs: 50,
+      fat: 20,
+      ingredients: [
+        { name: 'Pasta', amount: 100, unit: 'g' },
+        { name: 'Sauce', amount: 200, unit: 'ml' }
+      ],
+      instructions: [
+        { step: 1, instruction: 'First instruction that is long enough to pass validation' },
+        { step: 2, instruction: 'Second instruction that is also long enough' }
+      ]
+    });
   });
 
   describe('Validation Edge Cases', () => {
@@ -702,14 +722,38 @@ describe('AIRecipeService - Edge Cases', () => {
     });
   });
 
-  describe('OpenAI Response Edge Cases', () => {
-    test('should handle malformed JSON from OpenAI', async () => {
-      (mockOpenAI.chat.completions.create as jest.Mock).mockResolvedValue({
-        choices: [{
-          message: {
-            content: '{ "title": "Incomplete JSON", "calories": ' // Malformed
-          }
-        }]
+  describe('Provider Response Edge Cases', () => {
+    test('should handle provider error gracefully', async () => {
+      mockGenerateRecipe.mockRejectedValueOnce(new Error('Provider failed to generate recipe'));
+
+      const params = {
+        userId: 'test-user'
+      };
+
+      await expect(aiService.generateRecipe(params)).rejects.toThrow();
+    });
+
+    test('should reject recipe with missing required fields from provider', async () => {
+      // Provider returns recipe with empty title (fails validation)
+      mockGenerateRecipe.mockResolvedValueOnce({
+        title: 'AB', // below minimum 3 chars
+        description: 'test',
+        cuisine: 'Italian',
+        cookTime: 30,
+        difficulty: 'medium',
+        servings: 1,
+        calories: 500,
+        protein: 30,
+        carbs: 50,
+        fat: 20,
+        ingredients: [
+          { name: 'Pasta', amount: 100, unit: 'g' },
+          { name: 'Sauce', amount: 200, unit: 'ml' }
+        ],
+        instructions: [
+          { step: 1, instruction: 'First instruction' },
+          { step: 2, instruction: 'Second instruction' }
+        ]
       });
 
       const params = {
@@ -719,29 +763,13 @@ describe('AIRecipeService - Edge Cases', () => {
       await expect(aiService.generateRecipe(params)).rejects.toThrow();
     });
 
-    test('should handle empty JSON object from OpenAI', async () => {
-      (mockOpenAI.chat.completions.create as jest.Mock).mockResolvedValue({
-        choices: [{
-          message: {
-            content: '{}'
-          }
-        }]
-      });
-
-      const params = {
-        userId: 'test-user'
-      };
-
-      await expect(aiService.generateRecipe(params)).rejects.toThrow('missing required fields');
-    });
-
-    test('should handle JSON with extra fields', async () => {
+    test('should handle recipe with extra fields from provider', async () => {
       const recipeWithExtra = {
         title: 'Test Recipe',
         description: 'This is a valid test recipe description',
         cuisine: 'Italian',
         cookTime: 30,
-        difficulty: 'medium',
+        difficulty: 'medium' as const,
         servings: 1,
         calories: 500,
         protein: 30,
@@ -759,13 +787,7 @@ describe('AIRecipeService - Edge Cases', () => {
         anotherField: 123
       };
 
-      (mockOpenAI.chat.completions.create as jest.Mock).mockResolvedValue({
-        choices: [{
-          message: {
-            content: JSON.stringify(recipeWithExtra)
-          }
-        }]
-      });
+      mockGenerateRecipe.mockResolvedValueOnce(recipeWithExtra);
 
       const params = {
         userId: 'test-user'
@@ -777,13 +799,13 @@ describe('AIRecipeService - Edge Cases', () => {
       expect((result as any).extraField).toBeUndefined();
     });
 
-    test('should handle null values in OpenAI response', async () => {
+    test('should handle null optional fields in provider response', async () => {
       const recipeWithNulls = {
         title: 'Test Recipe',
         description: 'This is a valid test recipe description',
         cuisine: 'Italian',
         cookTime: 30,
-        difficulty: 'medium',
+        difficulty: 'medium' as const,
         servings: 1,
         calories: 500,
         protein: 30,
@@ -802,13 +824,7 @@ describe('AIRecipeService - Edge Cases', () => {
         tags: null
       };
 
-      (mockOpenAI.chat.completions.create as jest.Mock).mockResolvedValue({
-        choices: [{
-          message: {
-            content: JSON.stringify(recipeWithNulls)
-          }
-        }]
-      });
+      mockGenerateRecipe.mockResolvedValueOnce(recipeWithNulls);
 
       const params = {
         userId: 'test-user'
@@ -915,7 +931,7 @@ describe('AIRecipeService - Edge Cases', () => {
   describe('Image Service Edge Cases', () => {
     test('should handle slow image fetch', async () => {
       const { imageService } = require('../../src/services/imageService');
-      
+
       // Mock a slow response
       (imageService.searchFoodImage as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve({
@@ -927,33 +943,6 @@ describe('AIRecipeService - Edge Cases', () => {
           unsplashUrl: 'https://unsplash.com/photos/test'
         }), 100))
       );
-
-      (mockOpenAI.chat.completions.create as jest.Mock).mockResolvedValue({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              title: 'Test Recipe',
-              description: 'This is a valid test recipe description',
-              cuisine: 'Italian',
-              cookTime: 30,
-              difficulty: 'medium',
-              servings: 1,
-              calories: 500,
-              protein: 30,
-              carbs: 50,
-              fat: 20,
-              ingredients: [
-                { name: 'Pasta', amount: 100, unit: 'g' },
-                { name: 'Sauce', amount: 200, unit: 'ml' }
-              ],
-              instructions: [
-                { step: 1, instruction: 'First instruction that is long enough' },
-                { step: 2, instruction: 'Second instruction that is also long enough' }
-              ]
-            })
-          }
-        }]
-      });
 
       const recipe = {
         title: 'Test Recipe',

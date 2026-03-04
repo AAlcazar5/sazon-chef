@@ -55,7 +55,7 @@ describe('RegisterScreen', () => {
     fireEvent.press(getByText('Sign Up'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please fill in all fields');
+      expect(getByText('Name is required')).toBeTruthy();
     });
   });
 
@@ -69,7 +69,7 @@ describe('RegisterScreen', () => {
     fireEvent.press(getByText('Sign Up'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please enter a valid email address');
+      expect(getByText('Please enter a valid email address')).toBeTruthy();
     });
   });
 
@@ -83,7 +83,7 @@ describe('RegisterScreen', () => {
     fireEvent.press(getByText('Sign Up'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Password must be at least 8 characters');
+      expect(getByText('Password must be at least 8 characters')).toBeTruthy();
     });
   });
 
@@ -97,7 +97,7 @@ describe('RegisterScreen', () => {
     fireEvent.press(getByText('Sign Up'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Passwords do not match');
+      expect(getByText('Passwords do not match')).toBeTruthy();
     });
   });
 
@@ -131,7 +131,7 @@ describe('RegisterScreen', () => {
     fireEvent.press(getByText('Sign Up'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Registration Failed', 'User already exists');
+      expect(getByText('User already exists')).toBeTruthy();
     });
   });
 
