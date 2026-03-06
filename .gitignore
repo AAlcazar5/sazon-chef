@@ -6,6 +6,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 logs_59253298062
+logs_59590275171
+logs_59687490529
 ROADMAP_3.0.md
 
 # Environment variables (CRITICAL - Never commit these!)
