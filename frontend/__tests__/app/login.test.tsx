@@ -34,6 +34,7 @@ describe('LoginScreen', () => {
       isAuthenticated: false,
       login: mockLogin,
       register: jest.fn(),
+      socialLogin: jest.fn(),
       logout: mockLogout,
       updateUser: jest.fn(),
     });

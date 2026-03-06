@@ -115,7 +115,7 @@ export default function VoiceOverlay({
         <View style={styles.content}>
           {/* Mascot */}
           <View style={styles.mascotContainer}>
-            <SazonMascot expression={isListening ? 'thinking' : 'happy'} size={80} />
+            <SazonMascot expression={isListening ? 'thinking' : 'happy'} size="medium" />
           </View>
 
           {/* Pulsing rings */}

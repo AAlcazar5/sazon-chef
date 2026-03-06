@@ -169,53 +169,54 @@ export function useCookbookFilters(): UseCookbookFiltersReturn {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
           recipe.title?.toLowerCase().includes(query) ||
-          recipe.cuisineType?.toLowerCase().includes(query) ||
+          recipe.cuisine?.toLowerCase().includes(query) ||
           recipe.description?.toLowerCase().includes(query) ||
           recipe.notes?.toLowerCase().includes(query) ||
           recipe.ingredients?.some(ing =>
-            (typeof ing === 'string' ? ing : ing.name)?.toLowerCase().includes(query)
+            (typeof ing === 'string' ? ing : ing.text)?.toLowerCase().includes(query)
           );
         if (!matchesSearch) return false;
       }
 
       // Cook time filter
       if (filters.maxCookTime !== null) {
-        const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
+        const totalTime = recipe.cookTime || 0;
         if (totalTime > filters.maxCookTime) return false;
       }
 
       // Difficulty filter
       if (filters.difficulty.length > 0) {
-        if (!recipe.difficulty || !filters.difficulty.includes(recipe.difficulty as 'Easy' | 'Medium' | 'Hard')) {
+        const recipeDifficulty = (recipe.difficulty || '').charAt(0).toUpperCase() + (recipe.difficulty || '').slice(1).toLowerCase();
+        if (!recipe.difficulty || !filters.difficulty.includes(recipeDifficulty as 'Easy' | 'Medium' | 'Hard')) {
           return false;
         }
       }
 
       // Meal prep filter
       if (filters.mealPrepOnly) {
-        if (!recipe.mealPrepFriendly) return false;
+        if (!recipe.weeklyPrepFriendly) return false;
       }
 
       // High protein filter (>30g per serving)
       if (filters.highProtein) {
-        const protein = recipe.macros?.protein || 0;
+        const protein = recipe.protein || 0;
         if (protein < 30) return false;
       }
 
       // Low calorie filter (<500 cal per serving)
       if (filters.lowCal) {
-        const calories = recipe.macros?.calories || recipe.calories || 0;
+        const calories = recipe.calories || 0;
         if (calories >= 500) return false;
       }
 
       // Budget filter
       if (filters.budget) {
-        if (!recipe.budgetFriendly) return false;
+        if (!(recipe as any).budgetFriendly) return false;
       }
 
       // One pot filter
       if (filters.onePot) {
-        if (!recipe.onePot) return false;
+        if (!(recipe as any).onePot) return false;
       }
 
       return true;
@@ -231,15 +232,15 @@ export function useCookbookFilters(): UseCookbookFiltersReturn {
         sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
         break;
       case 'cuisine':
-        sorted.sort((a, b) => (a.cuisineType || '').localeCompare(b.cuisineType || ''));
+        sorted.sort((a, b) => (a.cuisine || '').localeCompare(b.cuisine || ''));
         break;
       case 'matchScore':
-        sorted.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+        sorted.sort((a, b) => ((b as any).matchScore || 0) - ((a as any).matchScore || 0));
         break;
       case 'cookTime':
         sorted.sort((a, b) => {
-          const aTime = (a.prepTime || 0) + (a.cookTime || 0);
-          const bTime = (b.prepTime || 0) + (b.cookTime || 0);
+          const aTime = a.cookTime || 0;
+          const bTime = b.cookTime || 0;
           return aTime - bTime;
         });
         break;
@@ -252,8 +253,8 @@ export function useCookbookFilters(): UseCookbookFiltersReturn {
       case 'recent':
       default:
         sorted.sort((a, b) => {
-          const aDate = new Date(a.savedAt || a.createdAt || 0).getTime();
-          const bDate = new Date(b.savedAt || b.createdAt || 0).getTime();
+          const aDate = new Date(a.savedDate || a.createdAt || 0).getTime();
+          const bDate = new Date(b.savedDate || b.createdAt || 0).getTime();
           return bDate - aDate;
         });
         break;

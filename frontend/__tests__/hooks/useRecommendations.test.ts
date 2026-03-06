@@ -80,7 +80,7 @@ describe('useRecommendations Hook', () => {
     });
 
     it('should set loading state correctly', async () => {
-      let resolvePromise;
+      let resolvePromise: (value: any) => void;
       const promise = new Promise((resolve) => {
         resolvePromise = resolve;
       });

@@ -397,7 +397,7 @@ export default function MealPlanScreen() {
     setDraggingMeal(null);
     setDragOverHour(null);
   }, []);
-  const handleDragOver = useCallback((hour: number) => setDragOverHour(hour), []);
+  const handleDragOver = useCallback((hour: number | null) => setDragOverHour(hour), []);
 
   // ── Effects ──
 

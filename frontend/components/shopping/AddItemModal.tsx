@@ -189,7 +189,7 @@ export default function AddItemModal({
                   } : undefined}
                 >
                   <Icon
-                    name={tab.icon}
+                    name={tab.icon as any}
                     size={14}
                     color={activeTab === tab.key
                       ? (isDark ? '#F9FAFB' : '#111827')

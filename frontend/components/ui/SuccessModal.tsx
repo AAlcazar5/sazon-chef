@@ -120,7 +120,6 @@ export default function SuccessModal({
               message={message}
               expression={expression}
               size="large"
-              variant="orange"
               fullScreen
               actionLabel={actionLabel}
               onAction={handleAction}

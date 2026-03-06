@@ -17,10 +17,10 @@ export interface QuickFilter {
 
 // Predefined quick filters
 export const QUICK_FILTERS: QuickFilter[] = [
-  { id: 'high-protein', label: 'High Protein', icon: Icons.BARBELL, color: Colors.tertiaryGreen },
-  { id: 'low-carb', label: 'Low Carb', icon: Icons.TRENDING_DOWN, color: Colors.secondaryRed },
-  { id: 'low-calorie', label: 'Low Calorie', icon: Icons.FITNESS, color: Colors.primary },
-  { id: 'quick', label: 'Quick', icon: Icons.TIME, color: Colors.accentOrange },
+  { id: 'high-protein', label: 'High Protein', icon: Icons.FLAME, color: Colors.tertiaryGreen },
+  { id: 'low-carb', label: 'Low Carb', icon: Icons.NUTRITION, color: Colors.secondaryRed },
+  { id: 'low-calorie', label: 'Low Calorie', icon: Icons.NUTRITION_OUTLINE, color: Colors.primary },
+  { id: 'quick', label: 'Quick', icon: Icons.TIME, color: Colors.accent },
 ];
 
 // Filter criteria for each quick filter
@@ -78,7 +78,7 @@ export default function QuickFilterChips({
             >
               {filter.icon && (
                 <Icon
-                  name={filter.icon}
+                  name={filter.icon as any}
                   size={IconSizes.XS}
                   color={isActive ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
                   accessibilityLabel=""

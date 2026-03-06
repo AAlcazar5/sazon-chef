@@ -82,6 +82,7 @@ describe('ProfileScreen - Logout', () => {
       isAuthenticated: true,
       login: jest.fn(),
       register: jest.fn(),
+      socialLogin: jest.fn(),
       logout: mockLogout,
       updateUser: jest.fn(),
     });

@@ -64,7 +64,6 @@ export type IconName =
   | 'dice' | 'dice-outline'
   | 'sparkles' | 'sparkles-outline'
   | 'document' | 'document-outline'
-  | 'book-outline'
   // Shopping
   | 'cart' | 'cart-outline'
   | 'storefront' | 'storefront-outline'
@@ -264,7 +263,6 @@ function mapIconName(name: IconName): string {
     'sparkles-outline': 'sparkles-outline',
     'document': 'document',
     'document-outline': 'document-outline',
-    'book-outline': 'book-outline',
     // Shopping
     'cart': 'cart',
     'cart-outline': 'cart-outline',

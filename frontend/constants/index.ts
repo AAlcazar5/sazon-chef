@@ -5,7 +5,7 @@
 export { Colors, DarkColors, BackgroundColors, TextColors, Gradients, getScoreColor, getMacroColor, getFeedbackColor } from './Colors';
 
 // Icons
-export { Icons, IconSizes, IconColors, IconVariants, getIconName } from './Icons';
+export { Icons, IconSizes } from './Icons';
 
 // Spacing
 export { Spacing, ComponentSpacing, BorderRadius, Gap, SPACING_UNIT } from './Spacing';

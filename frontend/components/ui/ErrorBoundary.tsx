@@ -62,7 +62,7 @@ class ErrorBoundaryClass extends Component<Props, State> {
       userId: this.props.userId,
       screen: this.props.screen,
       action: 'Component Render',
-      componentStack: errorInfo.componentStack,
+      componentStack: errorInfo.componentStack ?? undefined,
       metadata: {
         errorName: error.name,
         errorStack: error.stack,

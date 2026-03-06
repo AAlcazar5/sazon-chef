@@ -33,7 +33,7 @@ interface CookbookFilterModalProps {
   onFilterChange: (filters: CookbookFilters) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  collections: Collection[];
+  collections: any[];
   selectedListId: string | null;
   onSelectList: (id: string | null) => void;
   viewMode: ViewMode;

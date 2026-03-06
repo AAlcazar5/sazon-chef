@@ -76,7 +76,7 @@ export default function RecipeActionMenu({
     }
   };
 
-  const handleAction = (action: () => void | undefined) => {
+  const handleAction = (action: (() => void) | undefined) => {
     if (action) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       action();
@@ -116,7 +116,7 @@ export default function RecipeActionMenu({
     {
       id: 'healthify',
       label: 'Healthify Recipe',
-      icon: Icons.HEART_OUTLINE,
+      icon: Icons.FAVORITE_OUTLINE,
       color: Colors.tertiaryGreen,
       onPress: () => handleAction(onHealthify),
     },
@@ -144,7 +144,7 @@ export default function RecipeActionMenu({
     {
       id: 'report-issue',
       label: 'Report Issue',
-      icon: Icons.ALERT_CIRCLE_OUTLINE,
+      icon: Icons.ERROR_OUTLINE,
       color: Colors.secondaryRed,
       onPress: () => handleAction(onReportIssue),
     },
