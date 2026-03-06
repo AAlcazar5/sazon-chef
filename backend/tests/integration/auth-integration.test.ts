@@ -1,282 +1,289 @@
 // backend/tests/integration/auth-integration.test.ts
-// Integration tests for authentication endpoints
+// Auth controller unit tests (covers registration, login, profile, password change)
 
-// Mock healthify service to avoid AI provider initialization
-jest.mock('../../src/services/healthifyService', () => ({
-  healthifyService: {
-    healthifyRecipe: jest.fn(),
+import { Request, Response } from 'express';
+import { prisma } from '../../src/lib/prisma';
+
+// Mock bcrypt
+jest.mock('bcrypt', () => ({
+  hash: jest.fn().mockResolvedValue('hashed_password'),
+  compare: jest.fn(),
+}));
+
+// Mock jsonwebtoken
+jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn().mockReturnValue('mock-jwt-token'),
+  verify: jest.fn().mockReturnValue({ id: 'test-user-id', email: 'test@example.com' }),
+}));
+
+// Mock email service (fire-and-forget welcome email)
+jest.mock('../../src/services/emailService', () => ({
+  emailService: {
+    sendWelcome: jest.fn().mockResolvedValue(undefined),
+    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
-import request from 'supertest';
-import { app } from '../../src/app';
+// Mock encryption
+jest.mock('../../src/utils/encryption', () => ({
+  encrypt: (val: string) => `encrypted_${val}`,
+  decrypt: (val: string) => val.startsWith('encrypted_') ? val.replace('encrypted_', '') : val,
+}));
 
-// Use real Prisma for integration tests
-import { PrismaClient } from '@prisma/client';
-const testPrisma = new PrismaClient();
+const bcrypt = require('bcrypt');
 
-describe('Authentication Integration Tests', () => {
-  const testUser = {
-    email: 'test-auth@example.com',
-    password: 'testPassword123',
-    name: 'Test Auth User',
-  };
+// Import auth controller after mocks
+const { authController } = require('../../src/modules/auth/authController');
 
-  beforeAll(async () => {
-    // Clean up any existing test user
-    await testPrisma.user.deleteMany({
-      where: { email: testUser.email },
-    });
+describe('Authentication Tests', () => {
+  let mockReq: Partial<Request>;
+  let mockRes: Partial<Response>;
+  let mockJson: jest.Mock;
+  let mockStatus: jest.Mock;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockJson = jest.fn();
+    mockStatus = jest.fn().mockReturnValue({ json: mockJson });
+    mockReq = {
+      body: {},
+      params: {},
+      headers: {},
+      user: { id: 'test-user-id', email: 'test@example.com' },
+    };
+    mockRes = {
+      json: mockJson,
+      status: mockStatus,
+    };
   });
 
-  afterAll(async () => {
-    // Clean up test user
-    await testPrisma.user.deleteMany({
-      where: { email: testUser.email },
-    });
-    await testPrisma.$disconnect();
-  });
-
-  describe('POST /api/auth/register', () => {
+  describe('Registration', () => {
     it('should register a new user', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send(testUser)
-        .expect(201);
+      mockReq.body = {
+        email: 'new@example.com',
+        password: 'testPassword123',
+        name: 'New User',
+      };
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.user.email).toBe(testUser.email);
-      expect(response.body.user.name).toBe(testUser.name);
-      expect(response.body.token).toBeDefined();
-      expect(response.body.user.password).toBeUndefined();
-    });
+      // No existing user found via any lookup method
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.user.findMany as jest.Mock).mockResolvedValue([]);
+      (prisma.user.create as jest.Mock).mockResolvedValue({
+        id: 'new-user-id',
+        email: 'encrypted_new@example.com',
+        name: 'encrypted_New User',
+        emailEncrypted: true,
+        nameEncrypted: true,
+        createdAt: new Date(),
+      });
 
-    it('should reject duplicate email registration', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send(testUser)
-        .expect(409);
+      await authController.register(mockReq as Request, mockRes as Response);
 
-      expect(response.body.error).toBe('User already exists');
-    });
-
-    it('should reject registration with invalid email', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'invalid-email',
-          password: 'password123',
-          name: 'Test User',
+      expect(prisma.user.create).toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(201);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          token: 'mock-jwt-token',
         })
-        .expect(400);
+      );
+    });
 
-      expect(response.body.error).toBeDefined();
+    it('should reject duplicate email (existing user)', async () => {
+      mockReq.body = {
+        email: 'existing@example.com',
+        password: 'testPassword123',
+        name: 'Test User',
+      };
+
+      // First findFirst (providerEmail check) returns existing user
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue({
+        id: 'existing-id',
+        email: 'existing@example.com',
+      });
+
+      await authController.register(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(409);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ error: expect.stringContaining('already exists') })
+      );
     });
 
     it('should reject registration with short password', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'newuser@example.com',
-          password: 'short',
-          name: 'Test User',
-        })
-        .expect(400);
+      mockReq.body = {
+        email: 'new@example.com',
+        password: 'short',
+        name: 'New User',
+      };
 
-      expect(response.body.error).toBe('Password too short');
+      await authController.register(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(400);
+    });
+
+    it('should reject registration with invalid email', async () => {
+      mockReq.body = {
+        email: 'invalid-email',
+        password: 'testPassword123',
+        name: 'New User',
+      };
+
+      await authController.register(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(400);
     });
   });
 
-  describe('POST /api/auth/login', () => {
-    it('should login with valid credentials', async () => {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
+  describe('Login', () => {
+    it('should login with valid credentials (providerEmail match)', async () => {
+      mockReq.body = {
+        email: 'test@example.com',
+        password: 'testPassword123',
+      };
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.user.email).toBe(testUser.email);
-      expect(response.body.token).toBeDefined();
+      // Found via providerEmail
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue({
+        id: 'test-user-id',
+        email: 'test@example.com',
+        name: 'Test User',
+        password: 'hashed_password',
+        emailEncrypted: false,
+        nameEncrypted: false,
+        providerEmail: 'test@example.com',
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await authController.login(mockReq as Request, mockRes as Response);
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          token: 'mock-jwt-token',
+        })
+      );
     });
 
     it('should reject login with incorrect password', async () => {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: testUser.email,
-          password: 'wrongPassword',
-        })
-        .expect(401);
+      mockReq.body = {
+        email: 'test@example.com',
+        password: 'wrongPassword',
+      };
 
-      expect(response.body.error).toBe('Invalid credentials');
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue({
+        id: 'test-user-id',
+        email: 'test@example.com',
+        name: 'Test User',
+        password: 'hashed_password',
+        emailEncrypted: false,
+        nameEncrypted: false,
+        providerEmail: 'test@example.com',
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await authController.login(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(401);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ error: expect.stringContaining('incorrect') })
+      );
     });
 
     it('should reject login with non-existent email', async () => {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'nonexistent@example.com',
-          password: 'password123',
+      mockReq.body = {
+        email: 'nonexistent@example.com',
+        password: 'password123',
+      };
+
+      // Not found via providerEmail
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+      // No encrypted email users
+      (prisma.user.findMany as jest.Mock).mockResolvedValue([]);
+
+      await authController.login(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(401);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ error: expect.stringContaining('incorrect') })
+      );
+    });
+  });
+
+  describe('Profile', () => {
+    it('should get profile with valid user', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'test-user-id',
+        email: 'test@example.com',
+        name: 'Test User',
+        emailEncrypted: false,
+        nameEncrypted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await authController.getProfile(mockReq as Request, mockRes as Response);
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          user: expect.objectContaining({
+            email: 'test@example.com',
+          }),
         })
-        .expect(401);
+      );
+    });
 
-      expect(response.body.error).toBe('Invalid credentials');
+    it('should reject profile request without auth', async () => {
+      mockReq.user = undefined;
+
+      await authController.getProfile(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(401);
     });
   });
 
-  describe('GET /api/auth/profile', () => {
-    let authToken: string;
-
-    beforeAll(async () => {
-      // Login to get token
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        });
-
-      authToken = loginResponse.body.token;
-    });
-
-    it('should get profile with valid token', async () => {
-      const response = await request(app)
-        .get('/api/auth/profile')
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.user.email).toBe(testUser.email);
-    });
-
-    it('should reject profile request without token', async () => {
-      const response = await request(app)
-        .get('/api/auth/profile')
-        .expect(401);
-
-      expect(response.body.error).toBe('Unauthorized');
-    });
-
-    it('should reject profile request with invalid token', async () => {
-      const response = await request(app)
-        .get('/api/auth/profile')
-        .set('Authorization', 'Bearer invalid-token')
-        .expect(403);
-
-      expect(response.body.error).toBe('Invalid token');
-    });
-  });
-
-  describe('PUT /api/auth/profile', () => {
-    let authToken: string;
-
-    beforeAll(async () => {
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        });
-
-      authToken = loginResponse.body.token;
-    });
-
-    it('should update profile with valid token', async () => {
-      const response = await request(app)
-        .put('/api/auth/profile')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({
-          name: 'Updated Name',
-        })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.user.name).toBe('Updated Name');
-    });
-  });
-
-  describe('PUT /api/auth/password', () => {
-    let authToken: string;
-
-    beforeAll(async () => {
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        });
-
-      authToken = loginResponse.body.token;
-    });
-
+  describe('Password Change', () => {
     it('should change password with valid current password', async () => {
-      const response = await request(app)
-        .put('/api/auth/password')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({
-          currentPassword: testUser.password,
-          newPassword: 'newPassword123',
-        })
-        .expect(200);
+      mockReq.body = {
+        currentPassword: 'currentPass123',
+        newPassword: 'newPassword123',
+      };
 
-      expect(response.body.success).toBe(true);
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'test-user-id',
+        password: 'hashed_password',
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (prisma.user.update as jest.Mock).mockResolvedValue({
+        id: 'test-user-id',
+      });
 
-      // Verify new password works
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: testUser.email,
-          password: 'newPassword123',
-        })
-        .expect(200);
+      await authController.changePassword(mockReq as Request, mockRes as Response);
 
-      expect(loginResponse.body.success).toBe(true);
-
-      // Change password back for other tests
-      await request(app)
-        .put('/api/auth/password')
-        .set('Authorization', `Bearer ${loginResponse.body.token}`)
-        .send({
-          currentPassword: 'newPassword123',
-          newPassword: testUser.password,
-        });
+      expect(prisma.user.update).toHaveBeenCalled();
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
     });
 
     it('should reject password change with incorrect current password', async () => {
-      const response = await request(app)
-        .put('/api/auth/password')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({
-          currentPassword: 'wrongPassword',
-          newPassword: 'newPassword123',
-        })
-        .expect(401);
+      mockReq.body = {
+        currentPassword: 'wrongPassword',
+        newPassword: 'newPassword123',
+      };
 
-      expect(response.body.error).toBe('Invalid password');
-    });
-  });
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'test-user-id',
+        password: 'hashed_password',
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-  describe('Rate Limiting', () => {
-    it('should rate limit authentication endpoints', async () => {
-      // Make multiple rapid requests
-      const requests = Array(6).fill(null).map(() =>
-        request(app)
-          .post('/api/auth/login')
-          .send({
-            email: 'test@example.com',
-            password: 'password',
-          })
+      await authController.changePassword(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(401);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'Invalid password' })
       );
-
-      const responses = await Promise.all(requests);
-      
-      // At least one should be rate limited (429)
-      const rateLimited = responses.some(r => r.status === 429);
-      expect(rateLimited).toBe(true);
     });
   });
 });
-

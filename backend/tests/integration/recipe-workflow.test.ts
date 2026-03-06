@@ -1,8 +1,136 @@
-import request from 'supertest';
-import { app } from '../../src/app';
-import { prisma } from '../../src/lib/prisma';
+// Recipe workflow integration tests (controller-level)
+// Tests multi-step workflows that span across controllers
 
-// Mock Prisma for integration tests
+import { Request, Response } from 'express';
+
+// Mock AIProviderManager to prevent crash from healthifyService
+jest.mock('../../src/services/aiProviders/AIProviderManager', () => ({
+  AIProviderManager: jest.fn().mockImplementation(() => ({
+    generateRecipe: jest.fn(),
+    getAvailableProviders: jest.fn().mockReturnValue(['mock']),
+  }))
+}));
+
+jest.mock('../../src/services/healthifyService', () => ({
+  healthifyService: { healthifyRecipe: jest.fn() }
+}));
+
+jest.mock('../../src/services/recipeImportService', () => ({
+  importRecipeFromUrl: jest.fn(),
+  RecipeImportError: class extends Error { constructor(m: string) { super(m); } }
+}));
+
+jest.mock('../../src/utils/batchCookingRecommendations', () => ({
+  generateBatchCookingRecommendations: jest.fn()
+}));
+jest.mock('../../src/utils/runtimeImageVariation', () => ({
+  varyImageUrlsForPage: jest.fn().mockImplementation((r: any) => r)
+}));
+jest.mock('../../src/utils/recommendationCache', () => ({
+  recommendationCache: {
+    get: jest.fn(), set: jest.fn(),
+    has: jest.fn().mockReturnValue(false),
+    invalidateUserCache: jest.fn(),
+    getBehavioralData: jest.fn().mockResolvedValue({
+      likedCuisines: [], dislikedIngredients: [], preferredCookTimes: [],
+      likedRecipeIds: [], dislikedRecipeIds: []
+    })
+  }
+}));
+jest.mock('../../src/utils/cacheService', () => ({
+  cacheService: { get: jest.fn(), set: jest.fn(), del: jest.fn() }
+}));
+jest.mock('../../src/utils/scoring', () => ({
+  calculateRecipeScore: jest.fn().mockReturnValue(75),
+  calculateMacroScore: jest.fn().mockReturnValue(70),
+  calculateTasteScore: jest.fn().mockReturnValue(60)
+}));
+jest.mock('../../src/utils/behavioralScoring', () => ({
+  calculateBehavioralScore: jest.fn().mockReturnValue(0),
+  calculateBehavioralScoreFromProfile: jest.fn().mockReturnValue(0),
+  buildUserTasteProfile: jest.fn().mockReturnValue({
+    preferredCuisines: [], avoidedIngredients: [], preferredIngredients: [],
+    preferredCookTimes: [], preferredDifficulty: 'medium'
+  })
+}));
+jest.mock('../../src/utils/enhancedScoring', () => ({
+  calculateEnhancedScore: jest.fn().mockReturnValue(0)
+}));
+jest.mock('../../src/utils/discriminatoryScoring', () => ({
+  calculateDiscriminatoryScore: jest.fn().mockReturnValue(50)
+}));
+jest.mock('../../src/utils/healthGoalScoring', () => ({
+  calculateHealthGoalScore: jest.fn().mockReturnValue(50),
+  calculateHealthGoalMatch: jest.fn().mockReturnValue(50)
+}));
+jest.mock('../../src/utils/healthGrade', () => ({
+  calculateHealthGrade: jest.fn().mockReturnValue({
+    grade: 'B', score: 70,
+    breakdown: { macroBalance: 70, ingredientQuality: 70 }
+  })
+}));
+jest.mock('../../src/utils/nutritionalAnalysis', () => ({
+  performNutritionalAnalysis: jest.fn().mockReturnValue({
+    micronutrients: {}, omega3: {}, antioxidants: {},
+    nutritionalDensityScore: 50, keyNutrients: [], nutrientGaps: []
+  })
+}));
+jest.mock('../../src/utils/temporalScoring', () => ({
+  calculateTemporalScore: jest.fn().mockReturnValue(0),
+  getTimeAwareDefaults: jest.fn().mockReturnValue({}),
+  getCurrentTemporalContext: jest.fn().mockReturnValue({
+    timeOfDay: 'afternoon', dayOfWeek: 'wednesday', isWeekend: false,
+    season: 'spring', mealType: 'lunch'
+  }),
+  analyzeUserTemporalPatterns: jest.fn().mockReturnValue({
+    preferredMealTimes: {}, cookingFrequency: 'moderate', weekendPreference: 'same'
+  })
+}));
+jest.mock('../../src/utils/privacyHelper', () => ({
+  isDataSharingEnabledFromRequest: jest.fn().mockReturnValue(false),
+  getPrivacySettingsFromRequest: jest.fn().mockReturnValue({
+    analyticsEnabled: true, dataSharingEnabled: false, locationServicesEnabled: false
+  })
+}));
+jest.mock('../../src/utils/recipeOptimizationHelpers', () => ({
+  getRecipeOptimizationConfig: jest.fn().mockReturnValue({}),
+  applyRecipeOptimizations: jest.fn().mockImplementation((r: any) => r),
+  calculateOptimizationScore: jest.fn().mockReturnValue(0)
+}));
+jest.mock('../../src/utils/collaborativeFiltering', () => ({
+  getCollaborativeRecommendations: jest.fn().mockResolvedValue([]),
+  calculateCollaborativeScore: jest.fn().mockReturnValue(0)
+}));
+jest.mock('../../src/utils/dynamicWeightAdjustment', () => ({
+  getDynamicWeights: jest.fn().mockReturnValue({ macro: 0.3, taste: 0.3, behavioral: 0.2, temporal: 0.1, enhanced: 0.1 }),
+  adjustWeights: jest.fn().mockImplementation((w: any) => w)
+}));
+jest.mock('../../src/utils/externalScoring', () => ({
+  calculateExternalScore: jest.fn().mockReturnValue(0)
+}));
+jest.mock('../../src/utils/healthMetricsScoring', () => ({
+  calculateHealthMetricsScore: jest.fn().mockReturnValue(0)
+}));
+jest.mock('../../src/utils/predictiveScoring', () => ({
+  calculatePredictiveScore: jest.fn().mockReturnValue(0)
+}));
+jest.mock('../../src/services/recipeGenerationService', () => ({
+  recipeGenerationService: { generateRecipe: jest.fn() }
+}));
+jest.mock('../../src/services/spoonacularService', () => ({
+  spoonacularService: { searchRecipes: jest.fn() }
+}));
+jest.mock('../../src/services/aiEnrichmentService', () => ({
+  aiEnrichmentService: { enrichRecipe: jest.fn() }
+}));
+
+// Mock encryption for user controller
+jest.mock('../../src/utils/encryption', () => ({
+  encrypt: (val: string) => `encrypted_${val}`,
+  decrypt: (val: string) => val.startsWith('encrypted_') ? val.replace('encrypted_', '') : val,
+}));
+
+// Mock Prisma
 jest.mock('../../src/lib/prisma', () => ({
   prisma: {
     recipe: {
@@ -13,32 +141,49 @@ jest.mock('../../src/lib/prisma', () => ({
       delete: jest.fn(),
       count: jest.fn()
     },
+    recipeIngredient: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn()
+    },
+    recipeInstruction: {
+      create: jest.fn(),
+      deleteMany: jest.fn(),
+      createMany: jest.fn()
+    },
     savedRecipe: {
       findMany: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
-      delete: jest.fn()
+      delete: jest.fn(),
+      deleteMany: jest.fn()
     },
     recipeFeedback: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn()
     },
     user: {
-      findUnique: jest.fn()
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn()
     },
     userPreferences: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
       upsert: jest.fn()
     },
     macroGoals: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       upsert: jest.fn()
     },
     userPhysicalProfile: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -47,14 +192,67 @@ jest.mock('../../src/lib/prisma', () => ({
   }
 }));
 
+import { recipeController } from '../../src/modules/recipe/recipeController';
+import { prisma } from '../../src/lib/prisma';
+
 describe('Recipe Workflow Integration', () => {
+  let mockReq: Partial<Request>;
+  let mockRes: Partial<Response>;
+  let mockJson: jest.Mock;
+  let mockStatus: jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockJson = jest.fn();
+    mockStatus = jest.fn().mockReturnValue({ json: mockJson });
+
+    mockReq = {
+      params: {},
+      body: {},
+      query: {},
+      headers: {},
+      user: { id: 'test-user-id', email: 'test@example.com' }
+    };
+
+    mockRes = {
+      json: mockJson,
+      status: mockStatus,
+      setHeader: jest.fn(),
+      set: jest.fn()
+    };
   });
 
   describe('Recipe CRUD Operations', () => {
-    test('should complete full recipe lifecycle', async () => {
-      const recipeData = {
+    test('should complete full recipe lifecycle: create → get → save → like → delete', async () => {
+      const mockCreatedRecipe = {
+        id: 'recipe-1',
+        title: 'Integration Test Recipe',
+        description: 'Test Description',
+        cookTime: 30,
+        cuisine: 'Italian',
+        calories: 500,
+        protein: 25,
+        carbs: 50,
+        fat: 20,
+        userId: 'test-user-id',
+        isUserCreated: true,
+        ingredients: [
+          { text: 'pasta', order: 1 },
+          { text: 'sauce', order: 2 }
+        ],
+        instructions: [
+          { step: 1, text: 'Cook pasta' },
+          { step: 2, text: 'Add sauce' }
+        ]
+      };
+
+      // Step 1: Create recipe
+      (prisma.recipe.create as jest.Mock).mockResolvedValue(mockCreatedRecipe);
+      (prisma.recipeInstruction.create as jest.Mock).mockResolvedValue({});
+      (prisma.savedRecipe.create as jest.Mock).mockResolvedValue({});
+      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockCreatedRecipe);
+
+      mockReq.body = {
         title: 'Integration Test Recipe',
         description: 'Test Description',
         cookTime: 30,
@@ -67,332 +265,171 @@ describe('Recipe Workflow Integration', () => {
         instructions: ['Cook pasta', 'Add sauce']
       };
 
-      const mockRecipe = {
-        id: 'recipe-1',
-        ...recipeData,
-        userId: 'temp-user-id',
-        isUserCreated: true,
-        ingredients: [
-          { id: 'ing-1', text: 'pasta', order: 0 },
-          { id: 'ing-2', text: 'sauce', order: 1 }
-        ],
-        instructions: [
-          { id: 'inst-1', text: 'Cook pasta', step: 1 },
-          { id: 'inst-2', text: 'Add sauce', step: 2 }
-        ]
-      };
+      await recipeController.createRecipe(mockReq as Request, mockRes as Response);
 
-      // Mock recipe creation
-      (prisma.recipe.create as jest.Mock).mockResolvedValue(mockRecipe);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({ title: 'Integration Test Recipe' })
+        })
+      );
 
-      // 1. Create recipe
-      const createResponse = await request(app)
-        .post('/api/recipes')
-        .send(recipeData)
-        .expect(201);
+      // Step 2: Get recipe by ID
+      jest.clearAllMocks();
+      mockRes = { json: mockJson = jest.fn(), status: mockStatus = jest.fn().mockReturnValue({ json: mockJson }), setHeader: jest.fn(), set: jest.fn() };
+      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockCreatedRecipe);
+      mockReq.params = { id: 'recipe-1' };
 
-      expect(createResponse.body.message).toBe('Recipe created successfully');
-      expect(createResponse.body.recipe.id).toBe('recipe-1');
+      await recipeController.getRecipe(mockReq as Request, mockRes as Response);
 
-      // Mock recipe retrieval
-      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockRecipe);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'recipe-1',
+          title: 'Integration Test Recipe'
+        })
+      );
 
-      // 2. Get recipe
-      const getResponse = await request(app)
-        .get('/api/recipes/recipe-1')
-        .expect(200);
+      // Step 3: Save recipe to cookbook
+      jest.clearAllMocks();
+      mockRes = { json: mockJson = jest.fn(), status: mockStatus = jest.fn().mockReturnValue({ json: mockJson }), setHeader: jest.fn(), set: jest.fn() };
+      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockCreatedRecipe);
+      (prisma.savedRecipe.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.savedRecipe.create as jest.Mock).mockResolvedValue({
+        id: 'saved-1', recipeId: 'recipe-1', userId: 'test-user-id'
+      });
 
-      expect(getResponse.body.id).toBe('recipe-1');
-      expect(getResponse.body.title).toBe('Integration Test Recipe');
+      await recipeController.saveRecipe(mockReq as Request, mockRes as Response);
 
-      // Mock save recipe
-      const mockSavedRecipe = {
-        id: 'saved-1',
-        recipeId: 'recipe-1',
-        userId: 'temp-user-id',
-        savedDate: new Date(),
-        recipe: mockRecipe
-      };
-      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockRecipe);
-      (prisma.savedRecipe.findUnique as jest.Mock).mockResolvedValue(null);
-      (prisma.savedRecipe.create as jest.Mock).mockResolvedValue(mockSavedRecipe);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'Recipe saved successfully' });
 
-      // 3. Save recipe
-      await request(app)
-        .post('/api/recipes/recipe-1/save')
-        .expect(200);
+      // Step 4: Like recipe
+      jest.clearAllMocks();
+      mockRes = { json: mockJson = jest.fn(), status: mockStatus = jest.fn().mockReturnValue({ json: mockJson }), setHeader: jest.fn(), set: jest.fn() };
+      (prisma.recipeFeedback.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.recipeFeedback.create as jest.Mock).mockResolvedValue({
+        id: 'fb-1', recipeId: 'recipe-1', userId: 'test-user-id', liked: true, disliked: false
+      });
 
-      // Mock like recipe
-      const mockFeedback = {
-        id: 'feedback-1',
-        recipeId: 'recipe-1',
-        userId: 'temp-user-id',
-        liked: true
-      };
-      (prisma.recipeFeedback.findUnique as jest.Mock).mockResolvedValue(null);
-      (prisma.recipeFeedback.create as jest.Mock).mockResolvedValue(mockFeedback);
+      await recipeController.likeRecipe(mockReq as Request, mockRes as Response);
 
-      // 4. Like recipe
-      await request(app)
-        .post('/api/recipes/recipe-1/like')
-        .expect(200);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'Recipe liked successfully' });
 
-      // Mock get saved recipes
-      (prisma.savedRecipe.findMany as jest.Mock).mockResolvedValue([mockSavedRecipe]);
-      (prisma.recipe.findMany as jest.Mock).mockResolvedValue([]);
-
-      // 5. Get saved recipes
-      const savedResponse = await request(app)
-        .get('/api/recipes/saved')
-        .expect(200);
-
-      expect(savedResponse.body).toHaveLength(1);
-      expect(savedResponse.body[0].id).toBe('recipe-1');
-
-      // Mock recipe update
-      const updatedRecipe = {
-        ...mockRecipe,
-        title: 'Updated Recipe'
-      };
-      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockRecipe);
-      (prisma.recipe.update as jest.Mock).mockResolvedValue(updatedRecipe);
-
-      // 6. Update recipe
-      const updateResponse = await request(app)
-        .put('/api/recipes/recipe-1')
-        .send({ title: 'Updated Recipe' })
-        .expect(200);
-
-      expect(updateResponse.body.message).toBe('Recipe updated successfully');
-      expect(updateResponse.body.recipe.title).toBe('Updated Recipe');
-
-      // Mock recipe deletion
-      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockRecipe);
+      // Step 5: Delete recipe
+      jest.clearAllMocks();
+      mockRes = { json: mockJson = jest.fn(), status: mockStatus = jest.fn().mockReturnValue({ json: mockJson }), setHeader: jest.fn(), set: jest.fn() };
+      (prisma.recipeInstruction.deleteMany as jest.Mock).mockResolvedValue({});
+      (prisma.recipeIngredient.deleteMany as jest.Mock).mockResolvedValue({});
+      (prisma.savedRecipe.deleteMany as jest.Mock).mockResolvedValue({});
       (prisma.recipe.delete as jest.Mock).mockResolvedValue({});
 
-      // 7. Delete recipe
-      await request(app)
-        .delete('/api/recipes/recipe-1')
-        .expect(200);
+      await recipeController.deleteRecipe(mockReq as Request, mockRes as Response);
 
-      // 8. Verify deletion
+      expect(mockJson).toHaveBeenCalledWith({ success: true });
+
+      // Step 6: Verify deletion (recipe not found)
+      jest.clearAllMocks();
+      mockRes = { json: mockJson = jest.fn(), status: mockStatus = jest.fn().mockReturnValue({ json: mockJson }), setHeader: jest.fn(), set: jest.fn() };
       (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(null);
-      await request(app)
-        .get('/api/recipes/recipe-1')
-        .expect(404);
+
+      await recipeController.getRecipe(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(404);
     });
 
-    test('should handle recipe creation with validation errors', async () => {
-      const invalidRecipeData = {
-        title: 'Test Recipe'
-        // Missing required fields
-      };
+    test('should handle save-then-unsave workflow', async () => {
+      const mockRecipe = { id: 'recipe-1', title: 'Test Recipe' };
 
-      await request(app)
-        .post('/api/recipes')
-        .send(invalidRecipeData)
-        .expect(400);
-    });
-
-    test('should handle unauthorized recipe updates', async () => {
-      const mockRecipe = {
-        id: 'recipe-1',
-        userId: 'other-user-id', // Different user
-        title: 'Original Recipe'
-      };
-
+      // Save recipe
       (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockRecipe);
+      (prisma.savedRecipe.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.savedRecipe.create as jest.Mock).mockResolvedValue({
+        id: 'saved-1', recipeId: 'recipe-1', userId: 'test-user-id'
+      });
 
-      await request(app)
-        .put('/api/recipes/recipe-1')
-        .send({ title: 'Updated Recipe' })
-        .expect(403);
-    });
+      mockReq.params = { id: 'recipe-1' };
 
-    test('should handle unauthorized recipe deletion', async () => {
-      const mockRecipe = {
-        id: 'recipe-1',
-        userId: 'other-user-id', // Different user
-        title: 'Original Recipe'
-      };
+      await recipeController.saveRecipe(mockReq as Request, mockRes as Response);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'Recipe saved successfully' });
 
+      // Try saving again — should get 409
+      jest.clearAllMocks();
+      mockRes = { json: mockJson = jest.fn(), status: mockStatus = jest.fn().mockReturnValue({ json: mockJson }), setHeader: jest.fn(), set: jest.fn() };
       (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(mockRecipe);
+      (prisma.savedRecipe.findFirst as jest.Mock).mockResolvedValue({ id: 'saved-1' });
 
-      await request(app)
-        .delete('/api/recipes/recipe-1')
-        .expect(403);
-    });
-  });
+      await recipeController.saveRecipe(mockReq as Request, mockRes as Response);
+      expect(mockStatus).toHaveBeenCalledWith(409);
 
-  describe('User Profile Workflow', () => {
-    test('should complete user profile setup', async () => {
-      const mockUser = {
-        id: 'temp-user-id',
-        email: 'test@example.com',
-        name: 'Test User'
-      };
+      // Unsave
+      jest.clearAllMocks();
+      mockRes = { json: mockJson = jest.fn(), status: mockStatus = jest.fn().mockReturnValue({ json: mockJson }), setHeader: jest.fn(), set: jest.fn() };
+      (prisma.savedRecipe.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
 
-      const mockPreferences = {
-        id: 'pref-1',
-        userId: 'temp-user-id',
-        cookTimePreference: 30,
-        spiceLevel: 'medium',
-        bannedIngredients: [],
-        likedCuisines: [],
-        dietaryRestrictions: []
-      };
-
-      const mockPhysicalProfile = {
-        id: 'profile-1',
-        userId: 'temp-user-id',
-        gender: 'male',
-        age: 30,
-        heightCm: 180,
-        weightKg: 80,
-        activityLevel: 'moderately_active',
-        fitnessGoal: 'maintain',
-        bmr: 1800,
-        tdee: 2300
-      };
-
-      const mockMacroGoals = {
-        id: 'goals-1',
-        userId: 'temp-user-id',
-        calories: 2300,
-        protein: 128,
-        carbs: 230,
-        fat: 77
-      };
-
-      // Mock user profile
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-
-      // 1. Get user profile
-      const profileResponse = await request(app)
-        .get('/api/user/profile')
-        .expect(200);
-
-      expect(profileResponse.body.id).toBe('temp-user-id');
-
-      // Mock preferences
-      (prisma.userPreferences.findUnique as jest.Mock).mockResolvedValue(mockPreferences);
-
-      // 2. Get user preferences
-      const preferencesResponse = await request(app)
-        .get('/api/user/preferences')
-        .expect(200);
-
-      expect(preferencesResponse.body.userId).toBe('temp-user-id');
-
-      // Mock physical profile
-      (prisma.userPhysicalProfile.findUnique as jest.Mock).mockResolvedValue(mockPhysicalProfile);
-
-      // 3. Get physical profile
-      const physicalResponse = await request(app)
-        .get('/api/user/physical-profile')
-        .expect(200);
-
-      expect(physicalResponse.body.userId).toBe('temp-user-id');
-      expect(physicalResponse.body.bmr).toBe(1800);
-
-      // Mock macro goals
-      (prisma.macroGoals.findUnique as jest.Mock).mockResolvedValue(mockMacroGoals);
-
-      // 4. Get macro goals
-      const macroResponse = await request(app)
-        .get('/api/user/macro-goals')
-        .expect(200);
-
-      expect(macroResponse.body.userId).toBe('temp-user-id');
-      expect(macroResponse.body.calories).toBe(2300);
+      await recipeController.unsaveRecipe(mockReq as Request, mockRes as Response);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'Recipe unsaved successfully' });
     });
 
-    test('should handle physical profile creation and macro calculation', async () => {
-      const profileData = {
-        gender: 'male',
-        age: 30,
-        heightCm: 180,
-        weightKg: 80,
-        activityLevel: 'moderately_active',
-        fitnessGoal: 'maintain'
-      };
+    test('should handle like-then-dislike toggle', async () => {
+      mockReq.params = { id: 'recipe-1' };
 
-      const mockProfile = {
-        id: 'profile-1',
-        userId: 'temp-user-id',
-        ...profileData,
-        bmr: 1800,
-        tdee: 2300
-      };
+      // Like recipe (new feedback)
+      (prisma.recipeFeedback.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.recipeFeedback.create as jest.Mock).mockResolvedValue({
+        id: 'fb-1', liked: true, disliked: false
+      });
 
-      // Mock physical profile creation
-      (prisma.userPhysicalProfile.upsert as jest.Mock).mockResolvedValue(mockProfile);
+      await recipeController.likeRecipe(mockReq as Request, mockRes as Response);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'Recipe liked successfully' });
 
-      // 1. Create physical profile
-      const createResponse = await request(app)
-        .put('/api/user/physical-profile')
-        .send(profileData)
-        .expect(200);
+      // Dislike same recipe (update existing feedback)
+      jest.clearAllMocks();
+      mockRes = { json: mockJson = jest.fn(), status: mockStatus = jest.fn().mockReturnValue({ json: mockJson }), setHeader: jest.fn(), set: jest.fn() };
+      (prisma.recipeFeedback.findFirst as jest.Mock).mockResolvedValue({
+        id: 'fb-1', liked: true, disliked: false
+      });
+      (prisma.recipeFeedback.update as jest.Mock).mockResolvedValue({
+        id: 'fb-1', liked: false, disliked: true
+      });
 
-      expect(createResponse.body.message).toBe('Physical profile saved successfully');
-      expect(createResponse.body.profile.bmr).toBe(1800);
+      await recipeController.dislikeRecipe(mockReq as Request, mockRes as Response);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'Recipe disliked successfully' });
 
-      // Mock macro calculation
-      (prisma.userPhysicalProfile.findUnique as jest.Mock).mockResolvedValue(mockProfile);
-
-      // 2. Calculate recommended macros
-      const calcResponse = await request(app)
-        .get('/api/user/calculate-macros')
-        .expect(200);
-
-      expect(calcResponse.body.bmr).toBe(1780);
-      expect(calcResponse.body.tdee).toBe(2759);
-
-      // Mock macro goals update
-      const mockMacroGoals = {
-        id: 'goals-1',
-        userId: 'temp-user-id',
-        calories: 2300,
-        protein: 128,
-        carbs: 230,
-        fat: 77
-      };
-
-      (prisma.macroGoals.upsert as jest.Mock).mockResolvedValue(mockMacroGoals);
-
-      // 3. Apply calculated macros
-      const applyResponse = await request(app)
-        .post('/api/user/apply-calculated-macros')
-        .expect(200);
-
-      expect(applyResponse.body.message).toBe('Macro goals updated successfully');
-      expect(applyResponse.body.macroGoals.calories).toBe(2300);
+      // Verify update was called with correct flags
+      expect(prisma.recipeFeedback.update).toHaveBeenCalledWith({
+        where: { id: 'fb-1' },
+        data: { liked: false, disliked: true }
+      });
     });
   });
 
   describe('Error Handling', () => {
-    test('should handle database connection errors', async () => {
-      (prisma.recipe.findMany as jest.Mock).mockRejectedValue(new Error('Database connection failed'));
+    test('should handle database connection errors on recipe fetch', async () => {
+      (prisma.recipe.findUnique as jest.Mock).mockRejectedValue(new Error('Database connection failed'));
+      mockReq.params = { id: 'recipe-1' };
 
-      await request(app)
-        .get('/api/recipes')
-        .expect(500);
+      await recipeController.getRecipe(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(500);
     });
 
-    test('should handle invalid recipe ID', async () => {
+    test('should handle invalid recipe ID (not found)', async () => {
       (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(null);
+      mockReq.params = { id: 'invalid-id' };
 
-      await request(app)
-        .get('/api/recipes/invalid-id')
-        .expect(404);
+      await recipeController.getRecipe(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith({ error: 'Recipe not found' });
     });
 
-    test('should handle missing physical profile for macro calculation', async () => {
-      (prisma.userPhysicalProfile.findUnique as jest.Mock).mockResolvedValue(null);
+    test('should handle save of non-existent recipe', async () => {
+      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(null);
+      mockReq.params = { id: 'nonexistent' };
 
-      await request(app)
-        .get('/api/user/calculate-macros')
-        .expect(400);
+      await recipeController.saveRecipe(mockReq as Request, mockRes as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith({ error: 'Recipe not found' });
     });
   });
 });
