@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { SazonMascot } from '../mascot/SazonMascot';
+import { SazonMascot } from '../mascot';
 import { useSubscription } from '../../hooks/useSubscription';
 
 const STORAGE_KEY = 'lastCoffeeBannerShown';

@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { SazonMascot } from '../mascot/SazonMascot';
+import { SazonMascot } from '../mascot';
 import { stripeApi } from '../../lib/api';
 import { Colors } from '../../constants/Colors';
 
@@ -287,7 +287,7 @@ function ConfirmStep({
 }) {
   return (
     <>
-      <SazonMascot expression="sad" size="small" />
+      <SazonMascot expression="supportive" size="small" />
       <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-2">
         Cancel subscription?
       </Text>
