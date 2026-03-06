@@ -137,6 +137,10 @@ const createPrismaMock = () => ({
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    cancellationSurvey: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
   }
 });
 

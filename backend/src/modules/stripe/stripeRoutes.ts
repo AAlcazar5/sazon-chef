@@ -20,5 +20,6 @@ router.post(
 router.get('/subscription', authenticateToken, stripeController.getSubscription);
 router.post('/checkout', authenticateToken, stripeController.createCheckout);
 router.post('/portal', authenticateToken, stripeController.createPortal);
+router.post('/cancel', authenticateToken, stripeController.cancelSubscription);
 
 export { router as stripeRoutes };

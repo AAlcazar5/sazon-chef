@@ -4,6 +4,10 @@
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { stripeService } from '@/services/stripeService';
+import { emailService } from '@/services/emailService';
+
+const VALID_CANCEL_REASONS = ['too_expensive', 'not_using', 'missing_feature', 'other'] as const;
+type CancelReason = typeof VALID_CANCEL_REASONS[number];
 
 // Deep-link / web fallback URLs for Checkout redirects
 const APP_SCHEME = process.env.APP_SCHEME || 'sazonchef';
@@ -71,6 +75,61 @@ export const stripeController = {
     } catch (err: any) {
       console.error('createCheckout error:', err);
       return res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+  },
+
+  /**
+   * POST /api/stripe/cancel
+   * Body: { reason: CancelReason, feedback?: string, action: 'cancel' | 'pause' }
+   * Records survey response and cancels or pauses the Stripe subscription.
+   */
+  async cancelSubscription(req: Request, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const { reason, feedback, action = 'cancel' } = req.body;
+
+      if (!VALID_CANCEL_REASONS.includes(reason as CancelReason)) {
+        return res.status(400).json({
+          error: 'Invalid reason. Must be one of: too_expensive, not_using, missing_feature, other',
+        });
+      }
+
+      if (action !== 'cancel' && action !== 'pause') {
+        return res.status(400).json({ error: 'action must be cancel or pause' });
+      }
+
+      // Record survey response first (before calling Stripe)
+      await (prisma as any).cancellationSurvey.create({
+        data: { userId, reason, feedback: feedback || null, action },
+      });
+
+      if (!stripeService.isConfigured()) {
+        // In dev/test without Stripe, just update DB directly
+        await prisma.user.update({
+          where: { id: userId },
+          data: { subscriptionStatus: action === 'pause' ? 'paused' : 'canceled', subscriptionTier: 'free' },
+        });
+        return res.json(action === 'pause' ? { paused: true } : { cancelled: true });
+      }
+
+      if (action === 'pause') {
+        await stripeService.pauseSubscription(userId);
+        return res.json({ paused: true });
+      }
+
+      // Cancel
+      await stripeService.cancelSubscription(userId);
+
+      // Send cancellation email (fire-and-forget)
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, emailEncrypted: true } });
+      if (user?.email && !user.emailEncrypted) {
+        emailService.sendSubscriptionChange(user.email, 'cancelled').catch(() => {});
+      }
+
+      return res.json({ cancelled: true });
+    } catch (err: any) {
+      console.error('cancelSubscription error:', err);
+      return res.status(500).json({ error: err.message || 'Failed to cancel subscription' });
     }
   },
 

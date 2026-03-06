@@ -140,6 +140,47 @@ export const stripeService = {
   },
 
   /**
+   * Cancel a user's active (or trialing) subscription immediately.
+   * Returns the cancelled subscription ID.
+   */
+  async cancelSubscription(userId: string): Promise<string> {
+    const stripe = getStripe();
+    const customerId = await stripeService.getOrCreateCustomer(userId);
+
+    // Check active first, then trialing
+    for (const status of ['active', 'trialing'] as const) {
+      const list = await stripe.subscriptions.list({ customer: customerId, status, limit: 1 });
+      if (list.data.length > 0) {
+        const cancelled = await stripe.subscriptions.cancel(list.data[0].id);
+        return cancelled.id;
+      }
+    }
+
+    throw new Error('No active subscription found for this user');
+  },
+
+  /**
+   * Pause a user's subscription for 30 days via pause_collection.
+   * Returns the paused subscription ID.
+   */
+  async pauseSubscription(userId: string): Promise<string> {
+    const stripe = getStripe();
+    const customerId = await stripeService.getOrCreateCustomer(userId);
+
+    const list = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
+    if (list.data.length === 0) {
+      throw new Error('No active subscription found to pause');
+    }
+
+    const resumesAt = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+    const paused = await stripe.subscriptions.update(list.data[0].id, {
+      pause_collection: { behavior: 'void', resumes_at: resumesAt },
+    });
+
+    return paused.id;
+  },
+
+  /**
    * Construct and verify a Stripe webhook event.
    */
   constructWebhookEvent(

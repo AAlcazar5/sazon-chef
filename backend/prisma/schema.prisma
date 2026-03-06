@@ -72,6 +72,9 @@ model User {
   trialEndsAt             DateTime?
   currentPeriodEnd        DateTime?
 
+  // Group 8: Revenue Optimization
+  cancellationSurveys     CancellationSurvey[]
+
   @@map("users")
 }
 
@@ -891,6 +894,20 @@ model StripeWebhookEvent {
   @@index([userId])
   @@index([type])
   @@map("stripe_webhook_events")
+}
+
+// Cancellation survey response (Group 8: Revenue Optimization)
+model CancellationSurvey {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String   // too_expensive | not_using | missing_feature | other
+  feedback  String?  // free-text for "missing_feature" reason
+  action    String   // cancel | pause
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("cancellation_surveys")
 }
 
 // Push notification device tokens (Group 6: Growth & Marketing)
