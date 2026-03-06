@@ -1397,6 +1397,11 @@ export const stripeApi = {
   createCheckout: (interval: 'month' | 'year') =>
     apiClient.post('/stripe/checkout', { interval }),
   createPortal: () => apiClient.post('/stripe/portal'),
+  cancelSubscription: (payload: {
+    reason: 'too_expensive' | 'not_using' | 'missing_feature' | 'other';
+    feedback?: string;
+    action: 'cancel' | 'pause';
+  }) => apiClient.post('/stripe/cancel', payload),
 };
 
 export type { ApiResponse, ApiError };
