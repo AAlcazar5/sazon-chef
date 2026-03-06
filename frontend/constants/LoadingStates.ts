@@ -17,7 +17,7 @@ export interface LoadingStateConfig {
   /** Mascot size */
   mascotSize: 'tiny' | 'small' | 'medium' | 'large' | 'hero';
   /** Animation type for mascot */
-  animationType?: 'pulse' | 'bounce' | 'wiggle' | 'none';
+  animationType?: 'pulse' | 'bounce' | 'idle' | 'wave' | 'celebrate' | 'none';
   /** Estimated time hint (optional) */
   estimatedTime?: string;
 }

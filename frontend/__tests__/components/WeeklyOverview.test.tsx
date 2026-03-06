@@ -4,12 +4,12 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { View, Text, TouchableOpacity } from 'react-native';
 
 // Mock the WeeklyOverview component
-const WeeklyOverview = ({ weekDates, selectedDate, onDateSelect, isToday, isSelected }) => {
+const WeeklyOverview = ({ weekDates, selectedDate, onDateSelect, isToday, isSelected }: any) => {
   return (
     <View testID="weekly-overview">
       <Text testID="weekly-title">Weekly Overview</Text>
       <View testID="week-dates">
-        {weekDates.map((date, index) => {
+        {weekDates.map((date: any, index: number) => {
           const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
           const isFuture = date > new Date(new Date().setHours(23, 59, 59, 999));
           const isCurrentDay = isToday(date);

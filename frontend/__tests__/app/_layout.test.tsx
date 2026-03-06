@@ -69,7 +69,7 @@ describe('RootLayout - Protected Routes', () => {
     it('should redirect to login when not authenticated', async () => {
       mockUseAuth.mockReturnValue({
         user: null, token: null, isLoading: false, isAuthenticated: false,
-        login: jest.fn(), register: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
       });
       mockUseSegments.mockReturnValue(['(tabs)']);
 
@@ -83,7 +83,7 @@ describe('RootLayout - Protected Routes', () => {
     it('should not redirect if already on login screen', async () => {
       mockUseAuth.mockReturnValue({
         user: null, token: null, isLoading: false, isAuthenticated: false,
-        login: jest.fn(), register: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
       });
       mockUseSegments.mockReturnValue(['login']);
 
@@ -98,7 +98,7 @@ describe('RootLayout - Protected Routes', () => {
     it('should not redirect if on onboarding screen', async () => {
       mockUseAuth.mockReturnValue({
         user: null, token: null, isLoading: false, isAuthenticated: false,
-        login: jest.fn(), register: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
       });
       mockUseSegments.mockReturnValue(['onboarding']);
 
@@ -115,7 +115,7 @@ describe('RootLayout - Protected Routes', () => {
       mockUseAuth.mockReturnValue({
         user: { id: 'user-1', email: 'test@example.com', name: 'Test' },
         token: 'token-123', isLoading: false, isAuthenticated: true,
-        login: jest.fn(), register: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
       });
       mockUseSegments.mockReturnValue(['login']);
 
@@ -130,7 +130,7 @@ describe('RootLayout - Protected Routes', () => {
       mockUseAuth.mockReturnValue({
         user: { id: 'user-1', email: 'test@example.com', name: 'Test' },
         token: 'token-123', isLoading: false, isAuthenticated: true,
-        login: jest.fn(), register: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
       });
       mockUseSegments.mockReturnValue(['(tabs)']);
 
@@ -146,7 +146,7 @@ describe('RootLayout - Protected Routes', () => {
     it('should not redirect while loading authentication', async () => {
       mockUseAuth.mockReturnValue({
         user: null, token: null, isLoading: true, isAuthenticated: false,
-        login: jest.fn(), register: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
       });
       mockUseSegments.mockReturnValue(['(tabs)']);
 

@@ -55,9 +55,8 @@ export async function authenticateWithGoogle(): Promise<SocialAuthResult | null>
       });
 
       const result = await request.promptAsync(discovery, {
-        useProxy: true,
         showInRecents: true,
-      });
+      } as any);
 
       if (result.type === 'success' && result.params) {
         // Get user info from Google
@@ -100,7 +99,7 @@ export async function authenticateWithApple(): Promise<SocialAuthResult | null> 
     if (Platform.OS === 'ios' || Platform.OS === 'web') {
       const request = new AuthSession.AuthRequest({
         clientId: APPLE_CLIENT_ID,
-        scopes: [AuthSession.Scope.EMAIL, AuthSession.Scope.FULL_NAME],
+        scopes: ['email', 'full_name'],
         responseType: AuthSession.ResponseType.Token,
         redirectUri: APPLE_REDIRECT_URI,
       });
@@ -111,9 +110,8 @@ export async function authenticateWithApple(): Promise<SocialAuthResult | null> 
       };
 
       const result = await request.promptAsync(discovery, {
-        useProxy: true,
         showInRecents: true,
-      });
+      } as any);
 
       if (result.type === 'success' && result.params) {
         // Apple returns user info in the ID token

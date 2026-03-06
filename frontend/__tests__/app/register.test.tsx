@@ -33,6 +33,7 @@ describe('RegisterScreen', () => {
       isAuthenticated: false,
       login: jest.fn(),
       register: mockRegister,
+      socialLogin: jest.fn(),
       logout: jest.fn(),
       updateUser: jest.fn(),
     });

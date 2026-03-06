@@ -183,7 +183,7 @@ export default function CollectionCard({
           </View>
           {collection.updatedAt && (
             <View className="flex-row items-center">
-              <Icon name={Icons.CLOCK_OUTLINE} size={IconSizes.XS} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} accessibilityLabel="Last updated" />
+              <Icon name={Icons.TIME_OUTLINE} size={IconSizes.XS} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} accessibilityLabel="Last updated" />
               <Text className="text-xs ml-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                 {formatDate(collection.updatedAt)}
               </Text>

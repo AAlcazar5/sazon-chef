@@ -130,7 +130,7 @@ export default function AnimatedEmptyState({
         ) : (
           icon && (
             <Icon
-              name={icon}
+              name={icon as any}
               size={iconSize}
               color={iconColor ?? defaultIconColor}
               accessibilityLabel={displayTitle}

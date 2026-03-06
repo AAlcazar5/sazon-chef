@@ -17,6 +17,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         freezable: true,
       };
 
@@ -35,6 +37,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         weeklyPrepFriendly: true,
         fridgeStorageDays: 5,
       };
@@ -54,6 +58,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         shelfStable: true,
       };
 
@@ -72,6 +78,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         freezable: true,
         weeklyPrepFriendly: true,
         shelfStable: true,
@@ -95,6 +103,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
       };
 
       const methods = getStorageMethods(recipe);
@@ -112,6 +122,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         freezerStorageMonths: 3,
       };
 
@@ -130,6 +142,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         fridgeStorageDays: 5,
       };
 
@@ -150,6 +164,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         freezable: true,
         freezerStorageMonths: 3,
       };
@@ -172,6 +188,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         fridgeStorageDays: 5,
       };
 
@@ -191,6 +209,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
         storageInstructions: 'Store in airtight container for up to 7 days',
       };
 
@@ -209,6 +229,8 @@ describe('Storage Instructions', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['pasta'],
+        instructions: ['Cook'],
       };
 
       const instructions = generateStorageInstructions(recipe);

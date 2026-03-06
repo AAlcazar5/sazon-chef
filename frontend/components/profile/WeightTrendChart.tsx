@@ -193,7 +193,7 @@ export default function WeightTrendChart({ weightHistory, targetWeightKg, curren
   if (!weightHistory || weightHistory.length === 0) {
     return (
       <View className="py-6 items-center">
-        <Icon name={Icons.CHART_OUTLINE} size={IconSizes.XL} color={secondaryTextColor} accessibilityLabel="No data" />
+        <Icon name={Icons.OPTIONS_OUTLINE} size={IconSizes.XL} color={secondaryTextColor} accessibilityLabel="No data" />
         <Text className="text-gray-500 dark:text-gray-400 text-sm mt-2 text-center">
           Log your weight to see trends and statistics
         </Text>

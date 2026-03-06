@@ -55,6 +55,8 @@ describe('RecipeCard', () => {
       fat: 20
     },
     imageUrl: 'https://example.com/image.jpg',
+    ingredients: ['pasta', 'sauce'],
+    instructions: ['Cook pasta', 'Add sauce'],
     score: {
       total: 85,
       macroScore: 80,
@@ -163,14 +165,11 @@ describe('RecipeCard', () => {
   });
 
   test('should handle recipe without score', () => {
-    const recipeWithoutScore = {
-      ...mockRecipe,
-      score: undefined
-    };
+    const { score, ...recipeWithoutScore } = mockRecipe;
 
     render(
       <RecipeCard
-        recipe={recipeWithoutScore}
+        recipe={recipeWithoutScore as any}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
       />
@@ -270,6 +269,8 @@ describe('RecipeCard', () => {
       protein: 25,
       carbs: 50,
       fat: 20,
+      ingredients: ['pasta'],
+      instructions: ['Cook pasta'],
       macros: {
         calories: 500,
         protein: 25,
@@ -280,7 +281,7 @@ describe('RecipeCard', () => {
 
     render(
       <RecipeCard
-        recipe={minimalRecipe}
+        recipe={minimalRecipe as any}
         onLike={mockOnLike}
         onDislike={mockOnDislike}
       />

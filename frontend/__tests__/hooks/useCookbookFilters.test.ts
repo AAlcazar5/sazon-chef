@@ -12,26 +12,23 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useCookbookFilters } from '../../hooks/useCookbookFilters';
 import type { SavedRecipe } from '../../types';
 
-const makeRecipe = (overrides: Partial<SavedRecipe> = {}): SavedRecipe => ({
+const makeRecipe = (overrides: Record<string, any> = {}): SavedRecipe => ({
   id: `r-${Math.random().toString(36).slice(2, 7)}`,
   title: 'Test Recipe',
-  cuisineType: 'Italian',
+  cuisine: 'Italian',
   description: 'A delicious test recipe',
   cookTime: 30,
-  prepTime: 10,
   servings: 4,
   calories: 400,
-  difficulty: 'Easy',
+  protein: 25,
+  carbs: 40,
+  fat: 15,
+  difficulty: 'easy',
   notes: null,
   rating: null,
-  matchScore: 75,
-  cookCount: 0,
-  mealPrepFriendly: false,
-  budgetFriendly: false,
-  onePot: false,
-  macros: { protein: 25, carbs: 40, fat: 15, calories: 400 },
-  savedAt: '2025-01-15T10:00:00Z',
-  createdAt: '2025-01-10T10:00:00Z',
+  ingredients: ['pasta'],
+  instructions: ['Cook pasta'],
+  savedDate: '2025-01-15T10:00:00Z',
   ...overrides,
 } as SavedRecipe);
 
@@ -55,9 +52,9 @@ describe('useCookbookFilters', () => {
         result.current.setFilters({ ...result.current.filters, maxCookTime: 30 });
       });
       const recipes = [
-        makeRecipe({ prepTime: 10, cookTime: 15 }), // 25 min - passes
-        makeRecipe({ prepTime: 10, cookTime: 25 }), // 35 min - excluded
-        makeRecipe({ prepTime: 5, cookTime: 20 }),   // 25 min - passes
+        makeRecipe({ cookTime: 15 }), // 15 min - passes
+        makeRecipe({ cookTime: 35 }), // 35 min - excluded
+        makeRecipe({ cookTime: 25 }),  // 25 min - passes
       ];
       expect(result.current.filterRecipes(recipes)).toHaveLength(2);
     });
@@ -68,9 +65,9 @@ describe('useCookbookFilters', () => {
         result.current.setFilters({ ...result.current.filters, difficulty: ['Easy'] });
       });
       const recipes = [
-        makeRecipe({ difficulty: 'Easy' }),
-        makeRecipe({ difficulty: 'Medium' }),
-        makeRecipe({ difficulty: 'Hard' }),
+        makeRecipe({ difficulty: 'easy' }),
+        makeRecipe({ difficulty: 'medium' }),
+        makeRecipe({ difficulty: 'hard' }),
       ];
       expect(result.current.filterRecipes(recipes)).toHaveLength(1);
     });
@@ -81,9 +78,9 @@ describe('useCookbookFilters', () => {
         result.current.setFilters({ ...result.current.filters, difficulty: ['Easy', 'Medium'] });
       });
       const recipes = [
-        makeRecipe({ difficulty: 'Easy' }),
-        makeRecipe({ difficulty: 'Medium' }),
-        makeRecipe({ difficulty: 'Hard' }),
+        makeRecipe({ difficulty: 'easy' }),
+        makeRecipe({ difficulty: 'medium' }),
+        makeRecipe({ difficulty: 'hard' }),
       ];
       expect(result.current.filterRecipes(recipes)).toHaveLength(2);
     });
@@ -94,8 +91,8 @@ describe('useCookbookFilters', () => {
         result.current.setFilters({ ...result.current.filters, mealPrepOnly: true });
       });
       const recipes = [
-        makeRecipe({ mealPrepFriendly: true } as any),
-        makeRecipe({ mealPrepFriendly: false } as any),
+        makeRecipe({ weeklyPrepFriendly: true } as any),
+        makeRecipe({ weeklyPrepFriendly: false } as any),
       ];
       expect(result.current.filterRecipes(recipes)).toHaveLength(1);
     });
@@ -106,9 +103,9 @@ describe('useCookbookFilters', () => {
         result.current.setFilters({ ...result.current.filters, highProtein: true });
       });
       const recipes = [
-        makeRecipe({ macros: { protein: 35, carbs: 30, fat: 10, calories: 350 } } as any),
-        makeRecipe({ macros: { protein: 20, carbs: 40, fat: 15, calories: 400 } } as any),
-        makeRecipe({ macros: { protein: 30, carbs: 25, fat: 12, calories: 320 } } as any),
+        makeRecipe({ protein: 35 }),
+        makeRecipe({ protein: 20 }),
+        makeRecipe({ protein: 30 }),
       ];
       expect(result.current.filterRecipes(recipes)).toHaveLength(2);
     });
@@ -119,9 +116,9 @@ describe('useCookbookFilters', () => {
         result.current.setFilters({ ...result.current.filters, lowCal: true });
       });
       const recipes = [
-        makeRecipe({ macros: { protein: 25, carbs: 30, fat: 10, calories: 300 } } as any),
-        makeRecipe({ macros: { protein: 25, carbs: 30, fat: 10, calories: 500 } } as any),
-        makeRecipe({ macros: { protein: 25, carbs: 30, fat: 10, calories: 600 } } as any),
+        makeRecipe({ calories: 300 }),
+        makeRecipe({ calories: 500 }),
+        makeRecipe({ calories: 600 }),
       ];
       expect(result.current.filterRecipes(recipes)).toHaveLength(1);
     });
@@ -169,8 +166,8 @@ describe('useCookbookFilters', () => {
         result.current.setSearchQuery('italian');
       });
       const recipes = [
-        makeRecipe({ title: 'Pasta', cuisineType: 'Italian' }),
-        makeRecipe({ title: 'Tacos', cuisineType: 'Mexican' }),
+        makeRecipe({ title: 'Pasta', cuisine: 'Italian' }),
+        makeRecipe({ title: 'Tacos', cuisine: 'Mexican' }),
       ];
       expect(result.current.filterRecipes(recipes)).toHaveLength(1);
     });
@@ -198,10 +195,10 @@ describe('useCookbookFilters', () => {
         });
       });
       const recipes = [
-        makeRecipe({ prepTime: 5, cookTime: 20, difficulty: 'Easy', macros: { protein: 35, carbs: 20, fat: 10, calories: 300 } } as any),
-        makeRecipe({ prepTime: 5, cookTime: 20, difficulty: 'Easy', macros: { protein: 15, carbs: 40, fat: 15, calories: 400 } } as any),
-        makeRecipe({ prepTime: 10, cookTime: 35, difficulty: 'Easy', macros: { protein: 35, carbs: 20, fat: 10, calories: 300 } } as any),
-        makeRecipe({ prepTime: 5, cookTime: 20, difficulty: 'Hard', macros: { protein: 35, carbs: 20, fat: 10, calories: 300 } } as any),
+        makeRecipe({ cookTime: 25, difficulty: 'easy', protein: 35 }),
+        makeRecipe({ cookTime: 25, difficulty: 'easy', protein: 15 }),
+        makeRecipe({ cookTime: 45, difficulty: 'easy', protein: 35 }),
+        makeRecipe({ cookTime: 25, difficulty: 'hard', protein: 35 }),
       ];
       // Only first recipe passes all 3 filters
       expect(result.current.filterRecipes(recipes)).toHaveLength(1);
@@ -214,12 +211,12 @@ describe('useCookbookFilters', () => {
     it('should sort by recent (default)', () => {
       const { result } = renderHook(() => useCookbookFilters());
       const recipes = [
-        makeRecipe({ savedAt: '2025-01-10T00:00:00Z' } as any),
-        makeRecipe({ savedAt: '2025-01-15T00:00:00Z' } as any),
-        makeRecipe({ savedAt: '2025-01-12T00:00:00Z' } as any),
+        makeRecipe({ savedDate: '2025-01-10T00:00:00Z' } as any),
+        makeRecipe({ savedDate: '2025-01-15T00:00:00Z' } as any),
+        makeRecipe({ savedDate: '2025-01-12T00:00:00Z' } as any),
       ];
       const sorted = result.current.sortRecipes(recipes);
-      expect(new Date(sorted[0].savedAt as any).getTime()).toBeGreaterThan(new Date(sorted[1].savedAt as any).getTime());
+      expect(new Date(sorted[0].savedDate as any).getTime()).toBeGreaterThan(new Date(sorted[1].savedDate as any).getTime());
     });
 
     it('should sort alphabetically', async () => {
@@ -244,14 +241,14 @@ describe('useCookbookFilters', () => {
         result.current.setSortBy('cuisine');
       });
       const recipes = [
-        makeRecipe({ cuisineType: 'Mexican' }),
-        makeRecipe({ cuisineType: 'Italian' }),
-        makeRecipe({ cuisineType: 'Asian' }),
+        makeRecipe({ cuisine: 'Mexican' }),
+        makeRecipe({ cuisine: 'Italian' }),
+        makeRecipe({ cuisine: 'Asian' }),
       ];
       const sorted = result.current.sortRecipes(recipes);
-      expect(sorted[0].cuisineType).toBe('Asian');
-      expect(sorted[1].cuisineType).toBe('Italian');
-      expect(sorted[2].cuisineType).toBe('Mexican');
+      expect(sorted[0].cuisine).toBe('Asian');
+      expect(sorted[1].cuisine).toBe('Italian');
+      expect(sorted[2].cuisine).toBe('Mexican');
     });
 
     it('should sort by match score descending', async () => {
@@ -276,13 +273,13 @@ describe('useCookbookFilters', () => {
         result.current.setSortBy('cookTime');
       });
       const recipes = [
-        makeRecipe({ prepTime: 10, cookTime: 30 }), // 40 total
-        makeRecipe({ prepTime: 5, cookTime: 10 }),   // 15 total
-        makeRecipe({ prepTime: 10, cookTime: 15 }),  // 25 total
+        makeRecipe({ cookTime: 40 }),
+        makeRecipe({ cookTime: 15 }),
+        makeRecipe({ cookTime: 25 }),
       ];
       const sorted = result.current.sortRecipes(recipes);
-      expect((sorted[0].prepTime || 0) + (sorted[0].cookTime || 0)).toBe(15);
-      expect((sorted[2].prepTime || 0) + (sorted[2].cookTime || 0)).toBe(40);
+      expect(sorted[0].cookTime).toBe(15);
+      expect(sorted[2].cookTime).toBe(40);
     });
 
     it('should sort by rating descending', async () => {

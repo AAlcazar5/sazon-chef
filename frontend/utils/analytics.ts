@@ -85,11 +85,10 @@ class AnalyticsService {
     }
 
     this.isProcessing = true;
+    const events = [...this.eventQueue];
+    this.eventQueue = [];
 
     try {
-      // Store events locally (could also send to backend)
-      const events = [...this.eventQueue];
-      this.eventQueue = [];
 
       // Store in AsyncStorage for batch processing
       const existingEvents = await AsyncStorage.getItem(`analytics_events_${this.userId}`);

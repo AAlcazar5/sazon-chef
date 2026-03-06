@@ -18,6 +18,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         freezable: true,
       };
 
@@ -37,6 +39,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         batchFriendly: true,
       };
 
@@ -55,6 +59,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         weeklyPrepFriendly: true,
       };
 
@@ -73,6 +79,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepScore: 85,
       };
 
@@ -91,6 +99,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepScore: 70,
       };
 
@@ -109,6 +119,8 @@ describe('Meal Prep Tags', () => {
         protein: 5,
         carbs: 30,
         fat: 5,
+        ingredients: ['lettuce'],
+        instructions: ['Toss salad'],
         mealPrepSuitable: false,
         freezable: false,
         batchFriendly: false,
@@ -132,6 +144,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepScore: 85,
         freezable: true,
         batchFriendly: true,
@@ -160,6 +174,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepScore: 85,
       };
 
@@ -178,6 +194,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepScore: 70,
       };
 
@@ -196,6 +214,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepScore: 50,
       };
 
@@ -214,6 +234,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepScore: 30,
       };
 
@@ -232,6 +254,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepSuitable: true,
       };
 
@@ -250,6 +274,8 @@ describe('Meal Prep Tags', () => {
         protein: 5,
         carbs: 30,
         fat: 5,
+        ingredients: ['lettuce'],
+        instructions: ['Toss salad'],
         mealPrepSuitable: false,
         freezable: false,
         batchFriendly: false,
@@ -273,6 +299,8 @@ describe('Meal Prep Tags', () => {
         protein: 20,
         carbs: 50,
         fat: 15,
+        ingredients: ['chicken'],
+        instructions: ['Cook chicken'],
         mealPrepScore: 85,
         freezable: true,
       };
@@ -292,6 +320,8 @@ describe('Meal Prep Tags', () => {
         protein: 5,
         carbs: 30,
         fat: 5,
+        ingredients: ['lettuce'],
+        instructions: ['Toss salad'],
       };
 
       const category = getPrimaryMealPrepCategory(recipe);

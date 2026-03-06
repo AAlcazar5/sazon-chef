@@ -189,7 +189,7 @@ export default function RecipeRoulette({
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
           <Ionicons name="checkmark-circle" size={64} color={isDark ? DarkColors.primary : Colors.primary} />
-          <Text style={[styles.emptyText, { color: isDark ? DarkColors.text : Colors.text }]}>
+          <Text style={[styles.emptyText, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
             You've seen all recipes!
           </Text>
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
@@ -344,7 +344,7 @@ function RecipeCardContent({
   isPreview?: boolean;
 }) {
   return (
-    <View style={[styles.cardContent, { backgroundColor: isDark ? DarkColors.gray800 : Colors.white }]}>
+    <View style={[styles.cardContent, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
       {/* Recipe Image */}
       {recipe.imageUrl && (
         <View style={styles.imageContainer}>
@@ -374,7 +374,7 @@ function RecipeCardContent({
       >
         <View style={styles.contentPadding}>
           {/* Title */}
-          <Text style={[styles.title, { color: isDark ? DarkColors.text : Colors.text }]}>
+          <Text style={[styles.title, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
             {recipe.title}
           </Text>
 
@@ -407,7 +407,7 @@ function RecipeCardContent({
           <View style={[styles.macrosContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }]}>
             <View style={styles.macroItem}>
               <Text style={[styles.macroLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Calories</Text>
-              <Text style={[styles.macroValue, { color: isDark ? DarkColors.text : Colors.text }]}>
+              <Text style={[styles.macroValue, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
                 {recipe.calories}
               </Text>
             </View>

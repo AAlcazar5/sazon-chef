@@ -20,7 +20,7 @@ interface LoadingStateProps {
   /** Optional subtitle/hint text */
   subtitle?: string;
   /** Animation type for mascot */
-  animationType?: 'pulse' | 'bounce' | 'wiggle' | 'none';
+  animationType?: 'pulse' | 'bounce' | 'idle' | 'wave' | 'celebrate' | 'none';
   /** Pre-configured loading state (overrides individual props) */
   config?: LoadingStateConfig;
 }

@@ -195,7 +195,7 @@ function FeaturedRecipeCarousel({
             isFeedbackLoading={isFeedbackLoading}
             isDark={isDark}
             showDescription={true}
-            showTopMatchBadge={isTopMatch}
+            showTopMatchBadge={!!isTopMatch}
             recommendationReason={recommendationReason}
             showSwipeIndicators={topRecipes.length > 1}
             swipeIndicatorCount={topRecipes.length}

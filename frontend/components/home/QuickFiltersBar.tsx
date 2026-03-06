@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { HapticPatterns } from '../../constants/Haptics';
 import { Colors, DarkColors } from '../../constants/Colors';
-import type { Mood } from '../../lib/moodStorage';
+import type { Mood } from '../ui/MoodSelector';
 import type { FilterState } from '../../lib/filterStorage';
 
 export interface QuickMacroFilters {

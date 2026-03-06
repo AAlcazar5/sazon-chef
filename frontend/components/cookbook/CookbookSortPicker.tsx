@@ -90,7 +90,7 @@ export default function CookbookSortPicker({
                     style={{ marginRight: 12 }}
                   />
                   <Icon
-                    name={option.icon}
+                    name={option.icon as any}
                     size={IconSizes.SM}
                     color={isSelected ? (isDark ? DarkColors.primary : Colors.primary) : '#6B7280'}
                     accessibilityLabel={option.label}

@@ -68,7 +68,6 @@ export default function HapticTouchableOpacity({
     if (scaleOnPress && !disabled) {
       Animated.spring(scaleValue, {
         toValue: pressedScale,
-        useNativeDriver: true,
         ...Spring.stiff,
       }).start();
     }
@@ -78,7 +77,6 @@ export default function HapticTouchableOpacity({
     if (scaleOnPress && !disabled) {
       Animated.spring(scaleValue, {
         toValue: 1,
-        useNativeDriver: true,
         ...Spring.gentle,
       }).start();
     }

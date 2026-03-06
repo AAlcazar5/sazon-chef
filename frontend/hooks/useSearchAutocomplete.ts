@@ -44,7 +44,7 @@ export function useSearchAutocomplete(debounceMs = 300): UseSearchAutocompleteRe
           const res = await searchApi.getAutoCompleteSuggestions(trimmed);
           // Only apply if this is still the latest query
           if (lastQueryRef.current === trimmed) {
-            setSuggestions(res.data?.suggestions || res.suggestions || []);
+            setSuggestions(res.data?.suggestions || (res as any).suggestions || []);
           }
         } catch {
           if (lastQueryRef.current === trimmed) {

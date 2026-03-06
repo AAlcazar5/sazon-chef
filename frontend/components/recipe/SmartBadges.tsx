@@ -53,8 +53,8 @@ function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBad
     const badges: Badge[] = [];
 
     // 1. Match Score (Highest Priority)
-    if (recipe.score?.matchPercentage) {
-      const matchPct = Math.round(recipe.score.matchPercentage);
+    if ((recipe as any).score?.matchPercentage) {
+      const matchPct = Math.round((recipe as any).score.matchPercentage);
       badges.push({
         id: 'match-score',
         label: 'Match',
@@ -75,7 +75,7 @@ function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBad
     }
 
     // 2. Health Grade (High Priority)
-    const healthGrade = recipe.healthGrade || (recipe.score as any)?.healthGrade;
+    const healthGrade = (recipe as any).healthGrade || (recipe as any).score?.healthGrade;
     if (healthGrade) {
       const gradeColors = {
         'A': { bg: isDark ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.15)', text: isDark ? '#4ADE80' : '#15803D', border: '#22C55E' },
@@ -227,7 +227,7 @@ function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBad
       >
         {badge.icon && (
           <Icon
-            name={badge.icon}
+            name={badge.icon as any}
             size={iconSize}
             color={badge.textColor}
             accessibilityLabel={badge.label}
