@@ -6,9 +6,11 @@ const createPrismaMock = () => ({
   prisma: {
     user: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
       findMany: jest.fn()
     },
     recipe: {
@@ -152,7 +154,7 @@ jest.mock('@modules/user/userRoutes', () => ({
   userRoutes: mockRouter
 }));
 jest.mock('@modules/mealPlan/mealPlanRoutes', () => ({
-  default: mockRouter
+  __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/dailySuggestions/dailySuggestionsRoutes', () => ({
   dailySuggestionsRoutes: mockRouter
@@ -161,7 +163,7 @@ jest.mock('@modules/mealHistory/mealHistoryRoutes', () => ({
   mealHistoryRoutes: mockRouter
 }));
 jest.mock('@modules/aiRecipe/aiRecipeRoutes', () => ({
-  default: mockRouter
+  __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/notifications/notificationsRoutes', () => ({
   notificationsRoutes: mockRouter
@@ -185,22 +187,22 @@ jest.mock('@modules/search/searchRoutes', () => ({
   searchRoutes: mockRouter
 }));
 jest.mock('@modules/shoppingList/shoppingListRoutes', () => ({
-  default: mockRouter
+  __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/shoppingList/shoppingAppRoutes', () => ({
-  default: mockRouter
+  __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/costTracking/costTrackingRoutes', () => ({
-  default: mockRouter
+  __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/ingredientAvailability/ingredientAvailabilityRoutes', () => ({
-  default: mockRouter
+  __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/pantry/pantryRoutes', () => ({
-  default: mockRouter
+  __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/upload/uploadRoute', () => ({
-  default: mockRouter
+  __esModule: true, default: mockRouter
 }));
 
 // Mock expo-server-sdk (ESM module that Jest can't transform)

@@ -22,6 +22,12 @@ jest.mock('../../src/lib/prisma', () => ({
     },
     userPhysicalProfile: {
       findUnique: jest.fn()
+    },
+    recipeFeedback: {
+      findMany: jest.fn()
+    },
+    recipe: {
+      findMany: jest.fn()
     }
   }
 }));
@@ -42,8 +48,13 @@ describe('AIRecipeController', () => {
 
     mockRequest = {
       query: {},
-      body: {}
+      body: {},
+      headers: { 'x-data-sharing-enabled': 'true' },
+      user: { id: 'test-user-id', email: 'test@example.com' }
     };
+
+    // Default: recipeFeedback returns empty
+    (prisma.recipeFeedback as any).findMany.mockResolvedValue([]);
   });
 
   describe('generateRecipe', () => {
@@ -66,11 +77,18 @@ describe('AIRecipeController', () => {
       instructions: []
     };
 
+    const mockSavedRecipe = {
+      ...mockGeneratedRecipe,
+      ingredients: [],
+      instructions: []
+    };
+
     beforeEach(() => {
       (prisma.userPreferences.findUnique as jest.Mock).mockResolvedValue({
         likedCuisines: [{ name: 'Italian' }],
         dietaryRestrictions: [],
         bannedIngredients: [],
+        preferredSuperfoods: [],
         spiceLevel: 'medium',
         cookTimePreference: 30
       });
@@ -90,7 +108,7 @@ describe('AIRecipeController', () => {
       });
 
       (aiRecipeService.generateRecipe as jest.Mock).mockResolvedValue(mockGeneratedRecipe);
-      (aiRecipeService.saveGeneratedRecipe as jest.Mock).mockResolvedValue(mockGeneratedRecipe);
+      (aiRecipeService.saveGeneratedRecipe as jest.Mock).mockResolvedValue(mockSavedRecipe);
     });
 
     test('should fetch user preferences and generate recipe', async () => {
@@ -114,7 +132,7 @@ describe('AIRecipeController', () => {
       await controller.generateRecipe(mockRequest as Request, mockResponse as Response);
 
       const generateCall = (aiRecipeService.generateRecipe as jest.Mock).mock.calls[0][0];
-      expect(['breakfast', 'lunch', 'dinner', 'snack']).toContain(generateCall.mealType);
+      expect(['breakfast', 'lunch', 'dinner', 'snack', 'dessert']).toContain(generateCall.mealType);
     });
 
     test('should use provided meal type', async () => {
@@ -131,6 +149,7 @@ describe('AIRecipeController', () => {
         likedCuisines: [{ name: 'Italian' }, { name: 'Mexican' }, { name: 'Thai' }],
         dietaryRestrictions: [],
         bannedIngredients: [],
+        preferredSuperfoods: [],
         spiceLevel: 'medium',
         cookTimePreference: 30
       });
@@ -156,7 +175,7 @@ describe('AIRecipeController', () => {
       await controller.generateRecipe(mockRequest as Request, mockResponse as Response);
 
       const generateCall = (aiRecipeService.generateRecipe as jest.Mock).mock.calls[0][0];
-      
+
       // Breakfast should be 25% of daily macros
       expect(generateCall.macroGoals?.calories).toBe(500); // 2000 * 0.25
       expect(generateCall.macroGoals?.protein).toBe(38); // 150 * 0.25 rounded
@@ -189,6 +208,7 @@ describe('AIRecipeController', () => {
         likedCuisines: [],
         dietaryRestrictions: [{ name: 'Vegetarian' }, { name: 'Gluten-Free' }],
         bannedIngredients: [{ name: 'Peanuts' }],
+        preferredSuperfoods: [],
         spiceLevel: 'medium',
         cookTimePreference: 30
       });
@@ -205,7 +225,7 @@ describe('AIRecipeController', () => {
 
       expect(aiRecipeService.saveGeneratedRecipe).toHaveBeenCalledWith(
         mockGeneratedRecipe,
-        'temp-user-id'
+        'test-user-id'
       );
     });
 
@@ -228,12 +248,10 @@ describe('AIRecipeController', () => {
 
       await controller.generateRecipe(mockRequest as Request, mockResponse as Response);
 
-      expect(consoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('AI Recipe Generation: Request started')
-      );
-      expect(consoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('AI Recipe Generation: Completed in')
-      );
+      // console.log is called with emoji prefix as first arg, rest as additional args
+      const calls = consoleLog.mock.calls.map(c => c.join(' '));
+      expect(calls.some(c => c.includes('AI Recipe Generation: Request started'))).toBe(true);
+      expect(calls.some(c => c.includes('AI Recipe Generation: Completed in'))).toBe(true);
 
       consoleLog.mockRestore();
     });
@@ -268,6 +286,7 @@ describe('AIRecipeController', () => {
         likedCuisines: [],
         dietaryRestrictions: [],
         bannedIngredients: [],
+        preferredSuperfoods: [],
         spiceLevel: 'medium',
         cookTimePreference: 30
       });
@@ -282,6 +301,10 @@ describe('AIRecipeController', () => {
       (prisma.userPhysicalProfile.findUnique as jest.Mock).mockResolvedValue(null);
 
       (aiRecipeService.generateDailyMealPlan as jest.Mock).mockResolvedValue(mockMealPlan);
+      // saveGeneratedRecipe returns saved recipe with id for each meal
+      (aiRecipeService.saveGeneratedRecipe as jest.Mock).mockImplementation((recipe: any) =>
+        Promise.resolve({ id: recipe.id || 'saved-id', ...recipe })
+      );
     });
 
     test('should generate daily meal plan', async () => {
@@ -291,12 +314,13 @@ describe('AIRecipeController', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          meals: expect.objectContaining({
+          mealPlan: expect.objectContaining({
             breakfast: expect.objectContaining({ title: 'Breakfast Recipe' }),
             lunch: expect.objectContaining({ title: 'Lunch Recipe' }),
             dinner: expect.objectContaining({ title: 'Dinner Recipe' }),
             snack: expect.objectContaining({ title: 'Snack Recipe' })
-          })
+          }),
+          totalNutrition: expect.any(Object)
         })
       );
     });
@@ -318,4 +342,3 @@ describe('AIRecipeController', () => {
     });
   });
 });
-

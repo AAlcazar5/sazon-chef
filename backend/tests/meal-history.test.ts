@@ -32,7 +32,7 @@ describe('Meal History Controller', () => {
   beforeEach(() => {
     mockJson = jest.fn();
     mockStatus = jest.fn().mockReturnValue({ json: mockJson });
-    
+
     mockReq = {
       params: { id: 'meal-1' },
       body: {
@@ -40,9 +40,10 @@ describe('Meal History Controller', () => {
         date: '2024-01-01',
         feedback: 'delicious'
       },
+      query: {},
       user: { id: 'user-1', email: 'user1@example.com' }
     };
-    
+
     mockRes = {
       json: mockJson,
       status: mockStatus
@@ -61,6 +62,7 @@ describe('Meal History Controller', () => {
           userId: 'user-1',
           recipeId: 'recipe-1',
           date: new Date('2024-01-01'),
+          consumed: true,
           feedback: 'delicious',
           recipe: {
             id: 'recipe-1',
@@ -78,7 +80,7 @@ describe('Meal History Controller', () => {
       await mealHistoryController.getMealHistory(mockReq as Request, mockRes as Response);
 
       expect(mockPrisma.mealHistory.findMany).toHaveBeenCalledWith({
-        where: { userId: 'temp-user-id' },
+        where: { userId: 'user-1' },
         include: {
           recipe: {
             include: {
@@ -87,10 +89,23 @@ describe('Meal History Controller', () => {
             }
           }
         },
-        orderBy: { date: 'desc' }
+        orderBy: { date: 'desc' },
+        take: 50,
+        skip: 0
       });
 
-      expect(mockJson).toHaveBeenCalledWith(mockMealHistory);
+      // Response is { mealHistory, summary, pagination }
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mealHistory: mockMealHistory,
+          summary: expect.any(Object),
+          pagination: expect.objectContaining({
+            limit: 50,
+            offset: 0,
+            total: 1
+          })
+        })
+      );
     });
 
     it('should handle empty meal history', async () => {
@@ -98,7 +113,13 @@ describe('Meal History Controller', () => {
 
       await mealHistoryController.getMealHistory(mockReq as Request, mockRes as Response);
 
-      expect(mockJson).toHaveBeenCalledWith([]);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mealHistory: [],
+          summary: expect.any(Object),
+          pagination: expect.objectContaining({ total: 0 })
+        })
+      );
     });
 
     it('should handle database errors', async () => {
@@ -125,17 +146,18 @@ describe('Meal History Controller', () => {
         fat: 20
       };
 
-      const mockMealHistory = {
+      const mockMealEntry = {
         id: 'meal-1',
         userId: 'user-1',
         recipeId: 'recipe-1',
         date: new Date('2024-01-01'),
+        consumed: true,
         feedback: 'delicious',
         recipe: mockRecipe
       };
 
       mockPrisma.recipe.findUnique.mockResolvedValue(mockRecipe);
-      mockPrisma.mealHistory.create.mockResolvedValue(mockMealHistory);
+      mockPrisma.mealHistory.create.mockResolvedValue(mockMealEntry);
 
       await mealHistoryController.addMealToHistory(mockReq as Request, mockRes as Response);
 
@@ -145,9 +167,10 @@ describe('Meal History Controller', () => {
 
       expect(mockPrisma.mealHistory.create).toHaveBeenCalledWith({
         data: {
-          userId: 'temp-user-id',
+          userId: 'user-1',
           recipeId: 'recipe-1',
           date: new Date('2024-01-01'),
+          consumed: true,
           feedback: 'delicious'
         },
         include: {
@@ -160,7 +183,11 @@ describe('Meal History Controller', () => {
         }
       });
 
-      expect(mockJson).toHaveBeenCalledWith(mockMealHistory);
+      expect(mockStatus).toHaveBeenCalledWith(201);
+      expect(mockJson).toHaveBeenCalledWith({
+        message: 'Meal added to history successfully',
+        mealEntry: mockMealEntry
+      });
     });
 
     it('should handle recipe not found', async () => {
@@ -170,7 +197,8 @@ describe('Meal History Controller', () => {
 
       expect(mockStatus).toHaveBeenCalledWith(404);
       expect(mockJson).toHaveBeenCalledWith({
-        error: 'Recipe not found'
+        error: 'Recipe not found',
+        message: 'The specified recipe does not exist'
       });
     });
 
@@ -190,28 +218,34 @@ describe('Meal History Controller', () => {
 
   describe('updateMealHistory', () => {
     it('should update meal history', async () => {
-      const mockMealHistory = {
+      const mockExisting = {
+        id: 'meal-1',
+        userId: 'user-1',
+        recipeId: 'recipe-1'
+      };
+
+      const mockUpdated = {
         id: 'meal-1',
         userId: 'user-1',
         recipeId: 'recipe-1',
         date: new Date('2024-01-01'),
-        feedback: 'updated feedback'
+        feedback: 'delicious'
       };
 
-      mockPrisma.mealHistory.findFirst.mockResolvedValue(mockMealHistory);
-      mockPrisma.mealHistory.update.mockResolvedValue(mockMealHistory);
+      mockReq.body = { feedback: 'delicious' };
+
+      mockPrisma.mealHistory.findFirst.mockResolvedValue(mockExisting);
+      mockPrisma.mealHistory.update.mockResolvedValue(mockUpdated);
 
       await mealHistoryController.updateMealHistory(mockReq as Request, mockRes as Response);
 
       expect(mockPrisma.mealHistory.findFirst).toHaveBeenCalledWith({
-        where: { id: 'meal-1', userId: 'temp-user-id' }
+        where: { id: 'meal-1', userId: 'user-1' }
       });
 
       expect(mockPrisma.mealHistory.update).toHaveBeenCalledWith({
         where: { id: 'meal-1' },
         data: {
-          recipeId: 'recipe-1',
-          date: new Date('2024-01-01'),
           feedback: 'delicious'
         },
         include: {
@@ -224,7 +258,10 @@ describe('Meal History Controller', () => {
         }
       });
 
-      expect(mockJson).toHaveBeenCalledWith(mockMealHistory);
+      expect(mockJson).toHaveBeenCalledWith({
+        message: 'Meal history updated successfully',
+        mealEntry: mockUpdated
+      });
     });
 
     it('should handle meal not found', async () => {
@@ -234,7 +271,8 @@ describe('Meal History Controller', () => {
 
       expect(mockStatus).toHaveBeenCalledWith(404);
       expect(mockJson).toHaveBeenCalledWith({
-        error: 'Meal history not found'
+        error: 'Meal history entry not found',
+        message: 'The specified meal history entry does not exist or does not belong to you'
       });
     });
   });
@@ -253,7 +291,7 @@ describe('Meal History Controller', () => {
       await mealHistoryController.deleteMealHistory(mockReq as Request, mockRes as Response);
 
       expect(mockPrisma.mealHistory.findFirst).toHaveBeenCalledWith({
-        where: { id: 'meal-1', userId: 'temp-user-id' }
+        where: { id: 'meal-1', userId: 'user-1' }
       });
 
       expect(mockPrisma.mealHistory.delete).toHaveBeenCalledWith({
@@ -261,7 +299,7 @@ describe('Meal History Controller', () => {
       });
 
       expect(mockJson).toHaveBeenCalledWith({
-        message: 'Meal history deleted successfully'
+        message: 'Meal history entry deleted successfully'
       });
     });
 
@@ -272,40 +310,31 @@ describe('Meal History Controller', () => {
 
       expect(mockStatus).toHaveBeenCalledWith(404);
       expect(mockJson).toHaveBeenCalledWith({
-        error: 'Meal history not found'
+        error: 'Meal history entry not found',
+        message: 'The specified meal history entry does not exist or does not belong to you'
       });
     });
   });
 
   describe('getMealHistoryAnalytics', () => {
     it('should return meal history analytics', async () => {
-      const mockAnalytics = {
-        totalMeals: 10,
-        averageCalories: 450,
-        favoriteCuisines: ['Italian', 'American'],
-        mostConsumedRecipes: [
-          { recipeId: 'recipe-1', count: 3, title: 'Pasta' }
-        ],
-        weeklyPattern: {
-          monday: 2,
-          tuesday: 1,
-          wednesday: 3,
-          thursday: 1,
-          friday: 2,
-          saturday: 1,
-          sunday: 0
-        }
-      };
+      mockReq.query = { period: '30', groupBy: 'day' };
 
-      mockPrisma.mealHistory.count.mockResolvedValue(10);
       mockPrisma.mealHistory.findMany.mockResolvedValue([
-        { recipe: { calories: 400 } },
-        { recipe: { calories: 500 } }
+        { consumed: true, date: new Date('2024-01-01'), recipe: { calories: 400, cuisine: 'Italian' }, feedback: 'liked' },
+        { consumed: true, date: new Date('2024-01-01'), recipe: { calories: 500, cuisine: 'American' }, feedback: 'liked' }
       ]);
 
       await mealHistoryController.getMealHistoryAnalytics(mockReq as Request, mockRes as Response);
 
-      expect(mockJson).toHaveBeenCalled();
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          period: '30 days',
+          groupBy: 'day',
+          analytics: expect.any(Object),
+          generatedAt: expect.any(String)
+        })
+      );
     });
   });
 });
