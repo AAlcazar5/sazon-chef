@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSubscription } from '../../hooks/useSubscription';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { SazonMascot } from '../mascot/SazonMascot';
+import { SazonMascot } from '../mascot';
 
 const PREMIUM_FEATURES = [
   { icon: '🗓', label: 'Unlimited AI meal plans' },

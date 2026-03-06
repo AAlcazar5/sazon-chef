@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { useSubscription } from '../../hooks/useSubscription';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { SazonMascot } from '../mascot/SazonMascot';
+import { SazonMascot } from '../mascot';
 
 interface PremiumGateProps {
   children: React.ReactNode;
