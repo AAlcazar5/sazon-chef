@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { Alert } from 'react-native';
 
 // Interfaces for this file
 interface ApiResponse<T = any> {
@@ -174,8 +175,8 @@ api.interceptors.response.use(
         /insufficient_quota/i.test(String(rawMessage || '')) ||
         /API quota exceeded/i.test(String(rawMessage || ''));
 
-      // Don't log expected user errors (bad credentials, validation errors, not found)
-      const isExpectedUserError = statusCode === 400 || statusCode === 401 || statusCode === 404;
+      // Don't log expected user errors (bad credentials, validation, auth, not found)
+      const isExpectedUserError = statusCode === 400 || statusCode === 401 || statusCode === 403 || statusCode === 404;
 
       // Network errors (no response received) are handled gracefully below — no need to log
       const isNetworkError = !error.response && !!error.request;
@@ -239,16 +240,20 @@ api.interceptors.response.use(
 
         // Automatically logout on authentication errors (but NOT on auth endpoints)
         if (logoutCallback && !isAuthEndpoint) {
-          // Call logout asynchronously to avoid blocking error handling
-          // The AuthContext state change will trigger navigation in _layout.tsx
           const doLogout = logoutCallback;
-          setTimeout(async () => {
-            try {
-              await doLogout();
-            } catch (error) {
-              console.error('Error during automatic logout:', error);
-            }
-          }, 0);
+          Alert.alert(
+            'Session Expired',
+            'Your session has expired. Please log in again.',
+            [{
+              text: 'OK',
+              onPress: () => {
+                doLogout().catch(() => {
+                  // Logout errors are non-fatal — navigation will still redirect to login
+                });
+              },
+            }],
+            { cancelable: false }
+          );
         }
       }
 
@@ -1383,6 +1388,15 @@ export const notificationsApi = {
     apiClient.post('/notifications/register-token', { token, platform }),
   unregisterToken: (token: string) =>
     apiClient.delete('/notifications/unregister-token', { data: { token } }),
+};
+
+// ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
+
+export const stripeApi = {
+  getSubscription: () => apiClient.get('/stripe/subscription'),
+  createCheckout: (interval: 'month' | 'year') =>
+    apiClient.post('/stripe/checkout', { interval }),
+  createPortal: () => apiClient.post('/stripe/portal'),
 };
 
 export type { ApiResponse, ApiError };

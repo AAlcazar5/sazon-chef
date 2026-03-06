@@ -67,6 +67,7 @@
     "passport-google-oauth20": "^2.0.0",
     "prisma": "^5.7.1",
     "resend": "^6.9.3",
+    "stripe": "^20.4.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
   },

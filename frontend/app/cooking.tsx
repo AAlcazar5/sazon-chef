@@ -24,6 +24,7 @@ import { extractTimers } from '../utils/timerExtraction';
 import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingModeTimers';
 import IngredientChecklist from '../components/recipe/IngredientChecklist';
 import AnimatedSazon from '../components/mascot/AnimatedSazon';
+import { CoffeeBanner, shouldShowCoffeeBanner, recordCoffeeBannerShown } from '../components/premium/CoffeeBanner';
 
 // --- Types ---
 
@@ -84,6 +85,7 @@ export default function CookingScreen() {
 
   // Timer state
   const [timers, setTimers] = useState<CookingTimer[]>([]);
+  const [showCoffeeBanner, setShowCoffeeBanner] = useState(false);
 
   // Slide animation for step transitions
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -212,6 +214,13 @@ export default function CookingScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // Record cooking (non-blocking)
     recipeApi.recordCook(recipe.id).catch(() => {});
+    // Conditionally show coffee banner (7-day cooldown, free users only)
+    shouldShowCoffeeBanner().then((show) => {
+      if (show) {
+        setShowCoffeeBanner(true);
+        recordCoffeeBannerShown();
+      }
+    }).catch(() => {});
   }
 
   // --- Timer handlers ---
@@ -300,6 +309,11 @@ export default function CookingScreen() {
         >
           <Text className="text-white font-bold text-lg">Back to Recipe</Text>
         </HapticTouchableOpacity>
+
+        <CoffeeBanner
+          visible={showCoffeeBanner}
+          onDismiss={() => setShowCoffeeBanner(false)}
+        />
       </View>
     );
   }

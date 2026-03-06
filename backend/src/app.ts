@@ -23,6 +23,7 @@ import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { searchRoutes } from '@modules/search/searchRoutes';
 import { notificationsRoutes } from '@modules/notifications/notificationsRoutes';
+import { stripeRoutes } from '@modules/stripe/stripeRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 import { prisma } from '@/lib/prisma';
 import { cacheService } from '@/utils/cacheService';
@@ -163,6 +164,7 @@ app.use('/api/pantry', pantryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 

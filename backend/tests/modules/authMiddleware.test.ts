@@ -85,10 +85,10 @@ describe('Auth Middleware', () => {
 
       authenticateToken(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Invalid token',
+          error: 'Unauthorized',
         })
       );
 
@@ -109,7 +109,7 @@ describe('Auth Middleware', () => {
 
       authenticateToken(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockNext).not.toHaveBeenCalled();
     });
   });
