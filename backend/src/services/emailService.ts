@@ -9,6 +9,7 @@ import {
   paymentReceiptTemplate,
   trialEndingTemplate,
   subscriptionChangeTemplate,
+  paymentFailedTemplate,
 } from '../emails/templates';
 
 const resend = process.env.RESEND_API_KEY
@@ -95,6 +96,14 @@ export const emailService = {
       to,
       subject: `Your Sazon Chef subscription has been ${type}`,
       html: subscriptionChangeTemplate(type),
+    });
+  },
+
+  async sendPaymentFailed(to: string): Promise<boolean> {
+    return this.send({
+      to,
+      subject: 'Action required: payment failed for Sazon Chef',
+      html: paymentFailedTemplate(),
     });
   },
 };

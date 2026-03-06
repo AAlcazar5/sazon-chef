@@ -125,6 +125,12 @@ function RootLayoutNav() {
               <Stack.Screen name="edit-budget" />
               <Stack.Screen name="onboarding" />
               <Stack.Screen
+                name="paywall"
+                options={{
+                  presentation: 'modal',
+                }}
+              />
+              <Stack.Screen
                 name="login"
                 options={{
                   presentation: 'modal',

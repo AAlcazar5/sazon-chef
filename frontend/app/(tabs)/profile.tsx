@@ -1,10 +1,11 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Linking } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { useSubscription } from '../../hooks/useSubscription';
 import { Spacing } from '../../constants/Spacing';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -24,8 +25,11 @@ import {
   AccountCard,
 } from '../../components/profile';
 
+const COFFEE_URL = 'https://ko-fi.com/sazonchef';
+
 export default function ProfileScreen() {
   const { logout, user } = useAuth();
+  const { subscription } = useSubscription();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -173,6 +177,40 @@ export default function ProfileScreen() {
           onExportData={handleExportData}
           onConfirmClearHistory={handleConfirmClearHistory}
         />
+
+        {/* Support Sazon row — always visible for free-tier users */}
+        {!subscription.isPremium && (
+          <View className="mx-4 mb-4">
+            <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+              Support
+            </Text>
+            <View className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden">
+              <HapticTouchableOpacity
+                onPress={() => Linking.openURL(COFFEE_URL)}
+                className="flex-row items-center px-4 py-4"
+                hapticStyle="light"
+              >
+                <View className="w-10 h-10 rounded-full items-center justify-center mr-3 bg-yellow-50 dark:bg-yellow-900/30">
+                  <Text style={{ fontSize: 20 }}>☕</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-medium text-gray-900 dark:text-gray-100">
+                    Support Sazon
+                  </Text>
+                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                    Buy us a coffee to keep the stove on
+                  </Text>
+                </View>
+                <Icon
+                  name={Icons.CHEVRON_FORWARD}
+                  size={IconSizes.SM}
+                  color="#9CA3AF"
+                  accessibilityLabel="Navigate"
+                />
+              </HapticTouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <AccountCard
           user={user}

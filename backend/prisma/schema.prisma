@@ -60,9 +60,17 @@ model User {
   profilePresets          ProfilePreset[]
   searchQueries           SearchQuery[]
   pushTokens              PushToken[]
+  stripeWebhookEvents     StripeWebhookEvent[]
 
   // Group 6: Email verification
   emailVerified           Boolean  @default(false)
+
+  // Group 7: Stripe subscription
+  stripeCustomerId        String?
+  subscriptionStatus      String   @default("free") // free | trialing | active | past_due | canceled
+  subscriptionTier        String   @default("free") // free | premium
+  trialEndsAt             DateTime?
+  currentPeriodEnd        DateTime?
 
   @@map("users")
 }
@@ -868,6 +876,21 @@ model ProfilePreset {
   @@unique([userId, name])
   @@index([userId, isActive])
   @@map("profile_presets")
+}
+
+// Stripe webhook event log (Group 7: Stripe Integration)
+model StripeWebhookEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  type          String   // e.g. "customer.subscription.updated"
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  processedAt   DateTime @default(now())
+  data          String   // JSON string of the event payload for audit trail
+
+  @@index([userId])
+  @@index([type])
+  @@map("stripe_webhook_events")
 }
 
 // Push notification device tokens (Group 6: Growth & Marketing)

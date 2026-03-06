@@ -126,9 +126,26 @@ export function trialEndingTemplate(daysLeft: number): string {
   `);
 }
 
-export function subscriptionChangeTemplate(_type: 'cancelled' | 'resumed' | 'upgraded'): string {
+export function subscriptionChangeTemplate(type: 'cancelled' | 'resumed' | 'upgraded'): string {
+  const messages: Record<typeof type, string> = {
+    cancelled: 'Your Sazon Chef Premium subscription has been cancelled. You can continue using Premium features until your billing period ends.',
+    resumed: 'Great news — your Sazon Chef Premium subscription has been reactivated. Welcome back!',
+    upgraded: 'You\'ve upgraded your Sazon Chef Premium plan. Thank you for your support!',
+  };
   return baseLayout(`
     <h1 style="margin:0 0 16px;font-size:24px;color:${TEXT_COLOR};">Subscription updated</h1>
-    <p style="margin:0;font-size:16px;color:${MUTED_COLOR};">Subscription change template — coming in Group 7.</p>
+    <p style="margin:0;font-size:16px;color:${MUTED_COLOR};">${messages[type]}</p>
+  `);
+}
+
+export function paymentFailedTemplate(): string {
+  return baseLayout(`
+    <h1 style="margin:0 0 16px;font-size:24px;color:${TEXT_COLOR};">Payment failed</h1>
+    <p style="margin:0 0 16px;font-size:16px;color:${MUTED_COLOR};">
+      We were unable to process your Sazon Chef Premium payment. Please update your payment method to keep your Premium access.
+    </p>
+    <a href="sazonchef://profile/subscription" style="display:inline-block;background-color:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:16px;font-weight:600;">
+      Update Payment Method
+    </a>
   `);
 }

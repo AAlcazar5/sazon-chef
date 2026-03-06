@@ -37,9 +37,9 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     // Verify token
     jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
       if (err) {
-        return res.status(403).json({
-          error: 'Invalid token',
-          message: 'Authentication token is invalid or expired. Please login again.'
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Your session has expired. Please log in again.'
         });
       }
 

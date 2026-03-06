@@ -7,6 +7,7 @@ import * as bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { encrypt, decrypt } from '@/utils/encryption';
 import { emailService } from '@/services/emailService';
+import { stripeService } from '@/services/stripeService';
 
 // Note: Request.user type is declared in authMiddleware.ts
 
@@ -131,8 +132,11 @@ export const authController = {
         token
       });
 
-      // Fire-and-forget: send welcome email
+      // Fire-and-forget: send welcome email + create Stripe customer
       emailService.sendWelcome(email, name).catch(console.error);
+      if (stripeService.isConfigured()) {
+        stripeService.getOrCreateCustomer(user.id).catch(console.error);
+      }
     } catch (error: any) {
       console.error('Registration error:', error);
       res.status(500).json({

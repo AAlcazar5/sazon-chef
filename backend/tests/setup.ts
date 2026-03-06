@@ -6,6 +6,7 @@ const createPrismaMock = () => ({
   prisma: {
     user: {
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -132,6 +133,10 @@ const createPrismaMock = () => ({
     cookingLog: {
       count: jest.fn(),
     },
+    stripeWebhookEvent: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
   }
 });
 
@@ -167,6 +172,9 @@ jest.mock('@modules/aiRecipe/aiRecipeRoutes', () => ({
 }));
 jest.mock('@modules/notifications/notificationsRoutes', () => ({
   notificationsRoutes: mockRouter
+}));
+jest.mock('@modules/stripe/stripeRoutes', () => ({
+  stripeRoutes: mockRouter
 }));
 jest.mock('@modules/auth/authRoutes', () => ({
   authRoutes: mockRouter
@@ -214,6 +222,38 @@ jest.mock('expo-server-sdk', () => {
   const ExpoClass = jest.fn(() => mockExpo);
   (ExpoClass as any).isExpoPushToken = jest.fn(() => true);
   return { __esModule: true, default: ExpoClass };
+});
+
+// Mock stripe SDK
+jest.mock('stripe', () => {
+  const mockStripeInstance = {
+    customers: {
+      create: jest.fn().mockResolvedValue({ id: 'cus_test' }),
+    },
+    checkout: {
+      sessions: {
+        create: jest.fn().mockResolvedValue({ id: 'cs_test', url: 'https://checkout.stripe.com/test' }),
+      },
+    },
+    billingPortal: {
+      sessions: {
+        create: jest.fn().mockResolvedValue({ url: 'https://billing.stripe.com/test' }),
+      },
+    },
+    subscriptions: {
+      retrieve: jest.fn().mockResolvedValue({
+        id: 'sub_test',
+        status: 'active',
+        current_period_end: Math.floor(Date.now() / 1000) + 86400 * 30,
+        trial_end: null,
+      }),
+    },
+    webhooks: {
+      constructEvent: jest.fn(),
+    },
+  };
+  const StripeMock = jest.fn(() => mockStripeInstance);
+  return { __esModule: true, default: StripeMock };
 });
 
 // Mock resend (email service — not configured in test env)

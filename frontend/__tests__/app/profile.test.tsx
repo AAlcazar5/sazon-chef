@@ -40,6 +40,12 @@ jest.mock('react', () => {
   };
 });
 
+jest.mock('../../hooks/useSubscription', () => ({
+  useSubscription: () => ({
+    subscription: { isPremium: false, loading: false, status: 'free', tier: 'free' },
+  }),
+}));
+
 jest.mock('../../lib/api', () => ({
   userApi: {
     getProfile: jest.fn(),
