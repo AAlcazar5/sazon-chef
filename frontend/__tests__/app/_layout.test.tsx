@@ -53,6 +53,8 @@ jest.mock('../../components/ui/SplashScreen', () =>
 
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RootLayout from '../../app/_layout';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSegments } from 'expo-router';
@@ -156,6 +158,72 @@ describe('RootLayout - Protected Routes', () => {
         expect(mockRouterObj.replace).not.toHaveBeenCalled();
       });
       expect(rendered).toBeTruthy();
+    });
+  });
+
+  describe('Safe Area - No Layout Shift', () => {
+    // These tests verify the fix for the layout shift on initial load.
+    // SafeAreaProvider and GestureHandlerRootView MUST live in the always-mounted
+    // RootLayout, not inside the conditionally-rendered RootLayoutNav. Mounting them
+    // conditionally caused insets to reset to zero during the splash→loading→app
+    // transition, producing a visible content jump.
+
+    it('should render SafeAreaProvider at root even during auth loading', () => {
+      mockUseAuth.mockReturnValue({
+        user: null, token: null, isLoading: true, isAuthenticated: false,
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+      });
+
+      const { UNSAFE_getAllByType } = render(<RootLayout />);
+      // SafeAreaProvider must always be in the tree — exactly once at root
+      expect(UNSAFE_getAllByType(SafeAreaProvider)).toHaveLength(1);
+    });
+
+    it('should render GestureHandlerRootView at root even during auth loading', () => {
+      mockUseAuth.mockReturnValue({
+        user: null, token: null, isLoading: true, isAuthenticated: false,
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+      });
+
+      const { UNSAFE_getAllByType } = render(<RootLayout />);
+      expect(UNSAFE_getAllByType(GestureHandlerRootView)).toHaveLength(1);
+    });
+
+    it('should keep SafeAreaProvider mounted throughout splash-to-app transition', async () => {
+      mockUseAuth.mockReturnValue({
+        user: null, token: null, isLoading: true, isAuthenticated: false,
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+      });
+      mockUseSegments.mockReturnValue(['(tabs)']);
+
+      const { UNSAFE_getAllByType, rerender } = render(<RootLayout />);
+
+      // Phase 1: initial load — SafeAreaProvider must be present
+      expect(UNSAFE_getAllByType(SafeAreaProvider)).toHaveLength(1);
+
+      // Phase 2: auth resolves — SafeAreaProvider must still be present (not remounted)
+      mockUseAuth.mockReturnValue({
+        user: { id: '1', email: 'a@b.com', name: 'Test' },
+        token: 'tok', isLoading: false, isAuthenticated: true,
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+      });
+      rerender(<RootLayout />);
+
+      await waitFor(() => {
+        expect(UNSAFE_getAllByType(SafeAreaProvider)).toHaveLength(1);
+      });
+    });
+
+    it('should keep SafeAreaProvider mounted when RootLayoutNav renders null', () => {
+      // isLoading: true + isOnboardingComplete: null → RootLayoutNav returns null
+      // SafeAreaProvider must still be in the tree (it wraps RootLayoutNav)
+      mockUseAuth.mockReturnValue({
+        user: null, token: null, isLoading: true, isAuthenticated: false,
+        login: jest.fn(), register: jest.fn(), socialLogin: jest.fn(), logout: jest.fn(), updateUser: jest.fn(),
+      });
+
+      const { UNSAFE_getAllByType } = render(<RootLayout />);
+      expect(UNSAFE_getAllByType(SafeAreaProvider)).toHaveLength(1);
     });
   });
 });

@@ -98,66 +98,66 @@ function RootLayoutNav() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <ErrorBoundary>
-          <View className="flex-1">
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                animation: 'default',
-                animationDuration: Duration.medium,
-              }}
-            >
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen
-                name="modal"
-                options={{
-                  presentation: 'modal',
-                }}
-              />
-              <Stack.Screen name="edit-physical-profile" />
-              <Stack.Screen name="edit-macro-goals" />
-              <Stack.Screen name="edit-preferences" />
-              <Stack.Screen name="recipe-form" />
-              <Stack.Screen name="scanner-results" />
-              <Stack.Screen name="cooking" />
-              <Stack.Screen name="edit-budget" />
-              <Stack.Screen name="onboarding" />
-              <Stack.Screen
-                name="paywall"
-                options={{
-                  presentation: 'modal',
-                }}
-              />
-              <Stack.Screen
-                name="login"
-                options={{
-                  presentation: 'modal',
-                }}
-              />
-              <Stack.Screen
-                name="register"
-                options={{
-                  presentation: 'modal',
-                }}
-              />
-            </Stack>
-          </View>
-        </ErrorBoundary>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <View className="flex-1">
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'default',
+            animationDuration: Duration.medium,
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="modal"
+            options={{
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen name="edit-physical-profile" />
+          <Stack.Screen name="edit-macro-goals" />
+          <Stack.Screen name="edit-preferences" />
+          <Stack.Screen name="recipe-form" />
+          <Stack.Screen name="scanner-results" />
+          <Stack.Screen name="cooking" />
+          <Stack.Screen name="edit-budget" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen
+            name="paywall"
+            options={{
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
+            name="login"
+            options={{
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
+            name="register"
+            options={{
+              presentation: 'modal',
+            }}
+          />
+        </Stack>
+      </View>
+    </ErrorBoundary>
   );
 }
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <RootLayoutNav />
-        </ToastProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <ThemeProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <RootLayoutNav />
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
