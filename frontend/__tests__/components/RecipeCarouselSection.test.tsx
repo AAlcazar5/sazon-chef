@@ -50,17 +50,18 @@ const makeRecipe = (id: string): SuggestedRecipe => ({
   title: `Recipe ${id}`,
   description: 'Delicious',
   cookTime: 20,
-  difficulty: 'Easy',
+  cuisine: 'Italian',
+  difficulty: 'easy' as const,
   servings: 2,
   ingredients: [],
   instructions: [],
-  nutritionInfo: { calories: 300, protein: 20, carbs: 30, fat: 10 },
-  tags: [],
-  cuisineType: 'Italian',
-  mealType: 'lunch',
+  calories: 300,
+  protein: 20,
+  carbs: 30,
+  fat: 10,
   imageUrl: undefined,
-  score: { total: 80, breakdown: {} as any },
-});
+  score: { total: 80, macroScore: 75, tasteScore: 80, matchPercentage: 80, breakdown: {} as any },
+} as SuggestedRecipe);
 
 const defaultProps = {
   title: 'Trending Recipes',

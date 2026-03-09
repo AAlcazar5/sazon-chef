@@ -207,8 +207,8 @@ describe('WeeklyCalendar', () => {
     // DayPill uses style={{ borderWidth: isToday && !isSelected ? 2 : 0 }}
     // style may be an array — flatten and check any element has borderWidth 2
     const pills = UNSAFE_getAllByType(TouchableOpacity);
-    const styles = [].concat(pills[3].props.style).filter(Boolean);
-    expect(styles.some((s) => s.borderWidth === 2)).toBe(true);
+    const styles: any[] = [].concat(pills[3].props.style).filter(Boolean);
+    expect(styles.some((s: any) => s.borderWidth === 2)).toBe(true);
   });
 
   it('renders the "Weekly Meal Plan" header', () => {

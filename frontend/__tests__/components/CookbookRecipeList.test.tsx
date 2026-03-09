@@ -75,18 +75,19 @@ const makeRecipe = (id: string, title: string, imageUrl?: string): SavedRecipe =
   title,
   description: 'Test recipe',
   cookTime: 25,
-  difficulty: 'Easy',
+  cuisine: 'Mexican',
+  difficulty: 'easy' as const,
   servings: 4,
   ingredients: [],
   instructions: [],
-  nutritionInfo: { calories: 400, protein: 25, carbs: 40, fat: 12 },
-  tags: [],
-  cuisineType: 'Mexican',
-  mealType: 'dinner',
+  calories: 400,
+  protein: 25,
+  carbs: 40,
+  fat: 12,
   savedDate: '2025-01-01',
   rating: null,
   imageUrl,
-});
+} as SavedRecipe);
 
 const recipes: SavedRecipe[] = [
   makeRecipe('r1', 'Tacos', 'https://example.com/tacos.jpg'),

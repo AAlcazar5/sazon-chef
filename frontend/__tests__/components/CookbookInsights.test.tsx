@@ -31,18 +31,19 @@ const makeRecipe = (overrides: Partial<any> = {}): SavedRecipe => ({
   title: 'Test',
   description: '',
   cookTime: 20,
-  difficulty: 'Easy',
+  cuisine: 'Mexican',
+  difficulty: 'easy' as const,
   servings: 2,
   ingredients: [],
   instructions: [],
-  nutritionInfo: { calories: 350, protein: 30, carbs: 40, fat: 10 },
-  tags: [],
-  cuisineType: 'Mexican',
-  mealType: 'dinner',
+  calories: 350,
+  protein: 30,
+  carbs: 40,
+  fat: 10,
   savedDate: '2025-01-01',
   rating: null,
   ...overrides,
-});
+} as SavedRecipe);
 
 const defaultFilters = {
   search: '',
@@ -55,6 +56,7 @@ const defaultFilters = {
   highProtein: false,
   lowCal: false,
   budget: false,
+  onePot: false,
   hasCookCount: false,
 };
 
