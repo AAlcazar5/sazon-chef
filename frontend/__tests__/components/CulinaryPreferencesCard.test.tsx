@@ -42,9 +42,9 @@ describe('CulinaryPreferencesCard', () => {
     );
 
     expect(screen.getByText('Gluten-Free')).toBeTruthy();
-    expect(screen.getByText('(strict)')).toBeTruthy();
+    expect(screen.getByText('🚫')).toBeTruthy(); // strict badge
     expect(screen.getByText('Dairy-Free')).toBeTruthy();
-    expect(screen.getByText('(avoid)')).toBeTruthy();
+    expect(screen.getByText('⚠️')).toBeTruthy(); // prefer_avoid badge
   });
 
   it('renders cooking skill level', () => {
@@ -116,6 +116,6 @@ describe('CulinaryPreferencesCard', () => {
     );
 
     expect(screen.getByText('Vegan')).toBeTruthy();
-    expect(screen.getByText('(strict)')).toBeTruthy();
+    expect(screen.getByText('🚫')).toBeTruthy(); // strict badge
   });
 });

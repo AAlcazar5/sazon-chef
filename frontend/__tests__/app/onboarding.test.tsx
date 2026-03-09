@@ -93,6 +93,12 @@ jest.mock('../../constants/Superfoods', () => ({
   SUPERFOOD_CATEGORIES: [],
 }));
 
+jest.mock('expo-router', () => ({
+  useLocalSearchParams: jest.fn().mockReturnValue({}),
+  useNavigation: jest.fn().mockReturnValue({ navigate: jest.fn(), goBack: jest.fn(), addListener: jest.fn(() => jest.fn()), dispatch: jest.fn() }),
+  router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
+}));
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('Onboarding', () => {
