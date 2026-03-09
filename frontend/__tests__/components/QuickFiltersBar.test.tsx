@@ -11,10 +11,6 @@ const defaultFilters: FilterState = {
   dietaryRestrictions: [],
   difficulty: [],
   maxCookTime: null,
-  minRating: null,
-  maxCalories: null,
-  minProtein: null,
-  maxCarbs: null,
 };
 
 const defaultProps = {
@@ -103,7 +99,7 @@ describe('QuickFiltersBar', () => {
 
   it('shows selected mood label when mood is active', () => {
     const { getByText } = render(
-      <QuickFiltersBar {...defaultProps} selectedMood={{ id: 'happy', emoji: '😊', label: 'Happy', description: '' }} />
+      <QuickFiltersBar {...defaultProps} selectedMood={{ id: 'happy', emoji: '😊', label: 'Happy', description: '', color: '#F59E0B' }} />
     );
     expect(getByText('Happy')).toBeTruthy();
   });

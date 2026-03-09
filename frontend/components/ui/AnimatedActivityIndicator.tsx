@@ -4,16 +4,22 @@ import { MotiView } from 'moti';
 
 interface AnimatedActivityIndicatorProps {
   visible?: boolean;
-  size?: number;
+  size?: number | 'small' | 'large';
   color?: string;
+  style?: object;
 }
+
+const SIZE_MAP: Record<string, number> = { small: 20, large: 36 };
 
 export default function AnimatedActivityIndicator({
   visible = true,
   size = 24,
   color = '#F97316',
+  style,
 }: AnimatedActivityIndicatorProps) {
   if (!visible) return null;
+
+  const resolvedSize = typeof size === 'string' ? (SIZE_MAP[size] ?? 24) : size;
 
   return (
     <MotiView
@@ -21,6 +27,7 @@ export default function AnimatedActivityIndicator({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       transition={{ type: 'timing', duration: 200 }}
+      style={style}
     >
       <MotiView
         from={{ rotate: '0deg' }}
@@ -34,9 +41,9 @@ export default function AnimatedActivityIndicator({
         style={[
           styles.spinner,
           {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
+            width: resolvedSize,
+            height: resolvedSize,
+            borderRadius: resolvedSize / 2,
             borderColor: color,
             borderTopColor: 'transparent',
           },

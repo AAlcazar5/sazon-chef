@@ -37,7 +37,7 @@ jest.mock('expo-router', () => ({
 const mockRouter = jest.requireMock('expo-router').router;
 
 jest.mock('expo-blur', () => ({
-  BlurView: function MockBlurView(props) {
+  BlurView: function MockBlurView(props: any) {
     return require('react').createElement(require('react-native').View, { style: props.style }, props.children);
   },
 }));
@@ -51,14 +51,14 @@ jest.mock('expo-haptics', () => ({
 }));
 
 jest.mock('../../components/ui/HapticTouchableOpacity', () => {
-  return function MockHTO(props) {
+  return function MockHTO(props: any) {
     return require('react').createElement(require('react-native').TouchableOpacity, props);
   };
 });
 
 jest.mock('../../components/ui/GradientButton', () => ({
   __esModule: true,
-  default: function MockGradientButton(props) {
+  default: function MockGradientButton(props: any) {
     const { TouchableOpacity, Text } = require('react-native');
     return require('react').createElement(
       TouchableOpacity,
@@ -77,7 +77,7 @@ jest.mock('../../components/ui/GradientButton', () => ({
 }));
 
 jest.mock('../../components/ui/AnimatedText', () => {
-  return function MockAnimatedText(props) {
+  return function MockAnimatedText(props: any) {
     return require('react').createElement(require('react-native').Text, null, props.children);
   };
 });
@@ -107,7 +107,7 @@ jest.mock('../../components/recipe/MealPrepScalingModal', () => {
 });
 
 jest.mock('../../utils/imageUtils', () => ({
-  optimizedImageUrl: (url) => url,
+  optimizedImageUrl: (url: string) => url,
 }));
 
 jest.mock('../../utils/storageInstructions', () => ({
@@ -121,7 +121,7 @@ jest.mock('../../utils/mealPrepTags', () => ({
 
 // Override global LinearGradient mock so testID is forwarded
 jest.mock('expo-linear-gradient', () => ({
-  LinearGradient: function MockLinearGradient(props) {
+  LinearGradient: function MockLinearGradient(props: any) {
     return require('react').createElement(
       require('react-native').View,
       { testID: props.testID, style: props.style },
@@ -188,7 +188,7 @@ describe('RecipeModal', () => {
   });
 
   it('renders hero placeholder gradient when imageUrl is absent', async () => {
-    mockRecipeLoad({ ...mockRecipe, imageUrl: undefined });
+    mockRecipeLoad({ ...mockRecipe, imageUrl: undefined as any });
 
     const { getByTestId, getByText, getAllByText } = render(<RecipeModal />);
     await waitFor(() => getAllByText('Grilled Salmon'));
@@ -239,9 +239,9 @@ describe('RecipeModal', () => {
     const header = getByTestId('frosted-header');
     // floatingHeaderOpacity is an Animated interpolation of modalScrollY (starts at 0)
     // At scroll=0, inputRange=[HERO_HEIGHT-72, HERO_HEIGHT-16], value clamps to 0
-    const opacityStyle = [].concat(header.props.style).filter(Boolean);
+    const opacityStyle: any[] = [].concat(header.props.style).filter(Boolean);
     const hasZeroOpacity = opacityStyle.some(
-      (s) => s.opacity === 0 || (s.opacity != null && typeof s.opacity === 'object'),
+      (s: any) => s.opacity === 0 || (s.opacity != null && typeof s.opacity === 'object'),
     );
     expect(hasZeroOpacity).toBe(true);
   });
