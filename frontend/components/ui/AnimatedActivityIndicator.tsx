@@ -1,32 +1,53 @@
-import React, { useEffect, useRef } from 'react';
-import { ActivityIndicator, ActivityIndicatorProps, Animated } from 'react-native';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { MotiView } from 'moti';
 
-interface AnimatedActivityIndicatorProps extends ActivityIndicatorProps {
+interface AnimatedActivityIndicatorProps {
   visible?: boolean;
+  size?: number;
+  color?: string;
 }
 
 export default function AnimatedActivityIndicator({
   visible = true,
-  ...props
+  size = 24,
+  color = '#F97316',
 }: AnimatedActivityIndicatorProps) {
-  const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: visible ? 1 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [visible]);
-
-  if (!visible) {
-    return null;
-  }
+  if (!visible) return null;
 
   return (
-    <Animated.View style={{ opacity }}>
-      <ActivityIndicator {...props} />
-    </Animated.View>
+    <MotiView
+      from={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ type: 'timing', duration: 200 }}
+    >
+      <MotiView
+        from={{ rotate: '0deg' }}
+        animate={{ rotate: '360deg' }}
+        transition={{
+          type: 'timing',
+          duration: 900,
+          loop: true,
+          repeatReverse: false,
+        }}
+        style={[
+          styles.spinner,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            borderColor: color,
+            borderTopColor: 'transparent',
+          },
+        ]}
+      />
+    </MotiView>
   );
 }
 
+const styles = StyleSheet.create({
+  spinner: {
+    borderWidth: 2.5,
+  },
+});

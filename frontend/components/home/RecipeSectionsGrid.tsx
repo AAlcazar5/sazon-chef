@@ -2,7 +2,7 @@
 // Renders the contextual recipe sections with collapse/expand, grid/list/carousel views, and inline pagination
 
 import React from 'react';
-import { View, Text, ScrollView, Animated } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
@@ -38,8 +38,6 @@ interface RecipeSectionsGridProps {
   // List-view animation
   animatedRecipeIds: Set<string>;
   onAnimatedRecipeId: (id: string) => void;
-  scrollY: Animated.Value;
-
   // Quick meals carousel
   quickMealsScrollViewRef: React.RefObject<ScrollView | null>;
   quickMealsCurrentIndex: number;
@@ -72,7 +70,6 @@ function RecipeSectionsGrid({
   onSave,
   animatedRecipeIds,
   onAnimatedRecipeId,
-  scrollY,
   quickMealsScrollViewRef,
   quickMealsCurrentIndex,
   onQuickMealsIndexChange,
@@ -108,7 +105,7 @@ function RecipeSectionsGrid({
               <View className="flex-row items-center flex-1">
                 <Text className="text-2xl mr-2">{section.emoji}</Text>
                 <View className="flex-1">
-                  <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  <Text className="text-xl font-black text-gray-900 dark:text-gray-100">
                     {section.title}
                   </Text>
                   <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -126,14 +123,15 @@ function RecipeSectionsGrid({
 
             {/* Section Content */}
             {!isCollapsed && (
-              <Animated.View>
+              <View>
                 {isQuickMeals || isMealPrep ? (
                   /* Carousel view for Quick Meals / Meal Prep */
                   <ScrollView
                     ref={isQuickMeals ? quickMealsScrollViewRef : undefined}
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingRight: 16 }}
+                    style={{ marginHorizontal: -16 }}
+                    contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
                     decelerationRate="fast"
                     snapToInterval={280}
                     snapToAlignment="start"
@@ -267,7 +265,6 @@ function RecipeSectionsGrid({
                             recipeId={recipe.id}
                             animatedIds={animatedRecipeIds}
                             onAnimated={onAnimatedRecipeId}
-                            scrollY={scrollY}
                           >
                             <RecipeCard
                               recipe={recipe}
@@ -302,7 +299,7 @@ function RecipeSectionsGrid({
                     onNextPage={onNextPage}
                   />
                 )}
-              </Animated.View>
+              </View>
             )}
           </View>
         );

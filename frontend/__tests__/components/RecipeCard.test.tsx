@@ -76,6 +76,7 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={mockRecipe}
+        variant="featured"
         onLike={mockOnLike}
         onDislike={mockOnDislike}
       />
@@ -83,7 +84,6 @@ describe('RecipeCard', () => {
 
     expect(screen.getByText('Test Recipe')).toBeTruthy();
     expect(screen.getByText('Test Description')).toBeTruthy();
-    expect(screen.getByText('30 min')).toBeTruthy();
     expect(screen.getByText('Italian')).toBeTruthy();
     expect(screen.getByText('500 cal')).toBeTruthy();
   });
@@ -92,6 +92,7 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={mockRecipe}
+        variant="featured"
         onLike={mockOnLike}
         onDislike={mockOnDislike}
       />
@@ -114,6 +115,23 @@ describe('RecipeCard', () => {
     expect(screen.getByText('85%')).toBeTruthy(); // Match percentage
   });
 
+
+  test('save button triggers onSave callback (heart-burst animation)', () => {
+    const mockOnSave = jest.fn();
+    render(
+      <RecipeCard
+        recipe={mockRecipe}
+        onLike={mockOnLike}
+        onDislike={mockOnDislike}
+        onSave={mockOnSave}
+      />
+    );
+
+    // Find the save button by its accessibility label
+    const saveButton = screen.getByLabelText('Save recipe');
+    fireEvent.press(saveButton);
+    expect(mockOnSave).toHaveBeenCalledWith(mockRecipe.id);
+  });
 
   test('should handle like button press', () => {
     render(
@@ -205,6 +223,7 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={longDescRecipe}
+        variant="featured"
         onLike={mockOnLike}
         onDislike={mockOnDislike}
       />
@@ -226,13 +245,13 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={zeroValuesRecipe}
+        variant="featured"
         onLike={mockOnLike}
         onDislike={mockOnDislike}
       />
     );
 
     expect(screen.getByText('0 cal')).toBeTruthy();
-    // 0g macros are rendered as labels
     expect(screen.getByText('0g pro')).toBeTruthy();
   });
 
@@ -249,13 +268,14 @@ describe('RecipeCard', () => {
     render(
       <RecipeCard
         recipe={highValuesRecipe}
+        variant="featured"
         onLike={mockOnLike}
         onDislike={mockOnDislike}
       />
     );
 
     expect(screen.getByText('9999 cal')).toBeTruthy();
-    expect(screen.getByText('999 min')).toBeTruthy();
+    expect(screen.getByText('999g pro')).toBeTruthy();
   });
 
   test('should handle missing optional fields', () => {

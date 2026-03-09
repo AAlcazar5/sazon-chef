@@ -6,6 +6,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { useColorScheme } from 'nativewind';
 
 interface CollectionCardProps {
@@ -73,11 +74,7 @@ export default function CollectionCard({
         borderColor: isSelected 
           ? (isDark ? DarkColors.primary : Colors.primary)
           : (isDark ? DarkColors.border.light : Colors.border.light),
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isSelected ? 0.2 : 0.1,
-        shadowRadius: 4,
-        elevation: isSelected ? 4 : 2,
+        ...Shadows.MD,
       }}
       activeOpacity={0.8}
     >

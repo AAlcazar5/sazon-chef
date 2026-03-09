@@ -1,24 +1,39 @@
 // frontend/__tests__/app/register.test.tsx
-// Tests for registration screen
+// Phase 5: Register screen — confirm password, mismatch error, excited mascot on success
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import RegisterScreen from '../../app/register';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 
-// Mock dependencies
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
 jest.mock('../../contexts/AuthContext');
 jest.mock('expo-router');
 
+jest.mock('../../components/ui/HapticTouchableOpacity', () => {
+  const { TouchableOpacity } = require('react-native');
+  return function MockHTO(props: any) {
+    return <TouchableOpacity {...props} />;
+  };
+});
+
+jest.mock('../../components/mascot/LogoMascot', () => {
+  return function MockLogoMascot({ expression }: any) {
+    return require('react').createElement(
+      require('react-native').View,
+      { testID: `mascot-${expression}` },
+    );
+  };
+});
+
+// ── Setup ─────────────────────────────────────────────────────────────────────
+
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
-const mockRouter = {
-  push: jest.fn(),
-  replace: jest.fn(),
-  back: jest.fn(),
-};
+const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
 
 describe('RegisterScreen', () => {
   const mockRegister = jest.fn();
@@ -40,130 +55,173 @@ describe('RegisterScreen', () => {
     (Alert.alert as jest.Mock) = jest.fn();
   });
 
-  it('should render registration form', () => {
-    const { getByPlaceholderText, getByText } = render(<RegisterScreen />);
+  // ── Structure ───────────────────────────────────────────────────────────────
 
+  it('renders all registration form fields', () => {
+    const { getByPlaceholderText, getAllByText } = render(<RegisterScreen />);
     expect(getByPlaceholderText('Enter your name')).toBeTruthy();
     expect(getByPlaceholderText('Enter your email')).toBeTruthy();
     expect(getByPlaceholderText('Enter your password (min 8 characters)')).toBeTruthy();
     expect(getByPlaceholderText('Confirm your password')).toBeTruthy();
-    expect(getByText('Sign Up')).toBeTruthy();
+    expect(getAllByText('Create Account').length).toBeGreaterThan(0);
   });
 
-  it('should show error for empty fields', async () => {
-    const { getByText } = render(<RegisterScreen />);
-
-    fireEvent.press(getByText('Sign Up'));
-
-    await waitFor(() => {
-      expect(getByText('Name is required')).toBeTruthy();
-    });
+  it('renders the Confirm Password field', () => {
+    const { getByPlaceholderText } = render(<RegisterScreen />);
+    expect(getByPlaceholderText('Confirm your password')).toBeTruthy();
   });
 
-  it('should show error for invalid email', async () => {
-    const { getByPlaceholderText, getByText } = render(<RegisterScreen />);
+  // ── Validation ──────────────────────────────────────────────────────────────
 
+  it('shows error for empty name', async () => {
+    const { getByText, getByLabelText } = render(<RegisterScreen />);
+    fireEvent.press(getByLabelText('Create Account'));
+    await waitFor(() => expect(getByText('Name is required')).toBeTruthy());
+  });
+
+  it('shows error for invalid email', async () => {
+    const { getByPlaceholderText, getByText, getByLabelText } = render(<RegisterScreen />);
     fireEvent.changeText(getByPlaceholderText('Enter your name'), 'Test User');
     fireEvent.changeText(getByPlaceholderText('Enter your email'), 'invalid-email');
     fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'password123');
     fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'password123');
-    fireEvent.press(getByText('Sign Up'));
-
-    await waitFor(() => {
-      expect(getByText('Please enter a valid email address')).toBeTruthy();
-    });
+    fireEvent.press(getByLabelText('Create Account'));
+    await waitFor(() =>
+      expect(getByText('Please enter a valid email address')).toBeTruthy()
+    );
   });
 
-  it('should show error for short password', async () => {
-    const { getByPlaceholderText, getByText } = render(<RegisterScreen />);
-
+  it('shows error for short password', async () => {
+    const { getByPlaceholderText, getByText, getByLabelText } = render(<RegisterScreen />);
     fireEvent.changeText(getByPlaceholderText('Enter your name'), 'Test User');
     fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
     fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'short');
     fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'short');
-    fireEvent.press(getByText('Sign Up'));
-
-    await waitFor(() => {
-      expect(getByText('Password must be at least 8 characters')).toBeTruthy();
-    });
+    fireEvent.press(getByLabelText('Create Account'));
+    await waitFor(() =>
+      expect(getByText('Password must be at least 8 characters')).toBeTruthy()
+    );
   });
 
-  it('should show error for mismatched passwords', async () => {
-    const { getByPlaceholderText, getByText } = render(<RegisterScreen />);
-
+  it('shows inline mismatch error when passwords do not match', async () => {
+    const { getByPlaceholderText, getByText, getByLabelText } = render(<RegisterScreen />);
     fireEvent.changeText(getByPlaceholderText('Enter your name'), 'Test User');
     fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
     fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'password123');
     fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'differentpass');
-    fireEvent.press(getByText('Sign Up'));
-
-    await waitFor(() => {
-      expect(getByText('Passwords do not match')).toBeTruthy();
-    });
+    fireEvent.press(getByLabelText('Create Account'));
+    await waitFor(() => expect(getByText('Passwords do not match')).toBeTruthy());
   });
 
-  it('should call register with correct data', async () => {
+  it('mismatch error is inline — Alert is NOT called', async () => {
+    const { getByPlaceholderText, getByText, getByLabelText } = render(<RegisterScreen />);
+    fireEvent.changeText(getByPlaceholderText('Enter your name'), 'Test User');
+    fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
+    fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'password123');
+    fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'differentpass');
+    fireEvent.press(getByLabelText('Create Account'));
+    await waitFor(() => expect(getByText('Passwords do not match')).toBeTruthy());
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
+  // ── Registration success ────────────────────────────────────────────────────
+
+  it('calls register with correct data', async () => {
     mockRegister.mockResolvedValue(undefined);
 
-    const { getByPlaceholderText, getByText } = render(<RegisterScreen />);
-
+    const { getByPlaceholderText, getByLabelText } = render(<RegisterScreen />);
     fireEvent.changeText(getByPlaceholderText('Enter your name'), 'Test User');
     fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
     fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'password123');
     fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'password123');
-    fireEvent.press(getByText('Sign Up'));
+    fireEvent.press(getByLabelText('Create Account'));
 
-    await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith('Test User', 'test@example.com', 'password123');
-    });
-
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)');
+    await waitFor(() =>
+      expect(mockRegister).toHaveBeenCalledWith('Test User', 'test@example.com', 'password123')
+    );
   });
 
-  it('should handle registration errors', async () => {
+  it('shows excited mascot briefly after successful registration', async () => {
+    jest.useFakeTimers();
+    mockRegister.mockResolvedValue(undefined);
+
+    const { getByPlaceholderText, getByLabelText, queryByTestId } = render(<RegisterScreen />);
+    fireEvent.changeText(getByPlaceholderText('Enter your name'), 'Test User');
+    fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
+    fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'password123');
+    fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'password123');
+
+    await act(async () => {
+      fireEvent.press(getByLabelText('Create Account'));
+      await Promise.resolve(); // flush register() promise
+    });
+
+    await waitFor(() => expect(queryByTestId('mascot-excited')).toBeTruthy());
+
+    // After 800ms timeout fires — mascot hides and router navigates
+    act(() => { jest.advanceTimersByTime(900); });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)');
+
+    jest.useRealTimers();
+  });
+
+  it('routes to /(tabs) after successful registration', async () => {
+    jest.useFakeTimers();
+    mockRegister.mockResolvedValue(undefined);
+
+    const { getByPlaceholderText, getByLabelText } = render(<RegisterScreen />);
+    fireEvent.changeText(getByPlaceholderText('Enter your name'), 'Test User');
+    fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
+    fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'password123');
+    fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'password123');
+
+    await act(async () => {
+      fireEvent.press(getByLabelText('Create Account'));
+      await Promise.resolve();
+    });
+
+    act(() => { jest.advanceTimersByTime(900); });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)');
+
+    jest.useRealTimers();
+  });
+
+  // ── Error handling ──────────────────────────────────────────────────────────
+
+  it('shows inline error message on registration failure', async () => {
     mockRegister.mockRejectedValue(new Error('User already exists'));
 
-    const { getByPlaceholderText, getByText } = render(<RegisterScreen />);
-
+    const { getByPlaceholderText, getByText, getByLabelText } = render(<RegisterScreen />);
     fireEvent.changeText(getByPlaceholderText('Enter your name'), 'Test User');
     fireEvent.changeText(getByPlaceholderText('Enter your email'), 'existing@example.com');
     fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'password123');
     fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'password123');
-    fireEvent.press(getByText('Sign Up'));
+    fireEvent.press(getByLabelText('Create Account'));
 
-    await waitFor(() => {
-      expect(getByText('User already exists')).toBeTruthy();
-    });
+    await waitFor(() => expect(getByText('User already exists')).toBeTruthy());
   });
 
-  it('should navigate to login screen', () => {
+  // ── Navigation ──────────────────────────────────────────────────────────────
+
+  it('navigates to login when Sign In is pressed', () => {
     const { getByText } = render(<RegisterScreen />);
-
     fireEvent.press(getByText('Sign In'));
-
     expect(mockRouter.push).toHaveBeenCalledWith('/login');
   });
 
-  it('should trim email and name inputs', async () => {
+  // ── Input trimming ──────────────────────────────────────────────────────────
+
+  it('trims name before calling register', async () => {
     mockRegister.mockResolvedValue(undefined);
 
-    const { getByPlaceholderText, getByText } = render(<RegisterScreen />);
-
-    // The email validation checks the untrimmed email, but we trim before calling register
-    // So we need to use a valid email format even with spaces
+    const { getByPlaceholderText, getByLabelText } = render(<RegisterScreen />);
     fireEvent.changeText(getByPlaceholderText('Enter your name'), '  Test User  ');
     fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
     fireEvent.changeText(getByPlaceholderText('Enter your password (min 8 characters)'), 'password123');
     fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'password123');
-    
-    fireEvent.press(getByText('Sign Up'));
+    fireEvent.press(getByLabelText('Create Account'));
 
-    await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalled();
-    }, { timeout: 3000 });
-
-    // The register function is called with trimmed values
+    await waitFor(() => expect(mockRegister).toHaveBeenCalled(), { timeout: 3000 });
     expect(mockRegister).toHaveBeenCalledWith('Test User', 'test@example.com', 'password123');
   });
 });
-

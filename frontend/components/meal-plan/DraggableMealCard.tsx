@@ -11,6 +11,7 @@ import Reanimated, {
   useSharedValue,
   withSpring,
   withTiming,
+  withDelay,
   runOnJS,
 } from 'react-native-reanimated';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -83,6 +84,21 @@ function DraggableMealCard({
   const opacity = useSharedValue(1);
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
+
+  // Entrance animation — slides up + fades in on mount, staggered by mealIndex
+  const entranceY = useSharedValue(24);
+  const entranceOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    const delay = mealIndex * 60;
+    entranceOpacity.value = withDelay(delay, withTiming(1, { duration: 260 }));
+    entranceY.value = withDelay(delay, withSpring(0, { damping: 14, stiffness: 120 }));
+  }, []);
+
+  const entranceAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: entranceOpacity.value,
+    transform: [{ translateY: entranceY.value }],
+  }));
 
   // Celebration animation for checkmark
   const checkmarkScale = useSharedValue(isCompleted ? 1 : 0);
@@ -288,6 +304,7 @@ function DraggableMealCard({
   });
 
   return (
+    <Reanimated.View style={entranceAnimatedStyle}>
     <GestureDetector gesture={panGesture}>
       <Reanimated.View
         style={[
@@ -609,6 +626,7 @@ function DraggableMealCard({
         </HapticTouchableOpacity>
       </Reanimated.View>
     </GestureDetector>
+    </Reanimated.View>
   );
 }
 

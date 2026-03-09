@@ -3,8 +3,11 @@
 
 import { View, Text, Modal, TextInput, Image, ActivityIndicator } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import FrostedHeader from '../ui/FrostedHeader';
 import { useState } from 'react';
 import Icon from '../ui/Icon';
+import AnimatedStatCounter from '../ui/AnimatedStatCounter';
+import ShimmerBadge from '../ui/ShimmerBadge';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -16,6 +19,14 @@ interface ProfileHeaderProps {
   uploadingPicture: boolean;
   onChangeProfilePicture: () => void;
   onSaveName: (name: string) => Promise<boolean>;
+  /** Optional stats for the animated counters strip */
+  stats?: {
+    savedRecipes: number;
+    mealHistory: number;
+    mealPlans: number;
+  };
+  /** Show the shimmer premium badge */
+  isPremium?: boolean;
 }
 
 export default function ProfileHeader({
@@ -24,6 +35,8 @@ export default function ProfileHeader({
   uploadingPicture,
   onChangeProfilePicture,
   onSaveName,
+  stats,
+  isPremium = false,
 }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -46,7 +59,7 @@ export default function ProfileHeader({
 
   return (
     <>
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-6 border-b border-gray-200 dark:border-gray-700">
+      <FrostedHeader paddingBottom={24} withTopInset={false}>
         <View className="items-center">
           <HapticTouchableOpacity
             onPress={onChangeProfilePicture}
@@ -92,9 +105,42 @@ export default function ProfileHeader({
               />
             </HapticTouchableOpacity>
           </View>
+          {isPremium && <ShimmerBadge label="✦ Premium" testID="premium-badge" />}
           <Text className="text-gray-500 dark:text-gray-200">{profile.email}</Text>
+
+          {/* Animated stats strip */}
+          {stats && (
+            <View className="flex-row mt-4 gap-6">
+              <View className="items-center">
+                <AnimatedStatCounter
+                  value={stats.savedRecipes}
+                  style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
+                  testID="stat-saved-recipes"
+                />
+                <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Saved</Text>
+              </View>
+              <View style={{ width: 1, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />
+              <View className="items-center">
+                <AnimatedStatCounter
+                  value={stats.mealHistory}
+                  style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
+                  testID="stat-meals-cooked"
+                />
+                <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Cooked</Text>
+              </View>
+              <View style={{ width: 1, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />
+              <View className="items-center">
+                <AnimatedStatCounter
+                  value={stats.mealPlans}
+                  style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
+                  testID="stat-meal-plans"
+                />
+                <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Meal Plans</Text>
+              </View>
+            </View>
+          )}
         </View>
-      </View>
+      </FrostedHeader>
 
       {/* Edit Name Modal */}
       <Modal

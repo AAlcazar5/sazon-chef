@@ -26,6 +26,7 @@ import {
   CookbookSortPicker,
   CookbookRecipeList,
   CollectionPicker,
+  CollectionFilterRow,
   CollectionEditModal,
   MergeCollectionsModal,
   SimilarRecipesCarousel,
@@ -879,6 +880,15 @@ export default function CookbookScreen() {
         isOffline={isOffline}
         hasPendingSync={hasPendingSync}
         cacheAge={cacheAge}
+      />
+
+      {/* Inline collection filter row — horizontal animated chips */}
+      <CollectionFilterRow
+        collections={collections}
+        selectedListId={selectedListId}
+        onSelectList={handleSelectList}
+        isDark={isDark}
+        totalSavedCount={savedRecipes.length}
       />
 
       {/* Cookbook Filter Modal */}

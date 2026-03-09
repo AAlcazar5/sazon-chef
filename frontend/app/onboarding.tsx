@@ -1,6 +1,6 @@
 // frontend/app/onboarding.tsx
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,25 @@ import {
   ActivityIndicator,
   TextInput,
   Switch,
+  BackHandler,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import { MotiView } from 'moti';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { userApi } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AnimatedSazon from '../components/mascot/AnimatedSazon';
 import LogoMascot from '../components/mascot/LogoMascot';
 import LoadingState from '../components/ui/LoadingState';
+import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import SuccessModal from '../components/ui/SuccessModal';
 import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
 import { Colors, DarkColors } from '../constants/Colors';
@@ -112,6 +123,7 @@ export default function OnboardingScreen() {
   const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams();
   const isEditMode = params.edit === 'true';
+  const navigation = useNavigation();
   
   const [currentStep, setCurrentStep] = useState(isEditMode ? 1 : 0); // Skip welcome if editing
   const [saving, setSaving] = useState(false);
@@ -154,6 +166,30 @@ export default function OnboardingScreen() {
       fetchRouletteRecipes();
     }
   }, [currentStep]);
+
+  // Minimum step before allowing screen-level back navigation
+  const firstStep = isEditMode ? 1 : 0;
+
+  // Android hardware back button → go to previous step (not previous screen)
+  useEffect(() => {
+    const onHardwareBack = () => {
+      if (currentStep <= firstStep) return false; // Let OS pop the screen
+      prevStep();
+      return true; // Consumed — don't pop the screen
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+    return () => sub.remove();
+  }, [currentStep, firstStep]);
+
+  // iOS swipe-back gesture → go to previous step (not previous screen)
+  useEffect(() => {
+    const unsubscribe = (navigation as any).addListener('beforeRemove', (e: any) => {
+      if (currentStep <= firstStep) return; // First step — allow the screen to be popped
+      e.preventDefault(); // Cancel the navigation event
+      prevStep();          // Move one step back within the flow instead
+    });
+    return unsubscribe;
+  }, [navigation, currentStep, firstStep]);
 
   const loadExistingData = async () => {
     try {
@@ -297,9 +333,28 @@ export default function OnboardingScreen() {
     }
   };
 
+  const slideX = useSharedValue(0);
+  const [visibleStep, setVisibleStep] = useState(currentStep);
+
+  const animateToStep = (nextStepIndex: number) => {
+    const direction = nextStepIndex > currentStep ? 1 : -1;
+    slideX.value = withTiming(direction * -40, { duration: 120 }, () => {
+      runOnJS(setVisibleStep)(nextStepIndex);
+      slideX.value = direction * 40;
+      slideX.value = withSpring(0, { damping: 18, stiffness: 280 });
+    });
+  };
+
+  const slideStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(1, { duration: 100 }),
+    transform: [{ translateX: slideX.value }],
+  }));
+
   const nextStep = () => {
     if (currentStep < totalSteps - 1) {
-      setCurrentStep(currentStep + 1);
+      const next = currentStep + 1;
+      animateToStep(next);
+      setCurrentStep(next);
     } else {
       saveOnboarding();
     }
@@ -307,7 +362,9 @@ export default function OnboardingScreen() {
 
   const prevStep = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      const prev = currentStep - 1;
+      animateToStep(prev);
+      setCurrentStep(prev);
     }
   };
 
@@ -1252,74 +1309,70 @@ export default function OnboardingScreen() {
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       <View className="flex-1">
         {/* Header */}
-        <View className="px-6 py-4 border-b" style={{ 
+        <View className="px-6 pt-4 pb-3 border-b" style={{
           backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
           borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light,
         }}>
-          <View className="flex-row items-center justify-between mb-3">
+          <View className="flex-row items-center justify-between mb-4">
             {currentStep > 0 ? (
-              <HapticTouchableOpacity onPress={prevStep} className="p-1">
+              <HapticTouchableOpacity onPress={prevStep} style={{ padding: 4 }}>
                 <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
               </HapticTouchableOpacity>
             ) : (
               <View style={{ width: 32 }} />
             )}
-            <View className="flex-row items-center">
-              <LogoMascot 
-                expression={getMascotExpression()} 
-                size="small" 
-                style={{ marginRight: 8 }}
-              />
-              <Text className="text-base font-medium" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                Step {currentStep + 1} of {totalSteps}
-              </Text>
-            </View>
-            <HapticTouchableOpacity onPress={skipOnboarding} className="p-1">
-              <Text className="text-base font-medium" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>Skip</Text>
+
+            {/* Animated mascot reacting per step */}
+            <AnimatedSazon
+              expression={getMascotExpression()}
+              size="tiny"
+            />
+
+            <HapticTouchableOpacity onPress={skipOnboarding} style={{ padding: 4 }}>
+              <Text className="text-base font-medium" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Skip</Text>
             </HapticTouchableOpacity>
           </View>
-          {/* Progress Bar */}
-          <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
-            <View 
-              className="h-full rounded-full"
-              style={{ 
-                width: `${progress}%`,
-                backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
-              }}
-            />
+
+          {/* Spring progress dots */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }}>
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <MotiView
+                key={i}
+                animate={{
+                  width: i === currentStep ? 20 : 6,
+                  opacity: i === currentStep ? 1 : i < currentStep ? 0.6 : 0.25,
+                }}
+                transition={{ type: 'spring', damping: 15, stiffness: 300 }}
+                style={{
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: i <= currentStep
+                    ? (isDark ? DarkColors.primary : Colors.primary)
+                    : (isDark ? '#4B5563' : '#D1D5DB'),
+                }}
+              />
+            ))}
           </View>
         </View>
 
-        {/* Content */}
-        {renderStep()}
+        {/* Content — slides between steps */}
+        <Animated.View style={[{ flex: 1 }, slideStyle]}>
+          {renderStep()}
+        </Animated.View>
 
         {/* Bottom Bar */}
-        <View className="px-6 py-4 border-t" style={{ 
+        <View className="px-6 py-4 border-t" style={{
           backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
           borderTopColor: isDark ? DarkColors.border.light : Colors.border.light,
         }}>
-          <HapticTouchableOpacity
+          <GradientButton
+            label={saving ? 'Setting Up...' : currentStep === totalSteps - 1 ? 'Finish' : 'Continue'}
             onPress={nextStep}
             disabled={!canProceed() || saving}
-            className="py-4 rounded-xl"
-            style={{
-              backgroundColor: (!canProceed() || saving)
-                ? (isDark ? '#4B5563' : '#D1D5DB')
-                : (isDark ? DarkColors.secondaryRed : Colors.secondaryRed),
-            }}
-            activeOpacity={0.7}
-          >
-            {saving ? (
-              <View className="flex-row items-center justify-center">
-                <ActivityIndicator size="small" color="white" />
-                <Text className="text-white font-semibold ml-2">Setting Up...</Text>
-              </View>
-            ) : (
-              <Text className="text-white font-semibold text-center text-lg">
-                {currentStep === totalSteps - 1 ? 'Finish' : 'Continue'}
-              </Text>
-            )}
-          </HapticTouchableOpacity>
+            loading={saving}
+            colors={canProceed() ? GradientPresets.brand : ['#9CA3AF', '#6B7280']}
+            icon={currentStep === totalSteps - 1 ? 'checkmark-circle-outline' : 'arrow-forward'}
+          />
         </View>
       </View>
       

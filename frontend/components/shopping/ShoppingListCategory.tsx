@@ -1,7 +1,8 @@
 // frontend/components/shopping/ShoppingListCategory.tsx
 // Category grouping component for recipe-grouped view
 
-import { View, Text } from 'react-native';
+import { View, Text, Animated } from 'react-native';
+import { useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -34,6 +35,62 @@ interface ShoppingListCategoryProps {
   onCantFind?: (itemId: string) => void;
 }
 
+// Header for a recipe group — flashes green when all items are purchased
+function RecipeGroupHeader({
+  recipe,
+  itemCount,
+  allPurchased,
+  isDark,
+}: {
+  recipe: any;
+  itemCount: number;
+  allPurchased: boolean;
+  isDark: boolean;
+}) {
+  const flashAnim = useRef(new Animated.Value(0)).current;
+  const prevAllPurchased = useRef(false);
+
+  useEffect(() => {
+    if (allPurchased && !prevAllPurchased.current) {
+      // Flash: fade in green overlay, then fade back out
+      Animated.sequence([
+        Animated.timing(flashAnim, { toValue: 1, duration: 250, useNativeDriver: false }),
+        Animated.timing(flashAnim, { toValue: 0, duration: 600, delay: 400, useNativeDriver: false }),
+      ]).start();
+    }
+    prevAllPurchased.current = allPurchased;
+  }, [allPurchased]);
+
+  const baseColor = isDark ? `${Colors.primaryLight}33` : Colors.primaryLight;
+  const backgroundColor = flashAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [baseColor, isDark ? '#14532D' : '#DCFCE7'],
+  });
+
+  return (
+    <Animated.View
+      className={`flex-row items-center mb-3 p-3 rounded-lg ${allPurchased ? 'opacity-60' : ''}`}
+      style={{ backgroundColor }}
+    >
+      <HapticTouchableOpacity
+        onPress={() => router.push(`/recipe/${recipe.id}` as any)}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+      >
+        <View className="flex-1">
+          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            {recipe.title}
+            {allPurchased ? ' ✓' : ''}
+          </Text>
+          <Text className="text-xs text-gray-500 dark:text-gray-400">
+            {itemCount} {itemCount === 1 ? 'item' : 'items'}
+          </Text>
+        </View>
+        <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.SM} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="View recipe" />
+      </HapticTouchableOpacity>
+    </Animated.View>
+  );
+}
+
 export default function ShoppingListCategory({
   itemsByRecipe,
   selectionMode,
@@ -54,23 +111,16 @@ export default function ShoppingListCategory({
   return (
     <>
       {/* Grouped by Recipe */}
-      {Object.values(itemsByRecipe.grouped).map((group) => (
+      {Object.values(itemsByRecipe.grouped).map((group) => {
+        const allPurchased = group.items.length > 0 && group.items.every((item) => item.purchased);
+        return (
         <View key={group.recipe.id} className="mb-6">
-          <HapticTouchableOpacity
-            onPress={() => router.push(`/recipe/${group.recipe.id}` as any)}
-            className="flex-row items-center mb-3 p-3 rounded-lg"
-            style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight }}
-          >
-            <View className="flex-1">
-              <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                {group.recipe.title}
-              </Text>
-              <Text className="text-xs text-gray-500 dark:text-gray-400">
-                {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
-              </Text>
-            </View>
-            <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.SM} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="View recipe" />
-          </HapticTouchableOpacity>
+          <RecipeGroupHeader
+            recipe={group.recipe}
+            itemCount={group.items.length}
+            allPurchased={allPurchased}
+            isDark={isDark}
+          />
           {group.items.map((item) => (
             <SwipeableItem
               key={item.id}
@@ -93,7 +143,8 @@ export default function ShoppingListCategory({
             </SwipeableItem>
           ))}
         </View>
-      ))}
+        );
+      })}
       {/* Items without recipe */}
       {itemsByRecipe.noRecipe.length > 0 && (
         <View className="mb-6">

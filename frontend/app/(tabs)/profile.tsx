@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, ScrollView, Linking } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import SettingsRow from '../../components/ui/SettingsRow';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from '../../components/ui/Icon';
@@ -131,6 +132,12 @@ export default function ProfileScreen() {
         uploadingPicture={uploadingPicture}
         onChangeProfilePicture={handleChangeProfilePicture}
         onSaveName={saveNewName}
+        isPremium={subscription.isPremium}
+        stats={!dataStats.loading ? {
+          savedRecipes: dataStats.savedRecipes,
+          mealHistory: dataStats.mealHistory,
+          mealPlans: dataStats.mealPlans,
+        } : undefined}
       />
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
@@ -188,29 +195,17 @@ export default function ProfileScreen() {
               Support
             </Text>
             <View className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden">
-              <HapticTouchableOpacity
+              <SettingsRow
+                label="Support Sazon"
+                sublabel="Buy us a coffee to keep the stove on"
+                icon={
+                  <View className="w-10 h-10 rounded-full items-center justify-center bg-yellow-50 dark:bg-yellow-900/30">
+                    <Text style={{ fontSize: 20 }}>☕</Text>
+                  </View>
+                }
                 onPress={() => Linking.openURL(COFFEE_URL)}
-                className="flex-row items-center px-4 py-4"
-                hapticStyle="light"
-              >
-                <View className="w-10 h-10 rounded-full items-center justify-center mr-3 bg-yellow-50 dark:bg-yellow-900/30">
-                  <Text style={{ fontSize: 20 }}>☕</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-base font-medium text-gray-900 dark:text-gray-100">
-                    Support Sazon
-                  </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
-                    Buy us a coffee to keep the stove on
-                  </Text>
-                </View>
-                <Icon
-                  name={Icons.CHEVRON_FORWARD}
-                  size={IconSizes.SM}
-                  color="#9CA3AF"
-                  accessibilityLabel="Navigate"
-                />
-              </HapticTouchableOpacity>
+                showBorder={false}
+              />
             </View>
           </View>
         )}
@@ -222,34 +217,23 @@ export default function ProfileScreen() {
               Subscription
             </Text>
             <View className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden">
-              <HapticTouchableOpacity
+              <SettingsRow
+                label="Cancel Subscription"
+                sublabel="You can pause or cancel anytime"
+                icon={
+                  <View className="w-10 h-10 rounded-full items-center justify-center bg-red-50 dark:bg-red-900/30">
+                    <Icon
+                      name={Icons.DELETE_OUTLINE}
+                      size={IconSizes.SM}
+                      color="#EF4444"
+                      accessibilityLabel="Cancel subscription"
+                    />
+                  </View>
+                }
+                labelStyle={{ color: '#EF4444' }}
                 onPress={() => setShowCancellationFlow(true)}
-                className="flex-row items-center px-4 py-4"
-                hapticStyle="light"
-              >
-                <View className="w-10 h-10 rounded-full items-center justify-center mr-3 bg-red-50 dark:bg-red-900/30">
-                  <Icon
-                    name={Icons.DELETE_OUTLINE}
-                    size={IconSizes.SM}
-                    color="#EF4444"
-                    accessibilityLabel="Cancel subscription"
-                  />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-base font-medium text-red-500">
-                    Cancel Subscription
-                  </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">
-                    You can pause or cancel anytime
-                  </Text>
-                </View>
-                <Icon
-                  name={Icons.CHEVRON_FORWARD}
-                  size={IconSizes.SM}
-                  color="#9CA3AF"
-                  accessibilityLabel="Navigate"
-                />
-              </HapticTouchableOpacity>
+                showBorder={false}
+              />
             </View>
           </View>
         )}

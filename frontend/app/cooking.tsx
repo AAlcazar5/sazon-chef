@@ -25,6 +25,7 @@ import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingMod
 import IngredientChecklist from '../components/recipe/IngredientChecklist';
 import AnimatedSazon from '../components/mascot/AnimatedSazon';
 import { CoffeeBanner, shouldShowCoffeeBanner, recordCoffeeBannerShown } from '../components/premium/CoffeeBanner';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // --- Types ---
 
@@ -86,6 +87,22 @@ export default function CookingScreen() {
   // Timer state
   const [timers, setTimers] = useState<CookingTimer[]>([]);
   const [showCoffeeBanner, setShowCoffeeBanner] = useState(false);
+
+  // Track elapsed cooking time
+  const startTimeRef = useRef<number>(Date.now());
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Completion screen animations
+  const CONFETTI = ['🎉', '🍳', '✅', '🌟', '🎊', '👨‍🍳'];
+  const confettiAnims = useRef(
+    CONFETTI.map(() => ({
+      y: new Animated.Value(0),
+      x: new Animated.Value(0),
+      opacity: new Animated.Value(0),
+    }))
+  ).current;
+  const completionScale = useRef(new Animated.Value(0.7)).current;
+  const completionOpacity = useRef(new Animated.Value(0)).current;
 
   // Slide animation for step transitions
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -160,28 +177,16 @@ export default function CookingScreen() {
   }
 
   // --- Step Navigation ---
-  function animateStep(direction: 'next' | 'prev') {
-    const toValue = direction === 'next' ? -1 : 1;
-    Animated.sequence([
-      Animated.timing(slideAnim, {
-        toValue,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 0,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }
-
+  // True cross-fade: slide current content out, then slide new content in from the opposite side.
   function goNext() {
     if (!recipe) return;
     if (currentStep < recipe.instructions.length - 1) {
-      animateStep('next');
-      setCurrentStep((s) => s + 1);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Animated.timing(slideAnim, { toValue: -1, duration: 120, useNativeDriver: true }).start(() => {
+        setCurrentStep((s) => s + 1);
+        slideAnim.setValue(1);
+        Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }).start();
+      });
     } else {
       handleDone();
     }
@@ -189,9 +194,12 @@ export default function CookingScreen() {
 
   function goPrev() {
     if (currentStep > 0) {
-      animateStep('prev');
-      setCurrentStep((s) => s - 1);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Animated.timing(slideAnim, { toValue: 1, duration: 120, useNativeDriver: true }).start(() => {
+        setCurrentStep((s) => s - 1);
+        slideAnim.setValue(-1);
+        Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }).start();
+      });
     }
   }
 
@@ -210,8 +218,28 @@ export default function CookingScreen() {
   // --- Done! ---
   async function handleDone() {
     if (!recipe || done) return;
+    setElapsedSeconds(Math.round((Date.now() - startTimeRef.current) / 1000));
     setDone(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Animate confetti burst
+    confettiAnims.forEach((anim, i) => {
+      const angle = (i / CONFETTI.length) * Math.PI * 2;
+      const dist = 80 + Math.random() * 60;
+      Animated.parallel([
+        Animated.timing(anim.opacity, { toValue: 1, duration: 100, useNativeDriver: true }),
+        Animated.timing(anim.y, { toValue: -Math.abs(Math.sin(angle)) * dist - 40, duration: 900, useNativeDriver: true }),
+        Animated.timing(anim.x, { toValue: Math.cos(angle) * dist, duration: 900, useNativeDriver: true }),
+      ]).start(() => {
+        Animated.timing(anim.opacity, { toValue: 0, duration: 400, delay: 200, useNativeDriver: true }).start();
+      });
+    });
+
+    // Spring-in the completion card
+    Animated.parallel([
+      Animated.spring(completionScale, { toValue: 1, friction: 7, tension: 200, useNativeDriver: true }),
+      Animated.timing(completionOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
     // Record cooking (non-blocking)
     recipeApi.recordCook(recipe.id).catch(() => {});
     // Conditionally show coffee banner (7-day cooldown, free users only)
@@ -293,22 +321,73 @@ export default function CookingScreen() {
 
   // --- Done screen ---
   if (done) {
+    const elapsedMin = Math.floor(elapsedSeconds / 60);
+    const elapsedSec = elapsedSeconds % 60;
+    const timeLabel = elapsedMin > 0
+      ? `${elapsedMin}m ${elapsedSec}s`
+      : `${elapsedSeconds}s`;
+
     return (
       <View className="flex-1 bg-gray-950 items-center justify-center px-8">
-        <AnimatedSazon expression="chef-kiss" size="large" />
-        <Text className="text-white text-3xl font-bold mt-6 text-center">
-          Recipe Complete!
-        </Text>
-        <Text className="text-gray-400 text-center mt-2 text-base">
-          {recipe.title} is ready to serve. Enjoy!
-        </Text>
-        <HapticTouchableOpacity
-          onPress={() => router.back()}
-          hapticStyle="medium"
-          className="mt-8 bg-orange-500 px-8 py-4 rounded-2xl"
+        {/* Confetti burst */}
+        {confettiAnims.map((anim, i) => (
+          <Animated.Text
+            key={i}
+            style={{
+              position: 'absolute',
+              fontSize: 28,
+              opacity: anim.opacity,
+              transform: [{ translateY: anim.y }, { translateX: anim.x }],
+            }}
+          >
+            {CONFETTI[i]}
+          </Animated.Text>
+        ))}
+
+        {/* Main card spring-in */}
+        <Animated.View
+          style={{
+            alignItems: 'center',
+            transform: [{ scale: completionScale }],
+            opacity: completionOpacity,
+          }}
         >
-          <Text className="text-white font-bold text-lg">Back to Recipe</Text>
-        </HapticTouchableOpacity>
+          <AnimatedSazon expression="chef-kiss" size="large" />
+          <Text className="text-white text-3xl font-black mt-6 text-center">
+            Recipe Complete!
+          </Text>
+          <Text className="text-gray-400 text-center mt-2 text-base">
+            {recipe.title} is ready to serve. Enjoy!
+          </Text>
+
+          {/* Stats row */}
+          <View className="flex-row mt-6 gap-4">
+            <View className="items-center bg-gray-800 rounded-2xl px-5 py-3">
+              <Text className="text-orange-400 text-2xl font-black">{totalSteps}</Text>
+              <Text className="text-gray-400 text-xs mt-1">Steps</Text>
+            </View>
+            <View className="items-center bg-gray-800 rounded-2xl px-5 py-3">
+              <Text className="text-orange-400 text-2xl font-black">{timeLabel}</Text>
+              <Text className="text-gray-400 text-xs mt-1">Time</Text>
+            </View>
+          </View>
+
+          {/* Gradient CTA */}
+          <HapticTouchableOpacity
+            onPress={() => router.back()}
+            hapticStyle="medium"
+            style={{ marginTop: 32, borderRadius: 100, overflow: 'hidden' }}
+          >
+            <LinearGradient
+              colors={['#FB923C', '#EF4444']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ paddingHorizontal: 40, paddingVertical: 16, borderRadius: 100 }}
+            >
+              <Text className="text-white font-bold text-lg">Back to Recipe</Text>
+            </LinearGradient>
+          </HapticTouchableOpacity>
+        </Animated.View>
 
         <CoffeeBanner
           visible={showCoffeeBanner}

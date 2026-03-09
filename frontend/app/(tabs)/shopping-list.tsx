@@ -1,8 +1,9 @@
 // frontend/app/(tabs)/shopping-list.tsx
 // Shopping list screen - refactored to use extracted components and useShoppingList hook
 
-import { View, Text, ScrollView } from 'react-native';
-import { useEffect, useMemo } from 'react';
+import { View, Text, ScrollView, SectionList, Animated, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
@@ -11,6 +12,7 @@ import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndic
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import SwipeableItem from '../../components/ui/SwipeableItem';
 import LoadingState from '../../components/ui/LoadingState';
+import LogoMascot from '../../components/mascot/LogoMascot';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -27,6 +29,8 @@ import {
   MergeListsModal,
   OfflineBanner,
 } from '../../components/shopping';
+
+const CONFETTI = ['🎉', '🛒', '✅', '🌟', '🎊', '👏'];
 
 export default function ShoppingListScreen() {
   const { colorScheme } = useColorScheme();
@@ -82,6 +86,63 @@ export default function ShoppingListScreen() {
     handleSetupDefaultPantry,
   } = useShoppingList();
 
+  // All-done celebration
+  const [showCelebration, setShowCelebration] = useState(false);
+  const celebrationOpacity = useRef(new Animated.Value(0)).current;
+  const mascotScale = useRef(new Animated.Value(0)).current;
+  const confettiAnims = useRef(CONFETTI.map(() => ({
+    y: new Animated.Value(0),
+    opacity: new Animated.Value(1),
+    x: new Animated.Value(0),
+  }))).current;
+  const prevAllDone = useRef(false);
+
+  useEffect(() => {
+    const allDone = progressStats.total > 0 && progressStats.purchased === progressStats.total;
+    if (allDone && !prevAllDone.current && !state.loading) {
+      prevAllDone.current = true;
+      setShowCelebration(true);
+
+      // Reset confetti
+      confettiAnims.forEach(a => { a.y.setValue(0); a.opacity.setValue(1); a.x.setValue(0); });
+      mascotScale.setValue(0);
+      celebrationOpacity.setValue(0);
+
+      Animated.parallel([
+        Animated.timing(celebrationOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.spring(mascotScale, { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }),
+        ...confettiAnims.map((a, i) =>
+          Animated.parallel([
+            Animated.timing(a.y, {
+              toValue: -(120 + Math.random() * 160),
+              duration: 900 + i * 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(a.x, {
+              toValue: (Math.random() - 0.5) * 120,
+              duration: 900 + i * 100,
+              useNativeDriver: true,
+            }),
+            Animated.sequence([
+              Animated.delay(400),
+              Animated.timing(a.opacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+            ]),
+          ])
+        ),
+      ]).start();
+
+      // Auto-dismiss after 2.8 seconds
+      const timer = setTimeout(() => {
+        Animated.timing(celebrationOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
+          setShowCelebration(false);
+        });
+      }, 2800);
+      return () => clearTimeout(timer);
+    } else if (!allDone) {
+      prevAllDone.current = false;
+    }
+  }, [progressStats.purchased, progressStats.total, state.loading]);
+
   // Auto-activate in-store mode when navigated from Shopping Mode FAB action
   useEffect(() => {
     if (activateInStore === 'true' && !state.inStoreMode && !state.loading && currentItems.length > 0) {
@@ -131,6 +192,7 @@ export default function ShoppingListScreen() {
   }
 
   return (
+    <View style={{ flex: 1 }}>
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       <ShoppingListHeader
         state={state}
@@ -189,12 +251,9 @@ export default function ShoppingListScreen() {
             </View>
           )}
 
-          {/* Items List */}
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{ paddingBottom: state.inStoreMode || state.selectionMode ? 80 : Spacing['3xl'] }}
-          >
-            {visibleItems.length === 0 && currentItems.length > 0 ? (
+          {/* Items List — in-store aisle view uses SectionList for native sticky headers */}
+          {visibleItems.length === 0 && currentItems.length > 0 ? (
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
               <View className="flex-1 items-center justify-center p-8">
                 <AnimatedEmptyState
                   config={ShoppingListEmptyStates.allPurchased}
@@ -211,7 +270,9 @@ export default function ShoppingListScreen() {
                   </HapticTouchableOpacity>
                 </View>
               </View>
-            ) : currentItems.length === 0 ? (
+            </ScrollView>
+          ) : currentItems.length === 0 ? (
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
               <View className="flex-1 items-center justify-center p-8">
                 <AnimatedEmptyState
                   config={ShoppingListEmptyStates.emptyList}
@@ -255,7 +316,76 @@ export default function ShoppingListScreen() {
                   </HapticTouchableOpacity>
                 </View>
               </View>
-            ) : (
+            </ScrollView>
+          ) : itemsByAisle ? (
+            // In-store mode: SectionList with frosted glass sticky aisle headers
+            <SectionList
+              style={{ flex: 1 }}
+              sections={itemsByAisle.map(group => ({
+                title: group.category,
+                data: group.items,
+                remaining: group.items.filter(i => !i.purchased).length,
+              }))}
+              keyExtractor={item => item.id}
+              stickySectionHeadersEnabled
+              contentContainerStyle={{ paddingTop: 4, paddingBottom: 80 }}
+              renderSectionHeader={({ section }) => (
+                <BlurView
+                  intensity={80}
+                  tint={isDark ? 'dark' : 'light'}
+                  style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18, marginRight: 6 }}>
+                      {AISLE_EMOJI[section.title] || '📦'}
+                    </Text>
+                    <Text style={{
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: isDark ? '#D1D5DB' : '#374151',
+                    }}>
+                      {section.title}
+                    </Text>
+                    <Text style={{
+                      fontSize: 11,
+                      color: isDark ? '#6B7280' : '#9CA3AF',
+                      marginLeft: 8,
+                    }}>
+                      {section.remaining} left
+                    </Text>
+                  </View>
+                </BlurView>
+              )}
+              renderItem={({ item }) => (
+                <View style={{ paddingHorizontal: 16, paddingBottom: 2 }}>
+                  <SwipeableItem
+                    onDelete={() => handleDeleteItem(item)}
+                    disabled={state.selectionMode}
+                  >
+                    <ShoppingListItem
+                      item={item}
+                      selectionMode={state.selectionMode}
+                      isSelected={selectedItemsSet.has(item.id)}
+                      groupByRecipe={state.groupByRecipe}
+                      inStoreMode={state.inStoreMode}
+                      isCantFind={state.cantFindItems.includes(item.id)}
+                      isPantryItem={pantrySet.has(item.name.toLowerCase().trim())}
+                      onTogglePurchased={handleTogglePurchased}
+                      onEditQuantity={(editItem) => dispatch({ type: 'OPEN_EDIT_QUANTITY', item: editItem })}
+                      onToggleSelection={(itemId) => dispatch({ type: 'TOGGLE_ITEM_SELECTION', itemId })}
+                      onLongPress={(itemId) => dispatch({ type: 'ENTER_SELECTION_MODE', itemId })}
+                      onCantFind={handleCantFind}
+                      onAddToPantry={handleAddToPantry}
+                    />
+                  </SwipeableItem>
+                </View>
+              )}
+            />
+          ) : (
+            <ScrollView
+              className="flex-1"
+              contentContainerStyle={{ paddingBottom: state.selectionMode ? 80 : Spacing['3xl'] }}
+            >
               <View className="p-4">
                 {state.groupByRecipe && itemsByRecipe ? (
                   <ShoppingListCategory
@@ -271,45 +401,6 @@ export default function ShoppingListScreen() {
                     onLongPress={(itemId) => dispatch({ type: 'ENTER_SELECTION_MODE', itemId })}
                     onCantFind={handleCantFind}
                   />
-                ) : itemsByAisle ? (
-                  itemsByAisle.map((group) => (
-                    <View key={group.category} className="mb-4">
-                      <View className="flex-row items-center mb-2 px-1">
-                        <Text className="text-lg mr-1.5">
-                          {AISLE_EMOJI[group.category] || '📦'}
-                        </Text>
-                        <Text className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          {group.category}
-                        </Text>
-                        <Text className="text-xs text-gray-400 dark:text-gray-500 ml-2">
-                          {group.items.filter(i => !i.purchased).length} left
-                        </Text>
-                      </View>
-                      {group.items.map((item) => (
-                        <SwipeableItem
-                          key={item.id}
-                          onDelete={() => handleDeleteItem(item)}
-                          disabled={state.selectionMode}
-                        >
-                          <ShoppingListItem
-                            item={item}
-                            selectionMode={state.selectionMode}
-                            isSelected={selectedItemsSet.has(item.id)}
-                            groupByRecipe={state.groupByRecipe}
-                            inStoreMode={state.inStoreMode}
-                            isCantFind={state.cantFindItems.includes(item.id)}
-                            isPantryItem={pantrySet.has(item.name.toLowerCase().trim())}
-                            onTogglePurchased={handleTogglePurchased}
-                            onEditQuantity={(item) => dispatch({ type: 'OPEN_EDIT_QUANTITY', item })}
-                            onToggleSelection={(itemId) => dispatch({ type: 'TOGGLE_ITEM_SELECTION', itemId })}
-                            onLongPress={(itemId) => dispatch({ type: 'ENTER_SELECTION_MODE', itemId })}
-                            onCantFind={handleCantFind}
-                            onAddToPantry={handleAddToPantry}
-                          />
-                        </SwipeableItem>
-                      ))}
-                    </View>
-                  ))
                 ) : (
                   visibleItems.map((item) => (
                     <SwipeableItem
@@ -336,8 +427,8 @@ export default function ShoppingListScreen() {
                   ))
                 )}
               </View>
-            )}
-          </ScrollView>
+            </ScrollView>
+          )}
 
           {/* Floating In-Store Mode Bar */}
           {state.inStoreMode && currentItems.length > 0 && !state.selectionMode && (
@@ -446,5 +537,74 @@ export default function ShoppingListScreen() {
         onQuickAddSuggestion={handleQuickAddSuggestion}
       />
     </SafeAreaView>
+
+    {/* All-done celebration overlay */}
+    {showCelebration && (
+      <Animated.View
+        style={[StyleSheet.absoluteFill, {
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,0.45)',
+          opacity: celebrationOpacity,
+          zIndex: 99,
+        }]}
+        pointerEvents="box-none"
+      >
+        {/* Confetti emoji particles */}
+        {CONFETTI.map((emoji, i) => (
+          <Animated.Text
+            key={i}
+            style={{
+              position: 'absolute',
+              fontSize: 28 + (i % 3) * 8,
+              transform: [
+                { translateY: confettiAnims[i].y },
+                { translateX: confettiAnims[i].x },
+              ],
+              opacity: confettiAnims[i].opacity,
+            }}
+          >
+            {emoji}
+          </Animated.Text>
+        ))}
+
+        {/* Card */}
+        <Animated.View
+          style={{
+            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+            borderRadius: 24,
+            paddingVertical: 32,
+            paddingHorizontal: 40,
+            alignItems: 'center',
+            transform: [{ scale: mascotScale }],
+            shadowColor: '#000',
+            shadowOpacity: 0.25,
+            shadowRadius: 20,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 16,
+          }}
+        >
+          <LogoMascot expression="chef-kiss" size="large" />
+          <Text style={{
+            fontSize: 22,
+            fontWeight: '800',
+            color: isDark ? '#F9FAFB' : '#111827',
+            marginTop: 16,
+            textAlign: 'center',
+          }}>
+            All done!
+          </Text>
+          <Text style={{
+            fontSize: 14,
+            color: isDark ? '#9CA3AF' : '#6B7280',
+            marginTop: 6,
+            textAlign: 'center',
+          }}>
+            Great shopping trip
+          </Text>
+        </Animated.View>
+      </Animated.View>
+    )}
+    </View>
   );
 }

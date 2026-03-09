@@ -1,6 +1,8 @@
-import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, Image } from 'react-native';
+import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, Image, StyleSheet } from 'react-native';
+import { MotiView } from 'moti';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import AnimatedText from '../components/ui/AnimatedText';
 import LoadingState from '../components/ui/LoadingState';
 import SkeletonLoader from '../components/ui/SkeletonLoader';
@@ -8,7 +10,7 @@ import LogoMascot from '../components/mascot/LogoMascot';
 import MealPrepScalingModal from '../components/recipe/MealPrepScalingModal';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { useApi } from '../hooks/useApi';
@@ -20,6 +22,10 @@ import { generateStorageInstructions, getStorageMethods } from '../utils/storage
 import { getMealPrepTags } from '../utils/mealPrepTags';
 import * as Haptics from 'expo-haptics';
 import { Colors, DarkColors } from '../constants/Colors';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const HERO_HEIGHT = 300;
 
 // Helper function to extract text from ingredients/instructions
 const getTextContent = (item: any): string => {
@@ -56,17 +62,36 @@ export default function RecipeModal() {
   const { id, source } = useLocalSearchParams();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Animation for modal expansion
   const modalScale = useRef(new Animated.Value(0.8)).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
-  
+
   // Animation for collection picker modal
   const pickerScale = useRef(new Animated.Value(0)).current;
   const pickerOpacity = useRef(new Animated.Value(0)).current;
+
+  // Scroll-driven hero parallax + collapsing header
+  const modalScrollY = useRef(new Animated.Value(0)).current;
+  const heroParallax = modalScrollY.interpolate({
+    inputRange: [0, HERO_HEIGHT],
+    outputRange: [0, -HERO_HEIGHT * 0.35],
+    extrapolate: 'clamp',
+  });
+  const floatingHeaderOpacity = modalScrollY.interpolate({
+    inputRange: [HERO_HEIGHT - 72, HERO_HEIGHT - 16],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const heroGradientOpacity = modalScrollY.interpolate({
+    inputRange: [0, HERO_HEIGHT * 0.5],
+    outputRange: [1, 0.4],
+    extrapolate: 'clamp',
+  });
   
   const [isSaving, setIsSaving] = useState(false);
   const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
@@ -682,35 +707,71 @@ export default function RecipeModal() {
         opacity: modalOpacity,
       }}
     >
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
-      {/* Header - Single title with close button */}
-      <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <HapticTouchableOpacity 
-          onPress={() => router.back()}
-          className="p-2"
-        >
-          <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
-        </HapticTouchableOpacity>
-        <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
-        {isUserRecipe ? (
-          <HapticTouchableOpacity 
-            onPress={handleEditRecipe}
-            className="p-2"
-          >
-            <Ionicons name="create-outline" size={24} color="#F97316" />
-          </HapticTouchableOpacity>
-        ) : (
-        <View className="w-8" />
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
+      {/* Scrollable content with hero at top */}
+      <ScrollView
+        className="flex-1"
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: modalScrollY } } }],
+          { useNativeDriver: false }
         )}
-      </View>
+      >
+        {/* Hero image */}
+        <View style={{ height: HERO_HEIGHT, overflow: 'hidden' }}>
+          {recipe.imageUrl ? (
+            <Animated.Image
+              testID="hero-image"
+              source={{ uri: optimizedImageUrl(recipe.imageUrl, 600) }}
+              style={[
+                StyleSheet.absoluteFill,
+                { height: HERO_HEIGHT + 80, transform: [{ translateY: heroParallax }] },
+              ]}
+              resizeMode="cover"
+            />
+          ) : (
+            // Gradient placeholder when no image is available
+            <LinearGradient
+              testID="hero-placeholder"
+              colors={isDark ? ['#1F2937', '#111827'] : ['#FED7AA', '#FEF3C7']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
+          )}
+          {/* Dark gradient for readability */}
+          {recipe.imageUrl && (
+            <Animated.View style={[StyleSheet.absoluteFill, { opacity: heroGradientOpacity }]}>
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.55)']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0.4 }}
+                end={{ x: 0, y: 1 }}
+              />
+            </Animated.View>
+          )}
+        </View>
 
-      <ScrollView className="flex-1 bg-white dark:bg-gray-900">
-        <View className="p-4 bg-white dark:bg-gray-900">
-          {/* Recipe Title - Removed the duplicate title here */}
-          <AnimatedText className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        <View className="p-4 bg-white dark:bg-gray-900" style={{ paddingTop: 20 }}>
+          {/* Recipe Title */}
+          <AnimatedText className="text-3xl font-black text-gray-900 dark:text-gray-100 mb-1" style={{ lineHeight: 36 }}>
             {recipe.title}
           </AnimatedText>
-          
+
+          {/* Cuisine tag */}
+          {recipe.cuisine && (
+            <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+              <View style={{
+                paddingHorizontal: 10, paddingVertical: 3, borderRadius: 100,
+                backgroundColor: isDark ? 'rgba(249,115,22,0.15)' : 'rgba(249,115,22,0.1)',
+              }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? '#FB923C' : '#EA580C' }}>
+                  {recipe.cuisine}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Description */}
           <AnimatedText className="text-gray-600 dark:text-gray-300 mb-4">
             {recipe.description}
@@ -1170,10 +1231,17 @@ export default function RecipeModal() {
           <View className="mb-6">
             <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Ingredients</Text>
             {recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.map((ingredient: any, index: number) => (
-              <View key={index} className="flex-row items-center mb-2">
-                <View className="w-2 h-2 bg-orange-500 rounded-full mr-3" />
-                <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
-              </View>
+              <MotiView
+                key={index}
+                from={{ opacity: 0, translateX: -12 }}
+                animate={{ opacity: 1, translateX: 0 }}
+                transition={{ type: 'spring', delay: index * 35, damping: 20, stiffness: 200 }}
+              >
+                <View className="flex-row items-center mb-2">
+                  <View className="w-2 h-2 bg-orange-500 rounded-full mr-3" />
+                  <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
+                </View>
+              </MotiView>
             ))}
           </View>
 
@@ -1260,48 +1328,162 @@ export default function RecipeModal() {
         </View>
       </ScrollView>
 
+      {/* Floating close + edit buttons over hero (always visible) */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: insets.top + 8,
+          left: 12,
+          right: 12,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          zIndex: 20,
+        }}
+      >
+        <HapticTouchableOpacity
+          accessibilityLabel="Close recipe"
+          onPress={() => router.back()}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: 'rgba(0,0,0,0.40)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="close" size={20} color="#FFF" />
+        </HapticTouchableOpacity>
+        {isUserRecipe ? (
+          <HapticTouchableOpacity
+            accessibilityLabel="Edit recipe"
+            onPress={handleEditRecipe}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: 'rgba(0,0,0,0.40)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="create-outline" size={20} color="#FFF" />
+          </HapticTouchableOpacity>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
+      </View>
+
+      {/* Collapsing frosted header — fades in as hero scrolls out of view */}
+      <Animated.View
+        testID="frosted-header"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          opacity: floatingHeaderOpacity,
+          zIndex: 19,
+        }}
+        pointerEvents="none"
+      >
+        {Platform.OS === 'android' ? (
+          <View
+            style={{
+              paddingTop: insets.top,
+              paddingBottom: 12,
+              paddingHorizontal: 16,
+              backgroundColor: isDark ? 'rgba(17,24,39,0.95)' : 'rgba(255,255,255,0.95)',
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            }}
+          >
+            <Text
+              numberOfLines={1}
+              style={{
+                textAlign: 'center',
+                fontSize: 16,
+                fontWeight: '600',
+                color: isDark ? '#F9FAFB' : '#111827',
+              }}
+            >
+              {recipe.title}
+            </Text>
+          </View>
+        ) : (
+          <BlurView
+            intensity={isDark ? 60 : 80}
+            tint={isDark ? 'dark' : 'light'}
+            style={{
+              paddingTop: insets.top,
+              paddingBottom: 12,
+              paddingHorizontal: 16,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            }}
+          >
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(17,24,39,0.45)'
+                    : 'rgba(255,255,255,0.55)',
+                },
+              ]}
+              pointerEvents="none"
+            />
+            <Text
+              numberOfLines={1}
+              style={{
+                textAlign: 'center',
+                fontSize: 16,
+                fontWeight: '600',
+                color: isDark ? '#F9FAFB' : '#111827',
+              }}
+            >
+              {recipe.title}
+            </Text>
+          </BlurView>
+        )}
+      </Animated.View>
+
       {/* Action Buttons */}
-      <View className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <View className="p-4" style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
         {/* Meal Prep Scaling Button - Available for all recipes */}
-        <HapticTouchableOpacity 
+        <GradientButton
+          label="Meal Prep This Recipe"
           onPress={() => setShowMealPrepModal(true)}
           disabled={!recipe}
-          hapticStyle="medium"
-          className="py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center"
-          style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-        >
-          <Ionicons name="restaurant" size={20} color="white" style={{ marginRight: 8 }} />
-          <Text className="text-white font-semibold text-lg">
-            Meal Prep This Recipe
-          </Text>
-        </HapticTouchableOpacity>
+          colors={GradientPresets.premium}
+          icon="restaurant"
+          style={{ marginBottom: 8 }}
+        />
 
         {/* Start Cooking Button */}
-        <HapticTouchableOpacity
+        <GradientButton
+          label="Start Cooking"
           onPress={() => {
             if (!recipe) return;
             router.push({ pathname: '/cooking', params: { id: recipe.id } } as any);
           }}
           disabled={!recipe}
-          hapticStyle="medium"
-          className="bg-orange-500 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center"
-        >
-          <Ionicons name="restaurant-outline" size={20} color="white" style={{ marginRight: 8 }} />
-          <Text className="text-white font-semibold text-lg">Start Cooking</Text>
-        </HapticTouchableOpacity>
+          colors={GradientPresets.fire}
+          icon="flame-outline"
+          style={{ marginBottom: 8 }}
+        />
 
         {/* Add to Shopping List Button - Available for all recipes */}
-        <HapticTouchableOpacity
+        <GradientButton
+          label={addingToShoppingList ? 'Adding...' : 'Add to Shopping List'}
           onPress={handleAddToShoppingList}
           disabled={addingToShoppingList || !recipe}
-          hapticStyle="medium"
-          className={`${addingToShoppingList ? 'opacity-50' : ''} bg-red-600 dark:bg-red-400 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
-        >
-          <Ionicons name="cart" size={20} color="white" style={{ marginRight: 8 }} />
-          <Text className="text-white font-semibold text-lg">
-            {addingToShoppingList ? 'Adding...' : 'Add to Shopping List'}
-          </Text>
-        </HapticTouchableOpacity>
+          loading={addingToShoppingList}
+          colors={GradientPresets.info}
+          icon="cart"
+          style={{ marginBottom: 8 }}
+        />
 
         {/* Sync to Shopping Apps */}
         {integrations.length > 0 && (
@@ -1325,121 +1507,118 @@ export default function RecipeModal() {
 
         {/* Healthify Button - Only available for recipes with D or F grades */}
         {recipe.healthGrade && (recipe.healthGrade.toUpperCase() === 'A' || recipe.healthGrade.toUpperCase() === 'B' || recipe.healthGrade.toUpperCase() === 'C') ? (
-          <View className="bg-gray-100 dark:bg-gray-800 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center">
-            <Ionicons name="leaf" size={20} color={isDark ? "#9CA3AF" : "#6B7280"} style={{ marginRight: 8 }} />
-            <Text className="text-gray-600 dark:text-gray-400 font-semibold text-lg">
-              Recipe already healthy (Grade {recipe.healthGrade})
-            </Text>
-          </View>
+          <GradientButton
+            label={`Recipe already healthy (Grade ${recipe.healthGrade})`}
+            onPress={() => {}}
+            disabled
+            colors={['#9CA3AF', '#6B7280']}
+            icon="leaf"
+            style={{ marginBottom: 8 }}
+          />
         ) : (
-          <HapticTouchableOpacity 
+          <GradientButton
+            label={healthifying ? 'Healthifying...' : 'Healthify Recipe'}
             onPress={handleHealthify}
             disabled={healthifying}
-            className={`${healthifying ? 'opacity-50' : ''} py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center`}
-            style={{ backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}
-          >
-            <Ionicons name="leaf" size={20} color="white" style={{ marginRight: 8 }} />
-            <Text className="text-white font-semibold text-lg">
-              {healthifying ? 'Healthifying...' : 'Healthify Recipe'}
-            </Text>
-          </HapticTouchableOpacity>
+            loading={healthifying}
+            colors={GradientPresets.fresh}
+            icon="leaf"
+            style={{ marginBottom: 8 }}
+          />
         )}
 
         {isUserRecipe ? (
           // User-created recipe actions
           <>
-            <HapticTouchableOpacity 
+            <GradientButton
+              label="Edit Recipe"
               onPress={handleEditRecipe}
-              className="bg-orange-500 py-3 px-6 rounded-lg items-center mb-2"
-            >
-              <Text className="text-white font-semibold text-lg">Edit Recipe</Text>
-            </HapticTouchableOpacity>
-            <HapticTouchableOpacity 
+              colors={GradientPresets.brand}
+              icon="create-outline"
+              style={{ marginBottom: 8 }}
+            />
+            <GradientButton
+              label="Delete Recipe"
               onPress={handleDeleteRecipe}
-              className="border border-red-500 py-3 px-6 rounded-lg items-center"
-            >
-              <Text className="text-red-500 font-semibold">Delete Recipe</Text>
-            </HapticTouchableOpacity>
+              colors={GradientPresets.danger}
+              icon="trash-outline"
+            />
           </>
         ) : source === 'cookbook' ? (
           // System recipe actions (in cookbook context)
           <>
-            <HapticTouchableOpacity 
+            <GradientButton
+              label="Remove from Cookbook"
               onPress={handleRemoveFromCookbook}
-              className="bg-red-500 py-3 px-6 rounded-lg items-center mb-2"
-            >
-              <Text className="text-white font-semibold text-lg">Remove from Cookbook</Text>
-            </HapticTouchableOpacity>
-            <HapticTouchableOpacity 
+              colors={GradientPresets.danger}
+              icon="bookmark-outline"
+              style={{ marginBottom: 8 }}
+            />
+            <GradientButton
+              label="Share Recipe"
               onPress={handleShareRecipe}
-              className="border border-gray-300 dark:border-gray-600 py-3 px-6 rounded-lg items-center mb-2"
-            >
-              <Text className="text-gray-700 dark:text-gray-300 font-semibold">Share Recipe</Text>
-            </HapticTouchableOpacity>
-            <HapticTouchableOpacity 
+              colors={GradientPresets.info}
+              icon="share-outline"
+              style={{ marginBottom: 8 }}
+            />
+            <GradientButton
+              label="Add to Meal Plan"
               onPress={handleAddToMealPlan}
-              className="border border-red-600 dark:border-red-400 py-3 px-6 rounded-lg items-center"
-            >
-              <Text className="text-red-600 dark:text-red-400 font-semibold">Add to Meal Plan</Text>
-            </HapticTouchableOpacity>
+              colors={GradientPresets.fresh}
+              icon="calendar-outline"
+            />
           </>
         ) : source === 'random' ? (
           // System recipe actions (from random button)
           <>
-            <HapticTouchableOpacity 
-          onPress={handleSaveRecipe}
-          disabled={isSaving}
-                className={`py-3 px-6 rounded-lg items-center flex-row justify-center border-2 border-orange-500 dark:border-orange-600 mb-2 ${
-                  isSaving ? 'opacity-50' : ''
-          }`}
-        >
-                <Ionicons name="bookmark" size={20} color={isDark ? '#EA580C' : '#F97316'} style={{ marginRight: 8 }} />
-                <Text className="text-orange-500 dark:text-orange-600 text-lg font-semibold">
-            {isSaving ? 'Saving...' : 'Save to Cookbook'}
-          </Text>
-              </HapticTouchableOpacity>
-            <HapticTouchableOpacity 
-          onPress={handleNotInterested}
-              className="border border-gray-300 dark:border-gray-600 py-3 px-6 rounded-lg items-center mb-2 flex-row justify-center"
-            >
-              <Ionicons name="close-circle-outline" size={20} color={isDark ? "#9CA3AF" : "#374151"} style={{ marginRight: 8 }} />
-              <Text className="text-gray-700 dark:text-gray-300 font-semibold">Not Interested</Text>
-            </HapticTouchableOpacity>
-            <HapticTouchableOpacity 
+            <GradientButton
+              label={isSaving ? 'Saving...' : 'Save to Cookbook'}
+              onPress={handleSaveRecipe}
+              disabled={isSaving}
+              loading={isSaving}
+              colors={GradientPresets.brand}
+              icon="bookmark"
+              style={{ marginBottom: 8 }}
+            />
+            <GradientButton
+              label="Not Interested"
+              onPress={handleNotInterested}
+              colors={GradientPresets.danger}
+              icon="close-circle-outline"
+              style={{ marginBottom: 8 }}
+            />
+            <GradientButton
+              label="Share Recipe"
               onPress={handleShareRecipe}
-              className="border border-gray-300 dark:border-gray-600 py-3 px-6 rounded-lg items-center mb-2"
-            >
-              <Text className="text-gray-700 dark:text-gray-300 font-semibold">Share Recipe</Text>
-            </HapticTouchableOpacity>
-            <HapticTouchableOpacity 
+              colors={GradientPresets.info}
+              icon="share-outline"
+              style={{ marginBottom: 8 }}
+            />
+            <GradientButton
+              label="Add to Meal Plan"
               onPress={handleAddToMealPlan}
-              className="border border-red-600 dark:border-red-400 py-3 px-6 rounded-lg items-center"
-            >
-              <Text className="text-red-600 dark:text-red-400 font-semibold">Add to Meal Plan</Text>
-            </HapticTouchableOpacity>
+              colors={GradientPresets.fresh}
+              icon="calendar-outline"
+            />
           </>
         ) : (
           // System recipe actions (from home screen)
           <>
-            <HapticTouchableOpacity 
-                onPress={handleSaveRecipe}
-                disabled={isSaving}
-                className={`py-3 px-6 rounded-lg items-center flex-row justify-center border-2 border-orange-500 dark:border-orange-600 mb-2 ${
-                  isSaving ? 'opacity-50' : ''
-                }`}
-              >
-                <Ionicons name="bookmark" size={20} color={isDark ? '#EA580C' : '#F97316'} style={{ marginRight: 8 }} />
-                <Text className="text-orange-500 dark:text-orange-600 text-lg font-semibold">
-                  {isSaving ? 'Saving...' : 'Save to Cookbook'}
-                </Text>
-              </HapticTouchableOpacity>
-            <HapticTouchableOpacity 
-          onPress={handleNotInterested}
-          className="border border-gray-300 dark:border-gray-600 py-3 px-6 rounded-lg items-center flex-row justify-center"
-        >
-          <Ionicons name="close-circle-outline" size={20} color={isDark ? "#9CA3AF" : "#374151"} style={{ marginRight: 8 }} />
-          <Text className="text-gray-700 dark:text-gray-300 font-semibold">Not Interested</Text>
-            </HapticTouchableOpacity>
+            <GradientButton
+              label={isSaving ? 'Saving...' : 'Save to Cookbook'}
+              onPress={handleSaveRecipe}
+              disabled={isSaving}
+              loading={isSaving}
+              colors={GradientPresets.brand}
+              icon="bookmark"
+              style={{ marginBottom: 8 }}
+            />
+            <GradientButton
+              label="Not Interested"
+              onPress={handleNotInterested}
+              colors={GradientPresets.danger}
+              icon="close-circle-outline"
+            />
           </>
         )}
       </View>
@@ -1639,10 +1818,17 @@ export default function RecipeModal() {
                 <View className="mb-6">
                   <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Ingredients</Text>
                   {healthifiedRecipe.ingredients && healthifiedRecipe.ingredients.map((ingredient: any, index: number) => (
-                    <View key={index} className="flex-row items-center mb-2">
-                      <View className="w-2 h-2 bg-green-500 rounded-full mr-3" />
-                      <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
-                    </View>
+                    <MotiView
+                      key={index}
+                      from={{ opacity: 0, translateX: -12 }}
+                      animate={{ opacity: 1, translateX: 0 }}
+                      transition={{ type: 'spring', delay: index * 35, damping: 20, stiffness: 200 }}
+                    >
+                      <View className="flex-row items-center mb-2">
+                        <View className="w-2 h-2 bg-green-500 rounded-full mr-3" />
+                        <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
+                      </View>
+                    </MotiView>
                   ))}
                 </View>
 

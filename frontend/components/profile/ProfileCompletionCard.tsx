@@ -6,6 +6,7 @@ import { useRef, useEffect } from 'react';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface ProfileCompletionCardProps {
@@ -57,7 +58,7 @@ export default function ProfileCompletionCard({ profileCompletion }: ProfileComp
 
   if (profileCompletion.percentage >= 100) {
     return (
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
         <View className="items-center py-2">
           <Text className="text-3xl mb-2">🏆</Text>
           <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">Profile Complete!</Text>
@@ -79,7 +80,7 @@ export default function ProfileCompletionCard({ profileCompletion }: ProfileComp
   });
 
   return (
-    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center flex-1">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenDark }}>

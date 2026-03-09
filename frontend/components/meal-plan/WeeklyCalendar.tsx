@@ -1,14 +1,118 @@
 // frontend/components/meal-plan/WeeklyCalendar.tsx
 // Weekly calendar view with date selection and navigation
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { FontSize } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
+
+interface DayPillProps {
+  date: Date;
+  index: number;
+  isDark: boolean;
+  isSelected: boolean;
+  isToday: boolean;
+  mealsCount: number;
+  hasMealPrep: boolean;
+  onPress: () => void;
+  onLongPress: () => void;
+}
+
+function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, onPress, onLongPress }: DayPillProps) {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (isSelected) {
+      scale.value = withSequence(
+        withSpring(1.1, { damping: 5, stiffness: 400 }),
+        withSpring(1, { damping: 8, stiffness: 260 }),
+      );
+    } else {
+      scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+    }
+  }, [isSelected]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[{ flex: 1, marginHorizontal: 3 }, animStyle]}>
+      <HapticTouchableOpacity
+        onPress={onPress}
+        onLongPress={onLongPress}
+        style={{
+          borderRadius: 12,
+          overflow: 'hidden',
+          borderWidth: isToday && !isSelected ? 2 : 0,
+          borderColor: isToday && !isSelected ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) : 'transparent',
+        }}
+      >
+        {isSelected ? (
+          <LinearGradient
+            colors={['#fa7e12', '#f59e0b']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center' }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)', marginBottom: 2 }}>
+              {date.toLocaleDateString('en-US', { weekday: 'short' })}
+            </Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>
+              {date.getDate()}
+            </Text>
+            {mealsCount > 0 && (
+              <View style={{
+                marginTop: 4, minWidth: 22, height: 22, borderRadius: 11,
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+              }}>
+                <Text style={{ color: Colors.primaryDark, fontSize: 11, fontWeight: '800' }}>{mealsCount}</Text>
+              </View>
+            )}
+            {hasMealPrep && (
+              <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.9)', marginTop: 2, fontWeight: '700' }}>🍱 Prep</Text>
+            )}
+          </LinearGradient>
+        ) : (
+          <View style={{
+            paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center',
+            backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+          }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 2 }}>
+              {date.toLocaleDateString('en-US', { weekday: 'short' })}
+            </Text>
+            <Text style={{
+              fontSize: 18, fontWeight: '700',
+              color: isToday ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) : (isDark ? '#F9FAFB' : '#111827'),
+            }}>
+              {date.getDate()}
+            </Text>
+            {mealsCount > 0 && (
+              <View style={{
+                marginTop: 4, minWidth: 22, height: 22, borderRadius: 11,
+                backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+              }}>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{mealsCount}</Text>
+              </View>
+            )}
+            {hasMealPrep && (
+              <Text style={{ fontSize: 9, color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed, marginTop: 2, fontWeight: '700' }}>🍱 Prep</Text>
+            )}
+          </View>
+        )}
+      </HapticTouchableOpacity>
+    </Animated.View>
+  );
+}
+
 interface WeeklyCalendarProps {
   /** Week dates array (7 days) */
   weekDates: Date[];
@@ -70,108 +174,38 @@ function WeeklyCalendar({
       {/* Week Dates */}
       <View className="flex-row mb-2">
         {weekDates.map((date, index) => {
-          const dateIsSelected = isSelected(date);
-          const isTodayDate = isToday(date);
           const dateStr = date.toISOString().split('T')[0];
           const dayMeals = weeklyPlan?.weeklyPlan?.[dateStr]?.meals || {};
-
-          // Count total meals
           let mealsCount = 0;
           if (dayMeals.breakfast) mealsCount++;
           if (dayMeals.lunch) mealsCount++;
           if (dayMeals.dinner) mealsCount++;
-          if (dayMeals.snacks && Array.isArray(dayMeals.snacks)) {
-            mealsCount += dayMeals.snacks.length;
-          }
-
-          // Check if day has passed
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const checkDate = new Date(date);
-          checkDate.setHours(0, 0, 0, 0);
-
+          if (dayMeals.snacks && Array.isArray(dayMeals.snacks)) mealsCount += dayMeals.snacks.length;
           const mealPrepSessions = weeklyPlan?.weeklyPlan?.[dateStr]?.mealPrepSessions || [];
-          const hasMealPrep = mealPrepSessions.length > 0;
 
           return (
-            <HapticTouchableOpacity
+            <DayPill
               key={index}
+              date={date}
+              index={index}
+              isDark={isDark}
+              isSelected={isSelected(date)}
+              isToday={isToday(date)}
+              mealsCount={mealsCount}
+              hasMealPrep={mealPrepSessions.length > 0}
               onPress={() => {
                 try {
                   HapticPatterns.buttonPress();
                   onSelectDate(new Date(date));
-                  if (mealsCount > 0) {
-                    onShowDayMeals(new Date(date));
-                  }
+                  if (mealsCount > 0) onShowDayMeals(new Date(date));
                 } catch (error) {
                   console.error('Error selecting date:', error);
                 }
               }}
               onLongPress={() => {
-                if (onRegenerateDay && mealsCount > 0) {
-                  onRegenerateDay(new Date(date));
-                }
+                if (onRegenerateDay && mealsCount > 0) onRegenerateDay(new Date(date));
               }}
-              className={`flex-1 mx-1 rounded-lg p-3 ${
-                dateIsSelected ? '' : 'bg-white dark:bg-gray-800'
-              } ${isTodayDate ? 'border-2' : ''}`}
-              style={{
-                ...(dateIsSelected ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : {}),
-                ...(isTodayDate ? { borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed } : {})
-              }}
-            >
-              <Text className={`text-xs text-center font-medium ${
-                dateIsSelected ? 'text-white' : 'text-gray-500 dark:text-gray-200'
-              }`}>
-                {date.toLocaleDateString('en-US', { weekday: 'short' })}
-              </Text>
-              <Text className={`text-lg text-center font-bold mt-1 ${
-                dateIsSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'
-              }`} style={!dateIsSelected && isTodayDate ? { color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed } : undefined}>
-                {date.getDate()}
-              </Text>
-              {mealsCount > 0 && (
-                <View className="mt-1.5 self-center" style={{
-                  minWidth: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: dateIsSelected
-                    ? 'rgba(255, 255, 255, 0.95)'
-                    : (isDark ? DarkColors.primary : Colors.primary),
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 7,
-                  borderWidth: dateIsSelected ? 2 : 0,
-                  borderColor: dateIsSelected ? (isDark ? DarkColors.primary : Colors.primary) : 'transparent',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 3,
-                  elevation: 3,
-                }}>
-                  <Text className="font-bold" style={{
-                    color: dateIsSelected
-                      ? (isDark ? DarkColors.primaryDark : Colors.primary)
-                      : '#FFFFFF',
-                    fontSize: FontSize.sm,
-                    fontWeight: '700',
-                  }}>
-                    {mealsCount}
-                  </Text>
-                </View>
-              )}
-              {hasMealPrep && (
-                <View className={`mt-1 rounded-full px-2 py-0.5 ${
-                  dateIsSelected ? 'bg-white bg-opacity-30' : ''
-                }`} style={!dateIsSelected ? { backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight } : undefined}>
-                  <Text className={`text-xs text-center font-semibold ${
-                    dateIsSelected ? 'text-white' : ''
-                  }`} style={!dateIsSelected ? { color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed } : undefined}>
-                    🍱 Prep
-                  </Text>
-                </View>
-              )}
-            </HapticTouchableOpacity>
+            />
           );
         })}
       </View>

@@ -1,58 +1,210 @@
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  ScrollView,
+  Animated,
+  Dimensions,
+} from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { userApi } from '../lib/api';
 import type { MacroCalculations } from '../types';
 import * as Haptics from 'expo-haptics';
 import { Colors, DarkColors } from '../constants/Colors';
 import { useColorScheme } from 'nativewind';
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const TILE_GAP = 10;
+const TILE_H_PAD = 32; // 16 left + 16 right
+const TILE_WIDTH = (SCREEN_WIDTH - TILE_H_PAD - TILE_GAP) / 2;
+
+interface EatingGoal {
+  id: string;
+  label: string;
+  emoji: string;
+  description: string;
+  /** Cal multiplier applied to TDEE */
+  calMult: number;
+  /** Caloric ratios (must sum to ~1 when converted via cal/g) */
+  ratios: { protein: number; carbs: number; fat: number };
+  accentColor: string;
+  accentBg: string;
+  darkAccent: string;
+}
+
+const EATING_GOALS: EatingGoal[] = [
+  {
+    id: 'balanced',
+    label: 'Balanced',
+    emoji: '⚖️',
+    description: 'Steady energy & sustainable habits',
+    calMult: 1.0,
+    ratios: { protein: 0.30, carbs: 0.40, fat: 0.30 },
+    accentColor: '#3B82F6',
+    accentBg: '#EFF6FF',
+    darkAccent: '#60A5FA',
+  },
+  {
+    id: 'high_protein',
+    label: 'High Protein',
+    emoji: '💪',
+    description: 'Muscle building & recovery',
+    calMult: 1.0,
+    ratios: { protein: 0.40, carbs: 0.35, fat: 0.25 },
+    accentColor: '#DC2626',
+    accentBg: '#FEF2F2',
+    darkAccent: '#F87171',
+  },
+  {
+    id: 'low_carb',
+    label: 'Low Carb',
+    emoji: '🥑',
+    description: 'Fat adaptation & mental clarity',
+    calMult: 1.0,
+    ratios: { protein: 0.35, carbs: 0.15, fat: 0.50 },
+    accentColor: '#16A34A',
+    accentBg: '#F0FDF4',
+    darkAccent: '#4ADE80',
+  },
+  {
+    id: 'cut',
+    label: 'Cut',
+    emoji: '🔥',
+    description: 'Lose fat while preserving muscle',
+    calMult: 0.82,
+    ratios: { protein: 0.40, carbs: 0.35, fat: 0.25 },
+    accentColor: '#EA580C',
+    accentBg: '#FFF7ED',
+    darkAccent: '#FB923C',
+  },
+  {
+    id: 'bulk',
+    label: 'Bulk',
+    emoji: '📈',
+    description: 'Maximize muscle & strength gains',
+    calMult: 1.15,
+    ratios: { protein: 0.28, carbs: 0.45, fat: 0.27 },
+    accentColor: '#7C3AED',
+    accentBg: '#F5F3FF',
+    darkAccent: '#A78BFA',
+  },
+];
+
+/** Convert goal ratios + base TDEE into gram targets */
+function computeMacros(goal: EatingGoal, tdee: number) {
+  const cal = Math.round(tdee * goal.calMult);
+  const protein = Math.round((cal * goal.ratios.protein) / 4);
+  const carbs = Math.round((cal * goal.ratios.carbs) / 4);
+  const fat = Math.round((cal * goal.ratios.fat) / 9);
+  return { calories: cal, protein, carbs, fat };
+}
+
 export default function EditMacroGoalsScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const [loading, setLoading] = useState(false);
+
   const [loadingData, setLoadingData] = useState(true);
-  const [calculating, setCalculating] = useState(false);
-  
+  const [saving, setSaving] = useState(false);
+  const [hasPhysicalProfile, setHasPhysicalProfile] = useState(false);
+
+  // Base calorie reference — TDEE if available, else 2000
+  const [baseTdee, setBaseTdee] = useState(2000);
+  const [selectedGoal, setSelectedGoal] = useState<string>('balanced');
+  const [showCustomize, setShowCustomize] = useState(false);
+
+  // Raw custom inputs
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
-  
-  // Calculated recommendations
-  const [calculations, setCalculations] = useState<MacroCalculations | null>(null);
-  const [hasPhysicalProfile, setHasPhysicalProfile] = useState(false);
 
-  // Load current goals
+  // Animated bar values (0–100, representing % of caloric total)
+  const proteinAnim = useRef(new Animated.Value(30)).current;
+  const carbsAnim = useRef(new Animated.Value(40)).current;
+  const fatAnim = useRef(new Animated.Value(30)).current;
+
+  // Customize section collapse
+  const customizeAnim = useRef(new Animated.Value(0)).current;
+  const customizeHeight = customizeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 340] });
+
+  // ── Derived macros from selected goal ──────────────────────────────────
+  const derivedMacros = useMemo(() => {
+    const goal = EATING_GOALS.find(g => g.id === selectedGoal) ?? EATING_GOALS[0];
+    return computeMacros(goal, baseTdee);
+  }, [selectedGoal, baseTdee]);
+
+  // ── Active macros: either derived or custom ────────────────────────────
+  const activeMacros = useMemo(() => {
+    if (!showCustomize) return derivedMacros;
+    return {
+      calories: parseInt(calories) || 0,
+      protein: parseInt(protein) || 0,
+      carbs: parseInt(carbs) || 0,
+      fat: parseInt(fat) || 0,
+    };
+  }, [showCustomize, derivedMacros, calories, protein, carbs, fat]);
+
+  // ── Populate custom inputs when customize opens ────────────────────────
   useEffect(() => {
-    loadMacroGoals();
+    if (showCustomize) {
+      setCalories(derivedMacros.calories.toString());
+      setProtein(derivedMacros.protein.toString());
+      setCarbs(derivedMacros.carbs.toString());
+      setFat(derivedMacros.fat.toString());
+    }
+    Animated.spring(customizeAnim, {
+      toValue: showCustomize ? 1 : 0,
+      friction: 7,
+      tension: 100,
+      useNativeDriver: false,
+    }).start();
+  }, [showCustomize]);
+
+  // ── Animate macro bar when activeMacros change ─────────────────────────
+  useEffect(() => {
+    const { protein: p, carbs: c, fat: f } = activeMacros;
+    const pCal = p * 4;
+    const cCal = c * 4;
+    const fCal = f * 9;
+    const total = pCal + cCal + fCal || 1;
+    Animated.parallel([
+      Animated.spring(proteinAnim, { toValue: (pCal / total) * 100, friction: 8, tension: 100, useNativeDriver: false }),
+      Animated.spring(carbsAnim, { toValue: (cCal / total) * 100, friction: 8, tension: 100, useNativeDriver: false }),
+      Animated.spring(fatAnim, { toValue: (fCal / total) * 100, friction: 8, tension: 100, useNativeDriver: false }),
+    ]).start();
+  }, [activeMacros]);
+
+  // ── Load existing goals + TDEE on mount ───────────────────────────────
+  useEffect(() => {
+    loadData();
   }, []);
 
-  const loadMacroGoals = async () => {
+  const loadData = async () => {
     try {
       setLoadingData(true);
-      const response = await userApi.getMacroGoals();
-      const goals = response.data;
-      
-      console.log('📱 Edit Macro Goals: Loaded goals', goals);
+      const [goalsRes] = await Promise.all([userApi.getMacroGoals()]);
+      const goals = goalsRes.data;
+      // Pre-fill custom inputs with saved values
       setCalories(goals.calories.toString());
       setProtein(goals.protein.toString());
       setCarbs(goals.carbs.toString());
       setFat(goals.fat.toString());
-      
-      // Check if user has physical profile for calculations
+
+      // Fetch TDEE if physical profile exists
       try {
-        const profileResponse = await userApi.getPhysicalProfile();
-        setHasPhysicalProfile(profileResponse.data !== null);
+        const calcRes = await userApi.getCalculatedMacros();
+        setBaseTdee(calcRes.data.tdee);
+        setHasPhysicalProfile(true);
       } catch {
         setHasPhysicalProfile(false);
       }
     } catch (error: any) {
-      console.error('📱 Edit Macro Goals: Load error', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to load macro goals');
     } finally {
@@ -60,340 +212,234 @@ export default function EditMacroGoalsScreen() {
     }
   };
 
-  const handleCalculateFromProfile = async () => {
-    try {
-      setCalculating(true);
-      const response = await userApi.getCalculatedMacros();
-      const calc = response.data;
-      
-      console.log('📱 Edit Macro Goals: Calculated macros', calc);
-      setCalculations(calc);
-      
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Show the calculated values
-      Alert.alert(
-        'Calculated Macros',
-        `Based on your physical profile:\n\n` +
-        `Calories: ${calc.calories}\n` +
-        `Protein: ${calc.protein}g\n` +
-        `Carbs: ${calc.carbs}g\n` +
-        `Fat: ${calc.fat}g\n\n` +
-        `BMR: ${calc.bmr} cal/day\n` +
-        `TDEE: ${calc.tdee} cal/day\n\n` +
-        `Would you like to apply these values?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Apply',
-            onPress: () => {
-              setCalories(calc.calories.toString());
-              setProtein(calc.protein.toString());
-              setCarbs(calc.carbs.toString());
-              setFat(calc.fat.toString());
-            }
-          }
-        ]
-      );
-    } catch (error: any) {
-      console.error('📱 Edit Macro Goals: Calculate error', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      if (error.message?.includes('Physical profile') || error.message?.includes('profile required')) {
-        Alert.alert(
-          'Physical Profile Required',
-          'Please complete your physical profile first to use automatic macro calculation.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Set Up Profile',
-              onPress: () => {
-                router.back();
-                setTimeout(() => router.push('/edit-physical-profile'), 100);
-              }
-            }
-          ]
-        );
-      } else {
-        Alert.alert('Error', error.message || 'Failed to calculate macros');
-      }
-    } finally {
-      setCalculating(false);
-    }
-  };
-
   const handleSave = async () => {
-    // Validation
-    if (!calories || !protein || !carbs || !fat) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Validation Error', 'Please fill in all fields');
-      return;
-    }
+    const m = showCustomize ? activeMacros : derivedMacros;
 
-    if (isNaN(Number(calories)) || isNaN(Number(protein)) || 
-        isNaN(Number(carbs)) || isNaN(Number(fat))) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Validation Error', 'Please enter valid numbers');
-      return;
-    }
-
-    const caloriesNum = parseInt(calories);
-    const proteinNum = parseInt(protein);
-    const carbsNum = parseInt(carbs);
-    const fatNum = parseInt(fat);
-
-    if (caloriesNum < 500 || caloriesNum > 10000) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Validation Error', 'Calories must be between 500 and 10,000');
-      return;
-    }
-
-    if (proteinNum < 0 || carbsNum < 0 || fatNum < 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Validation Error', 'Macro values must be positive');
-      return;
+    if (showCustomize) {
+      if (!calories || !protein || !carbs || !fat) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Validation Error', 'Please fill in all fields');
+        return;
+      }
+      if (m.calories < 500 || m.calories > 10000) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Validation Error', 'Calories must be between 500 and 10,000');
+        return;
+      }
     }
 
     try {
-      setLoading(true);
+      setSaving(true);
       await userApi.updateMacroGoals({
-        calories: caloriesNum,
-        protein: proteinNum,
-        carbs: carbsNum,
-        fat: fatNum
+        calories: m.calories,
+        protein: m.protein,
+        carbs: m.carbs,
+        fat: m.fat,
       });
-      
-      console.log('📱 Edit Macro Goals: Goals updated');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Macro goals updated successfully!');
       router.back();
     } catch (error: any) {
-      console.error('📱 Edit Macro Goals: Update error', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to update macro goals');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
+  // ── Colours ────────────────────────────────────────────────────────────
+  const bg = isDark ? '#111827' : '#F9FAFB';
+  const cardBg = isDark ? '#1F2937' : '#FFFFFF';
+  const border = isDark ? '#374151' : '#E5E7EB';
+  const label = isDark ? '#F9FAFB' : '#111827';
+  const sub = isDark ? '#9CA3AF' : '#6B7280';
+  const inputBg = isDark ? '#374151' : '#F3F4F6';
+  const primaryColor = isDark ? DarkColors.primary : Colors.primary;
+
   if (loadingData) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-        <View className="flex-1 items-center justify-center">
-          <Ionicons name="fitness-outline" size={64} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
-          <Text className="mt-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Loading...</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="fitness-outline" size={56} color={sub} />
+          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading…</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-      <KeyboardAvoidingContainer>
-      {/* Header */}
-      <View className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
-        <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
-          <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.primary : Colors.text.primary} />
-        </HapticTouchableOpacity>
-        <Text className="text-xl font-bold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Edit Macro Goals</Text>
-        <HapticTouchableOpacity 
-          onPress={handleSave}
-          disabled={loading}
-          className="p-2"
-        >
-          <Text className="text-lg font-semibold" style={{ color: loading ? (isDark ? DarkColors.text.secondary : Colors.text.secondary) : (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) }}>
-            {loading ? 'Saving...' : 'Save'}
-          </Text>
-        </HapticTouchableOpacity>
-      </View>
+  const activeGoalData = EATING_GOALS.find(g => g.id === selectedGoal) ?? EATING_GOALS[0];
 
-      <ScrollView className="flex-1 p-4">
-        {/* Calculate from Profile Button */}
-        {hasPhysicalProfile && (
-          <HapticTouchableOpacity
-            onPress={handleCalculateFromProfile}
-            disabled={calculating}
-            className="p-4 rounded-xl mb-4 flex-row items-center justify-center shadow-sm"
-            style={{ backgroundColor: isDark ? DarkColors.accent : Colors.accent }}
-          >
-            <Ionicons name="calculator" size={24} color="white" />
-            <Text className="text-white font-bold text-lg ml-2">
-              {calculating ? 'Calculating...' : 'Calculate from Profile'}
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
+      <KeyboardAvoidingContainer>
+        {/* Header */}
+        <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+            <Ionicons name="arrow-back" size={24} color={label} />
+          </HapticTouchableOpacity>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: label }}>Macro Goals</Text>
+          <HapticTouchableOpacity onPress={handleSave} disabled={saving} style={{ padding: 4 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: saving ? sub : primaryColor }}>
+              {saving ? 'Saving…' : 'Save'}
             </Text>
           </HapticTouchableOpacity>
-        )}
-
-        {/* Info about physical profile */}
-        {!hasPhysicalProfile && (
-          <HapticTouchableOpacity
-            onPress={() => {
-              router.back();
-              setTimeout(() => router.push('/edit-physical-profile'), 100);
-            }}
-            className="p-4 rounded-xl mb-4 border"
-            style={{
-              backgroundColor: isDark ? `${Colors.secondaryRedLight}1A` : Colors.secondaryRedDark,
-              borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark,
-            }}
-          >
-            <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={20} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} />
-              <View className="flex-1 ml-2">
-                <Text className="font-semibold mb-1" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
-                  Get Personalized Recommendations
-                </Text>
-                <Text className="text-sm" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
-                  Complete your physical profile to automatically calculate your ideal macro goals based on scientific formulas.
-                </Text>
-                <Text className="text-xs mt-2 font-medium" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
-                  Tap here to set up your profile →
-                </Text>
-              </View>
-            </View>
-          </HapticTouchableOpacity>
-        )}
-
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <Text className="text-sm mb-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-            Set your daily macro nutrient targets to help personalize recipe recommendations.
-          </Text>
-
-          {/* Calories */}
-          <View className="mb-4">
-            <Text className="font-medium mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Daily Calories *</Text>
-            <TextInput
-              value={calories}
-              onChangeText={setCalories}
-              placeholder="2000"
-              keyboardType="numeric"
-              className="rounded-lg px-4 py-3"
-              style={{
-                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                borderWidth: 1,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-              }}
-              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-            />
-            <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Recommended: 1500-3000 calories</Text>
-          </View>
-
-          {/* Protein */}
-          <View className="mb-4">
-            <Text className="font-medium mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Protein (grams) *</Text>
-            <TextInput
-              value={protein}
-              onChangeText={setProtein}
-              placeholder="150"
-              keyboardType="numeric"
-              className="rounded-lg px-4 py-3"
-              style={{
-                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                borderWidth: 1,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-              }}
-              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-            />
-            <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Recommended: 0.8-1.2g per lb body weight</Text>
-          </View>
-
-          {/* Carbs */}
-          <View className="mb-4">
-            <Text className="font-medium mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Carbs (grams) *</Text>
-            <TextInput
-              value={carbs}
-              onChangeText={setCarbs}
-              placeholder="200"
-              keyboardType="numeric"
-              className="rounded-lg px-4 py-3"
-              style={{
-                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                borderWidth: 1,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-              }}
-              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-            />
-            <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Adjust based on activity level</Text>
-          </View>
-
-          {/* Fat */}
-          <View className="mb-4">
-            <Text className="font-medium mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Fat (grams) *</Text>
-            <TextInput
-              value={fat}
-              onChangeText={setFat}
-              placeholder="65"
-              keyboardType="numeric"
-              className="rounded-lg px-4 py-3"
-              style={{
-                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                borderWidth: 1,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-              }}
-              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-            />
-            <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Essential for hormone production</Text>
-          </View>
-
-          {/* Quick presets */}
-          <View className="mt-4">
-            <Text className="text-sm mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Quick Presets:</Text>
-            <View className="flex-row flex-wrap gap-2">
-              <HapticTouchableOpacity 
-                onPress={() => {
-                  setCalories('2000');
-                  setProtein('150');
-                  setCarbs('200');
-                  setFat('65');
-                }}
-                className="px-3 py-2 rounded-lg border"
-                style={{
-                  backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedDark,
-                  borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark,
-                }}
-              >
-                <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>Standard</Text>
-              </HapticTouchableOpacity>
-              <HapticTouchableOpacity 
-                onPress={() => {
-                  setCalories('1800');
-                  setProtein('140');
-                  setCarbs('150');
-                  setFat('60');
-                }}
-                className="px-3 py-2 rounded-lg border"
-                style={{
-                  backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenDark,
-                  borderColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreenDark,
-                }}
-              >
-                <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.tertiaryGreen : '#FFFFFF' }}>Weight Loss</Text>
-              </HapticTouchableOpacity>
-              <HapticTouchableOpacity 
-                onPress={() => {
-                  setCalories('2500');
-                  setProtein('180');
-                  setCarbs('280');
-                  setFat('80');
-                }}
-                className="px-3 py-2 rounded-lg border"
-                style={{
-                  backgroundColor: isDark ? `${Colors.accent}33` : '#7C3AED',
-                  borderColor: isDark ? DarkColors.accent : '#7C3AED',
-                }}
-              >
-                <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.accent : '#FFFFFF' }}>Muscle Gain</Text>
-              </HapticTouchableOpacity>
-            </View>
-          </View>
         </View>
 
-        {/* Bottom padding */}
-        <View className="h-8" />
-      </ScrollView>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Section heading */}
+          <Text style={{ fontSize: 13, fontWeight: '600', color: sub, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>
+            How do you want to eat?
+          </Text>
+
+          {/* Physical profile nudge */}
+          {!hasPhysicalProfile && (
+            <HapticTouchableOpacity
+              onPress={() => { router.back(); setTimeout(() => router.push('/edit-physical-profile'), 100); }}
+              style={{ backgroundColor: isDark ? 'rgba(250,204,21,0.1)' : '#FEFCE8', borderWidth: 1, borderColor: isDark ? '#854D0E' : '#FDE047', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}
+            >
+              <Ionicons name="information-circle-outline" size={18} color={isDark ? '#FDE047' : '#A16207'} style={{ marginRight: 8 }} />
+              <Text style={{ flex: 1, fontSize: 13, color: isDark ? '#FDE047' : '#78350F', lineHeight: 18 }}>
+                Add your physical profile to get calorie targets tailored to your body. Tap here →
+              </Text>
+            </HapticTouchableOpacity>
+          )}
+
+          {/* Goal picker tiles */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: TILE_GAP, marginBottom: 20 }}>
+            {EATING_GOALS.map((goal, index) => {
+              const isSelected = selectedGoal === goal.id;
+              const accent = isDark ? goal.darkAccent : goal.accentColor;
+              const tileBg = isSelected
+                ? (isDark ? `${goal.accentColor}25` : goal.accentBg)
+                : cardBg;
+              const tileBorder = isSelected ? accent : border;
+
+              return (
+                <HapticTouchableOpacity
+                  key={goal.id}
+                  onPress={() => {
+                    setSelectedGoal(goal.id);
+                    setShowCustomize(false);
+                  }}
+                  style={{
+                    width: index === 4 ? '100%' : TILE_WIDTH,
+                    backgroundColor: tileBg,
+                    borderWidth: isSelected ? 2 : 1,
+                    borderColor: tileBorder,
+                    borderRadius: 14,
+                    padding: 14,
+                  }}
+                >
+                  <View style={{ flexDirection: index === 4 ? 'row' : 'column', alignItems: index === 4 ? 'center' : 'flex-start' }}>
+                    <Text style={{ fontSize: index === 4 ? 22 : 26, marginBottom: index === 4 ? 0 : 6, marginRight: index === 4 ? 10 : 0 }}>{goal.emoji}</Text>
+                    <View style={{ flex: index === 4 ? 1 : 0 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: isSelected ? accent : label }}>{goal.label}</Text>
+                      <Text style={{ fontSize: 12, color: sub, marginTop: 2, lineHeight: 16 }} numberOfLines={2}>{goal.description}</Text>
+                    </View>
+                    {isSelected && (
+                      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: accent, alignItems: 'center', justifyContent: 'center', marginTop: index === 4 ? 0 : 8, marginLeft: index === 4 ? 8 : 0 }}>
+                        <Ionicons name="checkmark" size={12} color="white" />
+                      </View>
+                    )}
+                  </View>
+                </HapticTouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Animated macro bar preview */}
+          <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: border, borderRadius: 14, padding: 16, marginBottom: 14 }}>
+            {/* Numbers */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: label }}>{activeMacros.calories}</Text>
+                <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>calories</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#3B82F6' }}>{activeMacros.protein}g</Text>
+                <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>protein</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#F97316' }}>{activeMacros.carbs}g</Text>
+                <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>carbs</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#EAB308' }}>{activeMacros.fat}g</Text>
+                <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>fat</Text>
+              </View>
+            </View>
+
+            {/* Segmented bar */}
+            <View style={{ height: 10, borderRadius: 5, overflow: 'hidden', flexDirection: 'row', backgroundColor: isDark ? '#374151' : '#F3F4F6' }}>
+              <Animated.View style={{ width: proteinAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), backgroundColor: '#3B82F6' }} />
+              <Animated.View style={{ width: carbsAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), backgroundColor: '#F97316' }} />
+              <Animated.View style={{ width: fatAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), backgroundColor: '#EAB308' }} />
+            </View>
+
+            {/* Legend */}
+            <View style={{ flexDirection: 'row', gap: 16, marginTop: 8, justifyContent: 'center' }}>
+              {[['#3B82F6', 'Protein'], ['#F97316', 'Carbs'], ['#EAB308', 'Fat']].map(([color, name]) => (
+                <View key={name} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+                  <Text style={{ fontSize: 11, color: sub }}>{name}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* TDEE context */}
+            {hasPhysicalProfile && !showCustomize && (
+              <Text style={{ fontSize: 11, color: sub, marginTop: 10, textAlign: 'center' }}>
+                Based on your TDEE of {baseTdee} cal/day
+                {activeGoalData.calMult !== 1.0 ? ` · ${activeGoalData.calMult > 1 ? '+' : ''}${Math.round((activeGoalData.calMult - 1) * 100)}% adjustment` : ''}
+              </Text>
+            )}
+          </View>
+
+          {/* Customize toggle */}
+          <HapticTouchableOpacity
+            onPress={() => setShowCustomize(v => !v)}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 4 }}
+          >
+            <Ionicons name={showCustomize ? 'chevron-up' : 'settings-outline'} size={16} color={sub} style={{ marginRight: 6 }} />
+            <Text style={{ fontSize: 13, color: sub, fontWeight: '500' }}>
+              {showCustomize ? 'Hide custom values' : 'Customize'}
+            </Text>
+          </HapticTouchableOpacity>
+
+          {/* Custom inputs — always in tree, collapsed via maxHeight */}
+          <Animated.View style={{ maxHeight: customizeHeight, overflow: 'hidden' }}>
+            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: border, borderRadius: 14, padding: 16 }}>
+              <Text style={{ fontSize: 12, color: sub, marginBottom: 14, lineHeight: 18 }}>
+                Fine-tune your exact targets. Changes here override the goal selection above.
+              </Text>
+
+              {([
+                { label: 'Daily Calories', value: calories, onChange: setCalories, placeholder: '2000', hint: '500 – 10,000 cal' },
+                { label: 'Protein (g)', value: protein, onChange: setProtein, placeholder: '150', hint: '~0.8–1.2g per lb body weight' },
+                { label: 'Carbs (g)', value: carbs, onChange: setCarbs, placeholder: '200', hint: 'Adjust based on activity level' },
+                { label: 'Fat (g)', value: fat, onChange: setFat, placeholder: '65', hint: 'Essential for hormone production' },
+              ] as const).map(({ label: fieldLabel, value, onChange, placeholder, hint }) => (
+                <View key={fieldLabel} style={{ marginBottom: 14 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: label, marginBottom: 6 }}>{fieldLabel}</Text>
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder={placeholder}
+                    keyboardType="numeric"
+                    style={{ backgroundColor: inputBg, borderWidth: 1, borderColor: border, borderRadius: 9, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: label }}
+                    placeholderTextColor={sub}
+                  />
+                  <Text style={{ fontSize: 11, color: sub, marginTop: 4 }}>{hint}</Text>
+                </View>
+              ))}
+            </View>
+          </Animated.View>
+        </ScrollView>
       </KeyboardAvoidingContainer>
     </SafeAreaView>
   );
 }
-

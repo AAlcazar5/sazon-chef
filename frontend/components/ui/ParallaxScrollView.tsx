@@ -1,39 +1,55 @@
-import React, { useRef } from 'react';
-import { ScrollView, ScrollViewProps, Animated, View, StyleSheet } from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 
-interface ParallaxScrollViewProps extends ScrollViewProps {
+interface ParallaxScrollViewProps {
   parallaxImage?: string;
   parallaxHeight?: number;
   parallaxSpeed?: number;
   children: React.ReactNode;
+  [key: string]: any;
 }
 
 export default function ParallaxScrollView({
   parallaxImage,
   parallaxHeight = 200,
-  parallaxSpeed = 0.5, // 0.5 means background moves at half the speed of foreground
+  parallaxSpeed = 0.5,
   children,
   ...scrollViewProps
 }: ParallaxScrollViewProps) {
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useSharedValue(0);
 
-  const handleScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    { useNativeDriver: true }
-  );
-
-  const parallaxTranslateY = scrollY.interpolate({
-    inputRange: [0, parallaxHeight],
-    outputRange: [0, parallaxHeight * parallaxSpeed],
-    extrapolate: 'clamp',
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
   });
 
-  const parallaxOpacity = scrollY.interpolate({
-    inputRange: [0, parallaxHeight * 0.5, parallaxHeight],
-    outputRange: [1, 0.5, 0],
-    extrapolate: 'clamp',
-  });
+  const imageAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: interpolate(
+          scrollY.value,
+          [0, parallaxHeight],
+          [0, parallaxHeight * parallaxSpeed],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+    opacity: interpolate(
+      scrollY.value,
+      [0, parallaxHeight * 0.5, parallaxHeight],
+      [1, 0.5, 0],
+      Extrapolation.CLAMP
+    ),
+  }));
 
   return (
     <View style={styles.container}>
@@ -41,11 +57,8 @@ export default function ParallaxScrollView({
         <Animated.View
           style={[
             styles.parallaxImageContainer,
-            {
-              height: parallaxHeight,
-              transform: [{ translateY: parallaxTranslateY }],
-              opacity: parallaxOpacity,
-            },
+            { height: parallaxHeight },
+            imageAnimatedStyle,
           ]}
         >
           <Image
@@ -55,9 +68,9 @@ export default function ParallaxScrollView({
           />
         </Animated.View>
       )}
-      <ScrollView
+      <Animated.ScrollView
         {...scrollViewProps}
-        onScroll={handleScroll}
+        onScroll={scrollHandler}
         scrollEventThrottle={16}
         contentContainerStyle={[
           scrollViewProps.contentContainerStyle,
@@ -65,7 +78,7 @@ export default function ParallaxScrollView({
         ]}
       >
         {children}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -87,4 +100,3 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 });
-

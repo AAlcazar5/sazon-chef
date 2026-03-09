@@ -6,6 +6,7 @@ import { View, Text, Animated } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import CardStack from '../ui/CardStack';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import GradientButton, { GradientPresets } from '../ui/GradientButton';
 import { RecipeCard } from '../recipe/RecipeCard';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -150,22 +151,13 @@ function FeaturedRecipeCarousel({
             opacity: randomButtonOpacity,
           }}
         >
-          <HapticTouchableOpacity
+          <GradientButton
+            label="Random Recipe"
             onPress={onRandomRecipe}
+            colors={GradientPresets.brand}
+            icon="shuffle"
             hapticStyle="medium"
-            className="px-3 py-1.5 rounded-lg flex-row items-center"
-            style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-          >
-            <Icon
-              name={Icons.RANDOM_RECIPE}
-              size={IconSizes.XS}
-              color="#FFFFFF"
-              accessibilityLabel="Random recipe"
-            />
-            <Text className="text-white text-sm font-semibold" style={{ marginLeft: 6 }}>
-              Random Recipe
-            </Text>
-          </HapticTouchableOpacity>
+          />
         </Animated.View>
       </View>
 

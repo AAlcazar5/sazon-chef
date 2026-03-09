@@ -1,7 +1,7 @@
 // frontend/components/recipe/CookingModeTimers.tsx
 // Horizontal scrollable row of active cooking timers
 
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Animated } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -109,8 +109,44 @@ interface TimerCardProps {
 function TimerCard({ timer, onToggle, onDismiss }: TimerCardProps) {
   const progress = 1 - timer.remainingSeconds / timer.totalSeconds;
 
+  // Animated progress bar width (0–100%)
+  const progressAnim = useRef(new Animated.Value(progress * 100)).current;
+
+  // Pulsing border scale for running timers
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Card entrance scale spring
+  const entranceScale = useRef(new Animated.Value(0.7)).current;
+
+  useEffect(() => {
+    Animated.spring(entranceScale, { toValue: 1, friction: 6, tension: 200, useNativeDriver: true }).start();
+  }, []);
+
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progress * 100,
+      duration: 800,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  useEffect(() => {
+    if (timer.running && !timer.completed) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.03, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [timer.running, timer.completed]);
+
   return (
-    <View
+    <Animated.View
       className="rounded-2xl p-3 min-w-24 items-center"
       style={{
         backgroundColor: timer.completed
@@ -124,6 +160,7 @@ function TimerCard({ timer, onToggle, onDismiss }: TimerCardProps) {
           : timer.running
           ? '#F97316'
           : '#4B5563',
+        transform: [{ scale: pulseAnim }, { scale: entranceScale }],
       }}
     >
       {/* Label */}
@@ -148,13 +185,16 @@ function TimerCard({ timer, onToggle, onDismiss }: TimerCardProps) {
       )}
 
       {/* Progress bar */}
+      {/* Animated progress bar */}
       {!timer.completed && (
-        <View className="w-full h-1 bg-gray-600 rounded-full mt-2 overflow-hidden">
-          <View
+        <View className="w-full h-1.5 bg-gray-600 rounded-full mt-2 overflow-hidden">
+          <Animated.View
             className="h-full rounded-full"
             style={{
-              width: `${Math.min(100, progress * 100)}%`,
-              backgroundColor: timer.running ? '#F97316' : '#6B7280',
+              width: progressAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
+              backgroundColor: timer.running
+                ? timer.remainingSeconds <= 60 ? '#EF4444' : '#F97316'
+                : '#6B7280',
             }}
           />
         </View>
@@ -163,26 +203,14 @@ function TimerCard({ timer, onToggle, onDismiss }: TimerCardProps) {
       {/* Controls */}
       <View className="flex-row mt-2 gap-2">
         {!timer.completed && (
-          <HapticTouchableOpacity
-            onPress={onToggle}
-            hapticStyle="light"
-            className="p-1"
-          >
-            <Ionicons
-              name={timer.running ? 'pause-circle' : 'play-circle'}
-              size={18}
-              color="#FFFFFF"
-            />
+          <HapticTouchableOpacity onPress={onToggle} hapticStyle="light" className="p-1">
+            <Ionicons name={timer.running ? 'pause-circle' : 'play-circle'} size={18} color="#FFFFFF" />
           </HapticTouchableOpacity>
         )}
-        <HapticTouchableOpacity
-          onPress={onDismiss}
-          hapticStyle="light"
-          className="p-1"
-        >
+        <HapticTouchableOpacity onPress={onDismiss} hapticStyle="light" className="p-1">
           <Icon name={Icons.CLOSE} size={14} color="#9CA3AF" />
         </HapticTouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 }

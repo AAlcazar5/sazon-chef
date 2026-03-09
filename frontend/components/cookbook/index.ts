@@ -17,6 +17,7 @@ export { default as StarRating } from './StarRating';
 export { default as RecipeNotesModal } from './RecipeNotesModal';
 export { default as MarkCookedModal } from './MarkCookedModal';
 export { default as ImportFromUrlModal } from './ImportFromUrlModal';
+export { default as CollectionFilterRow } from './CollectionFilterRow';
 
 // Re-export types
 export type {

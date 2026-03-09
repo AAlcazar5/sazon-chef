@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 // frontend/components/cookbook/CookbookRecipeList.tsx
 // Grid and list views for cookbook recipes
 
@@ -9,6 +9,7 @@ import AnimatedRecipeCard from '../recipe/AnimatedRecipeCard';
 import StarRating from './StarRating';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
+import LogoMascot from '../mascot/LogoMascot';
 import type { SavedRecipe } from '../../types';
 
 interface RecipeFeedback {
@@ -62,6 +63,16 @@ function CookbookRecipeList({
   onSave,
   onRate,
 }: CookbookRecipeListProps) {
+  const [showChefKiss, setShowChefKiss] = useState(false);
+
+  const handleRate = useCallback((recipeId: string, rating: number | null) => {
+    if (rating === 5) {
+      setShowChefKiss(true);
+      setTimeout(() => setShowChefKiss(false), 1500);
+    }
+    onRate?.(recipeId, rating);
+  }, [onRate]);
+
   const RecipeMeta = useCallback(({ recipe }: { recipe: SavedRecipe }) => {
     const hasNotes = !!recipe.notes;
     const hasCookCount = (recipe.cookCount || 0) > 0;
@@ -72,7 +83,7 @@ function CookbookRecipeList({
       <View className="flex-row items-center mt-1.5 px-1" style={{ gap: 8 }}>
         <StarRating
           rating={recipe.rating ?? null}
-          onRate={onRate ? (r) => onRate(recipe.id, r) : undefined}
+          onRate={onRate ? (r) => handleRate(recipe.id, r) : undefined}
           size="sm"
           readonly={!onRate}
           isDark={isDark}
@@ -87,7 +98,7 @@ function CookbookRecipeList({
         )}
       </View>
     );
-  }, [isDark, onRate]);
+  }, [isDark, onRate, handleRate]);
 
   const keyExtractor = useCallback((item: SavedRecipe) => item.id, []);
 
@@ -152,33 +163,49 @@ function CookbookRecipeList({
     );
   }
 
+  const chefKissMascot = showChefKiss ? (
+    <View
+      testID="chef-kiss-mascot"
+      pointerEvents="none"
+      style={{ position: 'absolute', alignSelf: 'center', top: '40%', zIndex: 99 }}
+    >
+      <LogoMascot expression="chef-kiss" size="large" />
+    </View>
+  ) : null;
+
   if (displayMode === 'grid') {
     return (
-      <FlatList
-        data={recipes}
-        renderItem={renderGridItem}
-        keyExtractor={keyExtractor}
-        numColumns={2}
-        scrollEnabled={false}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={6}
-        windowSize={5}
-        style={{ marginHorizontal: -Spacing.sm }}
-      />
+      <View style={{ position: 'relative' }}>
+        <FlatList
+          data={recipes}
+          renderItem={renderGridItem}
+          keyExtractor={keyExtractor}
+          numColumns={2}
+          scrollEnabled={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          style={{ marginHorizontal: -Spacing.sm }}
+        />
+        {chefKissMascot}
+      </View>
     );
   }
 
   // List View - With animations
   return (
-    <FlatList
-      data={recipes}
-      renderItem={renderListItem}
-      keyExtractor={keyExtractor}
-      scrollEnabled={false}
-      removeClippedSubviews={true}
-      maxToRenderPerBatch={5}
-      windowSize={5}
-    />
+    <View style={{ position: 'relative' }}>
+      <FlatList
+        data={recipes}
+        renderItem={renderListItem}
+        keyExtractor={keyExtractor}
+        scrollEnabled={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+      />
+      {chefKissMascot}
+    </View>
   );
 }
 

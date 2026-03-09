@@ -1,5 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 
 interface AnimatedProgressBarProps {
   progress: number; // 0-100
@@ -20,44 +25,31 @@ export default function AnimatedProgressBar({
   duration = 800,
   style,
 }: AnimatedProgressBarProps) {
-  const animatedWidth = useRef(new Animated.Value(0)).current;
-  const previousProgress = useRef(progress);
+  const progressValue = useSharedValue(0);
 
   useEffect(() => {
-    // Animate from previous progress to new progress
-    Animated.timing(animatedWidth, {
-      toValue: Math.max(0, Math.min(100, progress)), // Clamp between 0-100
+    progressValue.value = withTiming(Math.max(0, Math.min(100, progress)), {
       duration,
-      useNativeDriver: false, // width animation requires layout
-    }).start();
+    });
+  }, [progress, duration]);
 
-    previousProgress.current = progress;
-  }, [progress, duration, animatedWidth]);
+  const progressStyle = useAnimatedStyle(() => ({
+    width: `${progressValue.value}%` as any,
+  }));
 
   return (
     <View
       style={[
         styles.container,
-        {
-          height,
-          backgroundColor,
-          borderRadius,
-        },
+        { height, backgroundColor, borderRadius },
         style,
       ]}
     >
       <Animated.View
         style={[
           styles.progress,
-          {
-            height,
-            backgroundColor: progressColor,
-            borderRadius,
-            width: animatedWidth.interpolate({
-              inputRange: [0, 100],
-              outputRange: ['0%', '100%'],
-            }),
-          },
+          { height, backgroundColor: progressColor, borderRadius },
+          progressStyle,
         ]}
       />
     </View>
@@ -75,4 +67,3 @@ const styles = StyleSheet.create({
     top: 0,
   },
 });
-

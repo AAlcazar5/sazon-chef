@@ -1,15 +1,25 @@
 // frontend/app/create-shopping-list.tsx
 // Screen for creating a new shopping list with items
 
-import { View, Text, TextInput, ScrollView, Alert, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Alert,
+  Platform,
+  Animated,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Dimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import Icon from '../components/ui/Icon';
 import { Icons, IconSizes } from '../constants/Icons';
 import { Colors, DarkColors } from '../constants/Colors';
@@ -57,9 +67,13 @@ const detectCategory = (itemName: string): string => {
   return 'Other';
 };
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const SHEET_HEIGHT = Math.round(SCREEN_HEIGHT * 0.92);
+
 export default function CreateShoppingListScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   const [listName, setListName] = useState('');
   const [items, setItems] = useState<ShoppingItem[]>([]);
@@ -71,7 +85,25 @@ export default function CreateShoppingListScreen() {
   const [editingQuantity, setEditingQuantity] = useState('');
 
   const itemInputRef = useRef<TextInput>(null);
-  const quantityInputRef = useRef<TextInput>(null);
+  const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      damping: 22,
+      stiffness: 220,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const handleClose = useCallback(() => {
+    Animated.spring(slideAnim, {
+      toValue: SHEET_HEIGHT,
+      damping: 22,
+      stiffness: 220,
+      useNativeDriver: true,
+    }).start(() => router.back());
+  }, [slideAnim]);
 
   // Generate unique ID for items
   const generateId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -93,14 +125,10 @@ export default function CreateShoppingListScreen() {
     setNewItemName('');
     setNewItemQuantity('1');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    // Focus back on item input for quick adding
     setTimeout(() => itemInputRef.current?.focus(), 100);
   }, [newItemName, newItemQuantity]);
 
-  // Add item from quick suggestions
   const handleQuickAdd = useCallback((itemName: string) => {
-    // Check if item already exists
     if (items.some(item => item.name.toLowerCase() === itemName.toLowerCase())) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
@@ -118,13 +146,11 @@ export default function CreateShoppingListScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, [items]);
 
-  // Remove an item
   const handleRemoveItem = useCallback((itemId: string) => {
     setItems(prev => prev.filter(item => item.id !== itemId));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
-  // Start editing an item
   const handleStartEdit = useCallback((item: ShoppingItem) => {
     setEditingItemId(item.id);
     setEditingName(item.name);
@@ -132,7 +158,6 @@ export default function CreateShoppingListScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
-  // Save edited item
   const handleSaveEdit = useCallback(() => {
     if (!editingItemId || !editingName.trim()) return;
 
@@ -154,14 +179,12 @@ export default function CreateShoppingListScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, [editingItemId, editingName, editingQuantity]);
 
-  // Cancel editing
   const handleCancelEdit = useCallback(() => {
     setEditingItemId(null);
     setEditingName('');
     setEditingQuantity('');
   }, []);
 
-  // Create the shopping list
   const handleCreateList = async () => {
     const name = listName.trim() || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -173,14 +196,8 @@ export default function CreateShoppingListScreen() {
 
     setSaving(true);
     try {
-      await shoppingListApi.createShoppingList({
-        name,
-        items: itemsToCreate,
-      });
-
+      await shoppingListApi.createShoppingList({ name, items: itemsToCreate });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      // Navigate to shopping list tab
       router.replace('/(tabs)/shopping-list');
     } catch (error: any) {
       console.error('Error creating shopping list:', error);
@@ -193,121 +210,139 @@ export default function CreateShoppingListScreen() {
 
   // Group items by category for display
   const groupedItems = items.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
+    if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
   }, {} as Record<string, ShoppingItem[]>);
 
-  // Filter quick suggestions to exclude already added items
   const availableSuggestions = QUICK_SUGGESTIONS.filter(
     suggestion => !items.some(item => item.name.toLowerCase() === suggestion.toLowerCase())
   );
 
-  return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-      <KeyboardAvoidingContainer>
-        {/* Header */}
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-          <View className="flex-row items-center justify-between mb-3">
-            <HapticTouchableOpacity
-              onPress={() => router.back()}
-              className="p-2 -ml-2"
-            >
-              <Icon name={Icons.CHEVRON_BACK} size={IconSizes.LG} color={isDark ? '#D1D5DB' : '#374151'} accessibilityLabel="Go back" />
-            </HapticTouchableOpacity>
-            <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">Create Shopping List</Text>
-            <View style={{ width: 40 }} />
-          </View>
+  const sheetBg = isDark ? '#111827' : '#F9FAFB';
+  const cardBg = isDark ? '#1F2937' : '#FFFFFF';
+  const borderColor = isDark ? '#374151' : '#E5E7EB';
+  const labelColor = isDark ? '#F9FAFB' : '#111827';
+  const subColor = isDark ? '#9CA3AF' : '#6B7280';
+  const inputBg = isDark ? '#374151' : '#F3F4F6';
+  const primaryColor = isDark ? DarkColors.primary : Colors.primary;
 
-          {/* List Name Input */}
-          <TextInput
-            placeholder="List name (optional)"
-            placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
-            value={listName}
-            onChangeText={setListName}
-            className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-lg text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-600"
-            style={{ fontSize: 16 }}
-          />
+  return (
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      {/* Backdrop — tap to dismiss */}
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <View style={{ flex: 1 }} />
+      </TouchableWithoutFeedback>
+
+      {/* Bottom sheet */}
+      <Animated.View
+        style={{
+          transform: [{ translateY: slideAnim }],
+          height: SHEET_HEIGHT,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Drag handle */}
+        <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: borderColor }} />
         </View>
 
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ paddingBottom: 120 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Add Item Section */}
-          <View className="bg-white dark:bg-gray-800 mx-4 mt-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Add Items</Text>
+        {/* Sheet header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: labelColor }}>Create Shopping List</Text>
+          <HapticTouchableOpacity onPress={handleClose} style={{ padding: 4 }}>
+            <Icon name={Icons.CLOSE} size={IconSizes.MD} color={subColor} accessibilityLabel="Close" />
+          </HapticTouchableOpacity>
+        </View>
 
-            <View className="flex-row items-center" style={{ gap: 8 }}>
-              <TextInput
-                ref={itemInputRef}
-                placeholder="Item name"
-                placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
-                value={newItemName}
-                onChangeText={setNewItemName}
-                onSubmitEditing={handleAddItem}
-                className="flex-1 bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-lg text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-600"
-                style={{ fontSize: 16 }}
-                returnKeyType="next"
-              />
-              <TextInput
-                ref={quantityInputRef}
-                placeholder="Qty"
-                placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
-                value={newItemQuantity}
-                onChangeText={setNewItemQuantity}
-                onSubmitEditing={handleAddItem}
-                className="w-20 bg-gray-100 dark:bg-gray-700 px-3 py-3 rounded-lg text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-600 text-center"
-                style={{ fontSize: 16 }}
-                keyboardType="default"
-                returnKeyType="done"
-              />
-              <HapticTouchableOpacity
-                onPress={handleAddItem}
-                disabled={!newItemName.trim()}
-                className={`p-3 rounded-lg ${!newItemName.trim() ? 'opacity-50' : ''}`}
-                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Add item" />
-              </HapticTouchableOpacity>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* List Name Input */}
+            <TextInput
+              placeholder="List name (optional)"
+              placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+              value={listName}
+              onChangeText={setListName}
+              style={{
+                backgroundColor: cardBg,
+                borderWidth: 1,
+                borderColor,
+                borderRadius: 10,
+                paddingHorizontal: 14,
+                paddingVertical: 13,
+                fontSize: 16,
+                color: labelColor,
+                marginBottom: 12,
+              }}
+            />
+
+            {/* Add Item Card */}
+            <View style={{ backgroundColor: cardBg, borderRadius: 12, borderWidth: 1, borderColor, padding: 14, marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: labelColor, marginBottom: 10 }}>Add Items</Text>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TextInput
+                  ref={itemInputRef}
+                  placeholder="Item name"
+                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+                  value={newItemName}
+                  onChangeText={setNewItemName}
+                  onSubmitEditing={handleAddItem}
+                  style={{ flex: 1, backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 11, fontSize: 16, color: labelColor }}
+                  returnKeyType="done"
+                />
+                <TextInput
+                  placeholder="Qty"
+                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+                  value={newItemQuantity}
+                  onChangeText={setNewItemQuantity}
+                  onSubmitEditing={handleAddItem}
+                  style={{ width: 60, backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 11, fontSize: 16, color: labelColor, textAlign: 'center' }}
+                  returnKeyType="done"
+                />
+                <HapticTouchableOpacity
+                  onPress={handleAddItem}
+                  disabled={!newItemName.trim()}
+                  style={{ padding: 11, borderRadius: 8, backgroundColor: primaryColor, opacity: newItemName.trim() ? 1 : 0.45 }}
+                >
+                  <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Add item" />
+                </HapticTouchableOpacity>
+              </View>
+
+              {/* Quick Suggestions */}
+              {availableSuggestions.length > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{ fontSize: 12, color: subColor, marginBottom: 8 }}>Quick add</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {availableSuggestions.slice(0, 12).map((suggestion) => (
+                        <HapticTouchableOpacity
+                          key={suggestion}
+                          onPress={() => handleQuickAdd(suggestion)}
+                          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100, borderWidth: 1, borderColor, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9FAFB' }}
+                        >
+                          <Text style={{ fontSize: 13, color: isDark ? '#D1D5DB' : '#374151' }}>{suggestion}</Text>
+                        </HapticTouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              )}
             </View>
 
-            {/* Quick Suggestions */}
-            {availableSuggestions.length > 0 && (
-              <View className="mt-4">
-                <Text className="text-sm text-gray-500 dark:text-gray-400 mb-2">Quick add</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View className="flex-row" style={{ gap: 8 }}>
-                    {availableSuggestions.slice(0, 12).map((suggestion) => (
-                      <HapticTouchableOpacity
-                        key={suggestion}
-                        onPress={() => handleQuickAdd(suggestion)}
-                        className="px-3 py-2 rounded-full border"
-                        style={{
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9FAFB',
-                          borderColor: isDark ? '#374151' : '#E5E7EB',
-                        }}
-                      >
-                        <Text className="text-sm text-gray-700 dark:text-gray-300">{suggestion}</Text>
-                      </HapticTouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          {/* Items List */}
-          {items.length > 0 && (
-            <View className="mx-4 mt-4">
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Items ({items.length})
-                </Text>
-                {items.length > 0 && (
+            {/* Items List */}
+            {items.length > 0 && (
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: labelColor }}>Items ({items.length})</Text>
                   <HapticTouchableOpacity
                     onPress={() => {
                       Alert.alert(
@@ -315,121 +350,99 @@ export default function CreateShoppingListScreen() {
                         'Are you sure you want to remove all items?',
                         [
                           { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Clear All',
-                            style: 'destructive',
-                            onPress: () => {
-                              setItems([]);
-                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            }
-                          },
+                          { text: 'Clear All', style: 'destructive', onPress: () => { setItems([]); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } },
                         ]
                       );
                     }}
-                    className="px-3 py-1.5 rounded-full"
-                    style={{ backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)' }}
+                    style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100, backgroundColor: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)' }}
                   >
-                    <Text className="text-xs font-semibold" style={{ color: isDark ? '#F87171' : '#DC2626' }}>Clear All</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? '#F87171' : '#DC2626' }}>Clear All</Text>
                   </HapticTouchableOpacity>
-                )}
-              </View>
-
-              {Object.entries(groupedItems).map(([category, categoryItems]) => (
-                <View key={category} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-3 overflow-hidden">
-                  <View className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                    <Text className="text-sm font-semibold text-gray-600 dark:text-gray-300">{category}</Text>
-                  </View>
-
-                  {categoryItems.map((item, index) => (
-                    <View
-                      key={item.id}
-                      className={`px-4 py-3 flex-row items-center ${index < categoryItems.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
-                    >
-                      {editingItemId === item.id ? (
-                        // Editing mode
-                        <View className="flex-1 flex-row items-center" style={{ gap: 8 }}>
-                          <TextInput
-                            value={editingName}
-                            onChangeText={setEditingName}
-                            className="flex-1 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg text-gray-900 dark:text-gray-100"
-                            autoFocus
-                          />
-                          <TextInput
-                            value={editingQuantity}
-                            onChangeText={setEditingQuantity}
-                            className="w-16 bg-gray-100 dark:bg-gray-700 px-2 py-2 rounded-lg text-gray-900 dark:text-gray-100 text-center"
-                          />
-                          <HapticTouchableOpacity onPress={handleSaveEdit} className="p-2">
-                            <Icon name={Icons.CHECKMARK} size={IconSizes.MD} color={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen} accessibilityLabel="Save" />
-                          </HapticTouchableOpacity>
-                          <HapticTouchableOpacity onPress={handleCancelEdit} className="p-2">
-                            <Icon name={Icons.CLOSE} size={IconSizes.MD} color="#9CA3AF" accessibilityLabel="Cancel" />
-                          </HapticTouchableOpacity>
-                        </View>
-                      ) : (
-                        // Display mode
-                        <>
-                          <View className="flex-1">
-                            <Text className="text-base text-gray-900 dark:text-gray-100">{item.name}</Text>
-                          </View>
-                          <Text className="text-sm text-gray-500 dark:text-gray-400 mr-3">{item.quantity}</Text>
-                          <HapticTouchableOpacity
-                            onPress={() => handleStartEdit(item)}
-                            className="p-2 mr-1"
-                          >
-                            <Icon name={Icons.EDIT} size={IconSizes.SM} color="#9CA3AF" accessibilityLabel="Edit item" />
-                          </HapticTouchableOpacity>
-                          <HapticTouchableOpacity
-                            onPress={() => handleRemoveItem(item.id)}
-                            className="p-2"
-                          >
-                            <Icon name={Icons.DELETE_OUTLINE} size={IconSizes.SM} color="#EF4444" accessibilityLabel="Remove item" />
-                          </HapticTouchableOpacity>
-                        </>
-                      )}
-                    </View>
-                  ))}
                 </View>
-              ))}
-            </View>
-          )}
 
-          {/* Empty State */}
-          {items.length === 0 && (
-            <View className="mx-4 mt-8 items-center">
-              <Icon name={Icons.CART_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="No items" />
-              <Text className="text-gray-500 dark:text-gray-400 mt-4 text-center">
-                Add items to your shopping list using the input above or tap the quick suggestions
-              </Text>
-            </View>
-          )}
-        </ScrollView>
+                {Object.entries(groupedItems).map(([category, categoryItems]) => (
+                  <View key={category} style={{ backgroundColor: cardBg, borderRadius: 12, borderWidth: 1, borderColor, marginBottom: 10, overflow: 'hidden' }}>
+                    <View style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB', borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: subColor }}>{category}</Text>
+                    </View>
 
-        {/* Create Button */}
-        <View
-          className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-4"
-          style={{ paddingBottom: Platform.OS === 'ios' ? 34 : 16 }}
-        >
-          <HapticTouchableOpacity
-            onPress={handleCreateList}
-            disabled={saving}
-            className={`py-4 rounded-xl flex-row items-center justify-center ${saving ? 'opacity-70' : ''}`}
-            style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-            hapticStyle="medium"
-          >
-            {saving ? (
-              <AnimatedActivityIndicator size="small" color="white" />
-            ) : (
-              <>
-                <Icon name={Icons.CHECKMARK} size={IconSizes.MD} color="white" accessibilityLabel="Create" style={{ marginRight: 8 }} />
-                <Text className="text-white font-semibold text-lg">
-                  {items.length > 0 ? `Create List (${items.length} items)` : 'Create Empty List'}
-                </Text>
-              </>
+                    {categoryItems.map((item, index) => (
+                      <View
+                        key={item.id}
+                        style={{ paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', borderTopWidth: index > 0 ? 1 : 0, borderTopColor: borderColor }}
+                      >
+                        {editingItemId === item.id ? (
+                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <TextInput
+                              value={editingName}
+                              onChangeText={setEditingName}
+                              style={{ flex: 1, backgroundColor: inputBg, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, color: labelColor, fontSize: 15 }}
+                              autoFocus
+                            />
+                            <TextInput
+                              value={editingQuantity}
+                              onChangeText={setEditingQuantity}
+                              style={{ width: 52, backgroundColor: inputBg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 8, color: labelColor, fontSize: 15, textAlign: 'center' }}
+                            />
+                            <HapticTouchableOpacity onPress={handleSaveEdit} style={{ padding: 6 }}>
+                              <Icon name={Icons.CHECKMARK} size={IconSizes.MD} color={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen} accessibilityLabel="Save" />
+                            </HapticTouchableOpacity>
+                            <HapticTouchableOpacity onPress={handleCancelEdit} style={{ padding: 6 }}>
+                              <Icon name={Icons.CLOSE} size={IconSizes.MD} color="#9CA3AF" accessibilityLabel="Cancel" />
+                            </HapticTouchableOpacity>
+                          </View>
+                        ) : (
+                          <>
+                            <Text style={{ flex: 1, fontSize: 15, color: labelColor }}>{item.name}</Text>
+                            <Text style={{ fontSize: 13, color: subColor, marginRight: 10 }}>{item.quantity}</Text>
+                            <HapticTouchableOpacity onPress={() => handleStartEdit(item)} style={{ padding: 6, marginRight: 2 }}>
+                              <Icon name={Icons.EDIT} size={IconSizes.SM} color="#9CA3AF" accessibilityLabel="Edit item" />
+                            </HapticTouchableOpacity>
+                            <HapticTouchableOpacity onPress={() => handleRemoveItem(item.id)} style={{ padding: 6 }}>
+                              <Icon name={Icons.DELETE_OUTLINE} size={IconSizes.SM} color="#EF4444" accessibilityLabel="Remove item" />
+                            </HapticTouchableOpacity>
+                          </>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
             )}
-          </HapticTouchableOpacity>
-        </View>
-      </KeyboardAvoidingContainer>
-    </SafeAreaView>
+
+            {/* Empty State */}
+            {items.length === 0 && (
+              <View style={{ alignItems: 'center', paddingTop: 24 }}>
+                <Icon name={Icons.CART_OUTLINE} size={52} color="#9CA3AF" accessibilityLabel="No items" />
+                <Text style={{ color: subColor, marginTop: 12, textAlign: 'center', fontSize: 14, lineHeight: 20 }}>
+                  Add items using the input above or tap a quick suggestion
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Create button — pinned above keyboard */}
+          <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 16), backgroundColor: sheetBg, borderTopWidth: 1, borderTopColor: borderColor }}>
+            <HapticTouchableOpacity
+              onPress={handleCreateList}
+              disabled={saving}
+              style={{ paddingVertical: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: primaryColor, opacity: saving ? 0.7 : 1 }}
+              hapticStyle="medium"
+            >
+              {saving ? (
+                <AnimatedActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <Icon name={Icons.CHECKMARK} size={IconSizes.MD} color="white" accessibilityLabel="Create" style={{ marginRight: 8 }} />
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 17 }}>
+                    {items.length > 0 ? `Create List (${items.length} items)` : 'Create Empty List'}
+                  </Text>
+                </>
+              )}
+            </HapticTouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Animated.View>
+    </View>
   );
 }
