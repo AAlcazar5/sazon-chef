@@ -1,14 +1,11 @@
 // frontend/components/ui/MoodSelector.tsx
 // Mood-based recipe recommendations selector (Home Page 2.0)
 
-import { View, Text, Modal, ScrollView, Animated } from 'react-native';
-import { useState, useRef, useEffect } from 'react';
+import { View, Text } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
-import { Colors, DarkColors } from '../../constants/Colors';
+import BottomSheet from './BottomSheet';
 import { HapticPatterns } from '../../constants/Haptics';
-import { Duration, Spring } from '../../constants/Animations';
 
 export interface Mood {
   id: string;
@@ -116,43 +113,6 @@ export default function MoodSelector({
 }: MoodSelectorProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const insets = useSafeAreaInsets();
-
-  const translateY = useRef(new Animated.Value(400)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      translateY.setValue(400);
-      opacity.setValue(0);
-      Animated.parallel([
-        Animated.spring(translateY, {
-          toValue: 0,
-          friction: Spring.default.friction,
-          tension: Spring.default.tension,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: Duration.medium,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: 400,
-          duration: Duration.normal,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: Duration.normal,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
 
   const handleMoodSelect = (mood: Mood) => {
     HapticPatterns.buttonPressPrimary();
@@ -167,95 +127,64 @@ export default function MoodSelector({
   };
 
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
+      onClose={onClose}
+      title="I'm feeling..."
+      snapPoints={['60%']}
+      scrollable
     >
-      <Animated.View
-        className="flex-1 justify-end"
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)', opacity }}
-      >
-        <HapticTouchableOpacity
-          className="flex-1"
-          onPress={onClose}
-          activeOpacity={1}
-        />
-        <Animated.View
-          className="bg-white dark:bg-gray-800 rounded-t-3xl"
-          style={{
-            transform: [{ translateY }],
-            paddingBottom: insets.bottom + 16,
-          }}
-        >
-          {/* Header */}
-          <View className="px-6 pt-6 pb-4">
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                I'm feeling...
-              </Text>
-              <HapticTouchableOpacity onPress={onClose}>
-                <Text className="text-gray-500 dark:text-gray-400 text-base">Cancel</Text>
-              </HapticTouchableOpacity>
-            </View>
-            <Text className="text-sm text-gray-500 dark:text-gray-400">
-              Select your mood to get personalized recipe suggestions
-            </Text>
-          </View>
+      {/* Subtitle */}
+      <Text className="text-sm text-gray-500 dark:text-gray-400 px-6 pb-4">
+        Select your mood to get personalized recipe suggestions
+      </Text>
 
-          {/* Mood Grid */}
-          <ScrollView
-            className="px-4"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 16 }}
-          >
-            <View className="flex-row flex-wrap justify-between">
-              {MOODS.map((mood) => {
-                const isSelected = selectedMood?.id === mood.id;
-                return (
-                  <HapticTouchableOpacity
-                    key={mood.id}
-                    onPress={() => handleMoodSelect(mood)}
-                    className="mb-3 rounded-2xl p-4 border-2"
-                    style={{
-                      width: '48%',
-                      backgroundColor: isSelected
-                        ? `${mood.color}22`
-                        : isDark ? '#1F2937' : '#F9FAFB',
-                      borderColor: isSelected ? mood.color : 'transparent',
-                    }}
-                  >
-                    <Text className="text-3xl mb-2">{mood.emoji}</Text>
-                    <Text
-                      className="text-base font-semibold mb-1"
-                      style={{ color: isSelected ? mood.color : (isDark ? '#F3F4F6' : '#1F2937') }}
-                    >
-                      {mood.label}
-                    </Text>
-                    <Text className="text-xs text-gray-500 dark:text-gray-400">
-                      {mood.description}
-                    </Text>
-                  </HapticTouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Clear Selection */}
-            {selectedMood && (
+      {/* Mood Grid */}
+      <View className="px-4 pb-6">
+        <View className="flex-row flex-wrap justify-between">
+          {MOODS.map((mood) => {
+            const isSelected = selectedMood?.id === mood.id;
+            return (
               <HapticTouchableOpacity
-                onPress={handleClearMood}
-                className="mt-2 py-3 rounded-xl border border-gray-300 dark:border-gray-600"
+                key={mood.id}
+                onPress={() => handleMoodSelect(mood)}
+                className="mb-3 rounded-2xl p-4 border-2"
+                style={{
+                  width: '48%',
+                  backgroundColor: isSelected
+                    ? `${mood.color}22`
+                    : isDark ? '#1F2937' : '#F9FAFB',
+                  borderColor: isSelected ? mood.color : 'transparent',
+                }}
               >
-                <Text className="text-center text-gray-600 dark:text-gray-300 font-medium">
-                  Clear Mood Filter
+                <Text className="text-3xl mb-2">{mood.emoji}</Text>
+                <Text
+                  className="text-base font-semibold mb-1"
+                  style={{ color: isSelected ? mood.color : (isDark ? '#F3F4F6' : '#1F2937') }}
+                >
+                  {mood.label}
+                </Text>
+                <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  {mood.description}
                 </Text>
               </HapticTouchableOpacity>
-            )}
-          </ScrollView>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+            );
+          })}
+        </View>
+
+        {/* Clear Selection */}
+        {selectedMood && (
+          <HapticTouchableOpacity
+            onPress={handleClearMood}
+            className="mt-2 py-3 rounded-xl border border-gray-300 dark:border-gray-600"
+          >
+            <Text className="text-center text-gray-600 dark:text-gray-300 font-medium">
+              Clear Mood Filter
+            </Text>
+          </HapticTouchableOpacity>
+        )}
+      </View>
+    </BottomSheet>
   );
 }
 
@@ -269,9 +198,6 @@ export function MoodChip({
   onPress: () => void;
   onClear?: () => void;
 }) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-
   if (!mood) {
     return (
       <HapticTouchableOpacity
