@@ -1,12 +1,14 @@
 // frontend/components/ui/HapticTouchableOpacity.tsx
-// TouchableOpacity component with automatic haptic feedback and scale animation
+// TouchableOpacity with haptic feedback and Reanimated spring press scale
 
-import { useRef } from 'react';
-import { TouchableOpacity, TouchableOpacityProps, Animated } from 'react-native';
+import { TouchableOpacity, TouchableOpacityProps } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { ImpactStyle, HapticPatterns } from '../../constants/Haptics';
-import { Duration, Spring } from '../../constants/Animations';
 
-// Create AnimatedTouchable once outside component to avoid re-creation on each render
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 type HapticStyle = 'light' | 'medium' | 'heavy';
@@ -22,35 +24,6 @@ interface HapticTouchableOpacityProps extends TouchableOpacityProps {
   pressedScale?: number;
 }
 
-/**
- * TouchableOpacity component that automatically provides haptic feedback on press.
- * Uses standardized haptic patterns from the design system.
- * Includes subtle scale animation on press for visual feedback.
- *
- * @example
- * // Default light haptic with scale animation
- * <HapticTouchableOpacity onPress={handlePress}>
- *   <Text>Press Me</Text>
- * </HapticTouchableOpacity>
- *
- * @example
- * // Medium haptic for primary actions
- * <HapticTouchableOpacity onPress={handlePress} hapticStyle="medium">
- *   <Text>Important Action</Text>
- * </HapticTouchableOpacity>
- *
- * @example
- * // Heavy haptic for destructive actions
- * <HapticTouchableOpacity onPress={handleDelete} hapticStyle="heavy">
- *   <Text>Delete</Text>
- * </HapticTouchableOpacity>
- *
- * @example
- * // Disable scale animation
- * <HapticTouchableOpacity onPress={handlePress} scaleOnPress={false}>
- *   <Text>No Scale</Text>
- * </HapticTouchableOpacity>
- */
 export default function HapticTouchableOpacity({
   onPress,
   hapticStyle = 'light',
@@ -62,30 +35,26 @@ export default function HapticTouchableOpacity({
   style,
   ...props
 }: HapticTouchableOpacityProps) {
-  const scaleValue = useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const handlePressIn = () => {
     if (scaleOnPress && !disabled) {
-      Animated.spring(scaleValue, {
-        toValue: pressedScale,
-        ...Spring.stiff,
-      }).start();
+      scale.value = withSpring(pressedScale, { damping: 20, stiffness: 400 });
     }
   };
 
   const handlePressOut = () => {
     if (scaleOnPress && !disabled) {
-      Animated.spring(scaleValue, {
-        toValue: 1,
-        ...Spring.gentle,
-      }).start();
+      scale.value = withSpring(1, { damping: 14, stiffness: 300 });
     }
   };
 
   const handlePress = (event: any) => {
-    // Provide haptic feedback if not disabled
     if (!disabled && !hapticDisabled && onPress) {
-      // Use standardized haptic patterns based on style
       switch (hapticStyle) {
         case 'heavy':
           HapticPatterns.buttonPressDestructive();
@@ -99,8 +68,6 @@ export default function HapticTouchableOpacity({
           break;
       }
     }
-
-    // Call original onPress handler
     if (onPress) {
       onPress(event);
     }
@@ -109,15 +76,14 @@ export default function HapticTouchableOpacity({
   return (
     <AnimatedTouchable
       {...props}
-      style={[style, scaleOnPress ? { transform: [{ scale: scaleValue }] } : undefined]}
+      style={[style, scaleOnPress ? animatedStyle : undefined]}
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
       accessibilityRole={accessibilityRole}
-      accessibilityState={{ disabled: disabled }}
-      activeOpacity={0.7}
+      accessibilityState={{ disabled }}
+      activeOpacity={1}
     />
   );
 }
-

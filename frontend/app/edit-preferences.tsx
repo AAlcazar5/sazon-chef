@@ -1,38 +1,104 @@
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, Alert, ScrollView, Animated } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useColorScheme } from 'nativewind';
 import { userApi } from '../lib/api';
 import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
 import { Colors, DarkColors } from '../constants/Colors';
-import { Spacing, BorderRadius } from '../constants/Spacing';
 import { HapticPatterns } from '../constants/Haptics';
+import * as Haptics from 'expo-haptics';
 
-// Predefined options
-const CUISINE_OPTIONS = ['Italian', 'Mexican', 'Asian', 'Mediterranean', 'American', 'Indian', 'Middle Eastern', 'Latin American'];
-const DIETARY_OPTIONS = ['Vegetarian', 'Vegan', 'Gluten-free', 'Dairy-free', 'Nut-free', 'Kosher', 'Halal'];
+const CUISINE_OPTIONS = [
+  { id: 'Italian', label: 'Italian', emoji: '🍝' },
+  { id: 'Mexican', label: 'Mexican', emoji: '🌮' },
+  { id: 'Asian', label: 'Asian', emoji: '🍜' },
+  { id: 'Mediterranean', label: 'Mediterranean', emoji: '🫒' },
+  { id: 'American', label: 'American', emoji: '🍔' },
+  { id: 'Indian', label: 'Indian', emoji: '🍛' },
+  { id: 'Middle Eastern', label: 'Middle Eastern', emoji: '🧆' },
+  { id: 'Latin American', label: 'Latin American', emoji: '🥘' },
+];
+
+const DIETARY_OPTIONS = [
+  { id: 'Vegetarian', label: 'Vegetarian', emoji: '🥗' },
+  { id: 'Vegan', label: 'Vegan', emoji: '🌱' },
+  { id: 'Gluten-free', label: 'Gluten-free', emoji: '🌾' },
+  { id: 'Dairy-free', label: 'Dairy-free', emoji: '🥛' },
+  { id: 'Nut-free', label: 'Nut-free', emoji: '🥜' },
+  { id: 'Kosher', label: 'Kosher', emoji: '✡️' },
+  { id: 'Halal', label: 'Halal', emoji: '☪️' },
+];
+
 const SPICE_LEVELS = ['mild', 'medium', 'spicy'];
+
+// ── Cuisine chip with spring-scale animation ───────────────────────────────
+function CuisineChip({
+  item,
+  isSelected,
+  onToggle,
+  isDark,
+}: {
+  item: (typeof CUISINE_OPTIONS)[number];
+  isSelected: boolean;
+  onToggle: () => void;
+  isDark: boolean;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () =>
+    Animated.spring(scale, { toValue: 0.87, friction: 5, tension: 300, useNativeDriver: true }).start();
+
+  const onPressOut = () =>
+    Animated.spring(scale, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }).start();
+
+  return (
+    <Animated.View style={{ transform: [{ scale }], marginRight: 8, marginBottom: 8 }}>
+      <HapticTouchableOpacity
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        onPress={onToggle}
+        style={{
+          paddingHorizontal: 13,
+          paddingVertical: 9,
+          borderRadius: 100,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 5,
+          backgroundColor: isSelected
+            ? (isDark ? '#166534' : '#16A34A')
+            : (isDark ? '#374151' : '#E5E7EB'),
+        }}
+      >
+        <Text style={{ fontSize: 15 }}>{item.emoji}</Text>
+        <Text style={{ fontSize: 13, fontWeight: '500', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>
+          {item.label}
+        </Text>
+        {isSelected && <Ionicons name="checkmark" size={13} color="white" />}
+      </HapticTouchableOpacity>
+    </Animated.View>
+  );
+}
 
 export default function EditPreferencesScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  
-  // State for all preference fields
+
   const [bannedIngredients, setBannedIngredients] = useState<string[]>([]);
   const [newIngredient, setNewIngredient] = useState('');
   const [likedCuisines, setLikedCuisines] = useState<string[]>([]);
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
+  // severity per restriction id: 'strict' = "I'm allergic", 'prefer_avoid' = "I try to avoid"
+  const [dietarySeverities, setDietarySeverities] = useState<Record<string, 'strict' | 'prefer_avoid'>>({});
   const [preferredSuperfoods, setPreferredSuperfoods] = useState<string[]>([]);
   const [cookTimePreference, setCookTimePreference] = useState('30');
   const [spiceLevel, setSpiceLevel] = useState('medium');
 
-  // Load current preferences
   useEffect(() => {
     loadPreferences();
   }, []);
@@ -42,26 +108,32 @@ export default function EditPreferencesScreen() {
       setLoadingData(true);
       const response = await userApi.getPreferences();
       const prefs = response.data;
-      
-      console.log('📱 Edit Preferences: Loaded preferences', prefs);
-      
-      // Handle both array of strings and array of objects with name property
+
       setBannedIngredients(
-        prefs.bannedIngredients?.map((i: any) => typeof i === 'string' ? i : i.name) || []
+        prefs.bannedIngredients?.map((i: any) => (typeof i === 'string' ? i : i.name)) || []
       );
       setLikedCuisines(
-        prefs.likedCuisines?.map((c: any) => typeof c === 'string' ? c : c.name) || []
+        prefs.likedCuisines?.map((c: any) => (typeof c === 'string' ? c : c.name)) || []
       );
-      setDietaryRestrictions(
-        prefs.dietaryRestrictions?.map((d: any) => typeof d === 'string' ? d : d.name) || []
-      );
+
+      const names: string[] = [];
+      const severities: Record<string, 'strict' | 'prefer_avoid'> = {};
+      (prefs.dietaryRestrictions || []).forEach((d: any) => {
+        const name = typeof d === 'string' ? d : d.name;
+        const sev: 'strict' | 'prefer_avoid' =
+          typeof d === 'string' ? 'strict' : (d.severity || 'strict');
+        names.push(name);
+        severities[name] = sev;
+      });
+      setDietaryRestrictions(names);
+      setDietarySeverities(severities);
+
       setPreferredSuperfoods(
-        prefs.preferredSuperfoods?.map((sf: any) => typeof sf === 'string' ? sf : sf.category) || []
+        prefs.preferredSuperfoods?.map((sf: any) => (typeof sf === 'string' ? sf : sf.category)) || []
       );
       setCookTimePreference(prefs.cookTimePreference?.toString() || '30');
       setSpiceLevel(prefs.spiceLevel || 'medium');
     } catch (error: any) {
-      console.error('📱 Edit Preferences: Load error', error);
       HapticPatterns.error();
       Alert.alert('Error', error.message || 'Failed to load preferences');
     } finally {
@@ -77,42 +149,45 @@ export default function EditPreferencesScreen() {
     }
   };
 
-  const removeBannedIngredient = (ingredient: string) => {
-    setBannedIngredients(bannedIngredients.filter(i => i !== ingredient));
-  };
+  const removeBannedIngredient = useCallback((ingredient: string) => {
+    setBannedIngredients(prev => prev.filter(i => i !== ingredient));
+  }, []);
 
-  const toggleCuisine = (cuisine: string) => {
-    setLikedCuisines(prev => 
-      prev.includes(cuisine) 
-        ? prev.filter(c => c !== cuisine)
-        : [...prev, cuisine]
+  const toggleCuisine = useCallback((id: string) => {
+    setLikedCuisines(prev =>
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
     );
-  };
+  }, []);
 
-  const toggleDietary = (dietary: string) => {
-    setDietaryRestrictions(prev => 
-      prev.includes(dietary) 
-        ? prev.filter(d => d !== dietary)
-        : [...prev, dietary]
-    );
-  };
+  const toggleDietary = useCallback((id: string) => {
+    setDietaryRestrictions(prev => {
+      if (prev.includes(id)) return prev.filter(d => d !== id);
+      // Default to 'strict' when first selected
+      setDietarySeverities(s => ({ ...s, [id]: s[id] || 'strict' }));
+      return [...prev, id];
+    });
+  }, []);
 
-  const toggleSuperfood = (category: string) => {
-    setPreferredSuperfoods(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
+  const toggleSeverity = useCallback((id: string) => {
+    setDietarySeverities(prev => ({
+      ...prev,
+      [id]: prev[id] === 'prefer_avoid' ? 'strict' : 'prefer_avoid',
+    }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const toggleSuperfood = useCallback((category: string) => {
+    setPreferredSuperfoods(prev =>
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
     );
-  };
+  }, []);
 
   const handleSave = async () => {
-    // Validation
     if (!cookTimePreference || isNaN(Number(cookTimePreference))) {
       HapticPatterns.error();
       Alert.alert('Validation Error', 'Please enter a valid cook time');
       return;
     }
-
     const cookTime = parseInt(cookTimePreference);
     if (cookTime < 5 || cookTime > 300) {
       HapticPatterns.error();
@@ -125,18 +200,18 @@ export default function EditPreferencesScreen() {
       await userApi.updatePreferences({
         bannedIngredients,
         likedCuisines,
-        dietaryRestrictions,
+        dietaryRestrictions: dietaryRestrictions.map(name => ({
+          name,
+          severity: dietarySeverities[name] || 'strict',
+        })),
         preferredSuperfoods,
         cookTimePreference: cookTime,
-        spiceLevel
+        spiceLevel,
       });
-      
-      console.log('📱 Edit Preferences: Preferences updated');
       HapticPatterns.success();
       Alert.alert('Success', 'Preferences updated successfully!');
       router.back();
     } catch (error: any) {
-      console.error('📱 Edit Preferences: Update error', error);
       HapticPatterns.error();
       Alert.alert('Error', error.message || 'Failed to update preferences');
     } finally {
@@ -144,258 +219,231 @@ export default function EditPreferencesScreen() {
     }
   };
 
+  const bg = isDark ? '#111827' : '#F9FAFB';
+  const cardBg = isDark ? '#1F2937' : '#FFFFFF';
+  const border = isDark ? '#374151' : '#E5E7EB';
+  const label = isDark ? '#F9FAFB' : '#111827';
+  const sub = isDark ? '#9CA3AF' : '#6B7280';
+  const inputBg = isDark ? '#374151' : '#F3F4F6';
+  const primaryColor = isDark ? DarkColors.primary : Colors.primary;
+
   if (loadingData) {
     return (
-      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top']}>
-        <View className="flex-1 items-center justify-center">
-          <Ionicons name="settings-outline" size={64} color={isDark ? "#6B7280" : "#9CA3AF"} />
-          <Text className={isDark ? 'text-gray-400 mt-4' : 'text-gray-500 mt-4'}>Loading preferences...</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="settings-outline" size={56} color={sub} />
+          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading preferences…</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
       <KeyboardAvoidingContainer>
-      {/* Header */}
-      <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} px-4 py-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center justify-between`}>
-        <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
-          <Ionicons name="arrow-back" size={24} color={isDark ? "#E5E7EB" : "#111827"} />
-        </HapticTouchableOpacity>
-        <Text className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Culinary Preferences</Text>
-        <HapticTouchableOpacity 
-          onPress={handleSave}
-          disabled={loading}
-          className="p-2"
-        >
-          <Text className={`text-lg font-semibold ${loading ? (isDark ? 'text-gray-400' : 'text-gray-500') : ''}`} style={{ color: loading ? undefined : (isDark ? DarkColors.primary : Colors.primary) }}>
-            {loading ? 'Saving...' : 'Save'}
-          </Text>
-        </HapticTouchableOpacity>
-      </View>
+        {/* Header */}
+        <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+            <Ionicons name="arrow-back" size={24} color={label} />
+          </HapticTouchableOpacity>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: label }}>Culinary Preferences</Text>
+          <HapticTouchableOpacity onPress={handleSave} disabled={loading} style={{ padding: 4 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: loading ? sub : primaryColor }}>
+              {loading ? 'Saving…' : 'Save'}
+            </Text>
+          </HapticTouchableOpacity>
+        </View>
 
-      <ScrollView className="flex-1 p-4">
-        {/* Banned Ingredients */}
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-          <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-2`}>Banned Ingredients</Text>
-          <Text className={`${isDark ? 'text-gray-300' : 'text-gray-600'} text-sm mb-3`}>
-            Add ingredients you want to avoid in recipes
-          </Text>
-          
-          <View className="flex-row mb-2">
-            <TextInput
-              value={newIngredient}
-              onChangeText={setNewIngredient}
-              placeholder="e.g., mushrooms"
-              className="flex-1 border rounded-lg px-4 py-2 mr-2"
-              style={{
-                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                borderWidth: 1,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-              }}
-              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-              onSubmitEditing={addBannedIngredient}
-            />
-            <HapticTouchableOpacity 
-              onPress={addBannedIngredient}
-              className="px-4 py-2 rounded-lg justify-center"
-              style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-            >
-              <Ionicons name="add" size={20} color="white" />
-            </HapticTouchableOpacity>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Cuisine Preferences ─────────────────────────────────────────── */}
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Favorite Cuisines</Text>
+            <Text style={{ fontSize: 13, color: sub, marginBottom: 14 }}>Recipes from these cuisines will be ranked higher for you</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {CUISINE_OPTIONS.map(cuisine => (
+                <CuisineChip
+                  key={cuisine.id}
+                  item={cuisine}
+                  isSelected={likedCuisines.includes(cuisine.id)}
+                  onToggle={() => toggleCuisine(cuisine.id)}
+                  isDark={isDark}
+                />
+              ))}
+            </View>
           </View>
 
-          <View className="flex-row flex-wrap">
-            {bannedIngredients.length > 0 ? (
-              bannedIngredients.map((ingredient, index) => (
-                <HapticTouchableOpacity 
-                  key={index}
-                  onPress={() => removeBannedIngredient(ingredient)}
-                  className="px-3 py-1 rounded-full mr-2 mb-2 flex-row items-center border"
-                  style={{
-                    backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight,
-                    borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
-                  }}
-                >
-                  <Text className="text-xs mr-1" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>{ingredient}</Text>
-                  <Ionicons name="close-circle" size={14} color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} />
-                </HapticTouchableOpacity>
-              ))
-            ) : (
-              <Text className="text-xs" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>No banned ingredients</Text>
+          {/* ── Dietary Restrictions ────────────────────────────────────────── */}
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Dietary Restrictions</Text>
+            <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Select any that apply, then tap the badge to set how strict it is</Text>
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {DIETARY_OPTIONS.map(({ id, label: optLabel, emoji }) => {
+                const isSelected = dietaryRestrictions.includes(id);
+                const sev = dietarySeverities[id] || 'strict';
+                const isAllergic = sev === 'strict';
+
+                const chipBg = isSelected
+                  ? (isAllergic
+                      ? (isDark ? 'rgba(220,38,38,0.2)' : '#FEE2E2')
+                      : (isDark ? 'rgba(217,119,6,0.2)' : '#FEF3C7'))
+                  : (isDark ? '#374151' : '#E5E7EB');
+                const chipBorderColor = isSelected
+                  ? (isAllergic
+                      ? (isDark ? '#F87171' : '#DC2626')
+                      : (isDark ? '#FCD34D' : '#D97706'))
+                  : border;
+                const chipTextColor = isSelected
+                  ? (isAllergic
+                      ? (isDark ? '#FCA5A5' : '#B91C1C')
+                      : (isDark ? '#FCD34D' : '#92400E'))
+                  : (isDark ? '#D1D5DB' : '#374151');
+
+                return (
+                  <View key={id} style={{ flexDirection: 'row', marginRight: 8, marginBottom: 8, borderRadius: 100, borderWidth: 1, borderColor: chipBorderColor, backgroundColor: chipBg, overflow: 'hidden' }}>
+                    {/* Main chip area — tap to toggle selection */}
+                    <HapticTouchableOpacity
+                      onPress={() => toggleDietary(id)}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingVertical: 8, paddingRight: isSelected ? 6 : 10, gap: 5 }}
+                    >
+                      <Text style={{ fontSize: 14 }}>{emoji}</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '500', color: chipTextColor }}>{optLabel}</Text>
+                    </HapticTouchableOpacity>
+
+                    {/* Severity badge — tap to toggle allergic vs avoid */}
+                    {isSelected && (
+                      <HapticTouchableOpacity
+                        onPress={() => toggleSeverity(id)}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 8, borderLeftWidth: 1, borderLeftColor: chipBorderColor, gap: 3 }}
+                      >
+                        <Text style={{ fontSize: 11 }}>{isAllergic ? '🚫' : '⚠️'}</Text>
+                        <Text style={{ fontSize: 10, fontWeight: '600', color: chipTextColor }}>
+                          {isAllergic ? "Allergic" : "Avoid"}
+                        </Text>
+                      </HapticTouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+
+            {dietaryRestrictions.length > 0 && (
+              <Text style={{ fontSize: 11, color: sub, marginTop: 8 }}>
+                🚫 I'm allergic — strictly excluded from all recipes{"   "}⚠️ I try to avoid — will be minimized
+              </Text>
             )}
           </View>
-        </View>
 
-        {/* Liked Cuisines */}
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-          <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-2`}>Liked Cuisines</Text>
-          <Text className={`${isDark ? 'text-gray-300' : 'text-gray-600'} text-sm mb-3`}>
-            Select cuisines you enjoy
-          </Text>
-          
-          <View className="flex-row flex-wrap">
-            {CUISINE_OPTIONS.map((cuisine) => {
-              const isSelected = likedCuisines.includes(cuisine);
-              return (
-                <HapticTouchableOpacity 
-                  key={cuisine}
-                  onPress={() => toggleCuisine(cuisine)}
-                  className="px-3 py-2 rounded-full mr-2 mb-2"
-                  style={{
-                    backgroundColor: isSelected 
-                      ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
-                      : (isDark ? '#374151' : '#E5E7EB'),
-                  }}
-                >
-                  <Text className="text-xs font-medium" style={{ 
-                    color: isSelected 
-                      ? 'white' 
-                      : (isDark ? DarkColors.text.primary : Colors.text.primary)
-                  }}>
-                    {cuisine}
-                  </Text>
-                </HapticTouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+          {/* ── Banned Ingredients ──────────────────────────────────────────── */}
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Banned Ingredients</Text>
+            <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Recipes containing these will never be recommended</Text>
 
-        {/* Dietary Restrictions */}
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-          <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-2`}>Dietary Restrictions</Text>
-          <Text className={`${isDark ? 'text-gray-300' : 'text-gray-600'} text-sm mb-3`}>
-            Select any dietary restrictions you have
-          </Text>
-          
-          <View className="flex-row flex-wrap">
-            {DIETARY_OPTIONS.map((dietary) => {
-              const isSelected = dietaryRestrictions.includes(dietary);
-              return (
-                <HapticTouchableOpacity 
-                  key={dietary}
-                  onPress={() => toggleDietary(dietary)}
-                  className="px-3 py-2 rounded-full mr-2 mb-2"
-                  style={{
-                    backgroundColor: isSelected 
-                      ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
-                      : (isDark ? '#374151' : '#E5E7EB'),
-                  }}
-                >
-                  <Text className="text-xs font-medium" style={{ 
-                    color: isSelected 
-                      ? 'white' 
-                      : (isDark ? DarkColors.text.primary : Colors.text.primary)
-                  }}>
-                    {dietary}
-                  </Text>
-                </HapticTouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+            <View style={{ flexDirection: 'row', marginBottom: 12, gap: 8 }}>
+              <TextInput
+                value={newIngredient}
+                onChangeText={setNewIngredient}
+                placeholder="e.g., mushrooms"
+                style={{ flex: 1, backgroundColor: inputBg, borderWidth: 1, borderColor: border, borderRadius: 9, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: label }}
+                placeholderTextColor={sub}
+                onSubmitEditing={addBannedIngredient}
+              />
+              <HapticTouchableOpacity
+                onPress={addBannedIngredient}
+                style={{ paddingHorizontal: 14, paddingVertical: 11, borderRadius: 9, backgroundColor: primaryColor, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Ionicons name="add" size={20} color="white" />
+              </HapticTouchableOpacity>
+            </View>
 
-        {/* Preferred Superfoods */}
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-          <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-2`}>Preferred Superfoods</Text>
-          <Text className={`${isDark ? 'text-gray-300' : 'text-gray-600'} text-sm mb-3`}>
-            Select superfoods you'd like to see more of in your recipes. Recipes containing these will be boosted in recommendations.
-          </Text>
-          
-          <View className="flex-row flex-wrap">
-            {SUPERFOOD_CATEGORIES.map((superfood) => {
-              const isSelected = preferredSuperfoods.includes(superfood.id);
-              return (
-                <HapticTouchableOpacity 
-                  key={superfood.id}
-                  onPress={() => toggleSuperfood(superfood.id)}
-                  className="px-3 py-2 rounded-full mr-2 mb-2 flex-row items-center"
-                  style={{
-                    backgroundColor: isSelected 
-                      ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
-                      : (isDark ? '#374151' : '#E5E7EB'),
-                  }}
-                >
-                  {superfood.emoji && (
-                    <Text className="mr-1">{superfood.emoji}</Text>
-                  )}
-                  <Text className="text-xs font-medium" style={{ 
-                    color: isSelected 
-                      ? 'white' 
-                      : (isDark ? DarkColors.text.primary : Colors.text.primary)
-                  }}>
-                    {superfood.name}
-                  </Text>
-                </HapticTouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Cook Time & Spice Level */}
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-          <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Other Preferences</Text>
-          
-          {/* Cook Time */}
-          <View className="mb-4">
-            <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Max Cook Time (minutes) *</Text>
-            <TextInput
-              value={cookTimePreference}
-              onChangeText={setCookTimePreference}
-              placeholder="30"
-              keyboardType="numeric"
-              className="border rounded-lg px-4 py-3"
-              style={{
-                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                borderWidth: 1,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-              }}
-              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-            />
-            <Text className={isDark ? 'text-gray-400 text-xs mt-1' : 'text-gray-500 text-xs mt-1'}>
-              Recipes longer than this won't be recommended
-            </Text>
-          </View>
-
-          {/* Spice Level */}
-          <View>
-            <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Spice Level Preference</Text>
-            <View className="flex-row gap-2">
-              {SPICE_LEVELS.map((level) => {
-                const isSelected = spiceLevel === level;
-                return (
-                  <HapticTouchableOpacity 
-                    key={level}
-                    onPress={() => setSpiceLevel(level)}
-                    className="flex-1 py-3 rounded-lg"
-                    style={{
-                      backgroundColor: isSelected 
-                        ? (isDark ? DarkColors.primary : Colors.primary)
-                        : (isDark ? '#374151' : '#E5E7EB'),
-                    }}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {bannedIngredients.length > 0 ? (
+                bannedIngredients.map((ingredient, index) => (
+                  <HapticTouchableOpacity
+                    key={index}
+                    onPress={() => removeBannedIngredient(ingredient)}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingRight: 8, paddingVertical: 7, borderRadius: 100, marginRight: 8, marginBottom: 8, borderWidth: 1, backgroundColor: isDark ? 'rgba(220,38,38,0.15)' : '#FEE2E2', borderColor: isDark ? '#F87171' : '#DC2626', gap: 4 }}
                   >
-                    <Text className="text-center text-sm font-medium" style={{ 
-                      color: isSelected 
-                        ? 'white' 
-                        : (isDark ? DarkColors.text.primary : Colors.text.primary)
-                    }}>
-                      {level === 'mild' ? '🌶️ Mild' : level === 'medium' ? '🌶️🌶️ Medium' : '🌶️🌶️🌶️ Spicy'}
+                    <Text style={{ fontSize: 12, color: isDark ? '#FCA5A5' : '#B91C1C' }}>{ingredient}</Text>
+                    <Ionicons name="close-circle" size={14} color={isDark ? '#F87171' : '#DC2626'} />
+                  </HapticTouchableOpacity>
+                ))
+              ) : (
+                <Text style={{ fontSize: 12, color: sub }}>No banned ingredients added</Text>
+              )}
+            </View>
+          </View>
+
+          {/* ── Preferred Superfoods ─────────────────────────────────────────── */}
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Preferred Superfoods</Text>
+            <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Recipes with these get a boost in your recommendations</Text>
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {SUPERFOOD_CATEGORIES.map((superfood) => {
+                const isSelected = preferredSuperfoods.includes(superfood.id);
+                return (
+                  <HapticTouchableOpacity
+                    key={superfood.id}
+                    onPress={() => toggleSuperfood(superfood.id)}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 100, marginRight: 8, marginBottom: 8, gap: 4, backgroundColor: isSelected ? (isDark ? '#166534' : '#16A34A') : (isDark ? '#374151' : '#E5E7EB') }}
+                  >
+                    {superfood.emoji && <Text style={{ fontSize: 14 }}>{superfood.emoji}</Text>}
+                    <Text style={{ fontSize: 12, fontWeight: '500', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>
+                      {superfood.name}
                     </Text>
                   </HapticTouchableOpacity>
                 );
               })}
             </View>
           </View>
-        </View>
 
-        {/* Bottom padding for safe scrolling */}
-        <View className="h-8" />
-      </ScrollView>
+          {/* ── Other Preferences ───────────────────────────────────────────── */}
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 14 }}>Other Preferences</Text>
+
+            {/* Cook Time */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: label, marginBottom: 6 }}>Max Cook Time (minutes)</Text>
+              <TextInput
+                value={cookTimePreference}
+                onChangeText={setCookTimePreference}
+                placeholder="30"
+                keyboardType="numeric"
+                style={{ backgroundColor: inputBg, borderWidth: 1, borderColor: border, borderRadius: 9, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: label }}
+                placeholderTextColor={sub}
+              />
+              <Text style={{ fontSize: 11, color: sub, marginTop: 4 }}>Recipes longer than this won't be recommended</Text>
+            </View>
+
+            {/* Spice Level */}
+            <View>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: label, marginBottom: 8 }}>Spice Preference</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {SPICE_LEVELS.map((level) => {
+                  const isSelected = spiceLevel === level;
+                  return (
+                    <HapticTouchableOpacity
+                      key={level}
+                      onPress={() => setSpiceLevel(level)}
+                      style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: isSelected ? primaryColor : (isDark ? '#374151' : '#E5E7EB') }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>
+                        {level === 'mild' ? '🌶 Mild' : level === 'medium' ? '🌶🌶 Medium' : '🌶🌶🌶 Spicy'}
+                      </Text>
+                    </HapticTouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingContainer>
     </SafeAreaView>
   );
 }
-

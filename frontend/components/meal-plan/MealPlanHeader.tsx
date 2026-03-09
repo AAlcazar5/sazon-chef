@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import FrostedHeader from '../ui/FrostedHeader';
 import { Colors, DarkColors } from '../../constants/Colors';
 
 interface MealPlanHeaderProps {
@@ -24,11 +25,11 @@ export default function MealPlanHeader({
   onJumpToToday,
 }: MealPlanHeaderProps) {
   return (
-    <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700" style={{ minHeight: 56 }}>
+    <FrostedHeader paddingBottom={12} withTopInset={false}>
       <View className="flex-row items-center justify-between" style={{ height: 28 }}>
         <View className="flex-row items-center flex-1">
           <Text className="text-2xl mr-2" style={{ lineHeight: 28 }}>🍽️</Text>
-          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" accessibilityRole="header" style={{ lineHeight: 28 }}>Meal Plan</Text>
+          <Text className="text-2xl font-black text-gray-900 dark:text-gray-100" accessibilityRole="header" style={{ lineHeight: 28 }}>Meal Plan</Text>
         </View>
         <View className="flex-row items-center" style={{ height: 28 }}>
           <Text className="text-base font-semibold text-gray-700 dark:text-gray-200 mr-2" numberOfLines={1} style={{ lineHeight: 20 }}>
@@ -47,6 +48,6 @@ export default function MealPlanHeader({
           )}
         </View>
       </View>
-    </View>
+    </FrostedHeader>
   );
 }

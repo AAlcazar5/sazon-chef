@@ -3,11 +3,13 @@
 
 import { View, Text, Modal, TextInput, ActivityIndicator } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import SettingsRow from '../ui/SettingsRow';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { HapticPatterns } from '../../constants/Haptics';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -73,7 +75,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
 
   return (
     <>
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
         <View className="flex-row items-center mb-3">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedDark }}>
             <Icon name={Icons.ACCOUNT_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} accessibilityLabel="Account" />
@@ -82,55 +84,39 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
         </View>
 
         {!user?.provider && (
-          <HapticTouchableOpacity
-            className="flex-row items-center justify-between py-3 border-b border-gray-100"
+          <SettingsRow
+            label="Change Password"
+            icon={<Icon name={Icons.LOCK_OUTLINE} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Change password" />}
             onPress={() => {
               setCurrentPassword('');
               setNewPassword('');
               setConfirmPassword('');
               setShowPasswordModal(true);
             }}
-          >
-            <View className="flex-row items-center">
-              <Icon name={Icons.LOCK_OUTLINE} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Change password" />
-              <Text className="text-gray-900 dark:text-gray-100 ml-3">Change Password</Text>
-            </View>
-            <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Navigate" />
-          </HapticTouchableOpacity>
+          />
         )}
 
-        <HapticTouchableOpacity
-          className="flex-row items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700"
+        <SettingsRow
+          label="Redo Setup"
+          icon={<Icon name={Icons.REFRESH} size={IconSizes.MD} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Redo setup" />}
+          labelStyle={{ color: isDark ? DarkColors.primary : Colors.primary }}
           onPress={() => router.push('/onboarding?edit=true' as any)}
-        >
-          <View className="flex-row items-center">
-            <Icon name={Icons.REFRESH} size={IconSizes.MD} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Redo setup" />
-            <Text className="ml-3 font-medium" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>Redo Setup</Text>
-          </View>
-          <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Navigate" />
-        </HapticTouchableOpacity>
+        />
 
-        <HapticTouchableOpacity
-          className="flex-row items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700"
+        <SettingsRow
+          label="Sign Out"
+          icon={<Icon name={Icons.LOG_OUT_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} accessibilityLabel="Sign out" />}
+          labelStyle={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
           onPress={onLogout}
-        >
-          <View className="flex-row items-center">
-            <Icon name={Icons.LOG_OUT_OUTLINE} size={IconSizes.MD} color={Colors.secondaryRed} accessibilityLabel="Sign out" />
-            <Text className="ml-3 font-medium" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>Sign Out</Text>
-          </View>
-          <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Navigate" />
-        </HapticTouchableOpacity>
+        />
 
-        <HapticTouchableOpacity
-          className="flex-row items-center justify-between py-3"
+        <SettingsRow
+          label="Delete Account"
+          icon={<Icon name={Icons.DELETE_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} accessibilityLabel="Delete account" />}
+          labelStyle={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
           onPress={() => setShowDeleteAccountModal(true)}
-        >
-          <View className="flex-row items-center">
-            <Icon name={Icons.DELETE_OUTLINE} size={IconSizes.MD} color={Colors.secondaryRed} accessibilityLabel="Delete account" />
-            <Text className="ml-3 font-medium" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>Delete Account</Text>
-          </View>
-          <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Navigate" />
-        </HapticTouchableOpacity>
+          showBorder={false}
+        />
       </View>
 
       {/* Password Change Modal */}

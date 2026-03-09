@@ -3,6 +3,7 @@ import React from 'react';
 // Header component with title, display mode toggle, quick filters, and search
 
 import { View, Text, ScrollView, TextInput } from 'react-native';
+import FrostedHeader from '../ui/FrostedHeader';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -74,15 +75,12 @@ function CookbookHeader({
   return (
     <>
       {/* Title and Display Toggle */}
-      <View
-        className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700"
-        style={{ minHeight: 56 }}
-      >
+      <FrostedHeader paddingBottom={12} withTopInset={false}>
         <View className="flex-row items-center justify-between" style={{ height: 28 }}>
           <View className="flex-row items-center flex-1">
             <Text className="text-2xl mr-2" style={{ lineHeight: 28 }}>📚</Text>
             <Text
-              className="text-2xl font-bold text-gray-900 dark:text-gray-100"
+              className="text-2xl font-black text-gray-900 dark:text-gray-100"
               accessibilityRole="header"
               style={{ lineHeight: 28 }}
             >
@@ -130,7 +128,7 @@ function CookbookHeader({
             </HapticTouchableOpacity>
           </View>
         </View>
-      </View>
+      </FrostedHeader>
 
       {/* Filters & Preferences */}
       <View className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

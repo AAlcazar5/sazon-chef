@@ -1,5 +1,5 @@
 // frontend/app/create-collection.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,13 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Animated,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,9 +22,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { collectionsApi } from '../lib/api';
 import { useColorScheme } from 'nativewind';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const SHEET_HEIGHT = Math.round(SCREEN_HEIGHT * 0.82);
 
 export default function CreateCollectionScreen() {
   const [name, setName] = useState('');
@@ -30,6 +37,27 @@ export default function CreateCollectionScreen() {
   const { theme } = useTheme();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
+
+  const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      damping: 22,
+      stiffness: 220,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const handleClose = () => {
+    Animated.spring(slideAnim, {
+      toValue: SHEET_HEIGHT,
+      damping: 22,
+      stiffness: 220,
+      useNativeDriver: true,
+    }).start(() => router.back());
+  };
 
   const handlePickImage = async () => {
     try {
@@ -60,36 +88,20 @@ export default function CreateCollectionScreen() {
     if (!name.trim()) {
       setShakeName(true);
       setTimeout(() => setShakeName(false), 500);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert('Error', 'Please enter a collection name');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await collectionsApi.create({
+      await collectionsApi.create({
         name: name.trim(),
         coverImageUrl: coverImageUrl || undefined,
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      Alert.alert(
-        'Success',
-        `Collection "${name.trim()}" created successfully!`,
-        [
-          {
-            text: 'View in Cookbook',
-            onPress: () => {
-              router.back();
-              router.push('/(tabs)/cookbook');
-            }
-          },
-          {
-            text: 'OK',
-            onPress: () => router.back()
-          }
-        ]
-      );
+      handleClose();
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error.message || 'Failed to create collection. Please try again.');
@@ -98,149 +110,144 @@ export default function CreateCollectionScreen() {
     }
   };
 
+  const sheetBg = isDark ? '#111827' : '#FFFFFF';
+  const labelColor = isDark ? '#F9FAFB' : '#111827';
+  const subColor = isDark ? '#9CA3AF' : '#6B7280';
+  const inputBg = isDark ? '#1F2937' : '#F9FAFB';
+  const borderColor = isDark ? '#374151' : '#D1D5DB';
+
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
-      <KeyboardAvoidingContainer>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
-          keyboardShouldPersistTaps="handled"
-        >
-        <View className="w-full max-w-md self-center">
-          {/* Back button */}
-          <HapticTouchableOpacity
-            onPress={() => router.back()}
-            className="mb-4"
-            disabled={loading}
-          >
-            <View className="flex-row items-center">
-              <Ionicons name="arrow-back" size={24} color={theme === 'dark' ? '#fff' : '#000'} />
-              <Text className="ml-2 text-base text-gray-900 dark:text-gray-100">Back</Text>
-            </View>
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      {/* Backdrop — tap to dismiss */}
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <View style={{ flex: 1 }} />
+      </TouchableWithoutFeedback>
+
+      {/* Bottom sheet */}
+      <Animated.View
+        style={{
+          transform: [{ translateY: slideAnim }],
+          height: SHEET_HEIGHT,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Drag handle */}
+        <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: borderColor }} />
+        </View>
+
+        {/* Sheet header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: labelColor }}>Create Collection</Text>
+          <HapticTouchableOpacity onPress={handleClose} disabled={loading} style={{ padding: 4 }}>
+            <Ionicons name="close" size={22} color={subColor} />
           </HapticTouchableOpacity>
+        </View>
 
-          <View className="items-center mb-6">
-            <Ionicons name="folder-outline" size={64} color="#F97316" />
-          </View>
-
-          <Text className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2 text-center">
-            Create Collection
-          </Text>
-          <Text className="text-base text-gray-600 dark:text-gray-200 mb-8 text-center">
-            Organize your favorite recipes
-          </Text>
-
-          <View className="w-full">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 20, paddingBottom: Math.max(insets.bottom, 20) + 16 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             {/* Collection Name */}
-            <View className="mb-5">
-              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Collection Name <Text className="text-red-600">*</Text>
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: labelColor, marginBottom: 8 }}>
+                Collection Name <Text style={{ color: '#DC2626' }}>*</Text>
               </Text>
               <ShakeAnimation shake={shakeName}>
                 <TextInput
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  placeholder="e.g., Quick Weeknight Dinners, Healthy Breakfast"
+                  style={{
+                    borderWidth: 1,
+                    borderColor,
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 13,
+                    fontSize: 16,
+                    backgroundColor: inputBg,
+                    color: labelColor,
+                  }}
+                  placeholder="e.g., Quick Weeknight Dinners"
                   placeholderTextColor="#9CA3AF"
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
                   editable={!loading}
                   maxLength={50}
+                  autoFocus
                 />
               </ShakeAnimation>
-              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {name.length}/50 characters
-              </Text>
+              <Text style={{ fontSize: 12, color: subColor, marginTop: 4 }}>{name.length}/50 characters</Text>
             </View>
 
-            {/* Cover Image (Optional) */}
-            <View className="mb-5">
-              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Cover Image (Optional)
+            {/* Cover Image */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: labelColor, marginBottom: 8 }}>
+                Cover Image <Text style={{ color: subColor, fontWeight: '400' }}>(Optional)</Text>
               </Text>
 
               {coverImageUrl ? (
-                <View className="relative">
+                <View style={{ position: 'relative' }}>
                   <Image
                     source={{ uri: coverImageUrl }}
-                    style={{
-                      width: '100%',
-                      height: 160,
-                      borderRadius: 8,
-                      backgroundColor: '#E5E7EB',
-                    }}
+                    style={{ width: '100%', height: 160, borderRadius: 10, backgroundColor: borderColor }}
                     resizeMode="cover"
                   />
                   <HapticTouchableOpacity
                     onPress={() => setCoverImageUrl(null)}
                     disabled={loading}
-                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-600 dark:bg-red-400 items-center justify-center"
+                    style={{ position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Ionicons name="close" size={20} color="white" />
+                    <Ionicons name="close" size={18} color="white" />
                   </HapticTouchableOpacity>
                 </View>
               ) : (
                 <HapticTouchableOpacity
                   onPress={handlePickImage}
                   disabled={loading}
-                  className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 items-center justify-center bg-gray-50 dark:bg-gray-800"
-                  style={{ height: 160 }}
+                  style={{ borderWidth: 2, borderStyle: 'dashed', borderColor, borderRadius: 10, height: 140, alignItems: 'center', justifyContent: 'center', backgroundColor: inputBg }}
                 >
-                  <Ionicons name="image-outline" size={40} color={isDark ? '#9CA3AF' : '#6B7280'} />
-                  <Text className="text-gray-600 dark:text-gray-200 text-sm mt-2">
-                    Tap to select image
-                  </Text>
-                  <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">
-                    Recommended: 16:9 aspect ratio
-                  </Text>
+                  <Ionicons name="image-outline" size={36} color={subColor} />
+                  <Text style={{ color: subColor, fontSize: 14, marginTop: 8 }}>Tap to select image</Text>
+                  <Text style={{ color: isDark ? '#6B7280' : '#9CA3AF', fontSize: 12, marginTop: 3 }}>Recommended: 16:9 ratio</Text>
                 </HapticTouchableOpacity>
               )}
             </View>
 
-            {/* Create Button */}
+            {/* Create button */}
             <HapticTouchableOpacity
-              className={`bg-red-600 dark:bg-red-400 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
               onPress={handleCreate}
               disabled={loading}
+              style={{ backgroundColor: '#DC2626', borderRadius: 12, paddingVertical: 16, alignItems: 'center', opacity: loading ? 0.65 : 1 }}
+              hapticStyle="medium"
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <View className="flex-row items-center">
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="add-circle-outline" size={20} color="white" style={{ marginRight: 8 }} />
-                  <Text className="text-white text-base font-semibold">Create Collection</Text>
+                  <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>Create Collection</Text>
                 </View>
               )}
             </HapticTouchableOpacity>
 
-            {/* Cancel Button */}
-            <HapticTouchableOpacity
-              className="mt-4"
-              onPress={() => router.back()}
-              disabled={loading}
-            >
-              <Text className="text-center text-gray-600 dark:text-gray-200 text-sm">
-                Cancel
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Info Box */}
-            <View className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <View className="flex-row items-start">
-                <Ionicons name="information-circle-outline" size={20} color="#3B82F6" style={{ marginRight: 8, marginTop: 2 }} />
-                <View className="flex-1">
-                  <Text className="text-sm text-blue-800 dark:text-blue-200 font-semibold mb-1">
-                    What are collections?
-                  </Text>
-                  <Text className="text-xs text-blue-700 dark:text-blue-300">
-                    Collections help you organize your saved recipes into custom groups like "Family Favorites", "Meal Prep Ideas", or "Holiday Recipes".
-                  </Text>
-                </View>
+            {/* What are collections info */}
+            <View style={{ marginTop: 20, padding: 16, backgroundColor: isDark ? 'rgba(59,130,246,0.12)' : '#EFF6FF', borderRadius: 10, borderWidth: 1, borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#BFDBFE', flexDirection: 'row' }}>
+              <Ionicons name="information-circle-outline" size={18} color="#3B82F6" style={{ marginRight: 8, marginTop: 1 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, color: isDark ? '#93C5FD' : '#1D4ED8', fontWeight: '600', marginBottom: 3 }}>What are collections?</Text>
+                <Text style={{ fontSize: 12, color: isDark ? '#93C5FD' : '#3B82F6', lineHeight: 18 }}>
+                  Collections help you organize saved recipes into custom groups like "Family Favorites" or "Meal Prep Ideas".
+                </Text>
               </View>
             </View>
-          </View>
-        </View>
-      </ScrollView>
-      </KeyboardAvoidingContainer>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Animated.View>
+    </View>
   );
 }

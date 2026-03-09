@@ -1,13 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { MotiView } from 'moti';
 import { useColorScheme } from 'nativewind';
 import Icon from './Icon';
 import { Icons } from '../../constants/Icons';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
 import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
-import { Typography, FontSize } from '../../constants/Typography';
-import { Duration } from '../../constants/Animations';
+import { FontSize } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { EmptyStateConfig } from '../../constants/EmptyStates';
@@ -64,51 +64,6 @@ export default function AnimatedEmptyState({
 
   const defaultIconColor = isDark ? DarkColors.text.tertiary : Colors.text.tertiary;
 
-  const bounceScale = useRef(new Animated.Value(1)).current;
-  const pulseOpacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    // Gentle bounce animation
-    const bounceAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(bounceScale, {
-          toValue: 1.1,
-          duration: Duration.extended * 1.5,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bounceScale, {
-          toValue: 1,
-          duration: Duration.extended * 1.5,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    // Pulse opacity animation
-    const pulseAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseOpacity, {
-          toValue: 0.6,
-          duration: Duration.extended * 2,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseOpacity, {
-          toValue: 1,
-          duration: Duration.extended * 2,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    bounceAnimation.start();
-    pulseAnimation.start();
-
-    return () => {
-      bounceAnimation.stop();
-      pulseAnimation.stop();
-    };
-  }, [bounceScale, pulseOpacity]);
-
   const handleAction = () => {
     HapticPatterns.buttonPressPrimary();
     onAction?.();
@@ -116,57 +71,93 @@ export default function AnimatedEmptyState({
 
   return (
     <View style={styles.container}>
-      <Animated.View
-        style={{
-          transform: [{ scale: bounceScale }],
-          opacity: pulseOpacity,
-        }}
+      {/* Icon/mascot — entrance fade+scale, then gentle float loop */}
+      <MotiView
+        from={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'spring', damping: 18, stiffness: 200 }}
       >
-        {displayUseMascot ? (
-          <LogoMascot
-            expression={displayMascotExpression}
-            size={displayMascotSize}
-          />
-        ) : (
-          icon && (
-            <Icon
-              name={icon as any}
-              size={iconSize}
-              color={iconColor ?? defaultIconColor}
-              accessibilityLabel={displayTitle}
+        <MotiView
+          from={{ translateY: 0 }}
+          animate={{ translateY: -8 }}
+          transition={{ type: 'timing', duration: 1800, loop: true, repeatReverse: true }}
+        >
+          {displayUseMascot ? (
+            <LogoMascot
+              expression={displayMascotExpression}
+              size={displayMascotSize}
             />
-          )
-        )}
-      </Animated.View>
-      <Text
-        style={[
-          styles.title,
-          { color: isDark ? DarkColors.text.secondary : Colors.text.secondary },
-        ]}
+          ) : (
+            icon && (
+              <Icon
+                name={icon as any}
+                size={iconSize}
+                color={iconColor ?? defaultIconColor}
+                accessibilityLabel={displayTitle}
+              />
+            )
+          )}
+        </MotiView>
+      </MotiView>
+
+      {/* Title — staggered entrance */}
+      <MotiView
+        from={{ opacity: 0, translateY: 12 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'spring', delay: 100, damping: 20, stiffness: 180 }}
       >
-        {displayTitle}
-      </Text>
-      {displayDescription && (
         <Text
           style={[
-            styles.description,
-            { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary },
+            styles.title,
+            { color: isDark ? DarkColors.text.secondary : Colors.text.secondary },
           ]}
         >
-          {displayDescription}
+          {displayTitle}
         </Text>
-      )}
-      {displayActionLabel && onAction && (
-        <HapticTouchableOpacity
-          onPress={handleAction}
-          style={[
-            styles.actionButton,
-            { backgroundColor: isDark ? DarkColors.primary : Colors.primary },
-          ]}
-          {...buttonAccessibility(displayActionLabel)}
+      </MotiView>
+
+      {/* Description */}
+      {displayDescription && (
+        <MotiView
+          from={{ opacity: 0, translateY: 10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'spring', delay: 180, damping: 20, stiffness: 180 }}
         >
-          <Text style={styles.actionButtonText}>{displayActionLabel}</Text>
-        </HapticTouchableOpacity>
+          <Text
+            style={[
+              styles.description,
+              { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary },
+            ]}
+          >
+            {displayDescription}
+          </Text>
+        </MotiView>
+      )}
+
+      {/* CTA button — entrance + pulsing scale */}
+      {displayActionLabel && onAction && (
+        <MotiView
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'spring', delay: 260, damping: 20, stiffness: 180 }}
+        >
+          <MotiView
+            from={{ scale: 1 }}
+            animate={{ scale: 1.05 }}
+            transition={{ type: 'timing', duration: 900, loop: true, repeatReverse: true, delay: 1000 }}
+          >
+            <HapticTouchableOpacity
+              onPress={handleAction}
+              style={[
+                styles.actionButton,
+                { backgroundColor: isDark ? DarkColors.primary : Colors.primary },
+              ]}
+              {...buttonAccessibility(displayActionLabel)}
+            >
+              <Text style={styles.actionButtonText}>{displayActionLabel}</Text>
+            </HapticTouchableOpacity>
+          </MotiView>
+        </MotiView>
       )}
     </View>
   );

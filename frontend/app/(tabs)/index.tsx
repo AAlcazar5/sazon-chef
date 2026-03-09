@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Alert, Animated, Modal } from 'react-native';
+import { View, Text, ScrollView, Alert, Animated, Modal, Pressable } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -18,7 +19,7 @@ import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, RecipeOfTheDayCard, MealPrepModeHeader, RecipeSectionsGrid } from '../../components/home';
+import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid } from '../../components/home';
 import SearchScopeSelector, { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
@@ -27,6 +28,7 @@ import QuickFiltersBar from '../../components/home/QuickFiltersBar';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
+import SurpriseMeFAB from '../../components/home/SurpriseMeFAB';
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
 import { SurpriseMeModal, type SurpriseFilters } from '../../components/home';
 import { Accelerometer } from 'expo-sensors';
@@ -322,6 +324,7 @@ export default function HomeScreen() {
   const recipesData = homeFeed.suggestedRecipes.length > 0 ? homeFeed.suggestedRecipes : null;
   const loading = homeFeed.loading;
   const error = homeFeed.error;
+  const errorCode = homeFeed.errorCode;
   const refetch = homeFeed.refetch;
 
   // Quick macro filters (highProtein, lowCarb, lowCalorie) - using extracted hook
@@ -739,7 +742,7 @@ export default function HomeScreen() {
 
   // Error state
   if (error && suggestedRecipes.length === 0) {
-    return <HomeErrorState error={error as string} onRetry={refetch} />;
+    return <HomeErrorState error={error as string} errorCode={errorCode} onRetry={refetch} />;
   }
 
   // Empty state
@@ -770,10 +773,10 @@ export default function HomeScreen() {
       <HomeHeader
         viewMode={viewMode}
         onToggleViewMode={handleToggleViewMode}
-        currentMealPeriod={currentMealPeriod}
-        timeAwareMode={timeAwareMode}
-        onToggleTimeAwareMode={handleToggleTimeAwareMode}
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
+        scrollY={scrollY}
+        searchValue={searchQuery}
+        onSearchChange={handleSearchChange}
       />
 
       {/* Unified Filters & Meal Prep Section */}
@@ -808,71 +811,38 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* Recipe Roulette Button */}
-      {!searchQuery && (
-        <View className="px-4 pt-3 pb-2">
-          <HapticTouchableOpacity
-            onPress={() => setShowSurpriseModal(true)}
-            className="flex-row items-center justify-between p-4 rounded-xl shadow-sm border"
-            style={{
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? '#374151' : '#E5E7EB',
-            }}
-          >
-            <View className="flex-row items-center flex-1">
-              <View
-                className="rounded-full p-3 mr-3"
-                style={{
-                  backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight,
-                }}
-              >
-                <Text className="text-2xl">🎰</Text>
-              </View>
-              <View className="flex-1">
-                <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  Recipe Roulette
-                </Text>
-                <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  Swipe through recipes Tinder-style
-                </Text>
-              </View>
-            </View>
-            <View className="ml-2">
-              <Ionicons
-                name="chevron-forward"
-                size={24}
-                color={isDark ? '#9CA3AF' : '#6B7280'}
-              />
-            </View>
-          </HapticTouchableOpacity>
-        </View>
-      )}
 
-      {/* Main content area - FIXED: Removed AnimatedRefreshControl */}
+      {/* Main content area */}
       <ScrollView
         ref={mainScrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 200 }}
         showsVerticalScrollIndicator={true}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
       >
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
 
-        {/* Spacer to replace pt-6 */}
-        <View style={{ height: Spacing.xl }} />
-
-        {/* Recipe of the Day (Home Page 2.0) */}
-        {recipeOfTheDay && !searchQuery && !mealPrepMode && (
-          <RecipeOfTheDayCard
+        {/* Parallax Hero — Recipe of the Day (full-bleed, image scrolls slower than content) */}
+        {recipeOfTheDay && !searchQuery && !mealPrepMode ? (
+          <ParallaxHeroSection
             recipe={recipeOfTheDay}
+            scrollY={scrollY}
             feedback={userFeedback[recipeOfTheDay.id] || { liked: false, disliked: false }}
             isFeedbackLoading={feedbackLoading === recipeOfTheDay.id}
+            isDark={isDark}
             onPress={handleRecipePress}
             onLongPress={handleLongPress}
             onLike={handleLike}
-            onDislike={handleDislike}
             onSave={openSavePicker}
           />
+        ) : (
+          /* Spacer when hero is not shown */
+          <View style={{ height: Spacing.xl }} />
         )}
 
         {/* Today's Recommendation / Featured Recipe - First section after filters */}
@@ -911,7 +881,6 @@ export default function HomeScreen() {
           onSave={openSavePicker}
           animatedRecipeIds={animatedRecipeIds}
           onAnimatedRecipeId={(id) => setAnimatedRecipeIds(prev => new Set(prev).add(id))}
-          scrollY={scrollY}
           quickMealsScrollViewRef={quickMealsScrollViewRef}
           quickMealsCurrentIndex={quickMealsCurrentIndex}
           onQuickMealsIndexChange={setQuickMealsCurrentIndex}
@@ -1167,6 +1136,11 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
         onClose={() => setShowSurpriseModal(false)}
         onSurprise={handleSurprise}
       />
+
+      {/* "Surprise Me" FAB — gradient pill, spring bounce on press */}
+      {!searchQuery && (
+        <SurpriseMeFAB onPress={() => setShowSurpriseModal(true)} />
+      )}
     </SafeAreaView>
   );
 }

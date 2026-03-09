@@ -1,11 +1,12 @@
 import React from 'react';
-import { Linking, View, Text } from 'react-native';
+import { Linking, View, Text, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { SuggestedRecipe } from '../../types';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Duration } from '../../constants/Animations';
+import { Shadows } from '../../constants/Shadows';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -74,6 +75,8 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
 }) => {
   const [imageError, setImageError] = React.useState(false);
   const [imageLoading, setImageLoading] = React.useState(true);
+  const [saveHighlighted, setSaveHighlighted] = React.useState(false);
+  const saveScale = React.useRef(new Animated.Value(1)).current;
 
   // Reset image error when recipe changes
   React.useEffect(() => {
@@ -81,9 +84,34 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
     setImageLoading(true);
   }, [recipe.id, recipe.imageUrl]);
 
+  // Heart-burst animation on save press (Airbnb-style)
+  const handleSavePress = React.useCallback(() => {
+    if (onDelete) {
+      onDelete(recipe.id);
+      return;
+    }
+    onSave?.(recipe.id);
+    setSaveHighlighted(true);
+    Animated.sequence([
+      Animated.spring(saveScale, {
+        toValue: 1.55,
+        useNativeDriver: false,
+        speed: 40,
+        bounciness: 14,
+      }),
+      Animated.spring(saveScale, {
+        toValue: 1,
+        useNativeDriver: false,
+        speed: 24,
+        bounciness: 6,
+      }),
+    ]).start();
+    setTimeout(() => setSaveHighlighted(false), 700);
+  }, [onDelete, onSave, recipe.id, saveScale]);
+
   // Default dimensions based on variant
   const defaultImageHeight = variant === 'featured' ? 240 : (variant === 'carousel' ? 140 : variant === 'grid' ? 150 : 170);
-  const defaultCardHeight = variant === 'featured' ? undefined : variant === 'carousel' ? 360 : variant === 'grid' ? 340 : 390;
+  const defaultCardHeight = variant === 'featured' ? undefined : variant === 'carousel' ? 280 : variant === 'grid' ? 260 : 310;
   const finalImageHeight = imageHeight || defaultImageHeight;
   const finalCardHeight = cardHeight || defaultCardHeight;
 
@@ -98,14 +126,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
     return isDark ? DarkColors.primary : Colors.primary;
   };
 
-  // Shadow style
-  const getShadowStyle = () => ({
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: isDark ? 0.3 : 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  });
+  const getShadowStyle = () => Shadows.MD;
 
   const handlePress = () => {
     if (onPress) {
@@ -343,12 +364,14 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
           {/* Action Buttons */}
           <View className="flex-row items-center justify-between">
             <HapticTouchableOpacity
-              onPress={() => onDelete ? onDelete(recipe.id) : onSave?.(recipe.id)}
+              onPress={handleSavePress}
               className="p-2 rounded-full border"
               style={{
                 backgroundColor: onDelete
                   ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2')
-                  : (isDark ? `${Colors.primaryLight}33` : Colors.primaryDark),
+                  : saveHighlighted
+                    ? (isDark ? DarkColors.primary : Colors.primary)
+                    : (isDark ? `${Colors.primaryLight}33` : Colors.primaryDark),
                 borderColor: onDelete
                   ? (isDark ? '#EF4444' : '#DC2626')
                   : (isDark ? DarkColors.primary : Colors.primaryDark),
@@ -357,11 +380,13 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                 hint: onDelete ? 'Remove this recipe from your cookbook' : 'Save this recipe to your cookbook'
               })}
             >
-              <Icon
-                name={onDelete ? Icons.CLOSE : Icons.SAVE_RECIPE}
-                size={18}
-                color={onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF')}
-              />
+              <Animated.View style={{ transform: [{ scale: saveScale }] }}>
+                <Icon
+                  name={onDelete ? Icons.CLOSE : Icons.SAVE_RECIPE}
+                  size={18}
+                  color={onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF')}
+                />
+              </Animated.View>
             </HapticTouchableOpacity>
 
             <View className="flex-row items-center">
@@ -390,27 +415,15 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
     );
   }
 
-  // Grid and List variants
+  // Grid, List, and Carousel variants — image-first design
   const isGrid = variant === 'grid';
-  const isCarousel = variant === 'carousel';
-  const isList = variant === 'list';
-  const useCompactStyle = isGrid; // Only grid uses compact styling now
-  // Ensure list and carousel use the same styling (unified template)
-  const useListStyle = isList || isCarousel;
-  const badgeMaxVisible = useCompactStyle ? 2 : 3;
-  const useScaledBadges = true;
-  const [badgeRowWidth, setBadgeRowWidth] = React.useState(0);
-  const [badgeContentWidth, setBadgeContentWidth] = React.useState(0);
-  const badgeRowScale = useScaledBadges && badgeRowWidth > 0 && badgeContentWidth > 0
-    ? Math.min(1, badgeRowWidth / badgeContentWidth)
-    : 1;
-  const badgeRowTranslateX = useScaledBadges && badgeRowWidth > 0 && badgeContentWidth > 0
-    ? -((badgeContentWidth * (1 - badgeRowScale)) / 2)
-    : 0;
+  const gradientHeight = isGrid ? 130 : 150;
+  const titleLines = isGrid ? 1 : 2;
+  const matchPct = recipe.score?.matchPercentage;
 
   return (
     <View
-      className={`bg-white dark:bg-gray-800 rounded-xl overflow-hidden ${className}`}
+      className={`rounded-xl overflow-hidden ${className}`}
       style={{
         borderWidth: 2,
         borderColor: getBorderColor(),
@@ -423,322 +436,234 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
         onPress={handlePress}
         onLongPress={() => onLongPress?.(recipe)}
         delayLongPress={500}
-        activeOpacity={0.7}
+        activeOpacity={0.9}
         style={{ flex: 1 }}
         {...recipeCardAccessibility(recipe.title, {
           cuisine: recipe.cuisine,
           calories: recipe.calories,
         })}
       >
-        {/* Recipe Image */}
+        {/* Full-bleed image */}
         {recipe.imageUrl && recipe.imageUrl.trim() !== '' && !imageError ? (
-          <View style={{ position: 'relative' }}>
-            <Image
-              source={{ uri: optimizedImageUrl(recipe.imageUrl.trim()) }}
-              style={{ width: '100%', height: finalImageHeight }}
-              contentFit="cover"
-              transition={Duration.normal}
-              cachePolicy="memory-disk"
-              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-              onLoad={() => {
-                setImageLoading(false);
-                setImageError(false);
-              }}
-              onError={(error: any) => {
-                // Extract error message from nested structure
-                let errorMessage = '';
-                if (typeof error === 'string') {
-                  errorMessage = error;
-                } else if (error?.error?.error) {
-                  errorMessage = error.error.error;
-                } else if (error?.error) {
-                  errorMessage = typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
-                } else if (error?.message) {
-                  errorMessage = error.message;
-                } else {
-                  errorMessage = JSON.stringify(error);
-                }
-                
-                // Silently handle image loading errors - these are expected for unreliable image sources
-                // Only log in development for debugging, using warn instead of error to avoid alarming users
-                if (__DEV__) {
-                  const isNetworkError = errorMessage.includes('UnknownHostException') ||
-                                        errorMessage.includes('Unable to resolve host') ||
-                                        errorMessage.includes('Network request failed') ||
-                                        errorMessage.includes('No address associated with hostname');
-                  const isServiceError = errorMessage.includes('503') ||
-                                        errorMessage.includes('Service Unavailable') ||
-                                        errorMessage.includes('502') ||
-                                        errorMessage.includes('504');
-
-                  // Only log non-service errors in dev mode, and use warn instead of error
-                  if (!isNetworkError && !isServiceError) {
-                    console.warn(`⚠️ Image unavailable for "${recipe.title}" - using fallback`);
-                  }
-                }
-                setImageError(true);
-                setImageLoading(false);
-              }}
-            />
-            <LinearGradient
-              colors={isDark
-                ? ['transparent', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.5)']
-                : ['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)']
+          <Image
+            source={{ uri: optimizedImageUrl(recipe.imageUrl.trim()) }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            contentFit="cover"
+            transition={Duration.normal}
+            cachePolicy="memory-disk"
+            recyclingKey={recipe.id}
+            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+            onLoad={() => { setImageLoading(false); setImageError(false); }}
+            onError={(error: any) => {
+              let errorMessage = '';
+              if (typeof error === 'string') {
+                errorMessage = error;
+              } else if (error?.error?.error) {
+                errorMessage = error.error.error;
+              } else if (error?.error) {
+                errorMessage = typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
+              } else if (error?.message) {
+                errorMessage = error.message;
+              } else {
+                errorMessage = JSON.stringify(error);
               }
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 40,
-              }}
-            />
-            
-            {/* Top Match Badge */}
-            {showTopMatchBadge && (
-              <View className="absolute top-4 left-4">
-                <View className="px-3 py-1.5 rounded-full flex-row items-center" style={{ backgroundColor: isDark ? `${Colors.tertiaryGreen}CC` : `${Colors.tertiaryGreen}E6` }}>
-                  <Icon name={Icons.STAR} size={14} color="#FFFFFF" accessibilityLabel="Top match" />
-                  <Text className="text-white font-bold text-xs ml-1">Top Match</Text>
-                </View>
-              </View>
-            )}
-            
-            {/* Recommendation Reason Badge */}
-            {recommendationReason && (
-              <View className="absolute top-4 right-4">
-                <View className="px-3 py-1.5 rounded-full" style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)' }}>
-                  <Text className="text-xs font-semibold" style={{ color: isDark ? '#FFFFFF' : '#1F2937' }}>
-                    {recommendationReason}
-                  </Text>
-                </View>
-              </View>
-            )}
-            
-            {/* Swipe Indicator (if multiple recipes) */}
-            {showSwipeIndicators && swipeIndicatorCount > 1 && (
-              <View className="absolute bottom-4" style={{ left: '50%', transform: [{ translateX: -50 }] }}>
-                <View className="flex-row items-center" style={{ gap: 4 }}>
-                  {Array.from({ length: swipeIndicatorCount }).map((_, idx) => (
-                    <View
-                      key={idx}
-                      className="rounded-full"
-                      style={{
-                        width: idx === swipeIndicatorIndex ? 8 : 6,
-                        height: 6,
-                        backgroundColor: idx === swipeIndicatorIndex ? '#FFFFFF' : 'rgba(255,255,255,0.5)',
-                      }}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-            
-            {renderUnsplashAttribution()}
-          </View>
-        ) : ((recipe.imageUrl && imageError) || !recipe.imageUrl || (recipe.imageUrl && recipe.imageUrl.trim() === '')) ? (
-          // Fallback UI when image fails to load or is missing
-          <View style={{ 
-            width: '100%', 
-            height: finalImageHeight, 
+              if (__DEV__) {
+                const isNetworkError = errorMessage.includes('UnknownHostException') ||
+                                      errorMessage.includes('Unable to resolve host') ||
+                                      errorMessage.includes('Network request failed') ||
+                                      errorMessage.includes('No address associated with hostname');
+                const isServiceError = errorMessage.includes('503') ||
+                                      errorMessage.includes('Service Unavailable') ||
+                                      errorMessage.includes('502') ||
+                                      errorMessage.includes('504');
+                if (!isNetworkError && !isServiceError) {
+                  console.warn(`⚠️ Image unavailable for "${recipe.title}" - using fallback`);
+                }
+              }
+              setImageError(true);
+              setImageLoading(false);
+            }}
+          />
+        ) : (
+          // Fallback background when image is missing or failed
+          <View style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: isDark ? '#374151' : '#E5E7EB',
-            justifyContent: 'center',
             alignItems: 'center',
-            position: 'relative',
+            justifyContent: 'center',
           }}>
-            <Icon 
-              name={Icons.RESTAURANT} 
-              size={40} 
-              color={isDark ? '#6B7280' : '#9CA3AF'} 
-              accessibilityLabel="Recipe image placeholder"
-            />
-            <Text style={{ 
-              marginTop: 8,
-              fontSize: 11,
-              color: isDark ? '#6B7280' : '#9CA3AF',
-              fontWeight: '500',
-            }}>
+            <Icon name={Icons.RESTAURANT} size={40} color={isDark ? '#6B7280' : '#9CA3AF'} accessibilityLabel="Recipe image placeholder" />
+            <Text style={{ marginTop: 8, fontSize: 11, color: isDark ? '#6B7280' : '#9CA3AF', fontWeight: '500' }}>
               {recipe.cuisine}
             </Text>
-            <LinearGradient
-              colors={isDark
-                ? ['transparent', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.5)']
-                : ['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)']
-              }
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 40,
-              }}
-            />
           </View>
-        ) : null}
+        )}
 
-        <View className="p-3" style={{ flex: 1, justifyContent: 'space-between' }}>
-          <View>
-            {/* Title */}
-            <Text
-              className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2"
-              numberOfLines={1}
-              style={{ lineHeight: 20 }}
-            >
-              {recipe.title}
+        {/* Strong gradient overlay at bottom */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.88)']}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: gradientHeight }}
+        />
+
+        {/* Sazon score pill — top right */}
+        {matchPct !== undefined && (
+          <View style={{ position: 'absolute', top: 8, right: 8 }}>
+            <View style={{
+              backgroundColor: matchPct >= 80 ? Colors.tertiaryGreen : matchPct >= 60 ? Colors.primary : Colors.secondaryRed,
+              paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
+            }}>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{matchPct}%</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Top Match badge — top left */}
+        {showTopMatchBadge && (
+          <View style={{ position: 'absolute', top: 8, left: 8 }}>
+            <View style={{
+              backgroundColor: `${Colors.tertiaryGreen}E6`,
+              paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
+              flexDirection: 'row', alignItems: 'center',
+            }}>
+              <Icon name={Icons.STAR} size={11} color="#FFFFFF" accessibilityLabel="Top match" />
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', marginLeft: 3 }}>Top Match</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Recommendation reason — top right (only if no score pill) */}
+        {recommendationReason && matchPct === undefined && (
+          <View style={{ position: 'absolute', top: 8, right: 8 }}>
+            <View style={{ backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>{recommendationReason}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Swipe indicators */}
+        {showSwipeIndicators && swipeIndicatorCount > 1 && (
+          <View style={{ position: 'absolute', bottom: gradientHeight + 8, left: 0, right: 0, alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              {Array.from({ length: swipeIndicatorCount }).map((_, idx) => (
+                <View
+                  key={idx}
+                  style={{
+                    width: idx === swipeIndicatorIndex ? 8 : 6,
+                    height: 6,
+                    borderRadius: 999,
+                    backgroundColor: idx === swipeIndicatorIndex ? '#FFFFFF' : 'rgba(255,255,255,0.5)',
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Overlaid content — sits on the gradient */}
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 10, paddingBottom: 10, paddingTop: 6 }}>
+          {/* Cuisine label */}
+          {!!recipe.cuisine && (
+            <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: '700', letterSpacing: 0.6, marginBottom: 3, textTransform: 'uppercase' }}>
+              {recipe.cuisine}
             </Text>
+          )}
 
-            {/* Badges Row - Unified template for list and carousel */}
-            <View
-              className={useScaledBadges ? "mb-2" : "flex-row flex-wrap items-center mb-2"}
-              onLayout={useScaledBadges ? (event) => setBadgeRowWidth(event.nativeEvent.layout.width) : undefined}
-            >
-              <View
-                className={useScaledBadges ? "flex-row items-center" : "flex-row flex-wrap items-center"}
-                onLayout={useScaledBadges ? (event) => setBadgeContentWidth(event.nativeEvent.layout.width) : undefined}
-                style={useScaledBadges ? { transform: [{ translateX: badgeRowTranslateX }, { scale: badgeRowScale }], alignSelf: 'flex-start' } : undefined}
-              >
-                <SmartBadges 
-                  recipe={recipe} 
-                  maxVisible={badgeMaxVisible} 
-                  variant={useListStyle ? 'list' : (useCompactStyle ? 'grid' : 'list')} 
-                  hideInfoBadge={true} 
-                  noWrap={useScaledBadges} 
-                  forceIncludeIds={
-                    isCarousel
-                      ? ['match-score', 'health-grade', 'quick', 'prep-time']
-                      : []
-                  }
-                />
-                {!!recipe.cuisine && (
-                  <View 
-                    className={
-                      useScaledBadges
-                        ? "px-3 py-1.5 rounded-full mr-2"
-                        : (useListStyle ? "px-3 py-1.5 rounded-full mr-2 mb-2" : "px-2.5 py-1 rounded-full mr-2 mb-2")
-                    } 
-                    style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryDark }}
-                  >
-                    <Text 
-                      className={
-                        useScaledBadges
-                          ? "text-sm font-medium"
-                          : (useListStyle ? "text-sm font-medium" : "text-xs font-medium")
-                      } 
-                      style={{ color: isDark ? DarkColors.primaryDark : '#FFFFFF' }}
-                      numberOfLines={1}
-                    >
-                      {recipe.cuisine}
-                    </Text>
-                  </View>
-                )}
-                <SmartBadges 
-                  recipe={recipe} 
-                  maxVisible={1} 
-                  variant={useListStyle ? 'list' : (useCompactStyle ? 'grid' : 'list')} 
-                  showOnlyInfoBadge={true} 
-                  noWrap={useScaledBadges} 
-                />
-              </View>
-            </View>
+          {/* Title */}
+          <Text
+            style={{ color: '#ffffff', fontSize: isGrid ? 13 : 15, fontWeight: '900', lineHeight: isGrid ? 17 : 20, marginBottom: 6 }}
+            numberOfLines={titleLines}
+          >
+            {recipe.title}
+          </Text>
 
-            {/* Macro Nutrients - 4 Column Display - Unified template */}
-            <View className="flex-row items-center justify-between py-2 px-2 rounded-lg" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
-              <View className="items-center flex-1">
-                <Text 
-                  className={isCarousel ? "text-sm text-gray-500 dark:text-gray-400" : (useListStyle ? "text-base text-gray-500 dark:text-gray-400" : (useCompactStyle ? "text-xs text-gray-500 dark:text-gray-400" : "text-base text-gray-500 dark:text-gray-400"))}
-                  numberOfLines={1}
-                >
-                  {recipe.calories} cal
-                </Text>
+          {/* Macro pills */}
+          <View style={{ flexDirection: 'row', gap: 4, marginBottom: 6 }}>
+            {[
+              { label: `${recipe.calories} cal`, bg: 'rgba(255,255,255,0.18)' },
+              { label: `${recipe.protein}g P`, bg: 'rgba(59,130,246,0.50)' },
+              { label: `${recipe.carbs}g C`, bg: `${Colors.tertiaryGreen}70` },
+              { label: `${recipe.fat}g F`, bg: 'rgba(168,85,247,0.50)' },
+            ].map(({ label, bg }) => (
+              <View key={label} style={{ backgroundColor: bg, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{label}</Text>
               </View>
-              <View className="items-center flex-1">
-                <Text 
-                  className={isCarousel ? "text-sm font-semibold text-blue-600 dark:text-blue-400" : (useListStyle ? "text-base font-semibold text-blue-600 dark:text-blue-400" : (useCompactStyle ? "text-xs font-semibold text-blue-600 dark:text-blue-400" : "text-base font-semibold text-blue-600 dark:text-blue-400"))}
-                  numberOfLines={1}
-                >
-                  {recipe.protein}g pro
-                </Text>
-              </View>
-              <View className="items-center flex-1">
-                <Text 
-                  className={isCarousel ? "text-sm font-semibold" : (useListStyle ? "text-base font-semibold" : (useCompactStyle ? "text-xs font-semibold" : "text-base font-semibold"))} 
-                  style={{ color: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}
-                  numberOfLines={1}
-                >
-                  {recipe.carbs}g carb
-                </Text>
-              </View>
-              <View className="items-center flex-1">
-                <Text 
-                  className={isCarousel ? "text-sm font-semibold text-purple-600 dark:text-purple-400" : (useListStyle ? "text-base font-semibold text-purple-600 dark:text-purple-400" : (useCompactStyle ? "text-xs font-semibold text-purple-600 dark:text-purple-400" : "text-base font-semibold text-purple-600 dark:text-purple-400"))}
-                  numberOfLines={1}
-                >
-                  {recipe.fat}g fat
-                </Text>
-              </View>
-            </View>
-
-            {/* Description - Unified template for list, carousel, and grid */}
-            {showDescription && recipe.description && (
-              <Text
-                className={useListStyle ? "text-gray-600 dark:text-gray-300 text-base" : "text-gray-600 dark:text-gray-300 text-xs"}
-                numberOfLines={2}
-              >
-                {recipe.description}
-              </Text>
-            )}
-
-            {/* Optional footer (e.g. star rating, cook count) */}
-            {footer}
+            ))}
           </View>
 
-          {/* Action Buttons */}
-          <View className="flex-row items-center justify-between" style={{ marginTop: isCarousel ? 0 : 8 }}>
+          {/* Unsplash attribution — above action row */}
+          {(() => {
+            const name = (recipe as any).unsplashPhotographerName as string | undefined;
+            const username = (recipe as any).unsplashPhotographerUsername as string | undefined;
+            if (!name || !username) return null;
+            const profileUrl = `https://unsplash.com/@${username}?utm_source=Sazon%20Chef&utm_medium=referral`;
+            return (
+              <HapticTouchableOpacity
+                onPress={() => Linking.openURL(profileUrl)}
+                style={{ alignSelf: 'flex-end', marginBottom: 4 }}
+              >
+                <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9 }}>
+                  Photo by {name} on Unsplash
+                </Text>
+              </HapticTouchableOpacity>
+            );
+          })()}
+
+          {/* Action buttons */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <HapticTouchableOpacity
-              onPress={() => onDelete ? onDelete(recipe.id) : onSave?.(recipe.id)}
-              className="p-1.5 rounded-full border"
+              onPress={handleSavePress}
               style={{
+                padding: 7, borderRadius: 999,
                 backgroundColor: onDelete
-                  ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2')
-                  : (isDark ? `${Colors.primaryLight}33` : Colors.primaryDark),
-                borderColor: onDelete
-                  ? (isDark ? '#EF4444' : '#DC2626')
-                  : (isDark ? DarkColors.primary : Colors.primaryDark),
+                  ? 'rgba(239,68,68,0.30)'
+                  : saveHighlighted
+                    ? `${Colors.primary}CC`
+                    : 'rgba(255,255,255,0.20)',
+                borderWidth: 1,
+                borderColor: onDelete ? 'rgba(239,68,68,0.60)' : 'rgba(255,255,255,0.35)',
               }}
               {...iconButtonAccessibility(onDelete ? 'Remove recipe' : 'Save recipe', {
                 hint: onDelete ? 'Remove this recipe from your cookbook' : 'Save this recipe to your cookbook'
               })}
             >
-              <Icon
-                name={onDelete ? Icons.CLOSE : Icons.SAVE_RECIPE}
-                size={14}
-                color={onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF')}
-              />
+              <Animated.View style={{ transform: [{ scale: saveScale }] }}>
+                <Icon name={onDelete ? Icons.CLOSE : Icons.SAVE_RECIPE} size={14} color={onDelete ? '#EF4444' : '#FFFFFF'} />
+              </Animated.View>
             </HapticTouchableOpacity>
 
-            <View className="flex-row items-center">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <HapticTouchableOpacity
                 testID="like-button"
                 onPress={() => onLike?.(recipe.id)}
                 disabled={isFeedbackLoading}
-                className={`p-1.5 rounded-full mr-1.5 border ${feedback.liked ? '' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}
-                style={feedback.liked ? { backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen, borderColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen } : undefined}
+                style={{
+                  padding: 7, borderRadius: 999,
+                  backgroundColor: feedback.liked ? Colors.tertiaryGreen : 'rgba(255,255,255,0.20)',
+                  borderWidth: 1,
+                  borderColor: feedback.liked ? Colors.tertiaryGreen : 'rgba(255,255,255,0.35)',
+                }}
                 {...iconButtonAccessibility(feedback.liked ? 'Remove like' : 'Like recipe', { hint: 'Double tap to like this recipe' })}
               >
-                <Icon name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} size={14} color={feedback.liked ? "#FFFFFF" : (isDark ? "#D1D5DB" : "#4B5563")} />
+                <Icon name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} size={14} color="#FFFFFF" />
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 testID="dislike-button"
                 onPress={() => onDislike?.(recipe.id)}
                 disabled={isFeedbackLoading}
-                className={`p-1.5 rounded-full border ${feedback.disliked ? '' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}
-                style={feedback.disliked ? { backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed, borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed } : undefined}
+                style={{
+                  padding: 7, borderRadius: 999,
+                  backgroundColor: feedback.disliked ? Colors.secondaryRed : 'rgba(255,255,255,0.20)',
+                  borderWidth: 1,
+                  borderColor: feedback.disliked ? Colors.secondaryRed : 'rgba(255,255,255,0.35)',
+                }}
                 {...iconButtonAccessibility(feedback.disliked ? 'Remove dislike' : 'Dislike recipe', { hint: 'Double tap to dislike this recipe' })}
               >
-                <Icon name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE} size={14} color={feedback.disliked ? "#FFFFFF" : (isDark ? "#D1D5DB" : "#4B5563")} />
+                <Icon name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE} size={14} color="#FFFFFF" />
               </HapticTouchableOpacity>
             </View>
           </View>
+
+          {footer}
         </View>
       </HapticTouchableOpacity>
     </View>

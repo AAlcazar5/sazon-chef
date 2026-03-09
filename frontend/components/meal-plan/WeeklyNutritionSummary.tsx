@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Colors, DarkColors } from '../../constants/Colors';
+import AnimatedProgressBar from '../ui/AnimatedProgressBar';
 
 interface WeeklyNutritionSummaryProps {
   /** Weekly nutrition data */
@@ -42,28 +43,17 @@ export default function WeeklyNutritionSummary({
                 {weeklyNutrition.totals.calories.toLocaleString()} / {weeklyNutrition.goals.weeklyCalories.toLocaleString()}
               </Text>
             </View>
-            <View className="relative w-full" style={{ height: 12, borderRadius: 6, overflow: 'hidden' }}>
-              <View
-                className="absolute rounded-full"
-                style={{
-                  width: '100%',
-                  height: 12,
-                  backgroundColor: isDark ? '#374151' : '#E5E7EB',
-                  borderRadius: 6
-                }}
-              />
-              <View
-                className="absolute rounded-full"
-                style={{
-                  height: 12,
-                  width: `${Math.min((weeklyNutrition.totals.calories / weeklyNutrition.goals.weeklyCalories) * 100, 100)}%`,
-                  backgroundColor: weeklyNutrition.totals.calories > weeklyNutrition.goals.weeklyCalories
-                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
-                    : (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen),
-                  borderRadius: 6
-                }}
-              />
-            </View>
+            <AnimatedProgressBar
+              progress={Math.min((weeklyNutrition.totals.calories / weeklyNutrition.goals.weeklyCalories) * 100, 100)}
+              height={12}
+              borderRadius={6}
+              backgroundColor={isDark ? '#374151' : '#E5E7EB'}
+              progressColor={
+                weeklyNutrition.totals.calories > weeklyNutrition.goals.weeklyCalories
+                  ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                  : (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
+              }
+            />
           </View>
         )}
 
@@ -76,28 +66,17 @@ export default function WeeklyNutritionSummary({
                 {weeklyNutrition.averages.dailyCalories.toFixed(0)} / {weeklyNutrition.goals.dailyCalories}
               </Text>
             </View>
-            <View className="relative w-full" style={{ height: 12, borderRadius: 6, overflow: 'hidden' }}>
-              <View
-                className="absolute rounded-full"
-                style={{
-                  width: '100%',
-                  height: 12,
-                  backgroundColor: isDark ? '#374151' : '#E5E7EB',
-                  borderRadius: 6
-                }}
-              />
-              <View
-                className="absolute rounded-full"
-                style={{
-                  height: 12,
-                  width: `${Math.min((weeklyNutrition.averages.dailyCalories / weeklyNutrition.goals.dailyCalories) * 100, 100)}%`,
-                  backgroundColor: weeklyNutrition.averages.dailyCalories > weeklyNutrition.goals.dailyCalories
-                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
-                    : (isDark ? DarkColors.primary : Colors.primary),
-                  borderRadius: 6
-                }}
-              />
-            </View>
+            <AnimatedProgressBar
+              progress={Math.min((weeklyNutrition.averages.dailyCalories / weeklyNutrition.goals.dailyCalories) * 100, 100)}
+              height={12}
+              borderRadius={6}
+              backgroundColor={isDark ? '#374151' : '#E5E7EB'}
+              progressColor={
+                weeklyNutrition.averages.dailyCalories > weeklyNutrition.goals.dailyCalories
+                  ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+                  : (isDark ? DarkColors.primary : Colors.primary)
+              }
+            />
           </View>
         )}
 
@@ -193,26 +172,13 @@ export default function WeeklyNutritionSummary({
               {weeklyNutrition.completed.mealsCompleted} / {weeklyNutrition.completed.totalMeals}
             </Text>
           </View>
-          <View className="relative w-full" style={{ height: 8, borderRadius: 4, overflow: 'hidden' }}>
-            <View
-              className="absolute rounded-full"
-              style={{
-                width: '100%',
-                height: 8,
-                backgroundColor: isDark ? '#374151' : '#E5E7EB',
-                borderRadius: 4
-              }}
-            />
-            <View
-              className="absolute rounded-full"
-              style={{
-                height: 8,
-                width: `${weeklyNutrition.completed.completionRate}%`,
-                backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen,
-                borderRadius: 4
-              }}
-            />
-          </View>
+          <AnimatedProgressBar
+            progress={weeklyNutrition.completed.completionRate}
+            height={8}
+            borderRadius={4}
+            backgroundColor={isDark ? '#374151' : '#E5E7EB'}
+            progressColor={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen}
+          />
         </View>
       </View>
     </View>

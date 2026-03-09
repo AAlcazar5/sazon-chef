@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { useTheme } from '../../contexts/ThemeContext';
 import WeightTrendChart from './WeightTrendChart';
 
@@ -29,7 +30,7 @@ export default function WeightHistoryCard({ physicalProfile, weightHistory, weig
   const targetWeightKg = physicalProfile.targetWeightKg;
 
   return (
-    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
       {/* Header */}
       <View className="flex-row justify-between items-center mb-3">
         <View className="flex-row items-center">

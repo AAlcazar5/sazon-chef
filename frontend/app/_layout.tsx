@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { ToastProvider } from '../contexts/ToastContext';
@@ -123,6 +124,14 @@ function RootLayoutNav() {
           <Stack.Screen name="edit-budget" />
           <Stack.Screen name="onboarding" />
           <Stack.Screen
+            name="create-shopping-list"
+            options={{ presentation: 'transparentModal', animation: 'none' }}
+          />
+          <Stack.Screen
+            name="create-collection"
+            options={{ presentation: 'transparentModal', animation: 'none' }}
+          />
+          <Stack.Screen
             name="paywall"
             options={{
               presentation: 'modal',
@@ -153,7 +162,9 @@ export default function RootLayout() {
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <RootLayoutNav />
+              <BottomSheetModalProvider>
+                <RootLayoutNav />
+              </BottomSheetModalProvider>
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

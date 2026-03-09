@@ -7,6 +7,7 @@ import { useState, useRef } from 'react';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { Duration } from '../../constants/Animations';
 import { HapticPatterns } from '../../constants/Haptics';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -29,7 +30,7 @@ export default function AppearanceSection() {
   };
 
   return (
-    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
       <HapticTouchableOpacity
         onPress={toggleSection}
         className="flex-row items-center justify-between mb-3"

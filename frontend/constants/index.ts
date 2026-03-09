@@ -23,6 +23,9 @@ export type { ImpactStyleKey, NotificationTypeKey, HapticPatternKey } from './Ha
 export { Duration, Spring, Easing_, Timing, Transform, Stagger, AnimationPresets } from './Animations';
 export type { DurationKey, SpringKey, TimingKey, StaggerKey } from './Animations';
 
+// Shadows
+export { Shadows } from './Shadows';
+
 // Empty States
 export {
   EmptyStates,

@@ -1,5 +1,5 @@
 // frontend/components/profile/CulinaryPreferencesCard.tsx
-// Culinary preferences display card with tags, skill level, cooking time budgets, and dietary severity
+// Culinary preferences display card with tags, skill level, cooking time budgets, and dietary labels
 
 import { View, Text } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { UserProfile, CookingSkillLevel } from '../../types';
 
@@ -28,7 +29,7 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
   const prefs = profile?.preferences || preferences;
 
   return (
-    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
       <View className="flex-row justify-between items-center mb-3">
         <View className="flex-row items-center">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryDark }}>
@@ -62,32 +63,29 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
         </HapticTouchableOpacity>
       ) : (
         <View className="space-y-3">
-          {/* Dietary Restrictions with Severity */}
+          {/* Dietary Restrictions */}
           <View>
             <Text className="text-sm mb-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Dietary Restrictions</Text>
             <View className="flex-row flex-wrap">
               {prefs.dietaryRestrictions && prefs.dietaryRestrictions.length > 0 ? (
                 prefs.dietaryRestrictions.map((restriction: any, index: number) => {
                   const name = typeof restriction === 'string' ? restriction : restriction.name;
-                  const severity = typeof restriction === 'string' ? 'strict' : (restriction.severity || 'strict');
+                  const sev = typeof restriction === 'string' ? 'strict' : (restriction.severity || 'strict');
                   const capitalized = name.replace(/\b\w/g, (char: string) => char.toUpperCase());
-                  const isStrict = severity === 'strict';
+                  const isAllergic = sev === 'strict';
                   return (
                     <View
                       key={index}
                       className="px-2 py-1 rounded-full mr-2 mb-2 flex-row items-center"
                       style={{
-                        backgroundColor: isStrict
+                        backgroundColor: isAllergic
                           ? (isDark ? Colors.secondaryRedLight : Colors.secondaryRedLight)
                           : (isDark ? '#D97706' : '#F59E0B'),
+                        gap: 3,
                       }}
                     >
-                      <Text className="text-xs" style={{ color: '#FFFFFF' }}>
-                        {capitalized}
-                      </Text>
-                      <Text className="text-[10px] ml-1 opacity-80" style={{ color: '#FFFFFF' }}>
-                        {isStrict ? '(strict)' : '(avoid)'}
-                      </Text>
+                      <Text className="text-xs" style={{ color: '#FFFFFF' }}>{capitalized}</Text>
+                      <Text style={{ fontSize: 11 }}>{isAllergic ? '🚫' : '⚠️'}</Text>
                     </View>
                   );
                 })

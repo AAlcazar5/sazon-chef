@@ -7,6 +7,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { ProfilePreset } from '../../types';
 
@@ -83,7 +84,7 @@ export default function ProfilePresetsCard({
 
   return (
     <>
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
         {/* Header */}
         <View className="flex-row items-center justify-between mb-3">
           <View className="flex-row items-center">

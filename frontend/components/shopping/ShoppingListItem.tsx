@@ -3,8 +3,9 @@
 // Default: checkbox + name + qty/price (right-aligned). Tap row → edit modal.
 // In-store: larger checkboxes + "Can't find" button.
 
-import { View, Text } from 'react-native';
+import { View, Text, Animated } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import { useEffect, useRef } from 'react';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -47,6 +48,36 @@ export default function ShoppingListItem({
   const checkboxSize = inStoreMode ? 36 : 26;
   const checkmarkSize = inStoreMode ? 24 : 16;
 
+  // Spring scale for the checkbox circle on check/uncheck
+  const checkScale = useRef(new Animated.Value(1)).current;
+  // Opacity for the checkmark icon (fades in/out)
+  const checkOpacity = useRef(new Animated.Value(item.purchased ? 1 : 0)).current;
+  // Strikethrough line width: 0 → '100%' (JS driver needed for layout)
+  const strikeWidth = useRef(new Animated.Value(item.purchased ? 1 : 0)).current;
+  // Row opacity fades when purchased
+  const rowOpacity = useRef(new Animated.Value(item.purchased ? 0.5 : 1)).current;
+
+  useEffect(() => {
+    if (item.purchased) {
+      // Checkbox spring bounce
+      Animated.sequence([
+        Animated.spring(checkScale, { toValue: 1.3, friction: 3, tension: 400, useNativeDriver: true }),
+        Animated.spring(checkScale, { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }),
+      ]).start();
+      // Checkmark fade-in
+      Animated.timing(checkOpacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+      // Strikethrough grows across the text
+      Animated.timing(strikeWidth, { toValue: 1, duration: 280, delay: 80, useNativeDriver: false }).start();
+      // Row dims
+      Animated.timing(rowOpacity, { toValue: 0.5, duration: 300, useNativeDriver: true }).start();
+    } else {
+      // Reverse everything instantly on uncheck
+      Animated.timing(checkOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
+      strikeWidth.setValue(0);
+      Animated.timing(rowOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    }
+  }, [item.purchased]);
+
   const handlePress = () => {
     if (selectionMode) {
       onToggleSelection(item.id);
@@ -65,7 +96,7 @@ export default function ShoppingListItem({
   };
 
   return (
-    <View
+    <Animated.View
       className={`flex-row items-center rounded-xl mb-2 ${
         item.purchased ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
       } ${selectionMode && isSelected ? 'border-2' : 'border border-gray-100 dark:border-gray-700'}`}
@@ -74,9 +105,8 @@ export default function ShoppingListItem({
         selectionMode && isSelected ? {
           borderColor: isDark ? DarkColors.primary : Colors.primary,
           backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight,
-        } : item.purchased ? {
-          opacity: 0.5,
         } : undefined,
+        { opacity: rowOpacity },
       ]}
     >
       {/* Checkbox */}
@@ -106,7 +136,7 @@ export default function ShoppingListItem({
             )}
           </View>
         ) : (
-          <View
+          <Animated.View
             style={{
               width: checkboxSize,
               height: checkboxSize,
@@ -120,12 +150,13 @@ export default function ShoppingListItem({
                 : 'transparent',
               alignItems: 'center',
               justifyContent: 'center',
+              transform: [{ scale: checkScale }],
             }}
           >
-            {item.purchased && (
+            <Animated.View style={{ opacity: checkOpacity }}>
               <Icon name={Icons.CHECKMARK} size={checkmarkSize} color="white" accessibilityLabel="Purchased" />
-            )}
-          </View>
+            </Animated.View>
+          </Animated.View>
         )}
       </HapticTouchableOpacity>
 
@@ -138,17 +169,32 @@ export default function ShoppingListItem({
         className="flex-1 ml-3"
         style={inStoreMode ? { minHeight: 40 } : undefined}
       >
-        <Text
-          className={`font-medium ${
-            item.purchased
-              ? 'text-gray-400 dark:text-gray-500 line-through'
-              : 'text-gray-900 dark:text-gray-100'
-          }`}
-          style={{ fontSize: inStoreMode ? 17 : 15 }}
-          numberOfLines={1}
-        >
-          {item.name}
-        </Text>
+        <View style={{ position: 'relative', justifyContent: 'center' }}>
+          <Text
+            className={`font-medium ${
+              item.purchased
+                ? 'text-gray-400 dark:text-gray-500'
+                : 'text-gray-900 dark:text-gray-100'
+            }`}
+            style={{ fontSize: inStoreMode ? 17 : 15 }}
+            numberOfLines={1}
+          >
+            {item.name}
+          </Text>
+          {/* Animated strikethrough line */}
+          <Animated.View
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: '50%',
+              height: 1.5,
+              borderRadius: 1,
+              backgroundColor: isDark ? '#6B7280' : '#9CA3AF',
+              width: strikeWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+            }}
+            pointerEvents="none"
+          />
+        </View>
       </HapticTouchableOpacity>
 
       {/* Right side: qty + price */}
@@ -193,6 +239,6 @@ export default function ShoppingListItem({
           </Text>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }

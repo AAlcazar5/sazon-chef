@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { FontSize } from '../../constants/Typography';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { UserNotifications } from '../../types';
@@ -201,7 +202,7 @@ export default function NotificationsCard({
 
   return (
     <>
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
         <View className="flex-row items-center mb-3">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenDark }}>
             <Icon name={Icons.NOTIFICATIONS_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.tertiaryGreen : '#FFFFFF'} accessibilityLabel="Notifications" />

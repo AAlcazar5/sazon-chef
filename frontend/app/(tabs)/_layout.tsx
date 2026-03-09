@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform } from 'react-native';
+import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedBadge from '../../components/ui/AnimatedBadge';
 import { router, usePathname, useSegments } from 'expo-router';
@@ -233,14 +234,24 @@ export default function TabLayout() {
         tabBarActiveTintColor: '#F97316',
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopWidth: 0,
+          position: 'absolute',
+          backgroundColor: Platform.OS === 'android' ? colors.background : 'transparent',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
           height: ComponentSpacing.tabBar.height + insets.bottom,
           paddingBottom: Math.max(ComponentSpacing.tabBar.paddingBottom, insets.bottom),
           paddingTop: ComponentSpacing.tabBar.paddingTop,
-          // Prevent Android elevation from clipping tab bar corners
           ...(Platform.OS === 'android' && { elevation: 0 }),
         },
+        tabBarBackground: Platform.OS === 'ios'
+          ? () => (
+              <BlurView
+                intensity={isDark ? 60 : 80}
+                tint={isDark ? 'dark' : 'light'}
+                style={StyleSheet.absoluteFill}
+              />
+            )
+          : undefined,
         tabBarLabelStyle: {
           fontSize: FontSize.sm,
           fontWeight: FontWeight.medium,

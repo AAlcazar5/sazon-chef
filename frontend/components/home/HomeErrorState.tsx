@@ -11,16 +11,17 @@ import { HapticPatterns } from '../../constants/Haptics';
 
 interface HomeErrorStateProps {
   error: string;
+  errorCode?: string | null;
   onRetry: () => void;
 }
 
-function HomeErrorState({ error, onRetry }: HomeErrorStateProps) {
+function HomeErrorState({ error, errorCode, onRetry }: HomeErrorStateProps) {
   // Determine error type and message
   const getErrorInfo = () => {
-    if (error.includes('network') || error.includes('Network') || error.includes('fetch')) {
+    if (errorCode === 'NETWORK_ERROR' || error.includes('network') || error.includes('Network') || error.includes('fetch') || error.includes('connect')) {
       return {
         title: "Connection Problem",
-        message: "We couldn't connect to our servers. Please check your internet connection.",
+        message: "We couldn't reach our servers. Please check your internet connection and try again.",
         suggestions: [
           "Check your Wi-Fi or mobile data connection",
           "Make sure you're connected to the internet",
@@ -28,7 +29,7 @@ function HomeErrorState({ error, onRetry }: HomeErrorStateProps) {
         ]
       };
     }
-    if (error.includes('timeout') || error.includes('Timeout')) {
+    if (errorCode === 'TIMEOUT_ERROR' || error.includes('timeout') || error.includes('Timeout')) {
       return {
         title: "Request Timed Out",
         message: "The request took too long to complete.",

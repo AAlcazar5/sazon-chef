@@ -88,7 +88,7 @@ function RecipeCarouselSection({
 
   if (isLoading && recipes.length === 0) {
     return (
-      <View className="px-4 mb-6">
+      <View className="mb-6">
         {/* Section Header skeleton */}
         <View className="flex-row items-center justify-between mb-4">
           <View className="flex-row items-center flex-1">
@@ -100,7 +100,7 @@ function RecipeCarouselSection({
           </View>
         </View>
         {/* Skeleton cards */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }} scrollEnabled={false}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }} scrollEnabled={false}>
           {[1, 2, 3].map(i => (
             <View key={i} style={{ width: CARD_WIDTH, marginRight: CARD_MARGIN }}>
               <SkeletonLoader width={CARD_WIDTH} height={160} borderRadius={12} isDark={isDark} />
@@ -123,17 +123,17 @@ function RecipeCarouselSection({
   }
 
   return (
-    <View className="px-4 mb-6">
+    <View className="mb-6">
       {/* Section Header */}
       <HapticTouchableOpacity
         onPress={onToggleCollapse}
-        className="flex-row items-center justify-between mb-4"
+        className="flex-row items-center justify-between mb-4 px-4"
         activeOpacity={0.7}
       >
         <View className="flex-row items-center flex-1">
           <Text className="text-2xl mr-2">{emoji}</Text>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <Text className="text-xl font-black text-gray-900 dark:text-gray-100">
               {title}
             </Text>
             <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -155,7 +155,7 @@ function RecipeCarouselSection({
           ref={scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingRight: 16 }}
+          contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
           decelerationRate="fast"
           snapToInterval={CARD_STEP}
           snapToAlignment="start"

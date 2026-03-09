@@ -49,6 +49,7 @@ interface HomeFeedData {
 interface UseHomeFeedReturn extends HomeFeedData {
   loading: boolean;
   error: string | null;
+  errorCode: string | null;
   refetch: (params?: HomeFeedParams) => Promise<HomeFeedData | null>;
 }
 
@@ -64,6 +65,7 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   // Track if initial fetch has happened
   const hasFetched = useRef(false);
@@ -72,6 +74,7 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
     try {
       setLoading(true);
       setError(null);
+      setErrorCode(null);
 
       const response = await recipeApi.getHomeFeed(fetchParams || params);
       const responseData = response.data;
@@ -99,6 +102,7 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
     } catch (err: any) {
       console.error('❌ Error fetching home feed:', err);
       setError(err?.message || 'Failed to fetch home feed');
+      setErrorCode(err?.code || null);
       return null;
     } finally {
       setLoading(false);
@@ -120,6 +124,7 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
     ...data,
     loading,
     error,
+    errorCode,
     refetch: fetchHomeFeed,
   };
 }
