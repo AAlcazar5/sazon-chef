@@ -28,8 +28,8 @@ describe('DarkElevation tokens', () => {
   });
 
   it('all values are valid 6-digit hex strings', () => {
-    Object.entries(DarkElevation).forEach(([key, value]) => {
-      expect(value).toMatch(/^#[0-9a-fA-F]{6}$/, `${key} should be a 6-digit hex colour`);
+    Object.entries(DarkElevation).forEach(([, value]) => {
+      expect(value).toMatch(/^#[0-9a-fA-F]{6}$/);
     });
   });
 
