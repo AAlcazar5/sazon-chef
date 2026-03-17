@@ -7,6 +7,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { HapticPatterns } from '../../constants/Haptics';
 
 interface PaginationInfo {
@@ -42,7 +43,7 @@ export default function CookbookPagination({
 
   return (
     <View className="px-4 py-6">
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 flex-row items-center justify-between" style={Shadows.MD}>
         <HapticTouchableOpacity
           onPress={() => {
             if (!paginationInfo.isFirstPage) {

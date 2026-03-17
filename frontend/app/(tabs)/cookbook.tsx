@@ -12,24 +12,26 @@ import OfflineBanner from '../../components/shopping/OfflineBanner';
 import type { SavedRecipe, Collection } from '../../types';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
+import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { CookbookEmptyStates } from '../../constants/EmptyStates';
 import { CookbookLoadingStates } from '../../constants/LoadingStates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
+import Toast, { ToastType } from '../../components/ui/Toast';
 
 // Extracted cookbook components
 import {
   CookbookFilterModal,
   CookbookHeader,
   CookbookInsights,
-  CookbookPagination,
   CookbookSortPicker,
   CookbookRecipeList,
   CollectionPicker,
-  CollectionFilterRow,
   CollectionEditModal,
   MergeCollectionsModal,
   SimilarRecipesCarousel,
+  CollectionCarousel,
+  CookbookPagination,
   CollectionSavePicker,
   StarRating,
   RecipeNotesModal,
@@ -91,6 +93,22 @@ export default function CookbookScreen() {
 
   // Animation state for recipe cards (matches home page behavior)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
+
+  // Collection carousel collapsed state
+  const [collapsedCollections, setCollapsedCollections] = useState<Set<string>>(new Set());
+  const toggleCollectionCollapse = useCallback((id: string) => {
+    setCollapsedCollections(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Toast state (P4: inline feedback instead of Alert.alert)
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: ToastType }>({ visible: false, message: '', type: 'success' });
+  const showToast = useCallback((message: string, type: ToastType = 'success') => {
+    setToast({ visible: true, message, type });
+  }, []);
 
   // Action menu state for long press
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
@@ -218,14 +236,14 @@ export default function CookbookScreen() {
   useFocusEffect(
     useCallback(() => {
       loadCollections();
-      loadRecipes(viewMode, selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined);
-    }, [viewMode, selectedCollectionIds])
+      loadRecipes(viewMode);
+    }, [viewMode])
   );
 
   // Also refresh when needsRefresh is triggered
   useEffect(() => {
     if (needsRefresh) {
-      loadRecipes(viewMode, selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined);
+      loadRecipes(viewMode);
       setNeedsRefresh(false);
     }
   }, [needsRefresh]);
@@ -388,6 +406,21 @@ export default function CookbookScreen() {
     });
   }, [sortedRecipes, searchQuery]);
 
+  // Group recipes by collection for collection carousels
+  const recipesByCollection = useMemo(() => {
+    const map = new Map<string, SavedRecipe[]>();
+    for (const recipe of allRecipes) {
+      const cols = (recipe as any).collections || [];
+      for (const col of cols) {
+        const colId = col.id;
+        if (!colId) continue;
+        if (!map.has(colId)) map.set(colId, []);
+        map.get(colId)!.push(recipe);
+      }
+    }
+    return map;
+  }, [allRecipes]);
+
   // Current page slice
   const pagedRecipes = useMemo(() => {
     const start = currentPage * RECIPES_PER_PAGE;
@@ -491,11 +524,11 @@ export default function CookbookScreen() {
     setCurrentPage(0); // Reset to first page when switching between grid and list view
   }, [displayMode]);
   
-  // Refetch when view mode or collection selection changes
+  // Refetch when view mode changes
   useEffect(() => {
     setNeedsRefresh(true);
-    setCurrentPage(0); // Reset pagination when view mode or collection changes
-  }, [viewMode, selectedCollectionIds]);
+    setCurrentPage(0);
+  }, [viewMode]);
 
   // Reset pagination when search query changes
   useEffect(() => {
@@ -512,7 +545,7 @@ export default function CookbookScreen() {
     setRefreshing(true);
     await Promise.all([
       loadCollections(),
-      loadRecipes(viewMode, selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined),
+      loadRecipes(viewMode),
     ]);
     setRefreshing(false);
   };
@@ -564,13 +597,13 @@ export default function CookbookScreen() {
         handleSelectList(created.id);
       }
       
-      Alert.alert('Created', 'Collection created successfully');
+      showToast('Collection created!', 'success');
     } catch (e: any) {
       const msg = e?.message || '';
       if (/already\s*exists/i.test(msg)) {
-        Alert.alert('Duplicate', 'A collection with this name already exists.');
+        showToast('A collection with this name already exists.', 'warning');
       } else {
-        Alert.alert('Error', msg || 'Failed to create collection');
+        showToast(msg || 'Failed to create collection', 'error');
       }
     }
   };
@@ -599,9 +632,9 @@ export default function CookbookScreen() {
     } catch (e: any) {
       const msg = e?.message || '';
       if (/already\s*exists/i.test(msg)) {
-        Alert.alert('Duplicate', 'A collection with this name already exists.');
+        showToast('A collection with this name already exists.', 'warning');
       } else {
-        Alert.alert('Error', msg || 'Failed to save collection');
+        showToast(msg || 'Failed to save collection', 'error');
       }
     }
   };
@@ -613,7 +646,7 @@ export default function CookbookScreen() {
       await loadCollections();
       HapticPatterns.buttonPress();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to toggle pin');
+      showToast(e?.message || 'Failed to toggle pin', 'error');
     }
   };
 
@@ -623,9 +656,9 @@ export default function CookbookScreen() {
       await collectionsApi.duplicate(collectionId);
       await loadCollections();
       HapticPatterns.success();
-      Alert.alert('Duplicated', 'Collection duplicated successfully.');
+      showToast('Collection duplicated!', 'success');
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to duplicate collection');
+      showToast(e?.message || 'Failed to duplicate collection', 'error');
     }
   };
 
@@ -640,9 +673,9 @@ export default function CookbookScreen() {
       }
       await loadCollections();
       HapticPatterns.success();
-      Alert.alert('Merged', 'Collections merged successfully.');
+      showToast('Collections merged!', 'success');
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to merge collections');
+      showToast(e?.message || 'Failed to merge collections', 'error');
     }
   };
 
@@ -697,7 +730,7 @@ export default function CookbookScreen() {
       setSavePickerRecipeId(null);
       setSavePickerCollectionIds([]);
       HapticPatterns.success();
-      Alert.alert('Saved', 'Recipe saved to cookbook!');
+      showToast('Recipe saved to cookbook!', 'success');
 
       // Refresh recipes if in saved view
       if (viewMode === 'saved') {
@@ -709,16 +742,16 @@ export default function CookbookScreen() {
         if (savePickerCollectionIds.length > 0) {
           try {
             await collectionsApi.moveSavedRecipe(savePickerRecipeId, savePickerCollectionIds);
-            Alert.alert('Moved', 'Recipe moved to collections!');
+            showToast('Recipe moved to collections!', 'success');
           } catch (e) {
-            Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
+            showToast('This recipe is already in your cookbook!', 'info');
           }
         } else {
-          Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
+          showToast('This recipe is already in your cookbook!', 'info');
         }
       } else {
         HapticPatterns.error();
-        Alert.alert('Error', error.message || 'Failed to save recipe');
+        showToast(error.message || 'Failed to save recipe', 'error');
       }
       setSavePickerVisible(false);
       setSavePickerRecipeId(null);
@@ -749,7 +782,7 @@ export default function CookbookScreen() {
       await recipeApi.likeRecipe(recipeId);
 
       HapticPatterns.success();
-      Alert.alert('Liked!', 'We\'ll show you more recipes like this');
+      showToast('We\'ll show you more recipes like this', 'success');
     } catch (error: any) {
       console.error('Error liking recipe:', error);
       HapticPatterns.error();
@@ -760,7 +793,7 @@ export default function CookbookScreen() {
         [recipeId]: { liked: false, disliked: false }
       }));
 
-      Alert.alert('Error', 'Failed to like recipe');
+      showToast('Failed to like recipe', 'error');
     } finally {
       setFeedbackLoading(null);
     }
@@ -779,7 +812,7 @@ export default function CookbookScreen() {
       await recipeApi.dislikeRecipe(recipeId);
 
       HapticPatterns.success();
-      Alert.alert('Noted', 'We\'ll show fewer recipes like this');
+      showToast('We\'ll show fewer recipes like this', 'info');
     } catch (error: any) {
       console.error('Error disliking recipe:', error);
       HapticPatterns.error();
@@ -790,7 +823,7 @@ export default function CookbookScreen() {
         [recipeId]: { liked: false, disliked: false }
       }));
 
-      Alert.alert('Error', 'Failed to dislike recipe');
+      showToast('Failed to dislike recipe', 'error');
     } finally {
       setFeedbackLoading(null);
     }
@@ -819,11 +852,11 @@ export default function CookbookScreen() {
   // Loading state (only on first load with no cached data)
   if (cacheLoading && savedRecipes.length === 0 && allRecipes.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+        <View style={{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}>
           <View className="mb-3 flex-row items-center">
             <Text className="text-2xl mr-2">📚</Text>
-            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" accessibilityRole="header">My Cookbook</Text>
+            <Text className="text-2xl font-black text-gray-900 dark:text-gray-100" accessibilityRole="header">My Cookbook</Text>
         </View>
           <Text className="text-gray-500 dark:text-gray-200">Loading saved recipes...</Text>
         </View>
@@ -835,11 +868,11 @@ export default function CookbookScreen() {
   // Offline with no cached data
   if (isOffline && allRecipes.length === 0 && !cacheLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-        <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+        <View style={{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}>
           <View className="mb-3 flex-row items-center">
             <Text className="text-2xl mr-2">📚</Text>
-            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" accessibilityRole="header">My Cookbook</Text>
+            <Text className="text-2xl font-black text-gray-900 dark:text-gray-100" accessibilityRole="header">My Cookbook</Text>
         </View>
           <Text className="text-gray-500 dark:text-gray-200">No cached recipes available</Text>
         </View>
@@ -857,11 +890,9 @@ export default function CookbookScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
       {/* Header with title, display toggle, quick filters, and search */}
       <CookbookHeader
-        displayMode={displayMode}
-        onDisplayModeChange={handleToggleDisplayMode}
         filters={cookbookFilters}
         onFilterChange={(newFilters) => {
           setCookbookFilters(newFilters);
@@ -874,6 +905,8 @@ export default function CookbookScreen() {
           setCurrentPage(0);
         }}
         onImportPress={() => setShowImportModal(true)}
+        displayMode={displayMode}
+        onDisplayModeChange={handleToggleDisplayMode}
       />
 
       {/* Offline / sync status banner */}
@@ -881,15 +914,6 @@ export default function CookbookScreen() {
         isOffline={isOffline}
         hasPendingSync={hasPendingSync}
         cacheAge={cacheAge}
-      />
-
-      {/* Inline collection filter row — horizontal animated chips */}
-      <CollectionFilterRow
-        collections={collections}
-        selectedListId={selectedListId}
-        onSelectList={handleSelectList}
-        isDark={isDark}
-        totalSavedCount={savedRecipes.length}
       />
 
       {/* Cookbook Filter Modal */}
@@ -911,14 +935,14 @@ export default function CookbookScreen() {
         selectedListId={selectedListId}
         onSelectList={(id) => {
           handleSelectList(id);
-          // Don't close modal - let user continue filtering
         }}
         viewMode={viewMode}
         onViewModeChange={(mode) => {
           setViewMode(mode);
           setNeedsRefresh(true);
-          // Don't close modal - let user continue filtering
         }}
+        displayMode={displayMode}
+        onDisplayModeChange={handleToggleDisplayMode}
         sortBy={sortBy}
         onSortChange={(sort) => {
           handleSortChange(sort);
@@ -982,9 +1006,9 @@ export default function CookbookScreen() {
                     handleSelectList(null);
                   }
                   await loadCollections();
-                  Alert.alert('Deleted', 'Collection deleted successfully.');
+                  showToast('Collection deleted.', 'success');
                 } catch (e: any) {
-                  Alert.alert('Error', e?.message || 'Failed to delete collection');
+                  showToast(e?.message || 'Failed to delete collection', 'error');
                 }
               }}
             ]
@@ -1094,14 +1118,17 @@ export default function CookbookScreen() {
           >
           <View className="px-4">
 
-            {/* Pagination summary */}
+            {/* Recipe count */}
             {filteredAndSortedRecipes.length > 0 && (
               <Text className="text-center text-sm text-gray-500 dark:text-gray-400 mb-3">
-                Showing {paginationInfo.from}-{paginationInfo.to} of {paginationInfo.totalItems} recipes{serverHasMore ? ` (${serverTotal} total)` : ''}
+                {paginationInfo.hasMultiplePages
+                  ? `${paginationInfo.from}–${paginationInfo.to} of ${paginationInfo.totalItems} recipe${paginationInfo.totalItems !== 1 ? 's' : ''}`
+                  : `${filteredAndSortedRecipes.length} recipe${filteredAndSortedRecipes.length !== 1 ? 's' : ''}`
+                }{serverHasMore ? ` (${serverTotal} total)` : ''}
               </Text>
             )}
             <CookbookRecipeList
-              recipes={savedRecipes.length > 0 ? savedRecipes : allRecipes.slice(0, RECIPES_PER_PAGE)}
+              recipes={savedRecipes}
               displayMode={displayMode}
               isDark={isDark}
               userFeedback={userFeedback}
@@ -1117,6 +1144,13 @@ export default function CookbookScreen() {
             />
           </View>
 
+          {/* Pagination controls */}
+          <CookbookPagination
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            paginationInfo={paginationInfo}
+          />
+
           {/* Loading more indicator */}
           {loadingMore && (
             <View className="py-3 items-center">
@@ -1124,13 +1158,41 @@ export default function CookbookScreen() {
             </View>
           )}
 
-          {/* Pagination Controls */}
-          <CookbookPagination
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            paginationInfo={paginationInfo}
-          />
+          {/* Load more from server */}
+          {serverHasMore && !loadingMore && (
+            <View className="py-4 items-center">
+              <HapticTouchableOpacity
+                onPress={() => { loadMore(); HapticPatterns.buttonPress(); }}
+                className="px-6 py-3 rounded-full"
+                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
+              >
+                <Text className="text-white font-semibold text-sm">Load more recipes</Text>
+              </HapticTouchableOpacity>
+            </View>
+          )}
           
+          {/* Collection Carousels */}
+          {collections
+            .filter(c => (recipesByCollection.get(c.id)?.length ?? 0) > 0)
+            .map(collection => (
+              <CollectionCarousel
+                key={collection.id}
+                collection={collection}
+                recipes={recipesByCollection.get(collection.id) || []}
+                isCollapsed={collapsedCollections.has(collection.id)}
+                onToggleCollapse={() => toggleCollectionCollapse(collection.id)}
+                onRecipePress={handleRecipePress}
+                onRecipeLongPress={handleLongPress}
+                isDark={isDark}
+                userFeedback={userFeedback}
+                feedbackLoading={feedbackLoading}
+                onLike={handleLike}
+                onDislike={handleDislike}
+                onSave={handleSaveFromCookbook}
+              />
+            ))
+          }
+
           {/* Similar Recipes Carousel */}
           <SimilarRecipesCarousel
             recipes={similarRecipes}
@@ -1241,6 +1303,14 @@ export default function CookbookScreen() {
           setShowImportModal(false);
           setNeedsRefresh(true);
         }}
+      />
+
+      {/* Toast feedback (P4: inline instead of Alert.alert) */}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, visible: false }))}
       />
     </SafeAreaView>
   );

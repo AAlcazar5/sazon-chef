@@ -1,23 +1,24 @@
 import React from 'react';
 // frontend/components/cookbook/CookbookHeader.tsx
-// Header component with title, display mode toggle, quick filters, and search
+// Compact header: title + search + icon actions in FrostedHeader, quick filter chips below
 
 import { View, Text, ScrollView, TextInput } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import FrostedHeader from '../ui/FrostedHeader';
-import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { HapticPatterns } from '../../constants/Haptics';
 import type { CookbookFilters } from './CookbookFilterModal';
 
 interface CookbookHeaderProps {
-  /** Current display mode (grid or list) */
-  displayMode: 'grid' | 'list';
-  /** Called when display mode changes */
-  onDisplayModeChange: (mode: 'grid' | 'list') => void;
   /** Current cookbook filters */
   filters: CookbookFilters;
   /** Called when filters change */
@@ -34,14 +35,17 @@ interface CookbookHeaderProps {
   onSearchBlur?: () => void;
   /** Called when import from URL button is pressed */
   onImportPress?: () => void;
+  /** Current display mode */
+  displayMode?: 'grid' | 'list';
+  /** Called when display mode changes */
+  onDisplayModeChange?: (mode: 'grid' | 'list') => void;
 }
 
 /**
- * Cookbook header with title, display mode toggle, quick filters, and search bar
+ * Compact cookbook header: title row with action icons + search bar in FrostedHeader,
+ * then quick filter chips directly below (no label — chips are self-explanatory).
  */
 function CookbookHeader({
-  displayMode,
-  onDisplayModeChange,
   filters,
   onFilterChange,
   onAdvancedFilterPress,
@@ -50,6 +54,8 @@ function CookbookHeader({
   onSearchFocus,
   onSearchBlur,
   onImportPress,
+  displayMode = 'list',
+  onDisplayModeChange,
 }: CookbookHeaderProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -72,10 +78,21 @@ function CookbookHeader({
     HapticPatterns.buttonPress();
   };
 
+  // Count active filters for badge
+  const activeFilterCount = [
+    filters.maxCookTime !== null,
+    filters.difficulty.length > 0,
+    filters.mealPrepOnly,
+    filters.highProtein,
+    filters.lowCal,
+    filters.budget,
+    filters.onePot,
+  ].filter(Boolean).length;
+
   return (
     <>
-      {/* Title and Display Toggle */}
-      <FrostedHeader paddingBottom={12} withTopInset={false}>
+      {/* Compact FrostedHeader: title + icons */}
+      <FrostedHeader paddingBottom={8} withTopInset={false}>
         <View className="flex-row items-center justify-between" style={{ height: 28 }}>
           <View className="flex-row items-center flex-1">
             <Text className="text-2xl mr-2" style={{ lineHeight: 28 }}>📚</Text>
@@ -87,11 +104,38 @@ function CookbookHeader({
               My Cookbook
             </Text>
           </View>
-          {/* Import from URL */}
+
+          {/* Grid / List toggle */}
+          {onDisplayModeChange && (
+            <View
+              className="flex-row items-center rounded-lg p-0.5 ml-2"
+              style={{ backgroundColor: isDark ? '#374151' : '#F3F4F6' }}
+            >
+              {(['list', 'grid'] as const).map((mode) => (
+                <HapticTouchableOpacity
+                  key={mode}
+                  onPress={() => onDisplayModeChange(mode)}
+                  className="px-2.5 py-1.5 rounded-md"
+                  style={displayMode === mode ? {
+                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                  } : undefined}
+                >
+                  <Icon
+                    name={mode === 'list' ? Icons.SHOPPING_LIST : Icons.GRID_OUTLINE}
+                    size={14}
+                    color={displayMode === mode ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
+                    accessibilityLabel={mode === 'list' ? 'List view' : 'Grid view'}
+                  />
+                </HapticTouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Import from URL — icon only, no bg box */}
           {onImportPress && (
             <HapticTouchableOpacity
               onPress={() => { onImportPress(); HapticPatterns.buttonPress(); }}
-              className="mr-2 p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700"
+              className="p-2"
               accessibilityLabel="Import recipe from URL"
             >
               <Icon
@@ -102,169 +146,60 @@ function CookbookHeader({
             </HapticTouchableOpacity>
           )}
 
-          {/* View Mode Toggle */}
-          <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <HapticTouchableOpacity
-              onPress={() => onDisplayModeChange('list')}
-              className="px-3 py-1.5 rounded"
-              style={displayMode === 'list' ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
-            >
-              <Ionicons
-                name="list"
-                size={18}
-                color={displayMode === 'list' ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
-              />
-            </HapticTouchableOpacity>
-            <HapticTouchableOpacity
-              onPress={() => onDisplayModeChange('grid')}
-              className="px-3 py-1.5 rounded"
-              style={displayMode === 'grid' ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
-            >
-              <Ionicons
-                name="grid"
-                size={18}
-                color={displayMode === 'grid' ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
-              />
-            </HapticTouchableOpacity>
-          </View>
-        </View>
-      </FrostedHeader>
-
-      {/* Filters & Preferences */}
-      <View className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        {/* Header with Filter Button */}
-        <View className="px-4 pt-3 pb-2 flex-row items-center justify-between">
-          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
-            Filters & Preferences
-          </Text>
+          {/* Advanced filters — icon with badge */}
           <HapticTouchableOpacity
-            onPress={() => {
-              onAdvancedFilterPress();
-              HapticPatterns.buttonPress();
-            }}
-            className="px-3 py-1.5 rounded-lg flex-row items-center"
-            style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryDark }}
+            onPress={() => { onAdvancedFilterPress(); HapticPatterns.buttonPress(); }}
+            className="p-2"
+            accessibilityLabel="Advanced filters"
           >
             <Icon
               name={Icons.RECIPE_FILTER}
-              size={IconSizes.SM}
-              color={isDark ? DarkColors.primary : '#FFFFFF'}
-              accessibilityLabel="Advanced filters"
+              size={IconSizes.MD}
+              color={isDark ? DarkColors.primary : Colors.primary}
             />
-            <Text
-              className="text-sm font-semibold ml-1.5"
-              style={{ color: isDark ? DarkColors.primary : '#FFFFFF' }}
-            >
-              Advanced
-            </Text>
+            {activeFilterCount > 0 && (
+              <View style={{
+                position: 'absolute', top: 2, right: 2,
+                backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
+                width: 16, height: 16, borderRadius: 8,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{activeFilterCount}</Text>
+              </View>
+            )}
           </HapticTouchableOpacity>
         </View>
 
-        {/* Quick Filter Chips */}
-        <View className="px-4 pb-3">
-          <ScrollView
-            horizontal
-            scrollEventThrottle={16}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingRight: 16 }}
-          >
-            <View className="flex-row items-center" style={{ gap: 8 }}>
-              {/* Quick (<30min) */}
-              <QuickFilterChip
-                label="Quick"
-                emoji={null}
-                icon={Icons.COOK_TIME}
-                isActive={filters.maxCookTime === 30}
-                onPress={() => handleQuickFilterToggle('maxCookTime', 30)}
-                isDark={isDark}
-              />
-
-              {/* Easy Difficulty */}
-              <QuickFilterChip
-                label="Easy"
-                emoji="✨"
-                isActive={filters.difficulty.includes('Easy')}
-                onPress={() => handleQuickFilterToggle('difficulty', 'Easy')}
-                isDark={isDark}
-              />
-
-              {/* High Protein */}
-              <QuickFilterChip
-                label="High Protein"
-                emoji="💪"
-                isActive={filters.highProtein}
-                onPress={() => handleQuickFilterToggle('highProtein')}
-                isDark={isDark}
-              />
-
-              {/* Low Cal */}
-              <QuickFilterChip
-                label="Low Cal"
-                emoji="🥗"
-                isActive={filters.lowCal}
-                onPress={() => handleQuickFilterToggle('lowCal')}
-                isDark={isDark}
-              />
-
-              {/* Meal Prep */}
-              <QuickFilterChip
-                label="Meal Prep"
-                emoji="🍱"
-                isActive={filters.mealPrepOnly}
-                onPress={() => handleQuickFilterToggle('mealPrepOnly')}
-                isDark={isDark}
-              />
-
-              {/* Budget Friendly */}
-              <QuickFilterChip
-                label="Budget"
-                emoji="💰"
-                isActive={filters.budget}
-                onPress={() => handleQuickFilterToggle('budget')}
-                isDark={isDark}
-              />
-
-              {/* One Pot */}
-              <QuickFilterChip
-                label="One Pot"
-                emoji="🍲"
-                isActive={filters.onePot}
-                onPress={() => handleQuickFilterToggle('onePot')}
-                isDark={isDark}
-              />
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-
-      {/* Search Bar */}
-      <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2.5">
+        {/* Search bar — inside FrostedHeader for compact feel */}
+        <View
+          className="flex-row items-center mt-2 px-3 py-2"
+          style={{
+            backgroundColor: isDark ? '#374151' : '#F3F4F6',
+            borderRadius: 12,
+          }}
+        >
           <Icon
             name={Icons.SEARCH}
-            size={IconSizes.MD}
+            size={IconSizes.SM}
             color={isDark ? '#9CA3AF' : '#6B7280'}
             accessibilityLabel="Search"
             style={{ marginRight: 8 }}
           />
           <TextInput
-            placeholder="Search recipes, ingredients, tags..."
+            placeholder="Search recipes..."
             placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
             value={searchQuery}
             onChangeText={onSearchChange}
             onFocus={onSearchFocus}
             onBlur={onSearchBlur}
-            className="flex-1 text-gray-900 dark:text-gray-100 text-base"
+            className="flex-1 text-sm"
             style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
             returnKeyType="search"
             clearButtonMode="while-editing"
           />
           {searchQuery.length > 0 && (
             <HapticTouchableOpacity
-              onPress={() => {
-                onSearchChange('');
-                HapticPatterns.buttonPress();
-              }}
+              onPress={() => { onSearchChange(''); HapticPatterns.buttonPress(); }}
               className="ml-2"
             >
               <Icon
@@ -276,17 +211,73 @@ function CookbookHeader({
             </HapticTouchableOpacity>
           )}
         </View>
-        {searchQuery.length > 0 && (
-          <Text className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-2 ml-1">
-            Results for "{searchQuery}"
-          </Text>
-        )}
+      </FrostedHeader>
+
+      {/* Quick Filter Chips — directly below header, no label (P7: chips are self-explanatory) */}
+      <View style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF', paddingVertical: 8 }}>
+        <ScrollView
+          horizontal
+          scrollEventThrottle={16}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 8, flexDirection: 'row' }}
+        >
+          <QuickFilterChip
+            label="Quick"
+            emoji={null}
+            icon={Icons.COOK_TIME}
+            isActive={filters.maxCookTime === 30}
+            onPress={() => handleQuickFilterToggle('maxCookTime', 30)}
+            isDark={isDark}
+          />
+          <QuickFilterChip
+            label="Easy"
+            emoji="✨"
+            isActive={filters.difficulty.includes('Easy')}
+            onPress={() => handleQuickFilterToggle('difficulty', 'Easy')}
+            isDark={isDark}
+          />
+          <QuickFilterChip
+            label="High Protein"
+            emoji="💪"
+            isActive={filters.highProtein}
+            onPress={() => handleQuickFilterToggle('highProtein')}
+            isDark={isDark}
+          />
+          <QuickFilterChip
+            label="Low Cal"
+            emoji="🥗"
+            isActive={filters.lowCal}
+            onPress={() => handleQuickFilterToggle('lowCal')}
+            isDark={isDark}
+          />
+          <QuickFilterChip
+            label="Meal Prep"
+            emoji="🍱"
+            isActive={filters.mealPrepOnly}
+            onPress={() => handleQuickFilterToggle('mealPrepOnly')}
+            isDark={isDark}
+          />
+          <QuickFilterChip
+            label="Budget"
+            emoji="💰"
+            isActive={filters.budget}
+            onPress={() => handleQuickFilterToggle('budget')}
+            isDark={isDark}
+          />
+          <QuickFilterChip
+            label="One Pot"
+            emoji="🍲"
+            isActive={filters.onePot}
+            onPress={() => handleQuickFilterToggle('onePot')}
+            isDark={isDark}
+          />
+        </ScrollView>
       </View>
     </>
   );
 }
 
-// Quick filter chip sub-component
+// Quick filter chip with spring scale animation (P3 + P6)
 interface QuickFilterChipProps {
   label: string;
   emoji?: string | null;
@@ -297,33 +288,52 @@ interface QuickFilterChipProps {
 }
 
 function QuickFilterChip({ label, emoji, icon, isActive, onPress, isDark }: QuickFilterChipProps) {
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.92, { damping: 10, stiffness: 400 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 300 });
+  };
+
   return (
-    <HapticTouchableOpacity
-      onPress={onPress}
-      className={`px-4 py-2 rounded-full flex-row items-center ${
-        isActive ? '' : 'bg-gray-100 dark:bg-gray-700'
-      }`}
-      style={isActive ? {
-        backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-      } : undefined}
-    >
-      {icon && !emoji && (
-        <Icon
-          name={icon as any}
-          size={14}
-          color={isActive ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
-          accessibilityLabel={label}
-        />
-      )}
-      {emoji && <Text className="text-base">{emoji}</Text>}
-      <Text
-        className={`text-sm font-semibold ${icon || emoji ? 'ml-1.5' : ''} ${
-          isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
-        }`}
+    <Animated.View style={animStyle}>
+      <HapticTouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        className="px-4 py-2 rounded-full flex-row items-center"
+        style={isActive ? {
+          backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+          ...Shadows.SM,
+        } : {
+          backgroundColor: isDark ? '#374151' : '#F3F4F6',
+        }}
       >
-        {label}
-      </Text>
-    </HapticTouchableOpacity>
+        {icon && !emoji && (
+          <Icon
+            name={icon as any}
+            size={14}
+            color={isActive ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')}
+            accessibilityLabel={label}
+          />
+        )}
+        {emoji && <Text className="text-base">{emoji}</Text>}
+        <Text
+          className={`text-sm font-semibold ${icon || emoji ? 'ml-1.5' : ''} ${
+            isActive ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          {label}
+        </Text>
+      </HapticTouchableOpacity>
+    </Animated.View>
   );
 }
 

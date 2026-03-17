@@ -1,10 +1,10 @@
 // frontend/components/cookbook/CookbookSortPicker.tsx
-// Modal for selecting recipe sort order
+// Bottom sheet for selecting recipe sort order
 
-import { View, Text, ScrollView, Modal, Dimensions } from 'react-native';
+import { View, Text } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BottomSheet from '../ui/BottomSheet';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -22,9 +22,9 @@ const SORT_OPTIONS: Array<{ value: SortOption; label: string; icon: string }> = 
 ];
 
 interface CookbookSortPickerProps {
-  /** Whether the modal is visible */
+  /** Whether the sheet is visible */
   visible: boolean;
-  /** Close the modal */
+  /** Close the sheet */
   onClose: () => void;
   /** Current sort option */
   sortBy: SortOption;
@@ -42,72 +42,51 @@ export default function CookbookSortPicker({
   const isDark = colorScheme === 'dark';
 
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
+      onClose={onClose}
+      title="Sort recipes"
+      snapPoints={['50%']}
     >
-      <SafeAreaView className="flex-1 bg-black/50 justify-center items-center px-4" edges={['top', 'bottom']}>
-        <HapticTouchableOpacity
-          activeOpacity={1}
-          onPress={onClose}
-          className="absolute inset-0"
-        />
-        <View className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm shadow-lg">
-          <View className="p-4 border-b border-gray-200 dark:border-gray-700 flex-row items-start justify-between">
-            <View className="flex-1 pr-3">
-              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sort recipes</Text>
-              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Choose how your cookbook is ordered
-              </Text>
-            </View>
+      <View style={{ paddingBottom: 24 }}>
+        <Text className="text-xs text-gray-500 dark:text-gray-400 px-4 mb-2">
+          Choose how your cookbook is ordered
+        </Text>
+        {SORT_OPTIONS.map((option) => {
+          const isSelected = sortBy === option.value;
+          return (
             <HapticTouchableOpacity
-              onPress={onClose}
-              className="p-2 rounded-full"
-              style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }}
+              key={option.value}
+              onPress={() => onSortChange(option.value)}
+              className="px-4 py-3 flex-row items-center"
+              style={isSelected ? {
+                backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight,
+              } : undefined}
             >
-              <Icon name={Icons.CLOSE} size={IconSizes.SM} color={isDark ? '#D1D5DB' : '#6B7280'} accessibilityLabel="Close sort modal" />
+              <Icon
+                name={isSelected ? Icons.CHECKMARK_CIRCLE : Icons.ELLIPSE_OUTLINE}
+                size={IconSizes.MD}
+                color={isSelected ? (isDark ? DarkColors.primary : Colors.primary) : "#9CA3AF"}
+                accessibilityLabel={isSelected ? "Selected" : "Not selected"}
+                style={{ marginRight: 12 }}
+              />
+              <Icon
+                name={option.icon as any}
+                size={IconSizes.SM}
+                color={isSelected ? (isDark ? DarkColors.primary : Colors.primary) : '#6B7280'}
+                accessibilityLabel={option.label}
+                style={{ marginRight: 12 }}
+              />
+              <Text
+                className={`flex-1 text-base ${isSelected ? 'font-semibold' : 'text-gray-900 dark:text-gray-100'}`}
+                style={isSelected ? { color: isDark ? DarkColors.primaryDark : Colors.primaryDark } : undefined}
+              >
+                {option.label}
+              </Text>
             </HapticTouchableOpacity>
-          </View>
-          <ScrollView style={{ maxHeight: Dimensions.get('window').height * 0.6 }}>
-            {SORT_OPTIONS.map((option) => {
-              const isSelected = sortBy === option.value;
-              return (
-                <HapticTouchableOpacity
-                  key={option.value}
-                  onPress={() => onSortChange(option.value)}
-                  className={`px-4 py-3 flex-row items-center border-b border-gray-100 dark:border-gray-700 ${
-                    isSelected ? '' : 'bg-white dark:bg-gray-800'
-                  }`}
-                  style={isSelected ? { backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight } : undefined}
-                >
-                  <Icon
-                    name={isSelected ? Icons.CHECKMARK_CIRCLE : Icons.ELLIPSE_OUTLINE}
-                    size={IconSizes.MD}
-                    color={isSelected ? (isDark ? DarkColors.primary : Colors.primary) : "#9CA3AF"}
-                    accessibilityLabel={isSelected ? "Selected" : "Not selected"}
-                    style={{ marginRight: 12 }}
-                  />
-                  <Icon
-                    name={option.icon as any}
-                    size={IconSizes.SM}
-                    color={isSelected ? (isDark ? DarkColors.primary : Colors.primary) : '#6B7280'}
-                    accessibilityLabel={option.label}
-                    style={{ marginRight: 12 }}
-                  />
-                  <Text
-                    className={`flex-1 text-base ${isSelected ? 'font-semibold' : 'text-gray-900 dark:text-gray-100'}`}
-                    style={isSelected ? { color: isDark ? DarkColors.primaryDark : Colors.primaryDark } : undefined}
-                  >
-                    {option.label}
-                  </Text>
-                </HapticTouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </SafeAreaView>
-    </Modal>
+          );
+        })}
+      </View>
+    </BottomSheet>
   );
 }
