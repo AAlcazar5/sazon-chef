@@ -21,6 +21,7 @@ import { ShoppingListEmptyStates } from '../../constants/EmptyStates';
 import { ShoppingListLoadingStates } from '../../constants/LoadingStates';
 import { useShoppingList, categorizeItem, AISLE_ORDER, DEFAULT_AISLE_ORDER, AISLE_EMOJI } from '../../hooks/useShoppingList';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
+import { HapticChoreography } from '../../utils/hapticChoreography';
 import {
   ShoppingListHeader,
   ShoppingListItem,
@@ -102,6 +103,7 @@ export default function ShoppingListScreen() {
     if (allDone && !prevAllDone.current && !state.loading) {
       prevAllDone.current = true;
       setShowCelebration(true);
+      HapticChoreography.shoppingCelebration();
 
       // Reset confetti
       confettiAnims.forEach(a => { a.y.setValue(0); a.opacity.setValue(1); a.x.setValue(0); });
@@ -476,40 +478,26 @@ export default function ShoppingListScreen() {
       )}
 
       {!state.selectedList && state.shoppingLists.length === 0 && (
-        <View className="flex-1 items-center justify-center p-8">
-          <Icon name={Icons.CART_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="No shopping lists" />
-          <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-4 mb-2">
-            No shopping lists yet
-          </Text>
-          <Text className="text-gray-600 dark:text-gray-100 text-center mb-6">
-            Create your first shopping list to get started
-          </Text>
-          <HapticTouchableOpacity
-            onPress={handleCreateList}
-            className="px-6 py-3 rounded-lg"
-            style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-          >
-            <Text className="text-white font-semibold">Create Shopping List</Text>
-          </HapticTouchableOpacity>
+        <View className="flex-1">
+          <AnimatedEmptyState
+            config={ShoppingListEmptyStates.noLists}
+            title=""
+            onAction={handleCreateList}
+          />
         </View>
       )}
 
       {!state.selectedList && state.shoppingLists.length > 0 && (
-        <View className="flex-1 items-center justify-center p-8">
-          <Icon name={Icons.SHOPPING_LIST_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="Select a list" />
-          <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-4 mb-2">
-            Select a shopping list
-          </Text>
-          <Text className="text-gray-600 dark:text-gray-100 text-center mb-6">
-            Choose a list from the dropdown above to view and manage items
-          </Text>
-          <HapticTouchableOpacity
-            onPress={() => dispatch({ type: 'UPDATE', payload: { showListPicker: true } })}
-            className="px-6 py-3 rounded-lg"
-            style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-          >
-            <Text className="text-white font-semibold">Select List</Text>
-          </HapticTouchableOpacity>
+        <View className="flex-1">
+          <AnimatedEmptyState
+            useMascot
+            mascotExpression="happy"
+            mascotSize="large"
+            title="Select a Shopping List"
+            description="Choose a list from the dropdown above to view and manage items."
+            actionLabel="Select List"
+            onAction={() => dispatch({ type: 'UPDATE', payload: { showListPicker: true } })}
+          />
         </View>
       )}
 

@@ -3,7 +3,7 @@ import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import LoadingState from '../../components/ui/LoadingState';
 import { router, useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { recipeApi, collectionsApi } from '../../lib/api';
@@ -42,6 +42,7 @@ import {
 export default function CookbookScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   // Multi-select: empty array => All
@@ -1079,7 +1080,7 @@ export default function CookbookScreen() {
         // Recipes list (show if we have recipes and not loading)
         <ScrollView
           scrollEventThrottle={16}
-          contentContainerStyle={{ paddingTop: 0, paddingBottom: 300 }}
+          contentContainerStyle={{ paddingTop: 0 }}
             refreshControl={
               <AnimatedRefreshControl 
                 refreshing={refreshing} 
@@ -1145,6 +1146,9 @@ export default function CookbookScreen() {
             onSave={viewMode !== 'saved' ? handleSaveFromCookbook : undefined}
             viewMode={viewMode}
           />
+
+          {/* Spacer to clear the absolutely-positioned tab bar + search bar */}
+          <View style={{ height: 60 + 72 + insets.bottom + 140 }} />
         </ScrollView>
       ) : null}
 

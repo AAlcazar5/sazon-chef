@@ -7,6 +7,7 @@ import LoadingState from '../ui/LoadingState';
 import { HomeLoadingStates } from '../../constants/LoadingStates';
 import { BorderRadius } from '../../constants/Spacing';
 import { Spacing } from '../../constants/Spacing';
+import { DarkElevation } from '../../constants/Colors';
 
 interface RandomRecipeModalProps {
   visible: boolean;
@@ -33,7 +34,7 @@ function RandomRecipeModal({
         alignItems: 'center'
       }}>
         <View style={{
-          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+          backgroundColor: isDark ? DarkElevation.dp16 : '#FFFFFF',
           borderRadius: BorderRadius.lg,
           padding: Spacing.xl,
           margin: Spacing.xl,

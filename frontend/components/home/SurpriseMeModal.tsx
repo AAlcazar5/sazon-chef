@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
 
 export interface SurpriseFilters {
   cuisine?: string;
@@ -93,7 +93,7 @@ export default function SurpriseMeModal({
         <View
           className="mx-6 rounded-2xl p-6"
           style={{
-            backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+            backgroundColor: isDark ? DarkElevation.dp16 : '#FFFFFF',
             width: Dimensions.get('window').width - 48,
           }}
         >

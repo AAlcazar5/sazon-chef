@@ -11,6 +11,7 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
+import { HapticChoreography } from '../../utils/hapticChoreography';
 
 interface ShoppingListItemProps {
   item: ShoppingListItemType;
@@ -91,6 +92,12 @@ export default function ShoppingListItem({
     if (selectionMode) {
       onToggleSelection(item.id);
     } else {
+      // Choreographed haptic: fires at animation peak (~80ms into spring bounce)
+      if (!item.purchased) {
+        HapticChoreography.itemCheckOff();
+      } else {
+        HapticChoreography.itemUncheck();
+      }
       onTogglePurchased(item);
     }
   };
@@ -109,9 +116,10 @@ export default function ShoppingListItem({
         { opacity: rowOpacity },
       ]}
     >
-      {/* Checkbox */}
+      {/* Checkbox — hapticDisabled because HapticChoreography owns the timing */}
       <HapticTouchableOpacity
         onPress={handleCheckboxPress}
+        hapticDisabled
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         {selectionMode ? (
