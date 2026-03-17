@@ -13,6 +13,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { HapticChoreography } from '../../utils/hapticChoreography';
 
 interface StarRatingProps {
   /** Current rating (1-5) or null if unrated */
@@ -37,6 +38,7 @@ function AnimatedStar({
   filledColor,
   emptyColor,
   onPress,
+  currentRating,
 }: {
   star: number;
   filled: boolean;
@@ -44,6 +46,7 @@ function AnimatedStar({
   filledColor: string;
   emptyColor: string;
   onPress: () => void;
+  currentRating: number | null;
 }) {
   const scale = useSharedValue(1);
   const rotate = useSharedValue(0);
@@ -65,12 +68,20 @@ function AnimatedStar({
 
   const handlePress = () => {
     burst();
+    // Choreographed haptic: count-up taps + burst at animation peak
+    if (currentRating === star) {
+      HapticChoreography.starClear();
+    } else {
+      HapticChoreography.starBurst(star);
+    }
     onPress();
   };
 
   return (
+    // hapticDisabled — we own the haptic timing via HapticChoreography
     <HapticTouchableOpacity
       onPress={handlePress}
+      hapticDisabled
       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
     >
       <Animated.View style={animStyle}>
@@ -126,6 +137,7 @@ export default function StarRating({
             filledColor={filledColor}
             emptyColor={emptyColor}
             onPress={() => handlePress(star)}
+            currentRating={rating}
           />
         );
       })}

@@ -2,15 +2,14 @@ import React from 'react';
 // frontend/components/home/FeaturedRecipeCarousel.tsx
 // Featured recipe carousel with top 3 recipes and swipe functionality
 
-import { View, Text, Animated } from 'react-native';
+import { View, Text, Animated, StyleSheet } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import CardStack from '../ui/CardStack';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import GradientButton, { GradientPresets } from '../ui/GradientButton';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RecipeCard } from '../recipe/RecipeCard';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
 import type { SuggestedRecipe } from '../../types';
@@ -130,34 +129,44 @@ function FeaturedRecipeCarousel({
   };
 
   return (
-    <View className="px-4">
+    <View style={{ paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl }}>
       {/* Header */}
-      <View className="flex-row items-center justify-between" style={{ marginBottom: Spacing.xl }}>
-        <View className="flex-1">
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text className="text-xl font-black text-gray-900 dark:text-gray-100">
             {mealPrepMode ? '🍱 Meal Prep Recipes' : "Today's Recommendation"}
           </Text>
           {recipes.length > 1 && !mealPrepMode && (
-            <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <Text className="text-xs text-gray-500 dark:text-gray-400" style={{ marginTop: Spacing.xs }}>
               Swipe to see more top matches
             </Text>
           )}
         </View>
 
-        {/* Random Recipe Button */}
+        {/* Surprise Me pill button */}
         <Animated.View
           style={{
             transform: [{ scale: randomButtonScale }],
             opacity: randomButtonOpacity,
           }}
         >
-          <GradientButton
-            label="Random Recipe"
+          <HapticTouchableOpacity
             onPress={onRandomRecipe}
-            colors={GradientPresets.brand}
-            icon="shuffle"
             hapticStyle="medium"
-          />
+            accessibilityLabel="Surprise Me"
+            accessibilityRole="button"
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#FB923C', '#EF4444']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.pill}
+            >
+              <Text style={styles.pillEmoji}>🎰</Text>
+              <Text style={styles.pillLabel}>Surprise Me!</Text>
+            </LinearGradient>
+          </HapticTouchableOpacity>
         </Animated.View>
       </View>
 
@@ -199,5 +208,37 @@ function FeaturedRecipeCarousel({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+    gap: Spacing.md,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: 100,
+    gap: Spacing.sm,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.30,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  pillEmoji: {
+    fontSize: 16,
+  },
+  pillLabel: {
+    color: '#FFF',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.2,
+  },
+});
 
 export default React.memo(FeaturedRecipeCarousel);

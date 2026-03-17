@@ -291,6 +291,28 @@ export const TextColors = {
   }
 };
 
+// Dark mode elevation surfaces
+// In dark mode, shadows are nearly invisible — elevated surfaces use *lighter* backgrounds
+// to communicate depth (Material Design dark theme specification).
+//
+// Elevation levels (dp = density-independent layer depth):
+//   dp0  — screen background (base)
+//   dp1  — cards, list items resting on surface
+//   dp2  — floating action buttons, cards on elevation dp1
+//   dp4  — navigation drawers, modals, bottom sheets
+//   dp8  — bottom app bar, menus
+//  dp16  — navigation bar, modals above sheets
+//  dp24  — dialog boxes, top-level overlays
+export const DarkElevation = {
+  dp0:  '#0D0D0D', // deepest background (OLED-optimized)
+  dp1:  '#1C1C1E', // card surfaces resting on background
+  dp2:  '#242426', // cards on cards, bottom sheet body
+  dp4:  '#2C2C2E', // bottom sheets, slide-in modals
+  dp8:  '#363638', // menus, dropdowns, tooltips
+  dp16: '#3A3A3C', // dialog boxes
+  dp24: '#48484A', // top-level overlay surfaces
+} as const;
+
 // Gradient colors for potential future use
 export const Gradients = {
   primary: ['#fa7e12', '#d67a0c'], // New brand orange gradient

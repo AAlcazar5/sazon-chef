@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
 import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Duration, Spring } from '../../constants/Animations';
@@ -109,7 +109,7 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
               style={[
                 styles.container,
                 {
-                  backgroundColor: isDark ? DarkColors.surface : Colors.surface,
+                  backgroundColor: isDark ? DarkElevation.dp4 : Colors.surface,
                   transform: [{ translateY }],
                   maxHeight: '85%',
                   paddingBottom: Math.max(insets.bottom, Spacing.lg),

@@ -13,7 +13,7 @@ import { scannerApi, shoppingListApi } from '../../lib/api';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Spacing, ComponentSpacing, Gap } from '../../constants/Spacing';
 import { Duration } from '../../constants/Animations';
@@ -376,10 +376,10 @@ export default function TabLayout() {
                   left: 0,
                   right: 0,
                   marginBottom: 4,
-                  backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                  backgroundColor: isDark ? DarkElevation.dp8 : '#FFFFFF',
                   borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: isDark ? '#374151' : '#E5E7EB',
+                  borderWidth: isDark ? 0 : 1,
+                  borderColor: isDark ? 'transparent' : '#E5E7EB',
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: -2 },
                   shadowOpacity: 0.1,
@@ -614,7 +614,7 @@ function QuickTimerModal({
         <View
           className="mx-6 rounded-2xl p-6"
           style={{
-            backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+            backgroundColor: isDark ? DarkElevation.dp16 : '#FFFFFF',
             width: Dimensions.get('window').width - 48,
           }}
         >

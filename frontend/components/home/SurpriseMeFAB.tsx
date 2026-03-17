@@ -17,9 +17,10 @@ import { Text } from 'react-native';
 
 interface SurpriseMeFABProps {
   onPress: () => void;
+  bottomOffset?: number;
 }
 
-export default function SurpriseMeFAB({ onPress }: SurpriseMeFABProps) {
+export default function SurpriseMeFAB({ onPress, bottomOffset }: SurpriseMeFABProps) {
   const scale = useSharedValue(1);
   const pulseScale = useSharedValue(1);
 
@@ -48,7 +49,7 @@ export default function SurpriseMeFAB({ onPress }: SurpriseMeFABProps) {
   }));
 
   return (
-    <Animated.View style={[styles.wrapper, animStyle]}>
+    <Animated.View style={[styles.wrapper, animStyle, bottomOffset !== undefined && { bottom: bottomOffset + 12 }]}>
       <HapticTouchableOpacity
         onPress={onPress}
         onPressIn={handlePressIn}

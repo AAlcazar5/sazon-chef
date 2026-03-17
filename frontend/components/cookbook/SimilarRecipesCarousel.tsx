@@ -106,9 +106,10 @@ function SimilarRecipesCarousel({
           scrollEventThrottle={16}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 20 }}
-          decelerationRate="fast"
+          decelerationRate={0.92}
           snapToInterval={292}
           snapToAlignment="start"
+          disableIntervalMomentum
         >
           {recipes.map((recipe) => {
             const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };

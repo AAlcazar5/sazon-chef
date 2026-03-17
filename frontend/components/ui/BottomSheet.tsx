@@ -11,6 +11,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useTheme } from '../../contexts/ThemeContext';
+import { DarkElevation } from '../../constants/Colors';
 
 interface BottomSheetProps {
   /** Controls visibility — matches the RN Modal `visible` prop pattern */
@@ -34,7 +35,10 @@ export default function BottomSheet({
   children,
 }: BottomSheetProps) {
   const ref = useRef<BottomSheetModal>(null);
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
+  // Elevated surface: in dark mode use lighter background so sheet lifts above the page
+  const sheetBackground = isDark ? DarkElevation.dp4 : colors.background;
   const snapPoints = useMemo(() => snapPointsProp ?? ['50%'], [snapPointsProp]);
 
   useEffect(() => {
@@ -60,8 +64,8 @@ export default function BottomSheet({
   );
 
   const Handle = () => (
-    <View style={[styles.handle, { backgroundColor: colors.background }]}>
-      <View style={styles.handleBar} />
+    <View style={[styles.handle, { backgroundColor: sheetBackground }]}>
+      <View style={[styles.handleBar, { backgroundColor: isDark ? '#48484A' : '#D1D5DB' }]} />
       {title && (
         <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>
       )}
@@ -77,7 +81,7 @@ export default function BottomSheet({
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       handleComponent={Handle}
-      backgroundStyle={{ backgroundColor: colors.background }}
+      backgroundStyle={{ backgroundColor: sheetBackground }}
       enablePanDownToClose
     >
       <ContentWrapper style={styles.content}>

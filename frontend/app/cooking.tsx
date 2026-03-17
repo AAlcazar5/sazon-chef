@@ -26,6 +26,7 @@ import IngredientChecklist from '../components/recipe/IngredientChecklist';
 import AnimatedSazon from '../components/mascot/AnimatedSazon';
 import { CoffeeBanner, shouldShowCoffeeBanner, recordCoffeeBannerShown } from '../components/premium/CoffeeBanner';
 import { LinearGradient } from 'expo-linear-gradient';
+import { HapticChoreography } from '../utils/hapticChoreography';
 
 // --- Types ---
 
@@ -220,7 +221,7 @@ export default function CookingScreen() {
     if (!recipe || done) return;
     setElapsedSeconds(Math.round((Date.now() - startTimeRef.current) / 1000));
     setDone(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    HapticChoreography.cookingComplete();
 
     // Animate confetti burst
     confettiAnims.forEach((anim, i) => {

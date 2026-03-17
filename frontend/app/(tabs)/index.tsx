@@ -28,7 +28,6 @@ import QuickFiltersBar from '../../components/home/QuickFiltersBar';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
-import SurpriseMeFAB from '../../components/home/SurpriseMeFAB';
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
 import { SurpriseMeModal, type SurpriseFilters } from '../../components/home';
 import { Accelerometer } from 'expo-sensors';
@@ -1137,10 +1136,6 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
         onSurprise={handleSurprise}
       />
 
-      {/* "Surprise Me" FAB — gradient pill, spring bounce on press */}
-      {!searchQuery && (
-        <SurpriseMeFAB onPress={() => setShowSurpriseModal(true)} />
-      )}
     </SafeAreaView>
   );
 }
