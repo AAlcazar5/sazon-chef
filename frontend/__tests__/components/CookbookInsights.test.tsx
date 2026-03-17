@@ -24,6 +24,17 @@ jest.mock('../../components/ui/Icon', () => {
   };
 });
 
+jest.mock('../../components/ui/BottomSheet', () => {
+  return function MockBottomSheet({ visible, children, title }: any) {
+    if (!visible) return null;
+    const { View, Text } = require('react-native');
+    return require('react').createElement(View, null,
+      title ? require('react').createElement(Text, null, title) : null,
+      children,
+    );
+  };
+});
+
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const makeRecipe = (overrides: Partial<any> = {}): SavedRecipe => ({
@@ -165,13 +176,11 @@ describe('CookbookInsights', () => {
     );
   });
 
-  it('tapping close button calls onClose', () => {
-    const onClose = jest.fn();
-    const { getByLabelText } = render(
-      <CookbookInsights {...baseProps} onClose={onClose} />
+  it('renders header title text', () => {
+    const { getByText } = render(
+      <CookbookInsights {...baseProps} />
     );
-    fireEvent.press(getByLabelText('Close insights'));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(getByText('Quick stats + one-tap filters')).toBeTruthy();
   });
 
   it('does not render when visible is false', () => {

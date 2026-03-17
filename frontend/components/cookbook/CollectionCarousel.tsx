@@ -1,7 +1,7 @@
-import React from 'react';
-// frontend/components/cookbook/SimilarRecipesCarousel.tsx
-// Horizontal carousel showing similar recipe recommendations
+// frontend/components/cookbook/CollectionCarousel.tsx
+// Horizontal carousel for a single collection's recipes (P6: purposeful motion)
 
+import React from 'react';
 import { View, Text, ScrollView, Dimensions } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { useColorScheme } from 'nativewind';
@@ -10,10 +10,10 @@ import { RecipeCard } from '../recipe/RecipeCard';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { HapticPatterns } from '../../constants/Haptics';
-import type { SavedRecipe } from '../../types';
+import type { SavedRecipe, Collection } from '../../types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_WIDTH = SCREEN_WIDTH * 0.72; // ~72% of screen so next card peeks
+const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const CARD_GAP = 12;
 const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
 
@@ -22,60 +22,53 @@ interface RecipeFeedback {
   disliked: boolean;
 }
 
-interface SimilarRecipesCarouselProps {
-  /** Similar recipes to display */
+interface CollectionCarouselProps {
+  /** Collection metadata */
+  collection: Collection;
+  /** Recipes belonging to this collection */
   recipes: SavedRecipe[];
   /** Whether the carousel is collapsed */
   isCollapsed: boolean;
   /** Toggle collapse state */
   onToggleCollapse: () => void;
-  /** User feedback state for recipes */
-  userFeedback: Record<string, RecipeFeedback>;
-  /** Recipe ID currently loading feedback */
-  feedbackLoading: string | null;
   /** Called when a recipe is pressed */
   onRecipePress: (recipeId: string) => void;
   /** Called when a recipe is long-pressed */
   onRecipeLongPress: (recipe: SavedRecipe) => void;
+  /** Whether dark mode is active */
+  isDark: boolean;
+  /** User feedback state */
+  userFeedback?: Record<string, RecipeFeedback>;
+  /** Recipe ID currently loading feedback */
+  feedbackLoading?: string | null;
   /** Called when like button is pressed */
-  onLike: (recipeId: string) => void;
+  onLike?: (recipeId: string) => void;
   /** Called when dislike button is pressed */
-  onDislike: (recipeId: string) => void;
-  /** Called when delete/unsave button is pressed (for saved view) */
-  onDelete?: (recipeId: string) => void;
-  /** Called when save button is pressed (for liked/disliked view) */
+  onDislike?: (recipeId: string) => void;
+  /** Called when save/unsave button is pressed */
   onSave?: (recipeId: string) => void;
-  /** Current view mode */
-  viewMode: 'saved' | 'liked' | 'disliked';
 }
 
-/**
- * Horizontal carousel showing similar recipe recommendations
- * Collapsible section with recipe cards
- */
-function SimilarRecipesCarousel({
+function CollectionCarousel({
+  collection,
   recipes,
   isCollapsed,
   onToggleCollapse,
-  userFeedback,
-  feedbackLoading,
   onRecipePress,
   onRecipeLongPress,
+  isDark,
+  userFeedback = {},
+  feedbackLoading = null,
   onLike,
   onDislike,
-  onDelete,
   onSave,
-  viewMode,
-}: SimilarRecipesCarouselProps) {
+}: CollectionCarouselProps) {
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
 
-  if (recipes.length === 0) {
-    return null;
-  }
+  if (recipes.length === 0) return null;
 
   return (
-    <View className="mt-8 mb-12">
+    <View className="mt-6 mb-2">
       <View className="px-4">
         <HapticTouchableOpacity
           onPress={() => {
@@ -85,12 +78,20 @@ function SimilarRecipesCarousel({
           className="mb-3 flex-row items-center justify-between"
         >
           <View className="flex-row items-center flex-1">
-            <View className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
-              <Text className="text-lg">💡</Text>
+            <View
+              className="w-8 h-8 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: isDark ? '#374151' : '#F3F4F6' }}
+            >
+              <Icon
+                name={Icons.BOOKMARK}
+                size={IconSizes.SM}
+                color={isDark ? '#D1D5DB' : '#6B7280'}
+                accessibilityLabel={collection.name}
+              />
             </View>
             <View className="flex-1">
               <Text className="text-lg font-semibold text-gray-900 dark:text-white">
-                You might also like
+                {collection.name}
               </Text>
               <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 {recipes.length} recipe{recipes.length !== 1 ? 's' : ''}
@@ -111,7 +112,7 @@ function SimilarRecipesCarousel({
           horizontal
           scrollEventThrottle={16}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 20 }}
+          contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 12 }}
           decelerationRate={0.92}
           snapToInterval={SNAP_INTERVAL}
           snapToAlignment="start"
@@ -135,8 +136,7 @@ function SimilarRecipesCarousel({
                   onLongPress={() => onRecipeLongPress(recipe)}
                   onLike={onLike}
                   onDislike={onDislike}
-                  onDelete={viewMode === 'saved' ? onDelete : undefined}
-                  onSave={viewMode !== 'saved' ? onSave : undefined}
+                  onSave={onSave}
                   feedback={feedback}
                   isFeedbackLoading={isFeedbackLoading}
                   isDark={isDark}
@@ -151,4 +151,4 @@ function SimilarRecipesCarousel({
   );
 }
 
-export default React.memo(SimilarRecipesCarousel);
+export default React.memo(CollectionCarousel);

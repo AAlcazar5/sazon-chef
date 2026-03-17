@@ -159,10 +159,8 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
         onPress={handlePress}
         onLongPress={() => onLongPress?.(recipe)}
         delayLongPress={500}
-        className={`bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg mb-4 ${className}`}
+        className={`bg-white dark:bg-gray-800 rounded-xl overflow-hidden mb-4 ${className}`}
         style={{
-          borderWidth: 2,
-          borderColor: getBorderColor(),
           ...getShadowStyle(),
           ...style,
         }}
@@ -365,16 +363,13 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
           <View className="flex-row items-center justify-between">
             <HapticTouchableOpacity
               onPress={handleSavePress}
-              className="p-2 rounded-full border"
+              className="p-2 rounded-full"
               style={{
                 backgroundColor: onDelete
                   ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2')
                   : saveHighlighted
                     ? (isDark ? DarkColors.primary : Colors.primary)
                     : (isDark ? `${Colors.primaryLight}33` : Colors.primaryDark),
-                borderColor: onDelete
-                  ? (isDark ? '#EF4444' : '#DC2626')
-                  : (isDark ? DarkColors.primary : Colors.primaryDark),
               }}
               {...iconButtonAccessibility(onDelete ? 'Remove recipe' : 'Save recipe', {
                 hint: onDelete ? 'Remove this recipe from your cookbook' : 'Save this recipe to your cookbook'
@@ -393,8 +388,8 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               <HapticTouchableOpacity
                 onPress={() => onLike?.(recipe.id)}
                 disabled={isFeedbackLoading}
-                className={`p-2 rounded-full mr-2 border ${feedback.liked ? '' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}
-                style={feedback.liked ? { backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen, borderColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen } : undefined}
+                className={`p-2 rounded-full mr-2 ${feedback.liked ? '' : 'bg-gray-100 dark:bg-gray-700'}`}
+                style={feedback.liked ? { backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen } : undefined}
                 {...iconButtonAccessibility(feedback.liked ? 'Remove like' : 'Like recipe', { hint: 'Double tap to like this recipe' })}
               >
                 <Icon name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} size={20} color={feedback.liked ? "#FFFFFF" : (isDark ? "#D1D5DB" : "#4B5563")} />
@@ -402,8 +397,8 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               <HapticTouchableOpacity
                 onPress={() => onDislike?.(recipe.id)}
                 disabled={isFeedbackLoading}
-                className={`p-2 rounded-full border ${feedback.disliked ? '' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}
-                style={feedback.disliked ? { backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed, borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed } : undefined}
+                className={`p-2 rounded-full ${feedback.disliked ? '' : 'bg-gray-100 dark:bg-gray-700'}`}
+                style={feedback.disliked ? { backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed } : undefined}
                 {...iconButtonAccessibility(feedback.disliked ? 'Remove dislike' : 'Dislike recipe', { hint: 'Double tap to dislike this recipe' })}
               >
                 <Icon name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE} size={20} color={feedback.disliked ? "#FFFFFF" : (isDark ? "#D1D5DB" : "#4B5563")} />
@@ -425,8 +420,6 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
     <View
       className={`rounded-xl overflow-hidden ${className}`}
       style={{
-        borderWidth: 2,
-        borderColor: getBorderColor(),
         height: finalCardHeight,
         ...getShadowStyle(),
         ...style,
@@ -619,8 +612,6 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                   : saveHighlighted
                     ? `${Colors.primary}CC`
                     : 'rgba(255,255,255,0.20)',
-                borderWidth: 1,
-                borderColor: onDelete ? 'rgba(239,68,68,0.60)' : 'rgba(255,255,255,0.35)',
               }}
               {...iconButtonAccessibility(onDelete ? 'Remove recipe' : 'Save recipe', {
                 hint: onDelete ? 'Remove this recipe from your cookbook' : 'Save this recipe to your cookbook'
@@ -639,8 +630,6 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                 style={{
                   padding: 7, borderRadius: 999,
                   backgroundColor: feedback.liked ? Colors.tertiaryGreen : 'rgba(255,255,255,0.20)',
-                  borderWidth: 1,
-                  borderColor: feedback.liked ? Colors.tertiaryGreen : 'rgba(255,255,255,0.35)',
                 }}
                 {...iconButtonAccessibility(feedback.liked ? 'Remove like' : 'Like recipe', { hint: 'Double tap to like this recipe' })}
               >
@@ -653,8 +642,6 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                 style={{
                   padding: 7, borderRadius: 999,
                   backgroundColor: feedback.disliked ? Colors.secondaryRed : 'rgba(255,255,255,0.20)',
-                  borderWidth: 1,
-                  borderColor: feedback.disliked ? Colors.secondaryRed : 'rgba(255,255,255,0.35)',
                 }}
                 {...iconButtonAccessibility(feedback.disliked ? 'Remove dislike' : 'Dislike recipe', { hint: 'Double tap to dislike this recipe' })}
               >

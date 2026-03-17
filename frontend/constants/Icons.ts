@@ -87,6 +87,8 @@ export const Icons = {
   FILTER_OUTLINE: 'filter-outline' as IconName,
   SEARCH: 'search' as IconName,
   SEARCH_OUTLINE: 'search-outline' as IconName,
+  GRID: 'grid' as IconName,
+  GRID_OUTLINE: 'grid-outline' as IconName,
   NOTIFICATIONS: 'notifications' as IconName,
   NOTIFICATIONS_OUTLINE: 'notifications-outline' as IconName,
   

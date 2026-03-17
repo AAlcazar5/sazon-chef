@@ -107,8 +107,6 @@ export default function CollectionFilterRow({
   return (
     <View style={{
       backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-      borderBottomWidth: 0.5,
-      borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
     }}>
       <ScrollView
         horizontal

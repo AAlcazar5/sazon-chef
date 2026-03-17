@@ -18,6 +18,7 @@ export { default as RecipeNotesModal } from './RecipeNotesModal';
 export { default as MarkCookedModal } from './MarkCookedModal';
 export { default as ImportFromUrlModal } from './ImportFromUrlModal';
 export { default as CollectionFilterRow } from './CollectionFilterRow';
+export { default as CollectionCarousel } from './CollectionCarousel';
 
 // Re-export types
 export type {

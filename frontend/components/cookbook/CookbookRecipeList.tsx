@@ -1,8 +1,11 @@
 import React, { useCallback, useState } from 'react';
 // frontend/components/cookbook/CookbookRecipeList.tsx
-// Grid and list views for cookbook recipes
+// Grid and list views for cookbook recipes with staggered entrance animations
 
 import { View, Text, FlatList } from 'react-native';
+import Animated, {
+  FadeIn,
+} from 'react-native-reanimated';
 import { Spacing } from '../../constants/Spacing';
 import { RecipeCard } from '../recipe/RecipeCard';
 import AnimatedRecipeCard from '../recipe/AnimatedRecipeCard';
@@ -102,12 +105,17 @@ function CookbookRecipeList({
 
   const keyExtractor = useCallback((item: SavedRecipe) => item.id, []);
 
-  const renderGridItem = useCallback(({ item: recipe }: { item: SavedRecipe }) => {
+  const renderGridItem = useCallback(({ item: recipe, index }: { item: SavedRecipe; index: number }) => {
     const feedback = userFeedback[recipe.id] || DEFAULT_FEEDBACK;
     const isFeedbackLoading = feedbackLoading === recipe.id;
+    // Stagger delay: 60ms per item, capped at 600ms
+    const delay = Math.min(index * 60, 600);
 
     return (
-      <View style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.lg }}>
+      <Animated.View
+        entering={FadeIn.delay(delay).duration(350)}
+        style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.lg }}
+      >
         <RecipeCard
           recipe={recipe as any}
           variant="grid"
@@ -121,7 +129,7 @@ function CookbookRecipeList({
           isDark={isDark}
           footer={<RecipeMeta recipe={recipe} />}
         />
-      </View>
+      </Animated.View>
     );
   }, [userFeedback, feedbackLoading, isDark, onRecipePress, onRecipeLongPress, onLike, onDislike, onSave, RecipeMeta]);
 
@@ -158,7 +166,7 @@ function CookbookRecipeList({
   if (recipes.length === 0) {
     return (
       <View className={`${displayMode === 'grid' ? 'w-full' : ''} py-8 items-center`}>
-        <Text className="text-gray-500 dark:text-gray-400">No recipes on this page</Text>
+        <Text className="text-gray-500 dark:text-gray-400">No recipes found</Text>
       </View>
     );
   }
@@ -177,6 +185,7 @@ function CookbookRecipeList({
     return (
       <View style={{ position: 'relative' }}>
         <FlatList
+          key="grid-2col"
           data={recipes}
           renderItem={renderGridItem}
           keyExtractor={keyExtractor}
@@ -196,6 +205,7 @@ function CookbookRecipeList({
   return (
     <View style={{ position: 'relative' }}>
       <FlatList
+        key="list-1col"
         data={recipes}
         renderItem={renderListItem}
         keyExtractor={keyExtractor}
