@@ -536,6 +536,8 @@ export const recipeApi = {
     minProtein?: number;
     maxCarbs?: number;
     maxCalories?: number;
+    lat?: number;
+    lon?: number;
   }) => {
     const params: any = {};
     if (options?.page !== undefined) params.page = options.page;
@@ -552,6 +554,8 @@ export const recipeApi = {
     if (options?.minProtein !== undefined) params.minProtein = options.minProtein;
     if (options?.maxCarbs !== undefined) params.maxCarbs = options.maxCarbs;
     if (options?.maxCalories !== undefined) params.maxCalories = options.maxCalories;
+    if (options?.lat !== undefined) params.lat = options.lat;
+    if (options?.lon !== undefined) params.lon = options.lon;
     return apiClient.get('/recipes/home-feed', { params });
   },
 
@@ -581,8 +585,8 @@ export const recipeApi = {
     return apiClient.post(`/recipes/${id}/like`);
   },
 
-  dislikeRecipe: (id: string) => {
-    return apiClient.post(`/recipes/${id}/dislike`);
+  dislikeRecipe: (id: string, reason?: string) => {
+    return apiClient.post(`/recipes/${id}/dislike`, reason ? { reason } : {});
   },
 
   saveRecipe: (id: string, data?: { collectionIds?: string[] }) => {
@@ -591,6 +595,18 @@ export const recipeApi = {
 
   unsaveRecipe: (id: string) => {
     return apiClient.delete(`/recipes/${id}/save`);
+  },
+
+  bulkUnsaveRecipes: (recipeIds: string[]) => {
+    return apiClient.delete('/recipes/bulk-unsave', { data: { recipeIds } });
+  },
+
+  bulkMoveToCollection: (recipeIds: string[], collectionIds: string[]) => {
+    return apiClient.patch('/recipes/bulk-move-collection', { recipeIds, collectionIds });
+  },
+
+  exportCookbook: () => {
+    return apiClient.get('/recipes/export');
   },
 
   // Recipe scoring

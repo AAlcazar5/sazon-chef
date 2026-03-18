@@ -47,6 +47,10 @@ interface CookbookRecipeListProps {
   onSave: (recipeId: string) => void;
   /** Called when rating changes */
   onRate?: (recipeId: string, rating: number | null) => void;
+  /** Whether multi-select mode is active */
+  selectionMode?: boolean;
+  /** Set of selected recipe IDs */
+  selectedRecipeIds?: Set<string>;
 }
 
 const DEFAULT_FEEDBACK = { liked: false, disliked: false };
@@ -65,6 +69,8 @@ function CookbookRecipeList({
   onDislike,
   onSave,
   onRate,
+  selectionMode = false,
+  selectedRecipeIds,
 }: CookbookRecipeListProps) {
   const [showChefKiss, setShowChefKiss] = useState(false);
 
@@ -110,32 +116,50 @@ function CookbookRecipeList({
     const isFeedbackLoading = feedbackLoading === recipe.id;
     // Stagger delay: 60ms per item, capped at 600ms
     const delay = Math.min(index * 60, 600);
+    const isSelected = selectionMode && selectedRecipeIds?.has(recipe.id);
 
     return (
       <Animated.View
         entering={FadeIn.delay(delay).duration(350)}
-        style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.lg }}
+        style={[
+          { width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.lg },
+          isSelected && { opacity: 0.85 },
+        ]}
       >
+        {selectionMode && (
+          <View style={{
+            position: 'absolute', top: 6, right: Spacing.sm + 6, zIndex: 10,
+            width: 24, height: 24, borderRadius: 12, borderWidth: 2,
+            borderColor: isSelected ? '#10B981' : (isDark ? '#6B7280' : '#D1D5DB'),
+            backgroundColor: isSelected ? '#10B981' : (isDark ? 'rgba(31,41,55,0.8)' : 'rgba(255,255,255,0.8)'),
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            {isSelected && (
+              <Icon name={Icons.CHECKMARK as any} size={14} color="#FFFFFF" />
+            )}
+          </View>
+        )}
         <RecipeCard
           recipe={recipe as any}
           variant="grid"
           onPress={onRecipePress}
           onLongPress={() => onRecipeLongPress(recipe)}
-          onLike={onLike}
-          onDislike={onDislike}
-          onSave={onSave}
+          onLike={selectionMode ? undefined : onLike}
+          onDislike={selectionMode ? undefined : onDislike}
+          onSave={selectionMode ? undefined : onSave}
           feedback={feedback}
           isFeedbackLoading={isFeedbackLoading}
           isDark={isDark}
-          footer={<RecipeMeta recipe={recipe} />}
+          footer={selectionMode ? undefined : <RecipeMeta recipe={recipe} />}
         />
       </Animated.View>
     );
-  }, [userFeedback, feedbackLoading, isDark, onRecipePress, onRecipeLongPress, onLike, onDislike, onSave, RecipeMeta]);
+  }, [userFeedback, feedbackLoading, isDark, onRecipePress, onRecipeLongPress, onLike, onDislike, onSave, RecipeMeta, selectionMode, selectedRecipeIds]);
 
   const renderListItem = useCallback(({ item: recipe, index }: { item: SavedRecipe; index: number }) => {
     const feedback = userFeedback[recipe.id] || DEFAULT_FEEDBACK;
     const isFeedbackLoading = feedbackLoading === recipe.id;
+    const isSelected = selectionMode && selectedRecipeIds?.has(recipe.id);
 
     return (
       <AnimatedRecipeCard
@@ -144,24 +168,43 @@ function CookbookRecipeList({
         animatedIds={animatedRecipeIds}
         onAnimated={onAnimated}
       >
-        <RecipeCard
-          recipe={recipe as any}
-          variant="list"
-          onPress={onRecipePress}
-          onLongPress={() => onRecipeLongPress(recipe)}
-          onLike={onLike}
-          onDislike={onDislike}
-          onSave={onSave}
-          feedback={feedback}
-          isFeedbackLoading={isFeedbackLoading}
-          isDark={isDark}
-          showDescription={true}
-          className="mb-1"
-          footer={<RecipeMeta recipe={recipe} />}
-        />
+        <View style={[
+          { flexDirection: 'row', alignItems: 'center' },
+          isSelected && { opacity: 0.85 },
+        ]}>
+          {selectionMode && (
+            <View style={{
+              width: 24, height: 24, borderRadius: 12, borderWidth: 2, marginRight: 8,
+              borderColor: isSelected ? '#10B981' : (isDark ? '#6B7280' : '#D1D5DB'),
+              backgroundColor: isSelected ? '#10B981' : 'transparent',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              {isSelected && (
+                <Icon name={Icons.CHECKMARK as any} size={14} color="#FFFFFF" />
+              )}
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <RecipeCard
+              recipe={recipe as any}
+              variant="list"
+              onPress={onRecipePress}
+              onLongPress={() => onRecipeLongPress(recipe)}
+              onLike={selectionMode ? undefined : onLike}
+              onDislike={selectionMode ? undefined : onDislike}
+              onSave={selectionMode ? undefined : onSave}
+              feedback={feedback}
+              isFeedbackLoading={isFeedbackLoading}
+              isDark={isDark}
+              showDescription={!selectionMode}
+              className="mb-1"
+              footer={selectionMode ? undefined : <RecipeMeta recipe={recipe} />}
+            />
+          </View>
+        </View>
       </AnimatedRecipeCard>
     );
-  }, [userFeedback, feedbackLoading, isDark, animatedRecipeIds, onAnimated, onRecipePress, onRecipeLongPress, onLike, onDislike, onSave, RecipeMeta]);
+  }, [userFeedback, feedbackLoading, isDark, animatedRecipeIds, onAnimated, onRecipePress, onRecipeLongPress, onLike, onDislike, onSave, RecipeMeta, selectionMode, selectedRecipeIds]);
 
   if (recipes.length === 0) {
     return (

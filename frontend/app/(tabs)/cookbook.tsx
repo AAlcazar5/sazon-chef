@@ -37,6 +37,7 @@ import {
   RecipeNotesModal,
   MarkCookedModal,
   ImportFromUrlModal,
+  BulkActionBar,
   type CookbookFilters,
   type CollectionSortMode,
 } from '../../components/cookbook';
@@ -90,6 +91,10 @@ export default function CookbookScreen() {
   // Track last fetched base recipe ID to avoid redundant API calls when only filters change
   const lastSimilarBaseIdRef = useRef<string | null>(null);
   const rawSimilarRecipesRef = useRef<SavedRecipe[]>([]);
+
+  // Multi-select / bulk operations state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedRecipeIds, setSelectedRecipeIds] = useState<Set<string>>(new Set());
 
   // Animation state for recipe cards (matches home page behavior)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
@@ -693,12 +698,100 @@ export default function CookbookScreen() {
     router.push(`../modal?id=${recipeId}&source=cookbook`);
   }, []);
 
-  // Long press handler to show action menu (matches home page behavior)
+  // Long press handler — enters multi-select mode (or shows action menu if already in selection)
   const handleLongPress = useCallback((recipe: SavedRecipe) => {
     HapticPatterns.buttonPress();
-    setActionMenuRecipe(recipe);
-    setActionMenuVisible(true);
+    if (!selectionMode) {
+      setSelectionMode(true);
+      setSelectedRecipeIds(new Set([recipe.id]));
+    } else {
+      setSelectedRecipeIds(prev => {
+        const next = new Set(prev);
+        if (next.has(recipe.id)) next.delete(recipe.id);
+        else next.add(recipe.id);
+        if (next.size === 0) setSelectionMode(false);
+        return next;
+      });
+    }
+  }, [selectionMode]);
+
+  const handleRecipeTapInSelection = useCallback((recipeId: string) => {
+    if (selectionMode) {
+      setSelectedRecipeIds(prev => {
+        const next = new Set(prev);
+        if (next.has(recipeId)) next.delete(recipeId);
+        else next.add(recipeId);
+        if (next.size === 0) setSelectionMode(false);
+        return next;
+      });
+    } else {
+      router.push(`../modal?id=${recipeId}&source=cookbook`);
+    }
+  }, [selectionMode]);
+
+  const handleCancelSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedRecipeIds(new Set());
   }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const allIds = new Set(filteredAndSortedRecipes.map(r => r.id));
+    setSelectedRecipeIds(allIds);
+  }, [filteredAndSortedRecipes]);
+
+  const handleBulkRemove = useCallback(async () => {
+    const ids = Array.from(selectedRecipeIds);
+    if (ids.length === 0) return;
+    Alert.alert(
+      'Remove from Cookbook',
+      `Remove ${ids.length} recipe${ids.length > 1 ? 's' : ''} from your cookbook?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await recipeApi.bulkUnsaveRecipes(ids);
+              setSavedRecipes(prev => prev.filter(r => !selectedRecipeIds.has(r.id)));
+              handleCancelSelection();
+              HapticPatterns.success();
+            } catch (e) {
+              Alert.alert('Error', 'Failed to remove recipes');
+            }
+          },
+        },
+      ]
+    );
+  }, [selectedRecipeIds, handleCancelSelection]);
+
+  const [bulkMovePickerVisible, setBulkMovePickerVisible] = useState(false);
+  const [bulkMoveCollectionIds, setBulkMoveCollectionIds] = useState<string[]>([]);
+
+  const handleBulkMoveStart = useCallback(async () => {
+    try {
+      const res = await collectionsApi.list();
+      const cols = (Array.isArray(res.data) ? res.data : (res.data?.data || [])) as Array<{ id: string; name: string }>;
+      setCollections(cols);
+      setBulkMoveCollectionIds([]);
+      setBulkMovePickerVisible(true);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to load collections');
+    }
+  }, []);
+
+  const handleBulkMoveConfirm = useCallback(async () => {
+    const ids = Array.from(selectedRecipeIds);
+    try {
+      await recipeApi.bulkMoveToCollection(ids, bulkMoveCollectionIds);
+      setBulkMovePickerVisible(false);
+      handleCancelSelection();
+      HapticPatterns.success();
+      setNeedsRefresh(true);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to move recipes');
+    }
+  }, [selectedRecipeIds, bulkMoveCollectionIds, handleCancelSelection]);
 
   const handleRemoveRecipe = useCallback(async (recipeId: string) => {
     await cachedUnsaveRecipe(recipeId);
@@ -1135,12 +1228,14 @@ export default function CookbookScreen() {
               feedbackLoading={feedbackLoading}
               animatedRecipeIds={animatedRecipeIds}
               onAnimated={(id) => setAnimatedRecipeIds(prev => new Set(prev).add(id))}
-              onRecipePress={handleRecipePress}
+              onRecipePress={handleRecipeTapInSelection}
               onRecipeLongPress={handleLongPress}
               onLike={handleLike}
               onDislike={handleDislike}
               onSave={handleSaveFromCookbook}
               onRate={handleUpdateRating}
+              selectionMode={selectionMode}
+              selectedRecipeIds={selectedRecipeIds}
             />
           </View>
 
@@ -1181,7 +1276,7 @@ export default function CookbookScreen() {
                 recipes={recipesByCollection.get(collection.id) || []}
                 isCollapsed={collapsedCollections.has(collection.id)}
                 onToggleCollapse={() => toggleCollectionCollapse(collection.id)}
-                onRecipePress={handleRecipePress}
+                onRecipePress={handleRecipeTapInSelection}
                 onRecipeLongPress={handleLongPress}
                 isDark={isDark}
                 userFeedback={userFeedback}
@@ -1200,7 +1295,7 @@ export default function CookbookScreen() {
             onToggleCollapse={() => setSimilarRecipesCollapsed(!similarRecipesCollapsed)}
             userFeedback={userFeedback}
             feedbackLoading={feedbackLoading}
-            onRecipePress={handleRecipePress}
+            onRecipePress={handleRecipeTapInSelection}
             onRecipeLongPress={handleLongPress}
             onLike={handleLike}
             onDislike={handleDislike}
@@ -1213,6 +1308,34 @@ export default function CookbookScreen() {
           <View style={{ height: 60 + 72 + insets.bottom + 140 }} />
         </ScrollView>
       ) : null}
+
+      {/* Bulk Action Bar (multi-select mode) */}
+      {selectionMode && (
+        <BulkActionBar
+          selectedCount={selectedRecipeIds.size}
+          onMoveToCollection={handleBulkMoveStart}
+          onRemoveFromCookbook={handleBulkRemove}
+          onSelectAll={handleSelectAll}
+          onCancel={handleCancelSelection}
+        />
+      )}
+
+      {/* Bulk Move Collection Picker */}
+      <CollectionSavePicker
+        visible={bulkMovePickerVisible}
+        onClose={() => {
+          setBulkMovePickerVisible(false);
+          setBulkMoveCollectionIds([]);
+        }}
+        collections={collections}
+        selectedCollectionIds={bulkMoveCollectionIds}
+        onSelectionChange={setBulkMoveCollectionIds}
+        onSave={handleBulkMoveConfirm}
+        onCreateCollection={async (name) => {
+          setNewCollectionName(name);
+          await handleCreateCollection();
+        }}
+      />
 
       {/* Collection Save Picker Modal */}
       <CollectionSavePicker

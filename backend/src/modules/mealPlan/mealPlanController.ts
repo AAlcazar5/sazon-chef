@@ -431,6 +431,7 @@ export const generateMealPlan = async (req: Request, res: Response) => {
             physicalProfile: physProfileData,
             cuisineOverride: dayCuisine,
             userFeedback,
+            dayDate: dateStr,
           },
           {
             mealsToGenerate: mealsPerDay as Array<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert'>,

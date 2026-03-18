@@ -66,6 +66,16 @@ export default function AddItemModal({
     [multiItemDetected, state.newItemName]
   );
 
+  // "You usually buy" hint — match current item name against purchase history
+  const usuallyBuyHint = useMemo(() => {
+    const name = state.newItemName.trim().toLowerCase();
+    if (!name || name.length < 2) return null;
+    const match = state.purchaseHistory.find(
+      h => h.itemName.toLowerCase() === name
+    );
+    return match?.quantity || null;
+  }, [state.newItemName, state.purchaseHistory]);
+
   // Auto-populate quantity field when user types a single item with embedded quantity
   const handleItemNameChange = useCallback((text: string) => {
     dispatch({ type: 'UPDATE', payload: { newItemName: text } });
@@ -75,9 +85,18 @@ export default function AddItemModal({
       const extracted = extractEmbeddedQuantity(text);
       if (extracted && !state.newItemQuantity) {
         dispatch({ type: 'UPDATE', payload: { newItemQuantity: extracted.quantity } });
+      } else if (!state.newItemQuantity) {
+        // Auto-populate from purchase history
+        const normalized = text.trim().toLowerCase();
+        const historyMatch = state.purchaseHistory.find(
+          h => h.itemName.toLowerCase() === normalized
+        );
+        if (historyMatch?.quantity) {
+          dispatch({ type: 'UPDATE', payload: { newItemQuantity: historyMatch.quantity } });
+        }
       }
     }
-  }, [dispatch, state.newItemQuantity]);
+  }, [dispatch, state.newItemQuantity, state.purchaseHistory]);
 
   const handleAdd = useCallback(() => {
     if (multiItemDetected && parsedItems.length > 1) {
@@ -279,13 +298,24 @@ export default function AddItemModal({
 
                 {/* Hide quantity field when multi-item detected */}
                 {!multiItemDetected && (
-                  <TextInput
-                    placeholder="Quantity (e.g., 2 cups, 1 lb)"
-                    value={state.newItemQuantity}
-                    onChangeText={(text) => dispatch({ type: 'UPDATE', payload: { newItemQuantity: text } })}
-                    className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-lg mb-3 text-gray-900 dark:text-gray-100"
-                    placeholderTextColor="#9CA3AF"
-                  />
+                  <View>
+                    <TextInput
+                      placeholder="Quantity (e.g., 2 cups, 1 lb)"
+                      value={state.newItemQuantity}
+                      onChangeText={(text) => dispatch({ type: 'UPDATE', payload: { newItemQuantity: text } })}
+                      className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-lg text-gray-900 dark:text-gray-100"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                    {usuallyBuyHint && (
+                      <Text
+                        className="text-xs ml-1 mt-1 mb-2"
+                        style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}
+                      >
+                        usually {usuallyBuyHint}
+                      </Text>
+                    )}
+                    {!usuallyBuyHint && <View className="mb-3" />}
+                  </View>
                 )}
                 {multiItemDetected && <View className="mb-2" />}
 

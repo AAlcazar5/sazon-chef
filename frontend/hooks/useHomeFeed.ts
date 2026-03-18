@@ -20,6 +20,8 @@ interface HomeFeedParams {
   minProtein?: number;
   maxCarbs?: number;
   maxCalories?: number;
+  lat?: number;
+  lon?: number;
 }
 
 interface PopularSearch {
@@ -43,6 +45,7 @@ interface HomeFeedData {
   perfectMatches: SuggestedRecipe[];
   likedRecipes: SuggestedRecipe[];
   popularSearches: PopularSearch[];
+  searchSuggestions: string[];
   pagination: HomeFeedPagination | null;
 }
 
@@ -61,6 +64,7 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
     perfectMatches: [],
     likedRecipes: [],
     popularSearches: [],
+    searchSuggestions: [],
     pagination: null,
   });
   const [loading, setLoading] = useState(true);
@@ -86,6 +90,7 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
         perfectMatches: responseData.perfectMatches || [],
         likedRecipes: responseData.likedRecipes || [],
         popularSearches: responseData.popularSearches || [],
+        searchSuggestions: responseData.searchSuggestions || [],
         pagination: responseData.pagination || null,
       };
 
@@ -100,7 +105,12 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
 
       return feedData;
     } catch (err: any) {
-      console.error('❌ Error fetching home feed:', err);
+      const isNetworkError = err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network') || err?.message?.includes('connect');
+      if (isNetworkError) {
+        console.log('📡 Home feed unavailable — no network connection');
+      } else {
+        console.error('❌ Error fetching home feed:', err);
+      }
       setError(err?.message || 'Failed to fetch home feed');
       setErrorCode(err?.code || null);
       return null;

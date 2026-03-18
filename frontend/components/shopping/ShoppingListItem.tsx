@@ -6,6 +6,7 @@
 import { View, Text, Animated } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -46,6 +47,7 @@ export default function ShoppingListItem({
 }: ShoppingListItemProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
 
   const checkboxSize = inStoreMode ? 36 : 26;
   const checkmarkSize = inStoreMode ? 24 : 16;
@@ -199,6 +201,27 @@ export default function ShoppingListItem({
           >
             {item.name}
           </Text>
+          {/* Recipe origin tag — hidden when already grouped by recipe */}
+          {!groupByRecipe && item.recipe?.title && !item.purchased && (
+            <HapticTouchableOpacity
+              onPress={() => router.push(`/recipe/${item.recipeId}` as any)}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}
+            >
+              <Icon
+                name={Icons.RESTAURANT_OUTLINE as any}
+                size={11}
+                color={isDark ? '#9CA3AF' : '#6B7280'}
+                style={{ marginRight: 3 }}
+              />
+              <Text
+                style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}
+                numberOfLines={1}
+              >
+                {item.recipe.title}
+              </Text>
+            </HapticTouchableOpacity>
+          )}
           {/* Animated strikethrough line */}
           <Animated.View
             style={{

@@ -258,4 +258,47 @@ describe('ShoppingListItem', () => {
     const nameEl = getByText('Chicken breast');
     expect(nameEl.props.style).toMatchObject({ fontSize: 15 });
   });
+
+  // ─── Recipe Context Tag Tests ──────────────────────────────────────
+
+  it('shows recipe title tag when item has recipe context', () => {
+    const item = makeItem({
+      recipeId: 'recipe-1',
+      recipe: { id: 'recipe-1', title: 'Thai Basil Chicken' } as any,
+    });
+    const { getByText } = render(
+      <ShoppingListItem item={item} {...defaultProps} />
+    );
+    expect(getByText('Thai Basil Chicken')).toBeTruthy();
+  });
+
+  it('does not show recipe tag when groupByRecipe is true', () => {
+    const item = makeItem({
+      recipeId: 'recipe-1',
+      recipe: { id: 'recipe-1', title: 'Thai Basil Chicken' } as any,
+    });
+    const { queryByText } = render(
+      <ShoppingListItem item={item} {...defaultProps} groupByRecipe={true} />
+    );
+    expect(queryByText('Thai Basil Chicken')).toBeNull();
+  });
+
+  it('does not show recipe tag when item is purchased', () => {
+    const item = makeItem({
+      purchased: true,
+      recipeId: 'recipe-1',
+      recipe: { id: 'recipe-1', title: 'Thai Basil Chicken' } as any,
+    });
+    const { queryByText } = render(
+      <ShoppingListItem item={item} {...defaultProps} />
+    );
+    expect(queryByText('Thai Basil Chicken')).toBeNull();
+  });
+
+  it('does not show recipe tag when item has no recipe', () => {
+    const { queryByText } = render(
+      <ShoppingListItem item={makeItem()} {...defaultProps} />
+    );
+    expect(queryByText('Thai Basil Chicken')).toBeNull();
+  });
 });

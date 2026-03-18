@@ -19,11 +19,13 @@ import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid } from '../../components/home';
+import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet } from '../../components/home';
+import type { DislikeReason } from '../../components/home';
 import SearchScopeSelector, { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
+import NoResultsState from '../../components/home/NoResultsState';
 import QuickFiltersBar from '../../components/home/QuickFiltersBar';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
@@ -114,6 +116,32 @@ export default function HomeScreen() {
     onRecipesUpdate: setSuggestedRecipes,
   });
   const { handleLike, handleDislike } = recipeFeedback;
+
+  // Dislike reason sheet state
+  const [dislikeSheetVisible, setDislikeSheetVisible] = useState(false);
+  const [pendingDislikeId, setPendingDislikeId] = useState<string | null>(null);
+  const [pendingDislikeName, setPendingDislikeName] = useState<string | undefined>(undefined);
+
+  const handleShowDislikeSheet = useCallback((recipeId: string): Promise<void> => {
+    // Look up the recipe name from local state for the sheet header
+    const recipe = suggestedRecipes.find(r => r.id === recipeId);
+    setPendingDislikeId(recipeId);
+    setPendingDislikeName(recipe?.title);
+    setDislikeSheetVisible(true);
+    return Promise.resolve();
+  }, [suggestedRecipes]);
+
+  const handleDislikeWithReason = useCallback((reason: DislikeReason) => {
+    setDislikeSheetVisible(false);
+    if (pendingDislikeId) handleDislike(pendingDislikeId, reason);
+    setPendingDislikeId(null);
+  }, [pendingDislikeId, handleDislike]);
+
+  const handleDislikeSkip = useCallback(() => {
+    setDislikeSheetVisible(false);
+    if (pendingDislikeId) handleDislike(pendingDislikeId);
+    setPendingDislikeId(null);
+  }, [pendingDislikeId, handleDislike]);
 
   // View mode state (grid/list) - using extracted hook
   const { viewMode, setViewMode, recipesPerPage: RECIPES_PER_PAGE, isLoaded: viewModeLoaded } = useViewMode('list');
@@ -744,8 +772,28 @@ export default function HomeScreen() {
     return <HomeErrorState error={error as string} errorCode={errorCode} onRetry={refetch} />;
   }
 
-  // Empty state
+  // Empty state — smart no-results when searching, generic otherwise
   if (suggestedRecipes.length === 0 && !loading && !loadingFromFilters && !initialLoading) {
+    if (searchQuery.trim()) {
+      return (
+        <NoResultsState
+          searchQuery={searchQuery}
+          suggestions={homeFeed.searchSuggestions}
+          hasActiveFilters={activeFilters.length > 0}
+          onSelectSuggestion={(query) => {
+            handleSearchChange(query);
+          }}
+          onClearFilters={() => {
+            clearFilters();
+            setMealPrepMode(false);
+          }}
+          onClearSearch={() => {
+            clearSearch();
+            refetch();
+          }}
+        />
+      );
+    }
     return (
       <HomeEmptyState
         filters={filters}
@@ -767,7 +815,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#111827' : '#F9FAFB' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
       {/* Header */}
       <HomeHeader
         viewMode={viewMode}
@@ -857,7 +905,7 @@ export default function HomeScreen() {
             userFeedback={userFeedback}
             feedbackLoading={feedbackLoading}
             onLike={handleLike}
-            onDislike={handleDislike}
+            onDislike={handleShowDislikeSheet}
             onRecipePress={handleRecipePress}
             onLongPress={handleLongPress}
             onSave={openSavePicker}
@@ -913,7 +961,7 @@ export default function HomeScreen() {
                 onRecipePress={handleRecipePress}
                 onRecipeLongPress={handleLongPress}
                 onLike={handleLike}
-                onDislike={handleDislike}
+                onDislike={handleShowDislikeSheet}
                 onSave={openSavePicker}
               />
             )}
@@ -937,7 +985,7 @@ export default function HomeScreen() {
                   onRecipePress={handleRecipePress}
                   onRecipeLongPress={handleLongPress}
                   onLike={handleLike}
-                  onDislike={handleDislike}
+                  onDislike={handleShowDislikeSheet}
                   onSave={openSavePicker}
                   scrollRef={perfectMatchScrollViewRef}
                   onScroll={(event) => {
@@ -979,7 +1027,7 @@ export default function HomeScreen() {
                   onRecipePress={handleRecipePress}
                   onRecipeLongPress={handleLongPress}
                   onLike={handleLike}
-                  onDislike={handleDislike}
+                  onDislike={handleShowDislikeSheet}
                   onSave={openSavePicker}
                 />
               );
@@ -1081,7 +1129,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
               flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: isDark ? '#111827' : '#F9FAFB',
+              backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7',
             }}
           >
             <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -1106,7 +1154,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
               flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: isDark ? '#111827' : '#F9FAFB',
+              backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7',
               padding: 24,
             }}
           >
@@ -1134,6 +1182,15 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
         visible={showSurpriseModal}
         onClose={() => setShowSurpriseModal(false)}
         onSurprise={handleSurprise}
+      />
+
+      {/* Dislike Reason Sheet */}
+      <DislikeReasonSheet
+        visible={dislikeSheetVisible}
+        recipeName={pendingDislikeName}
+        onSelectReason={handleDislikeWithReason}
+        onSkip={handleDislikeSkip}
+        onDismiss={handleDislikeSkip}
       />
 
     </SafeAreaView>

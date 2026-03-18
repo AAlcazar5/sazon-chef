@@ -149,3 +149,39 @@ export function paymentFailedTemplate(): string {
     </a>
   `);
 }
+
+export function day3NudgeTemplate(userName: string): string {
+  return baseLayout(`
+    <h1 style="margin:0 0 16px;font-size:24px;color:${TEXT_COLOR};">Hey ${userName}, ready to plan your first week? 🌶️</h1>
+    <p style="margin:0 0 16px;font-size:16px;color:${MUTED_COLOR};">
+      You signed up 3 days ago — and we noticed you haven't tried a meal plan yet. Want me to plan your first week? It takes about 10 seconds.
+    </p>
+    <p style="margin:0 0 24px;font-size:16px;color:${MUTED_COLOR};">
+      Sazon will pick recipes based on your preferences, build a balanced week, and even generate your shopping list.
+    </p>
+    <a href="sazonchef://meal-plan" style="display:inline-block;background-color:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:16px;font-weight:600;">
+      Plan My Week
+    </a>
+  `);
+}
+
+export function day14TrialWarningTemplate(userName: string): string {
+  return baseLayout(`
+    <h1 style="margin:0 0 16px;font-size:24px;color:${TEXT_COLOR};">Your trial ends in 3 days, ${userName}</h1>
+    <p style="margin:0 0 16px;font-size:16px;color:${MUTED_COLOR};">
+      Here's what you'd lose without Premium:
+    </p>
+    <ul style="margin:0 0 24px;padding-left:20px;font-size:16px;color:${MUTED_COLOR};">
+      <li style="margin-bottom:8px;">Unlimited AI-generated recipes</li>
+      <li style="margin-bottom:8px;">Smart meal planning</li>
+      <li style="margin-bottom:8px;">Auto-generated shopping lists</li>
+      <li style="margin-bottom:8px;">Personalized nutrition tracking</li>
+    </ul>
+    <a href="sazonchef://paywall" style="display:inline-block;background-color:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:16px;font-weight:600;">
+      Upgrade Now
+    </a>
+    <p style="margin:16px 0 0;font-size:14px;color:${MUTED_COLOR};">
+      No pressure — you can always use the free tier.
+    </p>
+  `);
+}

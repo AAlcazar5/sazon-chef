@@ -1,7 +1,7 @@
 // frontend/components/profile/AccountCard.tsx
 // Account actions: change password, sign out, delete account with modals
 
-import { View, Text, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TextInput, ActivityIndicator, Share, Alert, Switch } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import SettingsRow from '../ui/SettingsRow';
 import { useState } from 'react';
@@ -12,6 +12,8 @@ import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { HapticPatterns } from '../../constants/Haptics';
 import { useTheme } from '../../contexts/ThemeContext';
+import { recipeApi } from '../../lib/api';
+import { useBiometricLock } from '../../hooks/useBiometricLock';
 
 interface AccountCardProps {
   user: { id?: string; provider?: string } | null;
@@ -23,6 +25,7 @@ interface AccountCardProps {
 export default function AccountCard({ user, onLogout, onProceedWithDeletion, onChangePassword }: AccountCardProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const { biometricEnabled, biometricAvailable, toggleBiometricLock } = useBiometricLock();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -31,6 +34,26 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountConfirmText, setDeleteAccountConfirmText] = useState('');
+  const [exportingCookbook, setExportingCookbook] = useState(false);
+
+  const handleExportCookbook = async () => {
+    try {
+      setExportingCookbook(true);
+      HapticPatterns.buttonPress();
+      const response = await recipeApi.exportCookbook();
+      const data = response.data;
+      const content = JSON.stringify(data, null, 2);
+      const title = `Sazon Cookbook Export - ${new Date().toISOString().slice(0, 10)}`;
+      await Share.share({ message: content, title });
+      HapticPatterns.success();
+    } catch (error: any) {
+      console.error('Export cookbook error:', error);
+      Alert.alert('Export Failed', 'Could not export your cookbook. Please try again.');
+      HapticPatterns.error();
+    } finally {
+      setExportingCookbook(false);
+    }
+  };
 
   const handleConfirmPasswordChange = async () => {
     if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
@@ -96,11 +119,33 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
           />
         )}
 
+        {biometricAvailable && (
+          <SettingsRow
+            label="Require Face ID / Touch ID"
+            icon={<Icon name={Icons.LOCK_OUTLINE} size={IconSizes.MD} color={isDark ? '#9CA3AF' : '#6B7280'} accessibilityLabel="Biometric lock" />}
+            rightElement={
+              <Switch
+                value={biometricEnabled}
+                onValueChange={toggleBiometricLock}
+                trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
+                thumbColor="#FFFFFF"
+              />
+            }
+          />
+        )}
+
         <SettingsRow
           label="Redo Setup"
           icon={<Icon name={Icons.REFRESH} size={IconSizes.MD} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Redo setup" />}
           labelStyle={{ color: isDark ? DarkColors.primary : Colors.primary }}
           onPress={() => router.push('/onboarding?edit=true' as any)}
+        />
+
+        <SettingsRow
+          label={exportingCookbook ? 'Exporting...' : 'Export Cookbook'}
+          icon={<Icon name={Icons.DOWNLOAD_OUTLINE} size={IconSizes.MD} color={isDark ? '#9CA3AF' : '#6B7280'} accessibilityLabel="Export cookbook" />}
+          onPress={handleExportCookbook}
+          disabled={exportingCookbook}
         />
 
         <SettingsRow

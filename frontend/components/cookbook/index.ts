@@ -19,6 +19,7 @@ export { default as MarkCookedModal } from './MarkCookedModal';
 export { default as ImportFromUrlModal } from './ImportFromUrlModal';
 export { default as CollectionFilterRow } from './CollectionFilterRow';
 export { default as CollectionCarousel } from './CollectionCarousel';
+export { default as BulkActionBar } from './BulkActionBar';
 
 // Re-export types
 export type {

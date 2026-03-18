@@ -39,6 +39,7 @@ export const Icons = {
   SAVE_OUTLINE: 'save-outline' as IconName,
   SHARE: 'share' as IconName,
   SHARE_OUTLINE: 'share-outline' as IconName,
+  DOWNLOAD_OUTLINE: 'download-outline' as IconName,
   
   // Recipe Feedback
   LIKE: 'thumbs-up' as IconName,

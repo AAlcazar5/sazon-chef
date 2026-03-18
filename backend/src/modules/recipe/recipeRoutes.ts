@@ -37,6 +37,10 @@ router.post('/collections/:id/duplicate', recipeController.duplicateCollection);
 router.put('/collections/:id', recipeController.updateCollection);
 router.delete('/collections/:id', recipeController.deleteCollection);
 
+// Bulk operations - before parameterized routes
+router.delete('/bulk-unsave', recipeController.bulkUnsaveRecipes);
+router.patch('/bulk-move-collection', recipeController.bulkMoveToCollection);
+
 // Recipe actions - specific routes before parameterized
 router.post('/generate', recipeController.generateRecipe);
 router.post('/import-url', recipeController.importRecipeFromUrl);
@@ -47,6 +51,9 @@ router.get('/enrich/status', recipeController.getEnrichmentStatus);
 
 // Cookbook Quick Wins - specific routes before parameterized
 router.get('/recently-viewed', recipeController.getRecentlyViewed);
+
+// Cookbook export
+router.get('/export', recipeController.exportCookbook);
 
 // Search 2.0 - auto-complete and popular searches
 router.get('/autocomplete', recipeController.getAutoCompleteSuggestions);

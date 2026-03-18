@@ -12,6 +12,7 @@ import { HapticPatterns } from '../../constants/Haptics';
 import { useSearchAutocomplete, type SearchSuggestion } from '../../hooks/useSearchAutocomplete';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { usePopularSearches, type PopularSearch } from '../../hooks/usePopularSearches';
+import { useVoiceInput } from '../../hooks/useVoiceInput';
 
 interface RecipeSearchBarProps {
   /** Current search query value */
@@ -83,6 +84,21 @@ export default function RecipeSearchBar({
     useSearchAutocomplete();
   const { searchHistory, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
   const { popularSearches } = usePopularSearches({ initialData: initialPopularSearches });
+
+  const voice = useVoiceInput({
+    onIntent: (intent) => {
+      // When voice returns a transcript, populate search and submit
+      if (intent.rawText) {
+        const query = intent.rawText.trim();
+        onChangeText(query);
+        clearSuggestions();
+        addToHistory(query);
+        setIsFocused(false);
+        inputRef.current?.blur();
+        onSubmitSearch?.(query);
+      }
+    },
+  });
 
   const handleChangeText = useCallback(
     (text: string) => {
@@ -169,6 +185,23 @@ export default function RecipeSearchBar({
               size={IconSizes.SM}
               color={isDark ? '#9CA3AF' : '#6B7280'}
               accessibilityLabel="Clear search"
+            />
+          </HapticTouchableOpacity>
+        )}
+        {voice.isAvailable && value.length === 0 && (
+          <HapticTouchableOpacity
+            onPress={voice.isListening ? voice.stopListening : voice.startListening}
+            className="ml-2"
+            accessibilityLabel={voice.isListening ? 'Stop listening' : 'Search by voice'}
+          >
+            <Icon
+              name={voice.isListening ? Icons.MIC_OFF_OUTLINE : Icons.MIC_OUTLINE}
+              size={IconSizes.MD}
+              color={
+                voice.isListening
+                  ? (isDark ? DarkColors.primary : Colors.primary)
+                  : (isDark ? '#9CA3AF' : '#6B7280')
+              }
             />
           </HapticTouchableOpacity>
         )}

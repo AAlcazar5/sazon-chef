@@ -3,6 +3,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { pushNotificationService } from './pushNotificationService';
+import { emailService } from './emailService';
 
 export const notificationTriggerService = {
   // ─── EVENT-DRIVEN TRIGGERS ──────────────────────────────────────────────────
@@ -183,10 +184,64 @@ export const notificationTriggerService = {
   },
 
   /**
-   * Trial ending: STUB — depends on Group 7 (Stripe).
+   * Trial ending: check users whose trial ends in 3 days and send warning email.
    */
   async checkTrialEnding(): Promise<void> {
-    // TODO: Implement when Stripe subscription model is added (Group 7)
-    // Will check users where trialEndsAt is within 3 days
+    try {
+      const threeDaysFromNow = new Date();
+      threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+      const startOfDay = new Date(threeDaysFromNow);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(threeDaysFromNow);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const users = await prisma.user.findMany({
+        where: {
+          trialEndsAt: { gte: startOfDay, lte: endOfDay },
+          subscriptionStatus: { not: 'active' },
+        },
+        select: { id: true, email: true, name: true },
+      });
+
+      for (const user of users) {
+        if (user.email) {
+          await emailService.sendDay14TrialWarning(user.email, user.name || 'Chef');
+        }
+      }
+      console.log(`📬 [Triggers] checkTrialEnding: sent ${users.length} emails`);
+    } catch (error) {
+      console.error('❌ [Triggers] checkTrialEnding error:', error);
+    }
+  },
+
+  /**
+   * Day 3 nudge: send email to users who signed up 3 days ago and have no meal plans.
+   */
+  async checkDay3Nudge(): Promise<void> {
+    try {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const startOfDay = new Date(threeDaysAgo);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(threeDaysAgo);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const users = await prisma.user.findMany({
+        where: {
+          createdAt: { gte: startOfDay, lte: endOfDay },
+          mealPlans: { none: {} },
+        },
+        select: { id: true, email: true, name: true },
+      });
+
+      for (const user of users) {
+        if (user.email) {
+          await emailService.sendDay3Nudge(user.email, user.name || 'Chef');
+        }
+      }
+      console.log(`📬 [Triggers] checkDay3Nudge: sent ${users.length} emails`);
+    } catch (error) {
+      console.error('❌ [Triggers] checkDay3Nudge error:', error);
+    }
   },
 };

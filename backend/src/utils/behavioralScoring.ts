@@ -22,6 +22,7 @@ export interface UserBehaviorData {
     fat: number;
     ingredients: Array<{ text: string }>;
     createdAt: Date;
+    dislikeReason?: string; // 'not_my_style' | 'too_complex' | 'missing_ingredients' | 'already_tried'
   }>;
   savedRecipes: Array<{
     recipeId: string;
@@ -75,6 +76,8 @@ export interface UserTasteProfile {
   dislikedIngredientCounts: Record<string, number>;
   // Recency bonus (same for all recipes, computed once)
   recencyBonus: number;
+  // 0–1: how strongly the user dislikes complex recipes (from "too_complex" dislike reasons)
+  complexityAversion: number;
   hasData: boolean;
 }
 
@@ -90,6 +93,7 @@ export function buildUserTasteProfile(userBehavior: UserBehaviorData): UserTaste
       avgLikedMacros: null,
       likedIngredientCounts: {}, dislikedIngredientCounts: {},
       recencyBonus: 50,
+      complexityAversion: 0,
       hasData: false,
     };
   }
@@ -142,12 +146,19 @@ export function buildUserTasteProfile(userBehavior: UserBehaviorData): UserTaste
     consumedRecipes.filter(r => now - new Date(r.date).getTime() < recentThreshold).length;
   const recencyBonus = recentActivity >= 5 ? 100 : recentActivity >= 3 ? 80 : recentActivity >= 1 ? 60 : 50;
 
+  // Complexity aversion: fraction of dislikes that were "too_complex"
+  const tooComplexCount = dislikedRecipes.filter(r => r.dislikeReason === 'too_complex').length;
+  const complexityAversion = dislikedRecipes.length > 0
+    ? Math.min(1, tooComplexCount / dislikedRecipes.length)
+    : 0;
+
   return {
     positiveCuisineCounts, negativeCuisineCounts,
     avgPositiveCookTime, avgNegativeCookTime,
     avgLikedMacros,
     likedIngredientCounts, dislikedIngredientCounts,
     recencyBonus,
+    complexityAversion,
     hasData: true,
   };
 }
@@ -196,10 +207,13 @@ export function calculateBehavioralScoreFromProfile(recipe: any, profile: UserTa
     ingredientPreference = Math.round(totalScore / recipe.ingredients.length);
   }
 
+  // Shift up to 0.15 weight from macroPreference → cookTimePreference for users who
+  // repeatedly flag recipes as "too complex" (complexity aversion signal).
+  const complexityShift = profile.complexityAversion * 0.15;
   const total = Math.round(
     cuisinePreference * 0.3 +
-    cookTimePreference * 0.2 +
-    macroPreference * 0.3 +
+    cookTimePreference * (0.2 + complexityShift) +
+    macroPreference * (0.3 - complexityShift) +
     ingredientPreference * 0.15 +
     profile.recencyBonus * 0.05
   );
