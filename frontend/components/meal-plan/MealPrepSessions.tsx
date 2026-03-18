@@ -6,6 +6,7 @@ import { View, Text } from 'react-native';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 interface MealPrepSessionsProps {
   /** Selected date */
   selectedDate: Date;
@@ -30,13 +31,13 @@ export default function MealPrepSessions({
 
   return (
     <View className="px-4 mb-4">
-      <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 12 }}>
         🍱 Meal Prep - {formattedDate}
       </Text>
 
       <View className="mb-3">
         {dayMealPrepSessions.map((session: any) => (
-          <View key={session.id} className="rounded-lg p-4 mb-2 border" style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight, borderColor: isDark ? DarkColors.primaryDark : Colors.primaryDark }}>
+          <View key={session.id} style={[{ borderRadius: 16, padding: 16, marginBottom: 8, backgroundColor: isDark ? '#2C2C2E' : '#FFF7ED' }, Shadows.SM]}>
             <View className="flex-row items-center justify-between mb-2">
               <View className="flex-row items-center">
                 <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.SM} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Meal prep session" />

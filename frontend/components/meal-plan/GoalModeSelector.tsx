@@ -1,11 +1,13 @@
 // frontend/components/meal-plan/GoalModeSelector.tsx
 // Three-button selector for Cut / Maintain / Build goal modes
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { Icons, IconSizes } from '../../constants/Icons';
 
 export type GoalMode = 'cut' | 'maintain' | 'build';
@@ -54,50 +56,74 @@ const MODES: Array<{
   },
 ];
 
+function GoalModeButton({ mode, isSelected, isDark, onSelect }: {
+  mode: typeof MODES[number];
+  isSelected: boolean;
+  isDark: boolean;
+  onSelect: (mode: GoalMode) => void;
+}) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[animStyle, { flex: 1 }]}>
+      <HapticTouchableOpacity
+        onPress={() => onSelect(mode.key)}
+        onPressIn={() => { scale.value = withSpring(0.93, { damping: 10, stiffness: 400 }); }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 12, stiffness: 300 }); }}
+        style={[{
+          alignItems: 'center',
+          borderRadius: 16,
+          paddingVertical: 14,
+          paddingHorizontal: 8,
+          backgroundColor: isSelected
+            ? (isDark ? mode.darkActiveBg : mode.activeBg)
+            : (isDark ? '#1C1C1E' : '#FFFFFF'),
+        }, isSelected ? Shadows.MD : Shadows.SM]}
+      >
+        <Icon
+          name={mode.icon as any}
+          size={IconSizes.LG}
+          color={isSelected ? mode.activeColor : (isDark ? '#9CA3AF' : '#6B7280')}
+        />
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: '700',
+            marginTop: 4,
+            color: isSelected ? mode.activeColor : (isDark ? '#D1D5DB' : '#374151'),
+          }}
+        >
+          {mode.label}
+        </Text>
+        <Text
+          style={{
+            fontSize: 11,
+            marginTop: 2,
+            color: isSelected ? mode.activeColor : (isDark ? '#9CA3AF' : '#9CA3AF'),
+          }}
+        >
+          {mode.description}
+        </Text>
+      </HapticTouchableOpacity>
+    </Animated.View>
+  );
+}
+
 export default function GoalModeSelector({ selectedMode, onSelect, isDark }: GoalModeSelectorProps) {
   return (
-    <View className="flex-row" style={{ gap: 8 }}>
-      {MODES.map((mode) => {
-        const isSelected = selectedMode === mode.key;
-        return (
-          <HapticTouchableOpacity
-            key={mode.key}
-            onPress={() => onSelect(mode.key)}
-            className="flex-1 items-center rounded-xl py-3 px-2"
-            style={{
-              backgroundColor: isSelected
-                ? (isDark ? mode.darkActiveBg : mode.activeBg)
-                : (isDark ? '#374151' : '#F3F4F6'),
-              borderWidth: isSelected ? 2 : 1,
-              borderColor: isSelected ? mode.activeColor : (isDark ? '#4B5563' : '#E5E7EB'),
-            }}
-          >
-            <Icon
-              name={mode.icon as any}
-              size={IconSizes.LG}
-              color={isSelected ? mode.activeColor : (isDark ? '#9CA3AF' : '#6B7280')}
-            />
-            <Text
-              className="font-semibold mt-1"
-              style={{
-                fontSize: 14,
-                color: isSelected ? mode.activeColor : (isDark ? '#D1D5DB' : '#374151'),
-              }}
-            >
-              {mode.label}
-            </Text>
-            <Text
-              className="mt-0.5"
-              style={{
-                fontSize: 11,
-                color: isSelected ? mode.activeColor : (isDark ? '#9CA3AF' : '#9CA3AF'),
-              }}
-            >
-              {mode.description}
-            </Text>
-          </HapticTouchableOpacity>
-        );
-      })}
+    <View className="flex-row" style={{ gap: 10 }}>
+      {MODES.map((mode) => (
+        <GoalModeButton
+          key={mode.key}
+          mode={mode}
+          isSelected={selectedMode === mode.key}
+          isDark={isDark}
+          onSelect={onSelect}
+        />
+      ))}
     </View>
   );
 }

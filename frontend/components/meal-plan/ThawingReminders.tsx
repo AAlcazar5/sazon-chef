@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 
 interface ThawingRemindersProps {
   /** Array of thawing reminders */
@@ -20,7 +21,7 @@ export default function ThawingReminders({
 
   return (
     <View className="px-4 mb-4">
-      <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 12 }}>
         ❄️ Thawing Reminders
       </Text>
       {thawingReminders.slice(0, 3).map((reminder: any, index: number) => {
@@ -29,7 +30,7 @@ export default function ThawingReminders({
         const isTomorrow = thawDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
 
         return (
-          <View key={index} className="rounded-lg p-3 mb-2 border" style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight, borderColor: isDark ? DarkColors.primaryDark : Colors.primaryDark }}>
+          <View key={index} style={[{ borderRadius: 16, padding: 14, marginBottom: 8, backgroundColor: isDark ? '#2C2C2E' : '#FFF7ED' }, Shadows.SM]}>
             <View className="flex-row items-center justify-between mb-1">
               <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {reminder.recipe.title}

@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import AnimatedProgressBar from '../ui/AnimatedProgressBar';
 
 interface WeeklyNutritionSummaryProps {
@@ -21,10 +22,14 @@ export default function WeeklyNutritionSummary({
 
   return (
     <View className="px-4 mb-4">
-      <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 12 }}>
         Weekly Nutrition Summary
       </Text>
-      <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+      <View style={[{
+        backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+        borderRadius: 20,
+        padding: 20,
+      }, Shadows.MD]}>
         <View className="flex-row items-center justify-between mb-4">
           <Text className="text-sm text-gray-600 dark:text-gray-200">
             {weeklyNutrition.period.days} days
@@ -165,7 +170,7 @@ export default function WeeklyNutritionSummary({
         </View>
 
         {/* Completion Progress Chart */}
-        <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <View style={{ marginTop: 12, paddingTop: 12 }}>
           <View className="flex-row justify-between items-center mb-2">
             <Text className="text-xs font-medium text-gray-700 dark:text-gray-200">Meal Completion</Text>
             <Text className="text-xs text-gray-500 dark:text-gray-400">

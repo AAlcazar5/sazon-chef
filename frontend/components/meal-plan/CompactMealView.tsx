@@ -1,8 +1,9 @@
 // frontend/components/meal-plan/CompactMealView.tsx
 // Compact view grouping meals by type (breakfast, lunch, dinner, snacks)
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Image } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay, withTiming, Easing, FadeInDown } from 'react-native-reanimated';
 import { optimizedImageUrl } from '../../utils/imageUtils';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -10,6 +11,7 @@ import Icon from '../ui/Icon';
 import AnimatedEmptyState from '../ui/AnimatedEmptyState';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { MealPlanEmptyStates } from '../../constants/EmptyStates';
 import SurpriseBadge from './SurpriseBadge';
 import type { GroupedMeals } from '../../hooks/useMealPlanUI';
@@ -71,55 +73,81 @@ function CompactMealView({
           const color = getMealTypeColor(mealType.key, isDark);
           if (meals.length === 0) return null;
 
+          const typeIndex = MEAL_TYPES.findIndex(t => t.key === mealType.key);
+
           return (
-            <View key={mealType.key} className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+            <Animated.View
+              key={mealType.key}
+              entering={FadeInDown.delay(typeIndex * 100).springify().damping(14).stiffness(200)}
+              style={[{
+                backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                borderRadius: 20,
+                padding: 20,
+                marginBottom: 12,
+              }, Shadows.MD]}
+            >
               <View className="flex-row items-center mb-3">
-                <Text className="text-2xl mr-2">{mealType.icon}</Text>
-                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1">
+                <Text style={{ fontSize: 22, marginRight: 8 }}>{mealType.icon}</Text>
+                <Text style={{ fontSize: 18, fontWeight: '800', flex: 1, color: isDark ? '#F9FAFB' : '#111827' }}>
                   {mealType.label}
                 </Text>
                 <HapticTouchableOpacity
                   onPress={() => onAddMealToHour(mealType.defaultHour)}
-                  className="px-3 py-1 rounded-lg"
-                  style={{ backgroundColor: color }}
+                  style={[{
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 100,
+                    backgroundColor: color,
+                  }, Shadows.SM]}
                 >
-                  <Text className="text-white text-sm font-semibold">+ Add</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>+ Add</Text>
                 </HapticTouchableOpacity>
               </View>
-              <View className="space-y-2">
+              <View style={{ gap: 10 }}>
                 {meals.map((meal, index) => {
                   const hour = meal.hour;
                   const mealIndex = hourlyMeals[hour]?.findIndex(m => m.id === meal.id) || 0;
-                  const isSnack = mealType.key === 'snacks';
-                  const backgroundColor = isSnack
-                    ? (isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight)
-                    : (isDark ? `${color}22` : `${color}11`);
-                  const borderColor = isSnack
-                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
-                    : color;
 
                   return (
                     <HapticTouchableOpacity
                       key={`${mealType.key}-${index}`}
                       onPress={() => router.push(`/modal?id=${meal.id}&source=meal-plan`)}
                       onLongPress={() => onRemoveMeal(hour, mealIndex)}
-                      className="flex-row items-center p-3 rounded-lg border"
-                      style={{ backgroundColor, borderColor }}
+                      style={[{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: 12,
+                        borderRadius: 14,
+                        backgroundColor: isDark ? '#2C2C2E' : '#F9FAFB',
+                      }]}
                     >
                       {meal.imageUrl ? (
                         <Image
                           source={{ uri: optimizedImageUrl(meal.imageUrl) }}
-                          className="w-16 h-16 rounded-lg mr-3"
-                          style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}
+                          style={{
+                            width: 52,
+                            height: 52,
+                            borderRadius: 12,
+                            marginRight: 12,
+                            backgroundColor: isDark ? '#374151' : '#E5E7EB',
+                          }}
                         />
                       ) : (
-                        <View className="w-16 h-16 rounded-lg mr-3 items-center justify-center" style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
+                        <View style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: 12,
+                          marginRight: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: isDark ? '#374151' : '#E5E7EB',
+                        }}>
                           <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.MD} color="#9CA3AF" />
                         </View>
                       )}
-                      <View className="flex-1">
+                      <View style={{ flex: 1 }}>
                         <View className="flex-row items-center">
-                          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                          <Text style={{ fontSize: 15, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827' }}>
                             {meal.name || meal.title}
                           </Text>
                           {cookedRecipeIds && (
@@ -128,7 +156,7 @@ function CompactMealView({
                             </View>
                           )}
                         </View>
-                        <Text className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <Text style={{ fontSize: 13, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
                           {formatTime(hour, 0)} • {meal.calories} cal
                         </Text>
                       </View>
@@ -136,12 +164,12 @@ function CompactMealView({
                   );
                 })}
               </View>
-            </View>
+            </Animated.View>
           );
         })}
 
         {Object.values(groupedMeals).flat().length === 0 && (
-          <View className="bg-white dark:bg-gray-800 rounded-lg p-6">
+          <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 24 }, Shadows.MD]}>
             <AnimatedEmptyState
               config={MealPlanEmptyStates.emptyDay}
               title=""

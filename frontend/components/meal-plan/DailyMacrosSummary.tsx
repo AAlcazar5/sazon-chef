@@ -7,6 +7,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { HapticPatterns } from '../../constants/Haptics';
 
 interface MacroData {
@@ -89,7 +90,7 @@ function DailyMacrosSummary({
         }}
         className="flex-row items-center justify-between mb-3"
       >
-        <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827' }}>
           Daily Macros - {formattedDate}
         </Text>
         <Icon
@@ -101,7 +102,7 @@ function DailyMacrosSummary({
       </HapticTouchableOpacity>
 
       {macrosExpanded ? (
-        <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+        <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
           <View className="flex-row justify-between" style={{ gap: 8 }}>
             <View className="flex-1 items-center" style={{ marginHorizontal: 4 }}>
               <Text className="text-sm text-gray-500 dark:text-gray-200">Calories</Text>
@@ -141,7 +142,7 @@ function DailyMacrosSummary({
           </View>
         </View>
       ) : (
-        <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+        <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
           <View className="flex-row justify-between items-center">
             <View className="flex-row items-center flex-1">
               <View className="flex-1 items-center">

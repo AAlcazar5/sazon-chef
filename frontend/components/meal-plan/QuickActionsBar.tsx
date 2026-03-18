@@ -1,36 +1,89 @@
 // frontend/components/meal-plan/QuickActionsBar.tsx
 // Horizontal scrollable quick action badges for meal plan
+// Redesigned: elevation over borders, spring press feedback
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { HapticPatterns } from '../../constants/Haptics';
 
-interface QuickActionsBarProps {
-  /** Whether a plan is being generated */
-  generatingPlan: boolean;
-  /** Whether a shopping list is being generated */
-  generatingShoppingList: boolean;
-  /** Whether dark mode is active */
+interface ActionBadgeProps {
+  emoji: string;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  destructive?: boolean;
   isDark: boolean;
-  /** Generate full day meals */
+}
+
+function ActionBadge({ emoji, label, onPress, disabled, destructive, isDark }: ActionBadgeProps) {
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.92, { damping: 10, stiffness: 400 });
+  }, []);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 300 });
+  }, []);
+
+  return (
+    <Animated.View style={animStyle}>
+      <HapticTouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        style={[
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 100,
+            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+            opacity: disabled ? 0.5 : 1,
+          },
+          Shadows.SM,
+        ]}
+      >
+        <Text style={{ fontSize: 15 }}>{emoji}</Text>
+        <Text
+          style={{
+            fontSize: 13,
+            fontWeight: '600',
+            marginLeft: 6,
+            color: destructive
+              ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
+              : (isDark ? '#E5E7EB' : '#374151'),
+          }}
+        >
+          {label}
+        </Text>
+      </HapticTouchableOpacity>
+    </Animated.View>
+  );
+}
+
+interface QuickActionsBarProps {
+  generatingPlan: boolean;
+  generatingShoppingList: boolean;
+  isDark: boolean;
   onGenerateFullDay: () => void;
-  /** Generate remaining meals */
   onGenerateRemainingMeals: () => void;
-  /** Generate weekly plan */
   onGenerateWeeklyPlan: () => void;
-  /** Show shopping list name modal */
   onShowShoppingListModal: () => void;
-  /** Clear all meals for the day */
   onClearAll: () => void;
-  /** Open duplicate modal */
   onDuplicate: () => void;
-  /** Save current week as template */
   onSaveAsTemplate: () => void;
-  /** Open template picker */
   onUseTemplate: () => void;
-  /** Open recurring meals manager */
   onRecurring: () => void;
 }
 
@@ -49,149 +102,60 @@ export default function QuickActionsBar({
   onRecurring,
 }: QuickActionsBarProps) {
   return (
-    <View className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      {/* Header */}
-      <View className="px-4 pt-3 pb-2 flex-row items-center justify-between">
-        <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">Quick Actions Menu</Text>
-      </View>
-
-      {/* Quick Action Badges */}
-      <View className="px-4 pb-3">
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingRight: 16 }}
-          style={{ flexGrow: 0 }}
-          nestedScrollEnabled={true}
-        >
-          <View className="flex-row items-center" style={{ gap: 8, flexWrap: 'nowrap' }}>
-            {/* Create Full Day */}
-            <HapticTouchableOpacity
-              onPress={() => {
-                if (!generatingPlan) {
-                  onGenerateFullDay();
-                }
-              }}
-              disabled={generatingPlan}
-              className={`px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700 ${generatingPlan ? 'opacity-50' : ''}`}
-            >
-              <Text className="text-base">🤖</Text>
-              <Text className="text-sm font-semibold ml-1.5 text-gray-700 dark:text-gray-300">
-                {generatingPlan ? 'Creating...' : 'Create Full Day'}
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Create Remaining Meals */}
-            <HapticTouchableOpacity
-              onPress={() => {
-                if (!generatingPlan) {
-                  onGenerateRemainingMeals();
-                }
-              }}
-              disabled={generatingPlan}
-              className={`px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700 ${generatingPlan ? 'opacity-50' : ''}`}
-            >
-              <Text className="text-base">🍽️</Text>
-              <Text className="text-sm font-semibold ml-1.5 text-gray-700 dark:text-gray-300">
-                Remaining Meals
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Create Weekly Plan */}
-            <HapticTouchableOpacity
-              onPress={() => {
-                if (!generatingPlan) {
-                  onGenerateWeeklyPlan();
-                }
-              }}
-              disabled={generatingPlan}
-              className={`px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700 ${generatingPlan ? 'opacity-50' : ''}`}
-            >
-              <Text className="text-base">📅</Text>
-              <Text className="text-sm font-semibold ml-1.5 text-gray-700 dark:text-gray-300">
-                {generatingPlan ? 'Creating...' : 'Weekly Plan'}
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Create Shopping List */}
-            <HapticTouchableOpacity
-              onPress={onShowShoppingListModal}
-              disabled={generatingShoppingList}
-              className={`px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700 ${generatingShoppingList ? 'opacity-50' : ''}`}
-            >
-              <Text className="text-base">🛒</Text>
-              <Text className="text-sm font-semibold ml-1.5 text-gray-700 dark:text-gray-300">
-                {generatingShoppingList ? 'Creating...' : 'Shopping List'}
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Duplicate */}
-            <HapticTouchableOpacity
-              onPress={onDuplicate}
-              className="px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700"
-            >
-              <Text className="text-base">📑</Text>
-              <Text className="text-sm font-semibold ml-1.5 text-gray-700 dark:text-gray-300">
-                Duplicate
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Use Template */}
-            <HapticTouchableOpacity
-              onPress={onUseTemplate}
-              className="px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700"
-            >
-              <Text className="text-base">📋</Text>
-              <Text className="text-sm font-semibold ml-1.5 text-gray-700 dark:text-gray-300">
-                Use Template
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Save as Template */}
-            <HapticTouchableOpacity
-              onPress={onSaveAsTemplate}
-              className="px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700"
-            >
-              <Text className="text-base">🔖</Text>
-              <Text className="text-sm font-semibold ml-1.5 text-gray-700 dark:text-gray-300">
-                Save Template
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Recurring Meals */}
-            <HapticTouchableOpacity
-              onPress={onRecurring}
-              className="px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700"
-            >
-              <Text className="text-base">🔁</Text>
-              <Text className="text-sm font-semibold ml-1.5 text-gray-700 dark:text-gray-300">
-                Recurring
-              </Text>
-            </HapticTouchableOpacity>
-
-            {/* Clear All Meals */}
-            <HapticTouchableOpacity
-              onPress={() => {
-                HapticPatterns.buttonPress();
-                Alert.alert('Clear Day', 'Clear all meals for this day?', [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Clear',
-                    style: 'destructive',
-                    onPress: onClearAll,
-                  },
-                ]);
-              }}
-              className="px-4 py-2 rounded-full flex-row items-center bg-gray-100 dark:bg-gray-700"
-            >
-              <Text className="text-base">🗑️</Text>
-              <Text className="text-sm font-semibold ml-1.5" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>
-                Clear All
-              </Text>
-            </HapticTouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
+    <View style={{ paddingTop: 12, paddingBottom: 8 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+        style={{ flexGrow: 0 }}
+        nestedScrollEnabled
+      >
+        <ActionBadge
+          emoji="🤖"
+          label={generatingPlan ? 'Creating...' : 'Full Day'}
+          onPress={() => { if (!generatingPlan) onGenerateFullDay(); }}
+          disabled={generatingPlan}
+          isDark={isDark}
+        />
+        <ActionBadge
+          emoji="🍽️"
+          label="Remaining"
+          onPress={() => { if (!generatingPlan) onGenerateRemainingMeals(); }}
+          disabled={generatingPlan}
+          isDark={isDark}
+        />
+        <ActionBadge
+          emoji="📅"
+          label={generatingPlan ? 'Creating...' : 'Weekly Plan'}
+          onPress={() => { if (!generatingPlan) onGenerateWeeklyPlan(); }}
+          disabled={generatingPlan}
+          isDark={isDark}
+        />
+        <ActionBadge
+          emoji="🛒"
+          label={generatingShoppingList ? 'Creating...' : 'Shopping List'}
+          onPress={onShowShoppingListModal}
+          disabled={generatingShoppingList}
+          isDark={isDark}
+        />
+        <ActionBadge emoji="📑" label="Duplicate" onPress={onDuplicate} isDark={isDark} />
+        <ActionBadge emoji="📋" label="Template" onPress={onUseTemplate} isDark={isDark} />
+        <ActionBadge emoji="🔖" label="Save" onPress={onSaveAsTemplate} isDark={isDark} />
+        <ActionBadge emoji="🔁" label="Recurring" onPress={onRecurring} isDark={isDark} />
+        <ActionBadge
+          emoji="🗑️"
+          label="Clear All"
+          destructive
+          onPress={() => {
+            HapticPatterns.buttonPress();
+            Alert.alert('Clear Day', 'Clear all meals for this day?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Clear', style: 'destructive', onPress: onClearAll },
+            ]);
+          }}
+          isDark={isDark}
+        />
+      </ScrollView>
     </View>
   );
 }

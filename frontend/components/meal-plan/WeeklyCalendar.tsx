@@ -9,6 +9,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { FontSize } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
 
@@ -47,12 +48,10 @@ function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, o
       <HapticTouchableOpacity
         onPress={onPress}
         onLongPress={onLongPress}
-        style={{
-          borderRadius: 12,
+        style={[{
+          borderRadius: 14,
           overflow: 'hidden',
-          borderWidth: isToday && !isSelected ? 2 : 0,
-          borderColor: isToday && !isSelected ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) : 'transparent',
-        }}
+        }, Shadows.SM]}
       >
         {isSelected ? (
           <LinearGradient
@@ -83,17 +82,28 @@ function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, o
         ) : (
           <View style={{
             paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center',
-            backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
           }}>
             <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 2 }}>
               {date.toLocaleDateString('en-US', { weekday: 'short' })}
             </Text>
             <Text style={{
-              fontSize: 18, fontWeight: '700',
+              fontSize: 18, fontWeight: '800',
               color: isToday ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) : (isDark ? '#F9FAFB' : '#111827'),
             }}>
               {date.getDate()}
             </Text>
+            {isToday && (
+              <View style={{
+                width: 5,
+                height: 5,
+                borderRadius: 3,
+                backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
+                position: 'absolute',
+                top: 6,
+                right: 6,
+              }} />
+            )}
             {mealsCount > 0 && (
               <View style={{
                 marginTop: 4, minWidth: 22, height: 22, borderRadius: 11,
@@ -154,7 +164,7 @@ function WeeklyCalendar({
   return (
     <View className="px-4 mb-4">
       <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Meal Plan</Text>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827' }}>Weekly Meal Plan</Text>
         <View className="flex-row items-center space-x-2">
           <HapticTouchableOpacity
             onPress={onPreviousWeek}

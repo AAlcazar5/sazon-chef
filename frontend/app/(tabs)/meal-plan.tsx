@@ -454,33 +454,37 @@ export default function MealPlanScreen() {
 
   return (
     <>
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
         {loading ? (
           <>
-            <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700" style={{ minHeight: 56 }}>
+            <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, minHeight: 56 }}>
               <View className="flex-row items-center justify-center" style={{ height: 28 }}>
-                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Meal Plan</Text>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827' }}>Meal Plan</Text>
               </View>
             </View>
             <ScrollView className="flex-1" contentContainerStyle={{ padding: Spacing.lg }} nestedScrollEnabled={true}>
               <WeeklyCalendarSkeleton />
-              <View className="px-4 mb-4">
-                <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+              <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+                <View style={[{
+                  backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                  borderRadius: 20,
+                  padding: 20,
+                }]}>
                   <SkeletonLoader width="40%" height={16} borderRadius={4} style={{ marginBottom: 12 }} />
-                  <View className="space-y-2">
+                  <View style={{ gap: 12 }}>
                     {[1, 2, 3].map((i) => (
                       <View key={i}>
                         <View className="flex-row justify-between mb-1">
                           <SkeletonLoader width={60} height={12} borderRadius={4} />
                           <SkeletonLoader width={40} height={12} borderRadius={4} />
                         </View>
-                        <SkeletonLoader width={i === 1 ? "100%" : i === 2 ? "85%" : "70%"} height={8} borderRadius={4} />
+                        <SkeletonLoader width={i === 1 ? "100%" : i === 2 ? "85%" : "70%"} height={8} borderRadius={8} />
                       </View>
                     ))}
                   </View>
                 </View>
               </View>
-              <View className="px-4">
+              <View style={{ paddingHorizontal: 16 }}>
                 <SkeletonLoader width="30%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
                 {[1, 2, 3].map((i) => (
                   <MealCardSkeleton key={i} />
@@ -642,16 +646,20 @@ export default function MealPlanScreen() {
           {/* Cost Analysis */}
           <View className="px-4 mb-4">
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827' }}>
                 {"💰 Weekly Cost Analysis"}
               </Text>
               {costAnalysis && costAnalysis.budgetExceeded ? (
                 <HapticTouchableOpacity
                   onPress={handleOptimizeCost}
-                  className="px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 100,
+                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                  }}
                 >
-                  <Text className="text-white font-semibold text-sm">{"Optimize"}</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{"Optimize"}</Text>
                 </HapticTouchableOpacity>
               ) : null}
             </View>

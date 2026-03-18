@@ -195,20 +195,25 @@ describe('WeeklyCalendar', () => {
     expect(onRegenerateDay).toHaveBeenCalled();
   });
 
-  it('applies today border to the current day', () => {
-    const todayDate = weekDates[1]; // Tuesday — not the selected day, so border shows
+  it('applies today dot indicator to the current day', () => {
+    const todayDate = weekDates[1]; // Tuesday — not the selected day
     const { UNSAFE_getAllByType } = render(
       <WeeklyCalendar
         {...defaultProps}
         isToday={(date) => date.toDateString() === todayDate.toDateString()}
       />
     );
-    // [0]=prev chevron, [1]=next chevron, [2]=Mon, [3]=Tue (today, not selected)
-    // DayPill uses style={{ borderWidth: isToday && !isSelected ? 2 : 0 }}
-    // style may be an array — flatten and check any element has borderWidth 2
-    const pills = UNSAFE_getAllByType(TouchableOpacity);
-    const styles: any[] = [].concat(pills[3].props.style).filter(Boolean);
-    expect(styles.some((s: any) => s.borderWidth === 2)).toBe(true);
+    // The today indicator is now a small dot (View with width: 5, height: 5, borderRadius: 3)
+    // instead of a border. Verify the component renders without crashing for today state.
+    const { View } = require('react-native');
+    const allViews = UNSAFE_getAllByType(View);
+    const dotIndicator = allViews.find((v: any) => {
+      const style = v.props.style;
+      if (!style) return false;
+      const flatStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+      return flatStyle.width === 5 && flatStyle.height === 5 && flatStyle.borderRadius === 3;
+    });
+    expect(dotIndicator).toBeTruthy();
   });
 
   it('renders the "Weekly Meal Plan" header', () => {
