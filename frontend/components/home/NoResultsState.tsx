@@ -10,7 +10,7 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
-import { SazonMascot } from '../mascot/SazonMascot';
+import SazonMascot from '../mascot/SazonMascot';
 
 interface NoResultsStateProps {
   searchQuery: string;

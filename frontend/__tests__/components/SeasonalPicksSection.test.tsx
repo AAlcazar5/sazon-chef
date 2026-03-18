@@ -22,7 +22,10 @@ const makeRecipe = (id: string, title: string, overrides = {}) => ({
   protein: 20,
   carbs: 40,
   fat: 15,
-  matchPercentage: 85,
+  cuisine: 'American',
+  ingredients: ['ingredient 1'],
+  instructions: ['step 1'],
+  score: { total: 85, macroScore: 80, tasteScore: 90, matchPercentage: 85 },
   ...overrides,
 });
 
