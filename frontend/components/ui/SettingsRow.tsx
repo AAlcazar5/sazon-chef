@@ -16,7 +16,7 @@ interface SettingsRowProps {
   label: string;
   sublabel?: string;
   icon?: React.ReactNode;
-  onPress: () => void;
+  onPress?: () => void;
   /** Render a custom right-side element instead of the chevron */
   rightElement?: React.ReactNode;
   /** Show bottom border (default true) */
@@ -24,6 +24,7 @@ interface SettingsRowProps {
   labelStyle?: any;
   style?: ViewStyle;
   testID?: string;
+  disabled?: boolean;
 }
 
 export default function SettingsRow({
@@ -36,6 +37,7 @@ export default function SettingsRow({
   labelStyle,
   style,
   testID,
+  disabled,
 }: SettingsRowProps) {
   const chevronX = useSharedValue(0);
 
@@ -56,6 +58,7 @@ export default function SettingsRow({
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      disabled={disabled}
       hapticStyle="light"
       testID={testID}
       style={[

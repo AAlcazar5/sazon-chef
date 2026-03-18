@@ -12,16 +12,31 @@ import { recipeApi } from '../../lib/api';
 
 const mockGetHomeFeed = recipeApi.getHomeFeed as jest.Mock;
 
+const makeRecipe = (id: string, title: string) => ({
+  id,
+  title,
+  description: '',
+  cookTime: 30,
+  calories: 400,
+  protein: 20,
+  carbs: 40,
+  fat: 15,
+  cuisine: 'American',
+  ingredients: ['ingredient 1'],
+  instructions: ['step 1'],
+  score: { total: 85, macroScore: 80, tasteScore: 90, matchPercentage: 85 },
+});
+
 const makeFeedResponse = (overrides: Record<string, any> = {}) => ({
   data: {
-    recipeOfTheDay: { id: 'rotd-1', title: 'Recipe of the Day' },
+    recipeOfTheDay: makeRecipe('rotd-1', 'Recipe of the Day'),
     suggestedRecipes: [
-      { id: 's1', title: 'Suggested 1' },
-      { id: 's2', title: 'Suggested 2' },
+      makeRecipe('s1', 'Suggested 1'),
+      makeRecipe('s2', 'Suggested 2'),
     ],
-    quickMeals: [{ id: 'qm1', title: 'Quick Meal 1' }],
-    perfectMatches: [{ id: 'pm1', title: 'Perfect Match 1' }],
-    likedRecipes: [{ id: 'lr1', title: 'Liked Recipe 1' }],
+    quickMeals: [makeRecipe('qm1', 'Quick Meal 1')],
+    perfectMatches: [makeRecipe('pm1', 'Perfect Match 1')],
+    likedRecipes: [makeRecipe('lr1', 'Liked Recipe 1')],
     popularSearches: [{ query: 'chicken', count: 42 }],
     pagination: {
       page: 0,
@@ -132,7 +147,7 @@ describe('useHomeFeed', () => {
     // Refetch
     mockGetHomeFeed.mockResolvedValueOnce(
       makeFeedResponse({
-        suggestedRecipes: [{ id: 'new1', title: 'New Recipe' }],
+        suggestedRecipes: [makeRecipe('new1', 'New Recipe')],
       })
     );
 

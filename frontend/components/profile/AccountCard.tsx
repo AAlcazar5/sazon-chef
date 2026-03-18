@@ -126,7 +126,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
             rightElement={
               <Switch
                 value={biometricEnabled}
-                onValueChange={toggleBiometricLock}
+                onValueChange={(val) => { toggleBiometricLock(val); }}
                 trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
                 thumbColor="#FFFFFF"
               />
