@@ -7,6 +7,7 @@ import SkeletonLoader from '../ui/SkeletonLoader';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 
 interface CostAnalysisSectionProps {
   costAnalysis: any;
@@ -28,7 +29,7 @@ function CostAnalysisSection({
   // No cost analysis data - show empty or loading state
   if (!costAnalysis || typeof costAnalysis !== 'object' || Array.isArray(costAnalysis)) {
     return (
-      <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border-l-4" style={{ borderLeftColor: isDark ? DarkColors.primary : Colors.primary }}>
+      <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
         {loadingCostAnalysis ? (
           <View style={{ gap: 12 }}>
             <SkeletonLoader width="60%" height={16} borderRadius={4} isDark={isDark} />
@@ -46,7 +47,7 @@ function CostAnalysisSection({
 
   // Has cost analysis data - show full analysis
   return (
-    <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border-l-4" style={{ borderLeftColor: isDark ? DarkColors.primary : Colors.primary }}>
+    <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
       <View className="flex-row justify-between items-center mb-3">
         <View>
           <Text className="text-sm text-gray-500 dark:text-gray-200">{"Total Weekly Cost"}</Text>
@@ -63,7 +64,7 @@ function CostAnalysisSection({
       </View>
 
       {costAnalysis.budgetExceeded ? (
-        <View className="rounded-lg p-3 mb-3 border" style={{ backgroundColor: isDark ? '#EF444433' : Colors.secondaryRedLight, borderColor: isDark ? DarkColors.secondaryRedDark : Colors.secondaryRedDark }}>
+        <View style={[{ borderRadius: 14, padding: 12, marginBottom: 12, backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#FEF2F2' }, Shadows.SM]}>
           <View className="flex-row items-center mb-1">
             <Icon name={Icons.WARNING_OUTLINE} size={IconSizes.XS} color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} accessibilityLabel="Budget exceeded warning" />
             <Text className="font-semibold ml-2" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>
@@ -77,7 +78,7 @@ function CostAnalysisSection({
       ) : null}
 
       {costAnalysis.budgetRemaining && costAnalysis.budgetRemaining > 0 ? (
-        <View className="rounded-lg p-3 mb-3 border" style={{ backgroundColor: isDark ? '#10B98133' : Colors.tertiaryGreenLight, borderColor: isDark ? DarkColors.tertiaryGreenDark : Colors.tertiaryGreenDark }}>
+        <View style={[{ borderRadius: 14, padding: 12, marginBottom: 12, backgroundColor: isDark ? 'rgba(16,185,129,0.15)' : '#ECFDF5' }, Shadows.SM]}>
           <View className="flex-row items-center">
             <Icon name={Icons.CHECKMARK_CIRCLE_OUTLINE} size={IconSizes.XS} color={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen} accessibilityLabel="Budget remaining" />
             <Text className="font-semibold ml-2" style={{ color: isDark ? DarkColors.tertiaryGreenDark : Colors.tertiaryGreenDark }}>
@@ -99,7 +100,7 @@ function CostAnalysisSection({
 
       {/* Budget Progress */}
       {maxWeeklyBudget ? (
-        <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <View style={{ marginTop: 16, paddingTop: 16 }}>
           <View className="flex-row items-center justify-between mb-2">
             <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
               {"Weekly Budget"}
@@ -112,7 +113,7 @@ function CostAnalysisSection({
               {`$${costAnalysis.totalCost ? costAnalysis.totalCost.toFixed(2) : '0.00'} / $${maxWeeklyBudget.toFixed(2)}`}
             </Text>
           </View>
-          <View className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
+          <View style={{ height: 12, borderRadius: 6, overflow: 'hidden', backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
             <View
               className="h-full rounded-full"
               style={{
@@ -126,7 +127,7 @@ function CostAnalysisSection({
         </View>
       ) : null}
 
-      <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+      <View style={{ marginTop: 16, paddingTop: 16 }}>
         <View className="flex-row justify-between">
           <Text className="text-sm text-gray-500 dark:text-gray-200">{"Cost per meal"}</Text>
           <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -143,7 +144,7 @@ function CostAnalysisSection({
 
       {/* Per-Meal Costs */}
       {costAnalysis.mealCosts && costAnalysis.mealCosts.length > 0 ? (
-        <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <View style={{ marginTop: 16, paddingTop: 16 }}>
           <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
             {"Per-Meal Costs"}
           </Text>
@@ -174,7 +175,7 @@ function CostAnalysisSection({
                           {`$${meal.cost.toFixed(2)}`}
                         </Text>
                       </View>
-                      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
+                      <View style={{ height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
                         <View
                           className="h-full rounded-full"
                           style={{
@@ -198,7 +199,7 @@ function CostAnalysisSection({
 
       {/* Savings Suggestions */}
       {shoppingListSavings && shoppingListSavings.savings > 0 ? (
-        <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <View style={{ marginTop: 16, paddingTop: 16 }}>
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center">
               <Icon name={Icons.STORE_OUTLINE} size={IconSizes.XS} color="#10B981" accessibilityLabel="Best store" />

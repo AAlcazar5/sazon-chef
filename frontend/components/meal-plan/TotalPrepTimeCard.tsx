@@ -6,6 +6,7 @@ import { View, Text } from 'react-native';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 
 interface TotalPrepTimeCardProps {
   /** Total prep time in minutes */
@@ -22,7 +23,7 @@ function TotalPrepTimeCard({
 
   return (
     <View className="px-4 mb-4">
-      <View className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+      <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
             <Icon name={Icons.COOK_TIME} size={IconSizes.MD} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Total prep time" />
