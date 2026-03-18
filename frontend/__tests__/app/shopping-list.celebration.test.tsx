@@ -181,8 +181,8 @@ describe('Shopping List — all-done celebration overlay', () => {
     const { getByText } = render(<ShoppingListScreen />);
 
     await waitFor(() => {
-      expect(getByText('All done!')).toBeTruthy();
-      expect(getByText('Great shopping trip')).toBeTruthy();
+      expect(getByText('You nailed it!')).toBeTruthy();
+      expect(getByText('Your pantry is stocked. Ready to cook?')).toBeTruthy();
     });
   });
 
@@ -210,8 +210,8 @@ describe('Shopping List — all-done celebration overlay', () => {
     );
 
     const { queryByText } = render(<ShoppingListScreen />);
-    expect(queryByText('All done!')).toBeNull();
-    expect(queryByText('Great shopping trip')).toBeNull();
+    expect(queryByText('You nailed it!')).toBeNull();
+    expect(queryByText('Your pantry is stocked. Ready to cook?')).toBeNull();
   });
 
   it('does not show celebration when total === 0', () => {
@@ -223,7 +223,7 @@ describe('Shopping List — all-done celebration overlay', () => {
     );
 
     const { queryByText } = render(<ShoppingListScreen />);
-    expect(queryByText('All done!')).toBeNull();
+    expect(queryByText('You nailed it!')).toBeNull();
   });
 
   it('does not show celebration when loading is true even if purchased === total > 0', () => {
@@ -235,7 +235,7 @@ describe('Shopping List — all-done celebration overlay', () => {
     );
 
     const { queryByText } = render(<ShoppingListScreen />);
-    expect(queryByText('All done!')).toBeNull();
+    expect(queryByText('You nailed it!')).toBeNull();
   });
 
   it('auto-dismisses celebration after 2.8 seconds', async () => {
@@ -249,7 +249,7 @@ describe('Shopping List — all-done celebration overlay', () => {
     const { getByText, queryByText } = render(<ShoppingListScreen />);
 
     await waitFor(() => {
-      expect(getByText('All done!')).toBeTruthy();
+      expect(getByText('You nailed it!')).toBeTruthy();
     });
 
     // Advance past the 2800ms auto-dismiss + fade-out duration
@@ -258,7 +258,7 @@ describe('Shopping List — all-done celebration overlay', () => {
     });
 
     await waitFor(() => {
-      expect(queryByText('All done!')).toBeNull();
+      expect(queryByText('You nailed it!')).toBeNull();
     });
   });
 

@@ -5,6 +5,7 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
+import { Shadows } from '../../constants/Shadows';
 
 interface OfflineBannerProps {
   isOffline: boolean;
@@ -32,12 +33,16 @@ export default function OfflineBanner({
   if (isOffline) {
     return (
       <View
-        className="mx-4 mt-2 mb-1 flex-row items-center p-3 rounded-xl"
-        style={{
+        style={[{
+          marginHorizontal: 16,
+          marginTop: 8,
+          marginBottom: 4,
+          flexDirection: 'row',
+          alignItems: 'center',
+          padding: 12,
+          borderRadius: 16,
           backgroundColor: isDark ? '#78350F' : '#FFFBEB',
-          borderWidth: 1,
-          borderColor: isDark ? '#92400E' : '#FDE68A',
-        }}
+        }, Shadows.SM]}
       >
         <Icon
           name={Icons.CLOUD_OFFLINE_OUTLINE}
@@ -67,12 +72,16 @@ export default function OfflineBanner({
   if (hasPendingSync) {
     return (
       <View
-        className="mx-4 mt-2 mb-1 flex-row items-center p-3 rounded-xl"
-        style={{
+        style={[{
+          marginHorizontal: 16,
+          marginTop: 8,
+          marginBottom: 4,
+          flexDirection: 'row',
+          alignItems: 'center',
+          padding: 12,
+          borderRadius: 16,
           backgroundColor: isDark ? '#1E3A5F' : '#EFF6FF',
-          borderWidth: 1,
-          borderColor: isDark ? '#1E40AF' : '#BFDBFE',
-        }}
+        }, Shadows.SM]}
       >
         <ActivityIndicator
           size="small"
