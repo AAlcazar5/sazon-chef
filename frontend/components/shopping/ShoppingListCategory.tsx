@@ -10,6 +10,7 @@ import SwipeableItem from '../ui/SwipeableItem';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import ShoppingListItem from './ShoppingListItem';
 
@@ -69,19 +70,29 @@ function RecipeGroupHeader({
 
   return (
     <Animated.View
-      className={`flex-row items-center mb-3 p-3 rounded-lg ${allPurchased ? 'opacity-60' : ''}`}
-      style={{ backgroundColor }}
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 12,
+          padding: 14,
+          borderRadius: 16,
+          opacity: allPurchased ? 0.6 : 1,
+        },
+        Shadows.SM,
+        { backgroundColor },
+      ]}
     >
       <HapticTouchableOpacity
         onPress={() => router.push(`/recipe/${recipe.id}` as any)}
         style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
       >
         <View className="flex-1">
-          <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          <Text style={{ fontSize: 16, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827' }}>
             {recipe.title}
             {allPurchased ? ' ✓' : ''}
           </Text>
-          <Text className="text-xs text-gray-500 dark:text-gray-400">
+          <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
             {itemCount} {itemCount === 1 ? 'item' : 'items'}
           </Text>
         </View>
@@ -148,7 +159,7 @@ export default function ShoppingListCategory({
       {/* Items without recipe */}
       {itemsByRecipe.noRecipe.length > 0 && (
         <View className="mb-6">
-          <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Other Items</Text>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#D1D5DB' : '#374151', marginBottom: 12 }}>Other Items</Text>
           {itemsByRecipe.noRecipe.map((item) => (
             <SwipeableItem
               key={item.id}

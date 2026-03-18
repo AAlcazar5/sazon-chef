@@ -3,6 +3,7 @@
 
 import { View, Text, ScrollView, SectionList, Animated, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +17,7 @@ import LogoMascot from '../../components/mascot/LogoMascot';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { Spacing } from '../../constants/Spacing';
 import { ShoppingListEmptyStates } from '../../constants/EmptyStates';
 import { ShoppingListLoadingStates } from '../../constants/LoadingStates';
@@ -187,7 +189,7 @@ export default function ShoppingListScreen() {
 
   if (state.loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
         <LoadingState config={ShoppingListLoadingStates.lists} fullScreen />
       </SafeAreaView>
     );
@@ -195,7 +197,7 @@ export default function ShoppingListScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
       <ShoppingListHeader
         state={state}
         dispatch={dispatch}
@@ -230,21 +232,30 @@ export default function ShoppingListScreen() {
             />
           )}
 
-          {/* Slim Progress Bar */}
+          {/* Progress Card */}
           {currentItems.length > 0 && (
-            <View className="bg-white dark:bg-gray-800 px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-              <View className="flex-row items-center justify-between mb-1.5">
-                <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  {progressStats.purchased}/{progressStats.total} items
+            <View style={[{
+              marginHorizontal: 16,
+              marginTop: 12,
+              marginBottom: 4,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderRadius: 16,
+              backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+            }, Shadows.SM]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#D1D5DB' : '#374151' }}>
+                  {progressStats.purchased} of {progressStats.total} items
                 </Text>
-                <Text className="text-xs font-semibold" style={{ color: isDark ? '#34D399' : '#047857' }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#34D399' : '#047857' }}>
                   ${estimatedCost.toFixed(2)} est.
                 </Text>
               </View>
-              <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>
+              <View style={{ height: 6, borderRadius: 100, overflow: 'hidden', backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}>
                 <View
-                  className="h-full rounded-full"
                   style={{
+                    height: '100%',
+                    borderRadius: 100,
                     width: `${progressStats.total > 0 ? (progressStats.purchased / progressStats.total) * 100 : 0}%`,
                     backgroundColor: isDark ? '#34D399' : '#10B981',
                   }}
@@ -261,14 +272,21 @@ export default function ShoppingListScreen() {
                   config={ShoppingListEmptyStates.allPurchased}
                   title=""
                 />
-                <View className="mt-8 w-full px-4">
+                <View style={{ marginTop: 32, width: '100%', paddingHorizontal: 16 }}>
                   <HapticTouchableOpacity
                     onPress={toggleHidePurchased}
-                    className="px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
-                    style={{ backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}
+                    style={[{
+                      paddingHorizontal: 24,
+                      paddingVertical: 16,
+                      borderRadius: 100,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen,
+                    }, Shadows.SM]}
                   >
                     <Icon name={Icons.EYE_OUTLINE} size={IconSizes.MD} color="white" accessibilityLabel="Show purchased items" style={{ marginRight: 8 }} />
-                    <Text className="text-white font-semibold text-base">Show Purchased Items</Text>
+                    <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 16 }}>Show Purchased Items</Text>
                   </HapticTouchableOpacity>
                 </View>
               </View>
@@ -280,39 +298,43 @@ export default function ShoppingListScreen() {
                   config={ShoppingListEmptyStates.emptyList}
                   title=""
                 />
-                <View className="mt-8 w-full px-4" style={{ gap: 12 }}>
+                <View style={{ marginTop: 32, width: '100%', paddingHorizontal: 16, gap: 12 }}>
                   <HapticTouchableOpacity
                     onPress={handleGenerateFromMealPlan}
                     disabled={state.generatingFromMealPlan}
-                    className="px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
-                    style={{
-                      backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                      opacity: state.generatingFromMealPlan ? 0.6 : 1,
-                    }}
+                    style={[{ borderRadius: 100, overflow: 'hidden', opacity: state.generatingFromMealPlan ? 0.6 : 1 }, Shadows.MD]}
                   >
-                    {state.generatingFromMealPlan ? (
-                      <AnimatedActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
-                    ) : (
-                      <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.MD} color="white" accessibilityLabel="Generate from meal plan" style={{ marginRight: 8 }} />
-                    )}
-                    <Text className="text-white font-semibold text-base">
-                      {state.generatingFromMealPlan ? 'Generating...' : 'Generate from Meal Plan'}
-                    </Text>
+                    <LinearGradient
+                      colors={['#fa7e12', '#d67a0c']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{ paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 100 }}
+                    >
+                      {state.generatingFromMealPlan ? (
+                        <AnimatedActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                      ) : (
+                        <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.MD} color="white" accessibilityLabel="Generate from meal plan" style={{ marginRight: 8 }} />
+                      )}
+                      <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>
+                        {state.generatingFromMealPlan ? 'Generating...' : 'Generate from Meal Plan'}
+                      </Text>
+                    </LinearGradient>
                   </HapticTouchableOpacity>
 
                   <HapticTouchableOpacity
                     onPress={handleFABPress}
-                    className="px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg border-2"
                     style={{
-                      backgroundColor: 'transparent',
-                      borderColor: isDark ? DarkColors.accent : Colors.accent,
+                      paddingHorizontal: 24,
+                      paddingVertical: 16,
+                      borderRadius: 100,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
                     }}
                   >
-                    <Icon name={Icons.ADD} size={IconSizes.MD} color={isDark ? DarkColors.accent : Colors.accent} accessibilityLabel="Add item" style={{ marginRight: 8 }} />
-                    <Text
-                      className="font-semibold text-base"
-                      style={{ color: isDark ? DarkColors.accent : Colors.accent }}
-                    >
+                    <Icon name={Icons.ADD} size={IconSizes.MD} color={isDark ? '#E5E7EB' : '#374151'} accessibilityLabel="Add item" style={{ marginRight: 8 }} />
+                    <Text style={{ fontWeight: '600', fontSize: 16, color: isDark ? '#E5E7EB' : '#374151' }}>
                       Add Item Manually
                     </Text>
                   </HapticTouchableOpacity>
@@ -333,33 +355,41 @@ export default function ShoppingListScreen() {
               contentContainerStyle={{ paddingTop: 4, paddingBottom: 80 }}
               renderSectionHeader={({ section }) => (
                 <BlurView
-                  intensity={80}
+                  intensity={90}
                   tint={isDark ? 'dark' : 'light'}
-                  style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 18, marginRight: 6 }}>
+                    <Text style={{ fontSize: 20, marginRight: 8 }}>
                       {AISLE_EMOJI[section.title] || '📦'}
                     </Text>
                     <Text style={{
-                      fontSize: 13,
-                      fontWeight: '700',
-                      color: isDark ? '#D1D5DB' : '#374151',
+                      fontSize: 14,
+                      fontWeight: '800',
+                      color: isDark ? '#E5E7EB' : '#111827',
                     }}>
                       {section.title}
                     </Text>
-                    <Text style={{
-                      fontSize: 11,
-                      color: isDark ? '#6B7280' : '#9CA3AF',
+                    <View style={{
                       marginLeft: 8,
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 100,
+                      backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
                     }}>
-                      {section.remaining} left
-                    </Text>
+                      <Text style={{
+                        fontSize: 11,
+                        fontWeight: '600',
+                        color: isDark ? '#9CA3AF' : '#6B7280',
+                      }}>
+                        {section.remaining} left
+                      </Text>
+                    </View>
                   </View>
                 </BlurView>
               )}
               renderItem={({ item }) => (
-                <View style={{ paddingHorizontal: 16, paddingBottom: 2 }}>
+                <View style={{ paddingHorizontal: 16, paddingBottom: 0 }}>
                   <SwipeableItem
                     onDelete={() => handleDeleteItem(item)}
                     disabled={state.selectionMode}
@@ -435,15 +465,26 @@ export default function ShoppingListScreen() {
           {/* Floating In-Store Mode Bar */}
           {state.inStoreMode && currentItems.length > 0 && !state.selectionMode && (
             <View
-              className="absolute left-4 right-4 bottom-4 flex-row items-center justify-between px-4 py-3 rounded-xl shadow-lg"
-              style={{ backgroundColor: isDark ? '#064E3B' : '#059669' }}
+              style={[{
+                position: 'absolute',
+                left: 16,
+                right: 16,
+                bottom: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                borderRadius: 20,
+                backgroundColor: isDark ? '#064E3B' : '#059669',
+              }, Shadows.LG]}
             >
-              <View className="flex-row items-center">
-                <Text className="text-base mr-2">🛒</Text>
-                <Text className="text-white font-bold text-base">${estimatedCost.toFixed(2)}</Text>
-                <Text className="text-white/70 text-sm ml-1">remaining</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🛒</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 16 }}>${estimatedCost.toFixed(2)}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginLeft: 4 }}>remaining</Text>
               </View>
-              <Text className="text-white font-semibold text-sm">
+              <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
                 {progressStats.purchased}/{progressStats.total} done
               </Text>
             </View>
@@ -452,23 +493,36 @@ export default function ShoppingListScreen() {
           {/* Floating Selection Mode Bar */}
           {state.selectionMode && currentItems.length > 0 && (
             <View
-              className="absolute left-4 right-4 bottom-4 flex-row items-center rounded-xl shadow-lg overflow-hidden"
-              style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? '#374151' : '#E5E7EB' }}
+              style={[{
+                position: 'absolute',
+                left: 16,
+                right: 16,
+                bottom: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderRadius: 20,
+                overflow: 'hidden',
+                backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+              }, Shadows.LG]}
             >
               <HapticTouchableOpacity
                 onPress={() => dispatch({ type: 'EXIT_SELECTION_MODE' })}
-                className="flex-1 py-3 items-center"
-                style={{ backgroundColor: isDark ? '#374151' : '#F3F4F6' }}
+                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
               >
-                <Text className="font-semibold text-gray-700 dark:text-gray-100 text-sm">Cancel</Text>
+                <Text style={{ fontWeight: '600', fontSize: 14, color: isDark ? '#E5E7EB' : '#374151' }}>Cancel</Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={handleMarkSelectedComplete}
                 disabled={state.selectedItems.length === 0 || state.bulkUpdating}
-                className={`flex-1 py-3 items-center ${state.selectedItems.length === 0 || state.bulkUpdating ? 'opacity-50' : ''}`}
-                style={{ backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                  backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen,
+                  opacity: state.selectedItems.length === 0 || state.bulkUpdating ? 0.5 : 1,
+                }}
               >
-                <Text className="font-semibold text-white text-sm">
+                <Text style={{ fontWeight: '600', fontSize: 14, color: '#FFFFFF' }}>
                   {state.bulkUpdating ? '...' : `Done (${state.selectedItems.length})`}
                 </Text>
               </HapticTouchableOpacity>
@@ -526,17 +580,17 @@ export default function ShoppingListScreen() {
       />
     </SafeAreaView>
 
-    {/* All-done celebration overlay */}
+    {/* All-done celebration overlay — full-screen (P4: earn the peak) */}
     {showCelebration && (
       <Animated.View
         style={[StyleSheet.absoluteFill, {
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.45)',
+          backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.55)',
           opacity: celebrationOpacity,
           zIndex: 99,
         }]}
-        pointerEvents="box-none"
+        pointerEvents="box-only"
       >
         {/* Confetti emoji particles */}
         {CONFETTI.map((emoji, i) => (
@@ -544,7 +598,7 @@ export default function ShoppingListScreen() {
             key={i}
             style={{
               position: 'absolute',
-              fontSize: 28 + (i % 3) * 8,
+              fontSize: 32 + (i % 3) * 10,
               transform: [
                 { translateY: confettiAnims[i].y },
                 { translateX: confettiAnims[i].x },
@@ -556,40 +610,55 @@ export default function ShoppingListScreen() {
           </Animated.Text>
         ))}
 
-        {/* Card */}
+        {/* Celebration Card */}
         <Animated.View
-          style={{
+          style={[{
             backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-            borderRadius: 24,
-            paddingVertical: 32,
+            borderRadius: 28,
+            paddingVertical: 40,
             paddingHorizontal: 40,
             alignItems: 'center',
+            marginHorizontal: 32,
             transform: [{ scale: mascotScale }],
-            shadowColor: '#000',
-            shadowOpacity: 0.25,
-            shadowRadius: 20,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 16,
-          }}
+          }, Shadows.XL]}
         >
           <LogoMascot expression="chef-kiss" size="large" />
           <Text style={{
-            fontSize: 22,
+            fontSize: 26,
             fontWeight: '800',
             color: isDark ? '#F9FAFB' : '#111827',
-            marginTop: 16,
+            marginTop: 20,
             textAlign: 'center',
           }}>
-            All done!
+            You nailed it!
           </Text>
           <Text style={{
-            fontSize: 14,
+            fontSize: 15,
             color: isDark ? '#9CA3AF' : '#6B7280',
-            marginTop: 6,
+            marginTop: 8,
             textAlign: 'center',
+            lineHeight: 22,
           }}>
-            Great shopping trip
+            Your pantry is stocked. Ready to cook?
           </Text>
+
+          {/* CTA — next action (P4: always a next action) */}
+          <HapticTouchableOpacity
+            onPress={() => {
+              setShowCelebration(false);
+              router.push('/(tabs)/meal-plan' as any);
+            }}
+            style={[{ marginTop: 24, borderRadius: 100, overflow: 'hidden', width: '100%' }, Shadows.SM]}
+          >
+            <LinearGradient
+              colors={['#fa7e12', '#d67a0c']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ paddingVertical: 14, alignItems: 'center', borderRadius: 100 }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>Let's cook</Text>
+            </LinearGradient>
+          </HapticTouchableOpacity>
         </Animated.View>
       </Animated.View>
     )}

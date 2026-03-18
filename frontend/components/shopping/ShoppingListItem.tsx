@@ -10,6 +10,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
 
@@ -104,14 +105,23 @@ export default function ShoppingListItem({
 
   return (
     <Animated.View
-      className={`flex-row items-center rounded-xl mb-2 ${
-        item.purchased ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
-      } ${selectionMode && isSelected ? 'border-2' : 'border border-gray-100 dark:border-gray-700'}`}
       style={[
-        { paddingVertical: inStoreMode ? 14 : 12, paddingHorizontal: inStoreMode ? 16 : 14 },
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderRadius: 16,
+          marginBottom: 8,
+          paddingVertical: inStoreMode ? 14 : 12,
+          paddingHorizontal: inStoreMode ? 16 : 14,
+          backgroundColor: item.purchased
+            ? (isDark ? '#1A1A1C' : '#F9F9FB')
+            : (isDark ? '#1C1C1E' : '#FFFFFF'),
+        },
+        !item.purchased && Shadows.SM,
         selectionMode && isSelected ? {
-          borderColor: isDark ? DarkColors.primary : Colors.primary,
           backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight,
+          borderWidth: 2,
+          borderColor: isDark ? DarkColors.primary : Colors.primary,
         } : undefined,
         { opacity: rowOpacity },
       ]}
@@ -232,17 +242,16 @@ export default function ShoppingListItem({
       {!selectionMode && inStoreMode && !item.purchased && !isCantFind && (
         <HapticTouchableOpacity
           onPress={() => onCantFind?.(item.id)}
-          className="px-2.5 py-1.5 rounded-lg ml-2"
-          style={{ backgroundColor: isDark ? '#374151' : '#F3F4F6' }}
+          style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, marginLeft: 8, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
         >
-          <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          <Text style={{ fontSize: 12, fontWeight: '500', color: isDark ? '#9CA3AF' : '#6B7280' }}>
             Skip
           </Text>
         </HapticTouchableOpacity>
       )}
       {inStoreMode && isCantFind && (
-        <View className="px-2.5 py-1.5 rounded-lg ml-2" style={{ backgroundColor: isDark ? '#7C2D12' : '#FEF2F2' }}>
-          <Text className="text-xs font-medium" style={{ color: isDark ? '#FCA5A5' : '#DC2626' }}>
+        <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, marginLeft: 8, backgroundColor: isDark ? '#7C2D12' : '#FEF2F2' }}>
+          <Text style={{ fontSize: 12, fontWeight: '500', color: isDark ? '#FCA5A5' : '#DC2626' }}>
             Skipped
           </Text>
         </View>
