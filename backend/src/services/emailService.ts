@@ -10,6 +10,8 @@ import {
   trialEndingTemplate,
   subscriptionChangeTemplate,
   paymentFailedTemplate,
+  day3NudgeTemplate,
+  day14TrialWarningTemplate,
 } from '../emails/templates';
 
 const resend = process.env.RESEND_API_KEY
@@ -104,6 +106,22 @@ export const emailService = {
       to,
       subject: 'Action required: payment failed for Sazon Chef',
       html: paymentFailedTemplate(),
+    });
+  },
+
+  async sendDay3Nudge(to: string, userName: string): Promise<boolean> {
+    return this.send({
+      to,
+      subject: `${userName}, ready to plan your first week? 🌶️`,
+      html: day3NudgeTemplate(userName),
+    });
+  },
+
+  async sendDay14TrialWarning(to: string, userName: string): Promise<boolean> {
+    return this.send({
+      to,
+      subject: 'Your Sazon Chef trial ends in 3 days',
+      html: day14TrialWarningTemplate(userName),
     });
   },
 };

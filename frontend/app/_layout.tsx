@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { Text } from 'react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { ToastProvider } from '../contexts/ToastContext';
@@ -12,6 +13,9 @@ import SplashScreen from '../components/ui/SplashScreen';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Duration } from '../constants/Animations';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useBiometricLock } from '../hooks/useBiometricLock';
+import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import LogoMascot from '../components/mascot/LogoMascot';
 import '../global.css';
 
 function RootLayoutNav() {
@@ -23,6 +27,9 @@ function RootLayoutNav() {
 
   // Register for push notifications when authenticated
   usePushNotifications();
+
+  // Biometric lock
+  const { isLocked, biometricEnabled, loading: biometricLoading, authenticate } = useBiometricLock();
 
   console.log('[Layout] RootLayoutNav rendering with state:', { showSplash, isOnboardingComplete, isLoading, isAuthenticated, segments });
 
@@ -93,9 +100,30 @@ function RootLayoutNav() {
     );
   }
 
-  if (isOnboardingComplete === null || isLoading) {
-    // Show loading screen while checking onboarding/authentication status
+  if (isOnboardingComplete === null || isLoading || biometricLoading) {
+    // Show loading screen while checking onboarding/authentication/biometric status
     return null;
+  }
+
+  // Biometric lock screen
+  if (isAuthenticated && isLocked && biometricEnabled) {
+    return (
+      <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
+        <LogoMascot expression="thinking" size="large" />
+        <Text className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-6 mb-2">
+          Sazon is Locked
+        </Text>
+        <Text className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center px-8">
+          Authenticate to unlock your recipes
+        </Text>
+        <HapticTouchableOpacity
+          onPress={authenticate}
+          className="bg-emerald-500 px-8 py-3 rounded-full"
+        >
+          <Text className="text-white font-semibold text-base">Unlock</Text>
+        </HapticTouchableOpacity>
+      </View>
+    );
   }
 
   return (

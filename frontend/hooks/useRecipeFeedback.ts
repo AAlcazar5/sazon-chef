@@ -19,7 +19,7 @@ interface UseRecipeFeedbackOptions {
 
 interface UseRecipeFeedbackReturn {
   handleLike: (recipeId: string) => Promise<void>;
-  handleDislike: (recipeId: string) => Promise<void>;
+  handleDislike: (recipeId: string, reason?: string) => Promise<void>;
 }
 
 export function useRecipeFeedback(options: UseRecipeFeedbackOptions): UseRecipeFeedbackReturn {
@@ -70,15 +70,15 @@ export function useRecipeFeedback(options: UseRecipeFeedbackOptions): UseRecipeF
     }
   }, [userId, source, setFeedbackLoading, updateRecipeFeedback, onRecipesUpdate]);
 
-  const handleDislike = useCallback(async (recipeId: string) => {
+  const handleDislike = useCallback(async (recipeId: string, reason?: string) => {
     try {
       setFeedbackLoading(recipeId);
-      console.log('📱 Disliking recipe', recipeId);
+      console.log('📱 Disliking recipe', recipeId, reason ? `(reason: ${reason})` : '');
 
       // Update UI immediately (optimistic update)
       updateRecipeFeedback(recipeId, { liked: false, disliked: true });
 
-      await recipeApi.dislikeRecipe(recipeId);
+      await recipeApi.dislikeRecipe(recipeId, reason);
 
       // Track dislike action
       if (userId) {
@@ -95,7 +95,6 @@ export function useRecipeFeedback(options: UseRecipeFeedbackOptions): UseRecipeF
       }
 
       HapticPatterns.success();
-      Alert.alert('Noted', "We'll show fewer recipes like this");
     } catch (error: any) {
       console.error('📱 Dislike error', error);
       HapticPatterns.error();

@@ -1,5 +1,5 @@
 // backend/tests/behavioral-scoring.test.ts
-import { calculateBehavioralScore } from '../src/utils/behavioralScoring';
+import { calculateBehavioralScore, buildUserTasteProfile, calculateBehavioralScoreFromProfile } from '../src/utils/behavioralScoring';
 
 describe('Behavioral Scoring', () => {
   const mockRecipe = {
@@ -145,6 +145,100 @@ describe('Behavioral Scoring', () => {
       
       // Recipe with disliked ingredients should have lower ingredient preference score
       expect(scoreWithDisliked.ingredientPreference).toBeLessThanOrEqual(scoreWithoutDisliked.ingredientPreference);
+    });
+  });
+
+  describe('dislikeReason and complexityAversion', () => {
+    it('should compute complexityAversion from "too_complex" dislike reasons', () => {
+      const behaviorWithComplexDislikes = {
+        likedRecipes: mockUserBehavior.likedRecipes,
+        dislikedRecipes: [
+          { ...mockUserBehavior.dislikedRecipes[0], dislikeReason: 'too_complex' },
+          { ...mockUserBehavior.dislikedRecipes[0], recipeId: 'disliked-2', dislikeReason: 'too_complex' },
+        ],
+        savedRecipes: [],
+        consumedRecipes: [],
+      };
+
+      const profile = buildUserTasteProfile(behaviorWithComplexDislikes);
+      // All dislikes are "too_complex" → complexityAversion = 1.0
+      expect(profile.complexityAversion).toBe(1);
+    });
+
+    it('should compute partial complexityAversion for mixed reasons', () => {
+      const behaviorWithMixedDislikes = {
+        likedRecipes: mockUserBehavior.likedRecipes,
+        dislikedRecipes: [
+          { ...mockUserBehavior.dislikedRecipes[0], dislikeReason: 'too_complex' },
+          { ...mockUserBehavior.dislikedRecipes[0], recipeId: 'disliked-2', dislikeReason: 'not_my_style' },
+        ],
+        savedRecipes: [],
+        consumedRecipes: [],
+      };
+
+      const profile = buildUserTasteProfile(behaviorWithMixedDislikes);
+      expect(profile.complexityAversion).toBe(0.5);
+    });
+
+    it('should have zero complexityAversion when no dislikes are "too_complex"', () => {
+      const behaviorNoComplexDislikes = {
+        likedRecipes: mockUserBehavior.likedRecipes,
+        dislikedRecipes: [
+          { ...mockUserBehavior.dislikedRecipes[0], dislikeReason: 'not_my_style' },
+        ],
+        savedRecipes: [],
+        consumedRecipes: [],
+      };
+
+      const profile = buildUserTasteProfile(behaviorNoComplexDislikes);
+      expect(profile.complexityAversion).toBe(0);
+    });
+
+    it('should have zero complexityAversion with no dislikes at all', () => {
+      const emptyBehavior = {
+        likedRecipes: [],
+        dislikedRecipes: [],
+        savedRecipes: [],
+        consumedRecipes: [],
+      };
+
+      const profile = buildUserTasteProfile(emptyBehavior);
+      expect(profile.complexityAversion).toBe(0);
+    });
+
+    it('should shift scoring weight from macro to cookTime when complexityAversion is high', () => {
+      const profileNoAversion = buildUserTasteProfile({
+        likedRecipes: mockUserBehavior.likedRecipes,
+        dislikedRecipes: [{ ...mockUserBehavior.dislikedRecipes[0], dislikeReason: 'not_my_style' }],
+        savedRecipes: mockUserBehavior.savedRecipes,
+        consumedRecipes: mockUserBehavior.consumedRecipes,
+      });
+
+      const profileHighAversion = buildUserTasteProfile({
+        likedRecipes: mockUserBehavior.likedRecipes,
+        dislikedRecipes: [
+          { ...mockUserBehavior.dislikedRecipes[0], dislikeReason: 'too_complex' },
+          { ...mockUserBehavior.dislikedRecipes[0], recipeId: 'd2', dislikeReason: 'too_complex' },
+        ],
+        savedRecipes: mockUserBehavior.savedRecipes,
+        consumedRecipes: mockUserBehavior.consumedRecipes,
+      });
+
+      expect(profileNoAversion.complexityAversion).toBe(0);
+      expect(profileHighAversion.complexityAversion).toBe(1);
+
+      // Cook-time-matching recipe should score differently under different aversion levels
+      const quickRecipe = {
+        ...mockRecipe,
+        cookTime: 15, // Very quick
+      };
+
+      const scoreNoAversion = calculateBehavioralScoreFromProfile(quickRecipe, profileNoAversion);
+      const scoreHighAversion = calculateBehavioralScoreFromProfile(quickRecipe, profileHighAversion);
+
+      // High aversion gives more weight to cook time — a quick recipe gets a
+      // larger cook-time-preference contribution, so total should differ
+      expect(scoreHighAversion.total).not.toBe(scoreNoAversion.total);
     });
   });
 });

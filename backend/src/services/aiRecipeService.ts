@@ -56,6 +56,7 @@ interface RecipeGenerationParams {
   maxCookTimeForMeal?: number; // Maximum cook time for this specific meal
   maxDailyBudget?: number; // Maximum daily budget in dollars
   remainingBudget?: number; // Remaining budget for the day
+  dayDate?: string; // ISO date for this meal's day — used for weekday/weekend cook time awareness
 }
 
 export interface GeneratedRecipe {
@@ -542,6 +543,14 @@ export class AIRecipeService {
       );
     }
 
+    // Fiber target — fiber is treated as a 5th macro
+    const fiberTarget = params.macroGoals
+      ? Math.round(params.macroGoals.calories / 250) // ~8g per 2000cal meal day, scaled per meal
+      : 8;
+    parts.push(
+      `FIBER TARGET: Aim for at least ${fiberTarget}g of fiber per serving. Prioritize legumes, whole grains, vegetables, and fruit as primary fiber sources. Include the "fiber" field in your JSON response.`
+    );
+
     // ============================================
     // INGREDIENT PREFERENCES SECTION
     // This section is dynamically updated from user preferences
@@ -637,10 +646,24 @@ export class AIRecipeService {
       parts.push(
         `CRITICAL: Cook time MUST be ${params.maxCookTimeForMeal} minutes or less. This is part of a daily meal plan with limited total prep time.`
       );
-    } else if (params.userPreferences?.cookTimePreference) {
-      parts.push(
-        `Cook time should be under ${params.userPreferences.cookTimePreference} minutes.`
-      );
+    } else {
+      // Time-aware slot constraints: use weekday/weekend specific cook times when available
+      const prefs = params.userPreferences;
+      const dayOfWeek = params.dayDate ? new Date(params.dayDate).getDay() : null;
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const daySpecificTime = prefs
+        ? (isWeekend ? prefs.weekendCookTime : prefs.weekdayCookTime)
+        : null;
+
+      if (daySpecificTime) {
+        parts.push(
+          `Cook time should be under ${daySpecificTime} minutes. ${isWeekend ? 'This is a weekend slot — user has more time.' : 'This is a weekday slot — keep it quick.'}`
+        );
+      } else if (prefs?.cookTimePreference) {
+        parts.push(
+          `Cook time should be under ${prefs.cookTimePreference} minutes.`
+        );
+      }
     }
     
     // Total prep time constraint

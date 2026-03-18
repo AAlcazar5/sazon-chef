@@ -31,9 +31,10 @@ export function startNotificationScheduler(): void {
         await notificationTriggerService.checkWeeklyDigest();
       }
 
-      // Daily at 10am: trial ending check (stubbed for Group 7)
+      // Daily at 10am: trial ending + day 3 nudge lifecycle emails
       if (hour === 10) {
         await notificationTriggerService.checkTrialEnding();
+        await notificationTriggerService.checkDay3Nudge();
       }
     } catch (error) {
       console.error('❌ [NotificationScheduler] Error:', error);

@@ -51,6 +51,7 @@ export async function getUserBehaviorData(userId: string) {
         select: {
           recipeId: true,
           createdAt: true,
+          dislikeReason: true,
           recipe: {
             select: {
               cuisine: true, cookTime: true, calories: true,
@@ -119,7 +120,8 @@ export async function getUserBehaviorData(userId: string) {
         carbs: feedback.recipe.carbs,
         fat: feedback.recipe.fat,
         ingredients: feedback.recipe.ingredients,
-        createdAt: feedback.createdAt
+        createdAt: feedback.createdAt,
+        dislikeReason: feedback.dislikeReason ?? undefined,
       })),
       savedRecipes: savedRecipes.map((saved: any) => ({
         recipeId: saved.recipeId,
@@ -2763,6 +2765,115 @@ export const recipeController = {
     }
   },
 
+  // Bulk unsave multiple recipes at once
+  async bulkUnsaveRecipes(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { recipeIds } = req.body as { recipeIds: string[] };
+      if (!Array.isArray(recipeIds) || recipeIds.length === 0) {
+        return res.status(400).json({ error: 'recipeIds array is required' });
+      }
+
+      const deleted = await prisma.savedRecipe.deleteMany({
+        where: { userId, recipeId: { in: recipeIds } },
+      });
+
+      recommendationCache.invalidateUserCache(userId);
+      res.json({ message: `${deleted.count} recipes unsaved`, count: deleted.count });
+    } catch (error: any) {
+      console.error('❌ Bulk unsave error:', error);
+      res.status(500).json({ error: 'Failed to bulk unsave recipes' });
+    }
+  },
+
+  // Bulk move multiple recipes to a collection
+  async bulkMoveToCollection(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { recipeIds, collectionIds } = req.body as { recipeIds: string[]; collectionIds: string[] };
+      if (!Array.isArray(recipeIds) || recipeIds.length === 0) {
+        return res.status(400).json({ error: 'recipeIds array is required' });
+      }
+
+      const savedRecipes = await prisma.savedRecipe.findMany({
+        where: { userId, recipeId: { in: recipeIds } },
+        select: { id: true, recipeId: true },
+      });
+
+      for (const saved of savedRecipes) {
+        // Clear existing associations
+        await (prisma as any).recipeCollection.deleteMany({
+          where: { savedRecipeId: saved.id },
+        });
+        // Add to new collections
+        if (collectionIds?.length > 0) {
+          for (const collectionId of collectionIds) {
+            try {
+              await (prisma as any).recipeCollection.create({
+                data: { savedRecipeId: saved.id, collectionId, addedAt: new Date() },
+              });
+            } catch (e: any) {
+              if (e.code !== 'P2002') throw e;
+            }
+          }
+        }
+      }
+
+      res.json({ success: true, count: savedRecipes.length });
+    } catch (error: any) {
+      console.error('❌ Bulk move error:', error);
+      res.status(500).json({ error: 'Failed to bulk move recipes' });
+    }
+  },
+
+  // Export cookbook as JSON
+  async exportCookbook(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const savedRecipes = await (prisma.savedRecipe as any).findMany({
+        where: { userId },
+        include: {
+          recipe: true,
+          collections: { include: { collection: { select: { name: true } } } },
+        },
+        orderBy: { savedAt: 'desc' },
+      });
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        recipeCount: savedRecipes.length,
+        recipes: savedRecipes.map((sr: any) => ({
+          title: sr.recipe.title,
+          description: sr.recipe.description,
+          ingredients: sr.recipe.ingredients,
+          instructions: sr.recipe.instructions,
+          cuisine: sr.recipe.cuisine,
+          cookTime: sr.recipe.cookTime,
+          prepTime: sr.recipe.prepTime,
+          servings: sr.recipe.servings,
+          difficulty: sr.recipe.difficulty,
+          calories: sr.recipe.calories,
+          protein: sr.recipe.protein,
+          carbs: sr.recipe.carbs,
+          fat: sr.recipe.fat,
+          fiber: sr.recipe.fiber,
+          notes: sr.notes,
+          rating: sr.rating,
+          cookCount: sr.cookCount,
+          collections: sr.collections?.map((rc: any) => rc.collection?.name).filter(Boolean) || [],
+          savedAt: sr.savedAt,
+        })),
+      };
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="sazon-cookbook-${new Date().toISOString().slice(0, 10)}.json"`);
+      res.json(exportData);
+    } catch (error: any) {
+      console.error('❌ Export cookbook error:', error);
+      res.status(500).json({ error: 'Failed to export cookbook' });
+    }
+  },
+
   // Collections: list
   async getCollections(req: Request, res: Response) {
     try {
@@ -3240,7 +3351,11 @@ export const recipeController = {
     try {
       const { id } = req.params;
       const userId = getUserId(req);
-      
+      const { reason } = req.body as { reason?: string };
+
+      const validReasons = ['not_my_style', 'too_complex', 'missing_ingredients', 'already_tried'];
+      const dislikeReason = reason && validReasons.includes(reason) ? reason : undefined;
+
       const existing = await prisma.recipeFeedback.findFirst({
         where: { userId, recipeId: id }
       });
@@ -3248,17 +3363,17 @@ export const recipeController = {
       if (existing) {
         await prisma.recipeFeedback.update({
           where: { id: existing.id },
-          data: { liked: false, disliked: true }
+          data: { liked: false, disliked: true, ...(dislikeReason && { dislikeReason }) }
         });
       } else {
         await prisma.recipeFeedback.create({
-          data: { userId, recipeId: id, liked: false, disliked: true }
+          data: { userId, recipeId: id, liked: false, disliked: true, dislikeReason }
         });
       }
 
       // Invalidate behavioral cache so next request reflects new feedback
       recommendationCache.invalidateUserCache(userId);
-      console.log('✅ Recipe disliked successfully');
+      console.log('✅ Recipe disliked successfully', dislikeReason ? `(reason: ${dislikeReason})` : '');
       res.json({ message: 'Recipe disliked successfully' });
     } catch (error: any) {
       console.error('❌ Dislike recipe error:', error);
@@ -4336,13 +4451,21 @@ export const recipeController = {
       ]);
 
       // 4. Set up scoring context (shared across all recipes)
-      const { getCurrentTemporalContext, calculateTemporalScore, analyzeUserTemporalPatterns } = require('@/utils/temporalScoring');
+      const { getCurrentTemporalContext, calculateTemporalScore, analyzeUserTemporalPatterns, weatherBoost } = require('@/utils/temporalScoring');
       const { calculateRecipeScore } = require('@/utils/scoring');
       const { calculateBehavioralScoreFromProfile, buildUserTasteProfile } = require('@/utils/behavioralScoring');
       const { calculateEnhancedScore } = require('@/utils/enhancedScoring');
       const { calculateDiscriminatoryScore, getUserPreferencesForScoring } = require('../../utils/discriminatoryScoring');
       const { calculateHealthGoalMatch } = require('@/utils/healthGoalScoring');
       const { calculateHealthGrade } = require('@/utils/healthGrade');
+
+      // Weather-aware scoring — non-blocking, defaults to null if unavailable
+      const { getWeatherContext } = require('@/services/weatherService');
+      const lat = parseFloat(req.query.lat as string);
+      const lon = parseFloat(req.query.lon as string);
+      const weatherContext = (!isNaN(lat) && !isNaN(lon))
+        ? await getWeatherContext(lat, lon).catch(() => null)
+        : null;
 
       const temporalContext = getCurrentTemporalContext();
       const userTemporalPatterns = analyzeUserTemporalPatterns(userBehavior.consumedRecipes || []);
@@ -4407,7 +4530,10 @@ export const recipeController = {
           if (ingredientCount >= 5) qualityBoost += 1;
           if (instructionCount >= 4) qualityBoost += 2;
 
-          const finalScore = Math.round(Math.min(100, internalScore + cuisineBoost + qualityBoost));
+          // Weather nudge: −10 to +15, only active when weather data is available
+          const weatherNudge = weatherContext ? weatherBoost(recipe, weatherContext.condition) : 0;
+
+          const finalScore = Math.round(Math.min(100, internalScore + cuisineBoost + qualityBoost + weatherNudge));
 
           return {
             ...recipe,
@@ -4491,6 +4617,22 @@ export const recipeController = {
         recordSearchQuery(userId, search, paginatedRecipes.length).catch(() => {});
       }
 
+      // When a search returns 0 results, generate fuzzy suggestions from individual words
+      let searchSuggestions: string[] = [];
+      if (search && paginatedRecipes.length === 0) {
+        const words = search.trim().split(/\s+/).filter(w => w.length >= 3);
+        if (words.length > 0) {
+          const fuzzyMatches = await prisma.recipe.findMany({
+            where: {
+              OR: words.map(word => ({ title: { contains: word, mode: 'insensitive' as const } })),
+            },
+            select: { title: true },
+            take: 6,
+          });
+          searchSuggestions = fuzzyMatches.map((r: any) => r.title);
+        }
+      }
+
       console.log(`🏠 Home feed: ${paginatedRecipes.length} suggested, ${scoredQuickMeals.length} quick, ${perfectMatches.length} perfect, ${likedRecipes.length} liked, ROTD: ${recipeOfTheDay?.title || 'none'}`);
 
       const feedResponse = {
@@ -4500,6 +4642,7 @@ export const recipeController = {
         perfectMatches,
         likedRecipes,
         popularSearches,
+        ...(searchSuggestions.length > 0 && { searchSuggestions }),
         pagination: {
           page,
           limit,

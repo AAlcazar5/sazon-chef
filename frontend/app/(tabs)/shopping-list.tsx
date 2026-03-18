@@ -24,6 +24,7 @@ import { ShoppingListLoadingStates } from '../../constants/LoadingStates';
 import { useShoppingList, categorizeItem, AISLE_ORDER, DEFAULT_AISLE_ORDER, AISLE_EMOJI } from '../../hooks/useShoppingList';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
+import { userApi } from '../../lib/api';
 import {
   ShoppingListHeader,
   ShoppingListItem,
@@ -88,6 +89,18 @@ export default function ShoppingListScreen() {
     handleRemoveFromPantry,
     handleSetupDefaultPantry,
   } = useShoppingList();
+
+  // Weekly grocery budget from user preferences
+  const [weeklyBudget, setWeeklyBudget] = useState<number | null>(null);
+
+  useEffect(() => {
+    userApi.getPreferences()
+      .then(res => {
+        const budget = res.data?.maxDailyFoodBudget;
+        if (budget && budget > 0) setWeeklyBudget(budget);
+      })
+      .catch(() => {}); // Non-critical
+  }, []);
 
   // All-done celebration
   const [showCelebration, setShowCelebration] = useState(false);
@@ -261,6 +274,45 @@ export default function ShoppingListScreen() {
                   }}
                 />
               </View>
+
+              {/* Budget bar — only when user has a weekly budget set */}
+              {weeklyBudget != null && estimatedCost > 0 && (() => {
+                const totalCost = estimatedCost + (state.selectedList
+                  ? currentItems.filter(i => i.purchased && i.price != null && i.price > 0).reduce((s, i) => s + (i.price ?? 0), 0)
+                  : 0);
+                const budgetPct = Math.min((totalCost / weeklyBudget) * 100, 100);
+                const overBudget = totalCost > weeklyBudget;
+                return (
+                  <View style={{ marginTop: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '500', color: isDark ? '#9CA3AF' : '#6B7280' }}>
+                        Budget
+                      </Text>
+                      <Text style={{
+                        fontSize: 11,
+                        fontWeight: '600',
+                        color: overBudget
+                          ? (isDark ? '#FCA5A5' : '#DC2626')
+                          : (isDark ? '#9CA3AF' : '#6B7280'),
+                      }}>
+                        ${totalCost.toFixed(2)} / ${weeklyBudget.toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={{ height: 4, borderRadius: 100, overflow: 'hidden', backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}>
+                      <View
+                        style={{
+                          height: '100%',
+                          borderRadius: 100,
+                          width: `${budgetPct}%`,
+                          backgroundColor: overBudget
+                            ? (isDark ? '#EF4444' : '#DC2626')
+                            : (isDark ? '#60A5FA' : '#3B82F6'),
+                        }}
+                      />
+                    </View>
+                  </View>
+                );
+              })()}
             </View>
           )}
 

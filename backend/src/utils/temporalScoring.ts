@@ -449,10 +449,60 @@ function getMostCommonCuisines(meals: any[]): string[] {
     counts[cuisine] = (counts[cuisine] || 0) + 1;
     return counts;
   }, {} as Record<string, number>);
-  
+
   return Object.entries(cuisineCounts)
     .sort(([,a], [,b]) => (b as number) - (a as number))
     .slice(0, 3)
     .map(([cuisine]) => cuisine);
+}
+
+// ─── Weather-Aware Scoring ───────────────────────────────────────────
+
+export type WeatherCondition = 'hot' | 'cold' | 'rainy' | 'mild';
+
+// Tags that signal a recipe fits a weather condition.
+// Checked against recipe title + description (case-insensitive).
+const HOT_WEATHER_TAGS = ['salad', 'smoothie', 'cold', 'ceviche', 'poke', 'gazpacho', 'sushi', 'wrap'];
+const COLD_WEATHER_TAGS = ['soup', 'stew', 'roast', 'braise', 'chili', 'curry', 'casserole', 'pot pie', 'ramen'];
+const RAINY_WEATHER_TAGS = ['soup', 'stew', 'mac and cheese', 'grilled cheese', 'ramen', 'chili', 'curry', 'casserole'];
+
+/**
+ * Returns a score adjustment (−10 to +15) based on how well a recipe
+ * matches the current weather. A nudge, not a takeover.
+ */
+export function weatherBoost(
+  recipe: { title?: string; description?: string; calories?: number; cookTime?: number },
+  condition: WeatherCondition,
+): number {
+  const text = `${recipe.title ?? ''} ${recipe.description ?? ''}`.toLowerCase();
+
+  switch (condition) {
+    case 'hot': {
+      const isLight = (recipe.calories ?? 500) <= 450 || (recipe.cookTime ?? 30) <= 20;
+      const tagMatch = HOT_WEATHER_TAGS.some(t => text.includes(t));
+      if (tagMatch) return 15;
+      if (isLight) return 8;
+      // Penalise heavy/long-cook recipes slightly on hot days
+      if ((recipe.cookTime ?? 0) >= 60 || (recipe.calories ?? 0) >= 700) return -10;
+      return 0;
+    }
+    case 'cold': {
+      const isHearty = (recipe.calories ?? 0) >= 450 || (recipe.cookTime ?? 0) >= 30;
+      const tagMatch = COLD_WEATHER_TAGS.some(t => text.includes(t));
+      if (tagMatch) return 15;
+      if (isHearty) return 8;
+      return 0;
+    }
+    case 'rainy': {
+      const tagMatch = RAINY_WEATHER_TAGS.some(t => text.includes(t));
+      if (tagMatch) return 12;
+      // General comfort food boost: higher-calorie recipes
+      if ((recipe.calories ?? 0) >= 500) return 5;
+      return 0;
+    }
+    case 'mild':
+    default:
+      return 0; // No adjustment on mild days
+  }
 }
 

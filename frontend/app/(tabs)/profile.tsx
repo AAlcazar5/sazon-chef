@@ -66,7 +66,7 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
         <View className="flex-1 items-center justify-center">
           <Icon name={Icons.ACCOUNT_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="Loading profile" />
           <Text className="text-gray-500 dark:text-gray-200 mt-4">Loading profile...</Text>
@@ -77,7 +77,7 @@ export default function ProfileScreen() {
 
   if (!profile) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'], flexGrow: 1 }}>
           <AnimatedEmptyState
             useMascot
@@ -125,7 +125,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
       <ProfileHeader
         profile={profile}
         profilePicture={profilePicture}

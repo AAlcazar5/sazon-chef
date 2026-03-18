@@ -333,6 +333,8 @@ model RecipeFeedback {
   saved    Boolean @default(false)
   consumed Boolean @default(false)
 
+  dislikeReason String? // 'not_my_style' | 'too_complex' | 'missing_ingredients' | 'already_tried'
+
   createdAt DateTime @default(now())
 
   @@unique([recipeId, userId])
