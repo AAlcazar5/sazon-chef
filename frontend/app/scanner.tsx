@@ -1,6 +1,6 @@
 // frontend/app/scanner.tsx
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import GradientButton from '../components/ui/GradientButton';
+import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 // Scanner screen for ingredient scanning and food recognition (Phase 6, Group 13)
 
 import { View, Text, Alert, ActivityIndicator, ScrollView, Image, Animated, StyleSheet } from 'react-native';
