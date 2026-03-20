@@ -68,8 +68,6 @@ export default function SettingsRow({
           justifyContent: 'space-between',
           paddingVertical: 14,
           paddingHorizontal: 16,
-          borderBottomWidth: showBorder ? 0.5 : 0,
-          borderBottomColor: 'rgba(0,0,0,0.06)',
         },
         style,
       ]}

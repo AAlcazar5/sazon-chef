@@ -58,7 +58,7 @@ export default function BulkActionBar({
           style={{
             fontSize: 14,
             fontWeight: '700',
-            color: isDark ? '#F9FAFB' : '#111827',
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
           }}
         >
           {selectedCount} selected

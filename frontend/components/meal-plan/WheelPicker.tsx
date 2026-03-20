@@ -57,7 +57,7 @@ export default function WheelPicker({
       width: pickerWidth,
       overflow: 'hidden',
       borderRadius: 8,
-      backgroundColor: '#F9FAFB',
+      backgroundColor: Colors.surface,
       borderWidth: 1,
       borderColor: '#E5E7EB'
     }}>

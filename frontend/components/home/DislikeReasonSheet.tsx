@@ -147,7 +147,7 @@ export default function DislikeReasonSheet({
                 paddingHorizontal: 16,
                 borderRadius: 14,
                 marginBottom: idx < OPTIONS.length - 1 ? 8 : 0,
-                backgroundColor: isDark ? '#374151' : '#F9FAFB',
+                backgroundColor: isDark ? DarkColors.cardRaised : Colors.surface,
               }}
               accessibilityLabel={opt.label}
               accessibilityHint={opt.description}

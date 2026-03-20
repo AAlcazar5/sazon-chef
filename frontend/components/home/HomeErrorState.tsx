@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimatedLogoMascot } from '../mascot';
 import { LogoMascot } from '../mascot';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import GradientButton from '../ui/GradientButton';
 import { HapticPatterns } from '../../constants/Haptics';
 
 interface HomeErrorStateProps {
@@ -65,8 +66,8 @@ function HomeErrorState({ error, errorCode, onRetry }: HomeErrorStateProps) {
   const errorInfo = getErrorInfo();
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
+      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 ">
         <View className="flex-row items-center">
           <AnimatedLogoMascot
             expression="supportive"
@@ -106,15 +107,14 @@ function HomeErrorState({ error, errorCode, onRetry }: HomeErrorStateProps) {
           </View>
 
           <View className="mt-8 w-full max-w-sm">
-            <HapticTouchableOpacity
+            <GradientButton
+              label="Try Again"
               onPress={() => {
                 onRetry();
                 HapticPatterns.buttonPressPrimary();
               }}
-              className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg"
-            >
-              <Text className="text-white font-semibold text-center">Try Again</Text>
-            </HapticTouchableOpacity>
+              icon="refresh"
+            />
           </View>
         </View>
       </ScrollView>

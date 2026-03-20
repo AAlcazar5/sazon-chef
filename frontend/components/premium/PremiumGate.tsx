@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useSubscription } from '../../hooks/useSubscription';
-import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import GradientButton, { GradientPresets } from '../ui/GradientButton';
 import { SazonMascot } from '../mascot';
 
 interface PremiumGateProps {
@@ -41,12 +41,12 @@ export function PremiumGate({ children, featureName, onUpgrade }: PremiumGatePro
         Unlock all features with a 7-day free trial.
       </Text>
 
-      <HapticTouchableOpacity
-        className="bg-orange-500 px-8 py-4 rounded-2xl"
+      <GradientButton
+        label="Start Free Trial"
         onPress={onUpgrade}
-      >
-        <Text className="text-white font-bold text-base">Start Free Trial</Text>
-      </HapticTouchableOpacity>
+        colors={GradientPresets.premium}
+        icon="star"
+      />
     </View>
   );
 }

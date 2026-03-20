@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform, StyleSheet } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedBadge from '../../components/ui/AnimatedBadge';
 import { router, usePathname, useSegments } from 'expo-router';
@@ -235,23 +234,13 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          backgroundColor: Platform.OS === 'android' ? colors.background : 'transparent',
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+          backgroundColor: colors.background,
+          borderTopWidth: 0,
           height: ComponentSpacing.tabBar.height + insets.bottom,
           paddingBottom: Math.max(ComponentSpacing.tabBar.paddingBottom, insets.bottom),
           paddingTop: ComponentSpacing.tabBar.paddingTop,
-          ...(Platform.OS === 'android' && { elevation: 0 }),
+          elevation: 0,
         },
-        tabBarBackground: Platform.OS === 'ios'
-          ? () => (
-              <BlurView
-                intensity={isDark ? 60 : 80}
-                tint={isDark ? 'dark' : 'light'}
-                style={StyleSheet.absoluteFill}
-              />
-            )
-          : undefined,
         tabBarLabelStyle: {
           fontSize: FontSize.sm,
           fontWeight: FontWeight.medium,
@@ -327,7 +316,7 @@ export default function TabLayout() {
         <View className="flex-row items-center" style={{ gap: Gap.md }}>
           {/* Search Bar */}
           <View className="flex-1" style={{ position: 'relative' }}>
-            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 border border-gray-200 dark:border-gray-600" style={{ height: 40 }}>
+            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3" style={{ height: 40 }}>
               <Ionicons name="search-outline" size={20} color={colors.text.secondary} style={{ marginRight: Spacing.sm }} />
               <TextInput
                 ref={searchInputRef}
@@ -377,9 +366,7 @@ export default function TabLayout() {
                   right: 0,
                   marginBottom: 4,
                   backgroundColor: isDark ? DarkElevation.dp8 : '#FFFFFF',
-                  borderRadius: 12,
-                  borderWidth: isDark ? 0 : 1,
-                  borderColor: isDark ? 'transparent' : '#E5E7EB',
+                  borderRadius: 20,
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: -2 },
                   shadowOpacity: 0.1,
@@ -409,8 +396,7 @@ export default function TabLayout() {
                       onPress={() => handleSelectHistoryItem(query)}
                       className="flex-row items-center px-4 py-3"
                       style={{
-                        borderTopWidth: index > 0 ? 1 : 0,
-                        borderTopColor: isDark ? '#374151' : '#F3F4F6',
+                        marginTop: index > 0 ? 1 : 0,
                       }}
                     >
                       <Ionicons name="time-outline" size={16} color={colors.text.tertiary} style={{ marginRight: 12 }} />

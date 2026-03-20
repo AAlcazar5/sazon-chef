@@ -242,7 +242,7 @@ export default function ShoppingListHeader({
                 }, Shadows.XL, { transform: [{ scale: listPickerScale }] }]}
               >
                 <View style={{ padding: 20, paddingBottom: 12 }}>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }}>Pick a list</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Pick a list</Text>
                 </View>
 
                 <ScrollView className="max-h-80">
@@ -270,7 +270,7 @@ export default function ShoppingListHeader({
                           style={{ marginRight: 12 }}
                         />
                         <View className="flex-1">
-                          <Text style={{ fontSize: 16, fontWeight: isActive ? '600' : '400', color: isActive ? (isDark ? DarkColors.primaryDark : Colors.primaryDark) : (isDark ? '#F9FAFB' : '#111827') }}>
+                          <Text style={{ fontSize: 16, fontWeight: isActive ? '600' : '400', color: isActive ? (isDark ? DarkColors.primaryDark : Colors.primaryDark) : (isDark ? DarkColors.text.primary : Colors.text.primary) }}>
                             {list.name}
                           </Text>
                           <Text style={{ fontSize: 12, color: isDark ? '#6B7280' : '#9CA3AF', marginTop: 2 }}>
@@ -335,7 +335,7 @@ export default function ShoppingListHeader({
               maxWidth: 360,
             }, Shadows.XL, { transform: [{ scale: createListScale }] }]}
           >
-            <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 4 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 4 }}>
               New list
             </Text>
             <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 16 }}>
@@ -352,7 +352,7 @@ export default function ShoppingListHeader({
                 borderRadius: 14,
                 marginBottom: 16,
                 fontSize: 16,
-                color: isDark ? '#F9FAFB' : '#111827',
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
               }}
               placeholderTextColor="#9CA3AF"
               autoFocus={true}
@@ -409,7 +409,7 @@ export default function ShoppingListHeader({
               maxWidth: 360,
             }, Shadows.XL, { transform: [{ scale: editNameScale }] }]}
           >
-            <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 16 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 16 }}>
               Rename list
             </Text>
 
@@ -424,7 +424,7 @@ export default function ShoppingListHeader({
                 borderRadius: 14,
                 marginBottom: 16,
                 fontSize: 16,
-                color: isDark ? '#F9FAFB' : '#111827',
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
               }}
               placeholderTextColor="#9CA3AF"
               autoFocus={true}

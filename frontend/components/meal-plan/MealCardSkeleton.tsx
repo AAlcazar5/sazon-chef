@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import { Colors, DarkColors } from '../../constants/Colors';
 import SkeletonLoader from '../ui/SkeletonLoader';
 
 export default function MealCardSkeleton() {
@@ -38,7 +39,7 @@ export default function MealCardSkeleton() {
       {/* Macro breakdown skeleton */}
       <View 
         className="rounded-lg p-3 mb-3"
-        style={{ backgroundColor: isDark ? '#111827' : '#F9FAFB' }}
+        style={{ backgroundColor: isDark ? DarkColors.background : Colors.surface }}
       >
         <SkeletonLoader width="40%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
         <View className="flex-row justify-between">

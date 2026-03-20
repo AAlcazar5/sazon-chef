@@ -14,8 +14,8 @@ interface HomeLoadingStateProps {
 
 function HomeLoadingState({ viewMode }: HomeLoadingStateProps) {
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
+      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 ">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1">
             <AnimatedLogoMascot
@@ -33,7 +33,7 @@ function HomeLoadingState({ viewMode }: HomeLoadingStateProps) {
         </View>
       </View>
       {/* Quick Filter Chips Skeleton */}
-      <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <View className="bg-white dark:bg-gray-800 px-4 py-3 ">
         <View className="flex-row" style={{ gap: 8 }}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <View key={i} className="h-9 w-20 rounded-full bg-gray-200 dark:bg-gray-700" />

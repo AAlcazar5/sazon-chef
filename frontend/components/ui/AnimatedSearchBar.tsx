@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, TextInput, Animated, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
+import { Colors, DarkColors } from '../../constants/Colors';
 
 interface AnimatedSearchBarProps {
   placeholder?: string;
@@ -113,7 +114,7 @@ export default function AnimatedSearchBar({
             style={[
               styles.input,
               {
-                color: colorScheme === 'dark' ? '#F9FAFB' : '#111827',
+                color: colorScheme === 'dark' ? DarkColors.text.primary : Colors.text.primary,
               },
             ]}
             returnKeyType="search"

@@ -228,7 +228,7 @@ export default function RecipeRoulette({
       <LinearGradient
         colors={isDark 
           ? ['#1F2937', '#111827', '#0F172A']
-          : ['#F9FAFB', '#F3F4F6', '#E5E7EB']
+          : [Colors.surface, '#F0EBE5', '#E8E2DA']
         }
         style={StyleSheet.absoluteFill}
       />

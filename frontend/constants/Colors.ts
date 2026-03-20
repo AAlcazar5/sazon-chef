@@ -68,6 +68,10 @@ interface ColorPalette {
   // Neutral colors
   background: string;
   surface: string;
+  surfaceTint: string; // Warm beige for grouped sections / input fills
+  card: string; // Card surfaces resting on background
+  cardRaised: string; // Elevated cards (cards on cards, modals)
+  cardOverlay: string; // Top-level overlay surfaces
   text: {
     primary: string;
     secondary: string;
@@ -134,7 +138,11 @@ export const Colors: ColorPalette = {
   
   // Neutral colors
   background: '#FFFFFF',
-  surface: '#F9FAFB', // gray-50
+  surface: '#FAF7F4', // warm cream (was #F9FAFB gray-50)
+  surfaceTint: '#F5F0EB', // warm beige for grouped sections / input fills
+  card: '#FFFFFF', // card surfaces
+  cardRaised: '#FFFFFF', // elevated cards
+  cardOverlay: '#FFFFFF', // overlay surfaces
   
   text: {
     primary: '#111827', // gray-900
@@ -200,9 +208,13 @@ export const DarkColors: ColorPalette = {
   error: '#EF4444', // red-500
   info: '#3B82F6', // blue-500
   
-  // Neutral colors (dark mode inversions)
-  background: '#111827', // gray-900
-  surface: '#1F2937', // gray-800
+  // Neutral colors (dark mode — iOS elevation stack)
+  background: '#0F0F0F', // near-OLED black (was #111827)
+  surface: '#0F0F0F', // base surface matches background
+  surfaceTint: '#1C1C1E', // subtle elevation tint
+  card: '#1C1C1E', // card surfaces resting on background (dp1)
+  cardRaised: '#2C2C2E', // elevated cards, bottom sheets (dp4)
+  cardOverlay: '#3A3A3C', // top-level overlay surfaces (dp16)
   
   text: {
     primary: '#F9FAFB', // gray-50 (inverse)

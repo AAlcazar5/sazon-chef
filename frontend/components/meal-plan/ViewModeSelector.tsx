@@ -45,7 +45,7 @@ function ViewModeSelector({
             justifyContent: 'space-between',
             paddingHorizontal: 16,
             paddingVertical: 14,
-            borderRadius: 16,
+            borderRadius: 20,
             backgroundColor: '#FFFFFF',
           }, Shadows.SM]}
           className="dark:bg-[#1C1C1E]"

@@ -22,7 +22,7 @@ export default function WeeklyNutritionSummary({
 
   return (
     <View className="px-4 mb-4">
-      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 12 }}>
+      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 12 }}>
         Weekly Nutrition Summary
       </Text>
       <View style={[{

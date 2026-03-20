@@ -391,7 +391,7 @@ export default function DuplicateModal({
 
                   {/* Meal preview */}
                   {mealPreview && (
-                    <View className="mb-3 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    <View className="mb-3 px-3 py-2 rounded-lg bg-surface dark:bg-card-dark">
                       <Text className="text-sm text-gray-700 dark:text-gray-300" numberOfLines={1}>
                         {MEAL_TYPE_EMOJIS[mealSourceType || 'breakfast']} {getMealName(mealPreview)}
                       </Text>

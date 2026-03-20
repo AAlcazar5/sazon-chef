@@ -75,7 +75,7 @@ export default function MealSwapModal({
                       ]
                     );
                   }}
-                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-3"
+                  className="bg-surface dark:bg-card-dark rounded-lg p-4 mb-3"
                 >
                   <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                     {suggestion.recipe.title}

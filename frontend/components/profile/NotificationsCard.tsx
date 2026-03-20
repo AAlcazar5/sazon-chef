@@ -481,7 +481,7 @@ export default function NotificationsCard({
                   {editingTimeIndex !== null ? 'Edit Time' : 'Add Time'}
                 </Text>
 
-                <View className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                <View className="bg-surface dark:bg-card-dark rounded-lg p-4 mb-4">
                   <Text className="text-sm font-medium mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Selected Time</Text>
                   <View className="items-center">
                     <TextInput
@@ -499,7 +499,7 @@ export default function NotificationsCard({
                   </View>
                 </View>
 
-                <View className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                <View className="bg-surface dark:bg-card-dark rounded-lg p-4 mb-4">
                   <View className="flex-row justify-center items-center">
                     <View className="items-center mr-6">
                       <Text className="text-sm font-medium mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Hour</Text>

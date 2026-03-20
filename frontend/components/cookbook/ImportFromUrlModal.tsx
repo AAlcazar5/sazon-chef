@@ -191,7 +191,7 @@ export default function ImportFromUrlModal({
                         : isDark
                         ? '#374151'
                         : '#E5E7EB',
-                      backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                      backgroundColor: isDark ? DarkColors.card : Colors.surface,
                     }}
                   >
                     <Icon
@@ -284,21 +284,21 @@ export default function ImportFromUrlModal({
 
                   {/* Quick stats */}
                   <View className="flex-row gap-3 mb-4">
-                    <View className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 items-center">
+                    <View className="flex-1 bg-surface dark:bg-card-dark rounded-xl p-3 items-center">
                       <Text className="text-xl">⏱️</Text>
                       <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1">
                         {preview.cookTime} min
                       </Text>
                       <Text className="text-xs text-gray-500 dark:text-gray-400">Cook Time</Text>
                     </View>
-                    <View className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 items-center">
+                    <View className="flex-1 bg-surface dark:bg-card-dark rounded-xl p-3 items-center">
                       <Text className="text-xl">🍽️</Text>
                       <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1">
                         {preview.servings}
                       </Text>
                       <Text className="text-xs text-gray-500 dark:text-gray-400">Servings</Text>
                     </View>
-                    <View className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 items-center">
+                    <View className="flex-1 bg-surface dark:bg-card-dark rounded-xl p-3 items-center">
                       <Text className="text-xl">🌍</Text>
                       <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1" numberOfLines={1}>
                         {preview.cuisine}

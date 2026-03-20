@@ -297,7 +297,7 @@ export default function EditPhysicalProfileScreen() {
 
   if (loadingData) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? DarkColors.surface : Colors.surface }} edges={['top']}>
         <View className="flex-1 items-center justify-center">
           <Ionicons name="body-outline" size={64} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
           <Text className="mt-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Loading...</Text>
@@ -307,10 +307,10 @@ export default function EditPhysicalProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
       <KeyboardAvoidingContainer>
       {/* Header */}
-      <View className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
+      <View className="bg-white dark:bg-gray-800 px-4 py-4 flex-row items-center justify-between">
         <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.primary : Colors.text.primary} />
         </HapticTouchableOpacity>
@@ -328,7 +328,7 @@ export default function EditPhysicalProfileScreen() {
 
       <ScrollView className="flex-1 p-4">
         {/* Gender Selection */}
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
+        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
           <Text className="text-lg font-semibold mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Gender *</Text>
           <View className="flex-row gap-2">
             {GENDERS.map((g) => (
@@ -356,18 +356,16 @@ export default function EditPhysicalProfileScreen() {
         </View>
 
         {/* Age */}
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
+        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
           <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Age *</Text>
           <TextInput
             value={age}
             onChangeText={setAge}
             placeholder="25"
             keyboardType="numeric"
-            className="rounded-lg px-4 py-3"
+            className="rounded-input px-4 py-3"
             style={{
-              backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-              borderWidth: 1,
+              backgroundColor: isDark ? DarkColors.card : Colors.surface,
               color: isDark ? DarkColors.text.primary : Colors.text.primary,
             }}
             placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
@@ -375,7 +373,7 @@ export default function EditPhysicalProfileScreen() {
         </View>
 
         {/* Height */}
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
+        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
           <View className="flex-row justify-between items-center mb-2">
             <Text className="text-lg font-semibold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Height *</Text>
             <HapticTouchableOpacity 
@@ -396,9 +394,9 @@ export default function EditPhysicalProfileScreen() {
               onChangeText={handleHeightCmChange}
               placeholder="170"
               keyboardType="numeric"
-              className="rounded-lg px-4 py-3"
+              className="rounded-input px-4 py-3"
               style={{
-                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                backgroundColor: isDark ? DarkColors.card : Colors.surface,
                 borderColor: isDark ? DarkColors.border.light : Colors.border.light,
                 borderWidth: 1,
                 color: isDark ? DarkColors.text.primary : Colors.text.primary,
@@ -415,11 +413,9 @@ export default function EditPhysicalProfileScreen() {
                   onChangeText={handleHeightFeetChange}
                   placeholder="5"
                   keyboardType="numeric"
-                  className="rounded-lg px-4 py-3"
+                  className="rounded-input px-4 py-3"
                   style={{
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                    borderWidth: 1,
+                    backgroundColor: isDark ? DarkColors.card : Colors.surface,
                     color: isDark ? DarkColors.text.primary : Colors.text.primary,
                   }}
                   placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
@@ -432,11 +428,9 @@ export default function EditPhysicalProfileScreen() {
                   onChangeText={handleHeightInchesChange}
                   placeholder="10"
                   keyboardType="numeric"
-                  className="rounded-lg px-4 py-3"
+                  className="rounded-input px-4 py-3"
                   style={{
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                    borderWidth: 1,
+                    backgroundColor: isDark ? DarkColors.card : Colors.surface,
                     color: isDark ? DarkColors.text.primary : Colors.text.primary,
                   }}
                   placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
@@ -453,18 +447,16 @@ export default function EditPhysicalProfileScreen() {
         </View>
 
         {/* Weight */}
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
+        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
           <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Current Weight *</Text>
           <TextInput
             value={useMetric ? weightKg : weightLbs}
             onChangeText={useMetric ? handleWeightKgChange : handleWeightLbsChange}
             placeholder={useMetric ? '70' : '154'}
             keyboardType="numeric"
-            className="rounded-lg px-4 py-3"
+            className="rounded-input px-4 py-3"
             style={{
-              backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-              borderWidth: 1,
+              backgroundColor: isDark ? DarkColors.card : Colors.surface,
               color: isDark ? DarkColors.text.primary : Colors.text.primary,
             }}
             placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
@@ -477,7 +469,7 @@ export default function EditPhysicalProfileScreen() {
         </View>
 
         {/* Target Weight (Optional) */}
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
+        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
           <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
             Target Weight <Text className="text-sm" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>(Optional)</Text>
           </Text>
@@ -486,11 +478,9 @@ export default function EditPhysicalProfileScreen() {
             onChangeText={useMetric ? handleTargetWeightKgChange : handleTargetWeightLbsChange}
             placeholder={useMetric ? '65' : '143'}
             keyboardType="numeric"
-            className="rounded-lg px-4 py-3"
+            className="rounded-input px-4 py-3"
             style={{
-              backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-              borderWidth: 1,
+              backgroundColor: isDark ? DarkColors.card : Colors.surface,
               color: isDark ? DarkColors.text.primary : Colors.text.primary,
             }}
             placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
@@ -503,7 +493,7 @@ export default function EditPhysicalProfileScreen() {
         </View>
 
         {/* Activity Level */}
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
+        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
           <Text className="text-lg font-semibold mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Activity Level *</Text>
           {ACTIVITY_LEVELS.map((level) => {
             const isSelected = activityLevel === level.value;
@@ -515,7 +505,7 @@ export default function EditPhysicalProfileScreen() {
                 style={{
                   backgroundColor: isSelected 
                     ? (isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedDark)
-                    : (isDark ? '#1F2937' : '#F9FAFB'),
+                    : (isDark ? DarkColors.card : Colors.surface),
                   borderWidth: isSelected ? 2 : 0,
                   borderColor: isSelected 
                     ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark)
@@ -542,7 +532,7 @@ export default function EditPhysicalProfileScreen() {
         </View>
 
         {/* Fitness Goal */}
-        <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
+        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
           <Text className="text-lg font-semibold mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Fitness Goal *</Text>
           <View className="flex-row flex-wrap gap-2">
             {FITNESS_GOALS.map((goal) => {

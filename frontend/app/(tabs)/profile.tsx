@@ -94,7 +94,7 @@ export default function ProfileScreen() {
             <View className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
               <HapticTouchableOpacity
                 onPress={handleLogout}
-                className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700"
+                className="flex-row items-center justify-between px-4 py-4"
               >
                 <View className="flex-row items-center flex-1">
                   <View

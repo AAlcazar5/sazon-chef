@@ -168,7 +168,7 @@ export default function ProfileCompletionCard({ profileCompletion }: ProfileComp
               style={{
                 backgroundColor: completed
                   ? (isDark ? '#064E3B33' : '#ECFDF5')
-                  : (isDark ? '#1F293733' : '#F9FAFB'),
+                  : (isDark ? '#1F293733' : Colors.surface),
               }}
             >
               <Text className="text-lg mr-3">{icon}</Text>

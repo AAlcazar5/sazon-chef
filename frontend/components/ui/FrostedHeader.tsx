@@ -37,12 +37,8 @@ export default function FrostedHeader({
             paddingTop: topPad,
             paddingBottom,
             backgroundColor: isDark
-              ? 'rgba(17, 24, 39, 0.95)'
-              : 'rgba(255, 255, 255, 0.95)',
-            borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: isDark
-              ? 'rgba(255,255,255,0.08)'
-              : 'rgba(0,0,0,0.08)',
+              ? 'rgba(15, 15, 15, 0.95)'
+              : 'rgba(250, 247, 244, 0.95)',
           },
         ]}
       >
@@ -60,10 +56,6 @@ export default function FrostedHeader({
         {
           paddingTop: topPad,
           paddingBottom,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: isDark
-            ? 'rgba(255,255,255,0.08)'
-            : 'rgba(0,0,0,0.06)',
         },
       ]}
     >

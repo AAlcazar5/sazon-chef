@@ -1,5 +1,6 @@
 // frontend/app/scanner-results.tsx
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 // Results screen for food recognition
 
 import { View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
@@ -31,12 +32,12 @@ export default function ScannerResultsScreen() {
         <Text className="text-gray-600 text-center mb-6">
           Unable to process the food recognition results.
         </Text>
-        <HapticTouchableOpacity
+        <GradientButton
+          label="Go Back"
           onPress={() => router.back()}
-          className="bg-red-600 dark:bg-red-400 px-6 py-3 rounded-lg"
-        >
-          <Text className="text-white font-semibold">Go Back</Text>
-        </HapticTouchableOpacity>
+          colors={GradientPresets.brand}
+          icon="arrow-back"
+        />
       </SafeAreaView>
     );
   }
@@ -44,7 +45,7 @@ export default function ScannerResultsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row items-center">
+      <View className="bg-white px-4 py-4 flex-row items-center">
         <HapticTouchableOpacity onPress={() => router.back()} className="mr-4">
           <Ionicons name="arrow-back" size={24} color="#374151" />
         </HapticTouchableOpacity>
@@ -59,7 +60,7 @@ export default function ScannerResultsScreen() {
           )}
 
           {/* Summary */}
-          <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4 border border-red-200 dark:border-red-800">
+          <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4">
             <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
               {parsedResult.mealDescription || 'Food Items'}
             </Text>
@@ -73,7 +74,7 @@ export default function ScannerResultsScreen() {
             <View className="mb-4">
               <Text className="text-lg font-semibold text-gray-900 mb-2">Food Items:</Text>
               {parsedResult.foods.map((food: any, index: number) => (
-                <View key={index} className="bg-gray-50 p-3 rounded-lg mb-2">
+                <View key={index} className="bg-surface p-3 rounded-lg mb-2">
                   <View className="flex-row justify-between items-center">
                     <Text className="font-semibold text-gray-900">{food.name}</Text>
                     <Text className="text-red-600 dark:text-red-400 font-bold">{food.estimatedCalories} cal</Text>
@@ -88,12 +89,12 @@ export default function ScannerResultsScreen() {
 
           {/* Action Buttons */}
           <View className="mt-4 space-y-2">
-            <HapticTouchableOpacity
+            <GradientButton
+              label="Done"
               onPress={() => router.back()}
-              className="bg-red-600 dark:bg-red-400 py-3 rounded-lg"
-            >
-              <Text className="text-white text-center font-semibold">Done</Text>
-            </HapticTouchableOpacity>
+              colors={GradientPresets.brand}
+              icon="checkmark-circle"
+            />
           </View>
         </View>
       </ScrollView>

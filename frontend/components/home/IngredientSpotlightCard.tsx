@@ -29,7 +29,7 @@ export default function IngredientSpotlightCard({ onSearch }: IngredientSpotligh
           onSearch(spotlight.searchFilter);
         }}
         style={{
-          borderRadius: 16,
+          borderRadius: 20,
           padding: 16,
           backgroundColor: isDark ? '#1F2937' : '#FFFBEB',
           shadowColor: '#000',

@@ -459,7 +459,7 @@ export default function MealPlanScreen() {
           <>
             <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, minHeight: 56 }}>
               <View className="flex-row items-center justify-center" style={{ height: 28 }}>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827' }}>Meal Plan</Text>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Meal Plan</Text>
               </View>
             </View>
             <ScrollView className="flex-1" contentContainerStyle={{ padding: Spacing.lg }} nestedScrollEnabled={true}>
@@ -646,7 +646,7 @@ export default function MealPlanScreen() {
           {/* Cost Analysis */}
           <View className="px-4 mb-4">
             <View className="flex-row items-center justify-between mb-3">
-              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827' }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
                 {"💰 Weekly Cost Analysis"}
               </Text>
               {costAnalysis && costAnalysis.budgetExceeded ? (

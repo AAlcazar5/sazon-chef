@@ -64,7 +64,7 @@ export default function EditBudgetScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? '#111827' : '#F9FAFB' }} edges={['top']}>
+      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? DarkColors.background : Colors.surface }} edges={['top']}>
         <ActivityIndicator size="large" color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} />
         <Text className="mt-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Loading budget settings...</Text>
       </SafeAreaView>
@@ -72,12 +72,11 @@ export default function EditBudgetScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? '#111827' : '#F9FAFB' }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? DarkColors.background : Colors.surface }} edges={['top']}>
       <KeyboardAvoidingContainer>
       {/* Header */}
-      <View className="px-4 py-4 border-b" style={{ 
-        backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-        borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light,
+      <View className="px-4 py-4" style={{
+        backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
       }}>
         <View className="flex-row items-center">
           <HapticTouchableOpacity onPress={() => router.back()} className="mr-4">
@@ -148,8 +147,8 @@ export default function EditBudgetScreen() {
             </Text>
             <View className="flex-row items-center rounded-lg border" style={{
               backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-              borderWidth: 1,
+              borderColor: 'transparent',
+              borderWidth: 0,
             }}>
               <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                 {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}
@@ -179,8 +178,8 @@ export default function EditBudgetScreen() {
             </Text>
             <View className="flex-row items-center rounded-lg border" style={{
               backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-              borderWidth: 1,
+              borderColor: 'transparent',
+              borderWidth: 0,
             }}>
               <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                 {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}
@@ -210,8 +209,8 @@ export default function EditBudgetScreen() {
             </Text>
             <View className="flex-row items-center rounded-lg border" style={{
               backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-              borderWidth: 1,
+              borderColor: 'transparent',
+              borderWidth: 0,
             }}>
               <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                 {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}

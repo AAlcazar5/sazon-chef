@@ -39,7 +39,7 @@ export default function PantrySection({
         <View
           className="rounded-xl p-4 items-center"
           style={{
-            backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+            backgroundColor: isDark ? DarkColors.card : Colors.surface,
             borderWidth: 1,
             borderColor: isDark ? '#374151' : '#E5E7EB',
             borderStyle: 'dashed',

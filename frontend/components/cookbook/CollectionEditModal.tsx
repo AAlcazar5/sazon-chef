@@ -99,7 +99,7 @@ export default function CollectionEditModal({
                     className="border rounded-lg px-3 py-2.5"
                     style={{
                       borderColor: isDark ? '#4B5563' : '#D1D5DB',
-                      backgroundColor: isDark ? '#374151' : '#F9FAFB',
+                      backgroundColor: isDark ? DarkColors.cardRaised : Colors.surface,
                       color: isDark ? '#F3F4F6' : '#111827',
                       fontSize: 16,
                     }}
@@ -122,7 +122,7 @@ export default function CollectionEditModal({
                     className="border rounded-lg px-3 py-2.5"
                     style={{
                       borderColor: isDark ? '#4B5563' : '#D1D5DB',
-                      backgroundColor: isDark ? '#374151' : '#F9FAFB',
+                      backgroundColor: isDark ? DarkColors.cardRaised : Colors.surface,
                       color: isDark ? '#F3F4F6' : '#111827',
                       fontSize: 14,
                       minHeight: 72,

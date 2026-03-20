@@ -21,7 +21,7 @@ export default function ThawingReminders({
 
   return (
     <View className="px-4 mb-4">
-      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 12 }}>
+      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 12 }}>
         ❄️ Thawing Reminders
       </Text>
       {thawingReminders.slice(0, 3).map((reminder: any, index: number) => {
@@ -30,7 +30,7 @@ export default function ThawingReminders({
         const isTomorrow = thawDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
 
         return (
-          <View key={index} style={[{ borderRadius: 16, padding: 14, marginBottom: 8, backgroundColor: isDark ? '#2C2C2E' : '#FFF7ED' }, Shadows.SM]}>
+          <View key={index} style={[{ borderRadius: 20, padding: 14, marginBottom: 8, backgroundColor: isDark ? '#2C2C2E' : '#FFF7ED' }, Shadows.SM]}>
             <View className="flex-row items-center justify-between mb-1">
               <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {reminder.recipe.title}

@@ -211,7 +211,7 @@ export default function AddItemModal({
                     name={tab.icon as any}
                     size={14}
                     color={activeTab === tab.key
-                      ? (isDark ? '#F9FAFB' : '#111827')
+                      ? (isDark ? DarkColors.text.primary : Colors.text.primary)
                       : (isDark ? '#9CA3AF' : '#6B7280')
                     }
                     accessibilityLabel={tab.label}
@@ -221,7 +221,7 @@ export default function AddItemModal({
                     className="text-xs font-semibold"
                     style={{
                       color: activeTab === tab.key
-                        ? (isDark ? '#F9FAFB' : '#111827')
+                        ? (isDark ? DarkColors.text.primary : Colors.text.primary)
                         : (isDark ? '#9CA3AF' : '#6B7280'),
                     }}
                   >
@@ -251,7 +251,7 @@ export default function AddItemModal({
                             }}
                             className="px-3 py-1.5 rounded-full border"
                             style={{
-                              backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                              backgroundColor: isDark ? DarkColors.card : Colors.surface,
                               borderColor: isDark ? '#374151' : '#E5E7EB',
                             }}
                           >
@@ -467,7 +467,7 @@ export default function AddItemModal({
                               onLongPress={() => onToggleFavorite(item)}
                               className="flex-row items-center px-3 py-2 rounded-full border"
                               style={{
-                                backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                                backgroundColor: isDark ? DarkColors.card : Colors.surface,
                                 borderColor: isDark ? '#374151' : '#E5E7EB',
                               }}
                             >

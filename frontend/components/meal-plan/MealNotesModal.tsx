@@ -85,7 +85,7 @@ function MealNotesModal({
                         onInsertTemplate(template.text);
                       }}
                       className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
-                      style={{ backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }}
+                      style={{ backgroundColor: isDark ? DarkColors.card : Colors.surface }}
                     >
                       <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                         {template.label}

@@ -1,5 +1,6 @@
 // frontend/app/scanner.tsx
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import GradientButton from '../components/ui/GradientButton';
 // Scanner screen for ingredient scanning and food recognition (Phase 6, Group 13)
 
 import { View, Text, Alert, ActivityIndicator, ScrollView, Image, Animated, StyleSheet } from 'react-native';
@@ -307,12 +308,12 @@ export default function ScannerScreen() {
         <Text className="text-gray-600 text-center mb-6">
           We need access to your camera to scan ingredients and barcodes.
         </Text>
-        <HapticTouchableOpacity
+        <GradientButton
+          label="Grant Permission"
           onPress={requestPermission}
-          className="bg-red-600 dark:bg-red-400 px-6 py-3 rounded-lg"
-        >
-          <Text className="text-white font-semibold">Grant Permission</Text>
-        </HapticTouchableOpacity>
+          colors={GradientPresets.brand}
+          icon="camera"
+        />
       </SafeAreaView>
     );
   }
@@ -464,7 +465,7 @@ export default function ScannerScreen() {
 
                   <Text className="text-lg font-semibold text-gray-900 mb-2">Food Items:</Text>
                   {result.foods.map((food, index) => (
-                    <View key={index} className="bg-gray-50 p-3 rounded-lg mb-2">
+                    <View key={index} className="bg-surface p-3 rounded-lg mb-2">
                       <View className="flex-row justify-between items-center">
                         <Text className="font-semibold text-gray-900">{food.name}</Text>
                         <Text className="text-red-600 dark:text-red-400 font-bold">{food.estimatedCalories} cal</Text>
@@ -497,7 +498,7 @@ export default function ScannerScreen() {
                   </View>
 
                   <Text className="text-lg font-semibold text-gray-900 mb-2">Nutrition Information:</Text>
-                  <View className="bg-gray-50 p-4 rounded-lg mb-2">
+                  <View className="bg-surface p-4 rounded-lg mb-2">
                     <View className="flex-row justify-between mb-2">
                       <Text className="text-gray-700">Calories</Text>
                       <Text className="font-semibold text-gray-900">{result.calories} cal</Text>
@@ -546,21 +547,18 @@ export default function ScannerScreen() {
                   </Text>
                 </HapticTouchableOpacity>
 
-                <HapticTouchableOpacity
+                <GradientButton
+                  label="Find Recipes"
                   onPress={handleFindRecipes}
-                  className="bg-orange-500 py-3 rounded-lg flex-row items-center justify-center"
-                  style={{ gap: 8 }}
-                >
-                  <Icon name={Icons.SEARCH} size={20} color="white" />
-                  <Text className="text-white text-center font-semibold">Find Recipes</Text>
-                </HapticTouchableOpacity>
+                  icon="search"
+                />
 
-                <HapticTouchableOpacity
+                <GradientButton
+                  label="Scan Again"
                   onPress={reset}
-                  className="bg-red-600 dark:bg-red-400 py-3 rounded-lg"
-                >
-                  <Text className="text-white text-center font-semibold">Scan Again</Text>
-                </HapticTouchableOpacity>
+                  colors={GradientPresets.fire}
+                  icon="scan"
+                />
                 <HapticTouchableOpacity
                   onPress={() => router.back()}
                   className="bg-gray-200 py-3 rounded-lg"
@@ -645,7 +643,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 36,
   },
   noMatchTitle: {
-    color: '#F9FAFB',
+    color: DarkColors.text.primary,
     fontSize: 20,
     fontWeight: '700',
     marginTop: 20,
