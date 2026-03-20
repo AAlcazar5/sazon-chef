@@ -7,7 +7,7 @@ import SkeletonLoader from '../../components/ui/SkeletonLoader';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, DarkColors } from '../../constants/Colors';
-import { Spacing } from '../../constants/Spacing';
+import { Spacing, ComponentSpacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
 import { useMealPlanData } from '../../hooks/useMealPlanData';
 import { useMealPlanUI } from '../../hooks/useMealPlanUI';
@@ -534,7 +534,7 @@ export default function MealPlanScreen() {
         <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}
+          contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
           nestedScrollEnabled={true}
           onScroll={(event) => {
             scrollPositionRef.current = event.nativeEvent.contentOffset.y;

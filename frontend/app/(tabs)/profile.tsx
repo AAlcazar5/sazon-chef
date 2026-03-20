@@ -9,7 +9,7 @@ import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { useSubscription } from '../../hooks/useSubscription';
 import { CancellationFlow } from '../../components/premium/CancellationFlow';
-import { Spacing } from '../../constants/Spacing';
+import { Spacing, ComponentSpacing } from '../../constants/Spacing';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileData } from '../../hooks/useProfileData';
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
   if (!profile) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'], flexGrow: 1 }}>
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom, flexGrow: 1 }}>
           <AnimatedEmptyState
             useMascot
             mascotExpression="supportive"
@@ -140,7 +140,7 @@ export default function ProfileScreen() {
         } : undefined}
       />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}>
         <AppearanceSection />
 
         <ProfileCompletionCard profileCompletion={profileCompletion} />
