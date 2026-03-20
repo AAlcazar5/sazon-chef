@@ -1,18 +1,22 @@
 // frontend/components/home/FilterModal.tsx
 // Filter bottom sheet for recipe search filters
 
-import { View, Text } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import BottomSheet from '../ui/BottomSheet';
 import { AnimatedLogoMascot } from '../mascot';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { HapticPatterns } from '../../constants/Haptics';
 import { FilterState } from '../../lib/filterStorage';
 import {
   CUISINE_OPTIONS,
   DIETARY_OPTIONS,
   DIFFICULTY_OPTIONS,
 } from '../../utils/filterUtils';
+import type { Mood } from '../ui/MoodSelector';
+import type { QuickMacroFilters } from './QuickFiltersBar';
 
 interface FilterModalProps {
   visible: boolean;
@@ -20,6 +24,15 @@ interface FilterModalProps {
   onApply: () => void;
   filters: FilterState;
   onFilterChange: (type: keyof FilterState, value: any) => void;
+  /** Quick filter props */
+  selectedMood?: Mood | null;
+  onMoodPress?: () => void;
+  onClearMood?: () => void;
+  quickMacroFilters?: QuickMacroFilters;
+  mealPrepMode?: boolean;
+  handleQuickFilter?: (type: keyof FilterState, value: string | number | null | string[]) => void;
+  handleQuickMacroFilter?: (filterKey: keyof QuickMacroFilters) => void;
+  handleToggleMealPrepMode?: (enabled: boolean) => void;
 }
 
 export default function FilterModal({
@@ -28,6 +41,14 @@ export default function FilterModal({
   onApply,
   filters,
   onFilterChange,
+  selectedMood,
+  onMoodPress,
+  onClearMood,
+  quickMacroFilters,
+  mealPrepMode = false,
+  handleQuickFilter,
+  handleQuickMacroFilter,
+  handleToggleMealPrepMode,
 }: FilterModalProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -43,7 +64,7 @@ export default function FilterModal({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title="Filter Recipes"
+      title="Filters"
       snapPoints={['75%', '92%']}
       scrollable
     >
@@ -68,6 +89,96 @@ export default function FilterModal({
       </View>
 
       <View className="px-4 pb-6">
+        {/* Quick Filters */}
+        {handleQuickFilter && (
+          <View className="mb-6">
+            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              Quick Filters
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8 }}
+            >
+              {/* Mood */}
+              {onMoodPress && (
+                <HapticTouchableOpacity
+                  onPress={onMoodPress}
+                  className="px-4 py-2 rounded-full flex-row items-center"
+                  style={{ backgroundColor: selectedMood ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#374151' : '#F3F4F6') }}
+                >
+                  <Text className="text-base">{selectedMood?.emoji || '😊'}</Text>
+                  <Text className="text-sm font-semibold ml-1.5" style={{ color: selectedMood ? '#FFF' : (isDark ? '#D1D5DB' : '#374151') }}>
+                    {selectedMood?.label || 'Mood'}
+                  </Text>
+                  {selectedMood && onClearMood && (
+                    <HapticTouchableOpacity
+                      onPress={(e) => { e.stopPropagation(); onClearMood(); }}
+                      className="ml-2 w-4 h-4 rounded-full bg-white/30 items-center justify-center"
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="close" size={12} color="white" />
+                    </HapticTouchableOpacity>
+                  )}
+                </HapticTouchableOpacity>
+              )}
+
+              {/* Quick <30min */}
+              <QuickChip
+                active={filters.maxCookTime === 30}
+                emoji="⚡" label="Quick" isDark={isDark}
+                onPress={() => { handleQuickFilter('maxCookTime', filters.maxCookTime === 30 ? null : 30); HapticPatterns.buttonPress(); }}
+              />
+              {/* Easy */}
+              <QuickChip
+                active={filters.difficulty.includes('Easy')}
+                emoji="👍" label="Easy" isDark={isDark}
+                onPress={() => {
+                  const isActive = filters.difficulty.includes('Easy');
+                  handleQuickFilter('difficulty', isActive ? filters.difficulty.filter(d => d !== 'Easy') : [...filters.difficulty, 'Easy']);
+                  HapticPatterns.buttonPress();
+                }}
+              />
+              {/* High Protein */}
+              {handleQuickMacroFilter && quickMacroFilters && (
+                <>
+                  <QuickChip active={quickMacroFilters.highProtein} emoji="💪" label="High Protein" isDark={isDark} onPress={() => handleQuickMacroFilter('highProtein')} />
+                  <QuickChip active={quickMacroFilters.lowCarb} emoji="🥩" label="Low Carb" isDark={isDark} onPress={() => handleQuickMacroFilter('lowCarb')} />
+                  <QuickChip active={quickMacroFilters.lowCalorie} emoji="🥗" label="Low Cal" isDark={isDark} onPress={() => handleQuickMacroFilter('lowCalorie')} />
+                </>
+              )}
+              {/* Meal Prep */}
+              {handleToggleMealPrepMode && (
+                <QuickChip
+                  active={mealPrepMode}
+                  emoji="🍱" label="Meal Prep" isDark={isDark}
+                  onPress={() => { handleToggleMealPrepMode(!mealPrepMode); HapticPatterns.buttonPress(); }}
+                />
+              )}
+              {/* Budget */}
+              <QuickChip
+                active={filters.dietaryRestrictions.includes('Budget-Friendly')}
+                emoji="💰" label="Budget" isDark={isDark}
+                onPress={() => {
+                  const isActive = filters.dietaryRestrictions.includes('Budget-Friendly');
+                  handleQuickFilter('dietaryRestrictions', isActive ? filters.dietaryRestrictions.filter(d => d !== 'Budget-Friendly') : [...filters.dietaryRestrictions, 'Budget-Friendly']);
+                  HapticPatterns.buttonPress();
+                }}
+              />
+              {/* One Pot */}
+              <QuickChip
+                active={filters.dietaryRestrictions.includes('One-Pot')}
+                emoji="🍲" label="One Pot" isDark={isDark}
+                onPress={() => {
+                  const isActive = filters.dietaryRestrictions.includes('One-Pot');
+                  handleQuickFilter('dietaryRestrictions', isActive ? filters.dietaryRestrictions.filter(d => d !== 'One-Pot') : [...filters.dietaryRestrictions, 'One-Pot']);
+                  HapticPatterns.buttonPress();
+                }}
+              />
+            </ScrollView>
+          </View>
+        )}
+
         {/* Cuisine */}
         <View className="mb-6">
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
@@ -262,5 +373,36 @@ export default function FilterModal({
         )}
       </View>
     </BottomSheet>
+  );
+}
+
+/** Simple quick-filter chip (no spring animation — inside a scrollable sheet) */
+function QuickChip({
+  active,
+  emoji,
+  label,
+  onPress,
+  isDark,
+}: {
+  active: boolean;
+  emoji: string;
+  label: string;
+  onPress: () => void;
+  isDark: boolean;
+}) {
+  return (
+    <HapticTouchableOpacity
+      onPress={onPress}
+      className="px-4 py-2 rounded-full flex-row items-center"
+      style={{ backgroundColor: active ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#374151' : '#F3F4F6') }}
+    >
+      <Text className="text-base">{emoji}</Text>
+      <Text
+        className="text-sm font-semibold ml-1.5"
+        style={{ color: active ? '#FFF' : (isDark ? '#D1D5DB' : '#374151') }}
+      >
+        {label}
+      </Text>
+    </HapticTouchableOpacity>
   );
 }

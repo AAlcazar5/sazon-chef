@@ -24,6 +24,7 @@ interface RecipeSectionsGridProps {
   collapsedSections: Record<string, boolean>;
   onToggleSection: (key: string) => void;
   viewMode: 'grid' | 'list';
+  onToggleViewMode: (mode: 'grid' | 'list') => void;
   isDark: boolean;
 
   // Recipe card handlers
@@ -60,6 +61,7 @@ function RecipeSectionsGrid({
   collapsedSections,
   onToggleSection,
   viewMode,
+  onToggleViewMode,
   isDark,
   userFeedback,
   feedbackLoading,
@@ -113,6 +115,34 @@ function RecipeSectionsGrid({
                   </Text>
                 </View>
               </View>
+              {isRecipesForYou && (
+                <View
+                  className="flex-row items-center rounded-lg p-1 mr-2"
+                  style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }}
+                >
+                  {(['list', 'grid'] as const).map((mode) => (
+                    <HapticTouchableOpacity
+                      key={mode}
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        onToggleViewMode(mode);
+                      }}
+                      className="px-2.5 py-1 rounded"
+                      style={
+                        viewMode === mode
+                          ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary }
+                          : undefined
+                      }
+                    >
+                      <Ionicons
+                        name={mode as any}
+                        size={16}
+                        color={viewMode === mode ? '#FFF' : (isDark ? '#9CA3AF' : '#6B7280')}
+                      />
+                    </HapticTouchableOpacity>
+                  ))}
+                </View>
+              )}
               <Icon
                 name={isCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
                 size={IconSizes.SM}

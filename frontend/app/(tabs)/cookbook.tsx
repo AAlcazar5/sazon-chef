@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AnimatedRefreshControl from '../../components/ui/AnimatedRefreshControl';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import LoadingState from '../../components/ui/LoadingState';
@@ -85,6 +86,17 @@ export default function CookbookScreen() {
   });
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Count active filters for header badge
+  const cookbookActiveFilterCount = [
+    cookbookFilters.maxCookTime !== null,
+    cookbookFilters.difficulty.length > 0,
+    cookbookFilters.mealPrepOnly,
+    cookbookFilters.highProtein,
+    cookbookFilters.lowCal,
+    cookbookFilters.budget,
+    cookbookFilters.onePot,
+  ].filter(Boolean).length;
   
   // Similar recipes carousel state
   const [similarRecipes, setSimilarRecipes] = useState<SavedRecipe[]>([]);
@@ -985,22 +997,11 @@ export default function CookbookScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
-      {/* Header with title, display toggle, quick filters, and search */}
+      {/* Header: title + import icon + animated Filters button */}
       <CookbookHeader
-        filters={cookbookFilters}
-        onFilterChange={(newFilters) => {
-          setCookbookFilters(newFilters);
-          setCurrentPage(0);
-        }}
-        onAdvancedFilterPress={() => setShowFilterModal(true)}
-        searchQuery={searchQuery}
-        onSearchChange={(text) => {
-          setSearchQuery(text);
-          setCurrentPage(0);
-        }}
+        onFilterPress={() => setShowFilterModal(true)}
+        activeFilterCount={cookbookActiveFilterCount}
         onImportPress={() => setShowImportModal(true)}
-        displayMode={displayMode}
-        onDisplayModeChange={handleToggleDisplayMode}
       />
 
       {/* Offline / sync status banner */}
@@ -1019,11 +1020,6 @@ export default function CookbookScreen() {
           setCookbookFilters(newFilters);
           // Save filters to storage
           AsyncStorage.setItem(COOKBOOK_FILTERS_STORAGE_KEY, JSON.stringify(newFilters)).catch(console.error);
-        }}
-        searchQuery={searchQuery}
-        onSearchChange={(text) => {
-          setSearchQuery(text);
-          setCurrentPage(0);
         }}
         collections={collections}
         selectedListId={selectedListId}
@@ -1212,14 +1208,39 @@ export default function CookbookScreen() {
           >
           <View className="px-4">
 
-            {/* Recipe count */}
+            {/* Recipe count + grid/list toggle */}
             {filteredAndSortedRecipes.length > 0 && (
-              <Text className="text-center text-sm text-gray-500 dark:text-gray-400 mb-3">
-                {paginationInfo.hasMultiplePages
-                  ? `${paginationInfo.from}–${paginationInfo.to} of ${paginationInfo.totalItems} recipe${paginationInfo.totalItems !== 1 ? 's' : ''}`
-                  : `${filteredAndSortedRecipes.length} recipe${filteredAndSortedRecipes.length !== 1 ? 's' : ''}`
-                }{serverHasMore ? ` (${serverTotal} total)` : ''}
-              </Text>
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-sm text-gray-500 dark:text-gray-400">
+                  {paginationInfo.hasMultiplePages
+                    ? `${paginationInfo.from}–${paginationInfo.to} of ${paginationInfo.totalItems} recipe${paginationInfo.totalItems !== 1 ? 's' : ''}`
+                    : `${filteredAndSortedRecipes.length} recipe${filteredAndSortedRecipes.length !== 1 ? 's' : ''}`
+                  }{serverHasMore ? ` (${serverTotal} total)` : ''}
+                </Text>
+                <View
+                  className="flex-row items-center rounded-lg p-1"
+                  style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }}
+                >
+                  {(['list', 'grid'] as const).map((mode) => (
+                    <HapticTouchableOpacity
+                      key={mode}
+                      onPress={() => handleToggleDisplayMode(mode)}
+                      className="px-2.5 py-1 rounded"
+                      style={
+                        displayMode === mode
+                          ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary }
+                          : undefined
+                      }
+                    >
+                      <Ionicons
+                        name={mode as any}
+                        size={16}
+                        color={displayMode === mode ? '#FFF' : (isDark ? '#9CA3AF' : '#6B7280')}
+                      />
+                    </HapticTouchableOpacity>
+                  ))}
+                </View>
+              </View>
             )}
             <CookbookRecipeList
               recipes={savedRecipes}

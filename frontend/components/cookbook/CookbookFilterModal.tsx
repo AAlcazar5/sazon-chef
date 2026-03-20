@@ -1,5 +1,5 @@
 // frontend/components/cookbook/CookbookFilterModal.tsx
-// Advanced filter bottom sheet — view mode, collection, sort, cook time, difficulty, dietary (P5/P7/P11)
+// Unified filter bottom sheet — quick filters + view mode + collection + sort + cook time + difficulty + dietary (P5/P7/P11)
 
 import { View, Text, ScrollView } from 'react-native';
 import { useColorScheme } from 'nativewind';
@@ -9,6 +9,7 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
+import { HapticPatterns } from '../../constants/Haptics';
 
 export interface CookbookFilters {
   maxCookTime: number | null;
@@ -31,8 +32,6 @@ interface CookbookFilterModalProps {
   onClose: () => void;
   filters: CookbookFilters;
   onFilterChange: (filters: CookbookFilters) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   collections: any[];
   selectedListId: string | null;
   onSelectList: (id: string | null) => void;
@@ -45,7 +44,8 @@ interface CookbookFilterModalProps {
 }
 
 /**
- * Advanced filter bottom sheet for cookbook.
+ * Unified filter bottom sheet for cookbook.
+ * Quick filter chips at top, then view/collection/sort/cook time/difficulty/dietary sections.
  * Elevation-over-borders (P11), max 3 options per row (P5), friendly labels (P7).
  */
 export default function CookbookFilterModal({
@@ -103,7 +103,7 @@ export default function CookbookFilterModal({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title="Filter & sort"
+      title="Filters"
       snapPoints={['85%']}
       scrollable
     >
@@ -112,6 +112,66 @@ export default function CookbookFilterModal({
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Quick Filters */}
+        <View className="mb-5">
+          <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            Quick Filters
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            <QuickChip
+              active={filters.maxCookTime === 30}
+              emoji="⚡" label="Quick" isDark={isDark}
+              onPress={() => {
+                onFilterChange({ ...filters, maxCookTime: filters.maxCookTime === 30 ? null : 30 });
+                HapticPatterns.buttonPress();
+              }}
+            />
+            <QuickChip
+              active={filters.difficulty.includes('Easy')}
+              emoji="✨" label="Easy" isDark={isDark}
+              onPress={() => {
+                const isActive = filters.difficulty.includes('Easy');
+                onFilterChange({
+                  ...filters,
+                  difficulty: isActive
+                    ? filters.difficulty.filter(d => d !== 'Easy')
+                    : [...filters.difficulty, 'Easy'],
+                });
+                HapticPatterns.buttonPress();
+              }}
+            />
+            <QuickChip
+              active={filters.highProtein}
+              emoji="💪" label="High Protein" isDark={isDark}
+              onPress={() => { onFilterChange({ ...filters, highProtein: !filters.highProtein }); HapticPatterns.buttonPress(); }}
+            />
+            <QuickChip
+              active={filters.lowCal}
+              emoji="🥗" label="Low Cal" isDark={isDark}
+              onPress={() => { onFilterChange({ ...filters, lowCal: !filters.lowCal }); HapticPatterns.buttonPress(); }}
+            />
+            <QuickChip
+              active={filters.mealPrepOnly}
+              emoji="🍱" label="Meal Prep" isDark={isDark}
+              onPress={() => { onFilterChange({ ...filters, mealPrepOnly: !filters.mealPrepOnly }); HapticPatterns.buttonPress(); }}
+            />
+            <QuickChip
+              active={filters.budget}
+              emoji="💰" label="Budget" isDark={isDark}
+              onPress={() => { onFilterChange({ ...filters, budget: !filters.budget }); HapticPatterns.buttonPress(); }}
+            />
+            <QuickChip
+              active={filters.onePot}
+              emoji="🍲" label="One Pot" isDark={isDark}
+              onPress={() => { onFilterChange({ ...filters, onePot: !filters.onePot }); HapticPatterns.buttonPress(); }}
+            />
+          </ScrollView>
+        </View>
+
         {/* Display Mode (grid/list) */}
         <View className="mb-5">
           <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
@@ -322,5 +382,36 @@ export default function CookbookFilterModal({
         )}
       </ScrollView>
     </BottomSheet>
+  );
+}
+
+/** Simple quick-filter chip (no spring animation — inside a scrollable sheet) */
+function QuickChip({
+  active,
+  emoji,
+  label,
+  onPress,
+  isDark,
+}: {
+  active: boolean;
+  emoji: string;
+  label: string;
+  onPress: () => void;
+  isDark: boolean;
+}) {
+  return (
+    <HapticTouchableOpacity
+      onPress={onPress}
+      className="px-4 py-2 rounded-full flex-row items-center"
+      style={{ backgroundColor: active ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#374151' : '#F3F4F6') }}
+    >
+      <Text className="text-base">{emoji}</Text>
+      <Text
+        className="text-sm font-semibold ml-1.5"
+        style={{ color: active ? '#FFF' : (isDark ? '#D1D5DB' : '#374151') }}
+      >
+        {label}
+      </Text>
+    </HapticTouchableOpacity>
   );
 }

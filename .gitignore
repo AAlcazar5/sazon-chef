@@ -7,6 +7,19 @@ yarn-debug.log*
 yarn-error.log*
 logs
 ROADMAP_3.0.md
+.github
+/inspo
+
+# Editor / AI tool config
+.claude/
+.cursor/
+.cursorrules
+
+# Shell scripts (local dev helpers)
+cleanup.sh
+run-tests.sh
+setup-git.sh
+
 
 # Environment variables (CRITICAL - Never commit these!)
 .env

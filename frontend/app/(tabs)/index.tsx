@@ -19,14 +19,13 @@ import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, RecipeSearchBar, FeaturedRecipeCarousel, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet } from '../../components/home';
+import { FilterModal, FeaturedRecipeCarousel, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet } from '../../components/home';
 import type { DislikeReason } from '../../components/home';
-import SearchScopeSelector, { type SearchScope } from '../../components/home/SearchScopeSelector';
+import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
-import QuickFiltersBar from '../../components/home/QuickFiltersBar';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
@@ -818,46 +817,10 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
       {/* Header */}
       <HomeHeader
-        viewMode={viewMode}
-        onToggleViewMode={handleToggleViewMode}
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
-        scrollY={scrollY}
-        searchValue={searchQuery}
-        onSearchChange={handleSearchChange}
+        onFilterPress={handleFilterPress}
+        activeFilterCount={activeFilters.length + (mealPrepMode ? 1 : 0)}
       />
-
-      {/* Unified Filters & Meal Prep Section */}
-      <QuickFiltersBar
-        selectedMood={selectedMood}
-        onMoodPress={openMoodSelector}
-        onClearMood={() => handleMoodSelect(null)}
-        filters={filters}
-        quickMacroFilters={quickMacroFilters}
-        mealPrepMode={mealPrepMode}
-        handleQuickFilter={handleQuickFilter}
-        handleQuickMacroFilter={handleQuickMacroFilter}
-        handleToggleMealPrepMode={handleToggleMealPrepMode}
-        onAdvancedFilterPress={handleFilterPress}
-      />
-
-      {/* Search Bar */}
-      <RecipeSearchBar
-        value={searchQuery}
-        onChangeText={handleSearchChange}
-        onClear={() => { clearSearch(); setSearchScope('all'); }}
-        onSubmitSearch={handleSubmitSearch}
-        onSelectSuggestion={handleSubmitSearch}
-        initialPopularSearches={homeFeed.popularSearches}
-      />
-
-      {/* Search Scope Selector (visible when searching) */}
-      {searchQuery.trim().length > 0 && (
-        <SearchScopeSelector
-          activeScope={searchScope}
-          onScopeChange={handleScopeChange}
-        />
-      )}
-
 
       {/* Main content area */}
       <ScrollView
@@ -918,6 +881,7 @@ export default function HomeScreen() {
           collapsedSections={collapsedSections}
           onToggleSection={toggleSection}
           viewMode={viewMode}
+          onToggleViewMode={handleToggleViewMode}
           isDark={isDark}
           userFeedback={userFeedback}
           feedbackLoading={feedbackLoading}
@@ -1053,6 +1017,14 @@ export default function HomeScreen() {
         onApply={applyFilters}
         filters={filters}
         onFilterChange={handleFilterChange}
+        selectedMood={selectedMood}
+        onMoodPress={openMoodSelector}
+        onClearMood={() => handleMoodSelect(null)}
+        quickMacroFilters={quickMacroFilters}
+        mealPrepMode={mealPrepMode}
+        handleQuickFilter={handleQuickFilter}
+        handleQuickMacroFilter={handleQuickMacroFilter}
+        handleToggleMealPrepMode={handleToggleMealPrepMode}
       />
 
       {/* Mood Selector Modal (Home Page 2.0) */}

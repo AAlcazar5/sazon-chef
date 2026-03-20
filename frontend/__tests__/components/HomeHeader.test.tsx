@@ -1,5 +1,5 @@
 // frontend/__tests__/components/HomeHeader.test.tsx
-// Phase 4: HomeHeader — logo, brand name, view mode toggle
+// HomeHeader — logo + brand name + animated filters button
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
@@ -15,6 +15,15 @@ jest.mock('expo-blur', () => {
   };
 });
 
+jest.mock('expo-linear-gradient', () => {
+  const { View } = require('react-native');
+  return {
+    LinearGradient: function MockLinearGradient(props: any) {
+      return <View testID="linear-gradient" {...props} />;
+    },
+  };
+});
+
 jest.mock('../../components/mascot', () => {
   const { View } = require('react-native');
   return {
@@ -23,8 +32,6 @@ jest.mock('../../components/mascot', () => {
 });
 
 const defaultProps = {
-  viewMode: 'list' as const,
-  onToggleViewMode: jest.fn(),
   onMascotPress: jest.fn(),
 };
 
@@ -41,62 +48,81 @@ describe('HomeHeader', () => {
     expect(getByText('Sazon Chef')).toBeTruthy();
   });
 
-  it('renders view mode toggle buttons', () => {
-    const { toJSON } = render(<HomeHeader {...defaultProps} />);
-    expect(toJSON()).toBeTruthy();
-  });
-
   it('calls onMascotPress when logo is tapped', () => {
-    const { getByTestId, UNSAFE_getAllByType } = render(<HomeHeader {...defaultProps} />);
-    // First touchable wraps the logo
+    const { UNSAFE_getAllByType } = render(<HomeHeader {...defaultProps} />);
     fireEvent.press(UNSAFE_getAllByType(TouchableOpacity)[0]);
     expect(defaultProps.onMascotPress).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onToggleViewMode with "grid" when grid button pressed', () => {
-    const { UNSAFE_getAllByType } = render(<HomeHeader {...defaultProps} />);
-    // View mode toggles: list button (index 1) then grid button (index 2)
-    const buttons = UNSAFE_getAllByType(TouchableOpacity);
-    fireEvent.press(buttons[buttons.length - 1]); // last = grid
-    expect(defaultProps.onToggleViewMode).toHaveBeenCalledWith('grid');
-  });
-
-  it('renders without crashing when scrollY not provided', () => {
+  it('renders without crashing', () => {
     const { toJSON } = render(<HomeHeader {...defaultProps} />);
     expect(toJSON()).toBeTruthy();
   });
 
-  it('renders search input in collapsed header', () => {
-    const { getByPlaceholderText } = render(<HomeHeader {...defaultProps} />);
-    expect(getByPlaceholderText('Search recipes...')).toBeTruthy();
-  });
+  describe('Filters button', () => {
+    it('does not render filters button when onFilterPress is not provided', () => {
+      const { queryByText } = render(<HomeHeader {...defaultProps} />);
+      expect(queryByText('Filters')).toBeNull();
+    });
 
-  it('calls onSearchChange when text is entered in header search', () => {
-    const onSearchChange = jest.fn();
-    const { getByPlaceholderText } = render(
-      <HomeHeader {...defaultProps} searchValue="" onSearchChange={onSearchChange} />,
-    );
-    fireEvent.changeText(getByPlaceholderText('Search recipes...'), 'tacos');
-    expect(onSearchChange).toHaveBeenCalledWith('tacos');
-  });
+    it('renders filters button when onFilterPress is provided', () => {
+      const { getByText } = render(
+        <HomeHeader {...defaultProps} onFilterPress={jest.fn()} />
+      );
+      expect(getByText('Filters')).toBeTruthy();
+    });
 
-  it('shows clear button when searchValue is non-empty', () => {
-    const { UNSAFE_getAllByType } = render(
-      <HomeHeader {...defaultProps} searchValue="tacos" onSearchChange={jest.fn()} />,
-    );
-    // Buttons: mascot, clear (in search), list, grid
-    const buttons = UNSAFE_getAllByType(TouchableOpacity);
-    expect(buttons.length).toBe(4);
-  });
+    it('calls onFilterPress when filters button is tapped', () => {
+      const onFilterPress = jest.fn();
+      const { getByText } = render(
+        <HomeHeader {...defaultProps} onFilterPress={onFilterPress} />
+      );
+      fireEvent.press(getByText('Filters'));
+      expect(onFilterPress).toHaveBeenCalledTimes(1);
+    });
 
-  it('calls onSearchChange with empty string when clear is pressed', () => {
-    const onSearchChange = jest.fn();
-    const { UNSAFE_getAllByType } = render(
-      <HomeHeader {...defaultProps} searchValue="tacos" onSearchChange={onSearchChange} />,
-    );
-    // Buttons: mascot(0), clear(1), list(2), grid(3)
-    const buttons = UNSAFE_getAllByType(TouchableOpacity);
-    fireEvent.press(buttons[1]);
-    expect(onSearchChange).toHaveBeenCalledWith('');
+    it('shows active filter count badge when activeFilterCount > 0', () => {
+      const { getByText } = render(
+        <HomeHeader
+          {...defaultProps}
+          onFilterPress={jest.fn()}
+          activeFilterCount={3}
+        />
+      );
+      expect(getByText('3')).toBeTruthy();
+    });
+
+    it('shows badge with 0 when activeFilterCount is 0', () => {
+      const { getByText } = render(
+        <HomeHeader
+          {...defaultProps}
+          onFilterPress={jest.fn()}
+          activeFilterCount={0}
+        />
+      );
+      expect(getByText('0')).toBeTruthy();
+    });
+
+    it('has correct accessibility label with active filters', () => {
+      const { getByLabelText } = render(
+        <HomeHeader
+          {...defaultProps}
+          onFilterPress={jest.fn()}
+          activeFilterCount={2}
+        />
+      );
+      expect(getByLabelText('Filters, 2 active')).toBeTruthy();
+    });
+
+    it('has correct accessibility label without active filters', () => {
+      const { getByLabelText } = render(
+        <HomeHeader
+          {...defaultProps}
+          onFilterPress={jest.fn()}
+          activeFilterCount={0}
+        />
+      );
+      expect(getByLabelText('Filters, 0 active')).toBeTruthy();
+    });
   });
 });
