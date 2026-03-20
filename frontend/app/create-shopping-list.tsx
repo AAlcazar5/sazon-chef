@@ -219,10 +219,10 @@ export default function CreateShoppingListScreen() {
     suggestion => !items.some(item => item.name.toLowerCase() === suggestion.toLowerCase())
   );
 
-  const sheetBg = isDark ? '#111827' : '#F9FAFB';
-  const cardBg = isDark ? '#1F2937' : '#FFFFFF';
-  const borderColor = isDark ? '#374151' : '#E5E7EB';
-  const labelColor = isDark ? '#F9FAFB' : '#111827';
+  const sheetBg = isDark ? DarkColors.background : Colors.surface;
+  const cardBg = isDark ? DarkColors.card : '#FFFFFF';
+  const borderColor = isDark ? DarkColors.border.light : Colors.border.light;
+  const labelColor = isDark ? DarkColors.text.primary : Colors.text.primary;
   const subColor = isDark ? '#9CA3AF' : '#6B7280';
   const inputBg = isDark ? '#374151' : '#F3F4F6';
   const primaryColor = isDark ? DarkColors.primary : Colors.primary;
@@ -327,7 +327,7 @@ export default function CreateShoppingListScreen() {
                         <HapticTouchableOpacity
                           key={suggestion}
                           onPress={() => handleQuickAdd(suggestion)}
-                          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100, borderWidth: 1, borderColor, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9FAFB' }}
+                          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100, borderWidth: 1, borderColor, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : Colors.surface }}
                         >
                           <Text style={{ fontSize: 13, color: isDark ? '#D1D5DB' : '#374151' }}>{suggestion}</Text>
                         </HapticTouchableOpacity>
@@ -362,7 +362,7 @@ export default function CreateShoppingListScreen() {
 
                 {Object.entries(groupedItems).map(([category, categoryItems]) => (
                   <View key={category} style={{ backgroundColor: cardBg, borderRadius: 12, borderWidth: 1, borderColor, marginBottom: 10, overflow: 'hidden' }}>
-                    <View style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB', borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                    <View style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : Colors.surface, borderBottomWidth: 1, borderBottomColor: borderColor }}>
                       <Text style={{ fontSize: 12, fontWeight: '600', color: subColor }}>{category}</Text>
                     </View>
 

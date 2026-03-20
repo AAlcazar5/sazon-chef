@@ -3,6 +3,7 @@ import { View, Text, Modal, TextInput, ScrollView, Animated } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import GradientButton from '../ui/GradientButton';
 import { scaleRecipe, ScaledRecipe } from '../../utils/recipeScaling';
 import { mealPrepApi } from '../../lib/api';
 import { getStorageMethods } from '../../utils/storageInstructions';
@@ -358,7 +359,7 @@ export default function MealPrepScalingModal({
                     <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       Scaled Ingredients ({scaledRecipe.servings} servings)
                     </Text>
-                    <View className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3" style={{ maxHeight: 200 }}>
+                    <View className="bg-surface dark:bg-card-dark rounded-lg p-3" style={{ maxHeight: 200 }}>
                       <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
                         {scaledRecipe.ingredients.map((ing, index) => (
                           <View key={index} className="mb-2 pb-2 border-b border-gray-200 dark:border-gray-600 last:border-0">
@@ -542,7 +543,7 @@ export default function MealPrepScalingModal({
                 )}
 
                 {loadingCostAnalysis && (
-                  <View className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <View className="mb-4 p-4 bg-surface dark:bg-card-dark rounded-lg">
                     <Text className="text-sm text-gray-600 dark:text-gray-400 text-center">
                       Calculating cost analysis...
                     </Text>
@@ -778,16 +779,13 @@ export default function MealPrepScalingModal({
                 )}
                 
                 <View className="mt-4">
-                  <HapticTouchableOpacity
+                  <GradientButton
+                    label="Done"
                     onPress={handleConfirm}
                     disabled={!scaledRecipe || parseInt(totalServings) <= 0}
-                    className={`bg-orange-500 dark:bg-orange-600 py-3 rounded-lg items-center ${
-                      !scaledRecipe || parseInt(totalServings) <= 0 ? 'opacity-50' : ''
-                    }`}
                     hapticStyle="medium"
-                  >
-                    <Text className="text-white font-semibold">Done</Text>
-                  </HapticTouchableOpacity>
+                    icon="checkmark"
+                  />
                 </View>
               </View>
             </View>

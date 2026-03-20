@@ -75,7 +75,7 @@ function GoalModeButton({ mode, isSelected, isDark, onSelect }: {
         onPressOut={() => { scale.value = withSpring(1, { damping: 12, stiffness: 300 }); }}
         style={[{
           alignItems: 'center',
-          borderRadius: 16,
+          borderRadius: 20,
           paddingVertical: 14,
           paddingHorizontal: 8,
           backgroundColor: isSelected

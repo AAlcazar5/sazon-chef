@@ -54,7 +54,7 @@ export const ComponentSpacing = {
   card: {
     padding: Spacing.lg,
     gap: Spacing.md,
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: Spacing.md,
   },
 
@@ -147,17 +147,23 @@ export const ComponentSpacing = {
 export const BorderRadius = {
   /** 4px - Subtle rounding */
   xs: 4,
-  /** 8px - Small rounding */
+  /** 8px - Small rounding (small elements, badges) */
   sm: 8,
-  /** 12px - Medium rounding */
+  /** 12px - Medium rounding (small cards, chips) */
   md: 12,
+  /** 14px - Form inputs */
+  input: 14,
   /** 16px - Large rounding */
   lg: 16,
-  /** 20px - Extra large rounding */
+  /** 20px - Content cards, magazine-style surfaces */
+  card: 20,
+  /** 20px - Extra large rounding (alias) */
   xl: 20,
   /** 24px - Double extra large rounding */
   '2xl': 24,
-  /** 9999px - Full/pill rounding */
+  /** 28px - Bottom sheets top corners */
+  sheet: 28,
+  /** 9999px - Full/pill rounding (CTAs, chips, tags) */
   full: 9999,
 } as const;
 

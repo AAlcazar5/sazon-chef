@@ -6,6 +6,7 @@ import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import BottomSheet from './BottomSheet';
 import { HapticPatterns } from '../../constants/Haptics';
+import { Colors, DarkColors } from '../../constants/Colors';
 
 export interface Mood {
   id: string;
@@ -153,7 +154,7 @@ export default function MoodSelector({
                   width: '48%',
                   backgroundColor: isSelected
                     ? `${mood.color}22`
-                    : isDark ? '#1F2937' : '#F9FAFB',
+                    : isDark ? DarkColors.card : Colors.surface,
                   borderColor: isSelected ? mood.color : 'transparent',
                 }}
               >

@@ -18,6 +18,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import PulsingLoader from '../ui/PulsingLoader';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
+import { Shadows } from '../../constants/Shadows';
 import { Colors, DarkColors } from '../../constants/Colors';
 import SurpriseBadge from './SurpriseBadge';
 
@@ -312,7 +313,7 @@ function DraggableMealCard({
             marginBottom: 12,
             borderRadius: 8,
             padding: 16,
-            borderWidth: 2,
+            borderWidth: isDragOver ? 2 : 0,
             backgroundColor: isSnack
               ? isDark
                 ? `${Colors.secondaryRedLight}33`
@@ -566,7 +567,7 @@ function DraggableMealCard({
                           onSwapMeal(meal.mealPlanMealId, suggestion, meal);
                         }
                       }}
-                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border"
+                      className="bg-surface dark:bg-card-dark rounded-lg p-3 border"
                       style={{
                         borderColor: isDark ? DarkColors.primaryDark : Colors.primaryDark,
                       }}

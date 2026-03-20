@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { View, Text } from 'react-native';
+import { Colors, DarkColors } from '../../constants/Colors';
 
 interface NutritionProgressRingProps {
   /** Current progress 0–100 (clamped internally) */
@@ -71,7 +72,7 @@ export default function NutritionProgressRing({
           style={{
             fontSize: Math.round(size * 0.2),
             fontWeight: '700',
-            color: isDark ? '#F9FAFB' : '#111827',
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
           }}
         >
           {`${Math.round(clamped)}%`}

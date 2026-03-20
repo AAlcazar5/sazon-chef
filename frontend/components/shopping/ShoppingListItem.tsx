@@ -111,7 +111,7 @@ export default function ShoppingListItem({
         {
           flexDirection: 'row',
           alignItems: 'center',
-          borderRadius: 16,
+          borderRadius: 20,
           marginBottom: 8,
           paddingVertical: inStoreMode ? 14 : 12,
           paddingHorizontal: inStoreMode ? 16 : 14,

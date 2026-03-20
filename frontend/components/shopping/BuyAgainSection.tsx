@@ -44,7 +44,7 @@ export default function BuyAgainSection({
       style={{
         backgroundColor: item.isFavorite
           ? (isDark ? '#78350F' : '#FFFBEB')
-          : (isDark ? '#1F2937' : '#F9FAFB'),
+          : (isDark ? DarkColors.card : Colors.surface),
         borderColor: item.isFavorite
           ? (isDark ? '#F59E0B' : '#FCD34D')
           : (isDark ? '#374151' : '#E5E7EB'),

@@ -1,10 +1,12 @@
 import { Text, View, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedActivityIndicator from './AnimatedActivityIndicator';
 import RippleEffect from './RippleEffect';
 import { Colors, DarkColors, Gradients } from '../../constants/Colors';
 import { useColorScheme } from 'react-native';
 import GradientBorder from './GradientBorder';
 import GradientText from './GradientText';
+import { GradientPresets } from './GradientButton';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -70,12 +72,18 @@ export default function Button({
 
   // Variant styles
   const variantStyles = {
-    primary: 'bg-orange-500 dark:bg-orange-600 border border-orange-500 dark:border-orange-600',
+    primary: 'bg-transparent', // Uses LinearGradient overlay
     secondary: 'bg-gray-500 dark:bg-gray-600 border border-gray-500 dark:border-gray-600',
     outline: 'bg-transparent border border-gray-300 dark:border-gray-600',
-    danger: 'bg-red-600 dark:bg-red-400 border border-red-600 dark:border-red-500',
+    danger: 'bg-transparent', // Uses LinearGradient overlay
     accent: 'bg-red-600 dark:bg-red-400 border border-red-600 dark:border-red-500', // Red accent variant
     rainbow: 'bg-transparent' // Rainbow gradient variant - uses GradientBorder wrapper
+  };
+
+  // Gradient colors for gradient-backed variants
+  const gradientColors: Record<string, [string, string]> = {
+    primary: GradientPresets.brand,
+    danger: GradientPresets.danger,
   };
 
   // Text color styles
@@ -190,16 +198,8 @@ export default function Button({
     );
   }
 
-  return (
-    <RippleEffect
-      className={containerClasses}
-      style={dynamicStyles}
-      onPress={handlePress}
-      disabled={disabled || loading}
-      rippleColor={rippleColors[variant]}
-      rippleOpacity={0.3}
-      {...a11yProps}
-    >
+  const buttonContent = (
+    <>
       {loading ? (
         <AnimatedActivityIndicator
           size="small"
@@ -224,6 +224,52 @@ export default function Button({
           )}
         </>
       )}
+    </>
+  );
+
+  // Gradient-backed variants (primary, danger)
+  if (gradientColors[variant]) {
+    return (
+      <RippleEffect
+        className={containerClasses}
+        style={{ borderRadius: BorderRadius.lg, overflow: 'hidden' }}
+        onPress={handlePress}
+        disabled={disabled || loading}
+        rippleColor={rippleColors[variant]}
+        rippleOpacity={0.3}
+        {...a11yProps}
+      >
+        <LinearGradient
+          colors={gradientColors[variant]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: BorderRadius.lg,
+            },
+            dynamicStyles,
+          ]}
+        >
+          {buttonContent}
+        </LinearGradient>
+      </RippleEffect>
+    );
+  }
+
+  return (
+    <RippleEffect
+      className={containerClasses}
+      style={dynamicStyles}
+      onPress={handlePress}
+      disabled={disabled || loading}
+      rippleColor={rippleColors[variant]}
+      rippleOpacity={0.3}
+      {...a11yProps}
+    >
+      {buttonContent}
     </RippleEffect>
   );
 }

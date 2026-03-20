@@ -87,7 +87,7 @@ export default function NoResultsState({
       {hasActiveFilters && (
         <View
           className="w-full mt-5 rounded-2xl p-4"
-          style={{ backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }}
+          style={{ backgroundColor: isDark ? DarkColors.card : Colors.surface }}
         >
           <View className="flex-row items-center mb-2">
             <Icon

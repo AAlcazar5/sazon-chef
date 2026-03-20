@@ -22,8 +22,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import { collectionsApi } from '../lib/api';
 import { useColorScheme } from 'nativewind';
+import { Colors, DarkColors } from '../constants/Colors';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_HEIGHT = Math.round(SCREEN_HEIGHT * 0.82);
@@ -110,10 +112,10 @@ export default function CreateCollectionScreen() {
     }
   };
 
-  const sheetBg = isDark ? '#111827' : '#FFFFFF';
-  const labelColor = isDark ? '#F9FAFB' : '#111827';
-  const subColor = isDark ? '#9CA3AF' : '#6B7280';
-  const inputBg = isDark ? '#1F2937' : '#F9FAFB';
+  const sheetBg = isDark ? DarkColors.background : '#FFFFFF';
+  const labelColor = isDark ? DarkColors.text.primary : Colors.text.primary;
+  const subColor = isDark ? DarkColors.text.tertiary : Colors.text.secondary;
+  const inputBg = isDark ? DarkColors.card : Colors.surface;
   const borderColor = isDark ? '#374151' : '#D1D5DB';
 
   return (
@@ -219,21 +221,14 @@ export default function CreateCollectionScreen() {
             </View>
 
             {/* Create button */}
-            <HapticTouchableOpacity
+            <GradientButton
+              label="Create Collection"
               onPress={handleCreate}
               disabled={loading}
-              style={{ backgroundColor: '#DC2626', borderRadius: 12, paddingVertical: 16, alignItems: 'center', opacity: loading ? 0.65 : 1 }}
-              hapticStyle="medium"
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="add-circle-outline" size={20} color="white" style={{ marginRight: 8 }} />
-                  <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>Create Collection</Text>
-                </View>
-              )}
-            </HapticTouchableOpacity>
+              loading={loading}
+              colors={GradientPresets.brand}
+              icon="add-circle-outline"
+            />
 
             {/* What are collections info */}
             <View style={{ marginTop: 20, padding: 16, backgroundColor: isDark ? 'rgba(59,130,246,0.12)' : '#EFF6FF', borderRadius: 10, borderWidth: 1, borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#BFDBFE', flexDirection: 'row' }}>

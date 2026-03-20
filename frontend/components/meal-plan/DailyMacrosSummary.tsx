@@ -90,7 +90,7 @@ function DailyMacrosSummary({
         }}
         className="flex-row items-center justify-between mb-3"
       >
-        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827' }}>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           Daily Macros - {formattedDate}
         </Text>
         <Icon

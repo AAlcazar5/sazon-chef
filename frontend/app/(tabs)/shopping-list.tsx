@@ -253,7 +253,7 @@ export default function ShoppingListScreen() {
               marginBottom: 4,
               paddingHorizontal: 16,
               paddingVertical: 12,
-              borderRadius: 16,
+              borderRadius: 20,
               backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
             }, Shadows.SM]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -678,7 +678,7 @@ export default function ShoppingListScreen() {
           <Text style={{
             fontSize: 26,
             fontWeight: '800',
-            color: isDark ? '#F9FAFB' : '#111827',
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
             marginTop: 20,
             textAlign: 'center',
           }}>

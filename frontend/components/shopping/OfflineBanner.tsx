@@ -40,7 +40,7 @@ export default function OfflineBanner({
           flexDirection: 'row',
           alignItems: 'center',
           padding: 12,
-          borderRadius: 16,
+          borderRadius: 20,
           backgroundColor: isDark ? '#78350F' : '#FFFBEB',
         }, Shadows.SM]}
       >
@@ -79,7 +79,7 @@ export default function OfflineBanner({
           flexDirection: 'row',
           alignItems: 'center',
           padding: 12,
-          borderRadius: 16,
+          borderRadius: 20,
           backgroundColor: isDark ? '#1E3A5F' : '#EFF6FF',
         }, Shadows.SM]}
       >

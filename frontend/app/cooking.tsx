@@ -13,6 +13,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -301,12 +302,10 @@ export default function CookingScreen() {
         <Text className="text-6xl mb-4">😕</Text>
         <Text className="text-white text-xl font-bold mb-2">Recipe not found</Text>
         <Text className="text-gray-400 text-center mb-6">{error || 'Could not load recipe'}</Text>
-        <HapticTouchableOpacity
+        <GradientButton
+          label="Go Back"
           onPress={() => router.back()}
-          className="bg-orange-500 px-6 py-3 rounded-xl"
-        >
-          <Text className="text-white font-semibold">Go Back</Text>
-        </HapticTouchableOpacity>
+        />
       </View>
     );
   }
@@ -572,24 +571,14 @@ export default function CookingScreen() {
                 <Text className="text-gray-400 font-semibold ml-1">Prev</Text>
               </HapticTouchableOpacity>
 
-              <HapticTouchableOpacity
-                onPress={goNext}
-                hapticStyle="medium"
-                className="flex-2 flex-row items-center justify-center py-3.5 px-8 rounded-xl"
-                style={{ backgroundColor: isLastStep ? '#22C55E' : '#F97316', flex: 2 }}
-              >
-                {isLastStep ? (
-                  <>
-                    <Text className="text-white font-bold text-base mr-1">I'm Done!</Text>
-                    <Text className="text-xl">🎉</Text>
-                  </>
-                ) : (
-                  <>
-                    <Text className="text-white font-bold text-base mr-1">Next</Text>
-                    <Ionicons name="chevron-forward" size={20} color="white" />
-                  </>
-                )}
-              </HapticTouchableOpacity>
+              <View style={{ flex: 2 }}>
+                <GradientButton
+                  label={isLastStep ? "I'm Done!" : "Next"}
+                  onPress={goNext}
+                  colors={isLastStep ? GradientPresets.fresh : GradientPresets.fire}
+                  icon={isLastStep ? "checkmark-circle" : "chevron-forward"}
+                />
+              </View>
             </View>
           )}
         </View>

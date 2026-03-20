@@ -3,6 +3,7 @@ import { View, Text, Modal, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
+import GradientButton from './GradientButton';
 import Icon from './Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Duration } from '../../constants/Animations';
@@ -131,15 +132,11 @@ export default function HelpTooltip({
               {/* Actions */}
               <View className="flex-row justify-end gap-3">
                 {actionLabel && onAction && (
-                  <HapticTouchableOpacity
+                  <GradientButton
+                    label={actionLabel}
                     onPress={handleAction}
-                    className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg"
                     hapticStyle="medium"
-                  >
-                    <Text className="text-white font-semibold">
-                      {actionLabel}
-                    </Text>
-                  </HapticTouchableOpacity>
+                  />
                 )}
                 <HapticTouchableOpacity
                   onPress={handleDismiss}

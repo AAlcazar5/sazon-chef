@@ -113,7 +113,7 @@ export default function RecipeNotesModal({
                 multiline
                 numberOfLines={5}
                 textAlignVertical="top"
-                className="text-base text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-lg p-3"
+                className="text-base text-gray-900 dark:text-gray-100 bg-surface dark:bg-card-dark rounded-lg p-3"
                 style={{ minHeight: 120, maxHeight: 200 }}
                 autoFocus
               />

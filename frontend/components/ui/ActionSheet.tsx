@@ -148,7 +148,7 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                       {
                         backgroundColor: item.destructive
                           ? (isDark ? 'rgba(220, 38, 38, 0.1)' : 'rgba(254, 226, 226, 1)')
-                          : (isDark ? DarkColors.background : '#F9FAFB'),
+                          : (isDark ? DarkColors.background : Colors.surface),
                       },
                     ]}
                     {...buttonAccessibility(item.label, {

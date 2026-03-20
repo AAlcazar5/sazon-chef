@@ -686,12 +686,11 @@ export default function RecipeModal() {
           <Text className="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
             Don't worry, this happens sometimes. Try going back and selecting the recipe again.
           </Text>
-          <HapticTouchableOpacity 
+          <GradientButton
+            label="Go Back"
             onPress={() => router.back()}
-            className="bg-orange-500 dark:bg-orange-600 px-6 py-3 rounded-lg mt-2"
-          >
-            <Text className="text-white font-semibold">Go Back</Text>
-          </HapticTouchableOpacity>
+            style={{ marginTop: 8 }}
+          />
         </View>
       </SafeAreaView>
       </Animated.View>
@@ -778,7 +777,7 @@ export default function RecipeModal() {
           </AnimatedText>
 
           {/* Quick Stats */}
-          <View className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <View className="mb-6 p-4 bg-surface dark:bg-card-dark rounded-lg">
             <View className="flex-row items-center mb-3">
               <Text className="text-xl mr-2">⏱️</Text>
               <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cook Time</Text>
@@ -1394,9 +1393,7 @@ export default function RecipeModal() {
               paddingTop: insets.top,
               paddingBottom: 12,
               paddingHorizontal: 16,
-              backgroundColor: isDark ? 'rgba(17,24,39,0.95)' : 'rgba(255,255,255,0.95)',
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              backgroundColor: isDark ? 'rgba(15,15,15,0.95)' : 'rgba(250,247,244,0.95)',
             }}
           >
             <Text
@@ -1405,7 +1402,7 @@ export default function RecipeModal() {
                 textAlign: 'center',
                 fontSize: 16,
                 fontWeight: '600',
-                color: isDark ? '#F9FAFB' : '#111827',
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
               }}
             >
               {recipe.title}
@@ -1419,8 +1416,6 @@ export default function RecipeModal() {
               paddingTop: insets.top,
               paddingBottom: 12,
               paddingHorizontal: 16,
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
             }}
           >
             <View
@@ -1440,7 +1435,7 @@ export default function RecipeModal() {
                 textAlign: 'center',
                 fontSize: 16,
                 fontWeight: '600',
-                color: isDark ? '#F9FAFB' : '#111827',
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
               }}
             >
               {recipe.title}
@@ -1669,9 +1664,12 @@ export default function RecipeModal() {
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
                   placeholderTextColor="#9CA3AF"
                 />
-                <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-orange-500 px-3 py-2 rounded-lg">
-                  <Text className="text-white font-semibold">Create</Text>
-                </HapticTouchableOpacity>
+                <GradientButton
+                  label="Create"
+                  onPress={handleCreateCollection}
+                  colors={GradientPresets.brand}
+                  style={{ paddingVertical: 0, minWidth: 70 }}
+                />
               </View>
             ) : (
               <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
@@ -1683,9 +1681,11 @@ export default function RecipeModal() {
             <HapticTouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
               <Text className="text-gray-700">Cancel</Text>
             </HapticTouchableOpacity>
-            <HapticTouchableOpacity onPress={handleConfirmPicker} className="bg-orange-500 px-4 py-3 rounded-lg">
-              <Text className="text-white font-semibold">Save</Text>
-            </HapticTouchableOpacity>
+            <GradientButton
+              label="Save"
+              onPress={handleConfirmPicker}
+              style={{ paddingVertical: 10, paddingHorizontal: 16 }}
+            />
           </View>
         </Animated.View>
       </Animated.View>
@@ -1848,12 +1848,12 @@ export default function RecipeModal() {
 
           {/* Action Buttons */}
           <View className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <HapticTouchableOpacity 
+            <GradientButton
+              label="Save Healthified Recipe"
               onPress={async () => {
                 if (!healthifiedRecipe) return;
-                
+
                 try {
-                  // Save the healthified recipe as a new recipe
                   const recipeData = {
                     title: healthifiedRecipe.title,
                     description: healthifiedRecipe.description,
@@ -1863,16 +1863,16 @@ export default function RecipeModal() {
                     protein: healthifiedRecipe.protein,
                     carbs: healthifiedRecipe.carbs,
                     fat: healthifiedRecipe.fat,
-                    ingredients: healthifiedRecipe.ingredients.map((ing: any) => 
+                    ingredients: healthifiedRecipe.ingredients.map((ing: any) =>
                       typeof ing === 'string' ? ing : ing.text
                     ),
-                    instructions: healthifiedRecipe.instructions.map((inst: any) => 
+                    instructions: healthifiedRecipe.instructions.map((inst: any) =>
                       typeof inst === 'string' ? inst : inst.text
                     ),
                   };
-                  
+
                   await recipeApi.createRecipe(recipeData);
-                  
+
                   Alert.alert(
                     'Recipe Saved',
                     'Your healthified recipe has been saved to your cookbook!',
@@ -1887,10 +1887,10 @@ export default function RecipeModal() {
                   Alert.alert('Error', error.message || 'Failed to save recipe');
                 }
               }}
-              className="bg-green-500 py-3 px-6 rounded-lg items-center mb-2"
-            >
-              <Text className="text-white font-semibold text-lg">Save Healthified Recipe</Text>
-            </HapticTouchableOpacity>
+              colors={GradientPresets.fresh}
+              icon="leaf"
+              style={{ marginBottom: 8 }}
+            />
             
             <HapticTouchableOpacity 
               onPress={() => setShowHealthifyModal(false)}

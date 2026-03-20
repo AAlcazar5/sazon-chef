@@ -31,13 +31,13 @@ export default function MealPrepSessions({
 
   return (
     <View className="px-4 mb-4">
-      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 12 }}>
+      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 12 }}>
         🍱 Meal Prep - {formattedDate}
       </Text>
 
       <View className="mb-3">
         {dayMealPrepSessions.map((session: any) => (
-          <View key={session.id} style={[{ borderRadius: 16, padding: 16, marginBottom: 8, backgroundColor: isDark ? '#2C2C2E' : '#FFF7ED' }, Shadows.SM]}>
+          <View key={session.id} style={[{ borderRadius: 20, padding: 16, marginBottom: 8, backgroundColor: isDark ? '#2C2C2E' : '#FFF7ED' }, Shadows.SM]}>
             <View className="flex-row items-center justify-between mb-2">
               <View className="flex-row items-center">
                 <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.SM} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Meal prep session" />

@@ -5,29 +5,15 @@ import { TextStyle, Platform } from 'react-native';
 
 /**
  * Font family definitions
- * Using system fonts for optimal performance and native feel
+ * System fonts for now; DM Sans can be added later via expo-font.
  */
 export const FontFamily = {
-  regular: Platform.select({
-    ios: 'System',
-    android: 'Roboto',
-    default: 'System',
-  }),
-  medium: Platform.select({
-    ios: 'System',
-    android: 'Roboto-Medium',
-    default: 'System',
-  }),
-  semibold: Platform.select({
-    ios: 'System',
-    android: 'Roboto-Medium',
-    default: 'System',
-  }),
-  bold: Platform.select({
-    ios: 'System',
-    android: 'Roboto-Bold',
-    default: 'System',
-  }),
+  regular: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
+  medium: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
+  semibold: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
+  bold: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
+  extrabold: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
+  system: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
 } as const;
 
 /**
@@ -65,6 +51,10 @@ export const FontSize = {
   '4xl': 32,
   /** 36px - Display size */
   '5xl': 36,
+  /** 32px - Display numbers (profile stats, macro numbers, Sazon Score) */
+  display: 32,
+  /** 40px - Hero titles (screen headers, key numbers) */
+  hero: 40,
 } as const;
 
 /**
@@ -104,16 +94,24 @@ export const LetterSpacing = {
 export const Typography = {
   // Display/Hero text
   display: {
-    fontSize: FontSize['5xl'],
-    fontWeight: FontWeight.bold,
-    lineHeight: FontSize['5xl'] * LineHeight.tight,
+    fontSize: FontSize.display,
+    fontWeight: FontWeight.extrabold,
+    lineHeight: FontSize.display * LineHeight.tight,
+    letterSpacing: LetterSpacing.tight,
+  } as TextStyle,
+
+  // Hero numbers / splash titles
+  hero: {
+    fontSize: FontSize.hero,
+    fontWeight: FontWeight.extrabold,
+    lineHeight: FontSize.hero * LineHeight.tight,
     letterSpacing: LetterSpacing.tight,
   } as TextStyle,
 
   // Page/Screen titles
   h1: {
     fontSize: FontSize['3xl'],
-    fontWeight: FontWeight.bold,
+    fontWeight: FontWeight.extrabold,
     lineHeight: FontSize['3xl'] * LineHeight.tight,
     letterSpacing: LetterSpacing.tight,
   } as TextStyle,

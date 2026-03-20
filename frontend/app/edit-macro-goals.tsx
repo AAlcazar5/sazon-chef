@@ -247,10 +247,10 @@ export default function EditMacroGoalsScreen() {
   };
 
   // ── Colours ────────────────────────────────────────────────────────────
-  const bg = isDark ? '#111827' : '#F9FAFB';
-  const cardBg = isDark ? '#1F2937' : '#FFFFFF';
-  const border = isDark ? '#374151' : '#E5E7EB';
-  const label = isDark ? '#F9FAFB' : '#111827';
+  const bg = isDark ? DarkColors.background : Colors.surface;
+  const cardBg = isDark ? DarkColors.card : '#FFFFFF';
+  const border = 'transparent';
+  const label = isDark ? DarkColors.text.primary : Colors.text.primary;
   const sub = isDark ? '#9CA3AF' : '#6B7280';
   const inputBg = isDark ? '#374151' : '#F3F4F6';
   const primaryColor = isDark ? DarkColors.primary : Colors.primary;
@@ -272,7 +272,7 @@ export default function EditMacroGoalsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
       <KeyboardAvoidingContainer>
         {/* Header */}
-        <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
             <Ionicons name="arrow-back" size={24} color={label} />
           </HapticTouchableOpacity>

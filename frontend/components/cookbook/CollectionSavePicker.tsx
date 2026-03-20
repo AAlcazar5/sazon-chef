@@ -5,6 +5,7 @@ import { View, Text, ScrollView, Modal, TextInput, Dimensions } from 'react-nati
 import { useColorScheme } from 'nativewind';
 import { useState } from 'react';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import GradientButton, { GradientPresets } from '../ui/GradientButton';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -142,12 +143,12 @@ export default function CollectionSavePicker({
                   autoFocus
                   onSubmitEditing={handleCreateCollection}
                 />
-                <HapticTouchableOpacity
+                <GradientButton
+                  label="Create"
                   onPress={handleCreateCollection}
-                  className="bg-orange-500 dark:bg-orange-600 px-3 py-2 rounded-lg"
-                >
-                  <Text className="text-white font-semibold">Create</Text>
-                </HapticTouchableOpacity>
+                  colors={GradientPresets.brand}
+                  style={{ paddingVertical: 0, minWidth: 70 }}
+                />
               </View>
             ) : (
               <HapticTouchableOpacity

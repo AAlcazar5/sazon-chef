@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SazonMascot, AnimatedSazon, LogoMascot } from './index';
+import { Colors } from '../../constants/Colors';
 
 export function SazonExamples() {
   return (
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.surface,
   },
   title: {
     fontSize: 24,

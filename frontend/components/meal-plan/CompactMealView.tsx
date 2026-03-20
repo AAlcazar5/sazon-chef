@@ -88,7 +88,7 @@ function CompactMealView({
             >
               <View className="flex-row items-center mb-3">
                 <Text style={{ fontSize: 22, marginRight: 8 }}>{mealType.icon}</Text>
-                <Text style={{ fontSize: 18, fontWeight: '800', flex: 1, color: isDark ? '#F9FAFB' : '#111827' }}>
+                <Text style={{ fontSize: 18, fontWeight: '800', flex: 1, color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
                   {mealType.label}
                 </Text>
                 <HapticTouchableOpacity
@@ -118,7 +118,7 @@ function CompactMealView({
                         alignItems: 'center',
                         padding: 12,
                         borderRadius: 14,
-                        backgroundColor: isDark ? '#2C2C2E' : '#F9FAFB',
+                        backgroundColor: isDark ? DarkColors.cardRaised : Colors.surface,
                       }]}
                     >
                       {meal.imageUrl ? (
@@ -147,7 +147,7 @@ function CompactMealView({
                       )}
                       <View style={{ flex: 1 }}>
                         <View className="flex-row items-center">
-                          <Text style={{ fontSize: 15, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827' }}>
+                          <Text style={{ fontSize: 15, fontWeight: '600', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
                             {meal.name || meal.title}
                           </Text>
                           {cookedRecipeIds && (

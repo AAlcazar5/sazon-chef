@@ -89,7 +89,7 @@ function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, o
             </Text>
             <Text style={{
               fontSize: 18, fontWeight: '800',
-              color: isToday ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) : (isDark ? '#F9FAFB' : '#111827'),
+              color: isToday ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) : (isDark ? DarkColors.text.primary : Colors.text.primary),
             }}>
               {date.getDate()}
             </Text>
@@ -164,7 +164,7 @@ function WeeklyCalendar({
   return (
     <View className="px-4 mb-4">
       <View className="flex-row items-center justify-between mb-3">
-        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#F9FAFB' : '#111827' }}>Weekly Meal Plan</Text>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Weekly Meal Plan</Text>
         <View className="flex-row items-center space-x-2">
           <HapticTouchableOpacity
             onPress={onPreviousWeek}

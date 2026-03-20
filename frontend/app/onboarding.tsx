@@ -1294,7 +1294,7 @@ export default function OnboardingScreen() {
   // Show loading screen while fetching data in edit mode
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
         <LoadingState
           message="Loading your preferences..."
           expression="thinking"
@@ -1306,7 +1306,7 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
       <View className="flex-1">
         {/* Header */}
         <View className="px-6 pt-4 pb-3 border-b" style={{

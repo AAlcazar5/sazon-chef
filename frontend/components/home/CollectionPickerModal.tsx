@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import GradientButton, { GradientPresets } from '../ui/GradientButton';
 import BottomSheet from '../ui/BottomSheet';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -97,12 +98,12 @@ function CollectionPickerModal({
               placeholderTextColor="#9CA3AF"
               autoFocus
             />
-            <HapticTouchableOpacity
+            <GradientButton
+              label="Create"
               onPress={onCreateCollection}
-              className="bg-orange-500 dark:bg-orange-600 px-3 py-2 rounded-lg"
-            >
-              <Text className="text-white font-semibold">Create</Text>
-            </HapticTouchableOpacity>
+              colors={GradientPresets.brand}
+              style={{ paddingVertical: 0, minWidth: 70 }}
+            />
           </View>
         ) : (
           <HapticTouchableOpacity onPress={onStartCreating} className="py-3">

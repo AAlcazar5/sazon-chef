@@ -105,7 +105,7 @@ export default function MealPlanEmptyState({
       <Animated.View style={titleAnimStyle}>
         <Text
           className="text-2xl font-black text-center mt-6"
-          style={{ color: isDark ? '#F9FAFB' : '#111827' }}
+          style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
         >
           {generatingPlan ? 'Planning your week...' : 'Let me plan your week'}
         </Text>

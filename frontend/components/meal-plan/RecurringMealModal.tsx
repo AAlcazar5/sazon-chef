@@ -193,7 +193,7 @@ export default function RecurringMealModal({
                     style={{
                       backgroundColor: isSelected
                         ? isDark ? `${Colors.primaryLight}33` : Colors.primaryLight
-                        : isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                        : isDark ? 'rgba(255,255,255,0.04)' : Colors.surface,
                       borderColor: isSelected
                         ? isDark ? DarkColors.primary : Colors.primary
                         : isDark ? '#374151' : '#E5E7EB',

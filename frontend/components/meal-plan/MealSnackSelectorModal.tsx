@@ -97,7 +97,7 @@ function MealSnackSelectorModal({
                   className={`flex-1 mx-1 py-4 rounded-lg border-2 ${
                     selectedMeals === count
                       ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
+                      : 'border-gray-200 dark:border-gray-700 bg-surface dark:bg-card-dark'
                   }`}
                   style={
                     selectedMeals === count
@@ -137,7 +137,7 @@ function MealSnackSelectorModal({
                   className={`flex-1 mx-1 py-4 rounded-lg border-2 ${
                     selectedSnacks === count
                       ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
+                      : 'border-gray-200 dark:border-gray-700 bg-surface dark:bg-card-dark'
                   }`}
                   style={
                     selectedSnacks === count
@@ -180,7 +180,7 @@ function MealSnackSelectorModal({
                   className={`flex-1 mx-1 py-3 rounded-lg border-2 mb-2 ${
                     maxTotalPrepTime === minutes
                       ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
+                      : 'border-gray-200 dark:border-gray-700 bg-surface dark:bg-card-dark'
                   }`}
                   style={
                     maxTotalPrepTime === minutes
@@ -223,7 +223,7 @@ function MealSnackSelectorModal({
                   className={`flex-1 mx-1 py-3 rounded-lg border-2 mb-2 ${
                     maxWeeklyBudget === amount
                       ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
+                      : 'border-gray-200 dark:border-gray-700 bg-surface dark:bg-card-dark'
                   }`}
                   style={
                     maxWeeklyBudget === amount

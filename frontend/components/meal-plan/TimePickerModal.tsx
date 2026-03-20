@@ -68,7 +68,7 @@ export default function TimePickerModal({
         </Text>
 
         {/* Time Display */}
-        <View className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+        <View className="bg-surface dark:bg-card-dark rounded-lg p-4 mb-4">
           <View className="flex-row items-center justify-between mb-2">
             <Text className="text-sm font-medium text-gray-700 dark:text-gray-100">Selected Time</Text>
             <HapticTouchableOpacity
@@ -107,7 +107,7 @@ export default function TimePickerModal({
         </View>
 
         {/* Time Picker Wheels */}
-        <View className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+        <View className="bg-surface dark:bg-card-dark rounded-lg p-4 mb-6">
           <View className="flex-row justify-center items-center">
             {/* Hour Picker */}
             <View className="items-center mr-6">

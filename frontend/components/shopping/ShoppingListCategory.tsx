@@ -76,7 +76,7 @@ function RecipeGroupHeader({
           alignItems: 'center',
           marginBottom: 12,
           padding: 14,
-          borderRadius: 16,
+          borderRadius: 20,
           opacity: allPurchased ? 0.6 : 1,
         },
         Shadows.SM,
@@ -88,7 +88,7 @@ function RecipeGroupHeader({
         style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
       >
         <View className="flex-1">
-          <Text style={{ fontSize: 16, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827' }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
             {recipe.title}
             {allPurchased ? ' ✓' : ''}
           </Text>

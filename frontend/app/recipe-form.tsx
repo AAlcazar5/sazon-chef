@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import PulsingLoader from '../components/ui/PulsingLoader';
 import SuccessModal from '../components/ui/SuccessModal';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
@@ -551,7 +552,7 @@ export default function RecipeFormScreen() {
 
   if (loadingRecipe) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+      <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
         <View className="flex-1 items-center justify-center">
           <Text className="text-gray-500">Loading recipe...</Text>
         </View>
@@ -560,10 +561,10 @@ export default function RecipeFormScreen() {
   }
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-surface-dark' : 'bg-surface'}`} edges={['top']}>
       <KeyboardAvoidingContainer>
       {/* Header */}
-      <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} px-4 py-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center justify-between`}>
+      <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} px-4 py-4 flex-row items-center justify-between`}>
         <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color={isDark ? "#E5E7EB" : "#111827"} />
         </HapticTouchableOpacity>
@@ -582,7 +583,7 @@ export default function RecipeFormScreen() {
       </View>
 
       {/* Section pills nav */}
-      <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+      <View className={`${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -661,7 +662,7 @@ export default function RecipeFormScreen() {
           transition={{ type: 'timing', duration: 350, delay: 0 }}
           onLayout={(e) => { sectionYOffsets.current[0] = e.nativeEvent.layout.y; }}
         >
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-card p-4 mb-4 shadow-sm`}>
           <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Details</Text>
           
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Recipe Title *</Text>
@@ -669,7 +670,7 @@ export default function RecipeFormScreen() {
             value={title}
             onChangeText={setTitle}
             placeholder="Enter recipe title"
-            className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3 mb-3`}
+            className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3 mb-3`}
             placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
           />
 
@@ -680,7 +681,7 @@ export default function RecipeFormScreen() {
             placeholder="Describe your recipe"
             multiline
             numberOfLines={3}
-            className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3 mb-3`}
+            className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3 mb-3`}
             placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
             style={{ textAlignVertical: 'top' }}
           />
@@ -693,7 +694,7 @@ export default function RecipeFormScreen() {
                 onChangeText={setCookTime}
                 placeholder="30"
                 keyboardType="numeric"
-                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                 placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
@@ -703,7 +704,7 @@ export default function RecipeFormScreen() {
                 value={cuisine}
                 onChangeText={setCuisine}
                 placeholder="Italian"
-                className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                 placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
               />
             </View>
@@ -722,7 +723,7 @@ export default function RecipeFormScreen() {
                       : 'bg-orange-50 border-orange-500'
                     : isDark
                     ? 'bg-gray-700 border-gray-600'
-                    : 'bg-gray-50 border-gray-200'
+                    : 'bg-surface-tint border-gray-200'
                 }`}
               >
                 <Text className={`text-center font-medium ${
@@ -742,7 +743,7 @@ export default function RecipeFormScreen() {
                       : 'bg-orange-50 border-orange-500'
                     : isDark
                     ? 'bg-gray-700 border-gray-600'
-                    : 'bg-gray-50 border-gray-200'
+                    : 'bg-surface-tint border-gray-200'
                 }`}
               >
                 <Text className={`text-center font-medium ${
@@ -762,7 +763,7 @@ export default function RecipeFormScreen() {
                       : 'bg-orange-50 border-orange-500'
                     : isDark
                     ? 'bg-gray-700 border-gray-600'
-                    : 'bg-gray-50 border-gray-200'
+                    : 'bg-surface-tint border-gray-200'
                 }`}
               >
                 <Text className={`text-center font-medium ${
@@ -787,7 +788,7 @@ export default function RecipeFormScreen() {
                         : 'bg-orange-50 border-orange-500'
                       : isDark
                       ? 'bg-gray-700 border-gray-600'
-                      : 'bg-gray-50 border-gray-200'
+                      : 'bg-surface-tint border-gray-200'
                   }`}
                 >
                   <Text className={`text-center text-sm ${
@@ -807,7 +808,7 @@ export default function RecipeFormScreen() {
                         : 'bg-orange-50 border-orange-500'
                       : isDark
                       ? 'bg-gray-700 border-gray-600'
-                      : 'bg-gray-50 border-gray-200'
+                      : 'bg-surface-tint border-gray-200'
                   }`}
                 >
                   <Text className={`text-center text-sm ${
@@ -827,7 +828,7 @@ export default function RecipeFormScreen() {
                         : 'bg-orange-50 border-orange-500'
                       : isDark
                       ? 'bg-gray-700 border-gray-600'
-                      : 'bg-gray-50 border-gray-200'
+                      : 'bg-surface-tint border-gray-200'
                   }`}
                 >
                   <Text className={`text-center text-sm ${
@@ -888,7 +889,7 @@ export default function RecipeFormScreen() {
                     onChangeText={setCalories}
                     placeholder="500"
                     keyboardType="numeric"
-                    className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                    className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
                 </View>
@@ -899,7 +900,7 @@ export default function RecipeFormScreen() {
                     onChangeText={setProtein}
                     placeholder="30"
                     keyboardType="numeric"
-                    className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                    className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
                 </View>
@@ -913,7 +914,7 @@ export default function RecipeFormScreen() {
                     onChangeText={setCarbs}
                     placeholder="50"
                     keyboardType="numeric"
-                    className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                    className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
                 </View>
@@ -924,7 +925,7 @@ export default function RecipeFormScreen() {
                     onChangeText={setFat}
                     placeholder="15"
                     keyboardType="numeric"
-                    className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                    className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
                 </View>
@@ -938,7 +939,7 @@ export default function RecipeFormScreen() {
                     onChangeText={setFiber}
                     placeholder="5"
                     keyboardType="numeric"
-                    className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                    className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
                 </View>
@@ -949,7 +950,7 @@ export default function RecipeFormScreen() {
                     onChangeText={setSugar}
                     placeholder="10"
                     keyboardType="numeric"
-                    className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                    className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
                 </View>
@@ -966,7 +967,7 @@ export default function RecipeFormScreen() {
           transition={{ type: 'timing', duration: 350, delay: 80 }}
           onLayout={(e) => { sectionYOffsets.current[1] = e.nativeEvent.layout.y; }}
         >
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-card p-4 mb-4 shadow-sm`}>
           <View className="flex-row justify-between items-center mb-3">
             <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Ingredients *</Text>
             <HapticTouchableOpacity testID="add-ingredient-btn" onPress={addIngredient} className="p-2">
@@ -981,7 +982,7 @@ export default function RecipeFormScreen() {
                   value={ingredient}
                   onChangeText={(value) => updateIngredient(index, value)}
                   placeholder={`Ingredient ${index + 1}`}
-                  className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                  className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                   placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                 />
               </View>
@@ -1002,7 +1003,7 @@ export default function RecipeFormScreen() {
           transition={{ type: 'timing', duration: 350, delay: 160 }}
           onLayout={(e) => { sectionYOffsets.current[2] = e.nativeEvent.layout.y; }}
         >
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-card p-4 mb-4 shadow-sm`}>
           <View className="flex-row justify-between items-center mb-3">
             <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Instructions *</Text>
             <HapticTouchableOpacity testID="add-step-btn" onPress={addInstruction} className="p-2">
@@ -1021,7 +1022,7 @@ export default function RecipeFormScreen() {
                     placeholder={`Step ${index + 1} instructions`}
                     multiline
                     numberOfLines={2}
-                    className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3`}
+                    className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                     style={{ textAlignVertical: 'top' }}
                   />
@@ -1044,7 +1045,7 @@ export default function RecipeFormScreen() {
           transition={{ type: 'timing', duration: 350, delay: 240 }}
           onLayout={(e) => { sectionYOffsets.current[3] = e.nativeEvent.layout.y; }}
         >
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-4 shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-card p-4 mb-4 shadow-sm`}>
           <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Notes</Text>
 
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Private Notes</Text>
@@ -1054,7 +1055,7 @@ export default function RecipeFormScreen() {
             placeholder="Add personal tips, substitutions, or reminders..."
             multiline
             numberOfLines={3}
-            className={`${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200'} border rounded-lg px-4 py-3 mb-4`}
+            className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3 mb-4`}
             placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
             style={{ textAlignVertical: 'top' }}
           />
@@ -1157,9 +1158,12 @@ export default function RecipeFormScreen() {
                     className={`flex-1 border ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-300'} rounded-lg px-3 py-2 mr-2`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
-                  <HapticTouchableOpacity onPress={handleCreateCollection} className="bg-red-600 dark:bg-red-400 px-3 py-2 rounded-lg">
-                    <Text className="text-white font-semibold">Create</Text>
-                  </HapticTouchableOpacity>
+                  <GradientButton
+                    label="Create"
+                    onPress={handleCreateCollection}
+                    colors={GradientPresets.brand}
+                    style={{ paddingVertical: 0, minWidth: 70 }}
+                  />
                 </View>
               ) : (
                 <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
