@@ -19,7 +19,7 @@ import { Spacing, ComponentSpacing, Gap } from '../../constants/Spacing';
 import { Duration } from '../../constants/Animations';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { QuickMealLogModal } from '../../components/meal-plan';
-import AnimatedTabBar from '../../components/ui/AnimatedTabBar';
+import { AnimatedTabIcon } from '../../components/ui/AnimatedTabBar';
 
 export default function TabLayout() {
   console.log('[TabLayout] Rendering');
@@ -231,16 +231,92 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
     <Tabs
-      tabBar={(props) => <AnimatedTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        tabBarActiveTintColor: '#F97316',
+        tabBarInactiveTintColor: colors.text.secondary,
+        tabBarStyle: {
+          position: 'absolute',
+          borderTopWidth: 0,
+          height: ComponentSpacing.tabBar.height + insets.bottom,
+          paddingBottom: Math.max(ComponentSpacing.tabBar.paddingBottom, insets.bottom),
+          paddingTop: ComponentSpacing.tabBar.paddingTop,
+          elevation: 0,
+          backgroundColor: Platform.OS === 'ios'
+            ? 'transparent'
+            : isDark ? 'rgba(15, 15, 15, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+        },
+        tabBarBackground: Platform.OS === 'ios'
+          ? () => (
+              <BlurView
+                intensity={isDark ? 40 : 60}
+                tint={isDark ? 'dark' : 'light'}
+                style={StyleSheet.absoluteFill}
+              >
+                <View style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: isDark ? 'rgba(15, 15, 15, 0.4)' : 'rgba(255, 255, 255, 0.4)' },
+                ]} />
+              </BlurView>
+            )
+          : undefined,
+        tabBarLabelStyle: {
+          fontSize: FontSize.sm,
+          fontWeight: FontWeight.medium,
+        },
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
-      <Tabs.Screen name="add" options={{ href: null }} />
-      <Tabs.Screen name="cookbook" options={{ title: 'Cookbook' }} />
-      <Tabs.Screen name="meal-plan" options={{ title: 'Meal Plan' }} />
-      <Tabs.Screen name="shopping-list" options={{ title: 'Shopping' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="home-outline" color={color} size={size} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="add"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+      <Tabs.Screen
+        name="cookbook"
+        options={{
+          title: 'Cookbook',
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="book-outline" color={color} size={size} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="meal-plan"
+        options={{
+          title: 'Meal Plan',
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="calendar-outline" color={color} size={size} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="shopping-list"
+        options={{
+          title: 'Shopping',
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="cart-outline" color={color} size={size} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="person-outline" color={color} size={size} focused={focused} />
+          ),
+        }}
+      />
     </Tabs>
       </View>
 
