@@ -44,7 +44,7 @@ export default function TabLayout() {
 
   // FAB (Floating Action Button) animations
   const fabScale = useRef(new Animated.Value(1)).current;
-  const fabRotation = useRef(new Animated.Value(0)).current;
+
 
   // Execute a search query
   const executeSearch = useCallback((query: string) => {
@@ -452,26 +452,13 @@ export default function TabLayout() {
             )}
           </View>
 
-          {/* Plus Button */}
+          {/* Quick Actions Button — gradient pill matching header buttons */}
           <HapticTouchableOpacity
             onPress={async () => {
               Animated.sequence([
-                Animated.timing(fabRotation, {
-                  toValue: 1,
-                  duration: Duration.normal,
-                  useNativeDriver: true,
-                }),
-                Animated.timing(fabRotation, {
-                  toValue: 0,
-                  duration: Duration.normal,
-                  useNativeDriver: true,
-                }),
-              ]).start();
-
-              Animated.sequence([
                 Animated.spring(fabScale, {
-                  toValue: 0.9,
-                  friction: 3,
+                  toValue: 0.93,
+                  friction: 5,
                   tension: 40,
                   useNativeDriver: true,
                 }),
@@ -499,29 +486,34 @@ export default function TabLayout() {
 
               setShowActionSheet(true);
             }}
-            className="w-12 h-12 rounded-full items-center justify-center shadow-lg border-2"
-            style={{
-              backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-              borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed
-            }}
+            activeOpacity={1}
             accessibilityLabel="Quick actions menu"
             accessibilityRole="button"
             accessibilityHint="Opens menu with options to add recipes, take photos, and more"
+            style={{
+              borderRadius: 100,
+              overflow: 'hidden',
+              shadowColor: '#E84D3D',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
           >
-            <Animated.View
-              style={{
-                transform: [
-                  { scale: fabScale },
-                  {
-                    rotate: fabRotation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '45deg'],
-                    }),
-                  },
-                ],
-              }}
-            >
-              <Ionicons name="add" size={24} color="white" />
+            <Animated.View style={{ transform: [{ scale: fabScale }] }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  borderRadius: 100,
+                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                  gap: 5,
+                }}
+              >
+                <Ionicons name="add" size={18} color="white" />
+              </View>
             </Animated.View>
           </HapticTouchableOpacity>
         </View>
