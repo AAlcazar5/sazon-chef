@@ -18,7 +18,7 @@ import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
-import { Spacing } from '../../constants/Spacing';
+import { ComponentSpacing } from '../../constants/Spacing';
 import { ShoppingListEmptyStates } from '../../constants/EmptyStates';
 import { ShoppingListLoadingStates } from '../../constants/LoadingStates';
 import { useShoppingList, categorizeItem, AISLE_ORDER, DEFAULT_AISLE_ORDER, AISLE_EMOJI } from '../../hooks/useShoppingList';
@@ -318,7 +318,7 @@ export default function ShoppingListScreen() {
 
           {/* Items List — in-store aisle view uses SectionList for native sticky headers */}
           {visibleItems.length === 0 && currentItems.length > 0 ? (
-            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}>
               <View className="flex-1 items-center justify-center p-8">
                 <AnimatedEmptyState
                   config={ShoppingListEmptyStates.allPurchased}
@@ -344,7 +344,7 @@ export default function ShoppingListScreen() {
               </View>
             </ScrollView>
           ) : currentItems.length === 0 ? (
-            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}>
               <View className="flex-1 items-center justify-center p-8">
                 <AnimatedEmptyState
                   config={ShoppingListEmptyStates.emptyList}
@@ -404,7 +404,7 @@ export default function ShoppingListScreen() {
               }))}
               keyExtractor={item => item.id}
               stickySectionHeadersEnabled
-              contentContainerStyle={{ paddingTop: 4, paddingBottom: 80 }}
+              contentContainerStyle={{ paddingTop: 4, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
               renderSectionHeader={({ section }) => (
                 <BlurView
                   intensity={90}
@@ -468,7 +468,7 @@ export default function ShoppingListScreen() {
           ) : (
             <ScrollView
               className="flex-1"
-              contentContainerStyle={{ paddingBottom: state.selectionMode ? 80 : Spacing['3xl'] }}
+              contentContainerStyle={{ paddingBottom: state.selectionMode ? ComponentSpacing.tabBar.scrollPaddingBottom : ComponentSpacing.tabBar.scrollPaddingBottom }}
             >
               <View className="p-4">
                 {state.groupByRecipe && itemsByRecipe ? (

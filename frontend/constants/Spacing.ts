@@ -113,6 +113,8 @@ export const ComponentSpacing = {
     paddingBottom: Spacing.sm,
     paddingTop: Spacing.sm,
     iconLabelGap: Spacing.xs,
+    /** Total bottom clearance for tab screens (tab bar + search bar overlay) */
+    scrollPaddingBottom: 140,
   },
 
   /** Header spacing */

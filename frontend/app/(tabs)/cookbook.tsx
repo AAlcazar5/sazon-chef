@@ -11,6 +11,7 @@ import { useCookbookCache } from '../../hooks/useCookbookCache';
 import OfflineBanner from '../../components/shopping/OfflineBanner';
 import type { SavedRecipe, Collection } from '../../types';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { ComponentSpacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { CookbookEmptyStates } from '../../constants/EmptyStates';
@@ -1197,7 +1198,7 @@ export default function CookbookScreen() {
         // Recipes list (show if we have recipes and not loading)
         <ScrollView
           scrollEventThrottle={16}
-          contentContainerStyle={{ paddingTop: 0 }}
+          contentContainerStyle={{ paddingTop: 0, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
             refreshControl={
               <AnimatedRefreshControl 
                 refreshing={refreshing} 
