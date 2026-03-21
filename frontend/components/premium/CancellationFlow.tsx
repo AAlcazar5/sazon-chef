@@ -8,9 +8,9 @@ import {
   Text,
   Modal,
   TextInput,
-  ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { SazonMascot } from '../mascot';
 import { stripeApi } from '../../lib/api';
@@ -207,7 +207,7 @@ function OfferStep({
             hapticStyle="medium"
           >
             {loading ? (
-              <ActivityIndicator color="white" />
+              <AnimatedActivityIndicator color="white" />
             ) : (
               <Text className="text-white font-bold text-base">Pause for 1 month</Text>
             )}
@@ -305,7 +305,7 @@ function ConfirmStep({
         hapticStyle="heavy"
       >
         {loading ? (
-          <ActivityIndicator color="white" />
+          <AnimatedActivityIndicator color="white" />
         ) : (
           <Text className="text-white font-bold text-base">Cancel Subscription</Text>
         )}

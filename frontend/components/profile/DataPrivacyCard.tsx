@@ -1,7 +1,8 @@
 // frontend/components/profile/DataPrivacyCard.tsx
 // Data usage stats, privacy toggles, export and clear history with modals
 
-import { View, Text, Switch, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, Switch, Modal } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useState } from 'react';
 import Icon from '../ui/Icon';
@@ -77,7 +78,7 @@ export default function DataPrivacyCard({
           </Text>
           {dataStats.loading ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
+              <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
               <Text className="text-xs mt-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                 Loading statistics...
               </Text>
@@ -132,7 +133,7 @@ export default function DataPrivacyCard({
                 </Text>
               </View>
               {updatingPrivacySetting === 'analyticsEnabled' ? (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
               ) : (
                 <Switch
                   value={privacySettings.analyticsEnabled}
@@ -153,7 +154,7 @@ export default function DataPrivacyCard({
                 </Text>
               </View>
               {updatingPrivacySetting === 'dataSharingEnabled' ? (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
               ) : (
                 <Switch
                   value={privacySettings.dataSharingEnabled}
@@ -174,7 +175,7 @@ export default function DataPrivacyCard({
                 </Text>
               </View>
               {updatingPrivacySetting === 'locationServicesEnabled' ? (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
               ) : (
                 <Switch
                   value={privacySettings.locationServicesEnabled}
@@ -196,7 +197,7 @@ export default function DataPrivacyCard({
           >
             <View className="flex-row items-center">
               {exportingData ? (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.text.secondary : Colors.text.secondary} style={{ marginRight: 12 }} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.text.secondary : Colors.text.secondary} style={{ marginRight: 12 }} />
               ) : (
                 <Icon name={Icons.EXPORT_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} accessibilityLabel="Export data" />
               )}
@@ -302,7 +303,7 @@ export default function DataPrivacyCard({
                 style={{ backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
               >
                 {clearingHistory ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <AnimatedActivityIndicator size="small" color="white" />
                 ) : (
                   <Text className="text-white font-medium text-center">Clear</Text>
                 )}
@@ -372,7 +373,7 @@ export default function DataPrivacyCard({
                 style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
               >
                 {exportingData ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <AnimatedActivityIndicator size="small" color="white" />
                 ) : (
                   <Text className="text-white font-medium text-center">Export</Text>
                 )}

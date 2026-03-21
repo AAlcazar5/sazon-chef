@@ -13,6 +13,8 @@ import StarRating from './StarRating';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import LogoMascot from '../mascot/LogoMascot';
+import AnimatedEmptyState from '../ui/AnimatedEmptyState';
+import { CookbookEmptyStates } from '../../constants/EmptyStates';
 import type { SavedRecipe } from '../../types';
 
 interface RecipeFeedback {
@@ -209,7 +211,7 @@ function CookbookRecipeList({
   if (recipes.length === 0) {
     return (
       <View className={`${displayMode === 'grid' ? 'w-full' : ''} py-8 items-center`}>
-        <Text className="text-gray-500 dark:text-gray-400">No recipes found</Text>
+        <AnimatedEmptyState config={CookbookEmptyStates.noSearchResults} />
       </View>
     );
   }

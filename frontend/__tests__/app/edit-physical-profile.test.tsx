@@ -74,7 +74,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please fill in all required fields');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please fill in all required fields');
     });
   });
 
@@ -87,7 +87,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Age must be between 13 and 120');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Age must be between 13 and 120');
     });
   });
 
@@ -100,7 +100,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Age must be between 13 and 120');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Age must be between 13 and 120');
     });
   });
 
@@ -114,7 +114,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
     });
   });
 
@@ -128,7 +128,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
     });
   });
 
@@ -143,7 +143,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
     });
   });
 
@@ -158,7 +158,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
     });
   });
 
@@ -218,7 +218,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Error', 'Save failed');
+      expect(mockAlert).toHaveBeenCalledWith('Oops!', 'Save failed');
     });
   });
 

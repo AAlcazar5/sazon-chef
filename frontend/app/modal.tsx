@@ -219,7 +219,7 @@ export default function RecipeModal() {
           err?.message?.includes('Too many requests');
         if (!isQuotaError) {
           console.error('📱 Modal: Error fetching recipe', err);
-          setError(err.message || 'Failed to load recipe');
+          setError(err.message || 'Couldn\'t load this recipe');
         } else {
           // For quota errors, just log quietly - the recipe might still be cached or available
           console.log('📱 Modal: Recipe fetch hit quota limit, continuing anyway');
@@ -324,7 +324,7 @@ export default function RecipeModal() {
     } catch (error: any) {
       console.error('Error syncing recipe to app:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Sync Failed', error.message || 'Failed to sync recipe to shopping app');
+      Alert.alert('Oops!', error.message || 'Couldn\'t sync to your shopping app — try again?');
     }
   };
 
@@ -373,7 +373,7 @@ export default function RecipeModal() {
       } else {
         console.error('📱 Modal: Save error', error);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Error', error.message || 'Failed to save recipe');
+        Alert.alert('Oops!', error.message || 'Couldn\'t save the recipe — try again?');
       }
     } finally {
       setIsSaving(false);
@@ -402,7 +402,7 @@ export default function RecipeModal() {
       setNewCollectionName('');
       setCreatingCollection(false);
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to create collection');
+      Alert.alert('Oops!', e.message || 'Couldn\'t create the collection — try again?');
     }
   };
 
@@ -437,12 +437,12 @@ export default function RecipeModal() {
           ]
         );
       } else {
-        throw new Error('Failed to add items to shopping list');
+        throw new Error('Couldn\'t add items to your shopping list');
       }
     } catch (error: any) {
       console.error('❌ Add to shopping list error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to add items to shopping list');
+      Alert.alert('Oops!', error.message || 'Couldn\'t add items to your shopping list — try again?');
     } finally {
       setAddingToShoppingList(false);
     }
@@ -501,10 +501,10 @@ export default function RecipeModal() {
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        'Healthify Failed',
+        'Hmm, That Didn\'t Work',
         isQuotaError
-          ? 'AI healthify is temporarily unavailable due to quota limits. Please try again later.'
-          : error.message || 'Failed to healthify recipe. Please try again.',
+          ? 'Our AI is a bit overwhelmed right now — try again in a few minutes!'
+          : error.message || 'Couldn\'t healthify this recipe — give it another shot?',
         [{ text: 'OK' }]
       );
     } finally {
@@ -538,7 +538,7 @@ export default function RecipeModal() {
           } catch (error) {
             console.error('📱 Modal: Error removing recipe', error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert('Error', 'Failed to remove recipe from cookbook');
+            Alert.alert('Oops!', 'Couldn\'t remove that recipe — try again?');
           }
         },
       },
@@ -566,7 +566,7 @@ export default function RecipeModal() {
     } catch (error) {
       console.error('📱 Error sharing recipe:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Failed to share recipe');
+      Alert.alert('Oops!', 'Couldn\'t share the recipe — try again?');
     }
   };
 
@@ -607,7 +607,7 @@ export default function RecipeModal() {
               router.back();
             } catch (error: any) {
               console.error('📱 Modal: Delete error', error);
-              Alert.alert('Error', error.message || 'Failed to delete recipe');
+              Alert.alert('Oops!', error.message || 'Couldn\'t delete the recipe — try again?');
             }
           }
         }
@@ -1999,7 +1999,7 @@ export default function RecipeModal() {
                     ]
                   );
                 } catch (error: any) {
-                  Alert.alert('Error', error.message || 'Failed to save recipe');
+                  Alert.alert('Oops!', error.message || 'Couldn\'t save the recipe — try again?');
                 }
               }}
               colors={GradientPresets.fresh}

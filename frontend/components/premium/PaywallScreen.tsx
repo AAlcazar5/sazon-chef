@@ -6,9 +6,9 @@ import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { MotiView } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSubscription } from '../../hooks/useSubscription';
@@ -41,7 +41,7 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
   if (subscription.loading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <AnimatedActivityIndicator size="large" color="#FF6B35" />
       </View>
     );
   }

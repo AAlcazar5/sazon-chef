@@ -625,7 +625,7 @@ export default function CookbookScreen() {
       if (/already\s*exists/i.test(msg)) {
         showToast('A collection with this name already exists.', 'warning');
       } else {
-        showToast(msg || 'Failed to create collection', 'error');
+        showToast(msg || 'Couldn\'t create collection — try again?', 'error');
       }
     }
   };
@@ -656,7 +656,7 @@ export default function CookbookScreen() {
       if (/already\s*exists/i.test(msg)) {
         showToast('A collection with this name already exists.', 'warning');
       } else {
-        showToast(msg || 'Failed to save collection', 'error');
+        showToast(msg || 'Couldn\'t save collection — try again?', 'error');
       }
     }
   };
@@ -668,7 +668,7 @@ export default function CookbookScreen() {
       await loadCollections();
       HapticPatterns.buttonPress();
     } catch (e: any) {
-      showToast(e?.message || 'Failed to toggle pin', 'error');
+      showToast(e?.message || 'Couldn\'t update pin — try again?', 'error');
     }
   };
 
@@ -680,7 +680,7 @@ export default function CookbookScreen() {
       HapticPatterns.success();
       showToast('Collection duplicated!', 'success');
     } catch (e: any) {
-      showToast(e?.message || 'Failed to duplicate collection', 'error');
+      showToast(e?.message || 'Couldn\'t duplicate collection — try again?', 'error');
     }
   };
 
@@ -697,7 +697,7 @@ export default function CookbookScreen() {
       HapticPatterns.success();
       showToast('Collections merged!', 'success');
     } catch (e: any) {
-      showToast(e?.message || 'Failed to merge collections', 'error');
+      showToast(e?.message || 'Couldn\'t merge collections — try again?', 'error');
     }
   };
 
@@ -774,7 +774,7 @@ export default function CookbookScreen() {
               handleCancelSelection();
               HapticPatterns.success();
             } catch (e) {
-              Alert.alert('Error', 'Failed to remove recipes');
+              Alert.alert('Oops!', 'Couldn\'t remove those recipes — try again?');
             }
           },
         },
@@ -793,7 +793,7 @@ export default function CookbookScreen() {
       setBulkMoveCollectionIds([]);
       setBulkMovePickerVisible(true);
     } catch (e) {
-      Alert.alert('Error', 'Failed to load collections');
+      Alert.alert('Oops!', 'Couldn\'t load your collections — try again?');
     }
   }, []);
 
@@ -806,7 +806,7 @@ export default function CookbookScreen() {
       HapticPatterns.success();
       setNeedsRefresh(true);
     } catch (e) {
-      Alert.alert('Error', 'Failed to move recipes');
+      Alert.alert('Oops!', 'Couldn\'t move those recipes — try again?');
     }
   }, [selectedRecipeIds, bulkMoveCollectionIds, handleCancelSelection]);
 
@@ -863,7 +863,7 @@ export default function CookbookScreen() {
         }
       } else {
         HapticPatterns.error();
-        showToast(error.message || 'Failed to save recipe', 'error');
+        showToast(error.message || 'Couldn\'t save the recipe — try again?', 'error');
       }
       setSavePickerVisible(false);
       setSavePickerRecipeId(null);
@@ -905,7 +905,7 @@ export default function CookbookScreen() {
         [recipeId]: { liked: false, disliked: false }
       }));
 
-      showToast('Failed to like recipe', 'error');
+      showToast('Couldn\'t save your feedback — try again?', 'error');
     } finally {
       setFeedbackLoading(null);
     }
@@ -935,7 +935,7 @@ export default function CookbookScreen() {
         [recipeId]: { liked: false, disliked: false }
       }));
 
-      showToast('Failed to dislike recipe', 'error');
+      showToast('Couldn\'t save your feedback — try again?', 'error');
     } finally {
       setFeedbackLoading(null);
     }
@@ -1104,7 +1104,7 @@ export default function CookbookScreen() {
                   await loadCollections();
                   showToast('Collection deleted.', 'success');
                 } catch (e: any) {
-                  showToast(e?.message || 'Failed to delete collection', 'error');
+                  showToast(e?.message || 'Couldn\'t delete collection — try again?', 'error');
                 }
               }}
             ]

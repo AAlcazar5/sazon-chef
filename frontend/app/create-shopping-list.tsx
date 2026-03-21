@@ -201,7 +201,7 @@ export default function CreateShoppingListScreen() {
       router.replace('/(tabs)/shopping-list');
     } catch (error: any) {
       console.error('Error creating shopping list:', error);
-      Alert.alert('Error', error.message || 'Failed to create shopping list');
+      Alert.alert('Oops!', error.message || 'Couldn\'t create your shopping list — try again?');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setSaving(false);

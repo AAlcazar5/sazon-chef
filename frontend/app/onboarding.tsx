@@ -184,7 +184,7 @@ export default function OnboardingScreen() {
     } catch (error) {
       console.error('Error saving onboarding data:', error);
       HapticPatterns.error();
-      Alert.alert('Error', 'Failed to save your preferences. Please try again.');
+      Alert.alert('Oops!', 'Couldn\'t save your preferences — give it another shot?');
     } finally {
       setSaving(false);
     }

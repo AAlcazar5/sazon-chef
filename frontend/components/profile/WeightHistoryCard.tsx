@@ -1,7 +1,8 @@
 // frontend/components/profile/WeightHistoryCard.tsx
 // Weight history card with trend chart and recent logs
 
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { useState } from 'react';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { router } from 'expo-router';
@@ -61,7 +62,7 @@ export default function WeightHistoryCard({ physicalProfile, weightHistory, weig
 
       {weightHistoryLoading ? (
         <View className="py-8">
-          <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
+          <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
           <Text className="text-center text-xs text-gray-500 dark:text-gray-400 mt-2">
             Loading weight data...
           </Text>

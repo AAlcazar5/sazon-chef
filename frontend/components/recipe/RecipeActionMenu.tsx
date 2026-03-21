@@ -72,7 +72,7 @@ export default function RecipeActionMenu({
       onClose();
     } catch (error) {
       console.error('Error sharing recipe:', error);
-      Alert.alert('Error', 'Failed to share recipe');
+      Alert.alert('Oops!', 'Couldn\'t share the recipe — try again?');
     }
   };
 

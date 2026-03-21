@@ -1,7 +1,8 @@
 // frontend/components/profile/ProfileHeader.tsx
 // Profile header with avatar, name, email, and edit name modal
 
-import { View, Text, Modal, TextInput, Image, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, Modal, TextInput, Image, Animated } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import FrostedHeader from '../ui/FrostedHeader';
 import { useState, useEffect, useRef } from 'react';
@@ -107,7 +108,7 @@ export default function ProfileHeader({
             </View>
             {uploadingPicture ? (
               <View className="absolute inset-0 bg-black/50 rounded-full items-center justify-center">
-                <ActivityIndicator size="small" color="white" />
+                <AnimatedActivityIndicator size="small" color="white" />
               </View>
             ) : (
               <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full items-center justify-center border-2 border-white dark:border-gray-800" style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}>
@@ -233,7 +234,7 @@ export default function ProfileHeader({
                 style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
               >
                 {updatingName ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <AnimatedActivityIndicator size="small" color="white" />
                 ) : (
                   <Text className="text-white font-medium text-center">Save</Text>
                 )}

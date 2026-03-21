@@ -3,7 +3,8 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 // Scanner screen for ingredient scanning and food recognition (Phase 6, Group 13)
 
-import { View, Text, Alert, ActivityIndicator, ScrollView, Image, Animated, StyleSheet, Platform } from 'react-native';
+import { View, Text, Alert, ScrollView, Image, Animated, StyleSheet, Platform } from 'react-native';
+import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MotiView } from 'moti';
 import { CameraView, CameraType, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
@@ -163,7 +164,7 @@ export default function ScannerScreen() {
     } catch (error: any) {
       console.error('Error adding to shopping list:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Failed to add item to shopping list.');
+      Alert.alert('Oops!', 'Couldn\'t add that item — try again?');
     } finally {
       setAddingToList(false);
     }
@@ -206,7 +207,7 @@ export default function ScannerScreen() {
     } catch (error: any) {
       console.error('❌ Camera error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      Alert.alert('Oops!', 'Couldn\'t capture the photo — try again?');
     } finally {
       setScanning(false);
     }
@@ -233,7 +234,7 @@ export default function ScannerScreen() {
     } catch (error: any) {
       console.error('❌ Image picker error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      Alert.alert('Oops!', 'Couldn\'t load that image — try another one?');
     }
   };
 
@@ -298,8 +299,7 @@ export default function ScannerScreen() {
   if (!permission) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" />
-        <Text className="mt-4 text-gray-600">Requesting camera permission...</Text>
+        <LoadingState message="Setting up your camera..." expression="curious" size="small" />
       </SafeAreaView>
     );
   }
@@ -398,7 +398,7 @@ export default function ScannerScreen() {
                   className="w-20 h-20 rounded-full bg-red-600 dark:bg-red-400 items-center justify-center border-4 border-white"
                 >
                   {scanning || processing ? (
-                    <ActivityIndicator color="white" />
+                    <AnimatedActivityIndicator size="small" color="white" />
                   ) : (
                     <View className="w-16 h-16 rounded-full bg-white" />
                   )}
@@ -585,7 +585,7 @@ export default function ScannerScreen() {
                   style={{ gap: 8 }}
                 >
                   {addingToList ? (
-                    <ActivityIndicator color="white" size="small" />
+                    <AnimatedActivityIndicator size="small" color="white" />
                   ) : (
                     <Icon name={Icons.CART} size={20} color="white" />
                   )}

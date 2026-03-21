@@ -1,7 +1,8 @@
 // frontend/components/profile/AccountCard.tsx
 // Account actions: change password, sign out, delete account with modals
 
-import { View, Text, Modal, TextInput, ActivityIndicator, Share, Alert, Switch } from 'react-native';
+import { View, Text, Modal, TextInput, Share, Alert, Switch } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import SettingsRow from '../ui/SettingsRow';
 import { useState } from 'react';
@@ -283,7 +284,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
                 style={{ backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
               >
                 {deletingAccount ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <AnimatedActivityIndicator size="small" color="white" />
                 ) : (
                   <Text className="text-white font-medium text-center">Delete Account</Text>
                 )}

@@ -3,7 +3,10 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 // Budget settings screen
 
-import { View, Text, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TextInput, Alert } from 'react-native';
+import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
+import LoadingState from '../components/ui/LoadingState';
+import { ProfileLoadingStates } from '../constants/LoadingStates';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -56,7 +59,7 @@ export default function EditBudgetScreen() {
     } catch (error: any) {
       console.error('Error saving budget:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Failed to save budget settings');
+      Alert.alert('Oops!', 'Couldn\'t save your budget — try again?');
     } finally {
       setSaving(false);
     }
@@ -65,8 +68,7 @@ export default function EditBudgetScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? DarkColors.background : Colors.surface }} edges={['top']}>
-        <ActivityIndicator size="large" color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} />
-        <Text className="mt-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Loading budget settings...</Text>
+        <LoadingState message="Loading your budget..." expression="thinking" />
       </SafeAreaView>
     );
   }
@@ -243,7 +245,7 @@ export default function EditBudgetScreen() {
             }}
           >
             {saving ? (
-              <ActivityIndicator color="white" />
+              <AnimatedActivityIndicator size="small" color="white" />
             ) : (
               <Text className="text-white text-center font-semibold text-lg">Save Budget Settings</Text>
             )}

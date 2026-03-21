@@ -136,7 +136,7 @@ export default function EditPreferencesScreen() {
       setSpiceLevel(prefs.spiceLevel || 'medium');
     } catch (error: any) {
       HapticPatterns.error();
-      Alert.alert('Error', error.message || 'Failed to load preferences');
+      Alert.alert('Oops!', error.message || 'Couldn\'t load your preferences — try again?');
     } finally {
       setLoadingData(false);
     }
@@ -186,13 +186,13 @@ export default function EditPreferencesScreen() {
   const handleSave = async () => {
     if (!cookTimePreference || isNaN(Number(cookTimePreference))) {
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter a valid cook time');
+      Alert.alert('Hold On', 'Please enter a valid cook time');
       return;
     }
     const cookTime = parseInt(cookTimePreference);
     if (cookTime < 5 || cookTime > 300) {
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Cook time must be between 5 and 300 minutes');
+      Alert.alert('Hold On', 'Cook time must be between 5 and 300 minutes');
       return;
     }
 
@@ -214,7 +214,7 @@ export default function EditPreferencesScreen() {
       router.back();
     } catch (error: any) {
       HapticPatterns.error();
-      Alert.alert('Error', error.message || 'Failed to update preferences');
+      Alert.alert('Oops!', error.message || 'Couldn\'t save your preferences — try again?');
     } finally {
       setLoading(false);
     }
