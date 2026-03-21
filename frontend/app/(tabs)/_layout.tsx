@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform, StyleSheet } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
-import AnimatedBadge from '../../components/ui/AnimatedBadge';
 import { router, usePathname, useSegments } from 'expo-router';
 import ActionSheet, { ActionSheetItem } from '../../components/ui/ActionSheet';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Spacing, ComponentSpacing, Gap } from '../../constants/Spacing';
-import { Duration } from '../../constants/Animations';
+
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { QuickMealLogModal } from '../../components/meal-plan';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabBar';
@@ -236,30 +234,17 @@ export default function TabLayout() {
         tabBarActiveTintColor: '#F97316',
         tabBarInactiveTintColor: colors.text.secondary,
         tabBarStyle: {
-          position: 'absolute',
           borderTopWidth: 0,
           height: ComponentSpacing.tabBar.height + insets.bottom,
           paddingBottom: Math.max(ComponentSpacing.tabBar.paddingBottom, insets.bottom),
           paddingTop: ComponentSpacing.tabBar.paddingTop,
-          elevation: 0,
-          backgroundColor: Platform.OS === 'ios'
-            ? 'transparent'
-            : isDark ? 'rgba(15, 15, 15, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+          elevation: 8,
+          backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: isDark ? 0.3 : 0.06,
+          shadowRadius: 8,
         },
-        tabBarBackground: Platform.OS === 'ios'
-          ? () => (
-              <BlurView
-                intensity={isDark ? 40 : 60}
-                tint={isDark ? 'dark' : 'light'}
-                style={StyleSheet.absoluteFill}
-              >
-                <View style={[
-                  StyleSheet.absoluteFill,
-                  { backgroundColor: isDark ? 'rgba(15, 15, 15, 0.4)' : 'rgba(255, 255, 255, 0.4)' },
-                ]} />
-              </BlurView>
-            )
-          : undefined,
         tabBarLabelStyle: {
           fontSize: FontSize.sm,
           fontWeight: FontWeight.medium,
@@ -278,7 +263,6 @@ export default function TabLayout() {
         name="add"
         options={{
           href: null,
-          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
@@ -326,28 +310,18 @@ export default function TabLayout() {
           position: 'absolute',
           left: 0,
           right: 0,
-          backgroundColor: Platform.OS === 'ios'
-            ? 'transparent'
-            : isDark ? 'rgba(15, 15, 15, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+          backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
           bottom: ComponentSpacing.tabBar.height + insets.bottom,
           paddingVertical: Spacing.md,
           paddingHorizontal: Spacing.lg,
           zIndex: 10,
-          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: isDark ? 0.3 : 0.06,
+          shadowRadius: 8,
+          elevation: 8,
         }}
       >
-        {Platform.OS === 'ios' && (
-          <BlurView
-            intensity={isDark ? 40 : 60}
-            tint={isDark ? 'dark' : 'light'}
-            style={[StyleSheet.absoluteFill, { zIndex: -1 }]}
-          >
-            <View style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: isDark ? 'rgba(15, 15, 15, 0.4)' : 'rgba(255, 255, 255, 0.4)' },
-            ]} />
-          </BlurView>
-        )}
         <View className="flex-row items-center" style={{ gap: Gap.md }}>
           {/* Search Bar */}
           <View className="flex-1" style={{ position: 'relative' }}>
