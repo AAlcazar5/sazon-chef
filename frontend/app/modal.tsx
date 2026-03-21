@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, StyleSheet } from 'react-native';
+import ReAnimated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { MotiView } from 'moti';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -79,23 +80,41 @@ export default function RecipeModal() {
   const pickerScale = useRef(new Animated.Value(0)).current;
   const pickerOpacity = useRef(new Animated.Value(0)).current;
 
-  // Scroll-driven hero parallax + collapsing header
-  const modalScrollY = useRef(new Animated.Value(0)).current;
-  const heroParallax = modalScrollY.interpolate({
-    inputRange: [0, HERO_HEIGHT],
-    outputRange: [0, -HERO_HEIGHT * 0.35],
-    extrapolate: 'clamp',
+  // Scroll-driven hero parallax + collapsing header (Reanimated)
+  const modalScrollY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      modalScrollY.value = event.contentOffset.y;
+    },
   });
-  const floatingHeaderOpacity = modalScrollY.interpolate({
-    inputRange: [HERO_HEIGHT - 72, HERO_HEIGHT - 16],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const heroGradientOpacity = modalScrollY.interpolate({
-    inputRange: [0, HERO_HEIGHT * 0.5],
-    outputRange: [1, 0.4],
-    extrapolate: 'clamp',
-  });
+
+  const heroParallaxStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(
+      modalScrollY.value,
+      [0, HERO_HEIGHT],
+      [0, -HERO_HEIGHT * 0.35],
+      Extrapolation.CLAMP
+    )}],
+  }));
+
+  const floatingHeaderAnimStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      modalScrollY.value,
+      [HERO_HEIGHT - 72, HERO_HEIGHT - 16],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+  }));
+
+  const heroGradientAnimStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      modalScrollY.value,
+      [0, HERO_HEIGHT * 0.5],
+      [1, 0.4],
+      Extrapolation.CLAMP
+    ),
+  }));
   
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -709,22 +728,20 @@ export default function RecipeModal() {
     >
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
       {/* Scrollable content with hero at top */}
-      <ScrollView
+      <ReAnimated.ScrollView
         className="flex-1"
         scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: modalScrollY } } }],
-          { useNativeDriver: false }
-        )}
+        onScroll={scrollHandler}
       >
         {/* Hero image — full-bleed with blur-up loading via expo-image */}
         <View style={{ height: HERO_HEIGHT, overflow: 'hidden' }}>
           {recipe.imageUrl ? (
-            <Animated.View
+            <ReAnimated.View
               testID="hero-image"
               style={[
                 StyleSheet.absoluteFill,
-                { height: HERO_HEIGHT + 80, transform: [{ translateY: heroParallax }] },
+                { height: HERO_HEIGHT + 80 },
+                heroParallaxStyle,
               ]}
             >
               <Image
@@ -734,7 +751,7 @@ export default function RecipeModal() {
                 contentFit="cover"
                 style={{ width: '100%', height: '100%' }}
               />
-            </Animated.View>
+            </ReAnimated.View>
           ) : (
             // Gradient placeholder when no image is available
             <LinearGradient
@@ -747,14 +764,14 @@ export default function RecipeModal() {
           )}
           {/* Dark gradient for readability */}
           {recipe.imageUrl && (
-            <Animated.View style={[StyleSheet.absoluteFill, { opacity: heroGradientOpacity }]}>
+            <ReAnimated.View style={[StyleSheet.absoluteFill, heroGradientAnimStyle]}>
               <LinearGradient
                 colors={['transparent', 'rgba(0,0,0,0.55)']}
                 style={StyleSheet.absoluteFill}
                 start={{ x: 0, y: 0.4 }}
                 end={{ x: 0, y: 1 }}
               />
-            </Animated.View>
+            </ReAnimated.View>
           )}
         </View>
 
@@ -1343,7 +1360,7 @@ export default function RecipeModal() {
             </View>
           )}
         </View>
-      </ScrollView>
+      </ReAnimated.ScrollView>
 
       {/* Floating close + edit buttons over hero (always visible) */}
       <View
@@ -1447,16 +1464,15 @@ export default function RecipeModal() {
       )}
 
       {/* Collapsing frosted header — fades in as hero scrolls out of view */}
-      <Animated.View
+      <ReAnimated.View
         testID="frosted-header"
-        style={{
+        style={[{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          opacity: floatingHeaderOpacity,
           zIndex: 19,
-        }}
+        }, floatingHeaderAnimStyle]}
         pointerEvents="box-none"
       >
         {Platform.OS === 'android' ? (
@@ -1528,7 +1544,7 @@ export default function RecipeModal() {
             </View>
           </BlurView>
         )}
-      </Animated.View>
+      </ReAnimated.View>
 
       {/* Floating "Start Cooking" FAB — always visible at bottom */}
       <View

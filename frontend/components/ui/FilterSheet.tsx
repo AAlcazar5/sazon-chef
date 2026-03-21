@@ -8,6 +8,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -59,6 +61,11 @@ export default function FilterSheet({
   const { theme, colors } = useTheme();
   const isDark = theme === 'dark';
   const showGuidance = activeFilterCount >= 5;
+  const resetScale = useSharedValue(1);
+
+  const resetAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: resetScale.value }],
+  }));
 
   return (
     <BottomSheet
@@ -87,7 +94,7 @@ export default function FilterSheet({
         </View>
       )}
 
-      <View style={styles.body}>
+      <Animated.View style={[styles.body, resetAnimatedStyle]}>
         {/* Quick filters slot */}
         {quickFilters && (
           <View style={styles.quickFiltersSection}>{quickFilters}</View>
@@ -145,7 +152,7 @@ export default function FilterSheet({
             </View>
           </View>
         )}
-      </View>
+      </Animated.View>
 
       {/* Bottom bar — Apply CTA + Reset */}
       <View
@@ -161,6 +168,10 @@ export default function FilterSheet({
           <HapticTouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              resetScale.value = withSequence(
+                withTiming(0.96, { duration: 100 }),
+                withSpring(1, { damping: 12, stiffness: 200 })
+              );
               onReset();
             }}
             style={styles.resetButton}

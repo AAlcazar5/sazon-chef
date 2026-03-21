@@ -2,9 +2,10 @@
 // Compact 7-day macro summary at the top of the meal plan view.
 // Shows: Protein / Carbs / Fat / Fiber / Calories — fiber is the 5th macro.
 
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { useState } from 'react';
 import { useColorScheme } from 'nativewind';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Colors, DarkColors } from '../../constants/Colors';
 
 interface MacroTarget {
@@ -88,10 +89,12 @@ export default function WeekMacroBar({
           const isExpanded = expandedMacro === m.label;
 
           return (
-            <Pressable
+            <HapticTouchableOpacity
               key={m.label}
               onPress={() => setExpandedMacro(isExpanded ? null : m.label)}
               style={{ flex: 1, alignItems: 'center' }}
+              hapticStyle="light"
+              pressedScale={0.95}
               accessibilityLabel={`${m.label}: ${Math.round(m.current)}${m.unit} of ${Math.round(m.target)}${m.unit}`}
             >
               {/* Progress bar */}
@@ -146,7 +149,7 @@ export default function WeekMacroBar({
               >
                 /{Math.round(m.target / days)}{m.unit}
               </Text>
-            </Pressable>
+            </HapticTouchableOpacity>
           );
         })}
       </View>

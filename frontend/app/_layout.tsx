@@ -132,7 +132,7 @@ function RootLayoutNav() {
         <Stack
           screenOptions={{
             headerShown: false,
-            animation: 'default',
+            animation: 'ios_from_right',
             animationDuration: Duration.medium,
           }}
         >

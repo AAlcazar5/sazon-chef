@@ -238,12 +238,9 @@ export default function TabLayout() {
           height: ComponentSpacing.tabBar.height + insets.bottom,
           paddingBottom: Math.max(ComponentSpacing.tabBar.paddingBottom, insets.bottom),
           paddingTop: ComponentSpacing.tabBar.paddingTop,
-          elevation: 8,
+          elevation: 0,
           backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: isDark ? 0.3 : 0.06,
-          shadowRadius: 8,
+          shadowOpacity: 0,
         },
         tabBarLabelStyle: {
           fontSize: FontSize.sm,
@@ -315,11 +312,6 @@ export default function TabLayout() {
           paddingVertical: Spacing.md,
           paddingHorizontal: Spacing.lg,
           zIndex: 10,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: isDark ? 0.3 : 0.06,
-          shadowRadius: 8,
-          elevation: 8,
         }}
       >
         <View className="flex-row items-center" style={{ gap: Gap.md }}>

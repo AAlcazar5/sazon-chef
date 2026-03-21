@@ -2,7 +2,7 @@
 // Modal for creating/editing collections with name, description, and cover image
 
 import { useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput, Dimensions, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Modal, TextInput, Dimensions, ScrollView, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -10,6 +10,7 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 import type { Collection } from '../../types';
 
 interface CollectionEditModalProps {
@@ -31,6 +32,7 @@ export default function CollectionEditModal({
 }: CollectionEditModalProps) {
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
+  const { contentStyle } = useModalAnimation(visible);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -66,13 +68,16 @@ export default function CollectionEditModal({
         className="flex-1"
       >
         <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View
+          <Animated.View
             className="mx-6 rounded-2xl overflow-hidden"
-            style={{
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              width: Dimensions.get('window').width - 48,
-              maxHeight: Dimensions.get('window').height * 0.75,
-            }}
+            style={[
+              {
+                backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                width: Dimensions.get('window').width - 48,
+                maxHeight: Dimensions.get('window').height * 0.75,
+              },
+              contentStyle,
+            ]}
           >
             <ScrollView bounces={false}>
               {/* Header */}
@@ -215,7 +220,7 @@ export default function CollectionEditModal({
                 </Text>
               </HapticTouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </Modal>

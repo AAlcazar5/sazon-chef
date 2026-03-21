@@ -2,11 +2,12 @@
 // Quick meal log modal for logging meals without a full recipe
 
 import { useState } from 'react';
-import { View, Text, Modal, TextInput, Dimensions, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, Modal, TextInput, Dimensions, KeyboardAvoidingView, Platform, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { mealPlanApi } from '../../lib/api';
 
@@ -34,6 +35,7 @@ export default function QuickMealLogModal({
 }) {
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
+  const { contentStyle } = useModalAnimation(visible);
 
   const [name, setName] = useState('');
   const [mealType, setMealType] = useState(getDefaultMealType);
@@ -106,13 +108,16 @@ export default function QuickMealLogModal({
         className="flex-1"
       >
         <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View
+          <Animated.View
             className="mx-6 rounded-2xl p-6"
-            style={{
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              width: Dimensions.get('window').width - 48,
-              maxHeight: Dimensions.get('window').height * 0.8,
-            }}
+            style={[
+              {
+                backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                width: Dimensions.get('window').width - 48,
+                maxHeight: Dimensions.get('window').height * 0.8,
+              },
+              contentStyle,
+            ]}
           >
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* Header */}
@@ -269,7 +274,7 @@ export default function QuickMealLogModal({
                 </Text>
               </HapticTouchableOpacity>
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </Modal>

@@ -3,7 +3,8 @@
 
 import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, runOnJS } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
@@ -161,6 +162,26 @@ function WeeklyCalendar({
   onShowDayMeals,
   onRegenerateDay,
 }: WeeklyCalendarProps) {
+  const swipeTranslateX = useSharedValue(0);
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .onEnd((event) => {
+      if (event.translationX < -50) {
+        runOnJS(onNextWeek)();
+        swipeTranslateX.value = -20;
+        swipeTranslateX.value = withSpring(0, { damping: 12, stiffness: 200 });
+      } else if (event.translationX > 50) {
+        runOnJS(onPreviousWeek)();
+        swipeTranslateX.value = 20;
+        swipeTranslateX.value = withSpring(0, { damping: 12, stiffness: 200 });
+      }
+    });
+
+  const swipeAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: swipeTranslateX.value }],
+  }));
+
   return (
     <View className="px-4 mb-4">
       <View className="flex-row items-center justify-between mb-3">
@@ -182,7 +203,8 @@ function WeeklyCalendar({
       </View>
 
       {/* Week Dates */}
-      <View className="flex-row mb-2">
+      <GestureDetector gesture={panGesture}>
+      <Animated.View className="flex-row mb-2" style={swipeAnimStyle}>
         {weekDates.map((date, index) => {
           const dateStr = date.toISOString().split('T')[0];
           const dayMeals = weeklyPlan?.weeklyPlan?.[dateStr]?.meals || {};
@@ -218,7 +240,8 @@ function WeeklyCalendar({
             />
           );
         })}
-      </View>
+      </Animated.View>
+      </GestureDetector>
     </View>
   );
 }

@@ -2,11 +2,12 @@
 // Pre-roulette filter modal for "Surprise Me With..." options
 
 import { useState } from 'react';
-import { View, Text, Modal, Dimensions, ScrollView } from 'react-native';
+import { View, Text, Modal, Dimensions, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
 
 export interface SurpriseFilters {
@@ -62,6 +63,7 @@ export default function SurpriseMeModal({
 }) {
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
+  const { contentStyle } = useModalAnimation(visible);
 
   const [cuisine, setCuisine] = useState('any');
   const [mealType, setMealType] = useState(getDefaultMealType);
@@ -90,12 +92,15 @@ export default function SurpriseMeModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-        <View
+        <Animated.View
           className="mx-6 rounded-2xl p-6"
-          style={{
-            backgroundColor: isDark ? DarkElevation.dp16 : '#FFFFFF',
-            width: Dimensions.get('window').width - 48,
-          }}
+          style={[
+            {
+              backgroundColor: isDark ? DarkElevation.dp16 : '#FFFFFF',
+              width: Dimensions.get('window').width - 48,
+            },
+            contentStyle,
+          ]}
         >
           {/* Header */}
           <View className="flex-row items-center justify-between mb-5">
@@ -190,7 +195,7 @@ export default function SurpriseMeModal({
               Surprise Me!
             </Text>
           </HapticTouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

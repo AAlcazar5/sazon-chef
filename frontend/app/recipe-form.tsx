@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, ScrollView, TextInput, Alert, Modal, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import PulsingLoader from '../components/ui/PulsingLoader';
@@ -16,7 +16,71 @@ import { Shadows } from '../constants/Shadows';
 import { Spacing, BorderRadius } from '../constants/Spacing';
 import { Duration, Spring } from '../constants/Animations';
 import { HapticPatterns } from '../constants/Haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
+
+// Reusable animated focus ring wrapper for TextInputs
+const AnimatedInput = (props: React.ComponentProps<typeof TextInput> & { isDark?: boolean }) => {
+  const { isDark: inputDark, style, ...inputProps } = props;
+  const focusProgress = useRef(new Animated.Value(0)).current;
+
+  const handleFocus = (e: any) => {
+    Animated.spring(focusProgress, {
+      toValue: 1,
+      friction: 8,
+      tension: 100,
+      useNativeDriver: false,
+    }).start();
+    props.onFocus?.(e);
+  };
+
+  const handleBlur = (e: any) => {
+    Animated.spring(focusProgress, {
+      toValue: 0,
+      friction: 8,
+      tension: 100,
+      useNativeDriver: false,
+    }).start();
+    props.onBlur?.(e);
+  };
+
+  const borderColor = focusProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', Colors.primary],
+  });
+
+  const scale = focusProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.01],
+  });
+
+  const shadowOpacity = focusProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.15],
+  });
+
+  return (
+    <Animated.View
+      style={{
+        transform: [{ scale }],
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity,
+        shadowRadius: 6,
+      }}
+    >
+      <TextInput
+        {...inputProps}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        style={[style, { borderWidth: 0 }]}
+      />
+    </Animated.View>
+  );
+};
 
 export default function RecipeFormScreen() {
   const { colorScheme } = useColorScheme();
@@ -519,29 +583,26 @@ export default function RecipeFormScreen() {
       if (isEditMode && recipeId) {
         await recipeApi.updateRecipe(recipeId, recipeData);
         HapticPatterns.success();
-        Alert.alert('Success', 'Recipe updated successfully!');
-        router.back();
+        setSuccessMessage({
+          title: 'Recipe Updated!',
+          message: 'Your changes have been saved.',
+        });
+        setShowSuccessModal(true);
+        setTimeout(() => router.back(), 1500);
       } else {
         const response = await recipeApi.createRecipe(recipeData);
         const createdRecipe = (response.data?.data || response.data) as Recipe;
-        
+
         // Backend already saves to collections if collectionIds are provided in recipeData
         // No additional API call needed
-        
+
         HapticPatterns.success();
-        Alert.alert(
-          'Success', 
-          'Recipe created and saved to your cookbook!',
-          [
-            { 
-              text: 'OK', 
-              onPress: () => {
-                // Navigate to cookbook to see the new recipe
-                router.replace('/(tabs)/cookbook');
-              }
-            }
-          ]
-        );
+        setSuccessMessage({
+          title: 'Recipe Created!',
+          message: 'Your recipe has been saved to your cookbook!',
+        });
+        setShowSuccessModal(true);
+        setTimeout(() => router.replace('/(tabs)/cookbook'), 1500);
       }
     } catch (error: any) {
       console.error('Failed to save recipe:', error);
@@ -600,16 +661,17 @@ export default function RecipeFormScreen() {
                 paddingVertical: 6,
                 borderRadius: 20,
                 backgroundColor: activeSection === i
-                  ? (isDark ? Colors.primary + '33' : Colors.primary + '1A')
+                  ? Colors.primary
                   : 'transparent',
                 borderWidth: 1,
                 borderColor: activeSection === i ? Colors.primary : (isDark ? '#374151' : '#E5E7EB'),
+                transform: [{ scale: activeSection === i ? 1.08 : 1 }],
               }}
             >
               <Text style={{
                 fontSize: 13,
-                fontWeight: activeSection === i ? '600' : '400',
-                color: activeSection === i ? Colors.primary : (isDark ? '#9CA3AF' : '#6B7280'),
+                fontWeight: activeSection === i ? '700' : '400',
+                color: activeSection === i ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280'),
               }}>
                 {label}
               </Text>
@@ -624,36 +686,58 @@ export default function RecipeFormScreen() {
         onScroll={handleFormScroll}
         scrollEventThrottle={16}
       >
-        {/* Generate Recipe Button (only in create mode) */}
+        {/* Generate Recipe Button — Hero Card (only in create mode) */}
         {!isEditMode && (
           <Animated.View
             style={{
               transform: [{ scale: generateButtonScale }],
               opacity: generateButtonOpacity,
+              marginBottom: 16,
+              borderRadius: 16,
+              ...Shadows.MD,
             }}
           >
-            <HapticTouchableOpacity
-              onPress={handleGenerateRandomRecipe}
-              disabled={generatingAI}
-              hapticStyle="medium"
-              className={`flex-row items-center justify-center px-4 py-3 rounded-lg mb-4 ${generatingAI ? 'bg-gray-300' : 'bg-red-600 dark:bg-red-400'}`}
+            <LinearGradient
+              colors={isDark ? ['#7C3AED', '#DB2777'] : ['#F97316', '#EF4444']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 16, padding: 16 }}
             >
-              {generatingAI ? (
-                <>
-                  <PulsingLoader size={16} color="white" />
-                  <Text className="text-white font-semibold ml-3">
-                    {title.trim() ? `Generating "${title.trim()}" Recipe...` : 'Generating Random Recipe...'}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="sparkles" size={20} color="white" style={{ marginRight: 8 }} />
-                  <Text className="text-white font-semibold">
-                    {title.trim() ? `🤖 Generate "${title.trim()}" Recipe` : '🎲 Generate Random Recipe'}
-                  </Text>
-                </>
-              )}
-            </HapticTouchableOpacity>
+              <View className="flex-row items-center mb-2">
+                <Ionicons name="sparkles" size={18} color="white" style={{ marginRight: 6 }} />
+                <Text style={{ color: 'white', fontSize: 13, fontWeight: '600', opacity: 0.9 }}>Quick Start</Text>
+              </View>
+              <HapticTouchableOpacity
+                onPress={handleGenerateRandomRecipe}
+                disabled={generatingAI}
+                hapticStyle="medium"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  borderRadius: 12,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {generatingAI ? (
+                  <>
+                    <PulsingLoader size={16} color="white" />
+                    <Text className="text-white font-semibold ml-3">
+                      {title.trim() ? `Generating "${title.trim()}" Recipe...` : 'Generating Random Recipe...'}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="flash" size={20} color="white" style={{ marginRight: 8 }} />
+                    <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
+                      {title.trim() ? `Generate "${title.trim()}" Recipe` : 'Generate Random Recipe'}
+                    </Text>
+                  </>
+                )}
+              </HapticTouchableOpacity>
+            </LinearGradient>
           </Animated.View>
         )}
 
@@ -668,30 +752,34 @@ export default function RecipeFormScreen() {
           <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Details</Text>
           
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Recipe Title *</Text>
-          <TextInput
+          <View className="mb-3">
+          <AnimatedInput
             value={title}
             onChangeText={setTitle}
             placeholder="Enter recipe title"
-            className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3 mb-3`}
+            className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
             placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
           />
+          </View>
 
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Description *</Text>
-          <TextInput
+          <View className="mb-3">
+          <AnimatedInput
             value={description}
             onChangeText={setDescription}
             placeholder="Describe your recipe"
             multiline
             numberOfLines={3}
-            className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3 mb-3`}
+            className={`${isDark ? 'bg-gray-700 text-gray-100' : 'bg-surface-tint'} rounded-input px-4 py-3`}
             placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
             style={{ textAlignVertical: 'top' }}
           />
+          </View>
 
           <View className="flex-row gap-3">
             <View className="flex-1">
               <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Cook Time (min) *</Text>
-              <TextInput
+              <AnimatedInput
                 value={cookTime}
                 onChangeText={setCookTime}
                 placeholder="30"
@@ -702,7 +790,7 @@ export default function RecipeFormScreen() {
             </View>
             <View className="flex-1">
               <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Cuisine *</Text>
-              <TextInput
+              <AnimatedInput
                 value={cuisine}
                 onChangeText={setCuisine}
                 placeholder="Italian"

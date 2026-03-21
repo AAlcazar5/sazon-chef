@@ -2,6 +2,7 @@
 // Category grouping component for recipe-grouped view
 
 import { View, Text, Animated } from 'react-native';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 import { useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -132,26 +133,30 @@ export default function ShoppingListCategory({
             allPurchased={allPurchased}
             isDark={isDark}
           />
-          {group.items.map((item) => (
-            <SwipeableItem
+          {group.items.map((item, itemIndex) => (
+            <Reanimated.View
               key={item.id}
-              onDelete={() => onDeleteItem(item)}
-              disabled={selectionMode}
+              entering={FadeInDown.delay(Math.min(itemIndex * 40, 400)).duration(300).springify().damping(18).stiffness(200)}
             >
-              <ShoppingListItem
-                item={item}
-                selectionMode={selectionMode}
-                isSelected={selectedItemsSet.has(item.id)}
-                groupByRecipe={true}
-                inStoreMode={inStoreMode}
-                isCantFind={cantFindItems.includes(item.id)}
-                onTogglePurchased={onTogglePurchased}
-                onEditQuantity={onEditQuantity}
-                onToggleSelection={onToggleSelection}
-                onLongPress={onLongPress}
-                onCantFind={onCantFind}
-              />
-            </SwipeableItem>
+              <SwipeableItem
+                onDelete={() => onDeleteItem(item)}
+                disabled={selectionMode}
+              >
+                <ShoppingListItem
+                  item={item}
+                  selectionMode={selectionMode}
+                  isSelected={selectedItemsSet.has(item.id)}
+                  groupByRecipe={true}
+                  inStoreMode={inStoreMode}
+                  isCantFind={cantFindItems.includes(item.id)}
+                  onTogglePurchased={onTogglePurchased}
+                  onEditQuantity={onEditQuantity}
+                  onToggleSelection={onToggleSelection}
+                  onLongPress={onLongPress}
+                  onCantFind={onCantFind}
+                />
+              </SwipeableItem>
+            </Reanimated.View>
           ))}
         </View>
         );
@@ -160,26 +165,30 @@ export default function ShoppingListCategory({
       {itemsByRecipe.noRecipe.length > 0 && (
         <View className="mb-6">
           <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#D1D5DB' : '#374151', marginBottom: 12 }}>Other Items</Text>
-          {itemsByRecipe.noRecipe.map((item) => (
-            <SwipeableItem
+          {itemsByRecipe.noRecipe.map((item, itemIndex) => (
+            <Reanimated.View
               key={item.id}
-              onDelete={() => onDeleteItem(item)}
-              disabled={selectionMode}
+              entering={FadeInDown.delay(Math.min(itemIndex * 40, 400)).duration(300).springify().damping(18).stiffness(200)}
             >
-              <ShoppingListItem
-                item={item}
-                selectionMode={selectionMode}
-                isSelected={selectedItemsSet.has(item.id)}
-                groupByRecipe={true}
-                inStoreMode={inStoreMode}
-                isCantFind={cantFindItems.includes(item.id)}
-                onTogglePurchased={onTogglePurchased}
-                onEditQuantity={onEditQuantity}
-                onToggleSelection={onToggleSelection}
-                onLongPress={onLongPress}
-                onCantFind={onCantFind}
-              />
-            </SwipeableItem>
+              <SwipeableItem
+                onDelete={() => onDeleteItem(item)}
+                disabled={selectionMode}
+              >
+                <ShoppingListItem
+                  item={item}
+                  selectionMode={selectionMode}
+                  isSelected={selectedItemsSet.has(item.id)}
+                  groupByRecipe={true}
+                  inStoreMode={inStoreMode}
+                  isCantFind={cantFindItems.includes(item.id)}
+                  onTogglePurchased={onTogglePurchased}
+                  onEditQuantity={onEditQuantity}
+                  onToggleSelection={onToggleSelection}
+                  onLongPress={onLongPress}
+                  onCantFind={onCantFind}
+                />
+              </SwipeableItem>
+            </Reanimated.View>
           ))}
         </View>
       )}

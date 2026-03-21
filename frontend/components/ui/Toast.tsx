@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import HapticTouchableOpacity from './HapticTouchableOpacity';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -130,10 +131,11 @@ export default function Toast({
         className={typeStyles.bg}
         {...alertAccessibility(message, type)}
       >
-        <TouchableOpacity
+        <HapticTouchableOpacity
           onPress={handleClose}
           style={styles.touchable}
-          activeOpacity={0.8}
+          hapticStyle="light"
+          pressedScale={0.98}
           accessibilityLabel="Dismiss notification"
           accessibilityHint="Double tap to dismiss"
         >
@@ -145,7 +147,7 @@ export default function Toast({
           </View>
           <Text style={styles.message}>{message}</Text>
           <Ionicons name="close" size={20} color="white" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </Animated.View>
     </SafeAreaView>
   );

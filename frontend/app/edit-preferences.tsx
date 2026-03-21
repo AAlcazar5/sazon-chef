@@ -284,53 +284,107 @@ export default function EditPreferencesScreen() {
             <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Select any that apply, then tap the badge to set how strict it is</Text>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {DIETARY_OPTIONS.map(({ id, label: optLabel, emoji }) => {
-                const isSelected = dietaryRestrictions.includes(id);
-                const sev = dietarySeverities[id] || 'strict';
-                const isAllergic = sev === 'strict';
+              {(() => {
+                const sortedDietary = [...DIETARY_OPTIONS].sort((a, b) => {
+                  const aSelected = dietaryRestrictions.includes(a.id);
+                  const bSelected = dietaryRestrictions.includes(b.id);
+                  if (aSelected && !bSelected) return -1;
+                  if (!aSelected && bSelected) return 1;
+                  if (aSelected && bSelected) {
+                    const aStrict = dietarySeverities[a.id] === 'strict';
+                    const bStrict = dietarySeverities[b.id] === 'strict';
+                    if (aStrict && !bStrict) return -1;
+                    if (!aStrict && bStrict) return 1;
+                  }
+                  return 0;
+                });
 
-                const chipBg = isSelected
-                  ? (isAllergic
-                      ? (isDark ? 'rgba(220,38,38,0.2)' : '#FEE2E2')
-                      : (isDark ? 'rgba(217,119,6,0.2)' : '#FEF3C7'))
-                  : (isDark ? '#374151' : '#E5E7EB');
-                const chipBorderColor = isSelected
-                  ? (isAllergic
-                      ? (isDark ? '#F87171' : '#DC2626')
-                      : (isDark ? '#FCD34D' : '#D97706'))
-                  : 'transparent';
-                const chipTextColor = isSelected
-                  ? (isAllergic
-                      ? (isDark ? '#FCA5A5' : '#B91C1C')
-                      : (isDark ? '#FCD34D' : '#92400E'))
-                  : (isDark ? '#D1D5DB' : '#374151');
+                const hasStrict = dietaryRestrictions.some(id => dietarySeverities[id] === 'strict');
+                const hasAvoid = dietaryRestrictions.some(id => dietarySeverities[id] === 'prefer_avoid');
+                let insertedDivider = false;
 
-                return (
-                  <View key={id} style={{ flexDirection: 'row', marginRight: 8, marginBottom: 8, borderRadius: 100, borderWidth: 1, borderColor: chipBorderColor, backgroundColor: chipBg, overflow: 'hidden' }}>
-                    {/* Main chip area — tap to toggle selection */}
-                    <HapticTouchableOpacity
-                      onPress={() => toggleDietary(id)}
-                      style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingVertical: 8, paddingRight: isSelected ? 6 : 10, gap: 5 }}
-                    >
-                      <Text style={{ fontSize: 14 }}>{emoji}</Text>
-                      <Text style={{ fontSize: 12, fontWeight: '500', color: chipTextColor }}>{optLabel}</Text>
-                    </HapticTouchableOpacity>
+                return sortedDietary.map(({ id, label: optLabel, emoji }) => {
+                  const isSelected = dietaryRestrictions.includes(id);
+                  const sev = dietarySeverities[id] || 'strict';
+                  const isAllergic = sev === 'strict';
 
-                    {/* Severity badge — tap to toggle allergic vs avoid */}
-                    {isSelected && (
-                      <HapticTouchableOpacity
-                        onPress={() => toggleSeverity(id)}
-                        style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 8, borderLeftWidth: 1, borderLeftColor: chipBorderColor, gap: 3 }}
-                      >
-                        <Text style={{ fontSize: 11 }}>{isAllergic ? '🚫' : '⚠️'}</Text>
-                        <Text style={{ fontSize: 10, fontWeight: '600', color: chipTextColor }}>
-                          {isAllergic ? "Allergic" : "Avoid"}
-                        </Text>
-                      </HapticTouchableOpacity>
-                    )}
-                  </View>
-                );
-              })}
+                  const chipBg = isSelected
+                    ? (isAllergic
+                        ? (isDark ? 'rgba(220,38,38,0.2)' : '#FEE2E2')
+                        : (isDark ? 'rgba(217,119,6,0.2)' : '#FEF3C7'))
+                    : (isDark ? '#374151' : '#E5E7EB');
+                  const chipBorderColor = isSelected
+                    ? (isAllergic
+                        ? (isDark ? '#F87171' : '#DC2626')
+                        : (isDark ? '#FCD34D' : '#D97706'))
+                    : 'transparent';
+                  const chipTextColor = isSelected
+                    ? (isAllergic
+                        ? (isDark ? '#FCA5A5' : '#B91C1C')
+                        : (isDark ? '#FCD34D' : '#92400E'))
+                    : (isDark ? '#D1D5DB' : '#374151');
+
+                  // Determine if we need a divider before this chip
+                  let showDivider = false;
+                  if (hasStrict && hasAvoid && isSelected && !isAllergic && !insertedDivider) {
+                    showDivider = true;
+                    insertedDivider = true;
+                  }
+
+                  // Size & weight differ by severity
+                  const chipPaddingV = isSelected && isAllergic ? 10 : 8;
+                  const chipPaddingH = isSelected && isAllergic ? 12 : 10;
+                  const chipFontSize = isSelected && isAllergic ? 13 : 12;
+                  const chipFontWeight = isSelected && isAllergic ? '700' : '500';
+                  const borderStyle = isSelected && !isAllergic ? 'dashed' as const : 'solid' as const;
+
+                  return (
+                    <View key={id} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {showDivider && (
+                        <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginTop: 4, gap: 8 }}>
+                          <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#4B5563' : '#D1D5DB' }} />
+                          <Text style={{ fontSize: 10, color: sub, fontWeight: '500' }}>Nice to have</Text>
+                          <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#4B5563' : '#D1D5DB' }} />
+                        </View>
+                      )}
+                      <View style={{
+                        flexDirection: 'row',
+                        marginRight: 8,
+                        marginBottom: 8,
+                        borderRadius: 100,
+                        borderWidth: 1,
+                        borderStyle,
+                        borderColor: chipBorderColor,
+                        backgroundColor: chipBg,
+                        overflow: 'hidden',
+                        ...(isSelected && isAllergic ? { borderLeftWidth: 3, borderLeftColor: chipBorderColor } : {}),
+                      }}>
+                        {/* Main chip area — tap to toggle selection */}
+                        <HapticTouchableOpacity
+                          onPress={() => toggleDietary(id)}
+                          style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: chipPaddingH, paddingVertical: chipPaddingV, paddingRight: isSelected ? 6 : chipPaddingH, gap: 5 }}
+                        >
+                          <Text style={{ fontSize: 14 }}>{emoji}</Text>
+                          <Text style={{ fontSize: chipFontSize, fontWeight: chipFontWeight as any, color: chipTextColor }}>{optLabel}</Text>
+                        </HapticTouchableOpacity>
+
+                        {/* Severity badge — tap to toggle allergic vs avoid */}
+                        {isSelected && (
+                          <HapticTouchableOpacity
+                            onPress={() => toggleSeverity(id)}
+                            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: chipPaddingV, borderLeftWidth: 1, borderLeftColor: chipBorderColor, gap: 3 }}
+                          >
+                            <Text style={{ fontSize: 11 }}>{isAllergic ? '🚫' : '⚠️'}</Text>
+                            <Text style={{ fontSize: 10, fontWeight: '600', color: chipTextColor }}>
+                              {isAllergic ? "Allergic" : "Avoid"}
+                            </Text>
+                          </HapticTouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                });
+              })()}
             </View>
 
             {dietaryRestrictions.length > 0 && (

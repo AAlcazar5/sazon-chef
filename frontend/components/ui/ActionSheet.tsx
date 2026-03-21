@@ -1,11 +1,12 @@
 // frontend/components/ui/ActionSheet.tsx
 // Action sheet modal for quick actions
 
-import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Modal, TouchableWithoutFeedback, Animated, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import HapticTouchableOpacity from './HapticTouchableOpacity';
 import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
 import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
 import { FontSize, FontWeight } from '../../constants/Typography';
@@ -140,7 +141,7 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                 bounces={false}
               >
                 {items.map((item, index) => (
-                  <TouchableOpacity
+                  <HapticTouchableOpacity
                     key={index}
                     onPress={() => handleItemPress(item)}
                     style={[
@@ -151,6 +152,7 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                           : (isDark ? DarkColors.background : Colors.surface),
                       },
                     ]}
+                    hapticDisabled
                     {...buttonAccessibility(item.label, {
                       hint: item.destructive ? 'This is a destructive action' : undefined,
                     })}
@@ -206,12 +208,12 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                       size={20}
                       color={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
                     />
-                  </TouchableOpacity>
+                  </HapticTouchableOpacity>
                 ))}
               </ScrollView>
 
               {/* Cancel Button */}
-              <TouchableOpacity
+              <HapticTouchableOpacity
                 onPress={handleCancel}
                 style={[
                   styles.cancelButton,
@@ -220,12 +222,13 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                     borderColor: isDark ? DarkColors.border.light : Colors.border.light,
                   },
                 ]}
+                hapticDisabled
                 {...buttonAccessibility('Cancel')}
               >
                 <Text style={[styles.cancelText, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
                   Cancel
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             </Animated.View>
           </TouchableWithoutFeedback>
         </Animated.View>

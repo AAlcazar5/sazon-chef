@@ -2,13 +2,14 @@
 // Modal showing all meals for a selected day
 
 import React from 'react';
-import { View, Text, Modal, ScrollView } from 'react-native';
+import { View, Text, Modal, ScrollView, Animated } from 'react-native';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 
 interface DayMealsModalProps {
   visible: boolean;
@@ -27,6 +28,8 @@ function DayMealsModal({
   onClose,
   isToday,
 }: DayMealsModalProps) {
+  const { contentStyle } = useModalAnimation(visible);
+
   if (!visible || !selectedDay) {
     return null;
   }
@@ -124,7 +127,7 @@ function DayMealsModal({
       onRequestClose={onClose}
     >
       <View className="flex-1 bg-black/50 justify-center items-center px-4">
-        <View className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden w-full" style={{ maxHeight: '80%', maxWidth: '100%' }}>
+        <Animated.View className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden w-full" style={[{ maxHeight: '80%', maxWidth: '100%' }, contentStyle]}>
           {/* Header */}
           <View className="flex-row items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700">
             <View className="flex-1">
@@ -243,7 +246,7 @@ function DayMealsModal({
               </View>
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

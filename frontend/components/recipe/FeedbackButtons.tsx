@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, useColorScheme } from 'react-native';
 import { useState } from 'react';
-import * as Haptics from 'expo-haptics';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -53,15 +53,9 @@ function FeedbackButtons({
   const handleLike = () => {
     const newState = {
       liked: !feedback.liked,
-      disliked: false // Can't like and dislike at the same time
+      disliked: false,
     };
-    
-    // Haptic feedback on press - immediate tactile response
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
     setFeedback(newState);
-    
-    // Call parent callback if provided
     if (newState.liked && onLike) {
       onLike(recipeId);
     }
@@ -69,16 +63,10 @@ function FeedbackButtons({
 
   const handleDislike = () => {
     const newState = {
-      liked: false, // Can't like and dislike at the same time
-      disliked: !feedback.disliked
+      liked: false,
+      disliked: !feedback.disliked,
     };
-    
-    // Haptic feedback on press - immediate tactile response
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
     setFeedback(newState);
-    
-    // Call parent callback if provided
     if (newState.disliked && onDislike) {
       onDislike(recipeId);
     }
@@ -89,45 +77,47 @@ function FeedbackButtons({
   return (
     <View className="flex-row">
       {/* Dislike Button */}
-      <TouchableOpacity
+      <HapticTouchableOpacity
         onPress={handleDislike}
+        hapticStyle="light"
         className={`
-          ${currentSize.container} 
-          rounded-full 
+          ${currentSize.container}
+          rounded-full
           mr-2
-          ${feedback.disliked 
-            ? 'bg-red-600 dark:bg-red-400 border border-red-600 dark:border-red-500' 
+          ${feedback.disliked
+            ? 'bg-red-600 dark:bg-red-400 border border-red-600 dark:border-red-500'
             : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
           }
         `}
       >
-        <Icon 
-          name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE} 
-          size={currentSize.iconSize} 
+        <Icon
+          name={feedback.disliked ? Icons.DISLIKE : Icons.DISLIKE_OUTLINE}
+          size={currentSize.iconSize}
           color={feedback.disliked ? "#FFFFFF" : (colorScheme === 'dark' ? "#D1D5DB" : "#4B5563")}
           accessibilityLabel={feedback.disliked ? "Disliked" : "Dislike recipe"}
         />
-      </TouchableOpacity>
+      </HapticTouchableOpacity>
 
       {/* Like Button */}
-      <TouchableOpacity
+      <HapticTouchableOpacity
         onPress={handleLike}
+        hapticStyle="light"
         className={`
-          ${currentSize.container} 
-          rounded-full 
-          ${feedback.liked 
-            ? 'bg-green-500 dark:bg-green-600 border border-green-600 dark:border-green-700' 
+          ${currentSize.container}
+          rounded-full
+          ${feedback.liked
+            ? 'bg-green-500 dark:bg-green-600 border border-green-600 dark:border-green-700'
             : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
           }
         `}
       >
-        <Icon 
-          name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE} 
-          size={currentSize.iconSize} 
+        <Icon
+          name={feedback.liked ? Icons.LIKE : Icons.LIKE_OUTLINE}
+          size={currentSize.iconSize}
           color={feedback.liked ? "#FFFFFF" : (colorScheme === 'dark' ? "#D1D5DB" : "#4B5563")}
           accessibilityLabel={feedback.liked ? "Liked" : "Like recipe"}
         />
-      </TouchableOpacity>
+      </HapticTouchableOpacity>
     </View>
   );
 }
