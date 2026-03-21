@@ -115,6 +115,47 @@ export const HapticChoreography = {
     after(200, medium);
     after(450, light);
   },
+
+  /**
+   * Heart burst — recipe save.
+   * Synced with the squeeze-at-80ms → spring-pop-at-200ms heart animation.
+   */
+  heartBurst() {
+    after(80, light);    // Squeeze
+    after(200, medium);  // Pop peak
+  },
+
+  /**
+   * Heart unsave — lighter reverse feedback.
+   */
+  heartUnsave() {
+    light();
+  },
+
+  /**
+   * Meal plan generated — synced with staggered card entrance.
+   * Medium impact on landing, then light taps as cards appear.
+   */
+  planGenerated() {
+    medium();
+    after(200, light);
+    after(400, light);
+    after(600, () => success());
+  },
+
+  /**
+   * Premium conversion — big celebratory build.
+   * BOOM → stagger taps for each benefit row → final success.
+   */
+  premiumConversion() {
+    heavy();
+    after(150, medium);
+    after(600, light);
+    after(720, light);
+    after(840, light);
+    after(960, light);
+    after(1100, () => success());
+  },
 };
 
 export default HapticChoreography;

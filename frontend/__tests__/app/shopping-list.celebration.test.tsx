@@ -36,6 +36,38 @@ jest.mock('../../components/mascot/LogoMascot', () => {
   };
 });
 
+jest.mock('../../components/celebrations', () => {
+  const { View, Text, TouchableOpacity } = require('react-native');
+  return {
+    CelebrationOverlay: ({ visible, title, subtitle, primaryCTA, secondaryCTA, onDismiss }: any) => {
+      if (!visible) return null;
+      return (
+        <View testID="celebration-overlay">
+          <Text>{title}</Text>
+          {subtitle && <Text>{subtitle}</Text>}
+          {primaryCTA && (
+            <TouchableOpacity onPress={primaryCTA.onPress}>
+              <Text>{primaryCTA.label}</Text>
+            </TouchableOpacity>
+          )}
+          {secondaryCTA && (
+            <TouchableOpacity onPress={secondaryCTA.onPress}>
+              <Text>{secondaryCTA.label}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    },
+    HeartBurstAnimation: () => null,
+    PremiumCelebration: () => null,
+  };
+});
+
+jest.mock('../../lib/api', () => ({
+  userApi: { getPreferences: jest.fn().mockResolvedValue({ data: {} }) },
+  mealPlanApi: { getWeeklyPlan: jest.fn().mockResolvedValue({ data: { days: [] } }) },
+}));
+
 jest.mock('expo-blur', () => ({
   BlurView: ({ children }: any) => {
     const { View } = require('react-native');
@@ -181,12 +213,11 @@ describe('Shopping List — all-done celebration overlay', () => {
     const { getByText } = render(<ShoppingListScreen />);
 
     await waitFor(() => {
-      expect(getByText('You nailed it!')).toBeTruthy();
-      expect(getByText('Your pantry is stocked. Ready to cook?')).toBeTruthy();
+      expect(getByText('Shop complete!')).toBeTruthy();
     });
   });
 
-  it('shows chef-kiss mascot in the celebration overlay', async () => {
+  it('shows celebration overlay with CTA', async () => {
     const { useShoppingList } = require('../../hooks/useShoppingList');
     useShoppingList.mockReturnValue(
       makeHookReturn({}, {
@@ -197,7 +228,7 @@ describe('Shopping List — all-done celebration overlay', () => {
     const { getByTestId } = render(<ShoppingListScreen />);
 
     await waitFor(() => {
-      expect(getByTestId('logo-mascot-chef-kiss')).toBeTruthy();
+      expect(getByTestId('celebration-overlay')).toBeTruthy();
     });
   });
 
@@ -210,8 +241,7 @@ describe('Shopping List — all-done celebration overlay', () => {
     );
 
     const { queryByText } = render(<ShoppingListScreen />);
-    expect(queryByText('You nailed it!')).toBeNull();
-    expect(queryByText('Your pantry is stocked. Ready to cook?')).toBeNull();
+    expect(queryByText('Shop complete!')).toBeNull();
   });
 
   it('does not show celebration when total === 0', () => {
@@ -223,7 +253,7 @@ describe('Shopping List — all-done celebration overlay', () => {
     );
 
     const { queryByText } = render(<ShoppingListScreen />);
-    expect(queryByText('You nailed it!')).toBeNull();
+    expect(queryByText('Shop complete!')).toBeNull();
   });
 
   it('does not show celebration when loading is true even if purchased === total > 0', () => {
@@ -235,36 +265,12 @@ describe('Shopping List — all-done celebration overlay', () => {
     );
 
     const { queryByText } = render(<ShoppingListScreen />);
-    expect(queryByText('You nailed it!')).toBeNull();
-  });
-
-  it('auto-dismisses celebration after 2.8 seconds', async () => {
-    const { useShoppingList } = require('../../hooks/useShoppingList');
-    useShoppingList.mockReturnValue(
-      makeHookReturn({}, {
-        progressStats: { total: 1, purchased: 1, progress: 1 },
-      })
-    );
-
-    const { getByText, queryByText } = render(<ShoppingListScreen />);
-
-    await waitFor(() => {
-      expect(getByText('You nailed it!')).toBeTruthy();
-    });
-
-    // Advance past the 2800ms auto-dismiss + fade-out duration
-    act(() => {
-      jest.advanceTimersByTime(3300);
-    });
-
-    await waitFor(() => {
-      expect(queryByText('You nailed it!')).toBeNull();
-    });
+    expect(queryByText('Shop complete!')).toBeNull();
   });
 
   it('does not re-trigger celebration when loading toggles while allDone remains true', async () => {
     const { useShoppingList } = require('../../hooks/useShoppingList');
-    const springSpy = jest.spyOn(Animated, 'spring');
+    const Haptics = require('expo-haptics');
 
     // Initial render: all done → celebration triggered once
     useShoppingList.mockReturnValue(
@@ -272,11 +278,13 @@ describe('Shopping List — all-done celebration overlay', () => {
         progressStats: { total: 2, purchased: 2, progress: 1 },
       })
     );
-    const { rerender } = render(<ShoppingListScreen />);
+    const { rerender, getByTestId } = render(<ShoppingListScreen />);
 
     await waitFor(() => {
-      expect(springSpy).toHaveBeenCalledTimes(1);
+      expect(getByTestId('celebration-overlay')).toBeTruthy();
     });
+
+    const callCount = Haptics.impactAsync.mock.calls.length;
 
     // Simulate loading toggling to true (allDone still true, prevAllDone.current = true)
     useShoppingList.mockReturnValue(
@@ -294,11 +302,7 @@ describe('Shopping List — all-done celebration overlay', () => {
     );
     rerender(<ShoppingListScreen />);
 
-    await waitFor(() => {
-      // spring must still have been called only once — no re-trigger
-      expect(springSpy).toHaveBeenCalledTimes(1);
-    });
-
-    springSpy.mockRestore();
+    // Haptic calls should not increase — no re-trigger
+    expect(Haptics.impactAsync.mock.calls.length).toBe(callCount);
   });
 });

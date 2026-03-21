@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Alert, RefreshControl } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SuccessModal from '../../components/ui/SuccessModal';
 import Toast from '../../components/ui/Toast';
+import { CelebrationOverlay } from '../../components/celebrations';
 import SkeletonLoader from '../../components/ui/SkeletonLoader';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -829,13 +830,18 @@ export default function MealPlanScreen() {
         )}
       </SafeAreaView>
 
-      {/* Success Modal */}
-      <SuccessModal
+      {/* Meal Plan Generated Celebration */}
+      <CelebrationOverlay
         visible={showSuccessModal}
         title={successMessage.title}
-        message={successMessage.message}
-        expression="celebrating"
+        subtitle={successMessage.message}
+        expression="excited"
+        autoDismiss={3000}
         onDismiss={() => setShowSuccessModal(false)}
+        primaryCTA={{
+          label: 'View My Plan',
+          onPress: () => setShowSuccessModal(false),
+        }}
       />
 
       {/* Shopping List Success Modal */}

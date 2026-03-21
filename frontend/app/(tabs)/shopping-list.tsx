@@ -24,7 +24,8 @@ import { ShoppingListLoadingStates } from '../../constants/LoadingStates';
 import { useShoppingList, categorizeItem, AISLE_ORDER, DEFAULT_AISLE_ORDER, AISLE_EMOJI } from '../../hooks/useShoppingList';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
-import { userApi } from '../../lib/api';
+import { userApi, mealPlanApi } from '../../lib/api';
+import { CelebrationOverlay } from '../../components/celebrations';
 import {
   ShoppingListHeader,
   ShoppingListItem,
@@ -34,7 +35,7 @@ import {
   OfflineBanner,
 } from '../../components/shopping';
 
-const CONFETTI = ['🎉', '🛒', '✅', '🌟', '🎊', '👏'];
+// CONFETTI constant kept for backward compat reference (celebration now uses CelebrationOverlay)
 
 export default function ShoppingListScreen() {
   const { colorScheme } = useColorScheme();
@@ -104,13 +105,7 @@ export default function ShoppingListScreen() {
 
   // All-done celebration
   const [showCelebration, setShowCelebration] = useState(false);
-  const celebrationOpacity = useRef(new Animated.Value(0)).current;
-  const mascotScale = useRef(new Animated.Value(0)).current;
-  const confettiAnims = useRef(CONFETTI.map(() => ({
-    y: new Animated.Value(0),
-    opacity: new Animated.Value(1),
-    x: new Animated.Value(0),
-  }))).current;
+  const [tonightsMeal, setTonightsMeal] = useState<string | null>(null);
   const prevAllDone = useRef(false);
 
   useEffect(() => {
@@ -120,41 +115,17 @@ export default function ShoppingListScreen() {
       setShowCelebration(true);
       HapticChoreography.shoppingCelebration();
 
-      // Reset confetti
-      confettiAnims.forEach(a => { a.y.setValue(0); a.opacity.setValue(1); a.x.setValue(0); });
-      mascotScale.setValue(0);
-      celebrationOpacity.setValue(0);
-
-      Animated.parallel([
-        Animated.timing(celebrationOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.spring(mascotScale, { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }),
-        ...confettiAnims.map((a, i) =>
-          Animated.parallel([
-            Animated.timing(a.y, {
-              toValue: -(120 + Math.random() * 160),
-              duration: 900 + i * 100,
-              useNativeDriver: true,
-            }),
-            Animated.timing(a.x, {
-              toValue: (Math.random() - 0.5) * 120,
-              duration: 900 + i * 100,
-              useNativeDriver: true,
-            }),
-            Animated.sequence([
-              Animated.delay(400),
-              Animated.timing(a.opacity, { toValue: 0, duration: 500, useNativeDriver: true }),
-            ]),
-          ])
-        ),
-      ]).start();
-
-      // Auto-dismiss after 2.8 seconds
-      const timer = setTimeout(() => {
-        Animated.timing(celebrationOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
-          setShowCelebration(false);
-        });
-      }, 2800);
-      return () => clearTimeout(timer);
+      // Fetch tonight's meal (non-blocking)
+      mealPlanApi.getWeeklyPlan().then((res: any) => {
+        const days = res?.data?.days || res?.data?.data?.days || [];
+        if (Array.isArray(days)) {
+          const today = new Date().toISOString().split('T')[0];
+          const todayPlan = days.find((d: any) => d.date === today);
+          const meals = todayPlan?.meals || [];
+          const next = meals.find((m: any) => !m.completed);
+          if (next?.recipe?.title) setTonightsMeal(next.recipe.title);
+        }
+      }).catch(() => {});
     } else if (!allDone) {
       prevAllDone.current = false;
     }
@@ -632,88 +603,32 @@ export default function ShoppingListScreen() {
       />
     </SafeAreaView>
 
-    {/* All-done celebration overlay — full-screen (P4: earn the peak) */}
-    {showCelebration && (
-      <Animated.View
-        style={[StyleSheet.absoluteFill, {
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.55)',
-          opacity: celebrationOpacity,
-          zIndex: 99,
-        }]}
-        pointerEvents="box-only"
-      >
-        {/* Confetti emoji particles */}
-        {CONFETTI.map((emoji, i) => (
-          <Animated.Text
-            key={i}
-            style={{
-              position: 'absolute',
-              fontSize: 32 + (i % 3) * 10,
-              transform: [
-                { translateY: confettiAnims[i].y },
-                { translateX: confettiAnims[i].x },
-              ],
-              opacity: confettiAnims[i].opacity,
-            }}
-          >
-            {emoji}
-          </Animated.Text>
-        ))}
-
-        {/* Celebration Card */}
-        <Animated.View
-          style={[{
-            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-            borderRadius: 28,
-            paddingVertical: 40,
-            paddingHorizontal: 40,
-            alignItems: 'center',
-            marginHorizontal: 32,
-            transform: [{ scale: mascotScale }],
-          }, Shadows.XL]}
-        >
-          <LogoMascot expression="chef-kiss" size="large" />
-          <Text style={{
-            fontSize: 26,
-            fontWeight: '800',
-            color: isDark ? DarkColors.text.primary : Colors.text.primary,
-            marginTop: 20,
-            textAlign: 'center',
-          }}>
-            You nailed it!
-          </Text>
-          <Text style={{
-            fontSize: 15,
-            color: isDark ? '#9CA3AF' : '#6B7280',
-            marginTop: 8,
-            textAlign: 'center',
-            lineHeight: 22,
-          }}>
-            Your pantry is stocked. Ready to cook?
-          </Text>
-
-          {/* CTA — next action (P4: always a next action) */}
-          <HapticTouchableOpacity
-            onPress={() => {
-              setShowCelebration(false);
-              router.push('/(tabs)/meal-plan' as any);
-            }}
-            style={[{ marginTop: 24, borderRadius: 100, overflow: 'hidden', width: '100%' }, Shadows.SM]}
-          >
-            <LinearGradient
-              colors={['#fa7e12', '#d67a0c']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ paddingVertical: 14, alignItems: 'center', borderRadius: 100 }}
-            >
-              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>Let's cook</Text>
-            </LinearGradient>
-          </HapticTouchableOpacity>
-        </Animated.View>
-      </Animated.View>
-    )}
+    {/* All-done celebration overlay — full-screen */}
+    <CelebrationOverlay
+      visible={showCelebration}
+      title="Shop complete!"
+      subtitle={tonightsMeal
+        ? `Your pantry is stocked! Want to cook ${tonightsMeal} now?`
+        : 'Your pantry is stocked. Ready to cook?'}
+      expression="celebrating"
+      stats={[
+        { value: String(progressStats.total), label: 'Items', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.15)' },
+        { value: `$${estimatedCost.toFixed(0)}`, label: 'Spent', color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.15)' },
+      ]}
+      primaryCTA={{
+        label: tonightsMeal ? `Cook ${tonightsMeal}` : "Let's cook",
+        onPress: () => {
+          setShowCelebration(false);
+          router.push('/(tabs)/meal-plan' as any);
+        },
+      }}
+      secondaryCTA={{
+        label: 'Dismiss',
+        onPress: () => setShowCelebration(false),
+      }}
+      autoDismiss={5000}
+      onDismiss={() => setShowCelebration(false)}
+    />
     </View>
   );
 }

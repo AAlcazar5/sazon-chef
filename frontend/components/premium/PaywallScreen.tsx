@@ -15,6 +15,7 @@ import { useSubscription } from '../../hooks/useSubscription';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../ui/GradientButton';
 import { SazonMascot } from '../mascot';
+import { PremiumCelebration } from '../celebrations';
 
 const PREMIUM_FEATURES = [
   { icon: '🗓', label: 'Unlimited AI meal plans' },
@@ -30,7 +31,7 @@ interface PaywallScreenProps {
 }
 
 export function PaywallScreen({ onClose }: PaywallScreenProps) {
-  const { subscription, checkoutLoading, trialDaysLeft, startCheckout, openPortal } =
+  const { subscription, checkoutLoading, trialDaysLeft, startCheckout, openPortal, showPremiumCelebration, dismissPremiumCelebration } =
     useSubscription();
   const [interval, setInterval] = useState<'month' | 'year'>('month');
 
@@ -46,6 +47,7 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
   }
 
   return (
+    <>
     <ScrollView
       className="flex-1 bg-white dark:bg-gray-900"
       contentContainerStyle={{ paddingBottom: 48 }}
@@ -234,5 +236,15 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
         </View>
       )}
     </ScrollView>
+
+    {/* Premium conversion celebration */}
+    <PremiumCelebration
+      visible={showPremiumCelebration}
+      onDismiss={() => {
+        dismissPremiumCelebration();
+        onClose?.();
+      }}
+    />
+    </>
   );
 }

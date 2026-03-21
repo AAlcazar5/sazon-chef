@@ -1,9 +1,10 @@
 // frontend/hooks/useSubscription.ts
 // Hook for managing subscription state and Stripe checkout flows
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Linking } from 'react-native';
 import { stripeApi } from '../lib/api';
+import { HapticChoreography } from '../utils/hapticChoreography';
 
 export interface SubscriptionState {
   status: string; // free | trialing | active | past_due | canceled
@@ -29,16 +30,27 @@ export function useSubscription() {
   const [subscription, setSubscription] = useState<SubscriptionState>(DEFAULT_STATE);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
+  const wasPremiumRef = useRef<boolean | null>(null);
 
   const fetchSubscription = useCallback(async () => {
     try {
       setSubscription((prev) => ({ ...prev, loading: true, error: null }));
       const res = await stripeApi.getSubscription();
       const data = res.data;
+      const newIsPremium = data.isPremium;
+
+      // Detect fresh conversion: was not premium → now premium
+      if (wasPremiumRef.current === false && newIsPremium) {
+        setShowPremiumCelebration(true);
+        HapticChoreography.premiumConversion();
+      }
+      wasPremiumRef.current = newIsPremium;
+
       setSubscription({
         status: data.status,
         tier: data.tier,
-        isPremium: data.isPremium,
+        isPremium: newIsPremium,
         trialEndsAt: data.trialEndsAt,
         currentPeriodEnd: data.currentPeriodEnd,
         loading: false,
@@ -98,11 +110,17 @@ export function useSubscription() {
     return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
   })();
 
+  const dismissPremiumCelebration = useCallback(() => {
+    setShowPremiumCelebration(false);
+  }, []);
+
   return {
     subscription,
     checkoutLoading,
     portalLoading,
     trialDaysLeft,
+    showPremiumCelebration,
+    dismissPremiumCelebration,
     refresh: fetchSubscription,
     startCheckout,
     openPortal,
