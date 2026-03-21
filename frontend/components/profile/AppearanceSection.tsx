@@ -72,7 +72,7 @@ export default function AppearanceSection() {
         }}
       >
         {/* Theme Toggle */}
-        <View className="flex-row items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
+        <View className="flex-row items-center justify-between py-3 ">
           <View className="flex-1 mr-4">
             <View className="flex-row items-center mb-1">
               <Icon

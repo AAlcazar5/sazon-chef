@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, Image, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { MotiView } from 'moti';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
@@ -6,6 +7,7 @@ import GradientButton, { GradientPresets } from '../components/ui/GradientButton
 import AnimatedText from '../components/ui/AnimatedText';
 import LoadingState from '../components/ui/LoadingState';
 import SkeletonLoader from '../components/ui/SkeletonLoader';
+import BottomSheet from '../components/ui/BottomSheet';
 import LogoMascot from '../components/mascot/LogoMascot';
 import MealPrepScalingModal from '../components/recipe/MealPrepScalingModal';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -21,7 +23,8 @@ import { optimizedImageUrl } from '../utils/imageUtils';
 import { generateStorageInstructions, getStorageMethods } from '../utils/storageInstructions';
 import { getMealPrepTags } from '../utils/mealPrepTags';
 import * as Haptics from 'expo-haptics';
-import { Colors, DarkColors } from '../constants/Colors';
+import { Colors, DarkColors, BackgroundColors, TextColors } from '../constants/Colors';
+import { Shadows } from '../constants/Shadows';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { HeartBurstAnimation } from '../components/celebrations';
@@ -714,18 +717,24 @@ export default function RecipeModal() {
           { useNativeDriver: false }
         )}
       >
-        {/* Hero image */}
+        {/* Hero image — full-bleed with blur-up loading via expo-image */}
         <View style={{ height: HERO_HEIGHT, overflow: 'hidden' }}>
           {recipe.imageUrl ? (
-            <Animated.Image
+            <Animated.View
               testID="hero-image"
-              source={{ uri: optimizedImageUrl(recipe.imageUrl, 600) }}
               style={[
                 StyleSheet.absoluteFill,
                 { height: HERO_HEIGHT + 80, transform: [{ translateY: heroParallax }] },
               ]}
-              resizeMode="cover"
-            />
+            >
+              <Image
+                source={{ uri: optimizedImageUrl(recipe.imageUrl, 600) }}
+                placeholder={{ thumbhash: undefined }}
+                transition={300}
+                contentFit="cover"
+                style={{ width: '100%', height: '100%' }}
+              />
+            </Animated.View>
           ) : (
             // Gradient placeholder when no image is available
             <LinearGradient
@@ -796,28 +805,39 @@ export default function RecipeModal() {
             </View>
           </View>
 
-          {/* Macro Nutrients */}
-          <View className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <View className="flex-row items-center mb-2">
-              <Text className="text-xl mr-2">🥗</Text>
-              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Nutrition</Text>
+          {/* Macro Nutrients — pill row */}
+          <View style={{ marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>🥗</Text>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Nutrition</Text>
             </View>
-            <View className="flex-row justify-between">
-              <View className="items-center">
-                <Text className="text-gray-500 dark:text-gray-400 text-sm">Carbs</Text>
-                <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.carbs}g</Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-gray-500 dark:text-gray-400 text-sm">Fat</Text>
-                <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.fat}g</Text>
-              </View>
-              {recipe.fiber && (
-                <View className="items-center">
-                  <Text className="text-gray-500 dark:text-gray-400 text-sm">Fiber</Text>
-                  <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.fiber}g</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {[
+                { label: 'Calories', value: `${recipe.calories}`, color: 'calories' as const },
+                { label: 'Protein', value: `${recipe.protein}g`, color: 'protein' as const },
+                { label: 'Carbs', value: `${recipe.carbs}g`, color: 'carbs' as const },
+                { label: 'Fat', value: `${recipe.fat}g`, color: 'fat' as const },
+                ...(recipe.fiber ? [{ label: 'Fiber', value: `${recipe.fiber}g`, color: 'fiber' as const }] : []),
+              ].map((macro) => (
+                <View
+                  key={macro.label}
+                  style={{
+                    borderRadius: 100,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    backgroundColor: isDark ? `${Colors.macros[macro.color]}20` : BackgroundColors.macro[macro.color],
+                    ...Shadows.SM,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '500', color: isDark ? Colors.macros[macro.color] : TextColors.macro[macro.color], marginBottom: 2 }}>
+                    {macro.label}
+                  </Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: isDark ? Colors.macros[macro.color] : TextColors.macro[macro.color] }}>
+                    {macro.value}
+                  </Text>
                 </View>
-              )}
-            </View>
+              ))}
+            </ScrollView>
           </View>
 
           {/* Health Grade Badge */}
@@ -1357,6 +1377,26 @@ export default function RecipeModal() {
           {savedSuccess && (
             <HeartBurstAnimation saved={true} size={22} />
           )}
+          <HapticTouchableOpacity
+            accessibilityLabel="Share recipe"
+            onPress={() => {
+              if (!recipe) return;
+              Share.share({
+                message: `Check out this recipe: ${recipe.title}`,
+                title: recipe.title,
+              });
+            }}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: 'rgba(0,0,0,0.40)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="share-outline" size={18} color="#FFF" />
+          </HapticTouchableOpacity>
           {isUserRecipe ? (
             <HapticTouchableOpacity
               accessibilityLabel="Edit recipe"
@@ -1417,7 +1457,7 @@ export default function RecipeModal() {
           opacity: floatingHeaderOpacity,
           zIndex: 19,
         }}
-        pointerEvents="none"
+        pointerEvents="box-none"
       >
         {Platform.OS === 'android' ? (
           <View
@@ -1426,11 +1466,17 @@ export default function RecipeModal() {
               paddingBottom: 12,
               paddingHorizontal: 16,
               backgroundColor: isDark ? 'rgba(15,15,15,0.95)' : 'rgba(250,247,244,0.95)',
+              flexDirection: 'row',
+              alignItems: 'center',
             }}
           >
+            <HapticTouchableOpacity onPress={() => router.back()} style={{ width: 32 }}>
+              <Ionicons name="chevron-back" size={22} color={isDark ? '#fff' : '#111'} />
+            </HapticTouchableOpacity>
             <Text
               numberOfLines={1}
               style={{
+                flex: 1,
                 textAlign: 'center',
                 fontSize: 16,
                 fontWeight: '600',
@@ -1439,6 +1485,7 @@ export default function RecipeModal() {
             >
               {recipe.title}
             </Text>
+            <View style={{ width: 32 }} />
           </View>
         ) : (
           <BlurView
@@ -1461,20 +1508,51 @@ export default function RecipeModal() {
               ]}
               pointerEvents="none"
             />
-            <Text
-              numberOfLines={1}
-              style={{
-                textAlign: 'center',
-                fontSize: 16,
-                fontWeight: '600',
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-              }}
-            >
-              {recipe.title}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <HapticTouchableOpacity onPress={() => router.back()} style={{ width: 32 }}>
+                <Ionicons name="chevron-back" size={22} color={isDark ? '#fff' : '#111'} />
+              </HapticTouchableOpacity>
+              <Text
+                numberOfLines={1}
+                style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                }}
+              >
+                {recipe.title}
+              </Text>
+              <View style={{ width: 32 }} />
+            </View>
           </BlurView>
         )}
       </Animated.View>
+
+      {/* Floating "Start Cooking" FAB — always visible at bottom */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          bottom: insets.bottom + 16,
+          left: 16,
+          right: 16,
+          zIndex: 25,
+        }}
+      >
+        <GradientButton
+          label="Start Cooking"
+          onPress={() => {
+            if (!recipe) return;
+            router.push({ pathname: '/cooking', params: { id: recipe.id } } as any);
+          }}
+          disabled={!recipe}
+          colors={GradientPresets.fire}
+          icon="flame-outline"
+          style={{ ...Shadows.LG }}
+        />
+      </View>
 
       {/* Action Buttons */}
       <View className="p-4" style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
@@ -1485,19 +1563,6 @@ export default function RecipeModal() {
           disabled={!recipe}
           colors={GradientPresets.premium}
           icon="restaurant"
-          style={{ marginBottom: 8 }}
-        />
-
-        {/* Start Cooking Button */}
-        <GradientButton
-          label="Start Cooking"
-          onPress={() => {
-            if (!recipe) return;
-            router.push({ pathname: '/cooking', params: { id: recipe.id } } as any);
-          }}
-          disabled={!recipe}
-          colors={GradientPresets.fire}
-          icon="flame-outline"
           style={{ marginBottom: 8 }}
         />
 
@@ -1652,76 +1717,78 @@ export default function RecipeModal() {
     </SafeAreaView>
     
     {/* Collection Picker Modal */}
-    <Modal
+    <BottomSheet
       visible={pickerVisible}
-      animationType="none"
-      transparent
-      onRequestClose={() => setPickerVisible(false)}
+      onClose={() => setPickerVisible(false)}
+      title="Save to Collection"
+      snapPoints={['50%', '70%']}
+      scrollable
     >
-      <Animated.View className="flex-1 bg-black/40 justify-center items-center px-4" style={{ opacity: pickerOpacity }}>
-        <Animated.View 
-          className="bg-white rounded-2xl p-4 w-full max-h-[70%]"
-          style={{
-            transform: [{ scale: pickerScale }],
-          }}
-        >
-          <Text className="text-lg font-semibold mb-3">Save to Collection</Text>
-          <ScrollView className="mb-3">
-              {collections.map((c) => (
-                <HapticTouchableOpacity
-                  key={c.id}
-                  onPress={() => {
-                    setSelectedCollectionIds(prev => 
-                      prev.includes(c.id) 
-                        ? prev.filter(id => id !== c.id)
-                        : [...prev, c.id]
-                    );
-                  }}
-                  className="flex-row items-center py-3 border-b border-gray-100"
-                >
-                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-orange-500 border-orange-500' : 'border-gray-300'}`}>
-                    {selectedCollectionIds.includes(c.id) && (
-                      <Ionicons name="checkmark" size={14} color="white" style={{ position: 'absolute', top: 1, left: 1 }} />
-                    )}
-                  </View>
-                  <Text className="text-gray-900 flex-1">{c.name}</Text>
-                </HapticTouchableOpacity>
-              ))}
-            {creatingCollection ? (
-              <View className="flex-row items-center py-3">
-                <TextInput
-                  value={newCollectionName}
-                  onChangeText={setNewCollectionName}
-                  placeholder="New collection name"
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
-                  placeholderTextColor="#9CA3AF"
-                />
-                <GradientButton
-                  label="Create"
-                  onPress={handleCreateCollection}
-                  colors={GradientPresets.brand}
-                  style={{ paddingVertical: 0, minWidth: 70 }}
-                />
-              </View>
-            ) : (
-              <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
-                <Text className="text-orange-600 font-medium">+ Create new collection</Text>
-              </HapticTouchableOpacity>
-            )}
-          </ScrollView>
-          <View className="flex-row justify-end space-x-3">
-            <HapticTouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
-              <Text className="text-gray-700">Cancel</Text>
-            </HapticTouchableOpacity>
+      <View style={{ paddingHorizontal: 16, paddingBottom: 24 }}>
+        {collections.map((c) => (
+          <HapticTouchableOpacity
+            key={c.id}
+            onPress={() => {
+              setSelectedCollectionIds(prev =>
+                prev.includes(c.id)
+                  ? prev.filter(id => id !== c.id)
+                  : [...prev, c.id]
+              );
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}
+          >
+            <View style={{
+              width: 22, height: 22, marginRight: 12, borderRadius: 6,
+              borderWidth: 1.5,
+              borderColor: selectedCollectionIds.includes(c.id) ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#4B5563' : '#D1D5DB'),
+              backgroundColor: selectedCollectionIds.includes(c.id) ? (isDark ? DarkColors.primary : Colors.primary) : 'transparent',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              {selectedCollectionIds.includes(c.id) && (
+                <Ionicons name="checkmark" size={14} color="white" />
+              )}
+            </View>
+            <Text style={{ flex: 1, fontSize: 16, color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{c.name}</Text>
+          </HapticTouchableOpacity>
+        ))}
+        {creatingCollection ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}>
+            <TextInput
+              value={newCollectionName}
+              onChangeText={setNewCollectionName}
+              placeholder="New collection name"
+              style={{
+                flex: 1, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#D1D5DB',
+                borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8,
+                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB',
+              }}
+              placeholderTextColor="#9CA3AF"
+            />
             <GradientButton
-              label="Save"
-              onPress={handleConfirmPicker}
-              style={{ paddingVertical: 10, paddingHorizontal: 16 }}
+              label="Create"
+              onPress={handleCreateCollection}
+              colors={GradientPresets.brand}
+              style={{ paddingVertical: 0, minWidth: 70 }}
             />
           </View>
-        </Animated.View>
-      </Animated.View>
-      </Modal>
+        ) : (
+          <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} style={{ paddingVertical: 14 }}>
+            <Text style={{ color: isDark ? DarkColors.primary : Colors.primary, fontWeight: '600', fontSize: 15 }}>+ Create new collection</Text>
+          </HapticTouchableOpacity>
+        )}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
+          <HapticTouchableOpacity onPress={() => setPickerVisible(false)} style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+            <Text style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Cancel</Text>
+          </HapticTouchableOpacity>
+          <GradientButton
+            label="Save"
+            onPress={handleConfirmPicker}
+            style={{ paddingVertical: 10, paddingHorizontal: 16 }}
+          />
+        </View>
+      </View>
+    </BottomSheet>
 
       {/* Healthify Results Modal */}
       <Modal

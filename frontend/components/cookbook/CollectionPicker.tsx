@@ -1,16 +1,16 @@
 // frontend/components/cookbook/CollectionPicker.tsx
 // Modal for selecting view mode and collection filter
 
-import { View, Text, ScrollView, Modal, Animated, Dimensions, Alert } from 'react-native';
+import { View, Text, ScrollView, Dimensions, Alert } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { useRef, useEffect, useState } from 'react';
+import { useState } from 'react';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BottomSheet from '../ui/BottomSheet';
 import CollectionCard from '../collection/CollectionCard';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
-import { Duration, Spring } from '../../constants/Animations';
 import type { Collection } from '../../types';
 
 export type CollectionSortMode = 'name' | 'count' | 'recent' | 'custom';
@@ -82,40 +82,6 @@ export default function CollectionPicker({
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      scaleAnim.setValue(0);
-      opacityAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          ...Spring.stiff,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: Duration.medium,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0,
-          duration: Duration.normal,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: Duration.normal,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
   const viewModes = [
     {
       mode: 'saved' as const,
@@ -181,38 +147,14 @@ export default function CollectionPicker({
   };
 
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
+      onClose={onClose}
+      title="Select View & Collection"
+      snapPoints={['60%', '80%']}
+      scrollable
     >
-      <Animated.View
-        className="flex-1 bg-black/50 justify-center items-center px-4"
-        style={{ opacity: opacityAnim }}
-      >
-        <HapticTouchableOpacity
-          activeOpacity={1}
-          onPress={onClose}
-          className="flex-1 w-full justify-center items-center"
-        >
-          <HapticTouchableOpacity
-            activeOpacity={1}
-            onPress={() => {
-              // Prevent closing the modal when tapping inside content
-            }}
-          >
-            <Animated.View
-              className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-sm shadow-lg"
-              style={{
-                transform: [{ scale: scaleAnim }],
-              }}
-            >
-              <View className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Select View & Collection</Text>
-              </View>
-
-              <ScrollView style={{ maxHeight: Dimensions.get('window').height * 0.5 }}>
+      <View style={{ paddingBottom: 24 }}>
                 {/* View Mode Options */}
                 <View className="px-2 pt-2">
                   <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-2">View Mode</Text>
@@ -330,7 +272,6 @@ export default function CollectionPicker({
                     </View>
                   </View>
                 </View>
-              </ScrollView>
 
               {/* Create New Collection Button */}
               <View className="p-4 border-t border-gray-200 dark:border-gray-700">
@@ -347,17 +288,7 @@ export default function CollectionPicker({
                 </HapticTouchableOpacity>
               </View>
 
-              {/* Close Button */}
-              <HapticTouchableOpacity
-                onPress={onClose}
-                className="px-4 py-3 border-t border-gray-200 dark:border-gray-700"
-              >
-                <Text className="text-gray-600 dark:text-gray-100 font-medium text-center">Close</Text>
-              </HapticTouchableOpacity>
-            </Animated.View>
-          </HapticTouchableOpacity>
-        </HapticTouchableOpacity>
-      </Animated.View>
-    </Modal>
+      </View>
+    </BottomSheet>
   );
 }

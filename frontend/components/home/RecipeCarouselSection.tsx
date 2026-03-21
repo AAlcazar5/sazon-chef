@@ -155,7 +155,7 @@ function RecipeCarouselSection({
           ref={scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
+          contentContainerStyle={{ paddingLeft: 16, paddingRight: 48 }}
           decelerationRate="fast"
           snapToInterval={CARD_STEP}
           snapToAlignment="start"

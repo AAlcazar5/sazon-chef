@@ -152,7 +152,15 @@ function RecipeSectionsGrid({
             </HapticTouchableOpacity>
 
             {/* Section Content */}
-            {!isCollapsed && (
+            {!isCollapsed && section.recipes.length === 0 && (
+              <View className="items-center py-6 px-4">
+                <Text className="text-3xl mb-2">{section.emoji}</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                  No recipes matched yet — check back soon!
+                </Text>
+              </View>
+            )}
+            {!isCollapsed && section.recipes.length > 0 && (
               <View>
                 {isQuickMeals || isMealPrep ? (
                   /* Carousel view for Quick Meals / Meal Prep */

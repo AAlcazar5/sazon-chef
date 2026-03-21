@@ -2,10 +2,84 @@
 // Ingredient checklist for cooking mode — with check-off, scaling, and serving counter
 
 import { View, Text, ScrollView } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors } from '../../constants/Colors';
+
+function IngredientRow({ index, isChecked, scaledText, onToggle }: {
+  index: number;
+  isChecked: boolean;
+  scaledText: string;
+  onToggle: (index: number) => void;
+}) {
+  const scale = useSharedValue(1);
+  const checkScale = useSharedValue(isChecked ? 1 : 0);
+
+  const handlePress = () => {
+    // Spring scale bounce on check
+    scale.value = withSequence(
+      withSpring(0.95, { damping: 12, stiffness: 400 }),
+      withSpring(1, { damping: 10, stiffness: 200 }),
+    );
+    if (!isChecked) {
+      checkScale.value = withSequence(
+        withSpring(1.3, { damping: 6, stiffness: 300 }),
+        withSpring(1, { damping: 10, stiffness: 200 }),
+      );
+    } else {
+      checkScale.value = withSpring(0, { damping: 12, stiffness: 200 });
+    }
+    onToggle(index);
+  };
+
+  const rowStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const checkStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+  }));
+
+  return (
+    <Animated.View style={rowStyle}>
+      <HapticTouchableOpacity
+        onPress={handlePress}
+        hapticStyle="light"
+        className="flex-row items-start py-2.5 gap-3"
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: isChecked }}
+      >
+        {/* Checkbox */}
+        <View
+          className="w-6 h-6 rounded-full border-2 items-center justify-center flex-shrink-0 mt-0.5"
+          style={{
+            borderColor: isChecked ? '#22C55E' : '#4B5563',
+            backgroundColor: isChecked ? '#22C55E' : 'transparent',
+          }}
+        >
+          {isChecked && (
+            <Animated.View style={checkStyle}>
+              <Icon name={Icons.CHECKMARK} size={14} color="white" />
+            </Animated.View>
+          )}
+        </View>
+
+        {/* Ingredient text */}
+        <Text
+          className="flex-1 text-base leading-6"
+          style={{
+            color: isChecked ? '#6B7280' : '#E5E7EB',
+            textDecorationLine: isChecked ? 'line-through' : 'none',
+          }}
+        >
+          {scaledText}
+        </Text>
+      </HapticTouchableOpacity>
+    </Animated.View>
+  );
+}
 
 interface IngredientChecklistProps {
   /** Ingredient text strings (e.g. "1 cup flour") */
@@ -74,38 +148,13 @@ export default function IngredientChecklist({
           const scaledText = scaleIngredientText(ingredient, ratio);
 
           return (
-            <HapticTouchableOpacity
+            <IngredientRow
               key={index}
-              onPress={() => onToggle(index)}
-              hapticStyle="light"
-              className="flex-row items-start py-2.5 gap-3"
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: isChecked }}
-            >
-              {/* Checkbox */}
-              <View
-                className="w-6 h-6 rounded-full border-2 items-center justify-center flex-shrink-0 mt-0.5"
-                style={{
-                  borderColor: isChecked ? '#22C55E' : '#4B5563',
-                  backgroundColor: isChecked ? '#22C55E' : 'transparent',
-                }}
-              >
-                {isChecked && (
-                  <Icon name={Icons.CHECKMARK} size={14} color="white" />
-                )}
-              </View>
-
-              {/* Ingredient text */}
-              <Text
-                className="flex-1 text-base leading-6"
-                style={{
-                  color: isChecked ? '#6B7280' : '#E5E7EB',
-                  textDecorationLine: isChecked ? 'line-through' : 'none',
-                }}
-              >
-                {scaledText}
-              </Text>
-            </HapticTouchableOpacity>
+              index={index}
+              isChecked={isChecked}
+              scaledText={scaledText}
+              onToggle={onToggle}
+            />
           );
         })}
       </ScrollView>

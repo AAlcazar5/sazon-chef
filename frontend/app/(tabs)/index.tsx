@@ -19,7 +19,7 @@ import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, FeaturedRecipeCarousel, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet } from '../../components/home';
+import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet } from '../../components/home';
 import type { DislikeReason } from '../../components/home';
 import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
@@ -47,7 +47,6 @@ import { useRecipeInteractions } from '../../hooks/useRecipeInteractions';
 import { useRecipeFilters } from '../../hooks/useRecipeFilters';
 import { useCollectionSave } from '../../hooks/useCollectionSave';
 import { useQuickMeals } from '../../hooks/useQuickMeals';
-import { usePerfectMatches } from '../../hooks/usePerfectMatches';
 import { usePersonalizedRecipes } from '../../hooks/usePersonalizedRecipes';
 import { useCollapsibleSections } from '../../hooks/useCollapsibleSections';
 import { useRecipeActions } from '../../hooks/useRecipeActions';
@@ -153,7 +152,6 @@ export default function HomeScreen() {
   const { setCurrentPage, setTotalRecipes, setPaginationLoading } = pagination;
 
   // Featured recipe swipe state (cycle through top 3)
-  const [featuredRecipeIndex, setFeaturedRecipeIndex] = useState(0);
   
   // Section collapse state - using extracted hook
   const { collapsedSections, toggleSection } = useCollapsibleSections();
@@ -166,7 +164,6 @@ export default function HomeScreen() {
 
   // Personalized sections state - using extracted hook
   const {
-    likedRecipes,
     recentlyViewedIds: recentlyViewedRecipes,
     loading: loadingPersonalized,
     addRecentlyViewed,
@@ -187,8 +184,6 @@ export default function HomeScreen() {
   });
   const {
     showModal: showRandomModal,
-    buttonScale: randomButtonScale,
-    buttonOpacity: randomButtonOpacity,
     generateRandomRecipe: handleRandomRecipe,
     closeModal: closeRandomModal,
   } = randomRecipe;
@@ -317,26 +312,6 @@ export default function HomeScreen() {
     fetch: fetchQuickMeals,
     setCurrentIndex: setQuickMealsCurrentIndex,
   } = quickMeals;
-
-  // Perfect matches hook (≥85% match) - using extracted hook
-  const perfectMatches = usePerfectMatches({
-    filters: {
-      cuisines: filters.cuisines,
-      dietaryRestrictions: filters.dietaryRestrictions,
-      maxCookTime: filters.maxCookTime,
-      mealPrepMode,
-    },
-    enabled: filtersLoaded && !searchQuery,
-    initialData: homeFeed.perfectMatches,
-  });
-  const {
-    recipes: perfectMatchRecipes,
-    currentIndex: perfectMatchCurrentIndex,
-    refreshing: refreshingPerfectMatches,
-    scrollViewRef: perfectMatchScrollViewRef,
-    fetch: fetchPerfectMatches,
-    setCurrentIndex: setPerfectMatchCurrentIndex,
-  } = perfectMatches;
 
   // Time-aware suggestions toggle (Home Page 2.0) - using extracted hook
   const { timeAwareMode, setTimeAwareMode, toggleTimeAwareMode, currentMealPeriod, isLoaded: timeAwareLoaded } = useTimeAwareMode();
@@ -561,7 +536,7 @@ export default function HomeScreen() {
   // Set up ref for random recipe hook's onRefresh callback
   onRefreshRef.current = onRefresh;
 
-  // Re-fetch entire home feed when filters change so ALL sections (Quick Meals, Perfect Matches,
+  // Re-fetch entire home feed when filters change so ALL sections (Quick Meals,
   // Liked Recipes, Recipe of the Day) reflect the active filters — not just the main grid.
   const homeFeedFilterKeyRef = useRef<string>('');
   const homeFeedDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -755,11 +730,11 @@ export default function HomeScreen() {
   const recipeSections = useMemo(() => {
     return groupRecipesIntoSections(suggestedRecipes, {
       quickMealsRecipes,
-      perfectMatchRecipes,
+      perfectMatchRecipes: [],
       mealPrepMode,
       searchQuery,
     });
-  }, [suggestedRecipes, quickMealsRecipes, perfectMatchRecipes, mealPrepMode, searchQuery]);
+  }, [suggestedRecipes, quickMealsRecipes, mealPrepMode, searchQuery]);
 
   // Loading state with skeleton loaders
   if ((loading || initialLoading) && suggestedRecipes.length === 0) {
@@ -820,6 +795,7 @@ export default function HomeScreen() {
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
         onFilterPress={handleFilterPress}
         activeFilterCount={activeFilters.length + (mealPrepMode ? 1 : 0)}
+        onSurpriseMe={handleRandomRecipe}
       />
 
       {/* Main content area */}
@@ -837,7 +813,7 @@ export default function HomeScreen() {
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
 
-        {/* Parallax Hero — Recipe of the Day (full-bleed, image scrolls slower than content) */}
+        {/* Parallax Hero — Recipe of the Day with match %, macros */}
         {recipeOfTheDay && !searchQuery && !mealPrepMode ? (
           <ParallaxHeroSection
             recipe={recipeOfTheDay}
@@ -853,26 +829,6 @@ export default function HomeScreen() {
         ) : (
           /* Spacer when hero is not shown */
           <View style={{ height: Spacing.xl }} />
-        )}
-
-        {/* Today's Recommendation / Featured Recipe - First section after filters */}
-        {(!searchQuery || searchQuery.trim().length === 0) && (
-          <FeaturedRecipeCarousel
-            recipes={suggestedRecipes}
-            currentIndex={featuredRecipeIndex}
-            onIndexChange={setFeaturedRecipeIndex}
-            mealPrepMode={mealPrepMode}
-            randomButtonScale={randomButtonScale}
-            randomButtonOpacity={randomButtonOpacity}
-            onRandomRecipe={handleRandomRecipe}
-            userFeedback={userFeedback}
-            feedbackLoading={feedbackLoading}
-            onLike={handleLike}
-            onDislike={handleShowDislikeSheet}
-            onRecipePress={handleRecipePress}
-            onLongPress={handleLongPress}
-            onSave={openSavePicker}
-          />
         )}
 
         {/* Contextual Recipe Sections */}
@@ -909,69 +865,6 @@ export default function HomeScreen() {
         {/* Personalized Sections - Moved to bottom after Recipes for You */}
         {user?.id && (
           <>
-            {/* Your Favorites Section */}
-            {(likedRecipes.length > 0 || loading) && (
-              <RecipeCarouselSection
-                title="Your Favorites"
-                subtitle={`${likedRecipes.length} recipe${likedRecipes.length !== 1 ? 's' : ''} you've liked`}
-                emoji="❤️"
-                recipes={likedRecipes}
-                isLoading={loading}
-                isCollapsed={collapsedSections['your-favorites']}
-                onToggleCollapse={() => toggleSection('your-favorites')}
-                isDark={isDark}
-                userFeedback={userFeedback}
-                feedbackLoading={feedbackLoading}
-                onRecipePress={handleRecipePress}
-                onRecipeLongPress={handleLongPress}
-                onLike={handleLike}
-                onDislike={handleShowDislikeSheet}
-                onSave={openSavePicker}
-              />
-            )}
-
-            {/* Perfect Match for You Section */}
-            {(() => {
-              const perfectMatchSection = recipeSections.find(s => s.key === 'perfect-match');
-              if (!perfectMatchSection && !loading) return null;
-
-              return (
-                <RecipeCarouselSection
-                  title={perfectMatchSection?.title || 'Perfect Match'}
-                  emoji={perfectMatchSection?.emoji || '🎯'}
-                  recipes={perfectMatchSection?.recipes || []}
-                  isLoading={loading}
-                  isCollapsed={collapsedSections['perfect-match']}
-                  onToggleCollapse={() => toggleSection('perfect-match')}
-                  isDark={isDark}
-                  userFeedback={userFeedback}
-                  feedbackLoading={feedbackLoading}
-                  onRecipePress={handleRecipePress}
-                  onRecipeLongPress={handleLongPress}
-                  onLike={handleLike}
-                  onDislike={handleShowDislikeSheet}
-                  onSave={openSavePicker}
-                  scrollRef={perfectMatchScrollViewRef}
-                  onScroll={(event) => {
-                    const { contentOffset } = event.nativeEvent;
-                    const cardWidth = 280 + 12;
-                    const currentIndex = Math.round(contentOffset.x / cardWidth);
-                    setPerfectMatchCurrentIndex(currentIndex);
-                  }}
-                  onMomentumScrollEnd={(event) => {
-                    const { contentOffset } = event.nativeEvent;
-                    const cardWidth = 280 + 12;
-                    const currentIndex = Math.round(contentOffset.x / cardWidth);
-                    setPerfectMatchCurrentIndex(currentIndex);
-                  }}
-                  showRefreshPrompt={!!perfectMatchSection && perfectMatchCurrentIndex >= perfectMatchSection.recipes.length - 1 && perfectMatchSection.recipes.length >= 5}
-                  refreshing={refreshingPerfectMatches}
-                  onRefresh={() => fetchPerfectMatches(true)}
-                  refreshPromptText="Swipe to refresh and get new perfect matches"
-                />
-              );
-            })()}
-
             {/* Great for Meal Prep Section */}
             {(() => {
               const mealPrepSection = recipeSections.find(s => s.key === 'meal-prep');

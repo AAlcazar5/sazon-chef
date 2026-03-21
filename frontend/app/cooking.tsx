@@ -10,7 +10,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
@@ -87,6 +87,7 @@ export default function CookingScreen() {
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
   const [servings, setServings] = useState(1);
   const [done, setDone] = useState(false);
+  const [stepCheckVisible, setStepCheckVisible] = useState(false);
 
   // Timer state
   const [timers, setTimers] = useState<CookingTimer[]>([]);
@@ -96,6 +97,19 @@ export default function CookingScreen() {
   const startTimeRef = useRef<number>(Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [nextMealName, setNextMealName] = useState<string | null>(null);
+
+  // Hide tab bar while cooking for full immersion
+  const navigation = useNavigation();
+  useEffect(() => {
+    const parent = navigation.getParent?.();
+    parent?.setOptions?.({ tabBarStyle: { display: 'none' } });
+    return () => {
+      parent?.setOptions?.({ tabBarStyle: undefined });
+    };
+  }, [navigation]);
+
+  // Step scale animation for spring entrance
+  const stepScale = useRef(new Animated.Value(1)).current;
 
   // Slide animation for step transitions
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -174,11 +188,21 @@ export default function CookingScreen() {
   function goNext() {
     if (!recipe) return;
     if (currentStep < recipe.instructions.length - 1) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Animated.timing(slideAnim, { toValue: -1, duration: 120, useNativeDriver: true }).start(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Flash step completion checkmark
+      setStepCheckVisible(true);
+      setTimeout(() => setStepCheckVisible(false), 400);
+      // Cross-fade with spring scale (0.95 → 1.0)
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: -1, duration: 120, useNativeDriver: true }),
+        Animated.timing(stepScale, { toValue: 0.95, duration: 120, useNativeDriver: true }),
+      ]).start(() => {
         setCurrentStep((s) => s + 1);
         slideAnim.setValue(1);
-        Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }).start();
+        Animated.parallel([
+          Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }),
+          Animated.spring(stepScale, { toValue: 1, friction: 8, tension: 80, useNativeDriver: true }),
+        ]).start();
       });
     } else {
       handleDone();
@@ -188,10 +212,16 @@ export default function CookingScreen() {
   function goPrev() {
     if (currentStep > 0) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Animated.timing(slideAnim, { toValue: 1, duration: 120, useNativeDriver: true }).start(() => {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+        Animated.timing(stepScale, { toValue: 0.95, duration: 120, useNativeDriver: true }),
+      ]).start(() => {
         setCurrentStep((s) => s - 1);
         slideAnim.setValue(-1);
-        Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }).start();
+        Animated.parallel([
+          Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }),
+          Animated.spring(stepScale, { toValue: 1, friction: 8, tension: 80, useNativeDriver: true }),
+        ]).start();
       });
     }
   }
@@ -350,8 +380,15 @@ export default function CookingScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-950">
-      <StatusBar barStyle="light-content" backgroundColor="#030712" />
+    <View className="flex-1">
+      {/* Subtle dark gradient to reduce eye strain during cooking */}
+      <LinearGradient
+        colors={['#0A0A0F', '#111118', '#0D0D14']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
 
         {/* Progress bar */}
@@ -409,6 +446,7 @@ export default function CookingScreen() {
                       outputRange: [-40, 0, 40],
                     }),
                   },
+                  { scale: stepScale },
                 ],
                 opacity: slideAnim.interpolate({
                   inputRange: [-1, -0.5, 0, 0.5, 1],
@@ -416,6 +454,22 @@ export default function CookingScreen() {
                 }),
               }}
             >
+              {/* Step completion checkmark flash */}
+              {stepCheckVisible && (
+                <View style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                  alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                }}>
+                  <View style={{
+                    width: 64, height: 64, borderRadius: 32,
+                    backgroundColor: 'rgba(34,197,94,0.2)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
+                  </View>
+                </View>
+              )}
+
               {/* Step label */}
               <Text className="text-orange-400 text-sm font-semibold uppercase tracking-widest mb-4">
                 Step {currentStep + 1}
