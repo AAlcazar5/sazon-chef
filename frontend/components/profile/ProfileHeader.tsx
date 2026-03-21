@@ -1,10 +1,10 @@
 // frontend/components/profile/ProfileHeader.tsx
 // Profile header with avatar, name, email, and edit name modal
 
-import { View, Text, Modal, TextInput, Image, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TextInput, Image, ActivityIndicator, Animated } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import FrostedHeader from '../ui/FrostedHeader';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Icon from '../ui/Icon';
 import AnimatedStatCounter from '../ui/AnimatedStatCounter';
 import ShimmerBadge from '../ui/ShimmerBadge';
@@ -27,6 +27,8 @@ interface ProfileHeaderProps {
   };
   /** Show the shimmer premium badge */
   isPremium?: boolean;
+  /** Scroll Y value for stats parallax effect */
+  scrollY?: Animated.Value;
 }
 
 export default function ProfileHeader({
@@ -37,12 +39,35 @@ export default function ProfileHeader({
   onSaveName,
   stats,
   isPremium = false,
+  scrollY,
 }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const flameOpacity = useRef(new Animated.Value(1)).current;
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [updatingName, setUpdatingName] = useState(false);
+
+  // Subtle pulsing flame animation for streak indicator
+  useEffect(() => {
+    if (!stats?.mealHistory) return;
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(flameOpacity, {
+          toValue: 0.5,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(flameOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [stats?.mealHistory, flameOpacity]);
 
   const handleEditName = () => {
     setEditingName(profile.name);
@@ -108,9 +133,25 @@ export default function ProfileHeader({
           {isPremium && <ShimmerBadge label="✦ Premium" testID="premium-badge" />}
           <Text className="text-gray-500 dark:text-gray-200">{profile.email}</Text>
 
-          {/* Animated stats strip */}
+          {/* Animated stats strip — parallax: moves at 0.5x scroll speed */}
           {stats && (
-            <View className="flex-row mt-4 gap-6">
+            <Animated.View
+              className="flex-row mt-4 gap-6"
+              style={scrollY ? {
+                transform: [{
+                  translateY: scrollY.interpolate({
+                    inputRange: [0, 120],
+                    outputRange: [0, -12],
+                    extrapolate: 'clamp',
+                  }),
+                }],
+                opacity: scrollY.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: [1, 0.6],
+                  extrapolate: 'clamp',
+                }),
+              } : undefined}
+            >
               <View className="items-center">
                 <AnimatedStatCounter
                   value={stats.savedRecipes}
@@ -126,7 +167,12 @@ export default function ProfileHeader({
                   style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
                   testID="stat-meals-cooked"
                 />
-                <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Cooked</Text>
+                <View className="flex-row items-center mt-0.5">
+                  <Text className="text-xs text-gray-500 dark:text-gray-400">Cooked</Text>
+                  {stats.mealHistory > 0 && (
+                    <Animated.Text style={{ opacity: flameOpacity, fontSize: 10, marginLeft: 2 }}>🔥</Animated.Text>
+                  )}
+                </View>
               </View>
               <View style={{ width: 1, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />
               <View className="items-center">
@@ -137,7 +183,7 @@ export default function ProfileHeader({
                 />
                 <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Meal Plans</Text>
               </View>
-            </View>
+            </Animated.View>
           )}
         </View>
       </FrostedHeader>

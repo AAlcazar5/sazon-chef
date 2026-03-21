@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput, Animated, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TextInput, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import HapticTouchableOpacity from './HapticTouchableOpacity';
 import { useColorScheme } from 'nativewind';
 import { Colors, DarkColors } from '../../constants/Colors';
 
@@ -120,13 +121,13 @@ export default function AnimatedSearchBar({
             returnKeyType="search"
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
+            <HapticTouchableOpacity onPress={handleClear} style={styles.clearButton} hapticStyle="light" pressedScale={0.9}>
               <Ionicons
                 name="close-circle"
                 size={20}
                 color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'}
               />
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           )}
         </Animated.View>
       </View>

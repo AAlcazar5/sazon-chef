@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, Animated, Share, Alert } from 'react-native';
+import { View, Text, Modal, Pressable, Animated, Share, Alert } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
@@ -159,8 +159,7 @@ export default function RecipeActionMenu({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <TouchableOpacity
-        activeOpacity={1}
+      <Pressable
         onPress={onClose}
         className="flex-1 bg-black/50 justify-end"
       >
@@ -265,7 +264,7 @@ export default function RecipeActionMenu({
             </HapticTouchableOpacity>
           </View>
         </Animated.View>
-      </TouchableOpacity>
+      </Pressable>
     </Modal>
   );
 }

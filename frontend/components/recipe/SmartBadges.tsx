@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, Animated } from 'react-native';
+import { View, Text, Pressable, Modal, Animated } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
@@ -276,8 +276,7 @@ function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBad
         animationType="fade"
         onRequestClose={() => setShowMoreMenu(false)}
       >
-        <TouchableOpacity
-          activeOpacity={1}
+        <Pressable
           onPress={() => setShowMoreMenu(false)}
           className="flex-1 bg-black/50 justify-center items-center px-4"
         >
@@ -313,7 +312,7 @@ function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBad
               ))}
             </View>
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </Modal>
 
       {/* Tooltip Modal */}
@@ -324,8 +323,7 @@ function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBad
           animationType="fade"
           onRequestClose={hideTooltip}
         >
-          <TouchableOpacity
-            activeOpacity={1}
+          <Pressable
             onPress={hideTooltip}
             className="flex-1 justify-center items-center px-4"
           >
@@ -352,7 +350,7 @@ function SmartBadges({ recipe, maxVisible = 3, variant = 'list', showOnlyInfoBad
                 </Text>
               </View>
             </Animated.View>
-          </TouchableOpacity>
+          </Pressable>
         </Modal>
       )}
     </>

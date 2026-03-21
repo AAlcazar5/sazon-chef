@@ -5,10 +5,55 @@ import { View, Text, ScrollView, Animated } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import Svg, { Circle } from 'react-native-svg';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import { formatCountdown } from '../../utils/timerExtraction';
+
+// Animated circular progress ring for cooking timers
+function TimerRing({ progress, size = 56, strokeWidth = 3, color = '#F97316', children }: {
+  progress: number; // 0 to 1
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  children?: React.ReactNode;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', width: size, height: size, transform: [{ rotate: '-90deg' }] }}>
+        <Svg width={size} height={size}>
+          {/* Background circle */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="rgba(255,255,255,0.1)"
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
+          {/* Progress arc */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+          />
+        </Svg>
+      </View>
+      {children}
+    </View>
+  );
+}
 
 export interface CookingTimer {
   id: string;
@@ -172,32 +217,27 @@ function TimerCard({ timer, onToggle, onDismiss }: TimerCardProps) {
         {timer.label}
       </Text>
 
-      {/* Countdown or Done */}
+      {/* Countdown with circular progress ring, or Done */}
       {timer.completed ? (
         <Text className="text-2xl">✅</Text>
       ) : (
-        <Text
-          className="text-xl font-bold font-mono"
-          style={{ color: timer.remainingSeconds <= 60 && timer.running ? '#FCA5A5' : '#FFFFFF' }}
+        <TimerRing
+          progress={progress}
+          size={56}
+          strokeWidth={3}
+          color={
+            timer.running
+              ? timer.remainingSeconds <= 60 ? '#EF4444' : '#F97316'
+              : '#6B7280'
+          }
         >
-          {formatCountdown(timer.remainingSeconds)}
-        </Text>
-      )}
-
-      {/* Progress bar */}
-      {/* Animated progress bar */}
-      {!timer.completed && (
-        <View className="w-full h-1.5 bg-gray-600 rounded-full mt-2 overflow-hidden">
-          <Animated.View
-            className="h-full rounded-full"
-            style={{
-              width: progressAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
-              backgroundColor: timer.running
-                ? timer.remainingSeconds <= 60 ? '#EF4444' : '#F97316'
-                : '#6B7280',
-            }}
-          />
-        </View>
+          <Text
+            className="text-sm font-bold font-mono"
+            style={{ color: timer.remainingSeconds <= 60 && timer.running ? '#FCA5A5' : '#FFFFFF' }}
+          >
+            {formatCountdown(timer.remainingSeconds)}
+          </Text>
+        </TimerRing>
       )}
 
       {/* Controls */}

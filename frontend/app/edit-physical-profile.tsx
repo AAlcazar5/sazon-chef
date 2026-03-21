@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, Alert, ScrollView } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { router } from 'expo-router';

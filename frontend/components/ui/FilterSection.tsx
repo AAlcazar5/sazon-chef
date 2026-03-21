@@ -1,14 +1,15 @@
 // frontend/components/ui/FilterSection.tsx
 // Collapsible section wrapper for filter sheets — icon + title + count badge + animated expand/collapse
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import HapticTouchableOpacity from './HapticTouchableOpacity';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -62,7 +63,7 @@ export default function FilterSection({
   return (
     <View style={styles.container}>
       {/* Header row — tappable to collapse/expand */}
-      <Pressable onPress={toggleExpand} style={styles.header}>
+      <HapticTouchableOpacity onPress={toggleExpand} style={styles.header} hapticStyle="light" pressedScale={0.98} scaleOnPress>
         <View style={styles.headerLeft}>
           {icon && (
             <Ionicons
@@ -95,7 +96,7 @@ export default function FilterSection({
             color={colors.text.tertiary}
           />
         </Animated.View>
-      </Pressable>
+      </HapticTouchableOpacity>
 
       {/* Divider */}
       <View

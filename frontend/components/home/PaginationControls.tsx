@@ -2,9 +2,10 @@ import React from 'react';
 // frontend/components/home/PaginationControls.tsx
 // Pagination controls for recipe lists
 
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -65,10 +66,10 @@ function PaginationControls({
 
       <View className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
         {/* Previous Button */}
-        <TouchableOpacity
+        <HapticTouchableOpacity
           onPress={onPrevPage}
           disabled={paginationInfo.isFirstPage || isLoading}
-          activeOpacity={0.7}
+          hapticStyle="light"
           style={{
             paddingHorizontal: 16,
             paddingVertical: 8,
@@ -115,7 +116,7 @@ function PaginationControls({
           >
             Previous
           </Text>
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
 
         {/* Page Indicator */}
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -132,10 +133,10 @@ function PaginationControls({
         </View>
 
         {/* Next Button */}
-        <TouchableOpacity
+        <HapticTouchableOpacity
           onPress={onNextPage}
           disabled={paginationInfo.isLastPage || isLoading}
-          activeOpacity={0.7}
+          hapticStyle="light"
           style={{
             paddingHorizontal: 16,
             paddingVertical: 8,
@@ -182,7 +183,7 @@ function PaginationControls({
             }
             accessibilityLabel="Next page"
           />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </View>
     </View>
   );

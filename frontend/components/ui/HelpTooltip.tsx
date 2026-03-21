@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, Modal, Pressable, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
@@ -85,8 +85,7 @@ export default function HelpTooltip({
         className="flex-1 bg-black/50"
         edges={['top', 'bottom']}
       >
-        <TouchableOpacity
-          activeOpacity={1}
+        <Pressable
           onPress={handleDismiss}
           className="flex-1"
         >
@@ -94,8 +93,7 @@ export default function HelpTooltip({
             style={{ opacity: fadeAnim }}
             className="flex-1 justify-center px-4"
           >
-            <TouchableOpacity
-              activeOpacity={1}
+            <Pressable
               onPress={(e) => e.stopPropagation()}
               className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700"
             >
@@ -148,9 +146,9 @@ export default function HelpTooltip({
                   </Text>
                 </HapticTouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           </Animated.View>
-        </TouchableOpacity>
+        </Pressable>
       </SafeAreaView>
     </Modal>
   );

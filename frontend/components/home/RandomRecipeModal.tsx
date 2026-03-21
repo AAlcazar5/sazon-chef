@@ -2,8 +2,9 @@
 // Modal shown while generating a random recipe
 
 import React from 'react';
-import { View, Modal } from 'react-native';
+import { View, Modal, Animated } from 'react-native';
 import LoadingState from '../ui/LoadingState';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 import { HomeLoadingStates } from '../../constants/LoadingStates';
 import { BorderRadius } from '../../constants/Spacing';
 import { Spacing } from '../../constants/Spacing';
@@ -20,6 +21,8 @@ function RandomRecipeModal({
   isDark,
   onClose,
 }: RandomRecipeModalProps) {
+  const { contentStyle } = useModalAnimation(visible);
+
   return (
     <Modal
       visible={visible}
@@ -33,16 +36,16 @@ function RandomRecipeModal({
         justifyContent: 'center',
         alignItems: 'center'
       }}>
-        <View style={{
+        <Animated.View style={[{
           backgroundColor: isDark ? DarkElevation.dp16 : '#FFFFFF',
           borderRadius: BorderRadius.lg,
           padding: Spacing.xl,
           margin: Spacing.xl,
           maxWidth: 300,
           alignItems: 'center'
-        }}>
+        }, contentStyle]}>
           <LoadingState config={HomeLoadingStates.generatingRecipe} />
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

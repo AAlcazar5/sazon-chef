@@ -3,7 +3,7 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 // Results screen for food recognition
 
-import { View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Image } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

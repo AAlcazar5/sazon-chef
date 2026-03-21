@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Linking } from 'react-native';
+import { useState, useRef } from 'react';
+import { View, Text, ScrollView, Linking, Animated } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SettingsRow from '../../components/ui/SettingsRow';
+import StaggerItem from '../../components/ui/StaggerItem';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from '../../components/ui/Icon';
@@ -36,6 +37,8 @@ export default function ProfileScreen() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [showCancellationFlow, setShowCancellationFlow] = useState(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const {
     profile, physicalProfile, macroGoals, preferences, budgetSettings,
@@ -138,55 +141,84 @@ export default function ProfileScreen() {
           mealHistory: dataStats.mealHistory,
           mealPlans: dataStats.mealPlans,
         } : undefined}
+        scrollY={scrollY}
       />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}>
-        <AppearanceSection />
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
+        <StaggerItem index={0}>
+          <AppearanceSection />
+        </StaggerItem>
 
-        <ProfileCompletionCard profileCompletion={profileCompletion} />
+        <StaggerItem index={1}>
+          <ProfileCompletionCard profileCompletion={profileCompletion} />
+        </StaggerItem>
 
-        <PhysicalProfileCard physicalProfile={physicalProfile} />
+        <StaggerItem index={2}>
+          <PhysicalProfileCard physicalProfile={physicalProfile} />
+        </StaggerItem>
 
-        <WeightHistoryCard
-          physicalProfile={physicalProfile}
-          weightHistory={weightHistory}
-          weightHistoryLoading={weightHistoryLoading}
-        />
+        <StaggerItem index={3}>
+          <WeightHistoryCard
+            physicalProfile={physicalProfile}
+            weightHistory={weightHistory}
+            weightHistoryLoading={weightHistoryLoading}
+          />
+        </StaggerItem>
 
-        <MacroGoalsCard profile={profile} macroGoals={macroGoals} />
+        <StaggerItem index={4}>
+          <MacroGoalsCard profile={profile} macroGoals={macroGoals} />
+        </StaggerItem>
 
-        <ProfilePresetsCard
-          presets={presets}
-          presetsLoading={presetsLoading}
-          onSavePreset={handleSavePreset}
-          onApplyPreset={handleApplyPreset}
-          onDeletePreset={handleDeletePreset}
-        />
+        <StaggerItem index={5}>
+          <ProfilePresetsCard
+            presets={presets}
+            presetsLoading={presetsLoading}
+            onSavePreset={handleSavePreset}
+            onApplyPreset={handleApplyPreset}
+            onDeletePreset={handleDeletePreset}
+          />
+        </StaggerItem>
 
-        <CulinaryPreferencesCard
-          profile={profile}
-          preferences={preferences}
-        />
+        <StaggerItem index={6}>
+          <CulinaryPreferencesCard
+            profile={profile}
+            preferences={preferences}
+          />
+        </StaggerItem>
 
-        <BudgetCard budgetSettings={budgetSettings} />
+        <StaggerItem index={7}>
+          <BudgetCard budgetSettings={budgetSettings} />
+        </StaggerItem>
 
-        <NotificationsCard
-          notifications={notifications}
-          updatingNotification={updatingNotification}
-          onToggleNotification={toggleNotification}
-          onSaveMealReminderTime={handleSaveMealReminderTime}
-          onRemoveMealReminderTime={handleRemoveMealReminderTime}
-        />
+        <StaggerItem index={8}>
+          <NotificationsCard
+            notifications={notifications}
+            updatingNotification={updatingNotification}
+            onToggleNotification={toggleNotification}
+            onSaveMealReminderTime={handleSaveMealReminderTime}
+            onRemoveMealReminderTime={handleRemoveMealReminderTime}
+          />
+        </StaggerItem>
 
-        <DataPrivacyCard
-          dataStats={dataStats}
-          privacySettings={privacySettings}
-          updatingPrivacySetting={updatingPrivacySetting}
-          exportingData={exportingData}
-          onUpdatePrivacySetting={updatePrivacySetting}
-          onExportData={handleExportData}
-          onConfirmClearHistory={handleConfirmClearHistory}
-        />
+        <StaggerItem index={9}>
+          <DataPrivacyCard
+            dataStats={dataStats}
+            privacySettings={privacySettings}
+            updatingPrivacySetting={updatingPrivacySetting}
+            exportingData={exportingData}
+            onUpdatePrivacySetting={updatePrivacySetting}
+            onExportData={handleExportData}
+            onConfirmClearHistory={handleConfirmClearHistory}
+          />
+        </StaggerItem>
 
         {/* Support Sazon row — always visible for free-tier users */}
         {!subscription.isPremium && (

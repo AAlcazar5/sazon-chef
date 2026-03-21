@@ -19,6 +19,7 @@ import { CookbookEmptyStates } from '../../constants/EmptyStates';
 import { CookbookLoadingStates } from '../../constants/LoadingStates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
+import { HeartBurstAnimation } from '../../components/celebrations';
 import Toast, { ToastType } from '../../components/ui/Toast';
 
 // Extracted cookbook components
@@ -68,6 +69,9 @@ export default function CookbookScreen() {
   const [selectedListId, setSelectedListId] = useState<string | null>(null); // null = "Saved" (All)
   const [searchQuery, setSearchQuery] = useState<string>('');
   
+  // Heart burst animation on save
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
   // Collection save picker state
   const [savePickerVisible, setSavePickerVisible] = useState(false);
   const [savePickerRecipeId, setSavePickerRecipeId] = useState<string | null>(null);
@@ -836,6 +840,8 @@ export default function CookbookScreen() {
       setSavePickerRecipeId(null);
       setSavePickerCollectionIds([]);
       HapticPatterns.success();
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 1200);
       showToast('Recipe saved to cookbook!', 'success');
 
       // Refresh recipes if in saved view
@@ -1449,6 +1455,9 @@ export default function CookbookScreen() {
           setNeedsRefresh(true);
         }}
       />
+
+      {/* Heart burst animation on save */}
+      {savedSuccess && <HeartBurstAnimation saved={true} />}
 
       {/* Toast feedback (P4: inline instead of Alert.alert) */}
       <Toast

@@ -2,13 +2,14 @@
 // Modal for merging multiple collections into one
 
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, Modal, Dimensions, ScrollView } from 'react-native';
+import { View, Text, Modal, Dimensions, ScrollView, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 import type { Collection } from '../../types';
 
 interface MergeCollectionsModalProps {
@@ -26,6 +27,7 @@ export default function MergeCollectionsModal({
 }: MergeCollectionsModalProps) {
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
+  const { contentStyle } = useModalAnimation(visible);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [targetId, setTargetId] = useState<string | null>(null);
@@ -70,13 +72,16 @@ export default function MergeCollectionsModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-        <View
+        <Animated.View
           className="mx-6 rounded-2xl overflow-hidden"
-          style={{
-            backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-            width: Dimensions.get('window').width - 48,
-            maxHeight: Dimensions.get('window').height * 0.7,
-          }}
+          style={[
+            {
+              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+              width: Dimensions.get('window').width - 48,
+              maxHeight: Dimensions.get('window').height * 0.7,
+            },
+            contentStyle,
+          ]}
         >
           {/* Header */}
           <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -205,7 +210,7 @@ export default function MergeCollectionsModal({
               </HapticTouchableOpacity>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

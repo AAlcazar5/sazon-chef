@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  useReducedMotion,
 } from 'react-native-reanimated';
 import { ImpactStyle, HapticPatterns } from '../../constants/Haptics';
 
@@ -36,19 +37,22 @@ export default function HapticTouchableOpacity({
   ...props
 }: HapticTouchableOpacityProps) {
   const scale = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
+  const shouldAnimate = scaleOnPress && !disabled && !reducedMotion;
+
   const handlePressIn = () => {
-    if (scaleOnPress && !disabled) {
+    if (shouldAnimate) {
       scale.value = withSpring(pressedScale, { damping: 20, stiffness: 400 });
     }
   };
 
   const handlePressOut = () => {
-    if (scaleOnPress && !disabled) {
+    if (shouldAnimate) {
       scale.value = withSpring(1, { damping: 14, stiffness: 300 });
     }
   };
