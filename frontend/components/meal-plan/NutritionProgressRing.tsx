@@ -1,8 +1,9 @@
 // frontend/components/meal-plan/NutritionProgressRing.tsx
 // Circular progress ring for a single nutrition goal (calories, protein, carbs, fat)
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, Easing } from 'react-native-reanimated';
 import { Colors, DarkColors } from '../../constants/Colors';
 
 interface NutritionProgressRingProps {
@@ -36,11 +37,29 @@ export default function NutritionProgressRing({
   const ringWidth = Math.round(size * 0.1);
   const resolvedTrack = trackColor ?? (isDark ? '#374151' : '#E5E7EB');
 
+  // Animate fill opacity from 0 → target on mount
+  const fillOpacity = useSharedValue(0);
+  const scaleVal = useSharedValue(0.85);
+
+  useEffect(() => {
+    const targetOpacity = clamped > 0 ? clamped / 100 + 0.15 : 0;
+    fillOpacity.value = withDelay(200, withTiming(targetOpacity, { duration: 600, easing: Easing.out(Easing.cubic) }));
+    scaleVal.value = withDelay(100, withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) }));
+  }, [clamped]);
+
+  const fillAnimStyle = useAnimatedStyle(() => ({
+    opacity: fillOpacity.value,
+  }));
+
+  const ringAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleVal.value }],
+  }));
+
   return (
     <View style={{ alignItems: 'center' }}>
-      <View
+      <Animated.View
         testID="nutrition-progress-ring"
-        style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+        style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, ringAnimStyle]}
       >
         {/* Background track */}
         <View
@@ -54,17 +73,16 @@ export default function NutritionProgressRing({
           }}
         />
         {/* Filled arc — simplified as a full ring at reduced opacity for 0 progress */}
-        <View
+        <Animated.View
           testID="progress-fill"
-          style={{
+          style={[{
             position: 'absolute',
             width: size,
             height: size,
             borderRadius: size / 2,
             borderWidth: ringWidth,
             borderColor: color,
-            opacity: clamped > 0 ? clamped / 100 + 0.15 : 0,
-          }}
+          }, fillAnimStyle]}
         />
         {/* Centre percentage */}
         <Text
@@ -77,7 +95,7 @@ export default function NutritionProgressRing({
         >
           {`${Math.round(clamped)}%`}
         </Text>
-      </View>
+      </Animated.View>
 
       {/* Goal label */}
       <Text

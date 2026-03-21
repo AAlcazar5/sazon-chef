@@ -165,36 +165,47 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
             marginHorizontal: 24, borderRadius: 20,
             backgroundColor: '#F3F4F6', padding: 4, flexDirection: 'row', marginBottom: 16,
           }} className="dark:bg-gray-800">
-            <HapticTouchableOpacity
-              style={{
-                flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center',
-                backgroundColor: interval === 'month' ? '#fff' : 'transparent',
-                shadowColor: interval === 'month' ? '#000' : 'transparent',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.08,
-                shadowRadius: 4,
-                elevation: interval === 'month' ? 2 : 0,
-              }}
-              onPress={() => setInterval('month')}
+            <MotiView
+              animate={{ scale: interval === 'month' ? 1.02 : 0.98 }}
+              transition={{ type: 'spring', damping: 14, stiffness: 300 }}
+              style={{ flex: 1 }}
             >
-              <Text style={{ fontWeight: '700', fontSize: 13, color: interval === 'month' ? '#111827' : '#6B7280' }} className="dark:text-white">
-                Monthly
-              </Text>
-              <Text style={{ fontSize: 11, marginTop: 2, color: interval === 'month' ? '#fa7e12' : '#9CA3AF' }}>$4.99 / mo</Text>
-            </HapticTouchableOpacity>
+              <HapticTouchableOpacity
+                style={{
+                  paddingVertical: 12, borderRadius: 16, alignItems: 'center',
+                  backgroundColor: interval === 'month' ? '#fff' : 'transparent',
+                  shadowColor: interval === 'month' ? '#000' : 'transparent',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 4,
+                  elevation: interval === 'month' ? 2 : 0,
+                }}
+                onPress={() => setInterval('month')}
+              >
+                <Text style={{ fontWeight: '700', fontSize: 13, color: interval === 'month' ? '#111827' : '#6B7280' }} className="dark:text-white">
+                  Monthly
+                </Text>
+                <Text style={{ fontSize: 11, marginTop: 2, color: interval === 'month' ? '#fa7e12' : '#9CA3AF' }}>$4.99 / mo</Text>
+              </HapticTouchableOpacity>
+            </MotiView>
 
-            <HapticTouchableOpacity
-              style={{
-                flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center',
-                backgroundColor: interval === 'year' ? '#fff' : 'transparent',
-                shadowColor: interval === 'year' ? '#000' : 'transparent',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.08,
-                shadowRadius: 4,
-                elevation: interval === 'year' ? 2 : 0,
-              }}
-              onPress={() => setInterval('year')}
+            <MotiView
+              animate={{ scale: interval === 'year' ? 1.02 : 0.98 }}
+              transition={{ type: 'spring', damping: 14, stiffness: 300 }}
+              style={{ flex: 1 }}
             >
+              <HapticTouchableOpacity
+                style={{
+                  paddingVertical: 12, borderRadius: 16, alignItems: 'center',
+                  backgroundColor: interval === 'year' ? '#fff' : 'transparent',
+                  shadowColor: interval === 'year' ? '#000' : 'transparent',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 4,
+                  elevation: interval === 'year' ? 2 : 0,
+                }}
+                onPress={() => setInterval('year')}
+              >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Text style={{ fontWeight: '700', fontSize: 13, color: interval === 'year' ? '#111827' : '#6B7280' }} className="dark:text-white">
                   Annual
@@ -204,11 +215,17 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
                 </View>
               </View>
               <Text style={{ fontSize: 11, marginTop: 2, color: interval === 'year' ? '#fa7e12' : '#9CA3AF' }}>$39.99 / yr</Text>
-            </HapticTouchableOpacity>
+              </HapticTouchableOpacity>
+            </MotiView>
           </View>
 
-          {/* CTA */}
-          <View style={{ marginHorizontal: 24 }}>
+          {/* CTA — idle pulse every 3s to draw eye */}
+          <MotiView
+            from={{ opacity: 0.88 }}
+            animate={{ opacity: 1 }}
+            transition={{ type: 'timing', duration: 1500, loop: true, repeatReverse: true, delay: 3000 }}
+            style={{ marginHorizontal: 24 }}
+          >
             <GradientButton
               label="Start Free Trial"
               onPress={() => startCheckout(interval)}
@@ -221,7 +238,7 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
               No charge for 7 days. Cancel anytime in{' '}
               {Platform.OS === 'ios' ? 'App Store' : 'Google Play'} settings.
             </Text>
-          </View>
+          </MotiView>
         </MotiView>
       )}
 

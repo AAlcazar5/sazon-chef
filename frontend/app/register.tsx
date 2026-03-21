@@ -25,6 +25,7 @@ import FormInput from '../components/ui/FormInput';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import LogoMascot from '../components/mascot/LogoMascot';
 import { Colors, DarkColors } from '../constants/Colors';
+import { Shadows } from '../constants/Shadows';
 
 interface FormErrors {
   name?: string;
@@ -251,76 +252,92 @@ export default function RegisterScreen() {
                 </View>
               )}
 
-              {/* Name + Email */}
+              {/* Name + Email — grouped card */}
               <MotiView
                 from={{ opacity: 0, translateY: 18 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ type: 'spring', delay: 100, damping: 20, stiffness: 180 }}
               >
-                <FormInput
-                  label="Name"
-                  placeholder="Enter your name"
-                  value={name}
-                  onChangeText={(value) => { setName(value); clearError('name'); }}
-                  error={errors.name}
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  disabled={loading}
-                  leftIcon="person-outline"
-                  required
-                />
+                <View
+                  className="rounded-2xl p-4 mb-2"
+                  style={{
+                    backgroundColor: isDark ? '#1F2937' : '#FAFAFA',
+                    ...Shadows.SM,
+                  }}
+                >
+                  <FormInput
+                    label="Name"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChangeText={(value) => { setName(value); clearError('name'); }}
+                    error={errors.name}
+                    autoCapitalize="words"
+                    autoComplete="name"
+                    disabled={loading}
+                    leftIcon="person-outline"
+                    required
+                  />
 
-                <FormInput
-                  label="Email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChangeText={(value) => { setEmail(value); clearError('email'); }}
-                  error={errors.email}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  disabled={loading}
-                  leftIcon="mail-outline"
-                  required
-                />
+                  <FormInput
+                    label="Email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChangeText={(value) => { setEmail(value); clearError('email'); }}
+                    error={errors.email}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    disabled={loading}
+                    leftIcon="mail-outline"
+                    required
+                  />
+                </View>
               </MotiView>
 
-              {/* Password fields */}
+              {/* Password fields — grouped card */}
               <MotiView
                 from={{ opacity: 0, translateY: 16 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ type: 'spring', delay: 180, damping: 20, stiffness: 180 }}
               >
-                <FormInput
-                  label="Password"
-                  placeholder="Enter your password (min 8 characters)"
-                  value={password}
-                  onChangeText={(value) => { setPassword(value); clearError('password'); }}
-                  error={errors.password}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  disabled={loading}
-                  leftIcon="lock-closed-outline"
-                  rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  onRightIconPress={() => setShowPassword(!showPassword)}
-                  hint="Must be at least 8 characters"
-                  required
-                />
+                <View
+                  className="rounded-2xl p-4 mb-2"
+                  style={{
+                    backgroundColor: isDark ? '#1F2937' : '#FAFAFA',
+                    ...Shadows.SM,
+                  }}
+                >
+                  <FormInput
+                    label="Password"
+                    placeholder="Enter your password (min 8 characters)"
+                    value={password}
+                    onChangeText={(value) => { setPassword(value); clearError('password'); }}
+                    error={errors.password}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    disabled={loading}
+                    leftIcon="lock-closed-outline"
+                    rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    onRightIconPress={() => setShowPassword(!showPassword)}
+                    hint="Must be at least 8 characters"
+                    required
+                  />
 
-                <FormInput
-                  label="Confirm Password"
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChangeText={(value) => { setConfirmPassword(value); clearError('confirmPassword'); }}
-                  error={errors.confirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  disabled={loading}
-                  leftIcon="lock-closed-outline"
-                  rightIcon={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                  onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  required
-                />
+                  <FormInput
+                    label="Confirm Password"
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChangeText={(value) => { setConfirmPassword(value); clearError('confirmPassword'); }}
+                    error={errors.confirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    disabled={loading}
+                    leftIcon="lock-closed-outline"
+                    rightIcon={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    required
+                  />
+                </View>
               </MotiView>
 
               {/* Sign up button */}
@@ -354,7 +371,8 @@ export default function RegisterScreen() {
 
                 <View style={{ gap: 12 }}>
                   <HapticTouchableOpacity
-                    className={`flex-row items-center justify-center rounded-lg px-4 py-4 min-h-[50px] bg-blue-500 ${socialLoading === 'google' ? 'opacity-60' : ''}`}
+                    className={`flex-row items-center justify-center rounded-xl px-4 py-4 min-h-[50px] bg-blue-500 ${socialLoading === 'google' ? 'opacity-60' : ''}`}
+                    style={Shadows.SM}
                     onPress={handleGoogleLogin}
                     disabled={loading || socialLoading !== null}
                   >
@@ -370,7 +388,8 @@ export default function RegisterScreen() {
 
                   {(Platform.OS === 'ios' || Platform.OS === 'web') && (
                     <HapticTouchableOpacity
-                      className={`flex-row items-center justify-center rounded-lg px-4 py-4 min-h-[50px] bg-black dark:bg-gray-800 ${socialLoading === 'apple' ? 'opacity-60' : ''}`}
+                      className={`flex-row items-center justify-center rounded-xl px-4 py-4 min-h-[50px] bg-black dark:bg-gray-800 ${socialLoading === 'apple' ? 'opacity-60' : ''}`}
+                      style={Shadows.SM}
                       onPress={handleAppleLogin}
                       disabled={loading || socialLoading !== null}
                     >

@@ -31,13 +31,23 @@ export default function ShoppingListProgress({
 
   if (currentItems.length === 0) return null;
 
+  // Friendly progress text instead of raw numbers
+  const remaining = progressStats.total - progressStats.purchased;
+  const progressText = progressStats.progress >= 100
+    ? 'All done! Time to cook!'
+    : remaining <= 3 && remaining > 0
+      ? `Almost done! ${remaining} item${remaining !== 1 ? 's' : ''} left`
+      : remaining === 0
+        ? 'All done! Time to cook!'
+        : `${progressStats.purchased} of ${progressStats.total} items`;
+
   return (
     <>
       {/* Progress Indicator */}
       <View className="mx-4 mt-4 mb-2">
         <View className="flex-row items-center justify-between mb-2">
           <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {progressStats.purchased} of {progressStats.total} items purchased
+            {progressText}
           </Text>
           <Text className="text-sm font-semibold" style={{ color: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}>
             {Math.round(progressStats.progress)}%
@@ -58,9 +68,9 @@ export default function ShoppingListProgress({
           <View className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center">
-                <Icon name={Icons.CART_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.accent : Colors.accent} accessibilityLabel="Estimated cost" style={{ marginRight: 8 }} />
+                <Icon name={Icons.CART_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.accent : Colors.accent} accessibilityLabel="Estimated total" style={{ marginRight: 8 }} />
                 <View>
-                  <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">Estimated Total</Text>
+                  <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">Estimated total</Text>
                   <Text className="text-2xl font-bold" style={{ color: isDark ? DarkColors.accent : Colors.accent }}>
                     ${estimatedCost.toFixed(2)}
                   </Text>

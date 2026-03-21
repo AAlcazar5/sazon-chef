@@ -1,12 +1,13 @@
 // frontend/components/home/FilterModal.tsx
-// Filter bottom sheet for recipe search filters
+// Home screen filter modal — thin wrapper around shared FilterSheet
 
+import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import BottomSheet from '../ui/BottomSheet';
-import { AnimatedLogoMascot } from '../mascot';
+import FilterSheet from '../ui/FilterSheet';
+import FilterSection from '../ui/FilterSection';
+import FilterPill from '../ui/FilterPill';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
 import { FilterState } from '../../lib/filterStorage';
@@ -24,7 +25,6 @@ interface FilterModalProps {
   onApply: () => void;
   filters: FilterState;
   onFilterChange: (type: keyof FilterState, value: any) => void;
-  /** Quick filter props */
   selectedMood?: Mood | null;
   onMoodPress?: () => void;
   onClearMood?: () => void;
@@ -58,351 +58,137 @@ export default function FilterModal({
     filters.dietaryRestrictions.length +
     (filters.maxCookTime ? 1 : 0) +
     filters.difficulty.length;
-  const isRestrictive = totalFilters >= 5;
+
+  const handleReset = () => {
+    onFilterChange('cuisines', []);
+    onFilterChange('dietaryRestrictions', []);
+    onFilterChange('maxCookTime', null);
+    onFilterChange('difficulty', []);
+  };
+
+  // Build quick filters row
+  const quickFiltersRow = handleQuickFilter ? (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 8 }}
+    >
+      {onMoodPress && (
+        <FilterPill
+          emoji={selectedMood?.emoji || '😊'}
+          label={selectedMood?.label || 'Mood'}
+          active={!!selectedMood}
+          onPress={onMoodPress}
+          compact
+        />
+      )}
+      <FilterPill
+        emoji="⚡" label="Quick" compact
+        active={filters.maxCookTime === 30}
+        onPress={() => handleQuickFilter('maxCookTime', filters.maxCookTime === 30 ? null : 30)}
+      />
+      <FilterPill
+        emoji="👍" label="Easy" compact
+        active={filters.difficulty.includes('Easy')}
+        onPress={() => {
+          const isActive = filters.difficulty.includes('Easy');
+          handleQuickFilter('difficulty', isActive ? filters.difficulty.filter(d => d !== 'Easy') : [...filters.difficulty, 'Easy']);
+        }}
+      />
+      {handleQuickMacroFilter && quickMacroFilters && (
+        <>
+          <FilterPill emoji="💪" label="High Protein" compact active={quickMacroFilters.highProtein} onPress={() => handleQuickMacroFilter('highProtein')} />
+          <FilterPill emoji="🥩" label="Low Carb" compact active={quickMacroFilters.lowCarb} onPress={() => handleQuickMacroFilter('lowCarb')} />
+          <FilterPill emoji="🥗" label="Low Cal" compact active={quickMacroFilters.lowCalorie} onPress={() => handleQuickMacroFilter('lowCalorie')} />
+        </>
+      )}
+      {handleToggleMealPrepMode && (
+        <FilterPill emoji="🍱" label="Meal Prep" compact active={mealPrepMode} onPress={() => handleToggleMealPrepMode(!mealPrepMode)} />
+      )}
+    </ScrollView>
+  ) : undefined;
 
   return (
-    <BottomSheet
+    <FilterSheet
       visible={visible}
       onClose={onClose}
-      title="Filters"
-      snapPoints={['75%', '92%']}
-      scrollable
+      activeFilterCount={totalFilters}
+      onReset={handleReset}
+      onApply={onApply}
+      quickFilters={quickFiltersRow}
     >
-      {/* Apply / Cancel row */}
-      <View className="flex-row items-center justify-between px-4 pb-2">
-        <HapticTouchableOpacity onPress={onClose} style={{ paddingVertical: 8 }}>
-          <Text
-            className="font-medium"
-            style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
-          >
-            Cancel
-          </Text>
-        </HapticTouchableOpacity>
-        <HapticTouchableOpacity onPress={onApply} style={{ paddingVertical: 8 }}>
-          <Text
-            className="font-medium"
-            style={{ color: isDark ? DarkColors.primary : Colors.primary }}
-          >
-            Apply
-          </Text>
-        </HapticTouchableOpacity>
-      </View>
-
-      <View className="px-4 pb-6">
-        {/* Quick Filters */}
-        {handleQuickFilter && (
-          <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-              Quick Filters
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {/* Mood */}
-              {onMoodPress && (
-                <HapticTouchableOpacity
-                  onPress={onMoodPress}
-                  className="px-4 py-2 rounded-full flex-row items-center"
-                  style={{ backgroundColor: selectedMood ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#374151' : '#F3F4F6') }}
-                >
-                  <Text className="text-base">{selectedMood?.emoji || '😊'}</Text>
-                  <Text className="text-sm font-semibold ml-1.5" style={{ color: selectedMood ? '#FFF' : (isDark ? '#D1D5DB' : '#374151') }}>
-                    {selectedMood?.label || 'Mood'}
-                  </Text>
-                  {selectedMood && onClearMood && (
-                    <HapticTouchableOpacity
-                      onPress={(e) => { e.stopPropagation(); onClearMood(); }}
-                      className="ml-2 w-4 h-4 rounded-full bg-white/30 items-center justify-center"
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Ionicons name="close" size={12} color="white" />
-                    </HapticTouchableOpacity>
-                  )}
-                </HapticTouchableOpacity>
-              )}
-
-              {/* Quick <30min */}
-              <QuickChip
-                active={filters.maxCookTime === 30}
-                emoji="⚡" label="Quick" isDark={isDark}
-                onPress={() => { handleQuickFilter('maxCookTime', filters.maxCookTime === 30 ? null : 30); HapticPatterns.buttonPress(); }}
-              />
-              {/* Easy */}
-              <QuickChip
-                active={filters.difficulty.includes('Easy')}
-                emoji="👍" label="Easy" isDark={isDark}
-                onPress={() => {
-                  const isActive = filters.difficulty.includes('Easy');
-                  handleQuickFilter('difficulty', isActive ? filters.difficulty.filter(d => d !== 'Easy') : [...filters.difficulty, 'Easy']);
-                  HapticPatterns.buttonPress();
-                }}
-              />
-              {/* High Protein */}
-              {handleQuickMacroFilter && quickMacroFilters && (
-                <>
-                  <QuickChip active={quickMacroFilters.highProtein} emoji="💪" label="High Protein" isDark={isDark} onPress={() => handleQuickMacroFilter('highProtein')} />
-                  <QuickChip active={quickMacroFilters.lowCarb} emoji="🥩" label="Low Carb" isDark={isDark} onPress={() => handleQuickMacroFilter('lowCarb')} />
-                  <QuickChip active={quickMacroFilters.lowCalorie} emoji="🥗" label="Low Cal" isDark={isDark} onPress={() => handleQuickMacroFilter('lowCalorie')} />
-                </>
-              )}
-              {/* Meal Prep */}
-              {handleToggleMealPrepMode && (
-                <QuickChip
-                  active={mealPrepMode}
-                  emoji="🍱" label="Meal Prep" isDark={isDark}
-                  onPress={() => { handleToggleMealPrepMode(!mealPrepMode); HapticPatterns.buttonPress(); }}
-                />
-              )}
-              {/* Budget */}
-              <QuickChip
-                active={filters.dietaryRestrictions.includes('Budget-Friendly')}
-                emoji="💰" label="Budget" isDark={isDark}
-                onPress={() => {
-                  const isActive = filters.dietaryRestrictions.includes('Budget-Friendly');
-                  handleQuickFilter('dietaryRestrictions', isActive ? filters.dietaryRestrictions.filter(d => d !== 'Budget-Friendly') : [...filters.dietaryRestrictions, 'Budget-Friendly']);
-                  HapticPatterns.buttonPress();
-                }}
-              />
-              {/* One Pot */}
-              <QuickChip
-                active={filters.dietaryRestrictions.includes('One-Pot')}
-                emoji="🍲" label="One Pot" isDark={isDark}
-                onPress={() => {
-                  const isActive = filters.dietaryRestrictions.includes('One-Pot');
-                  handleQuickFilter('dietaryRestrictions', isActive ? filters.dietaryRestrictions.filter(d => d !== 'One-Pot') : [...filters.dietaryRestrictions, 'One-Pot']);
-                  HapticPatterns.buttonPress();
-                }}
-              />
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Cuisine */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            Cuisine
-          </Text>
-          <View className="flex-row flex-wrap">
-            {CUISINE_OPTIONS.map((cuisine) => (
-              <HapticTouchableOpacity
-                key={cuisine}
-                onPress={() => onFilterChange('cuisines', cuisine)}
-                className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
-                  filters.cuisines.includes(cuisine)
-                    ? ''
-                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
-                }`}
-                style={
-                  filters.cuisines.includes(cuisine)
-                    ? {
-                        backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                        borderColor: isDark ? DarkColors.primary : Colors.primary,
-                      }
-                    : undefined
-                }
-              >
-                <Text
-                  className={`text-sm font-medium ${
-                    filters.cuisines.includes(cuisine)
-                      ? 'text-white'
-                      : 'text-gray-700 dark:text-gray-100'
-                  }`}
-                >
-                  {cuisine}
-                </Text>
-              </HapticTouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Dietary */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            Dietary
-          </Text>
-          <View className="flex-row flex-wrap">
-            {DIETARY_OPTIONS.map((dietary) => (
-              <HapticTouchableOpacity
-                key={dietary}
-                onPress={() => onFilterChange('dietaryRestrictions', dietary)}
-                className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
-                  filters.dietaryRestrictions.includes(dietary)
-                    ? ''
-                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
-                }`}
-                style={
-                  filters.dietaryRestrictions.includes(dietary)
-                    ? {
-                        backgroundColor: isDark
-                          ? DarkColors.tertiaryGreen
-                          : Colors.tertiaryGreen,
-                        borderColor: isDark
-                          ? DarkColors.tertiaryGreen
-                          : Colors.tertiaryGreen,
-                      }
-                    : undefined
-                }
-              >
-                <Text
-                  className={`text-sm font-medium ${
-                    filters.dietaryRestrictions.includes(dietary)
-                      ? 'text-white'
-                      : 'text-gray-700 dark:text-gray-100'
-                  }`}
-                >
-                  {dietary}
-                </Text>
-              </HapticTouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Cook Time */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            Max Cook Time
-          </Text>
-          <View className="flex-row flex-wrap">
-            {[15, 30, 45, 60, 90].map((time) => (
-              <HapticTouchableOpacity
-                key={time}
-                onPress={() => onFilterChange('maxCookTime', time)}
-                className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
-                  filters.maxCookTime === time
-                    ? ''
-                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
-                }`}
-                style={
-                  filters.maxCookTime === time
-                    ? {
-                        backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                        borderColor: isDark ? DarkColors.primary : Colors.primary,
-                      }
-                    : undefined
-                }
-              >
-                <Text
-                  className={`text-sm font-medium ${
-                    filters.maxCookTime === time
-                      ? 'text-white'
-                      : 'text-gray-700 dark:text-gray-100'
-                  }`}
-                >
-                  ≤{time} min
-                </Text>
-              </HapticTouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Difficulty */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-            Difficulty
-          </Text>
-          <View className="flex-row flex-wrap">
-            {DIFFICULTY_OPTIONS.map((difficulty) => (
-              <HapticTouchableOpacity
-                key={difficulty}
-                onPress={() => onFilterChange('difficulty', difficulty)}
-                className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
-                  filters.difficulty.includes(difficulty)
-                    ? ''
-                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
-                }`}
-                style={
-                  filters.difficulty.includes(difficulty)
-                    ? {
-                        backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                        borderColor: isDark ? DarkColors.primary : Colors.primary,
-                      }
-                    : undefined
-                }
-              >
-                <Text
-                  className={`text-sm font-medium ${
-                    filters.difficulty.includes(difficulty)
-                      ? 'text-white'
-                      : 'text-gray-700 dark:text-gray-100'
-                  }`}
-                >
-                  {difficulty}
-                </Text>
-              </HapticTouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Guidance when many filters selected */}
-        {isRestrictive && (
-          <View
-            className="mb-4 p-4 rounded-lg border"
-            style={{
-              borderColor: isDark ? '#7c3421' : '#fed7aa',
-              backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight,
-            }}
-          >
-            <View className="flex-row items-start">
-              <View className="mr-3">
-                <AnimatedLogoMascot
-                  expression="thinking"
-                  size="small"
-                  animationType="idle"
-                />
-              </View>
-              <View className="flex-1">
-                <Text
-                  className="font-semibold mb-1"
-                  style={{ color: isDark ? DarkColors.primaryDark : Colors.primaryDark }}
-                >
-                  Many filters selected
-                </Text>
-                <Text
-                  className="text-sm"
-                  style={{ color: isDark ? DarkColors.primary : Colors.primary }}
-                >
-                  You've selected {totalFilters} filter
-                  {totalFilters !== 1 ? 's' : ''}. This might limit your recipe options.
-                  Consider removing some to see more suggestions!
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-      </View>
-    </BottomSheet>
-  );
-}
-
-/** Simple quick-filter chip (no spring animation — inside a scrollable sheet) */
-function QuickChip({
-  active,
-  emoji,
-  label,
-  onPress,
-  isDark,
-}: {
-  active: boolean;
-  emoji: string;
-  label: string;
-  onPress: () => void;
-  isDark: boolean;
-}) {
-  return (
-    <HapticTouchableOpacity
-      onPress={onPress}
-      className="px-4 py-2 rounded-full flex-row items-center"
-      style={{ backgroundColor: active ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#374151' : '#F3F4F6') }}
-    >
-      <Text className="text-base">{emoji}</Text>
-      <Text
-        className="text-sm font-semibold ml-1.5"
-        style={{ color: active ? '#FFF' : (isDark ? '#D1D5DB' : '#374151') }}
+      {/* Cuisine */}
+      <FilterSection
+        title="Cuisine"
+        icon="restaurant-outline"
+        activeCount={filters.cuisines.length}
       >
-        {label}
-      </Text>
-    </HapticTouchableOpacity>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {CUISINE_OPTIONS.map((cuisine) => (
+            <FilterPill
+              key={cuisine}
+              label={cuisine}
+              active={filters.cuisines.includes(cuisine)}
+              onPress={() => onFilterChange('cuisines', cuisine)}
+            />
+          ))}
+        </View>
+      </FilterSection>
+
+      {/* Dietary */}
+      <FilterSection
+        title="Dietary"
+        icon="leaf-outline"
+        activeCount={filters.dietaryRestrictions.length}
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {DIETARY_OPTIONS.map((dietary) => (
+            <FilterPill
+              key={dietary}
+              label={dietary}
+              active={filters.dietaryRestrictions.includes(dietary)}
+              onPress={() => onFilterChange('dietaryRestrictions', dietary)}
+              color="green"
+            />
+          ))}
+        </View>
+      </FilterSection>
+
+      {/* Cook Time */}
+      <FilterSection
+        title="Max Cook Time"
+        icon="time-outline"
+        activeCount={filters.maxCookTime ? 1 : 0}
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {[15, 30, 45, 60, 90].map((time) => (
+            <FilterPill
+              key={time}
+              label={`≤${time} min`}
+              active={filters.maxCookTime === time}
+              onPress={() => onFilterChange('maxCookTime', time)}
+            />
+          ))}
+        </View>
+      </FilterSection>
+
+      {/* Difficulty */}
+      <FilterSection
+        title="Difficulty"
+        icon="speedometer-outline"
+        activeCount={filters.difficulty.length}
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {DIFFICULTY_OPTIONS.map((difficulty) => (
+            <FilterPill
+              key={difficulty}
+              label={difficulty}
+              active={filters.difficulty.includes(difficulty)}
+              onPress={() => onFilterChange('difficulty', difficulty)}
+            />
+          ))}
+        </View>
+      </FilterSection>
+    </FilterSheet>
   );
 }

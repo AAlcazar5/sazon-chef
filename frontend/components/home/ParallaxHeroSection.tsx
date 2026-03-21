@@ -3,7 +3,7 @@
 // The background image scrolls at ~40% of the scroll speed, creating depth.
 
 import React from 'react';
-import { View, Text, Animated, Dimensions } from 'react-native';
+import { View, Text, Animated, Dimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -115,32 +115,62 @@ function ParallaxHeroSection({
           }}
         />
 
-        {/* Top badge */}
+        {/* Top row: badge + surprise me */}
         <View
           style={{
             position: 'absolute',
             top: 14,
             left: 16,
+            right: 16,
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: 'rgba(0,0,0,0.35)',
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-            borderRadius: 20,
+            justifyContent: 'space-between',
           }}
         >
-          <Text style={{ fontSize: 12 }}>🌟</Text>
-          <Text
-            style={{
-              color: '#FFFFFF',
-              fontSize: 11,
-              fontWeight: '700',
-              marginLeft: 4,
-              letterSpacing: 0.5,
-            }}
-          >
-            RECIPE OF THE DAY
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: 'rgba(0,0,0,0.35)',
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 20,
+              }}
+            >
+              <Text style={{ fontSize: 12 }}>🌟</Text>
+              <Text
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: 11,
+                  fontWeight: '700',
+                  marginLeft: 4,
+                  letterSpacing: 0.5,
+                }}
+              >
+                RECIPE OF THE DAY
+              </Text>
+            </View>
+
+            {/* Match percentage badge */}
+            {!!recipe.score?.matchPercentage && recipe.score.matchPercentage > 0 && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: recipe.score.matchPercentage >= 85 ? 'rgba(34,197,94,0.85)' : 'rgba(0,0,0,0.35)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 20,
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                  {Math.round(recipe.score.matchPercentage)}% Match
+                </Text>
+              </View>
+            )}
+          </View>
+
         </View>
 
         {/* Bottom content overlay */}
@@ -171,21 +201,13 @@ function ParallaxHeroSection({
             {recipe.title}
           </Text>
 
-          {/* Metadata row */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 12 }}>
+          {/* Metadata row: cook time + health grade */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 12 }}>
             {!!recipe.cookTime && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.85)" />
                 <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '500' }}>
                   {recipe.cookTime} min
-                </Text>
-              </View>
-            )}
-            {!!recipe.calories && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="flame-outline" size={13} color="rgba(255,255,255,0.85)" />
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '500' }}>
-                  {recipe.calories} cal
                 </Text>
               </View>
             )}
@@ -201,6 +223,34 @@ function ParallaxHeroSection({
                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
                   Grade {recipe.healthGrade}
                 </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Macros row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+            {!!recipe.calories && (
+              <View style={heroStyles.macroPill}>
+                <Text style={heroStyles.macroValue}>{recipe.calories}</Text>
+                <Text style={heroStyles.macroLabel}>cal</Text>
+              </View>
+            )}
+            {!!recipe.protein && (
+              <View style={heroStyles.macroPill}>
+                <Text style={heroStyles.macroValue}>{recipe.protein}g</Text>
+                <Text style={heroStyles.macroLabel}>protein</Text>
+              </View>
+            )}
+            {!!recipe.carbs && (
+              <View style={heroStyles.macroPill}>
+                <Text style={heroStyles.macroValue}>{recipe.carbs}g</Text>
+                <Text style={heroStyles.macroLabel}>carbs</Text>
+              </View>
+            )}
+            {!!recipe.fat && (
+              <View style={heroStyles.macroPill}>
+                <Text style={heroStyles.macroValue}>{recipe.fat}g</Text>
+                <Text style={heroStyles.macroLabel}>fat</Text>
               </View>
             )}
           </View>
@@ -271,5 +321,27 @@ function ParallaxHeroSection({
     </HapticTouchableOpacity>
   );
 }
+
+const heroStyles = StyleSheet.create({
+  macroPill: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    backgroundColor: 'rgba(0,0,0,0.30)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 3,
+  },
+  macroValue: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  macroLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+});
 
 export default React.memo(ParallaxHeroSection);

@@ -2,6 +2,7 @@
 // Profile completion progress bar with gamification and milestones
 
 import { View, Text, Animated } from 'react-native';
+import { MotiView } from 'moti';
 import { useRef, useEffect } from 'react';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -49,9 +50,10 @@ export default function ProfileCompletionCard({ profileCompletion }: ProfileComp
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(progressAnim, {
+    Animated.spring(progressAnim, {
       toValue: profileCompletion.percentage,
-      duration: 800,
+      friction: 8,
+      tension: 40,
       useNativeDriver: false,
     }).start();
   }, [profileCompletion.percentage]);
@@ -159,11 +161,14 @@ export default function ProfileCompletionCard({ profileCompletion }: ProfileComp
 
       {/* Completion Checklist with Rewards */}
       <View style={{ gap: 10 }}>
-        {COMPLETION_ITEMS.map(({ key, label, icon, reward }) => {
+        {COMPLETION_ITEMS.map(({ key, label, icon, reward }, i) => {
           const completed = profileCompletion[key];
           return (
-            <View
+            <MotiView
               key={key}
+              from={{ scale: completed ? 0.95 : 1, opacity: 0.8 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 12, stiffness: 200, delay: i * 80 }}
               className="flex-row items-center p-3 rounded-lg"
               style={{
                 backgroundColor: completed
@@ -196,7 +201,7 @@ export default function ProfileCompletionCard({ profileCompletion }: ProfileComp
                   {completed ? '✓ ' : ''}{reward}
                 </Text>
               </View>
-            </View>
+            </MotiView>
           );
         })}
       </View>

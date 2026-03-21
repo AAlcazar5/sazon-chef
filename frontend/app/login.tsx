@@ -25,6 +25,7 @@ import GradientButton, { GradientPresets } from '../components/ui/GradientButton
 import FormInput from '../components/ui/FormInput';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { Colors, DarkColors } from '../constants/Colors';
+import { Shadows } from '../constants/Shadows';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -248,43 +249,51 @@ export default function LoginScreen() {
               </View>
             )}
 
-            {/* Form fields */}
+            {/* Form fields — grouped card */}
             <MotiView
               from={{ opacity: 0, translateY: 16 }}
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: 'spring', delay: 160, damping: 20, stiffness: 180 }}
             >
-              <ShakeAnimation shake={shakeEmail}>
-                <FormInput
-                  label="Email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChangeText={handleEmailChange}
-                  error={errors.email}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  disabled={loading}
-                  leftIcon="mail-outline"
-                />
-              </ShakeAnimation>
+              <View
+                className="rounded-2xl p-4 mb-2"
+                style={{
+                  backgroundColor: isDark ? '#1F2937' : '#FAFAFA',
+                  ...Shadows.SM,
+                }}
+              >
+                <ShakeAnimation shake={shakeEmail}>
+                  <FormInput
+                    label="Email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChangeText={handleEmailChange}
+                    error={errors.email}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    disabled={loading}
+                    leftIcon="mail-outline"
+                  />
+                </ShakeAnimation>
 
-              <ShakeAnimation shake={shakePassword}>
-                <FormInput
-                  label="Password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChangeText={handlePasswordChange}
-                  error={errors.password}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoComplete="password"
-                  disabled={loading}
-                  leftIcon="lock-closed-outline"
-                  rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  onRightIconPress={() => setShowPassword(!showPassword)}
-                />
-              </ShakeAnimation>
+                <ShakeAnimation shake={shakePassword}>
+                  <FormInput
+                    label="Password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChangeText={handlePasswordChange}
+                    error={errors.password}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoComplete="password"
+                    disabled={loading}
+                    leftIcon="lock-closed-outline"
+                    rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    onRightIconPress={() => setShowPassword(!showPassword)}
+                  />
+                </ShakeAnimation>
+              </View>
             </MotiView>
 
             {/* Forgot password + login button */}
@@ -333,7 +342,7 @@ export default function LoginScreen() {
                   disabled={loading || socialLoading !== null}
                   icon="logo-google"
                   colors={['#4285F4', '#1A73E8']}
-                  style={{ minHeight: 50 }}
+                  style={{ minHeight: 50, ...Shadows.SM }}
                 />
 
                 {(Platform.OS === 'ios' || Platform.OS === 'web') && (
@@ -344,7 +353,7 @@ export default function LoginScreen() {
                     disabled={loading || socialLoading !== null}
                     icon="logo-apple"
                     colors={['#1c1c1e', '#374151']}
-                    style={{ minHeight: 50 }}
+                    style={{ minHeight: 50, ...Shadows.SM }}
                   />
                 )}
               </View>

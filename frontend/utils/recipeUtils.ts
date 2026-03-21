@@ -197,24 +197,7 @@ export function groupRecipesIntoSections(
         emoji: '⚡',
         recipes: quickMeals,
         key: 'quick-meals',
-        priority: 10,
-      });
-    }
-  }
-
-  // Perfect Match section
-  if (!searchQuery && perfectMatchRecipes.length > 0) {
-    const availablePerfectMatches = perfectMatchRecipes.filter(r => !usedHighlightIds.has(r.id));
-    if (availablePerfectMatches.length > 0) {
-      const perfectMatches = availablePerfectMatches
-        .sort((a, b) => (b.score?.matchPercentage || 0) - (a.score?.matchPercentage || 0))
-        .slice(0, 5);
-      perfectMatches.forEach(r => usedHighlightIds.add(r.id));
-      sections.push({
-        title: 'Perfect Match for You',
-        emoji: '⭐',
-        recipes: perfectMatches,
-        key: 'perfect-match',
+        priority: 3,
       });
     }
   }
@@ -234,20 +217,19 @@ export function groupRecipesIntoSections(
     });
   }
 
-  // High in Superfoods
+  // High in Superfoods — always show (placeholder if empty)
   const superfoodRecipes = takeUnique(
     remainingRecipes,
     (r) => r.healthGrade === 'A' || r.healthGrade === 'B',
     10
   );
-  if (superfoodRecipes.length > 0) {
-    sections.push({
-      title: 'High in Superfoods',
-      emoji: '🥗',
-      recipes: superfoodRecipes,
-      key: 'superfoods',
-    });
-  }
+  sections.push({
+    title: 'High in Superfoods',
+    emoji: '🥗',
+    recipes: superfoodRecipes,
+    key: 'superfoods',
+    priority: 50,
+  });
 
   // Recipes for You
   const recipesForYou = [
@@ -260,7 +242,7 @@ export function groupRecipesIntoSections(
       emoji: '🍳',
       recipes: recipesForYou,
       key: 'quick-easy',
-      priority: 5,
+      priority: 100,
     });
   }
 

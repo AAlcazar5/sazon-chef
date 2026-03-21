@@ -8,6 +8,8 @@ interface AnimatedStatCounterProps {
   value: number;
   /** Duration in ms */
   duration?: number;
+  /** Optional suffix like "%" or "g" */
+  suffix?: string;
   style?: TextStyle;
   testID?: string;
 }
@@ -15,6 +17,7 @@ interface AnimatedStatCounterProps {
 export default function AnimatedStatCounter({
   value,
   duration = 800,
+  suffix,
   style,
   testID,
 }: AnimatedStatCounterProps) {
@@ -48,5 +51,5 @@ export default function AnimatedStatCounter({
     };
   }, [value, duration]);
 
-  return <Text style={style} testID={testID}>{displayed}</Text>;
+  return <Text style={style} testID={testID}>{displayed}{suffix ?? ''}</Text>;
 }

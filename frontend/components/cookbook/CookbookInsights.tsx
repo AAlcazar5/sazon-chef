@@ -9,6 +9,7 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
+import AnimatedStatCounter from '../ui/AnimatedStatCounter';
 import type { SavedRecipe } from '../../types';
 import type { CookbookFilters } from './CookbookFilterModal';
 import { useMemo } from 'react';
@@ -193,21 +194,25 @@ export default function CookbookInsights({
           <View className="flex-row items-start justify-between mb-3">
             <View>
               <Text className="text-sm text-gray-600 dark:text-gray-200">Best match</Text>
-              <Text
-                className="text-2xl font-bold"
-                style={{ color: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                {insights.bestMatch}%
-              </Text>
+              <AnimatedStatCounter
+                value={insights.bestMatch}
+                duration={600}
+                suffix="%"
+                style={{ fontSize: 24, fontWeight: '700', color: isDark ? DarkColors.primary : Colors.primary }}
+              />
               <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Highest match across this collection
               </Text>
             </View>
             <View className="items-end">
               <Text className="text-sm text-gray-600 dark:text-gray-200">A/B health</Text>
-              <Text
-                className="text-2xl font-bold"
+              <AnimatedStatCounter
+                value={insights.abPct}
+                duration={600}
+                suffix="%"
                 style={{
+                  fontSize: 24,
+                  fontWeight: '700',
                   color:
                     insights.abPct >= 70
                       ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
@@ -215,9 +220,7 @@ export default function CookbookInsights({
                         ? (isDark ? DarkColors.primary : Colors.primary)
                         : (isDark ? DarkColors.secondaryRed : Colors.secondaryRed),
                 }}
-              >
-                {insights.abPct}%
-              </Text>
+              />
               <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {insights.abCount} of {insights.total} recipes
               </Text>

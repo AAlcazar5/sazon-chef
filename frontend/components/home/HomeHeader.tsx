@@ -25,6 +25,8 @@ interface HomeHeaderProps {
   onFilterPress?: () => void;
   /** Number of active filters (for badge) */
   activeFilterCount?: number;
+  /** Called when Surprise Me is pressed */
+  onSurpriseMe?: () => void;
 }
 
 const SPRING_PRESS = { damping: 12, stiffness: 400 };
@@ -34,6 +36,7 @@ export default function HomeHeader({
   onMascotPress,
   onFilterPress,
   activeFilterCount = 0,
+  onSurpriseMe,
 }: HomeHeaderProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -102,54 +105,64 @@ export default function HomeHeader({
           </Text>
         </View>
 
-        {onFilterPress && (
-          <Animated.View style={buttonAnimStyle}>
+        <View className="flex-row items-center" style={{ gap: 8 }}>
+          {onSurpriseMe && (
             <HapticTouchableOpacity
-              onPress={onFilterPress}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              activeOpacity={1}
-              accessibilityLabel={`Filters, ${activeFilterCount} active`}
+              onPress={onSurpriseMe}
+              hapticStyle="medium"
+              accessibilityLabel="Surprise Me"
               accessibilityRole="button"
-              style={styles.buttonOuter}
+              style={styles.surpriseButton}
             >
-              <LinearGradient
-                colors={['#FF8B41', '#E84D3D']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.gradient}
-              >
-                <Animated.View style={iconAnimStyle}>
-                  <Ionicons
-                    name="options"
-                    size={18}
-                    color="#FFF"
-                  />
-                </Animated.View>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: '#FFF' },
-                  ]}
-                >
-                  Filters
-                </Text>
-              </LinearGradient>
+              <Text style={{ fontSize: 13 }}>🎰</Text>
+              <Text style={[styles.label, { color: '#EF4444' }]}>Surprise</Text>
+            </HapticTouchableOpacity>
+          )}
 
-              {/* Animated badge — always visible */}
-              <Animated.View style={[styles.badge, badgeAnimStyle]}>
+          {onFilterPress && (
+            <Animated.View style={buttonAnimStyle}>
+              <HapticTouchableOpacity
+                onPress={onFilterPress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                activeOpacity={1}
+                accessibilityLabel={`Filters, ${activeFilterCount} active`}
+                accessibilityRole="button"
+                style={styles.buttonOuter}
+              >
                 <LinearGradient
-                  colors={['#FFFFFF', '#F3F4F6']}
-                  style={styles.badgeGradient}
+                  colors={['#FF8B41', '#E84D3D']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.gradient}
                 >
-                  <Text style={styles.badgeText}>
-                    {activeFilterCount}
+                  <Animated.View style={iconAnimStyle}>
+                    <Ionicons
+                      name="options"
+                      size={15}
+                      color="#FFF"
+                    />
+                  </Animated.View>
+                  <Text style={[styles.label, { color: '#FFF' }]}>
+                    Filters
                   </Text>
                 </LinearGradient>
-              </Animated.View>
-            </HapticTouchableOpacity>
-          </Animated.View>
-        )}
+
+                {/* Animated badge — always visible */}
+                <Animated.View style={[styles.badge, badgeAnimStyle]}>
+                  <LinearGradient
+                    colors={['#FFFFFF', '#F3F4F6']}
+                    style={styles.badgeGradient}
+                  >
+                    <Text style={styles.badgeText}>
+                      {activeFilterCount}
+                    </Text>
+                  </LinearGradient>
+                </Animated.View>
+              </HapticTouchableOpacity>
+            </Animated.View>
+          )}
+        </View>
       </View>
     </FrostedHeader>
   );
@@ -162,24 +175,32 @@ const styles = StyleSheet.create({
   gradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 100,
-    gap: 6,
+    gap: 5,
+  },
+  surpriseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 100,
+    gap: 5,
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   badge: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    top: -5,
+    right: -5,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     overflow: 'hidden',
-    // Shadow for depth
     shadowColor: '#E84D3D',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -190,11 +211,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
   },
   badgeText: {
     color: '#E84D3D',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '800',
   },
 });

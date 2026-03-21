@@ -3,9 +3,12 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 // Scanner screen for ingredient scanning and food recognition (Phase 6, Group 13)
 
-import { View, Text, Alert, ActivityIndicator, ScrollView, Image, Animated, StyleSheet } from 'react-native';
+import { View, Text, Alert, ActivityIndicator, ScrollView, Image, Animated, StyleSheet, Platform } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { MotiView } from 'moti';
 import { CameraView, CameraType, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import LoadingState from '../components/ui/LoadingState';
 import LogoMascot from '../components/mascot/LogoMascot';
 import { Colors, DarkColors } from '../constants/Colors';
+import { Shadows } from '../constants/Shadows';
 import Icon from '../components/ui/Icon';
 import { Icons } from '../constants/Icons';
 
@@ -439,41 +443,66 @@ export default function ScannerScreen() {
           <ScrollView className="flex-1 bg-white">
             <View className="p-4">
               {/* Header */}
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-2xl font-bold text-gray-900">Results</Text>
-                <HapticTouchableOpacity onPress={reset}>
-                  <Ionicons name="close-circle" size={32} color="#9CA3AF" />
-                </HapticTouchableOpacity>
-              </View>
+              <MotiView
+                from={{ opacity: 0, translateY: 12 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: 'spring', delay: 0, damping: 18, stiffness: 200 }}
+              >
+                <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-2xl font-bold text-gray-900">Results</Text>
+                  <HapticTouchableOpacity onPress={reset}>
+                    <Ionicons name="close-circle" size={32} color="#9CA3AF" />
+                  </HapticTouchableOpacity>
+                </View>
+              </MotiView>
 
               {/* Image Preview */}
               {imageUri && (
-                <Image source={{ uri: imageUri }} className="w-full h-48 rounded-lg mb-4" resizeMode="cover" />
+                <MotiView
+                  from={{ opacity: 0, translateY: 10 }}
+                  animate={{ opacity: 1, translateY: 0 }}
+                  transition={{ type: 'spring', delay: 80, damping: 18, stiffness: 200 }}
+                >
+                  <Image source={{ uri: imageUri }} className="w-full h-48 rounded-xl mb-4" style={Shadows.MD} resizeMode="cover" />
+                </MotiView>
               )}
 
               {/* Food Recognition Results */}
               {mode === 'food' && 'foods' in result && (
                 <View>
-                  <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4 border border-red-200 dark:border-red-800">
-                    <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                      {result.mealDescription}
-                    </Text>
-                    <Text className="text-3xl font-bold text-red-600 dark:text-red-400">
-                      {result.totalEstimatedCalories} calories
-                    </Text>
-                  </View>
+                  <MotiView
+                    from={{ opacity: 0, translateY: 10 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: 'spring', delay: 160, damping: 18, stiffness: 200 }}
+                  >
+                    <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl mb-4" style={Shadows.MD}>
+                      <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                        {result.mealDescription}
+                      </Text>
+                      <Text className="text-3xl font-bold text-red-600 dark:text-red-400">
+                        {result.totalEstimatedCalories} calories
+                      </Text>
+                    </View>
+                  </MotiView>
 
                   <Text className="text-lg font-semibold text-gray-900 mb-2">Food Items:</Text>
                   {result.foods.map((food, index) => (
-                    <View key={index} className="bg-surface p-3 rounded-lg mb-2">
-                      <View className="flex-row justify-between items-center">
-                        <Text className="font-semibold text-gray-900">{food.name}</Text>
-                        <Text className="text-red-600 dark:text-red-400 font-bold">{food.estimatedCalories} cal</Text>
+                    <MotiView
+                      key={index}
+                      from={{ opacity: 0, translateY: 8 }}
+                      animate={{ opacity: 1, translateY: 0 }}
+                      transition={{ type: 'spring', delay: 240 + index * 80, damping: 18, stiffness: 200 }}
+                    >
+                      <View className="bg-surface p-3 rounded-xl mb-2" style={Shadows.SM}>
+                        <View className="flex-row justify-between items-center">
+                          <Text className="font-semibold text-gray-900">{food.name}</Text>
+                          <Text className="text-red-600 dark:text-red-400 font-bold">{food.estimatedCalories} cal</Text>
+                        </View>
+                        {food.estimatedPortion && (
+                          <Text className="text-sm text-gray-600 mt-1">Portion: {food.estimatedPortion}</Text>
+                        )}
                       </View>
-                      {food.estimatedPortion && (
-                        <Text className="text-sm text-gray-600 mt-1">Portion: {food.estimatedPortion}</Text>
-                      )}
-                    </View>
+                    </MotiView>
                   ))}
                 </View>
               )}
@@ -481,50 +510,68 @@ export default function ScannerScreen() {
               {/* Barcode Results */}
               {mode === 'barcode' && 'productName' in result && (
                 <View>
-                  <View className="bg-blue-50 p-4 rounded-lg mb-4">
-                    <Text className="text-lg font-semibold text-gray-900 mb-1">
-                      {result.productName}
-                    </Text>
-                    {result.brand && (
-                      <Text className="text-sm text-gray-600 mb-2">Brand: {result.brand}</Text>
-                    )}
-                    {result.imageUrl && (
-                      <Image
-                        source={{ uri: result.imageUrl }}
-                        className="w-full h-32 rounded-lg mb-2"
-                        resizeMode="contain"
-                      />
-                    )}
-                  </View>
+                  <MotiView
+                    from={{ opacity: 0, translateY: 10 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: 'spring', delay: 160, damping: 18, stiffness: 200 }}
+                  >
+                    <View className="bg-blue-50 p-4 rounded-xl mb-4" style={Shadows.MD}>
+                      <Text className="text-lg font-semibold text-gray-900 mb-1">
+                        {result.productName}
+                      </Text>
+                      {result.brand && (
+                        <Text className="text-sm text-gray-600 mb-2">Brand: {result.brand}</Text>
+                      )}
+                      {result.imageUrl && (
+                        <Image
+                          source={{ uri: result.imageUrl }}
+                          className="w-full h-32 rounded-lg mb-2"
+                          resizeMode="contain"
+                        />
+                      )}
+                    </View>
+                  </MotiView>
 
-                  <Text className="text-lg font-semibold text-gray-900 mb-2">Nutrition Information:</Text>
-                  <View className="bg-surface p-4 rounded-lg mb-2">
-                    <View className="flex-row justify-between mb-2">
-                      <Text className="text-gray-700">Calories</Text>
-                      <Text className="font-semibold text-gray-900">{result.calories} cal</Text>
+                  <MotiView
+                    from={{ opacity: 0, translateY: 10 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: 'spring', delay: 240, damping: 18, stiffness: 200 }}
+                  >
+                    <Text className="text-lg font-semibold text-gray-900 mb-2">Nutrition Information:</Text>
+                    <View className="bg-surface p-4 rounded-xl mb-2" style={Shadows.SM}>
+                      <View className="flex-row justify-between mb-2">
+                        <Text className="text-gray-700">Calories</Text>
+                        <Text className="font-semibold text-gray-900">{result.calories} cal</Text>
+                      </View>
+                      <View className="flex-row justify-between mb-2">
+                        <Text className="text-gray-700">Protein</Text>
+                        <Text className="font-semibold text-gray-900">{result.protein}g</Text>
+                      </View>
+                      <View className="flex-row justify-between mb-2">
+                        <Text className="text-gray-700">Carbs</Text>
+                        <Text className="font-semibold text-gray-900">{result.carbs}g</Text>
+                      </View>
+                      <View className="flex-row justify-between">
+                        <Text className="text-gray-700">Fat</Text>
+                        <Text className="font-semibold text-gray-900">{result.fat}g</Text>
+                      </View>
+                      {result.servingSize && (
+                        <Text className="text-sm text-gray-600 mt-2">Serving Size: {result.servingSize}</Text>
+                      )}
                     </View>
-                    <View className="flex-row justify-between mb-2">
-                      <Text className="text-gray-700">Protein</Text>
-                      <Text className="font-semibold text-gray-900">{result.protein}g</Text>
-                    </View>
-                    <View className="flex-row justify-between mb-2">
-                      <Text className="text-gray-700">Carbs</Text>
-                      <Text className="font-semibold text-gray-900">{result.carbs}g</Text>
-                    </View>
-                    <View className="flex-row justify-between">
-                      <Text className="text-gray-700">Fat</Text>
-                      <Text className="font-semibold text-gray-900">{result.fat}g</Text>
-                    </View>
-                    {result.servingSize && (
-                      <Text className="text-sm text-gray-600 mt-2">Serving Size: {result.servingSize}</Text>
-                    )}
-                  </View>
+                  </MotiView>
 
                   {result.ingredients && result.ingredients.length > 0 && (
-                    <View className="mt-2">
-                      <Text className="text-sm font-semibold text-gray-700 mb-1">Ingredients:</Text>
-                      <Text className="text-sm text-gray-600">{result.ingredients.join(', ')}</Text>
-                    </View>
+                    <MotiView
+                      from={{ opacity: 0, translateY: 8 }}
+                      animate={{ opacity: 1, translateY: 0 }}
+                      transition={{ type: 'spring', delay: 320, damping: 18, stiffness: 200 }}
+                    >
+                      <View className="mt-2">
+                        <Text className="text-sm font-semibold text-gray-700 mb-1">Ingredients:</Text>
+                        <Text className="text-sm text-gray-600">{result.ingredients.join(', ')}</Text>
+                      </View>
+                    </MotiView>
                   )}
                 </View>
               )}
@@ -571,10 +618,20 @@ export default function ScannerScreen() {
         </Animated.View>
       )}
 
-      {/* Processing Overlay — Sazon "thinking" during scan */}
+      {/* Processing Overlay — frosted glass + Sazon "thinking" */}
       {processing && (
-        <View className="absolute inset-0 bg-black/50 items-center justify-center">
-          <View className="bg-white dark:bg-gray-800 p-8 rounded-lg items-center">
+        <View className="absolute inset-0 items-center justify-center" style={{ zIndex: 20 }}>
+          {Platform.OS === 'ios' ? (
+            <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
+          )}
+          <LinearGradient
+            colors={['rgba(220,38,38,0.12)', 'transparent']}
+            style={[StyleSheet.absoluteFill]}
+            pointerEvents="none"
+          />
+          <View className="rounded-2xl p-8 items-center" style={{ backgroundColor: 'rgba(255,255,255,0.12)', ...Shadows.LG }}>
             <LoadingState
               message={mode === 'food' ? 'Analyzing food photo...' : 'Looking up product...'}
               expression="thinking"

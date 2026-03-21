@@ -9,6 +9,7 @@ import { useColorScheme } from 'nativewind';
 import { userApi } from '../lib/api';
 import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
 import { Colors, DarkColors } from '../constants/Colors';
+import { Shadows } from '../constants/Shadows';
 import { HapticPatterns } from '../constants/Haptics';
 import * as Haptics from 'expo-haptics';
 
@@ -221,7 +222,7 @@ export default function EditPreferencesScreen() {
 
   const bg = isDark ? DarkColors.background : Colors.surface;
   const cardBg = isDark ? DarkColors.card : '#FFFFFF';
-  const border = 'transparent';
+  // borders removed — cards now use Shadows.SM for elevation
   const label = isDark ? DarkColors.text.primary : Colors.text.primary;
   const sub = isDark ? '#9CA3AF' : '#6B7280';
   const inputBg = isDark ? '#374151' : '#F3F4F6';
@@ -261,7 +262,7 @@ export default function EditPreferencesScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Cuisine Preferences ─────────────────────────────────────────── */}
-          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Favorite Cuisines</Text>
             <Text style={{ fontSize: 13, color: sub, marginBottom: 14 }}>Recipes from these cuisines will be ranked higher for you</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -278,7 +279,7 @@ export default function EditPreferencesScreen() {
           </View>
 
           {/* ── Dietary Restrictions ────────────────────────────────────────── */}
-          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Dietary Restrictions</Text>
             <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Select any that apply, then tap the badge to set how strict it is</Text>
 
@@ -297,7 +298,7 @@ export default function EditPreferencesScreen() {
                   ? (isAllergic
                       ? (isDark ? '#F87171' : '#DC2626')
                       : (isDark ? '#FCD34D' : '#D97706'))
-                  : border;
+                  : 'transparent';
                 const chipTextColor = isSelected
                   ? (isAllergic
                       ? (isDark ? '#FCA5A5' : '#B91C1C')
@@ -340,7 +341,7 @@ export default function EditPreferencesScreen() {
           </View>
 
           {/* ── Banned Ingredients ──────────────────────────────────────────── */}
-          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Banned Ingredients</Text>
             <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Recipes containing these will never be recommended</Text>
 
@@ -349,7 +350,7 @@ export default function EditPreferencesScreen() {
                 value={newIngredient}
                 onChangeText={setNewIngredient}
                 placeholder="e.g., mushrooms"
-                style={{ flex: 1, backgroundColor: inputBg, borderWidth: 1, borderColor: border, borderRadius: 9, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: label }}
+                style={{ flex: 1, backgroundColor: inputBg, borderRadius: 9, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: label, ...Shadows.SM }}
                 placeholderTextColor={sub}
                 onSubmitEditing={addBannedIngredient}
               />
@@ -380,7 +381,7 @@ export default function EditPreferencesScreen() {
           </View>
 
           {/* ── Preferred Superfoods ─────────────────────────────────────────── */}
-          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Preferred Superfoods</Text>
             <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Recipes with these get a boost in your recommendations</Text>
 
@@ -404,7 +405,7 @@ export default function EditPreferencesScreen() {
           </View>
 
           {/* ── Other Preferences ───────────────────────────────────────────── */}
-          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: border }}>
+          <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 14 }}>Other Preferences</Text>
 
             {/* Cook Time */}
@@ -415,7 +416,7 @@ export default function EditPreferencesScreen() {
                 onChangeText={setCookTimePreference}
                 placeholder="30"
                 keyboardType="numeric"
-                style={{ backgroundColor: inputBg, borderWidth: 1, borderColor: border, borderRadius: 9, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: label }}
+                style={{ backgroundColor: inputBg, borderRadius: 9, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: label, ...Shadows.SM }}
                 placeholderTextColor={sub}
               />
               <Text style={{ fontSize: 11, color: sub, marginTop: 4 }}>Recipes longer than this won't be recommended</Text>

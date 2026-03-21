@@ -12,6 +12,7 @@ import { useColorScheme } from 'nativewind';
 import { recipeApi, collectionsApi, aiRecipeApi } from '../lib/api';
 import type { Recipe } from '../types';
 import { Colors, DarkColors } from '../constants/Colors';
+import { Shadows } from '../constants/Shadows';
 import { Spacing, BorderRadius } from '../constants/Spacing';
 import { Duration, Spring } from '../constants/Animations';
 import { HapticPatterns } from '../constants/Haptics';
@@ -108,11 +109,12 @@ export default function RecipeFormScreen() {
     }
   }, [pickerVisible]);
 
-  // Animate nutrition section expansion
+  // Animate nutrition section expansion (spring for natural feel)
   useEffect(() => {
-    Animated.timing(nutritionMaxHeight, {
+    Animated.spring(nutritionMaxHeight, {
       toValue: showNutrition ? 1 : 0,
-      duration: 260,
+      friction: 10,
+      tension: 120,
       useNativeDriver: false,
     }).start();
   }, [showNutrition]);
@@ -716,62 +718,65 @@ export default function RecipeFormScreen() {
             <View className="flex-row gap-2 mb-2">
               <HapticTouchableOpacity
                 onPress={() => setRecipeType('meal')}
-                className={`flex-1 py-3 px-4 rounded-lg border-2 ${
+                className={`flex-1 py-3 px-4 rounded-xl ${
                   recipeType === 'meal'
                     ? isDark
-                      ? 'bg-orange-500/20 border-orange-500'
-                      : 'bg-orange-50 border-orange-500'
+                      ? 'bg-orange-500/20'
+                      : 'bg-orange-50'
                     : isDark
-                    ? 'bg-gray-700 border-gray-600'
-                    : 'bg-surface-tint border-gray-200'
+                    ? 'bg-gray-700'
+                    : 'bg-gray-50'
                 }`}
+                style={recipeType === 'meal' ? Shadows.MD : Shadows.SM}
               >
-                <Text className={`text-center font-medium ${
+                <Text className={`text-center font-semibold ${
                   recipeType === 'meal'
                     ? 'text-orange-500'
                     : isDark ? 'text-gray-300' : 'text-gray-700'
                 }`}>
-                  Meal
+                  🍽 Meal
                 </Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={() => setRecipeType('snack')}
-                className={`flex-1 py-3 px-4 rounded-lg border-2 ${
+                className={`flex-1 py-3 px-4 rounded-xl ${
                   recipeType === 'snack'
                     ? isDark
-                      ? 'bg-orange-500/20 border-orange-500'
-                      : 'bg-orange-50 border-orange-500'
+                      ? 'bg-orange-500/20'
+                      : 'bg-orange-50'
                     : isDark
-                    ? 'bg-gray-700 border-gray-600'
-                    : 'bg-surface-tint border-gray-200'
+                    ? 'bg-gray-700'
+                    : 'bg-gray-50'
                 }`}
+                style={recipeType === 'snack' ? Shadows.MD : Shadows.SM}
               >
-                <Text className={`text-center font-medium ${
+                <Text className={`text-center font-semibold ${
                   recipeType === 'snack'
                     ? 'text-orange-500'
                     : isDark ? 'text-gray-300' : 'text-gray-700'
                 }`}>
-                  Snack
+                  🥨 Snack
                 </Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={() => setRecipeType('dessert')}
-                className={`flex-1 py-3 px-4 rounded-lg border-2 ${
+                className={`flex-1 py-3 px-4 rounded-xl ${
                   recipeType === 'dessert'
                     ? isDark
-                      ? 'bg-orange-500/20 border-orange-500'
-                      : 'bg-orange-50 border-orange-500'
+                      ? 'bg-orange-500/20'
+                      : 'bg-orange-50'
                     : isDark
-                    ? 'bg-gray-700 border-gray-600'
-                    : 'bg-surface-tint border-gray-200'
+                    ? 'bg-gray-700'
+                    : 'bg-gray-50'
                 }`}
+                style={recipeType === 'dessert' ? Shadows.MD : Shadows.SM}
               >
-                <Text className={`text-center font-medium ${
+                <Text className={`text-center font-semibold ${
                   recipeType === 'dessert'
                     ? 'text-orange-500'
                     : isDark ? 'text-gray-300' : 'text-gray-700'
                 }`}>
-                  Dessert
+                  🍰 Dessert
                 </Text>
               </HapticTouchableOpacity>
             </View>
@@ -781,62 +786,53 @@ export default function RecipeFormScreen() {
               <View className="flex-row gap-2">
                 <HapticTouchableOpacity
                   onPress={() => setMealType('breakfast')}
-                  className={`flex-1 py-2 px-3 rounded-lg border ${
+                  className={`flex-1 py-2 px-3 rounded-xl ${
                     mealType === 'breakfast'
-                      ? isDark
-                        ? 'bg-orange-500/20 border-orange-500'
-                        : 'bg-orange-50 border-orange-500'
-                      : isDark
-                      ? 'bg-gray-700 border-gray-600'
-                      : 'bg-surface-tint border-gray-200'
+                      ? isDark ? 'bg-orange-500/20' : 'bg-orange-50'
+                      : isDark ? 'bg-gray-700' : 'bg-gray-50'
                   }`}
+                  style={mealType === 'breakfast' ? Shadows.SM : undefined}
                 >
                   <Text className={`text-center text-sm ${
                     mealType === 'breakfast'
                       ? 'text-orange-500 font-semibold'
                       : isDark ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    Breakfast
+                    🌅 Breakfast
                   </Text>
                 </HapticTouchableOpacity>
                 <HapticTouchableOpacity
                   onPress={() => setMealType('lunch')}
-                  className={`flex-1 py-2 px-3 rounded-lg border ${
+                  className={`flex-1 py-2 px-3 rounded-xl ${
                     mealType === 'lunch'
-                      ? isDark
-                        ? 'bg-orange-500/20 border-orange-500'
-                        : 'bg-orange-50 border-orange-500'
-                      : isDark
-                      ? 'bg-gray-700 border-gray-600'
-                      : 'bg-surface-tint border-gray-200'
+                      ? isDark ? 'bg-orange-500/20' : 'bg-orange-50'
+                      : isDark ? 'bg-gray-700' : 'bg-gray-50'
                   }`}
+                  style={mealType === 'lunch' ? Shadows.SM : undefined}
                 >
                   <Text className={`text-center text-sm ${
                     mealType === 'lunch'
                       ? 'text-orange-500 font-semibold'
                       : isDark ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    Lunch
+                    ☀️ Lunch
                   </Text>
                 </HapticTouchableOpacity>
                 <HapticTouchableOpacity
                   onPress={() => setMealType('dinner')}
-                  className={`flex-1 py-2 px-3 rounded-lg border ${
+                  className={`flex-1 py-2 px-3 rounded-xl ${
                     mealType === 'dinner'
-                      ? isDark
-                        ? 'bg-orange-500/20 border-orange-500'
-                        : 'bg-orange-50 border-orange-500'
-                      : isDark
-                      ? 'bg-gray-700 border-gray-600'
-                      : 'bg-surface-tint border-gray-200'
+                      ? isDark ? 'bg-orange-500/20' : 'bg-orange-50'
+                      : isDark ? 'bg-gray-700' : 'bg-gray-50'
                   }`}
+                  style={mealType === 'dinner' ? Shadows.SM : undefined}
                 >
                   <Text className={`text-center text-sm ${
                     mealType === 'dinner'
                       ? 'text-orange-500 font-semibold'
                       : isDark ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    Dinner
+                    🌙 Dinner
                   </Text>
                 </HapticTouchableOpacity>
               </View>
