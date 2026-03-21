@@ -26,8 +26,10 @@ import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingMod
 import IngredientChecklist from '../components/recipe/IngredientChecklist';
 import AnimatedSazon from '../components/mascot/AnimatedSazon';
 import { CoffeeBanner, shouldShowCoffeeBanner, recordCoffeeBannerShown } from '../components/premium/CoffeeBanner';
+import { CelebrationOverlay } from '../components/celebrations';
 import { LinearGradient } from 'expo-linear-gradient';
 import { HapticChoreography } from '../utils/hapticChoreography';
+import { mealPlanApi } from '../lib/api';
 
 // --- Types ---
 
@@ -93,18 +95,7 @@ export default function CookingScreen() {
   // Track elapsed cooking time
   const startTimeRef = useRef<number>(Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  // Completion screen animations
-  const CONFETTI = ['🎉', '🍳', '✅', '🌟', '🎊', '👨‍🍳'];
-  const confettiAnims = useRef(
-    CONFETTI.map(() => ({
-      y: new Animated.Value(0),
-      x: new Animated.Value(0),
-      opacity: new Animated.Value(0),
-    }))
-  ).current;
-  const completionScale = useRef(new Animated.Value(0.7)).current;
-  const completionOpacity = useRef(new Animated.Value(0)).current;
+  const [nextMealName, setNextMealName] = useState<string | null>(null);
 
   // Slide animation for step transitions
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -224,26 +215,21 @@ export default function CookingScreen() {
     setDone(true);
     HapticChoreography.cookingComplete();
 
-    // Animate confetti burst
-    confettiAnims.forEach((anim, i) => {
-      const angle = (i / CONFETTI.length) * Math.PI * 2;
-      const dist = 80 + Math.random() * 60;
-      Animated.parallel([
-        Animated.timing(anim.opacity, { toValue: 1, duration: 100, useNativeDriver: true }),
-        Animated.timing(anim.y, { toValue: -Math.abs(Math.sin(angle)) * dist - 40, duration: 900, useNativeDriver: true }),
-        Animated.timing(anim.x, { toValue: Math.cos(angle) * dist, duration: 900, useNativeDriver: true }),
-      ]).start(() => {
-        Animated.timing(anim.opacity, { toValue: 0, duration: 400, delay: 200, useNativeDriver: true }).start();
-      });
-    });
-
-    // Spring-in the completion card
-    Animated.parallel([
-      Animated.spring(completionScale, { toValue: 1, friction: 7, tension: 200, useNativeDriver: true }),
-      Animated.timing(completionOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-    ]).start();
     // Record cooking (non-blocking)
     recipeApi.recordCook(recipe.id).catch(() => {});
+
+    // Fetch next meal from today's plan (non-blocking)
+    mealPlanApi.getWeeklyPlan().then((res: any) => {
+      const days = res?.data?.days || res?.data?.data?.days || [];
+      if (Array.isArray(days)) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayPlan = days.find((d: any) => d.date === today);
+        const meals = todayPlan?.meals || [];
+        const next = meals.find((m: any) => !m.completed && m.recipe?.title !== recipe.title);
+        if (next?.recipe?.title) setNextMealName(next.recipe.title);
+      }
+    }).catch(() => {});
+
     // Conditionally show coffee banner (7-day cooldown, free users only)
     shouldShowCoffeeBanner().then((show) => {
       if (show) {
@@ -327,67 +313,33 @@ export default function CookingScreen() {
       ? `${elapsedMin}m ${elapsedSec}s`
       : `${elapsedSeconds}s`;
 
+    const cookingStats = [
+      { value: String(totalSteps), label: 'Steps', color: '#FB923C', bgColor: 'rgba(251, 146, 60, 0.15)' },
+      { value: timeLabel, label: 'Time', color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.15)' },
+      { value: String(checkedIngredients.size), label: 'Prepped', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.15)' },
+    ];
+
+    const nextMealCTA = nextMealName
+      ? { label: `Next: ${nextMealName}`, onPress: () => router.replace('/(tabs)/meal-plan' as any) }
+      : undefined;
+
     return (
-      <View className="flex-1 bg-gray-950 items-center justify-center px-8">
-        {/* Confetti burst */}
-        {confettiAnims.map((anim, i) => (
-          <Animated.Text
-            key={i}
-            style={{
-              position: 'absolute',
-              fontSize: 28,
-              opacity: anim.opacity,
-              transform: [{ translateY: anim.y }, { translateX: anim.x }],
-            }}
-          >
-            {CONFETTI[i]}
-          </Animated.Text>
-        ))}
-
-        {/* Main card spring-in */}
-        <Animated.View
-          style={{
-            alignItems: 'center',
-            transform: [{ scale: completionScale }],
-            opacity: completionOpacity,
+      <View className="flex-1 bg-gray-950">
+        <CelebrationOverlay
+          visible={true}
+          title="You nailed it!"
+          subtitle={`${recipe.title} is ready to serve. Enjoy!`}
+          expression="chef-kiss"
+          stats={cookingStats}
+          primaryCTA={nextMealCTA || {
+            label: 'Back to Recipe',
+            onPress: () => router.back(),
           }}
-        >
-          <AnimatedSazon expression="chef-kiss" size="large" />
-          <Text className="text-white text-3xl font-black mt-6 text-center">
-            Recipe Complete!
-          </Text>
-          <Text className="text-gray-400 text-center mt-2 text-base">
-            {recipe.title} is ready to serve. Enjoy!
-          </Text>
-
-          {/* Stats row */}
-          <View className="flex-row mt-6 gap-4">
-            <View className="items-center bg-gray-800 rounded-2xl px-5 py-3">
-              <Text className="text-orange-400 text-2xl font-black">{totalSteps}</Text>
-              <Text className="text-gray-400 text-xs mt-1">Steps</Text>
-            </View>
-            <View className="items-center bg-gray-800 rounded-2xl px-5 py-3">
-              <Text className="text-orange-400 text-2xl font-black">{timeLabel}</Text>
-              <Text className="text-gray-400 text-xs mt-1">Time</Text>
-            </View>
-          </View>
-
-          {/* Gradient CTA */}
-          <HapticTouchableOpacity
-            onPress={() => router.back()}
-            hapticStyle="medium"
-            style={{ marginTop: 32, borderRadius: 100, overflow: 'hidden' }}
-          >
-            <LinearGradient
-              colors={['#FB923C', '#EF4444']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ paddingHorizontal: 40, paddingVertical: 16, borderRadius: 100 }}
-            >
-              <Text className="text-white font-bold text-lg">Back to Recipe</Text>
-            </LinearGradient>
-          </HapticTouchableOpacity>
-        </Animated.View>
+          secondaryCTA={nextMealCTA ? {
+            label: 'Back to Recipe',
+            onPress: () => router.back(),
+          } : undefined}
+        />
 
         <CoffeeBanner
           visible={showCoffeeBanner}

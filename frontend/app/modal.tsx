@@ -24,6 +24,7 @@ import * as Haptics from 'expo-haptics';
 import { Colors, DarkColors } from '../constants/Colors';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { HeartBurstAnimation } from '../components/celebrations';
 
 const HERO_HEIGHT = 300;
 
@@ -94,6 +95,7 @@ export default function RecipeModal() {
   });
   
   const [isSaving, setIsSaving] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
   const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
@@ -321,34 +323,30 @@ export default function RecipeModal() {
 
   const performSave = async (collectionIds?: string[]) => {
     if (!recipe) return;
-    
+
     try {
       setIsSaving(true);
       console.log('📱 Modal: Saving recipe', recipe.id);
       await recipeApi.saveRecipe(recipe.id, collectionIds && collectionIds.length > 0 ? { collectionIds } : undefined);
       console.log('📱 Modal: Recipe saved successfully');
-      // Show confirmation, then close modal
-      Alert.alert('Saved', 'Recipe saved to your cookbook!', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      // Trigger heart burst animation, then auto-navigate back
+      setSavedSuccess(true);
+      setTimeout(() => router.back(), 1200);
     } catch (error: any) {
       if (error.code === 'HTTP_409' || /already\s*saved/i.test(error.message)) {
         // If already saved, try to add to collections
         if (collectionIds && collectionIds.length > 0) {
           try {
             await collectionsApi.moveSavedRecipe(recipe.id, collectionIds);
-            Alert.alert('Moved', 'Recipe moved to collections!', [
-              { text: 'OK', onPress: () => router.back() }
-            ]);
+            setSavedSuccess(true);
+            setTimeout(() => router.back(), 1200);
           } catch (e) {
-            Alert.alert('Already Saved', 'This recipe is already in your cookbook!', [
-              { text: 'OK', onPress: () => router.back() }
-            ]);
+            setSavedSuccess(true);
+            setTimeout(() => router.back(), 1200);
           }
       } else {
-          Alert.alert('Already Saved', 'This recipe is already in your cookbook!', [
-            { text: 'OK', onPress: () => router.back() }
-          ]);
+          setSavedSuccess(true);
+          setTimeout(() => router.back(), 1200);
         }
       } else {
         console.error('📱 Modal: Save error', error);
@@ -1354,25 +1352,59 @@ export default function RecipeModal() {
         >
           <Ionicons name="close" size={20} color="#FFF" />
         </HapticTouchableOpacity>
-        {isUserRecipe ? (
-          <HapticTouchableOpacity
-            accessibilityLabel="Edit recipe"
-            onPress={handleEditRecipe}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: 'rgba(0,0,0,0.40)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="create-outline" size={20} color="#FFF" />
-          </HapticTouchableOpacity>
-        ) : (
-          <View style={{ width: 36 }} />
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {/* Heart burst — visible after save */}
+          {savedSuccess && (
+            <HeartBurstAnimation saved={true} size={22} />
+          )}
+          {isUserRecipe ? (
+            <HapticTouchableOpacity
+              accessibilityLabel="Edit recipe"
+              onPress={handleEditRecipe}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: 'rgba(0,0,0,0.40)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="create-outline" size={20} color="#FFF" />
+            </HapticTouchableOpacity>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
+        </View>
       </View>
+
+      {/* Saved success banner */}
+      {savedSuccess && (
+        <MotiView
+          from={{ opacity: 0, translateY: -20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'spring', damping: 15 }}
+          style={{
+            position: 'absolute',
+            top: insets.top + 52,
+            left: 0,
+            right: 0,
+            zIndex: 30,
+            alignItems: 'center',
+          }}
+        >
+          <View style={{
+            backgroundColor: 'rgba(16, 185, 129, 0.9)',
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 100,
+          }}>
+            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
+              Saved to cookbook!
+            </Text>
+          </View>
+        </MotiView>
+      )}
 
       {/* Collapsing frosted header — fades in as hero scrolls out of view */}
       <Animated.View

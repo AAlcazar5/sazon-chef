@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { mealPlanApi, aiRecipeApi, userApi, costTrackingApi } from '../lib/api';
 import { HapticPatterns } from '../constants/Haptics';
+import { HapticChoreography } from '../utils/hapticChoreography';
 import type { HourData } from './useMealPlanUI';
 import type { MealPlanTemplate, RecurringMeal } from '../types';
 
@@ -426,7 +427,7 @@ export function useMealPlanActions({
       });
 
       if (response.data?.success) {
-        HapticPatterns.success();
+        HapticChoreography.planGenerated();
         setSuccessMessage({
           title: 'Weekly Meal Plan Generated!',
           message: `All ${response.data.days?.length || 7} days have been planned. Your personalized meal plan is ready!`,
