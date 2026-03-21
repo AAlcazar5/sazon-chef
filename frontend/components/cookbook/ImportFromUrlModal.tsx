@@ -21,7 +21,7 @@ import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Duration, Spring } from '../../constants/Animations';
 import { recipeApi } from '../../lib/api';
-import AnimatedSazon from '../mascot/AnimatedSazon';
+import AnimatedLottieMascot from '../mascot/AnimatedLottieMascot';
 
 type ImportState = 'input' | 'loading' | 'preview';
 
@@ -251,7 +251,7 @@ export default function ImportFromUrlModal({
               {/* Loading State */}
               {importState === 'loading' && (
                 <View className="px-5 py-10 items-center">
-                  <AnimatedSazon expression="thinking" size="medium" />
+                  <AnimatedLottieMascot expression="thinking" size="medium" />
                   <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-4">
                     Extracting Recipe...
                   </Text>

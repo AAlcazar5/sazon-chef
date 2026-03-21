@@ -45,9 +45,9 @@ jest.mock('../../utils/timerExtraction', () => ({
 jest.mock('../../components/recipe/CookingModeTimers', () => () => null);
 jest.mock('../../components/recipe/IngredientChecklist', () => () => null);
 
-jest.mock('../../components/mascot/AnimatedSazon', () => {
+jest.mock('../../components/mascot/AnimatedLottieMascot', () => {
   const { View } = require('react-native');
-  return function MockAnimatedSazon({ expression }: { expression: string }) {
+  return function MockAnimatedLottieMascot({ expression }: { expression: string }) {
     return <View testID={`sazon-${expression}`} />;
   };
 });

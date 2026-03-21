@@ -24,9 +24,9 @@ jest.mock('expo-linear-gradient', () => ({
   },
 }));
 
-jest.mock('../../components/mascot/AnimatedSazon', () => {
+jest.mock('../../components/mascot/AnimatedLottieMascot', () => {
   const { View } = require('react-native');
-  return function MockAnimatedSazon({ expression, animationType }: any) {
+  return function MockAnimatedLottieMascot({ expression, animationType }: any) {
     return <View testID={`animated-sazon-${expression}`} />;
   };
 });

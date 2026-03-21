@@ -5,7 +5,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AnimatedSazon from '../mascot/AnimatedSazon';
+import AnimatedLottieMascot from '../mascot/AnimatedLottieMascot';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import type { SazonExpression } from '../mascot/SazonMascot';
 
@@ -236,7 +236,7 @@ export default function CelebrationOverlay({
           ]}
         >
           {/* Mascot */}
-          <AnimatedSazon
+          <AnimatedLottieMascot
             expression={expression}
             size="large"
             animationType="celebrate"

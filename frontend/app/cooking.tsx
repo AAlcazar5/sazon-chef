@@ -24,7 +24,7 @@ import { recipeApi } from '../lib/api';
 import { extractTimers } from '../utils/timerExtraction';
 import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingModeTimers';
 import IngredientChecklist from '../components/recipe/IngredientChecklist';
-import AnimatedSazon from '../components/mascot/AnimatedSazon';
+import AnimatedLottieMascot from '../components/mascot/AnimatedLottieMascot';
 import { CoffeeBanner, shouldShowCoffeeBanner, recordCoffeeBannerShown } from '../components/premium/CoffeeBanner';
 import { CelebrationOverlay } from '../components/celebrations';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -306,7 +306,7 @@ export default function CookingScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-gray-950 items-center justify-center">
-        <AnimatedSazon expression="thinking" size="medium" />
+        <AnimatedLottieMascot expression="thinking" size="medium" />
         <Text className="text-gray-300 mt-4 text-base">Getting recipe ready...</Text>
       </View>
     );
