@@ -1,7 +1,8 @@
 // frontend/components/shopping/OfflineBanner.tsx
 // Banner indicating offline status, pending sync, or stale cache
 
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { useColorScheme } from 'nativewind';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
@@ -83,7 +84,7 @@ export default function OfflineBanner({
           backgroundColor: isDark ? '#1E3A5F' : '#EFF6FF',
         }, Shadows.SM]}
       >
-        <ActivityIndicator
+        <AnimatedActivityIndicator
           size="small"
           color={isDark ? '#93C5FD' : '#2563EB'}
           style={{ marginRight: 10 }}

@@ -139,7 +139,7 @@ export default function CookingScreen() {
         setLoading(false);
       } catch (err: any) {
         if (!cancelled) {
-          setError(err?.message || 'Failed to load recipe');
+          setError(err?.message || 'Couldn\'t load this recipe');
           setLoading(false);
         }
       }

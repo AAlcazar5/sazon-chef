@@ -2,7 +2,8 @@
 // Profile presets card with save/apply/delete functionality
 
 import { useState } from 'react';
-import { View, Text, Modal, TextInput, Alert, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TextInput, Alert, Switch } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -126,7 +127,7 @@ export default function ProfilePresetsCard({
 
         {/* Preset list */}
         {presetsLoading ? (
-          <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
+          <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
         ) : presets.length === 0 ? (
           <Text className="text-sm text-gray-400 dark:text-gray-500 text-center py-3">
             No presets yet. Save your current settings to create one.
@@ -167,7 +168,7 @@ export default function ProfilePresetsCard({
                   </View>
                   <View className="flex-row items-center" style={{ gap: 12 }}>
                     {applying === preset.id ? (
-                      <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
+                      <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
                     ) : (
                       <HapticTouchableOpacity onPress={() => handleApply(preset)}>
                         <Icon name={Icons.CHECKMARK_CIRCLE_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Apply preset" />
@@ -236,7 +237,7 @@ export default function ProfilePresetsCard({
                 }}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <AnimatedActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text className="text-white font-semibold">Save</Text>
                 )}

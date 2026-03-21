@@ -2,7 +2,8 @@
 // Reusable gradient pill button — matches the "Start Cooking" button style in modal.tsx.
 // Use GradientButton.presets to pick a named color pair from the app palette.
 
-import { ActivityIndicator, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Text, StyleSheet, ViewStyle } from 'react-native';
+import AnimatedActivityIndicator from './AnimatedActivityIndicator';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
@@ -73,7 +74,7 @@ export default function GradientButton({
         style={styles.gradient}
       >
         {loading ? (
-          <ActivityIndicator color="#FFF" />
+          <AnimatedActivityIndicator color="#FFF" />
         ) : (
           <>
             {icon && (

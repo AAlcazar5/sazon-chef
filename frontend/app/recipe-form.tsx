@@ -226,7 +226,7 @@ export default function RecipeFormScreen() {
       }
     } catch (e: any) {
       HapticPatterns.error();
-      Alert.alert('Error', e?.message || 'Failed to create collection');
+      Alert.alert('Oops!', e?.message || 'Couldn\'t create the collection — try again?');
     }
   };
 
@@ -281,7 +281,7 @@ export default function RecipeFormScreen() {
     } catch (error: any) {
       console.error('Failed to load recipe:', error);
       HapticPatterns.error();
-      Alert.alert('Error', error.message || 'Failed to load recipe');
+      Alert.alert('Oops!', error.message || 'Couldn\'t load the recipe — try again?');
       setLoadingRecipe(false);
       router.back();
     }
@@ -456,10 +456,10 @@ export default function RecipeFormScreen() {
                           error.message?.includes('429');
       
       Alert.alert(
-        'Generation Failed',
+        'Hmm, That Didn\'t Work',
         isQuotaError
-          ? 'AI recipe generation is temporarily unavailable due to quota limits. Please try again later.'
-          : error.message || 'Failed to generate recipe. Please try again.',
+          ? 'Our AI is a bit overwhelmed right now — try again in a few minutes!'
+          : error.message || 'Couldn\'t generate a recipe — give it another shot?',
         [{ text: 'OK' }]
       );
     } finally {
@@ -485,60 +485,60 @@ export default function RecipeFormScreen() {
   const validateForm = (): boolean => {
     if (!title.trim()) {
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter a recipe title');
+      Alert.alert('Hold On', 'Please enter a recipe title');
       return false;
     }
     if (!description.trim()) {
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter a description');
+      Alert.alert('Hold On', 'Please enter a description');
       return false;
     }
     if (!cookTime || isNaN(parseInt(cookTime))) {
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter a valid cook time');
+      Alert.alert('Hold On', 'Please enter a valid cook time');
       return false;
     }
     if (!cuisine.trim()) {
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter a cuisine type');
+      Alert.alert('Hold On', 'Please enter a cuisine type');
       return false;
     }
     if (!calories || isNaN(parseInt(calories))) {
       setShowNutrition(true);
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter valid calorie amount');
+      Alert.alert('Hold On', 'Please enter valid calorie amount');
       return false;
     }
     if (!protein || isNaN(parseInt(protein))) {
       setShowNutrition(true);
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter valid protein amount');
+      Alert.alert('Hold On', 'Please enter valid protein amount');
       return false;
     }
     if (!carbs || isNaN(parseInt(carbs))) {
       setShowNutrition(true);
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter valid carbs amount');
+      Alert.alert('Hold On', 'Please enter valid carbs amount');
       return false;
     }
     if (!fat || isNaN(parseInt(fat))) {
       setShowNutrition(true);
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please enter valid fat amount');
+      Alert.alert('Hold On', 'Please enter valid fat amount');
       return false;
     }
 
     const validIngredients = ingredients.filter(ing => ing.trim());
     if (validIngredients.length === 0) {
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please add at least one ingredient');
+      Alert.alert('Hold On', 'Please add at least one ingredient');
       return false;
     }
 
     const validInstructions = instructions.filter(inst => inst.trim());
     if (validInstructions.length === 0) {
       HapticPatterns.error();
-      Alert.alert('Validation Error', 'Please add at least one instruction');
+      Alert.alert('Hold On', 'Please add at least one instruction');
       return false;
     }
 
@@ -607,7 +607,7 @@ export default function RecipeFormScreen() {
     } catch (error: any) {
       console.error('Failed to save recipe:', error);
       HapticPatterns.error();
-      Alert.alert('Error', error.message || 'Failed to save recipe');
+      Alert.alert('Oops!', error.message || 'Couldn\'t save the recipe — try again?');
     } finally {
       setLoading(false);
     }

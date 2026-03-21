@@ -82,7 +82,7 @@ export default function CreateCollectionScreen() {
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      Alert.alert('Oops!', 'Couldn\'t load that image — try another one?');
     }
   };
 
@@ -91,7 +91,7 @@ export default function CreateCollectionScreen() {
       setShakeName(true);
       setTimeout(() => setShakeName(false), 500);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      Alert.alert('Error', 'Please enter a collection name');
+      Alert.alert('Oops!', 'Your collection needs a name first!');
       return;
     }
 
@@ -106,7 +106,7 @@ export default function CreateCollectionScreen() {
       handleClose();
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to create collection. Please try again.');
+      Alert.alert('Oops!', error.message || 'Couldn\'t create the collection — try again?');
     } finally {
       setLoading(false);
     }

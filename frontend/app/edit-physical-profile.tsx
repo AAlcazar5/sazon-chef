@@ -1,4 +1,5 @@
 import { View, Text, TextInput, Alert, ScrollView } from 'react-native';
+import LoadingState from '../components/ui/LoadingState';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { router } from 'expo-router';
@@ -200,7 +201,7 @@ export default function EditPhysicalProfileScreen() {
     // Validation - check for actual values
     if (!gender || !age || !activityLevel || !fitnessGoal) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Validation Error', 'Please fill in all required fields');
+      Alert.alert('Hold On', 'Please fill in all required fields');
       return;
     }
 
@@ -209,7 +210,7 @@ export default function EditPhysicalProfileScreen() {
     // Validate age
     if (!age || isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Validation Error', 'Age must be between 13 and 120');
+      Alert.alert('Hold On', 'Age must be between 13 and 120');
       return;
     }
 
@@ -217,7 +218,7 @@ export default function EditPhysicalProfileScreen() {
     if (useMetric) {
       if (!heightCm || isNaN(parseFloat(heightCm)) || finalHeightCm < 100 || finalHeightCm > 250) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Validation Error', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
+        Alert.alert('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
         return;
       }
     } else {
@@ -225,7 +226,7 @@ export default function EditPhysicalProfileScreen() {
       const inches = parseFloat(heightInches) || 0;
       if ((feet === 0 && inches === 0) || finalHeightCm < 100 || finalHeightCm > 250) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Validation Error', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
+        Alert.alert('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
         return;
       }
     }
@@ -234,14 +235,14 @@ export default function EditPhysicalProfileScreen() {
     if (useMetric) {
       if (!weightKg || isNaN(parseFloat(weightKg)) || finalWeightKg < 30 || finalWeightKg > 300) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Validation Error', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
+        Alert.alert('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
         return;
       }
     } else {
       const lbs = parseFloat(weightLbs) || 0;
       if (lbs === 0 || finalWeightKg < 30 || finalWeightKg > 300) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Validation Error', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
+        Alert.alert('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
         return;
       }
     }
@@ -289,7 +290,7 @@ export default function EditPhysicalProfileScreen() {
     } catch (error: any) {
       console.error('📱 Edit Physical Profile: Save error', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to save physical profile');
+      Alert.alert('Oops!', error.message || 'Couldn\'t save your profile — give it another shot?');
     } finally {
       setLoading(false);
     }
@@ -299,8 +300,7 @@ export default function EditPhysicalProfileScreen() {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? DarkColors.surface : Colors.surface }} edges={['top']}>
         <View className="flex-1 items-center justify-center">
-          <Ionicons name="body-outline" size={64} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
-          <Text className="mt-4" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Loading...</Text>
+          <LoadingState message="Loading your profile..." expression="happy" />
         </View>
       </SafeAreaView>
     );

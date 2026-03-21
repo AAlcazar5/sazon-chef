@@ -206,7 +206,7 @@ export default function EditMacroGoalsScreen() {
       }
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to load macro goals');
+      Alert.alert('Oops!', error.message || 'Couldn\'t load your macro goals — try again?');
     } finally {
       setLoadingData(false);
     }
@@ -218,12 +218,12 @@ export default function EditMacroGoalsScreen() {
     if (showCustomize) {
       if (!calories || !protein || !carbs || !fat) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Validation Error', 'Please fill in all fields');
+        Alert.alert('Hold On', 'Please fill in all fields');
         return;
       }
       if (m.calories < 500 || m.calories > 10000) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Validation Error', 'Calories must be between 500 and 10,000');
+        Alert.alert('Hold On', 'Calories must be between 500 and 10,000');
         return;
       }
     }
@@ -240,7 +240,7 @@ export default function EditMacroGoalsScreen() {
       router.back();
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to update macro goals');
+      Alert.alert('Oops!', error.message || 'Couldn\'t save your macro goals — try again?');
     } finally {
       setSaving(false);
     }

@@ -3,7 +3,8 @@
 // Redesigned: staggered entrance animations, gradient CTA, spring press
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
+import LoadingState from '../ui/LoadingState';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -165,11 +166,9 @@ export default function MealPlanEmptyState({
       )}
 
       {generatingPlan && (
-        <ActivityIndicator
-          size="large"
-          color={isDark ? DarkColors.primary : Colors.primary}
-          style={{ marginTop: 16 }}
-        />
+        <View style={{ marginTop: 16 }}>
+          <LoadingState message="Creating your meal plan..." expression="focused" size="small" />
+        </View>
       )}
     </View>
   );

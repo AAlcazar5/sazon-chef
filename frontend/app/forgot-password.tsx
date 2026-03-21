@@ -7,8 +7,8 @@ import {
   Text,
   Alert,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
+import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -168,7 +168,7 @@ export default function ForgotPasswordScreen() {
       );
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setErrors({ form: error.message || 'Failed to reset password. Please try again.' });
+      setErrors({ form: error.message || 'Couldn\'t reset your password — try again?' });
     } finally {
       setLoading(false);
     }
@@ -246,7 +246,7 @@ export default function ForgotPasswordScreen() {
                   disabled={loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <AnimatedActivityIndicator color="#fff" />
                   ) : (
                     <Text className="text-white text-base font-semibold">Send Reset Code</Text>
                   )}
@@ -284,7 +284,7 @@ export default function ForgotPasswordScreen() {
                   disabled={loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <AnimatedActivityIndicator color="#fff" />
                   ) : (
                     <Text className="text-white text-base font-semibold">Verify Code</Text>
                   )}
@@ -333,7 +333,7 @@ export default function ForgotPasswordScreen() {
                   disabled={loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <AnimatedActivityIndicator color="#fff" />
                   ) : (
                     <Text className="text-white text-base font-semibold">Reset Password</Text>
                   )}

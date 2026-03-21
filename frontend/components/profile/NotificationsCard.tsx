@@ -1,7 +1,8 @@
 // frontend/components/profile/NotificationsCard.tsx
 // Notifications settings card with meal reminder schedule modal and time wheel picker
 
-import { View, Text, ScrollView, Switch, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Switch, Modal, TextInput } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useState, useRef, useEffect } from 'react';
 import Icon from '../ui/Icon';
@@ -220,7 +221,7 @@ export default function NotificationsCard({
               </View>
               <View className="flex-row items-center">
                 {updatingNotification === 'mealReminders' && (
-                  <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+                  <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
                 )}
                 <Switch
                   value={notifications.mealReminders}
@@ -282,7 +283,7 @@ export default function NotificationsCard({
             </View>
             <View className="flex-row items-center">
               {updatingNotification === 'newRecipes' && (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
               )}
               <Switch
                 value={notifications.newRecipes}
@@ -303,7 +304,7 @@ export default function NotificationsCard({
               </View>
               <View className="flex-row items-center">
                 {updatingNotification === 'goalUpdates' && (
-                  <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+                  <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
                 )}
                 <Switch
                   value={notifications.goalUpdates}
@@ -331,7 +332,7 @@ export default function NotificationsCard({
             </View>
             <View className="flex-row items-center">
               {updatingNotification === 'shoppingReminders' && (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
               )}
               <Switch
                 value={notifications.shoppingReminders ?? true}
@@ -351,7 +352,7 @@ export default function NotificationsCard({
             </View>
             <View className="flex-row items-center">
               {updatingNotification === 'weeklyInsights' && (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
               )}
               <Switch
                 value={notifications.weeklyInsights ?? true}
@@ -372,7 +373,7 @@ export default function NotificationsCard({
               </View>
               <View className="flex-row items-center">
                 {updatingNotification === 'quietHoursStart' && (
-                  <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+                  <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
                 )}
                 <Switch
                   value={!!(notifications.quietHoursStart && notifications.quietHoursEnd)}
@@ -408,7 +409,7 @@ export default function NotificationsCard({
             </View>
             <View className="flex-row items-center">
               {updatingNotification === 'weekendsOff' && (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} style={{ marginRight: 8 }} />
               )}
               <Switch
                 value={notifications.weekendsOff ?? false}

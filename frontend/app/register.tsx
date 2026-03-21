@@ -6,10 +6,10 @@ import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   Alert,
   Platform,
 } from 'react-native';
+import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
@@ -377,7 +377,7 @@ export default function RegisterScreen() {
                     disabled={loading || socialLoading !== null}
                   >
                     {socialLoading === 'google' ? (
-                      <ActivityIndicator color="#fff" />
+                      <AnimatedActivityIndicator color="#fff" />
                     ) : (
                       <>
                         <Ionicons name="logo-google" size={20} color="#fff" />
@@ -394,7 +394,7 @@ export default function RegisterScreen() {
                       disabled={loading || socialLoading !== null}
                     >
                       {socialLoading === 'apple' ? (
-                        <ActivityIndicator color="#fff" />
+                        <AnimatedActivityIndicator color="#fff" />
                       ) : (
                         <>
                           <Ionicons name="logo-apple" size={20} color="#fff" />

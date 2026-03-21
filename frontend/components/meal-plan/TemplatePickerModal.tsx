@@ -2,7 +2,8 @@
 // Modal for browsing and applying meal plan templates
 
 import React from 'react';
-import { View, Text, Modal, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, ScrollView } from 'react-native';
+import LoadingState from '../ui/LoadingState';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import PulsingLoader from '../ui/PulsingLoader';
 import Icon from '../ui/Icon';
@@ -79,10 +80,7 @@ export default function TemplatePickerModal({
           {/* Content */}
           {loading ? (
             <View className="py-16 items-center">
-              <ActivityIndicator size="large" color={isDark ? '#10B981' : '#059669'} />
-              <Text className="text-gray-500 dark:text-gray-400 mt-3 text-sm">
-                Loading templates...
-              </Text>
+              <LoadingState message="Loading templates..." expression="curious" size="small" />
             </View>
           ) : templates.length === 0 ? (
             <View className="py-16 items-center px-8">

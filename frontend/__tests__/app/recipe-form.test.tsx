@@ -62,7 +62,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter a recipe title');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter a recipe title');
     });
   });
 
@@ -73,7 +73,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter a description');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter a description');
     });
   });
 
@@ -85,7 +85,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter a valid cook time');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter a valid cook time');
     });
   });
 
@@ -98,7 +98,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter a cuisine type');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter a cuisine type');
     });
   });
 
@@ -112,7 +112,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please enter valid calorie amount');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter valid calorie amount');
     });
   });
 
@@ -131,7 +131,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please add at least one ingredient');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please add at least one ingredient');
     });
   });
 
@@ -151,7 +151,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation Error', 'Please add at least one instruction');
+      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please add at least one instruction');
     });
   });
 
@@ -219,7 +219,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Error', 'Network error');
+      expect(mockAlert).toHaveBeenCalledWith('Oops!', 'Network error');
     });
   });
 

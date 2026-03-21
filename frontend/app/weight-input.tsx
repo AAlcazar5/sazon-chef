@@ -6,9 +6,9 @@ import {
   TextInput,
   Alert,
   ScrollView,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
+import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -62,7 +62,7 @@ export default function WeightInputScreen() {
     if (!weight.trim()) {
       setShakeWeight(true);
       setTimeout(() => setShakeWeight(false), 500);
-      Alert.alert('Error', 'Please enter your weight');
+      Alert.alert('Oops!', 'Pop in your weight first!');
       return;
     }
 
@@ -71,7 +71,7 @@ export default function WeightInputScreen() {
       setShakeWeight(true);
       setTimeout(() => setShakeWeight(false), 500);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Please enter a valid weight');
+      Alert.alert('Oops!', 'That doesn\'t look like a valid weight — double check?');
       return;
     }
 
@@ -99,7 +99,7 @@ export default function WeightInputScreen() {
       );
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to log weight. Please try again.');
+      Alert.alert('Oops!', error.message || 'Couldn\'t log your weight — try again?');
     } finally {
       setLoading(false);
     }
@@ -117,7 +117,7 @@ export default function WeightInputScreen() {
   if (loadingProfile) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
-        <ActivityIndicator size="large" color="#F97316" />
+        <AnimatedActivityIndicator size="large" color="#F97316" />
       </View>
     );
   }
@@ -250,7 +250,7 @@ export default function WeightInputScreen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <AnimatedActivityIndicator color="#fff" />
               ) : (
                 <Text className="text-white text-base font-semibold">Save Weight</Text>
               )}

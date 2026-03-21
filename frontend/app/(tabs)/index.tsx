@@ -498,7 +498,7 @@ export default function HomeScreen() {
     if (error) {
       console.error('📱 HomeScreen: API Error', error);
       HapticPatterns.error();
-      Alert.alert('Error', 'Failed to load recipes. Please try again.');
+      Alert.alert('Oops!', 'Couldn\'t load recipes — pull down to try again!');
     }
   }, [error]);
 
@@ -639,7 +639,7 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error('Error fetching roulette recipes:', error);
-      showToast('Failed to load recipes for roulette', 'error');
+      showToast('Couldn\'t load roulette recipes — try again?', 'error');
       setRouletteRecipes([]);
     } finally {
       setRouletteLoading(false);
@@ -690,7 +690,7 @@ export default function HomeScreen() {
       setRouletteRecipes(result ? result.recipes : []);
     } catch (error) {
       console.error('Error fetching surprise recipes:', error);
-      showToast('Failed to load recipes', 'error');
+      showToast('Couldn\'t load recipes — try again?', 'error');
       setRouletteRecipes([]);
     } finally {
       setRouletteLoading(false);

@@ -749,16 +749,16 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 ---
 
-#### **9F: Copy & Language Audit** ✍️
+#### **9F: Copy & Language Audit** ✍️ ✅ COMPLETE
 *Every string the user reads should sound like a text from a friend, not an error log.*
 
-- [ ] Error messages: replace any remaining "Error", "Failed", "Invalid" with Sazon personality ("Hmm, something went sideways", "That didn't quite work — try again?")
-- [ ] Empty states: audit all screens — ensure every empty state uses `AnimatedEmptyState` with mascot + friendly CTA (not just "No items")
-- [ ] Loading states: replace any `ActivityIndicator` with Sazon `thinking` expression + sequential status copy ("Finding your perfect match...", "Almost ready...")
-- [ ] Notification settings: "Do Not Disturb" (not `quietHoursStart/End`), "Weekend mode" (not `weekendsOff`)
-- [ ] Macro goals: "Daily protein target" (not "protein grams"), "How much you want to eat" (not "caloric intake")
-- [ ] Shopping list progress: "Almost done! 3 items left" (not "75%"), "All done! Time to cook!" (not "100%")
-- [ ] **Test:** Grep for banned terms (`quietHoursStart`, `prefer_avoid`, `strict`, `Error:`, `Failed to`, `Invalid`, `caloric intake`, `protein grams`) in user-facing strings — zero matches; every empty state renders `AnimatedEmptyState` with mascot; no screen uses raw `ActivityIndicator`
+- [x] Error messages: replace any remaining "Error", "Failed", "Invalid" with Sazon personality ("Hmm, something went sideways", "That didn't quite work — try again?")
+- [x] Empty states: audit all screens — ensure every empty state uses `AnimatedEmptyState` with mascot + friendly CTA (not just "No items")
+- [x] Loading states: replace any `ActivityIndicator` with Sazon `thinking` expression + sequential status copy ("Finding your perfect match...", "Almost ready...")
+- [x] Notification settings: "Do Not Disturb" (not `quietHoursStart/End`), "Weekend mode" (not `weekendsOff`)
+- [x] Macro goals: "Daily protein target" (not "protein grams"), "How much you want to eat" (not "caloric intake")
+- [x] Shopping list progress: "Almost done! 3 items left" (not "75%"), "All done! Time to cook!" (not "100%")
+- [x] **Test:** Grep for banned terms (`quietHoursStart`, `prefer_avoid`, `strict`, `Error:`, `Failed to`, `Invalid`, `caloric intake`, `protein grams`) in user-facing strings — zero matches; every empty state renders `AnimatedEmptyState` with mascot; no screen uses raw `ActivityIndicator`
 
 ---
 
