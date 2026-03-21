@@ -40,9 +40,9 @@ jest.mock('../../components/mascot/LogoMascot', () => {
   };
 });
 
-jest.mock('../../components/mascot/AnimatedSazon', () => {
+jest.mock('../../components/mascot/AnimatedLottieMascot', () => {
   const { View } = require('react-native');
-  return function MockAnimatedSazon({ expression }: any) {
+  return function MockAnimatedLottieMascot({ expression }: any) {
     return <View testID={`animated-sazon-${expression}`} />;
   };
 });

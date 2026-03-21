@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { AnimatedSazon } from '../mascot';
+import { AnimatedLottieMascot } from '../mascot';
 import GoalModeSelector, { GoalMode } from './GoalModeSelector';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
@@ -97,7 +97,7 @@ export default function MealPlanEmptyState({
   return (
     <View className="flex-1 items-center justify-center px-8">
       <Animated.View style={mascotAnimStyle}>
-        <AnimatedSazon
+        <AnimatedLottieMascot
           expression={generatingPlan ? 'thinking' : 'excited'}
           size="medium"
         />

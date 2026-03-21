@@ -21,7 +21,7 @@ import { router, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { userApi } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AnimatedSazon from '../components/mascot/AnimatedSazon';
+import AnimatedLottieMascot from '../components/mascot/AnimatedLottieMascot';
 import LogoMascot from '../components/mascot/LogoMascot';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import SuccessModal from '../components/ui/SuccessModal';
@@ -325,7 +325,7 @@ export default function OnboardingScreen() {
           transition={{ type: 'timing', duration: 400, delay: 0 }}
         >
           <View className="items-center mb-4">
-            <AnimatedSazon expression="thinking" size="small" />
+            <AnimatedLottieMascot expression="thinking" size="small" />
           </View>
         </MotiView>
 
@@ -424,7 +424,7 @@ export default function OnboardingScreen() {
         transition={{ type: 'timing', duration: 400, delay: 0 }}
       >
         <View className="items-center mb-4">
-          <AnimatedSazon expression="chef-kiss" size="small" />
+          <AnimatedLottieMascot expression="chef-kiss" size="small" />
         </View>
       </MotiView>
 
@@ -518,7 +518,7 @@ export default function OnboardingScreen() {
             )}
 
             {/* Animated mascot reacting per step */}
-            <AnimatedSazon
+            <AnimatedLottieMascot
               expression={getMascotExpression()}
               size="tiny"
             />

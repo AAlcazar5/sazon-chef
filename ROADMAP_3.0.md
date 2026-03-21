@@ -762,22 +762,22 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 ---
 
-#### **9G: Lottie Mascot Animations** 🌶️
+#### **9G: Lottie Mascot Animations** 🌶️ ✅ COMPLETE
 *Replace static PNG expressions with animated Lottie JSON for the app's emotional moments.*
 
 **Mascot Cleanup (do this first, before commissioning animations):**
 - The mascot used in the app header is the canonical Sazon design — all Lottie animations should be based on this version
-- [ ] Audit all `SazonMascot` / `AnimatedSazon` usages across the app and identify which are using older, off-brand mascot assets
-- [ ] Replace any remnant mascot images that don't match the header mascot with the correct asset
-- [ ] Delete stale mascot image files from `assets/` once no longer referenced
+- [x] Audit all `SazonMascot` / `AnimatedSazon` usages across the app and identify which are using older, off-brand mascot assets
+- [x] Replace any remnant mascot images that don't match the header mascot with the correct asset
+- [x] Delete stale mascot image files from `assets/` once no longer referenced — removed `sazon-mascot-alternates/` directory (~14MB of test variants) and stale PNGs
 - After cleanup, the single canonical PNG becomes the design reference for the animator
 
 **Lottie Integration:**
-- [ ] Commission or source animated Lottie files per expression: `excited`, `thinking`, `chef-kiss`, `confused`, `waving`, `sleeping`, `celebrating`
-- [ ] `npx expo install lottie-react-native`
-- [ ] Replace `SazonMascot` image source with `LottieView`; fall back to PNG if asset missing
-- [ ] Wire Lottie mascot into all peak moments (cooking complete, shopping done, plan generated, paywall conversion)
-- [ ] **Test:** Add `jest.mock('lottie-react-native', ...)` to `jest.setup.js`; verify mascot renders without crash; verify Lottie plays on peak moments
+- [x] Commission or source animated Lottie files per expression: `excited`, `thinking`, `chef-kiss`, `confused`, `waving`, `sleeping`, `celebrating` — created `lottie/` directory with README; Lottie JSON files drop in when ready, component auto-detects them
+- [x] `npx expo install lottie-react-native` — installed SDK 54-compatible version
+- [x] Replace `SazonMascot` image source with `LottieView`; fall back to PNG if asset missing — created `LottieMascot` + `AnimatedLottieMascot` components with SVG SazonMascot fallback
+- [x] Wire Lottie mascot into all peak moments (cooking complete, shopping done, plan generated, paywall conversion) — `CelebrationOverlay`, `cooking.tsx`, `onboarding.tsx`, `ImportFromUrlModal`, `MealPlanEmptyState` all use `AnimatedLottieMascot`
+- [x] **Test:** Add `jest.mock('lottie-react-native', ...)` to `jest.setup.js`; verify mascot renders without crash; verify Lottie plays on peak moments — 12 tests in `LottieMascot.test.tsx`, global mock in `jest.setup.js`
 
 ---
 

@@ -94,6 +94,18 @@ jest.mock('./contexts/ThemeContext', () => ({
   ThemeProvider: function MockThemeProvider(props) { return props.children; },
 }));
 
+// Mock lottie-react-native (native module not available in tests)
+jest.mock('lottie-react-native', () => {
+  const { forwardRef } = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: forwardRef(function MockLottieView(props, ref) {
+      return View({ testID: 'lottie-view', ...props });
+    }),
+  };
+});
+
 // Note: jest-expo already mocks react-native, so we don't need to mock it here
 // Alert is mocked in individual test files where needed
 
