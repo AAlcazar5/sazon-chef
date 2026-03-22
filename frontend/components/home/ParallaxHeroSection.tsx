@@ -65,12 +65,15 @@ function ParallaxHeroSection({
       onLongPress={onLongPress ? () => onLongPress(recipe) : undefined}
       activeOpacity={0.95}
     >
-      {/* Clipping container — content outside is hidden */}
+      {/* Clipping container — rounded bottom for smooth blend into content */}
       <View
         style={{
           height: HERO_HEIGHT,
           width: SCREEN_WIDTH,
           overflow: 'hidden',
+          borderBottomLeftRadius: 20,
+          borderBottomRightRadius: 20,
+          marginBottom: 4,
         }}
       >
         {/* Parallax image / fallback gradient */}

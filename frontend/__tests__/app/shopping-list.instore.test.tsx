@@ -109,8 +109,6 @@ function makeHookReturn(stateOverrides = {}, dataOverrides: Record<string, any> 
     listPickerOpacity: animVal(),
     editNameScale: animVal(),
     editNameOpacity: animVal(),
-    mergeScale: animVal(),
-    mergeOpacity: animVal(),
     createListScale: animVal(),
     createListOpacity: animVal(),
     handleSelectList: noop,

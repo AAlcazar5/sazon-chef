@@ -7,7 +7,6 @@ import {
   Text,
   Alert,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,6 +17,7 @@ import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAu
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import ScreenGradient from '../components/ui/ScreenGradient';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import LogoMascot from '../components/mascot/LogoMascot';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
@@ -191,7 +191,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+    <ScreenGradient variant="auth"><SafeAreaView className="flex-1" edges={['top']}>
       {/* Animated gradient accent */}
       <MotiView
         from={{ opacity: 0.3 }}
@@ -255,13 +255,7 @@ export default function LoginScreen() {
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: 'spring', delay: 160, damping: 20, stiffness: 180 }}
             >
-              <View
-                className="rounded-2xl p-4 mb-2"
-                style={{
-                  backgroundColor: isDark ? '#1F2937' : '#FAFAFA',
-                  ...Shadows.SM,
-                }}
-              >
+              <View className="mb-2" style={{ gap: 4 }}>
                 <ShakeAnimation shake={shakeEmail}>
                   <FormInput
                     label="Email"
@@ -345,17 +339,15 @@ export default function LoginScreen() {
                   style={{ minHeight: 50, ...Shadows.SM }}
                 />
 
-                {(Platform.OS === 'ios' || Platform.OS === 'web') && (
-                  <GradientButton
-                    label="Continue with Apple"
-                    onPress={handleAppleLogin}
-                    loading={socialLoading === 'apple'}
-                    disabled={loading || socialLoading !== null}
-                    icon="logo-apple"
-                    colors={['#1c1c1e', '#374151']}
-                    style={{ minHeight: 50, ...Shadows.SM }}
-                  />
-                )}
+                <GradientButton
+                  label="Continue with Apple"
+                  onPress={handleAppleLogin}
+                  loading={socialLoading === 'apple'}
+                  disabled={loading || socialLoading !== null}
+                  icon="logo-apple"
+                  colors={['#1c1c1e', '#374151']}
+                  style={{ minHeight: 50, ...Shadows.SM }}
+                />
               </View>
             </MotiView>
 
@@ -379,6 +371,6 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
       </KeyboardAvoidingContainer>
-    </SafeAreaView>
+    </SafeAreaView></ScreenGradient>
   );
 }

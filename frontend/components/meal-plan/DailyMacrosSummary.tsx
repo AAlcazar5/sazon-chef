@@ -3,8 +3,11 @@
 
 import React from 'react';
 import { View, Text } from 'react-native';
+import { CountingNumber } from '../ui/AnimatedStatCounter';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
+import MacroRingGrid from '../ui/MacroRingGrid';
+import FrostedCard from '../ui/FrostedCard';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
@@ -102,72 +105,32 @@ function DailyMacrosSummary({
       </HapticTouchableOpacity>
 
       {macrosExpanded ? (
-        <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
-          <View className="flex-row justify-between" style={{ gap: 8 }}>
-            <View className="flex-1 items-center" style={{ marginHorizontal: 4 }}>
-              <Text className="text-sm text-gray-500 dark:text-gray-200">Calories</Text>
-              <Text className="text-lg font-bold" style={getMacroColor(dailyMacros.calories, targetMacros.calories)}>
-                {dailyMacros.calories}
-              </Text>
-              <Text className="text-xs text-gray-400 dark:text-gray-200">/ {targetMacros.calories}</Text>
-              <MacroProgressBar current={dailyMacros.calories} target={targetMacros.calories} color={isDark ? DarkColors.primary : Colors.primary} isDark={isDark} />
-            </View>
-
-            <View className="flex-1 items-center" style={{ marginHorizontal: 4 }}>
-              <Text className="text-sm text-gray-500 dark:text-gray-200">Protein</Text>
-              <Text className="text-lg font-bold" style={getMacroColor(dailyMacros.protein, targetMacros.protein)}>
-                {dailyMacros.protein}g
-              </Text>
-              <Text className="text-xs text-gray-400 dark:text-gray-200">/ {targetMacros.protein}g</Text>
-              <MacroProgressBar current={dailyMacros.protein} target={targetMacros.protein} color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} isDark={isDark} />
-            </View>
-
-            <View className="flex-1 items-center" style={{ marginHorizontal: 4 }}>
-              <Text className="text-sm text-gray-500 dark:text-gray-200">Carbs</Text>
-              <Text className="text-lg font-bold" style={getMacroColor(dailyMacros.carbs, targetMacros.carbs)}>
-                {dailyMacros.carbs}g
-              </Text>
-              <Text className="text-xs text-gray-400 dark:text-gray-200">/ {targetMacros.carbs}g</Text>
-              <MacroProgressBar current={dailyMacros.carbs} target={targetMacros.carbs} color={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen} isDark={isDark} />
-            </View>
-
-            <View className="flex-1 items-center" style={{ marginHorizontal: 4 }}>
-              <Text className="text-sm text-gray-500 dark:text-gray-200">Fat</Text>
-              <Text className="text-lg font-bold" style={getMacroColor(dailyMacros.fat, targetMacros.fat)}>
-                {dailyMacros.fat}g
-              </Text>
-              <Text className="text-xs text-gray-400 dark:text-gray-200">/ {targetMacros.fat}g</Text>
-              <MacroProgressBar current={dailyMacros.fat} target={targetMacros.fat} color={isDark ? DarkColors.accent : Colors.accent} isDark={isDark} />
-            </View>
-          </View>
-        </View>
+        <FrostedCard style={{ padding: 20 }}>
+          <MacroRingGrid
+            macros={dailyMacros}
+            targets={targetMacros}
+            ringSize={52}
+          />
+        </FrostedCard>
       ) : (
         <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
           <View className="flex-row justify-between items-center">
             <View className="flex-row items-center flex-1">
               <View className="flex-1 items-center">
                 <Text className="text-xs text-gray-500 dark:text-gray-400">Calories</Text>
-                <Text className="text-base font-semibold" style={getMacroColor(dailyMacros.calories, targetMacros.calories)}>
-                  {dailyMacros.calories}/{targetMacros.calories}
-                </Text>
+                <CountingNumber value={dailyMacros.calories} suffix={`/${targetMacros.calories}`} delay={0} style={{ fontSize: 16, fontWeight: '600', ...getMacroColor(dailyMacros.calories, targetMacros.calories) }} />
               </View>
               <View className="flex-1 items-center">
                 <Text className="text-xs text-gray-500 dark:text-gray-400">Protein</Text>
-                <Text className="text-base font-semibold" style={getMacroColor(dailyMacros.protein, targetMacros.protein)}>
-                  {dailyMacros.protein}g/{targetMacros.protein}g
-                </Text>
+                <CountingNumber value={dailyMacros.protein} suffix={`g/${targetMacros.protein}g`} delay={100} style={{ fontSize: 16, fontWeight: '600', ...getMacroColor(dailyMacros.protein, targetMacros.protein) }} />
               </View>
               <View className="flex-1 items-center">
                 <Text className="text-xs text-gray-500 dark:text-gray-400">Carbs</Text>
-                <Text className="text-base font-semibold" style={getMacroColor(dailyMacros.carbs, targetMacros.carbs)}>
-                  {dailyMacros.carbs}g/{targetMacros.carbs}g
-                </Text>
+                <CountingNumber value={dailyMacros.carbs} suffix={`g/${targetMacros.carbs}g`} delay={200} style={{ fontSize: 16, fontWeight: '600', ...getMacroColor(dailyMacros.carbs, targetMacros.carbs) }} />
               </View>
               <View className="flex-1 items-center">
                 <Text className="text-xs text-gray-500 dark:text-gray-400">Fat</Text>
-                <Text className="text-base font-semibold" style={getMacroColor(dailyMacros.fat, targetMacros.fat)}>
-                  {dailyMacros.fat}g/{targetMacros.fat}g
-                </Text>
+                <CountingNumber value={dailyMacros.fat} suffix={`g/${targetMacros.fat}g`} delay={300} style={{ fontSize: 16, fontWeight: '600', ...getMacroColor(dailyMacros.fat, targetMacros.fat) }} />
               </View>
             </View>
           </View>

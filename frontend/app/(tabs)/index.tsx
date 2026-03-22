@@ -1,6 +1,8 @@
 import { View, Text, ScrollView, Alert, Animated, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import ScreenGradient from '../../components/ui/ScreenGradient';
+import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,11 +63,30 @@ import { useMoodSelector } from '../../hooks/useMoodSelector';
 import { useFilterActions } from '../../hooks/useFilterActions';
 import { usePaginationActions } from '../../hooks/usePaginationActions';
 import { useHomeFeed } from '../../hooks/useHomeFeed';
+import { useDarkFeed } from '../../hooks/useDarkFeed';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSubscription } from '../../hooks/useSubscription';
+import PremiumUpsellCard from '../../components/premium/PremiumUpsellCard';
 
 export default function HomeScreen() {
-  console.log('[HomeScreen] Component rendering');
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // First-run warm gradient fade (sessions 1-3 get progressively subtler warm tint)
+  const { subscription } = useSubscription();
+  const [firstRunTint, setFirstRunTint] = useState<number>(0);
+  useEffect(() => {
+    (async () => {
+      const key = 'homeSessionCount';
+      const raw = await AsyncStorage.getItem(key).catch(() => null);
+      const count = raw ? parseInt(raw, 10) : 0;
+      if (count < 3) {
+        // Tint intensity: session 0 → 0.06, session 1 → 0.04, session 2 → 0.02
+        setFirstRunTint(0.06 - count * 0.02);
+        await AsyncStorage.setItem(key, String(count + 1)).catch(() => {});
+      }
+    })();
+  }, []);
   const { showToast } = useToast();
   const { user } = useAuth();
   const { openRoulette } = useLocalSearchParams<{ openRoulette?: string }>();
@@ -224,6 +245,7 @@ export default function HomeScreen() {
 
   // Meal prep mode state - using extracted hook
   const { mealPrepMode, setMealPrepMode, toggleMealPrepMode, isLoaded: mealPrepLoaded } = useMealPrepMode();
+  const { darkFeed, toggleDarkFeed } = useDarkFeed();
 
   // Track if we're loading from filters to prevent useApi from interfering
   const [loadingFromFilters, setLoadingFromFilters] = useState(false);
@@ -420,18 +442,6 @@ export default function HomeScreen() {
     paginationLoading,
   });
 
-  // Debug logging for loading states
-  useEffect(() => {
-    console.log('[HomeScreen] State:', {
-      suggestedRecipesLength: suggestedRecipes.length,
-      loading,
-      initialLoading,
-      loadingFromFilters,
-      filtersLoaded,
-      error: error ? String(error) : null,
-    });
-  }, [suggestedRecipes.length, loading, initialLoading, loadingFromFilters, filtersLoaded, error]);
-
   // Reset pagination when view mode changes (grid/list)
   useEffect(() => {
     setCurrentPage(0); // Reset to first page when view mode changes
@@ -584,8 +594,6 @@ export default function HomeScreen() {
       quickMacroFilters, getMacroFilterParams, homeFeed.refetch, RECIPES_PER_PAGE]);
 
   const handleRecipePress = useCallback((recipeId: string) => {
-    console.log('📱 HomeScreen: Recipe pressed', recipeId);
-
     // Track recipe view for "Continue Cooking" section (using extracted hook)
     addRecentlyViewed(recipeId);
 
@@ -789,7 +797,8 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+    <ScreenGradient variant={firstRunTint > 0 ? 'onboarding' : 'default'}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       {/* Header */}
       <HomeHeader
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
@@ -804,6 +813,12 @@ export default function HomeScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 200 }}
         showsVerticalScrollIndicator={true}
+        refreshControl={
+          <SazonRefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
+        }
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
@@ -860,11 +875,15 @@ export default function HomeScreen() {
           paginationLoading={paginationLoading}
           onPrevPage={handlePrevPage}
           onNextPage={handleNextPage}
+          darkFeed={darkFeed}
         />
 
         {/* Personalized Sections - Moved to bottom after Recipes for You */}
         {user?.id && (
           <>
+            {/* Premium upsell card — only for free-tier users */}
+            {!subscription.isPremium && <PremiumUpsellCard testID="home-upsell-card" />}
+
             {/* Great for Meal Prep Section */}
             {(() => {
               const mealPrepSection = recipeSections.find(s => s.key === 'meal-prep');
@@ -918,6 +937,8 @@ export default function HomeScreen() {
         handleQuickFilter={handleQuickFilter}
         handleQuickMacroFilter={handleQuickMacroFilter}
         handleToggleMealPrepMode={handleToggleMealPrepMode}
+        darkFeed={darkFeed}
+        onToggleDarkFeed={toggleDarkFeed}
       />
 
       {/* Mood Selector Modal (Home Page 2.0) */}
@@ -1059,5 +1080,6 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
       />
 
     </SafeAreaView>
+    </ScreenGradient>
   );
 }

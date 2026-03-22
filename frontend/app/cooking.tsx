@@ -8,6 +8,8 @@ import {
   Animated,
   Platform,
   StatusBar,
+  Share,
+  Alert,
 } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalSearchParams, router, useNavigation } from 'expo-router';
@@ -16,7 +18,10 @@ import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
+import ViewShot from 'react-native-view-shot';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import Icon from '../components/ui/Icon';
 import { Icons, IconSizes } from '../constants/Icons';
@@ -27,6 +32,7 @@ import IngredientChecklist from '../components/recipe/IngredientChecklist';
 import AnimatedLottieMascot from '../components/mascot/AnimatedLottieMascot';
 import { CoffeeBanner, shouldShowCoffeeBanner, recordCoffeeBannerShown } from '../components/premium/CoffeeBanner';
 import { CelebrationOverlay } from '../components/celebrations';
+import ShareCardCapture from '../components/celebrations/ShareCardCapture';
 import { LinearGradient } from 'expo-linear-gradient';
 import { HapticChoreography } from '../utils/hapticChoreography';
 import { mealPlanApi } from '../lib/api';
@@ -49,6 +55,10 @@ interface CookingRecipe {
   servings: number;
   ingredients: Ingredient[];
   instructions: Instruction[];
+  imageUrl?: string;
+  cookTime?: number;
+  calories?: number;
+  protein?: number;
 }
 
 // --- Helpers ---
@@ -98,6 +108,10 @@ export default function CookingScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [nextMealName, setNextMealName] = useState<string | null>(null);
 
+  // Share card
+  const shareCardRef = useRef<ViewShot>(null);
+  const [userPhotoUri, setUserPhotoUri] = useState<string | null>(null);
+
   // Hide tab bar while cooking for full immersion
   const navigation = useNavigation();
   useEffect(() => {
@@ -134,7 +148,7 @@ export default function CookingScreen() {
           text: getTextContent(ing),
           order: ing.order ?? i + 1,
         }));
-        setRecipe({ id: data.id, title: data.title, servings: data.servings || 4, ingredients, instructions });
+        setRecipe({ id: data.id, title: data.title, servings: data.servings || 4, ingredients, instructions, imageUrl: data.imageUrl, cookTime: data.cookTime, calories: data.calories, protein: data.protein });
         setServings(data.servings || 4);
         setLoading(false);
       } catch (err: any) {
@@ -369,7 +383,75 @@ export default function CookingScreen() {
             label: 'Back to Recipe',
             onPress: () => router.back(),
           } : undefined}
-        />
+        >
+          {/* Photo + Share row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 12 }}>
+            {/* Add a photo of your dish */}
+            <HapticTouchableOpacity
+              onPress={async () => {
+                try {
+                  const result = await ImagePicker.launchCameraAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    quality: 0.8,
+                  });
+                  if (!result.canceled && result.assets[0]) {
+                    setUserPhotoUri(result.assets[0].uri);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }
+                } catch {
+                  // Camera permission denied or unavailable — skip silently
+                }
+              }}
+              hapticStyle="light"
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>📸</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+                {userPhotoUri ? 'Retake' : 'Add Photo'}
+              </Text>
+            </HapticTouchableOpacity>
+
+            {/* Share My Creation — branded card */}
+            <HapticTouchableOpacity
+              onPress={async () => {
+                try {
+                  if (shareCardRef.current?.capture) {
+                    const uri = await shareCardRef.current.capture();
+                    if (await Sharing.isAvailableAsync()) {
+                      await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your creation' });
+                    } else {
+                      // Fallback to text share
+                      await Share.share({
+                        message: `🌶️ Just cooked ${recipe.title} with Sazon Chef!\n\n⏱️ Cook Time: ${recipe.cookTime} min\n🔥 ${recipe.calories} cal | 🥩 ${recipe.protein}g protein\n\n🌶️ Discover amazing recipes with Sazon Chef!`,
+                      });
+                    }
+                  } else {
+                    await Share.share({
+                      message: `🌶️ Just cooked ${recipe.title} with Sazon Chef!\n\n⏱️ Cook Time: ${recipe.cookTime} min\n🔥 ${recipe.calories} cal | 🥩 ${recipe.protein}g protein\n\n🌶️ Discover amazing recipes with Sazon Chef!`,
+                    });
+                  }
+                } catch {}
+              }}
+              hapticStyle="light"
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>📤</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>Share</Text>
+            </HapticTouchableOpacity>
+          </View>
+
+          {/* Off-screen share card for capture */}
+          <ShareCardCapture
+            ref={shareCardRef}
+            title={recipe.title}
+            imageUrl={recipe.imageUrl}
+            cookTime={recipe.cookTime}
+            calories={recipe.calories}
+            protein={recipe.protein}
+            userPhotoUri={userPhotoUri ?? undefined}
+          />
+        </CelebrationOverlay>
 
         <CoffeeBanner
           visible={showCoffeeBanner}

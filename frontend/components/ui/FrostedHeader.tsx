@@ -37,8 +37,8 @@ export default function FrostedHeader({
             paddingTop: topPad,
             paddingBottom,
             backgroundColor: isDark
-              ? 'rgba(15, 15, 15, 0.95)'
-              : 'rgba(250, 247, 244, 0.95)',
+              ? 'rgba(15, 15, 15, 0.97)'
+              : 'rgba(255, 255, 255, 0.97)',
           },
         ]}
       >
@@ -59,14 +59,14 @@ export default function FrostedHeader({
         },
       ]}
     >
-      {/* Tint overlay to add brand warmth */}
+      {/* Tint overlay — higher opacity for seamless blend with content */}
       <View
         style={[
           StyleSheet.absoluteFill,
           {
             backgroundColor: isDark
-              ? 'rgba(17, 24, 39, 0.45)'
-              : 'rgba(255, 255, 255, 0.55)',
+              ? 'rgba(15, 15, 15, 0.65)'
+              : 'rgba(255, 255, 255, 0.75)',
           },
         ]}
         pointerEvents="none"

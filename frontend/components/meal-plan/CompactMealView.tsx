@@ -125,24 +125,24 @@ function CompactMealView({
                         <Image
                           source={{ uri: optimizedImageUrl(meal.imageUrl) }}
                           style={{
-                            width: 52,
-                            height: 52,
-                            borderRadius: 12,
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
                             marginRight: 12,
                             backgroundColor: isDark ? '#374151' : '#E5E7EB',
                           }}
                         />
                       ) : (
                         <View style={{
-                          width: 52,
-                          height: 52,
-                          borderRadius: 12,
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
                           marginRight: 12,
                           alignItems: 'center',
                           justifyContent: 'center',
                           backgroundColor: isDark ? '#374151' : '#E5E7EB',
                         }}>
-                          <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.MD} color="#9CA3AF" />
+                          <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.SM} color="#9CA3AF" />
                         </View>
                       )}
                       <View style={{ flex: 1 }}>
@@ -156,7 +156,7 @@ function CompactMealView({
                             </View>
                           )}
                         </View>
-                        <Text style={{ fontSize: 13, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                        <Text style={{ fontSize: 13, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2, opacity: 0.6 }}>
                           {formatTime(hour, 0)} • {meal.calories} cal
                         </Text>
                       </View>

@@ -54,6 +54,8 @@ interface RecipeSectionsGridProps {
   paginationLoading: boolean;
   onPrevPage: () => void;
   onNextPage: () => void;
+  /** Force dark card backgrounds in light mode */
+  darkFeed?: boolean;
 }
 
 function RecipeSectionsGrid({
@@ -84,6 +86,7 @@ function RecipeSectionsGrid({
   paginationLoading,
   onPrevPage,
   onNextPage,
+  darkFeed = false,
 }: RecipeSectionsGridProps) {
   const filtered = sections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep');
   if (filtered.length === 0) return null;
@@ -110,7 +113,7 @@ function RecipeSectionsGrid({
                   <Text className="text-xl font-black text-gray-900 dark:text-gray-100">
                     {section.title}
                   </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5" style={{ opacity: 0.5 }}>
                     {section.recipes.length} recipe{section.recipes.length !== 1 ? 's' : ''}
                   </Text>
                 </View>
@@ -201,6 +204,7 @@ function RecipeSectionsGrid({
                             isFeedbackLoading={feedbackLoading === recipe.id}
                             isDark={isDark}
                             showDescription={true}
+                            darkFeed={darkFeed}
                           />
                         </View>
                       );
@@ -280,6 +284,7 @@ function RecipeSectionsGrid({
                             feedback={feedback}
                             isFeedbackLoading={feedbackLoading === recipe.id}
                             isDark={isDark}
+                            darkFeed={darkFeed}
                           />
                         </View>
                       );
@@ -317,6 +322,7 @@ function RecipeSectionsGrid({
                               showDescription={true}
                               isDark={isDark}
                               className="mb-4"
+                              darkFeed={darkFeed}
                             />
                           </AnimatedRecipeCard>
                         </CardStack>

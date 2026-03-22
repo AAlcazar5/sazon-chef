@@ -7,6 +7,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors } from '../../constants/Colors';
+import { getIngredientEmoji } from '../../constants/IngredientEmoji';
 
 function IngredientRow({ index, isChecked, scaledText, onToggle }: {
   index: number;
@@ -66,7 +67,8 @@ function IngredientRow({ index, isChecked, scaledText, onToggle }: {
           )}
         </View>
 
-        {/* Ingredient text */}
+        {/* Ingredient emoji + text */}
+        <Text style={{ fontSize: 16, marginRight: 6, width: 22, textAlign: 'center' }}>{getIngredientEmoji(scaledText)}</Text>
         <Text
           className="flex-1 text-base leading-6"
           style={{

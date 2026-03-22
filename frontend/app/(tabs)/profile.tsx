@@ -1,9 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, Linking, Animated } from 'react-native';
+import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SettingsRow from '../../components/ui/SettingsRow';
 import StaggerItem from '../../components/ui/StaggerItem';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
+import ScreenGradient from '../../components/ui/ScreenGradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -39,6 +41,15 @@ export default function ProfileScreen() {
   const [showCancellationFlow, setShowCancellationFlow] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshSubscription();
+    } catch {}
+    setRefreshing(false);
+  }, [refreshSubscription]);
 
   const {
     profile, physicalProfile, macroGoals, preferences, budgetSettings,
@@ -69,18 +80,18 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+      <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View className="flex-1 items-center justify-center">
           <Icon name={Icons.ACCOUNT_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="Loading profile" />
           <Text className="text-gray-500 dark:text-gray-200 mt-4">Loading profile...</Text>
         </View>
-      </SafeAreaView>
+      </SafeAreaView></ScreenGradient>
     );
   }
 
   if (!profile) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+      <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom, flexGrow: 1 }}>
           <AnimatedEmptyState
             useMascot
@@ -123,12 +134,12 @@ export default function ProfileScreen() {
             </View>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </SafeAreaView></ScreenGradient>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+    <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <ProfileHeader
         profile={profile}
         profilePicture={profilePicture}
@@ -147,6 +158,9 @@ export default function ProfileScreen() {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
+        refreshControl={
+          <SazonRefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: true }
@@ -286,6 +300,6 @@ export default function ProfileScreen() {
           refreshSubscription();
         }}
       />
-    </SafeAreaView>
+    </SafeAreaView></ScreenGradient>
   );
 }

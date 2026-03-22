@@ -450,8 +450,6 @@ export function useShoppingList() {
   const listPickerOpacity = useRef(new Animated.Value(0)).current;
   const editNameScale = useRef(new Animated.Value(0)).current;
   const editNameOpacity = useRef(new Animated.Value(0)).current;
-  const mergeScale = useRef(new Animated.Value(0)).current;
-  const mergeOpacity = useRef(new Animated.Value(0)).current;
   const createListScale = useRef(new Animated.Value(0)).current;
   const createListOpacity = useRef(new Animated.Value(0)).current;
 
@@ -814,10 +812,6 @@ export function useShoppingList() {
   useEffect(() => {
     animateModal(state.showEditNameModal, editNameScale, editNameOpacity);
   }, [state.showEditNameModal]);
-
-  useEffect(() => {
-    animateModal(state.showMergeModal, mergeScale, mergeOpacity);
-  }, [state.showMergeModal]);
 
   useEffect(() => {
     animateModal(state.showCreateListModal, createListScale, createListOpacity);
@@ -1716,8 +1710,6 @@ export function useShoppingList() {
     listPickerOpacity,
     editNameScale,
     editNameOpacity,
-    mergeScale,
-    mergeOpacity,
     createListScale,
     createListOpacity,
 

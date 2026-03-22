@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { SuggestedRecipe } from '../../types';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, getDifficultyColor } from '../../constants/Colors';
 import { Duration } from '../../constants/Animations';
 import { Shadows } from '../../constants/Shadows';
 import Icon from '../ui/Icon';
@@ -38,6 +38,8 @@ interface RecipeCardProps {
   swipeIndicatorIndex?: number;
   /** Optional footer rendered inside the card, between content and action buttons */
   footer?: React.ReactNode;
+  /** Force dark card backgrounds in light mode (Dark Feed toggle) */
+  darkFeed?: boolean;
 }
 
 import { optimizedImageUrl } from '../../utils/imageUtils';
@@ -72,6 +74,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
   swipeIndicatorCount = 0,
   swipeIndicatorIndex = 0,
   footer,
+  darkFeed = false,
 }) => {
   const [imageError, setImageError] = React.useState(false);
   const [imageLoading, setImageLoading] = React.useState(true);
@@ -159,7 +162,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
         onPress={handlePress}
         onLongPress={() => onLongPress?.(recipe)}
         delayLongPress={500}
-        className={`bg-white dark:bg-gray-800 rounded-xl overflow-hidden mb-4 ${className}`}
+        className={`${darkFeed ? 'bg-[#1C1C1E]' : 'bg-white dark:bg-[#1C1C1E]'} rounded-xl overflow-hidden mb-4 ${className}`}
         style={{
           ...getShadowStyle(),
           ...style,
@@ -234,6 +237,21 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               }}
           />
             
+            {/* Trending/Ranking Badge — for high-scoring recipes (Sazon Score > 85) */}
+            {!showTopMatchBadge && recipe.score?.matchPercentage && recipe.score.matchPercentage > 85 && (
+              <View className="absolute top-4 left-4">
+                <LinearGradient
+                  colors={['#fa7e12', '#FF6B35']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ borderRadius: 100, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <Text style={{ fontSize: 11 }}>🔥</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700', marginLeft: 3 }}>Top Pick</Text>
+                </LinearGradient>
+              </View>
+            )}
+
             {/* Top Match Badge */}
             {showTopMatchBadge && (
               <View className="absolute top-4 left-4">
@@ -274,6 +292,31 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               </View>
             )}
             
+            {/* Cook Time Badge — translucent pill on image */}
+            {recipe.cookTime && (
+              <View style={{ position: 'absolute', bottom: 12, left: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 11, marginRight: 4 }}>⏱</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>{recipe.cookTime} min</Text>
+              </View>
+            )}
+
+            {/* Difficulty Badge — colored pill on image bottom-right */}
+            {recipe.difficulty && (
+              <View style={{
+                position: 'absolute',
+                bottom: 12,
+                right: 12,
+                backgroundColor: getDifficultyColor(recipe.difficulty, true).bg,
+                borderRadius: 100,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+              }}>
+                <Text style={{ color: getDifficultyColor(recipe.difficulty, true).text, fontSize: 12, fontWeight: '600', textTransform: 'capitalize' }}>
+                  {recipe.difficulty}
+                </Text>
+              </View>
+            )}
+
             {renderUnsplashAttribution()}
         </View>
         ) : ((recipe.imageUrl && imageError) || !recipe.imageUrl || (recipe.imageUrl && recipe.imageUrl.trim() === '')) ? (
@@ -320,7 +363,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
           <View className="flex-row justify-between items-start mb-2">
             <View className="flex-1 mr-3">
               {/* Title */}
-              <Text className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              <Text className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2" style={darkFeed && !isDark ? { color: '#F3F4F6' } : undefined}>
                 {recipe.title}
               </Text>
               {/* Badges Row with Cuisine */}
@@ -337,7 +380,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
           </View>
 
           {/* Macro Nutrients - 4 Column Display */}
-          <View className="flex-row items-center justify-between mb-3 p-2 rounded-lg" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+          <View className="flex-row items-center justify-between mb-3 p-2 rounded-lg" style={{ backgroundColor: (isDark || darkFeed) ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
             <View className="items-center flex-1">
               <Text className="text-xs text-gray-500 dark:text-gray-400">{recipe.calories} cal</Text>
             </View>

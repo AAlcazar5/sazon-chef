@@ -14,6 +14,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { BorderRadius } from '../../constants/Spacing';
+import { getCategoryColor } from '../../constants/CategoryColors';
 
 interface FilterPillProps {
   label: string;
@@ -24,6 +25,8 @@ interface FilterPillProps {
   color?: 'default' | 'green';
   /** Compact size for quick filter chips */
   compact?: boolean;
+  /** Category name — auto-applies pastel bg + emoji from CATEGORY_COLORS */
+  categoryName?: string;
 }
 
 const SPRING_CONFIG = { damping: 15, stiffness: 300 };
@@ -35,6 +38,7 @@ export default function FilterPill({
   emoji,
   color = 'default',
   compact = false,
+  categoryName,
 }: FilterPillProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -60,8 +64,12 @@ export default function FilterPill({
     onPress();
   }, [onPress]);
 
-  const activeColor =
-    color === 'green'
+  // Category-specific coloring
+  const catColor = categoryName ? getCategoryColor(categoryName) : null;
+
+  const activeColor = catColor
+    ? (isDark ? catColor.textDark : catColor.text)
+    : color === 'green'
       ? isDark
         ? DarkColors.tertiaryGreen
         : Colors.tertiaryGreen
@@ -69,7 +77,19 @@ export default function FilterPill({
         ? DarkColors.primary
         : Colors.primary;
 
-  const inactiveColor = isDark ? '#374151' : '#F3F4F6';
+  const inactiveBg = catColor
+    ? (isDark ? catColor.tintDark : catColor.tint)
+    : isDark ? '#374151' : '#F3F4F6';
+
+  const activeBg = catColor
+    ? (isDark ? catColor.bgDark : catColor.bg)
+    : activeColor;
+
+  const resolvedEmoji = emoji ?? (catColor?.emoji || undefined);
+
+  const textColor = active
+    ? (catColor ? (isDark ? catColor.textDark : catColor.text) : '#FFFFFF')
+    : isDark ? '#D1D5DB' : '#374151';
 
   return (
     <GestureDetector gesture={gesture}>
@@ -79,9 +99,10 @@ export default function FilterPill({
           styles.pill,
           compact && styles.pillCompact,
           {
-            backgroundColor: active ? activeColor : inactiveColor,
+            backgroundColor: active ? activeBg : inactiveBg,
           },
           active && Shadows.SM,
+          catColor && !active && { backgroundColor: isDark ? catColor.tintDark : catColor.tint },
         ]}
       >
         {/* Use Pressable overlay for onPress since Gesture.Tap doesn't support runOnJS callbacks easily */}
@@ -91,11 +112,11 @@ export default function FilterPill({
           onStartShouldSetResponder={() => true}
           onResponderRelease={handlePress}
         >
-          {emoji && <Text style={styles.emoji}>{emoji}</Text>}
+          {resolvedEmoji && <Text style={styles.emoji}>{resolvedEmoji}</Text>}
           <Text
             style={[
               compact ? styles.textCompact : styles.text,
-              { color: active ? '#FFFFFF' : isDark ? '#D1D5DB' : '#374151' },
+              { color: textColor },
             ]}
           >
             {label}

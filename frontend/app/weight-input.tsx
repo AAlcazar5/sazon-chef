@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
+import LoadingState from '../components/ui/LoadingState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -116,9 +117,11 @@ export default function WeightInputScreen() {
 
   if (loadingProfile) {
     return (
-      <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
-        <AnimatedActivityIndicator size="large" color="#F97316" />
-      </View>
+      <LoadingState
+        expression="thinking"
+        message="Loading your profile..."
+        fullScreen
+      />
     );
   }
 

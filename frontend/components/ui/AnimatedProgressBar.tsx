@@ -4,6 +4,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 
 interface AnimatedProgressBarProps {
@@ -13,6 +14,8 @@ interface AnimatedProgressBarProps {
   progressColor?: string;
   borderRadius?: number;
   duration?: number;
+  /** Use spring physics instead of timing animation */
+  useSpring?: boolean;
   style?: any;
 }
 
@@ -23,15 +26,22 @@ export default function AnimatedProgressBar({
   progressColor = '#3B82F6',
   borderRadius = 999,
   duration = 800,
+  useSpring: springMode = false,
   style,
 }: AnimatedProgressBarProps) {
   const progressValue = useSharedValue(0);
 
   useEffect(() => {
-    progressValue.value = withTiming(Math.max(0, Math.min(100, progress)), {
-      duration,
-    });
-  }, [progress, duration]);
+    const clamped = Math.max(0, Math.min(100, progress));
+    if (springMode) {
+      progressValue.value = withSpring(clamped, {
+        damping: 15,
+        stiffness: 80,
+      });
+    } else {
+      progressValue.value = withTiming(clamped, { duration });
+    }
+  }, [progress, duration, springMode]);
 
   const progressStyle = useAnimatedStyle(() => ({
     width: `${progressValue.value}%` as any,

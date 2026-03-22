@@ -24,11 +24,16 @@ import { optimizedImageUrl } from '../utils/imageUtils';
 import { generateStorageInstructions, getStorageMethods } from '../utils/storageInstructions';
 import { getMealPrepTags } from '../utils/mealPrepTags';
 import * as Haptics from 'expo-haptics';
-import { Colors, DarkColors, BackgroundColors, TextColors } from '../constants/Colors';
+import { Colors, DarkColors, BackgroundColors, TextColors, getDifficultyColor } from '../constants/Colors';
 import { Shadows } from '../constants/Shadows';
+import { CountingNumber } from '../components/ui/AnimatedStatCounter';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { HeartBurstAnimation } from '../components/celebrations';
+import FrostedCard from '../components/ui/FrostedCard';
+import MacroRingGrid from '../components/ui/MacroRingGrid';
+import { getIngredientEmoji } from '../constants/IngredientEmoji';
+import CookingStepsTimeline from '../components/recipe/CookingStepsTimeline';
 
 const HERO_HEIGHT = 300;
 
@@ -773,9 +778,28 @@ export default function RecipeModal() {
               />
             </ReAnimated.View>
           )}
+
+          {/* Cook time + Difficulty badges on hero image */}
+          <View style={{ position: 'absolute', bottom: 28, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            {recipe.cookTime ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 100, paddingHorizontal: 12, paddingVertical: 5 }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, marginRight: 4 }}>⏱</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>{recipe.cookTime} min</Text>
+              </View>
+            ) : <View />}
+            {recipe.difficulty ? (
+              <View style={{ backgroundColor: getDifficultyColor(recipe.difficulty, true).bg, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 5 }}>
+                <Text style={{ color: getDifficultyColor(recipe.difficulty, true).text, fontSize: 13, fontWeight: '600', textTransform: 'capitalize' }}>
+                  {recipe.difficulty}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </View>
 
-        <View className="p-4 bg-white dark:bg-gray-900" style={{ paddingTop: 20 }}>
+        <View className="bg-white dark:bg-gray-900" style={{ marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 16 }}>
+          {/* Drag handle indicator */}
+          <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: isDark ? '#48484A' : '#D1D5DB', marginBottom: 12 }} />
           {/* Recipe Title */}
           <AnimatedText className="text-3xl font-black text-gray-900 dark:text-gray-100 mb-1" style={{ lineHeight: 36 }}>
             {recipe.title}
@@ -801,7 +825,7 @@ export default function RecipeModal() {
           </AnimatedText>
 
           {/* Quick Stats */}
-          <View className="mb-6 p-4 bg-surface dark:bg-card-dark rounded-lg">
+          <FrostedCard style={{ marginBottom: 24, padding: 16 }}>
             <View className="flex-row items-center mb-3">
               <Text className="text-xl mr-2">⏱️</Text>
               <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cook Time</Text>
@@ -809,57 +833,41 @@ export default function RecipeModal() {
             <View className="flex-row justify-between">
             <View className="items-center">
               <Text className="text-gray-500 dark:text-gray-400 text-sm">Time</Text>
-              <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.cookTime} min</Text>
+              <CountingNumber value={recipe.cookTime} suffix=" min" delay={0} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
             </View>
             <View className="items-center">
               <Text className="text-gray-500 dark:text-gray-400 text-sm">Calories</Text>
-              <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.calories}</Text>
+              <CountingNumber value={recipe.calories} delay={100} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
             </View>
             <View className="items-center">
               <Text className="text-gray-500 dark:text-gray-400 text-sm">Protein</Text>
-              <Text className="font-semibold text-gray-900 dark:text-gray-100">{recipe.protein}g</Text>
+              <CountingNumber value={recipe.protein} suffix="g" delay={200} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
             </View>
             </View>
-          </View>
+          </FrostedCard>
 
-          {/* Macro Nutrients — pill row */}
+          {/* Macro Nutrients — 2×2 Ring Grid */}
           <View style={{ marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ fontSize: 20, marginRight: 8 }}>🥗</Text>
               <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Nutrition</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {[
-                { label: 'Calories', value: `${recipe.calories}`, color: 'calories' as const },
-                { label: 'Protein', value: `${recipe.protein}g`, color: 'protein' as const },
-                { label: 'Carbs', value: `${recipe.carbs}g`, color: 'carbs' as const },
-                { label: 'Fat', value: `${recipe.fat}g`, color: 'fat' as const },
-                ...(recipe.fiber ? [{ label: 'Fiber', value: `${recipe.fiber}g`, color: 'fiber' as const }] : []),
-              ].map((macro) => (
-                <View
-                  key={macro.label}
-                  style={{
-                    borderRadius: 100,
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    backgroundColor: isDark ? `${Colors.macros[macro.color]}20` : BackgroundColors.macro[macro.color],
-                    ...Shadows.SM,
-                  }}
-                >
-                  <Text style={{ fontSize: 11, fontWeight: '500', color: isDark ? Colors.macros[macro.color] : TextColors.macro[macro.color], marginBottom: 2 }}>
-                    {macro.label}
-                  </Text>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: isDark ? Colors.macros[macro.color] : TextColors.macro[macro.color] }}>
-                    {macro.value}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
+            <FrostedCard style={{ padding: 16 }}>
+              <MacroRingGrid
+                macros={{
+                  calories: recipe.calories || 0,
+                  protein: recipe.protein || 0,
+                  carbs: recipe.carbs || 0,
+                  fat: recipe.fat || 0,
+                }}
+                testID="recipe-macro-grid"
+              />
+            </FrostedCard>
           </View>
 
           {/* Health Grade Badge */}
           {(recipe.healthGrade || recipe.healthGradeScore) && (
-            <View className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <FrostedCard style={{ marginBottom: 16, padding: 16 }}>
               <View className="flex-row items-start justify-between mb-3">
                 <View className="flex-row items-start flex-1">
                   <Text className="text-xl mr-2 mt-0.5">⭐</Text>
@@ -945,12 +953,12 @@ export default function RecipeModal() {
                   </View>
                 </View>
               )}
-            </View>
+            </FrostedCard>
           )}
 
           {/* Nutritional Analysis */}
           {recipe.nutritionalAnalysis && (
-            <View className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+            <FrostedCard style={{ marginBottom: 16, padding: 16 }}>
               <View className="flex-row items-center mb-3">
                 <Text className="text-xl mr-2">🔬</Text>
                 <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Advanced Nutritional Analysis</Text>
@@ -1054,7 +1062,7 @@ export default function RecipeModal() {
                   </Text>
                 </View>
               )}
-            </View>
+            </FrostedCard>
           )}
 
           {/* Cost Information */}
@@ -1264,6 +1272,40 @@ export default function RecipeModal() {
           {/* Ingredients */}
           <View className="mb-6">
             <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Ingredients</Text>
+            {/* Horizontal ingredient thumbnail row */}
+            {recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 12, gap: 12 }}
+              >
+                {recipe.ingredients.map((ingredient: any, index: number) => {
+                  const text = getTextContent(ingredient);
+                  const shortLabel = text.split(',')[0].replace(/^\d[\d./]*\s*(cup|tbsp|tsp|oz|lb|g|kg|ml|l|clove|bunch|piece|stalk|head|can|pkg|package|pinch|dash)s?\s*/i, '').trim();
+                  return (
+                    <View key={index} style={{ alignItems: 'center', width: 56 }}>
+                      <View style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isDark ? '#374151' : '#F3F4F6',
+                        marginBottom: 4,
+                      }}>
+                        <Text style={{ fontSize: 20 }}>{getIngredientEmoji(text)}</Text>
+                      </View>
+                      <Text
+                        style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center' }}
+                        numberOfLines={1}
+                      >
+                        {shortLabel.length > 8 ? shortLabel.slice(0, 7) + '…' : shortLabel}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
             {recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.map((ingredient: any, index: number) => (
               <MotiView
                 key={index}
@@ -1272,22 +1314,22 @@ export default function RecipeModal() {
                 transition={{ type: 'spring', delay: index * 35, damping: 20, stiffness: 200 }}
               >
                 <View className="flex-row items-center mb-2">
-                  <View className="w-2 h-2 bg-orange-500 rounded-full mr-3" />
+                  <Text style={{ fontSize: 16, marginRight: 8, width: 24, textAlign: 'center' }}>{getIngredientEmoji(getTextContent(ingredient))}</Text>
                   <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
                 </View>
               </MotiView>
             ))}
           </View>
 
-          {/* Instructions */}
+          {/* Instructions — Vertical Timeline */}
           <View className="mb-6">
             <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Instructions</Text>
-            {recipe.instructions && Array.isArray(recipe.instructions) && recipe.instructions.map((instruction: any, index: number) => (
-              <View key={index} className="flex-row mb-3">
-                <Text className="font-bold text-orange-500 mr-3">{index + 1}.</Text>
-                <Text className="flex-1 text-gray-700 dark:text-gray-300">{getTextContent(instruction)}</Text>
-              </View>
-            ))}
+            {recipe.instructions && Array.isArray(recipe.instructions) && (
+              <CookingStepsTimeline
+                steps={recipe.instructions.map((i: any) => getTextContent(i))}
+                testID="recipe-instructions-timeline"
+              />
+            )}
           </View>
 
           {/* You Might Like Section */}
@@ -1546,19 +1588,11 @@ export default function RecipeModal() {
         )}
       </ReAnimated.View>
 
-      {/* Floating "Start Cooking" FAB — always visible at bottom */}
-      <View
-        pointerEvents="box-none"
-        style={{
-          position: 'absolute',
-          bottom: insets.bottom + 16,
-          left: 16,
-          right: 16,
-          zIndex: 25,
-        }}
-      >
+      {/* Action Buttons */}
+      <View className="p-4" style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
+        {/* Start Cooking — top of action buttons */}
         <GradientButton
-          label="Start Cooking"
+          label={recipe?.cookTime ? `Start Cooking · ${recipe.cookTime} min` : 'Start Cooking'}
           onPress={() => {
             if (!recipe) return;
             router.push({ pathname: '/cooking', params: { id: recipe.id } } as any);
@@ -1566,12 +1600,9 @@ export default function RecipeModal() {
           disabled={!recipe}
           colors={GradientPresets.fire}
           icon="flame-outline"
-          style={{ ...Shadows.LG }}
+          style={{ marginBottom: 8 }}
         />
-      </View>
 
-      {/* Action Buttons */}
-      <View className="p-4" style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
         {/* Meal Prep Scaling Button - Available for all recipes */}
         <GradientButton
           label="Meal Prep This Recipe"

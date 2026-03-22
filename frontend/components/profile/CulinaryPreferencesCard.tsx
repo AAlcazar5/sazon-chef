@@ -79,8 +79,8 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
                       className="px-2 py-1 rounded-full mr-2 mb-2 flex-row items-center"
                       style={{
                         backgroundColor: isAllergic
-                          ? (isDark ? Colors.secondaryRedLight : Colors.secondaryRedLight)
-                          : (isDark ? '#D97706' : '#F59E0B'),
+                          ? (isDark ? DarkColors.error : Colors.error)
+                          : (isDark ? DarkColors.warning : Colors.warning),
                         gap: 3,
                       }}
                     >
@@ -104,7 +104,7 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
                   const ingredientText = typeof ingredient === 'string' ? ingredient : ingredient.name;
                   const capitalized = ingredientText.replace(/\b\w/g, (char: string) => char.toUpperCase());
                   return (
-                    <View key={index} className="px-2 py-1 rounded-full mr-2 mb-2" style={{ backgroundColor: isDark ? Colors.secondaryRedLight : Colors.secondaryRedLight }}>
+                    <View key={index} className="px-2 py-1 rounded-full mr-2 mb-2" style={{ backgroundColor: isDark ? DarkColors.error : Colors.error }}>
                       <Text className="text-xs" style={{ color: '#FFFFFF' }}>
                         {capitalized}
                       </Text>

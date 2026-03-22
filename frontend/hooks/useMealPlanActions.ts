@@ -153,6 +153,8 @@ interface UseMealPlanActionsReturn {
   handleAddMealToHour: (hour: number) => void;
   /** Moves meal between hours */
   handleMoveMeal: (fromHour: number, fromMealIndex: number, toHour: number) => void;
+  /** Reorders meals within the same hour slot */
+  handleReorderMeal: (hour: number, fromIndex: number, toIndex: number) => void;
   /** Removes meal with confirmation */
   handleRemoveMeal: (hour: number, mealIndex: number) => void;
   /** Adds meal macros to daily total */
@@ -890,6 +892,25 @@ export function useMealPlanActions({
     }));
 
     HapticPatterns.success();
+  };
+
+  // ─── Reorder meals within the same hour slot ──────────────────────────
+  const handleReorderMeal = (hour: number, fromIndex: number, toIndex: number) => {
+    const meals = hourlyMeals[hour];
+    if (!meals || fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= meals.length) return;
+    if (toIndex < 0 || toIndex >= meals.length) return;
+
+    const reordered = [...meals];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+
+    setHourlyMeals(prev => ({
+      ...prev,
+      [hour]: reordered,
+    }));
+
+    HapticPatterns.buttonPress();
   };
 
   // ─── Remove meal with confirmation ────────────────────────────────────
@@ -1758,6 +1779,7 @@ export function useMealPlanActions({
     handleAddRecipeToMeal,
     handleAddMealToHour,
     handleMoveMeal,
+    handleReorderMeal,
     handleRemoveMeal,
     updateDailyMacros,
     loadWeeklyNutrition,

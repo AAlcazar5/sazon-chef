@@ -54,6 +54,8 @@ interface TimelineViewProps {
   onGetSwapSuggestions: (mealId: string, meal: any) => void;
   /** Swap a meal */
   onSwapMeal: (mealId: string, newRecipe: any, currentMeal: any) => void;
+  /** Reorder meals within the same hour */
+  onReorderMeal?: (hour: number, fromIndex: number, toIndex: number) => void;
   /** Set meal as recurring */
   onSetRecurring?: (meal: any) => void;
   cookedRecipeIds?: Set<string>;
@@ -81,6 +83,7 @@ function TimelineView({
   onOpenNotes,
   onGetSwapSuggestions,
   onSwapMeal,
+  onReorderMeal,
   onSetRecurring,
   cookedRecipeIds,
 }: TimelineViewProps) {
@@ -162,6 +165,7 @@ function TimelineView({
                   meal={meal}
                   hour={hourData.hour}
                   mealIndex={mealIndex}
+                  totalMealsInHour={mealsForHour.length}
                   isDark={isDark}
                   isDragging={isDragging}
                   isDragOver={isDragOverCurrent}
@@ -191,6 +195,7 @@ function TimelineView({
                   swapSuggestions={meal.mealPlanMealId ? mealSwapSuggestions[meal.mealPlanMealId] || [] : []}
                   isSwapExpanded={meal.mealPlanMealId ? expandedSwapMealId === meal.mealPlanMealId : false}
                   isLoadingSwap={meal.mealPlanMealId ? loadingSwapSuggestions === meal.mealPlanMealId : false}
+                  onReorder={onReorderMeal ? (fromIdx, toIdx) => onReorderMeal(hourData.hour, fromIdx, toIdx) : undefined}
                   onSwapMeal={onSwapMeal}
                   onSetRecurring={onSetRecurring}
                   cookedRecipeIds={cookedRecipeIds}

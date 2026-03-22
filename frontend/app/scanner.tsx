@@ -456,14 +456,44 @@ export default function ScannerScreen() {
                 </View>
               </MotiView>
 
-              {/* Image Preview */}
+              {/* Image Preview with floating labels */}
               {imageUri && (
                 <MotiView
                   from={{ opacity: 0, translateY: 10 }}
                   animate={{ opacity: 1, translateY: 0 }}
                   transition={{ type: 'spring', delay: 80, damping: 18, stiffness: 200 }}
                 >
-                  <Image source={{ uri: imageUri }} className="w-full h-48 rounded-xl mb-4" style={Shadows.MD} resizeMode="cover" />
+                  <View style={{ position: 'relative' }}>
+                    <Image source={{ uri: imageUri }} className="w-full h-48 rounded-xl" style={Shadows.MD} resizeMode="cover" />
+                    {/* Floating glassmorphic labels */}
+                    {mode === 'food' && 'foods' in result && (
+                      <View style={{ position: 'absolute', bottom: 12, left: 12, right: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {result.foods.map((food, index) => (
+                          <MotiView
+                            key={index}
+                            from={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ type: 'spring', delay: 200 + index * 120, damping: 14, stiffness: 260 }}
+                          >
+                            {Platform.OS === 'ios' ? (
+                              <BlurView intensity={25} tint="dark" style={{ borderRadius: 100, overflow: 'hidden' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6 }}>
+                                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>{food.name}</Text>
+                                  <Text style={{ color: '#4ADE80', fontSize: 13, marginLeft: 4 }}>✓</Text>
+                                </View>
+                              </BlurView>
+                            ) : (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 100 }}>
+                                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>{food.name}</Text>
+                                <Text style={{ color: '#4ADE80', fontSize: 13, marginLeft: 4 }}>✓</Text>
+                              </View>
+                            )}
+                          </MotiView>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ height: 16 }} />
                 </MotiView>
               )}
 

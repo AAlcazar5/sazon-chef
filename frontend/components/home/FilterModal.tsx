@@ -33,6 +33,8 @@ interface FilterModalProps {
   handleQuickFilter?: (type: keyof FilterState, value: string | number | null | string[]) => void;
   handleQuickMacroFilter?: (filterKey: keyof QuickMacroFilters) => void;
   handleToggleMealPrepMode?: (enabled: boolean) => void;
+  darkFeed?: boolean;
+  onToggleDarkFeed?: () => void;
 }
 
 export default function FilterModal({
@@ -49,6 +51,8 @@ export default function FilterModal({
   handleQuickFilter,
   handleQuickMacroFilter,
   handleToggleMealPrepMode,
+  darkFeed = false,
+  onToggleDarkFeed,
 }: FilterModalProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -105,6 +109,9 @@ export default function FilterModal({
       {handleToggleMealPrepMode && (
         <FilterPill emoji="🍱" label="Meal Prep" compact active={mealPrepMode} onPress={() => handleToggleMealPrepMode(!mealPrepMode)} />
       )}
+      {onToggleDarkFeed && (
+        <FilterPill emoji="🌙" label="Dark Feed" compact active={darkFeed} onPress={onToggleDarkFeed} />
+      )}
     </ScrollView>
   ) : undefined;
 
@@ -130,6 +137,7 @@ export default function FilterModal({
               label={cuisine}
               active={filters.cuisines.includes(cuisine)}
               onPress={() => onFilterChange('cuisines', cuisine)}
+              categoryName={cuisine}
             />
           ))}
         </View>

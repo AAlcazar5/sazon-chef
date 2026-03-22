@@ -15,6 +15,8 @@ interface SwipeableItemProps {
   deleteColor?: string;
   editColor?: string;
   disabled?: boolean;
+  /** Show a faint colored edge hint on the right side (swipe affordance) */
+  showEdgeHint?: boolean;
 }
 
 export default function SwipeableItem({
@@ -24,6 +26,7 @@ export default function SwipeableItem({
   deleteColor = Colors.secondaryRed,
   editColor = '#3B82F6',
   disabled = false,
+  showEdgeHint = false,
 }: SwipeableItemProps) {
   const swipeableRef = useRef<Swipeable>(null);
 
@@ -105,6 +108,9 @@ export default function SwipeableItem({
     return <>{children}</>;
   }
 
+  // Edge hint color: red for delete, blue for edit-only
+  const edgeColor = onDelete ? deleteColor : editColor;
+
   return (
     <Swipeable
       ref={swipeableRef}
@@ -113,7 +119,23 @@ export default function SwipeableItem({
       rightThreshold={40}
       overshootRight={false}
     >
-      {children}
+      <View style={{ position: 'relative' }}>
+        {children}
+        {showEdgeHint && (
+          <View
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: 4,
+              bottom: 4,
+              width: 3,
+              borderRadius: 1.5,
+              backgroundColor: edgeColor,
+              opacity: 0.25,
+            }}
+          />
+        )}
+      </View>
     </Swipeable>
   );
 }
