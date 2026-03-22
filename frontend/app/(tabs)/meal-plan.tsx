@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, Alert, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
+import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SuccessModal from '../../components/ui/SuccessModal';
 import Toast from '../../components/ui/Toast';
 import { CelebrationOverlay } from '../../components/celebrations';
 import SkeletonLoader from '../../components/ui/SkeletonLoader';
+import ScreenGradient from '../../components/ui/ScreenGradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -258,6 +260,7 @@ export default function MealPlanScreen() {
     handleAddRecipeToMeal,
     handleAddMealToHour,
     handleMoveMeal,
+    handleReorderMeal,
     handleRemoveMeal,
     handleTimePickerConfirm,
     loadWeeklyNutrition,
@@ -455,7 +458,7 @@ export default function MealPlanScreen() {
 
   return (
     <>
-      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+      <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {loading ? (
           <>
             <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, minHeight: 56 }}>
@@ -542,11 +545,9 @@ export default function MealPlanScreen() {
           }}
           scrollEventThrottle={16}
           refreshControl={
-            <RefreshControl
+            <SazonRefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor={isDark ? DarkColors.primary : Colors.primary}
-              colors={[isDark ? DarkColors.primary : Colors.primary]}
             />
           }
         >
@@ -607,6 +608,7 @@ export default function MealPlanScreen() {
               onDragEnd={handleDragEnd}
               onDragOver={handleDragOver}
               onMoveMeal={handleMoveMeal}
+              onReorderMeal={handleReorderMeal}
               onRemoveMeal={handleRemoveMeal}
               onToggleComplete={handleToggleMealCompletion}
               onOpenNotes={handleOpenNotes}
@@ -828,7 +830,7 @@ export default function MealPlanScreen() {
         />
         </>
         )}
-      </SafeAreaView>
+      </SafeAreaView></ScreenGradient>
 
       {/* Meal Plan Generated Celebration */}
       <CelebrationOverlay

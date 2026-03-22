@@ -3,11 +3,12 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard } from 'react-native';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import SearchBar from '../../components/ui/SearchBar';
 import { router, usePathname, useSegments } from 'expo-router';
 import ActionSheet, { ActionSheetItem } from '../../components/ui/ActionSheet';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { scannerApi, shoppingListApi } from '../../lib/api';
+import { scannerApi, shoppingListApi, mealPlanApi } from '../../lib/api';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +21,6 @@ import { QuickMealLogModal } from '../../components/meal-plan';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabBar';
 
 export default function TabLayout() {
-  console.log('[TabLayout] Rendering');
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
@@ -34,11 +34,45 @@ export default function TabLayout() {
   const [showQuickTimer, setShowQuickTimer] = useState(false);
   const [showQuickMealLog, setShowQuickMealLog] = useState(false);
   const [shoppingRemaining, setShoppingRemaining] = useState<number | null>(null);
+  const [shoppingBadge, setShoppingBadge] = useState<number | undefined>(undefined);
+  const [mealPlanHasUncooked, setMealPlanHasUncooked] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Search history
   const { searchHistory, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
+
+  // Tab badge counts — fetch on mount and periodically
+  const fetchBadgeCounts = useCallback(async () => {
+    try {
+      const response = await shoppingListApi.getShoppingLists();
+      const lists = response.data || [];
+      const activeList = lists.find((l: any) => l.isActive) || lists[0];
+      if (activeList?.items) {
+        const unchecked = activeList.items.filter((i: any) => !i.purchased).length;
+        setShoppingBadge(unchecked > 0 ? unchecked : undefined);
+      } else {
+        setShoppingBadge(undefined);
+      }
+    } catch {
+      // Silently fail
+    }
+
+    try {
+      const response = await mealPlanApi.getDailySuggestion();
+      const meals = response.data?.meals || response.data?.todayMeals || [];
+      const hasUncooked = meals.some((m: any) => !m.cooked && !m.skipped);
+      setMealPlanHasUncooked(hasUncooked);
+    } catch {
+      setMealPlanHasUncooked(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBadgeCounts();
+    const interval = setInterval(fetchBadgeCounts, 60000); // Refresh every 60s
+    return () => clearInterval(interval);
+  }, [fetchBadgeCounts]);
 
   // FAB (Floating Action Button) animations
   const fabScale = useRef(new Animated.Value(1)).current;
@@ -276,7 +310,7 @@ export default function TabLayout() {
         options={{
           title: 'Meal Plan',
           tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="calendar-outline" color={color} size={size} focused={focused} />
+            <AnimatedTabIcon name="calendar-outline" color={color} size={size} focused={focused} badgeDot={mealPlanHasUncooked} badgeColor={colors.primary} />
           ),
         }}
       />
@@ -285,7 +319,7 @@ export default function TabLayout() {
         options={{
           title: 'Shopping',
           tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="cart-outline" color={color} size={size} focused={focused} />
+            <AnimatedTabIcon name="cart-outline" color={color} size={size} focused={focused} badgeCount={shoppingBadge} badgeColor={colors.primary} />
           ),
         }}
       />
@@ -317,45 +351,29 @@ export default function TabLayout() {
         <View className="flex-row items-center" style={{ gap: Gap.md }}>
           {/* Search Bar */}
           <View className="flex-1" style={{ position: 'relative' }}>
-            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3" style={{ height: 40 }}>
-              <Ionicons name="search-outline" size={20} color={colors.text.secondary} style={{ marginRight: Spacing.sm }} />
-              <TextInput
-                ref={searchInputRef}
-                placeholder="Search recipes..."
-                placeholderTextColor={colors.text.tertiary}
-                value={searchQuery}
-                onChangeText={handleSearchChange}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => {
-                  // Delay to allow tapping history items
-                  setTimeout(() => setIsSearchFocused(false), 200);
-                }}
-                accessibilityLabel="Search recipes"
-                accessibilityHint="Enter recipe name or ingredient to search. Results update as you type."
-                onSubmitEditing={() => {
-                  if (searchQuery.trim()) {
-                    if (debounceRef.current) clearTimeout(debounceRef.current);
-                    executeSearch(searchQuery);
-                  }
-                }}
-                className="flex-1 text-gray-900 dark:text-gray-100"
-                style={{ fontSize: FontSize.md, color: colors.text.primary, paddingVertical: 0 }}
-              />
-              {searchQuery.length > 0 && (
-                <HapticTouchableOpacity
-                  onPress={() => {
-                    setSearchQuery('');
-                    if (debounceRef.current) clearTimeout(debounceRef.current);
-                  }}
-                  className="p-1"
-                  accessibilityLabel="Clear search"
-                  accessibilityRole="button"
-                  accessibilityHint="Clears the search text"
-                >
-                  <Ionicons name="close-circle" size={20} color={colors.text.secondary} />
-                </HapticTouchableOpacity>
-              )}
-            </View>
+            <SearchBar
+              ref={searchInputRef}
+              value={searchQuery}
+              onChangeText={handleSearchChange}
+              onClear={() => {
+                setSearchQuery('');
+                if (debounceRef.current) clearTimeout(debounceRef.current);
+              }}
+              placeholder="Search recipes..."
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => {
+                // Delay to allow tapping history items
+                setTimeout(() => setIsSearchFocused(false), 200);
+              }}
+              onSubmitEditing={() => {
+                if (searchQuery.trim()) {
+                  if (debounceRef.current) clearTimeout(debounceRef.current);
+                  executeSearch(searchQuery);
+                }
+              }}
+              accessibilityLabel="Search recipes"
+              accessibilityHint="Enter recipe name or ingredient to search. Results update as you type."
+            />
 
             {/* Search History Dropdown */}
             {showHistoryDropdown && (

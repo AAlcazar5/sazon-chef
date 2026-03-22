@@ -5,6 +5,7 @@ import { View, Text, TextInput, ScrollView } from 'react-native';
 import { useState, useRef, useCallback } from 'react';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import SearchBar from '../ui/SearchBar';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -155,57 +156,37 @@ export default function RecipeSearchBar({
       style={{ zIndex: 50 }}
     >
       {/* Search input row */}
-      <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2.5">
-        <Icon
-          name={Icons.SEARCH}
-          size={IconSizes.MD}
-          color={isDark ? '#9CA3AF' : '#6B7280'}
-          accessibilityLabel="Search"
-          style={{ marginRight: 8 }}
-        />
-        <TextInput
-          ref={inputRef}
-          placeholder={placeholder}
-          placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
-          value={value}
-          onChangeText={handleChangeText}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onSubmitEditing={handleSubmit}
-          className="flex-1 text-gray-900 dark:text-gray-100 text-base"
-          style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
-          returnKeyType="search"
-          accessibilityLabel="Search recipes"
-          accessibilityHint="Enter text to search for recipes"
-        />
-        {value.length > 0 && (
-          <HapticTouchableOpacity onPress={handleClear} className="ml-2">
-            <Icon
-              name={Icons.CLOSE_CIRCLE}
-              size={IconSizes.SM}
-              color={isDark ? '#9CA3AF' : '#6B7280'}
-              accessibilityLabel="Clear search"
-            />
-          </HapticTouchableOpacity>
-        )}
-        {voice.isAvailable && value.length === 0 && (
-          <HapticTouchableOpacity
-            onPress={voice.isListening ? voice.stopListening : voice.startListening}
-            className="ml-2"
-            accessibilityLabel={voice.isListening ? 'Stop listening' : 'Search by voice'}
-          >
-            <Icon
-              name={voice.isListening ? Icons.MIC_OFF_OUTLINE : Icons.MIC_OUTLINE}
-              size={IconSizes.MD}
-              color={
-                voice.isListening
-                  ? (isDark ? DarkColors.primary : Colors.primary)
-                  : (isDark ? '#9CA3AF' : '#6B7280')
-              }
-            />
-          </HapticTouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        ref={inputRef}
+        value={value}
+        onChangeText={handleChangeText}
+        onClear={handleClear}
+        placeholder={placeholder}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onSubmitEditing={handleSubmit}
+        accessibilityLabel="Search recipes"
+        accessibilityHint="Enter text to search for recipes"
+        rightAccessory={
+          voice.isAvailable && value.length === 0 ? (
+            <HapticTouchableOpacity
+              onPress={voice.isListening ? voice.stopListening : voice.startListening}
+              className="ml-2"
+              accessibilityLabel={voice.isListening ? 'Stop listening' : 'Search by voice'}
+            >
+              <Icon
+                name={voice.isListening ? Icons.MIC_OFF_OUTLINE : Icons.MIC_OUTLINE}
+                size={IconSizes.MD}
+                color={
+                  voice.isListening
+                    ? (isDark ? DarkColors.primary : Colors.primary)
+                    : (isDark ? '#9CA3AF' : '#6B7280')
+                }
+              />
+            </HapticTouchableOpacity>
+          ) : undefined
+        }
+      />
 
       {/* Results label */}
       {value.length > 0 && !isFocused && (

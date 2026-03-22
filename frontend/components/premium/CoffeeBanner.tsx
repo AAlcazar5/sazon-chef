@@ -1,14 +1,18 @@
 // frontend/components/premium/CoffeeBanner.tsx
-// Gentle "Buy Me a Coffee" banner shown to free-tier users after key moments.
+// Premium-styled "Support Sazon" banner shown to free-tier users after key moments.
 // Frequency-capped to once per 7 days via AsyncStorage.
 // Never shown to Premium or trialing subscribers.
+// Redesigned as a rich dark gradient card with mascot illustration.
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, Linking } from 'react-native';
+import React from 'react';
+import { View, Text, Modal, Linking, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { SazonMascot } from '../mascot';
 import { useSubscription } from '../../hooks/useSubscription';
+import { Shadows } from '../../constants/Shadows';
+import { Backdrop } from '../../constants/Colors';
 
 const STORAGE_KEY = 'lastCoffeeBannerShown';
 const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -37,39 +41,124 @@ export function CoffeeBanner({ visible, onDismiss }: CoffeeBannerProps) {
       animationType="fade"
       onRequestClose={onDismiss}
     >
-      <View className="flex-1 justify-end bg-black/40">
-        <View className="bg-white dark:bg-gray-900 rounded-t-3xl px-6 pt-6 pb-10 items-center">
-          <SazonMascot expression="chef-kiss" size="small" />
-
-          <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-2">
-            Enjoying Sazon?
-          </Text>
-          <Text className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
-            If Sazon is helping you eat better, a small coffee goes a long way toward keeping the stove on.
-          </Text>
-
-          <HapticTouchableOpacity
-            className="w-full bg-yellow-400 py-4 rounded-2xl items-center mb-3"
-            onPress={handleSupport}
-            hapticStyle="medium"
+      <View style={[styles.overlay, { backgroundColor: Backdrop.light }]}>
+        <View style={styles.cardWrapper}>
+          <LinearGradient
+            colors={['#1A1A2E', '#2D1B4E', '#1A1A2E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.card}
           >
-            <Text className="text-yellow-900 font-bold text-base">
-              Support Sazon ☕
-            </Text>
-          </HapticTouchableOpacity>
+            {/* Mascot on the right */}
+            <View style={styles.mascotContainer}>
+              <SazonMascot expression="chef-kiss" size="small" />
+            </View>
 
+            {/* Content on the left */}
+            <View style={styles.content}>
+              <Text style={styles.headline}>
+                Unlock the full menu
+              </Text>
+              <Text style={styles.subtext}>
+                Keep Sazon cooking with a small coffee — it goes a long way.
+              </Text>
+
+              {/* CTA Button with shimmer-like gradient */}
+              <HapticTouchableOpacity
+                onPress={handleSupport}
+                hapticStyle="medium"
+                style={styles.ctaWrapper}
+              >
+                <LinearGradient
+                  colors={['#fa7e12', '#FF9F43']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.ctaButton}
+                >
+                  <Text style={styles.ctaText}>Support Sazon ☕</Text>
+                </LinearGradient>
+              </HapticTouchableOpacity>
+            </View>
+          </LinearGradient>
+
+          {/* Dismiss */}
           <HapticTouchableOpacity
-            className="py-3"
+            style={styles.dismissButton}
             onPress={onDismiss}
             hapticDisabled
           >
-            <Text className="text-gray-400 dark:text-gray-500 text-sm">Maybe later</Text>
+            <Text style={styles.dismissText}>Maybe later</Text>
           </HapticTouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  cardWrapper: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  card: {
+    width: '100%',
+    borderRadius: 20,
+    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...Shadows.LG,
+  },
+  content: {
+    flex: 1,
+    marginRight: 16,
+  },
+  mascotContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headline: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  subtext: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  ctaWrapper: {
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  ctaButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  ctaText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  dismissButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  dismissText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
+  },
+});
 
 /**
  * Check whether the coffee banner should be shown, respecting the 7-day cooldown.

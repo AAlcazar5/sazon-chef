@@ -52,7 +52,7 @@ describe('ShoppingListItem', () => {
     const { getByText } = render(
       <ShoppingListItem item={makeItem()} {...defaultProps} />
     );
-    expect(getByText('Chicken breast')).toBeTruthy();
+    expect(getByText(/Chicken breast/)).toBeTruthy();
   });
 
   it('renders quantity when provided', () => {
@@ -96,7 +96,7 @@ describe('ShoppingListItem', () => {
     const { getByText } = render(
       <ShoppingListItem item={makeItem({ purchased: true })} {...defaultProps} />
     );
-    const nameEl = getByText('Chicken breast');
+    const nameEl = getByText(/Chicken breast/);
     expect(nameEl.props.className).toContain('text-gray-400');
   });
 
@@ -104,7 +104,7 @@ describe('ShoppingListItem', () => {
     const { getByText } = render(
       <ShoppingListItem item={makeItem({ purchased: false })} {...defaultProps} />
     );
-    const nameEl = getByText('Chicken breast');
+    const nameEl = getByText(/Chicken breast/);
     expect(nameEl.props.className).toContain('text-gray-900');
   });
 
@@ -132,7 +132,7 @@ describe('ShoppingListItem', () => {
         onEditQuantity={onEditQuantity}
       />
     );
-    fireEvent.press(getByText('Chicken breast'));
+    fireEvent.press(getByText(/Chicken breast/));
     expect(onEditQuantity).toHaveBeenCalledWith(expect.objectContaining({ name: 'Chicken breast' }));
   });
 
@@ -146,7 +146,7 @@ describe('ShoppingListItem', () => {
         onToggleSelection={onToggleSelection}
       />
     );
-    fireEvent.press(getByText('Chicken breast'));
+    fireEvent.press(getByText(/Chicken breast/));
     expect(onToggleSelection).toHaveBeenCalledWith('item-1');
   });
 
@@ -159,7 +159,7 @@ describe('ShoppingListItem', () => {
         onLongPress={onLongPress}
       />
     );
-    fireEvent(getByText('Chicken breast'), 'longPress');
+    fireEvent(getByText(/Chicken breast/), 'longPress');
     expect(onLongPress).toHaveBeenCalledWith('item-1');
   });
 
@@ -173,7 +173,7 @@ describe('ShoppingListItem', () => {
         onLongPress={onLongPress}
       />
     );
-    fireEvent(getByText('Chicken breast'), 'longPress');
+    fireEvent(getByText(/Chicken breast/), 'longPress');
     expect(onLongPress).not.toHaveBeenCalled();
   });
 
@@ -247,7 +247,7 @@ describe('ShoppingListItem', () => {
         inStoreMode={true}
       />
     );
-    const nameEl = getByText('Chicken breast');
+    const nameEl = getByText(/Chicken breast/);
     expect(nameEl.props.style).toMatchObject({ fontSize: 17 });
   });
 
@@ -255,7 +255,7 @@ describe('ShoppingListItem', () => {
     const { getByText } = render(
       <ShoppingListItem item={makeItem()} {...defaultProps} />
     );
-    const nameEl = getByText('Chicken breast');
+    const nameEl = getByText(/Chicken breast/);
     expect(nameEl.props.style).toMatchObject({ fontSize: 15 });
   });
 

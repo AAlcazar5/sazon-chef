@@ -3,7 +3,7 @@ import { Modal, View, StyleSheet, useColorScheme, Animated } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SuccessState from './SuccessState';
 import { SazonExpression } from '../mascot/SazonMascot';
-import { Colors, DarkColors, Gradients } from '../../constants/Colors';
+import { Colors, DarkColors, Gradients, Backdrop } from '../../constants/Colors';
 import { Duration, Spring } from '../../constants/Animations';
 
 interface SuccessModalProps {
@@ -137,7 +137,7 @@ export default function SuccessModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Backdrop.heavy, // Celebration overlay
   },
   contentWrapper: {
     flex: 1,

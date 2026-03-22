@@ -12,6 +12,7 @@ import {
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useTheme } from '../../contexts/ThemeContext';
 import { DarkElevation } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 
 interface BottomSheetProps {
   /** Controls visibility — matches the RN Modal `visible` prop pattern */
@@ -55,7 +56,7 @@ export default function BottomSheet({
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
-        opacity={0.45}
+        opacity={0.4}
         pressBehavior="close"
         onPress={onClose}
       />
@@ -81,7 +82,10 @@ export default function BottomSheet({
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       handleComponent={Handle}
-      backgroundStyle={{ backgroundColor: sheetBackground }}
+      backgroundStyle={[
+        { backgroundColor: sheetBackground, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+        Shadows.XL as any,
+      ]}
       enablePanDownToClose
     >
       <ContentWrapper style={styles.content}>
@@ -93,18 +97,19 @@ export default function BottomSheet({
 
 const styles = StyleSheet.create({
   handle: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingTop: 12,
     paddingBottom: 8,
-    alignItems: 'center',
+    alignItems: 'center' as const,
   },
   handleBar: {
-    width: 36,
+    width: 40,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#D1D5DB',
     marginBottom: 4,
+    opacity: 0.6,
   },
   title: {
     fontSize: 16,

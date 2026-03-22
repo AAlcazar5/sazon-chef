@@ -14,6 +14,7 @@ import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
+import { getIngredientEmoji } from '../../constants/IngredientEmoji';
 
 interface ShoppingListItemProps {
   item: ShoppingListItemType;
@@ -199,7 +200,7 @@ export default function ShoppingListItem({
             style={{ fontSize: inStoreMode ? 17 : 15 }}
             numberOfLines={1}
           >
-            {item.name}
+{getIngredientEmoji(item.name)} {item.name}
           </Text>
           {/* Recipe origin tag — hidden when already grouped by recipe */}
           {!groupByRecipe && item.recipe?.title && !item.purchased && (
@@ -273,8 +274,8 @@ export default function ShoppingListItem({
         </HapticTouchableOpacity>
       )}
       {inStoreMode && isCantFind && (
-        <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, marginLeft: 8, backgroundColor: isDark ? '#7C2D12' : '#FEF2F2' }}>
-          <Text style={{ fontSize: 12, fontWeight: '500', color: isDark ? '#FCA5A5' : '#DC2626' }}>
+        <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, marginLeft: 8, backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#FEF2F2' }}>
+          <Text style={{ fontSize: 12, fontWeight: '500', color: isDark ? DarkColors.warning : Colors.warning }}>
             Skipped
           </Text>
         </View>

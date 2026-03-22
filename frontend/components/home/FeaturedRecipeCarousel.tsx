@@ -133,11 +133,16 @@ function FeaturedRecipeCarousel({
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text className="text-xl font-black text-gray-900 dark:text-gray-100">
-            {mealPrepMode ? '🍱 Meal Prep Recipes' : "Today's Recommendation"}
+          <Text className="text-gray-900 dark:text-gray-100">
+            <Text style={{ fontWeight: '800', fontSize: 20 }}>
+              {mealPrepMode ? '🍱 Meal Prep' : "Today's"}
+            </Text>
+            <Text style={{ fontWeight: '400', fontSize: 20 }}>
+              {mealPrepMode ? ' Recipes' : ' Recommendation'}
+            </Text>
           </Text>
           {recipes.length > 1 && !mealPrepMode && (
-            <Text className="text-xs text-gray-500 dark:text-gray-400" style={{ marginTop: Spacing.xs }}>
+            <Text className="text-xs text-gray-500 dark:text-gray-400" style={{ marginTop: Spacing.xs, opacity: 0.5 }}>
               Swipe to see more top matches
             </Text>
           )}

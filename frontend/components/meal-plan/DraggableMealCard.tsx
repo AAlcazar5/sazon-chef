@@ -26,6 +26,8 @@ interface DraggableMealCardProps {
   meal: any;
   hour: number;
   mealIndex: number;
+  /** Total number of meals in this hour slot (for reorder bounds) */
+  totalMealsInHour?: number;
   isDark: boolean;
   isDragging: boolean;
   isDragOver: boolean;
@@ -35,6 +37,8 @@ interface DraggableMealCardProps {
   onDragOver: (targetHour: number) => void;
   onPress: () => void;
   onLongPress: () => void;
+  /** Reorder within the same hour slot */
+  onReorder?: (fromIndex: number, toIndex: number) => void;
   isCompleted?: boolean;
   hasNotes?: boolean;
   notesText?: string;
@@ -57,6 +61,7 @@ function DraggableMealCard({
   meal,
   hour,
   mealIndex,
+  totalMealsInHour = 1,
   isDark,
   isDragging,
   isDragOver,
@@ -69,6 +74,7 @@ function DraggableMealCard({
   onDragOver,
   onPress,
   onLongPress,
+  onReorder,
   onToggleComplete,
   onOpenNotes,
   onGetSwapSuggestions,
@@ -215,11 +221,24 @@ function DraggableMealCard({
       } else {
         // Not enough swipe distance or vertical drag - handle normally
         if (swipeAction.value === 'none') {
-          // Vertical drag - use the final translation to determine target hour
+          // Vertical drag - determine if reorder within hour or cross-hour move
           const hourHeight = 80;
           const hourOffset = Math.round(translateY.value / hourHeight);
           const targetHour = Math.max(0, Math.min(23, hour + hourOffset));
-          runOnJS(onDragEnd)(targetHour);
+
+          // If small drag and multiple meals in slot, treat as reorder
+          if (targetHour === hour && onReorder && totalMealsInHour > 1) {
+            const itemHeight = 160; // approximate card height
+            const indexOffset = Math.round(translateY.value / itemHeight);
+            if (indexOffset !== 0) {
+              const toIndex = Math.max(0, Math.min(totalMealsInHour - 1, mealIndex + indexOffset));
+              if (toIndex !== mealIndex) {
+                runOnJS(onReorder)(mealIndex, toIndex);
+              }
+            }
+          } else {
+            runOnJS(onDragEnd)(targetHour);
+          }
         }
 
         // Spring back to original position

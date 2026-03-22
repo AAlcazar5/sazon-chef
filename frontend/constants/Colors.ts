@@ -202,11 +202,11 @@ export const DarkColors: ColorPalette = {
   accent: '#A78BFA', // violet-400 (lighter for dark mode)
   accentSecondary: '#f87171', // Lighter red for dark mode - for habanero variants and brand accents
   
-  // Semantic colors (same as light theme)
-  success: '#10B981', // emerald-500
-  warning: '#F59E0B', // amber-500
-  error: '#EF4444', // red-500
-  info: '#3B82F6', // blue-500
+  // Semantic colors (brighter for dark mode visibility)
+  success: '#34D399', // emerald-400
+  warning: '#FBBF24', // amber-400
+  error: '#F87171', // red-400
+  info: '#60A5FA', // blue-400
   
   // Neutral colors (dark mode — iOS elevation stack)
   background: '#0F0F0F', // near-OLED black (was #111827)
@@ -336,6 +336,19 @@ export const Gradients = {
   rainbowBrightLight: ['#E63946', '#F77F00', '#FCBF49', '#06A77D', '#118AB2', '#7209B7', '#B5179E', '#E63946'] // Vibrant, saturated rainbow gradient for light mode - non-pastel for better legibility
 };
 
+// Modal backdrop tokens
+export const Backdrop = {
+  light: 'rgba(0,0,0,0.4)', // Standard modals, bottom sheets
+  heavy: 'rgba(0,0,0,0.7)', // Celebrations, paywall, full-screen overlays
+} as const;
+
+// Difficulty badge colors
+export const DifficultyColors = {
+  easy: { bg: '#D1FAE5', text: '#065F46', darkBg: 'rgba(16,185,129,0.2)', darkText: '#34D399' },
+  medium: { bg: '#FEF3C7', text: '#92400E', darkBg: 'rgba(245,158,11,0.2)', darkText: '#FBBF24' },
+  hard: { bg: '#FEE2E2', text: '#991B1B', darkBg: 'rgba(239,68,68,0.2)', darkText: '#F87171' },
+} as const;
+
 // Helper functions
 export const getScoreColor = (score: number): keyof typeof Colors.score => {
   if (score >= 80) return 'high';
@@ -349,4 +362,13 @@ export const getMacroColor = (type: keyof typeof Colors.macros): string => {
 
 export const getFeedbackColor = (type: 'like' | 'dislike' | 'neutral'): string => {
   return Colors.feedback[type];
+};
+
+export const getDifficultyColor = (difficulty: string, isDark: boolean) => {
+  const key = difficulty.toLowerCase() as keyof typeof DifficultyColors;
+  const colors = DifficultyColors[key] || DifficultyColors.medium;
+  return {
+    bg: isDark ? colors.darkBg : colors.bg,
+    text: isDark ? colors.darkText : colors.text,
+  };
 };

@@ -117,7 +117,7 @@ export default function ProfileHeader({
             )}
           </HapticTouchableOpacity>
           <View className="flex-row items-center mb-1">
-            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100 mr-2" accessibilityRole="header">{profile.name}</Text>
+            <Text style={{ fontSize: 28, fontWeight: '800', lineHeight: 34 }} className="text-gray-900 dark:text-gray-100 mr-2" accessibilityRole="header">{profile.name}</Text>
             <HapticTouchableOpacity
               onPress={handleEditName}
               className="p-1"
@@ -156,6 +156,7 @@ export default function ProfileHeader({
               <View className="items-center">
                 <AnimatedStatCounter
                   value={stats.savedRecipes}
+                  delay={0}
                   style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
                   testID="stat-saved-recipes"
                 />
@@ -165,6 +166,7 @@ export default function ProfileHeader({
               <View className="items-center">
                 <AnimatedStatCounter
                   value={stats.mealHistory}
+                  delay={100}
                   style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
                   testID="stat-meals-cooked"
                 />
@@ -179,6 +181,7 @@ export default function ProfileHeader({
               <View className="items-center">
                 <AnimatedStatCounter
                   value={stats.mealPlans}
+                  delay={200}
                   style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
                   testID="stat-meal-plans"
                 />

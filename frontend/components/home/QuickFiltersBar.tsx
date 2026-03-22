@@ -44,15 +44,35 @@ function FilterChip({
     <Animated.View style={animStyle}>
       <HapticTouchableOpacity
         onPress={onPress}
-        className="px-4 py-2 rounded-full flex-row items-center"
-        style={{ backgroundColor: active ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#374151' : '#F3F4F6') }}
+        style={{ alignItems: 'center', width: 64 }}
       >
         {children ?? (
           <>
-            {emoji ? <Text className="text-base">{emoji}</Text> : null}
+            {/* Circular emoji icon */}
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: active
+                  ? (isDark ? DarkColors.primary : Colors.primary)
+                  : (isDark ? '#374151' : '#F3F4F6'),
+                marginBottom: 4,
+              }}
+            >
+              {emoji ? <Text style={{ fontSize: 20 }}>{emoji}</Text> : null}
+            </View>
+            {/* Label below */}
             <Text
-              className="text-sm font-semibold ml-1.5"
-              style={{ color: active ? '#FFF' : (isDark ? '#D1D5DB' : '#374151') }}
+              style={{
+                fontSize: 11,
+                fontWeight: '600',
+                color: active ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280'),
+                textAlign: 'center',
+              }}
+              numberOfLines={1}
             >
               {label}
             </Text>
@@ -90,6 +110,10 @@ interface QuickFiltersBarProps {
   handleToggleMealPrepMode: (enabled: boolean) => void;
   /** Called when advanced filter button is pressed */
   onAdvancedFilterPress: () => void;
+  /** Whether dark feed mode is active */
+  darkFeed?: boolean;
+  /** Toggle dark feed mode */
+  onToggleDarkFeed?: () => void;
 }
 
 /**
@@ -107,6 +131,8 @@ function QuickFiltersBar({
   handleQuickMacroFilter,
   handleToggleMealPrepMode,
   onAdvancedFilterPress,
+  darkFeed = false,
+  onToggleDarkFeed,
 }: QuickFiltersBarProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -138,19 +164,43 @@ function QuickFiltersBar({
         >
           {/* Mood */}
           <FilterChip active={!!selectedMood} onPress={onMoodPress} isDark={isDark}>
-            <Text className="text-base">{selectedMood?.emoji || '😊'}</Text>
-            <Text className="text-sm font-semibold ml-1.5" style={{ color: selectedMood ? '#FFF' : (isDark ? '#D1D5DB' : '#374151') }}>
-              {selectedMood?.label || 'Mood'}
-            </Text>
-            {selectedMood && (
-              <HapticTouchableOpacity
-                onPress={(e) => { e.stopPropagation(); onClearMood(); }}
-                className="ml-2 w-4 h-4 rounded-full bg-white/30 items-center justify-center"
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            <View style={{ alignItems: 'center', width: 64 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: selectedMood
+                    ? (isDark ? DarkColors.primary : Colors.primary)
+                    : (isDark ? '#374151' : '#F3F4F6'),
+                  marginBottom: 4,
+                }}
               >
-                <Ionicons name="close" size={12} color="white" />
-              </HapticTouchableOpacity>
-            )}
+                <Text style={{ fontSize: 20 }}>{selectedMood?.emoji || '😊'}</Text>
+                {selectedMood && (
+                  <HapticTouchableOpacity
+                    onPress={(e: any) => { e.stopPropagation(); onClearMood(); }}
+                    style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="close" size={10} color="white" />
+                  </HapticTouchableOpacity>
+                )}
+              </View>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '600',
+                  color: selectedMood ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280'),
+                  textAlign: 'center',
+                }}
+                numberOfLines={1}
+              >
+                {selectedMood?.label || 'Mood'}
+              </Text>
+            </View>
           </FilterChip>
 
           {/* Quick <30min */}
@@ -218,6 +268,17 @@ function QuickFiltersBar({
               HapticPatterns.buttonPress();
             }}
           />
+
+          {/* Dark Feed */}
+          {onToggleDarkFeed && (
+            <FilterChip
+              active={darkFeed}
+              emoji="🌙"
+              label="Dark Feed"
+              isDark={isDark}
+              onPress={() => { onToggleDarkFeed(); HapticPatterns.buttonPress(); }}
+            />
+          )}
         </ScrollView>
       </View>
     </View>

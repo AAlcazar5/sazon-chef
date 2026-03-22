@@ -59,6 +59,7 @@ export default function ShoppingListProgress({
           backgroundColor={isDark ? '#374151' : '#E5E7EB'}
           progressColor={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen}
           borderRadius={999}
+          useSpring
         />
       </View>
 

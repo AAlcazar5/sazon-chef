@@ -6,7 +6,6 @@ import {
   TextInput,
   Alert,
   ScrollView,
-  ActivityIndicator,
   Image,
   Animated,
   TouchableWithoutFeedback,

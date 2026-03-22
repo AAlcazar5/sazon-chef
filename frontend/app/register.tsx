@@ -7,7 +7,6 @@ import {
   Text,
   ScrollView,
   Alert,
-  Platform,
 } from 'react-native';
 import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +18,7 @@ import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAu
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import ScreenGradient from '../components/ui/ScreenGradient';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import FormInput from '../components/ui/FormInput';
@@ -195,7 +195,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+    <ScreenGradient variant="auth"><SafeAreaView className="flex-1" edges={['top']}>
       {/* Success mascot flash — excited expression for 800ms after registration */}
       {showSuccessMascot && (
         <View
@@ -252,19 +252,13 @@ export default function RegisterScreen() {
                 </View>
               )}
 
-              {/* Name + Email — grouped card */}
+              {/* Name + Email */}
               <MotiView
                 from={{ opacity: 0, translateY: 18 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ type: 'spring', delay: 100, damping: 20, stiffness: 180 }}
               >
-                <View
-                  className="rounded-2xl p-4 mb-2"
-                  style={{
-                    backgroundColor: isDark ? '#1F2937' : '#FAFAFA',
-                    ...Shadows.SM,
-                  }}
-                >
+                <View className="mb-2" style={{ gap: 4 }}>
                   <FormInput
                     label="Name"
                     placeholder="Enter your name"
@@ -294,19 +288,13 @@ export default function RegisterScreen() {
                 </View>
               </MotiView>
 
-              {/* Password fields — grouped card */}
+              {/* Password fields */}
               <MotiView
                 from={{ opacity: 0, translateY: 16 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ type: 'spring', delay: 180, damping: 20, stiffness: 180 }}
               >
-                <View
-                  className="rounded-2xl p-4 mb-2"
-                  style={{
-                    backgroundColor: isDark ? '#1F2937' : '#FAFAFA',
-                    ...Shadows.SM,
-                  }}
-                >
+                <View className="mb-2" style={{ gap: 4 }}>
                   <FormInput
                     label="Password"
                     placeholder="Enter your password (min 8 characters)"
@@ -386,23 +374,21 @@ export default function RegisterScreen() {
                     )}
                   </HapticTouchableOpacity>
 
-                  {(Platform.OS === 'ios' || Platform.OS === 'web') && (
-                    <HapticTouchableOpacity
-                      className={`flex-row items-center justify-center rounded-xl px-4 py-4 min-h-[50px] bg-black dark:bg-gray-800 ${socialLoading === 'apple' ? 'opacity-60' : ''}`}
-                      style={Shadows.SM}
-                      onPress={handleAppleLogin}
-                      disabled={loading || socialLoading !== null}
-                    >
-                      {socialLoading === 'apple' ? (
-                        <AnimatedActivityIndicator color="#fff" />
-                      ) : (
-                        <>
-                          <Ionicons name="logo-apple" size={20} color="#fff" />
-                          <Text className="text-white text-base font-semibold ml-2">Continue with Apple</Text>
-                        </>
-                      )}
-                    </HapticTouchableOpacity>
-                  )}
+                  <HapticTouchableOpacity
+                    className={`flex-row items-center justify-center rounded-xl px-4 py-4 min-h-[50px] bg-black dark:bg-gray-800 ${socialLoading === 'apple' ? 'opacity-60' : ''}`}
+                    style={Shadows.SM}
+                    onPress={handleAppleLogin}
+                    disabled={loading || socialLoading !== null}
+                  >
+                    {socialLoading === 'apple' ? (
+                      <AnimatedActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="logo-apple" size={20} color="#fff" />
+                        <Text className="text-white text-base font-semibold ml-2">Continue with Apple</Text>
+                      </>
+                    )}
+                  </HapticTouchableOpacity>
                 </View>
               </MotiView>
 
@@ -426,6 +412,6 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingContainer>
-    </SafeAreaView>
+    </SafeAreaView></ScreenGradient>
   );
 }

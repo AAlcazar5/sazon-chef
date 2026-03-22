@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
+import ScreenGradient from '../../components/ui/ScreenGradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
@@ -56,8 +57,6 @@ export default function ShoppingListScreen() {
     listPickerOpacity,
     editNameScale,
     editNameOpacity,
-    mergeScale,
-    mergeOpacity,
     createListScale,
     createListOpacity,
     handleSelectList,
@@ -173,15 +172,15 @@ export default function ShoppingListScreen() {
 
   if (state.loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+      <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <LoadingState config={ShoppingListLoadingStates.lists} fullScreen />
-      </SafeAreaView>
+      </SafeAreaView></ScreenGradient>
     );
   }
 
   return (
     <View style={{ flex: 1 }}>
-    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7' }} edges={['top']}>
+    <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <ShoppingListHeader
         state={state}
         dispatch={dispatch}
@@ -241,7 +240,7 @@ export default function ShoppingListScreen() {
                     height: '100%',
                     borderRadius: 100,
                     width: `${progressStats.total > 0 ? (progressStats.purchased / progressStats.total) * 100 : 0}%`,
-                    backgroundColor: isDark ? '#34D399' : '#10B981',
+                    backgroundColor: isDark ? DarkColors.success : Colors.success,
                   }}
                 />
               </View>
@@ -263,7 +262,7 @@ export default function ShoppingListScreen() {
                         fontSize: 11,
                         fontWeight: '600',
                         color: overBudget
-                          ? (isDark ? '#FCA5A5' : '#DC2626')
+                          ? (isDark ? DarkColors.error : Colors.error)
                           : (isDark ? '#9CA3AF' : '#6B7280'),
                       }}>
                         ${totalCost.toFixed(2)} / ${weeklyBudget.toFixed(2)}
@@ -276,8 +275,8 @@ export default function ShoppingListScreen() {
                           borderRadius: 100,
                           width: `${budgetPct}%`,
                           backgroundColor: overBudget
-                            ? (isDark ? '#EF4444' : '#DC2626')
-                            : (isDark ? '#60A5FA' : '#3B82F6'),
+                            ? (isDark ? DarkColors.error : Colors.error)
+                            : (isDark ? DarkColors.info : Colors.info),
                         }}
                       />
                     </View>
@@ -582,8 +581,6 @@ export default function ShoppingListScreen() {
         state={state}
         dispatch={dispatch}
         onConfirmMerge={handleConfirmMerge}
-        mergeScale={mergeScale}
-        mergeOpacity={mergeOpacity}
       />
 
       <AddItemModal
@@ -601,7 +598,7 @@ export default function ShoppingListScreen() {
         onSetupDefaultPantry={handleSetupDefaultPantry}
         onQuickAddSuggestion={handleQuickAddSuggestion}
       />
-    </SafeAreaView>
+    </SafeAreaView></ScreenGradient>
 
     {/* All-done celebration overlay — full-screen */}
     <CelebrationOverlay

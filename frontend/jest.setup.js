@@ -106,6 +106,35 @@ jest.mock('lottie-react-native', () => {
   };
 });
 
+// Mock react-native-view-shot
+jest.mock('react-native-view-shot', () => {
+  const { forwardRef } = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: forwardRef(function MockViewShot(props, ref) {
+      return View({ testID: 'view-shot', ...props });
+    }),
+  };
+});
+
+// Mock expo-sharing
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn(() => Promise.resolve(true)),
+  shareAsync: jest.fn(() => Promise.resolve()),
+}));
+
+// Mock expo-file-system
+jest.mock('expo-file-system', () => ({
+  documentDirectory: '/mock/documents/',
+  cacheDirectory: '/mock/cache/',
+  readAsStringAsync: jest.fn(() => Promise.resolve('')),
+  writeAsStringAsync: jest.fn(() => Promise.resolve()),
+  deleteAsync: jest.fn(() => Promise.resolve()),
+  getInfoAsync: jest.fn(() => Promise.resolve({ exists: false })),
+  makeDirectoryAsync: jest.fn(() => Promise.resolve()),
+}));
+
 // Note: jest-expo already mocks react-native, so we don't need to mock it here
 // Alert is mocked in individual test files where needed
 

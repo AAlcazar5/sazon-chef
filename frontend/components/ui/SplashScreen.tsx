@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Animated, StyleSheet, useColorScheme } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { AnimatedLogoMascot } from '../mascot';
 
 interface SplashScreenProps {
@@ -9,13 +9,17 @@ interface SplashScreenProps {
 }
 
 export default function SplashScreen({ onFinish, duration = 2000 }: SplashScreenProps) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const titleTranslateY = useRef(new Animated.Value(20)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const crossFadeOut = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Mascot animation - fade in and scale up
+    // Mascot animation - fade in and scale up with spring
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -47,76 +51,120 @@ export default function SplashScreen({ onFinish, duration = 2000 }: SplashScreen
       ]),
     ]).start();
 
-    // Auto-dismiss after duration
+    // Subtle shimmer loop on mascot
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Auto-dismiss with cross-fade transition
     const timer = setTimeout(() => {
       if (onFinish) {
-        // Fade out before finishing
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(titleOpacity, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
+        Animated.timing(crossFadeOut, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }).start(() => {
           onFinish();
         });
       }
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, scaleAnim, titleOpacity, titleTranslateY, duration, onFinish]);
+  }, [fadeAnim, scaleAnim, titleOpacity, titleTranslateY, shimmerAnim, crossFadeOut, duration, onFinish]);
+
+  const shimmerOpacity = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.85, 1],
+  });
+
+  // Brand gradient: warm orange → peach (matching ScreenGradient)
+  const gradientColors = isDark
+    ? ['#1A1020', '#0F0F0F'] as const
+    : ['#fa7e12', '#FFD4A0', '#FFF3E0'] as const;
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top', 'bottom']}>
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
+    <Animated.View style={[styles.fill, { opacity: crossFadeOut }]} testID="splash-screen">
+      <LinearGradient
+        colors={gradientColors as unknown as string[]}
+        style={styles.fill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <Animated.View
-          style={{
-            transform: [{ scale: scaleAnim }],
-          }}
-        >
-          <AnimatedLogoMascot
-            expression="excited"
-            size="hero"
-            animationType="celebrate"
-          />
-        </Animated.View>
+        <View style={styles.container}>
+          <Animated.View
+            style={{
+              opacity: Animated.multiply(fadeAnim, shimmerOpacity),
+              transform: [{ scale: scaleAnim }],
+            }}
+          >
+            <AnimatedLogoMascot
+              expression="excited"
+              size="hero"
+              animationType="celebrate"
+            />
+          </Animated.View>
 
-        <Animated.View
-          style={{
-            opacity: titleOpacity,
-            transform: [{ translateY: titleTranslateY }],
-          }}
-        >
-          <Text className="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-6 text-center">
-            Sazon Chef
-          </Text>
-          <Text className="text-lg text-gray-500 dark:text-gray-400 mt-2 text-center">
-            Your personal cooking companion
-          </Text>
-        </Animated.View>
-      </Animated.View>
-    </SafeAreaView>
+          <Animated.View
+            style={{
+              opacity: titleOpacity,
+              transform: [{ translateY: titleTranslateY }],
+            }}
+          >
+            <Text style={[styles.title, isDark ? styles.titleDark : styles.titleLight]}>
+              Sazon Chef
+            </Text>
+            <Text style={[styles.subtitle, isDark ? styles.subtitleDark : styles.subtitleLight]}>
+              Your personal cooking companion
+            </Text>
+          </Animated.View>
+        </View>
+      </LinearGradient>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
+  title: {
+    fontSize: 36,
+    fontWeight: '800',
+    marginTop: 24,
+    textAlign: 'center',
+  },
+  titleLight: {
+    color: '#FFFFFF',
+  },
+  titleDark: {
+    color: '#F9FAFB',
+  },
+  subtitle: {
+    fontSize: 18,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  subtitleLight: {
+    color: 'rgba(255,255,255,0.85)',
+  },
+  subtitleDark: {
+    color: '#9CA3AF',
+  },
 });
-

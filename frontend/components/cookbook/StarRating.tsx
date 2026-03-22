@@ -157,7 +157,7 @@ export default function StarRating({
   onPerfectRating,
 }: StarRatingProps) {
   const starSize = STAR_SIZES[size];
-  const filledColor = isDark ? DarkColors.primary : Colors.primary;
+  const filledColor = isDark ? '#FFB800' : Colors.primary;
   const emptyColor = isDark ? '#6B7280' : '#9CA3AF';
   const gap = size === 'sm' ? 1 : size === 'md' ? 2 : 4;
   const [showConfetti, setShowConfetti] = useState(false);

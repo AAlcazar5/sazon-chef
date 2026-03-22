@@ -109,14 +109,14 @@ describe('GradientPresets', () => {
   });
 
   it('brand preset starts with the app primary orange', () => {
-    expect(GradientPresets.brand[0]).toBe('#fa7e12');
+    expect(GradientPresets.brand[0]).toBe('#F97316');
   });
 
   it('premium preset uses purple', () => {
-    expect(GradientPresets.premium[0]).toBe('#A855F7');
+    expect(GradientPresets.premium[0]).toBe('#9333EA');
   });
 
   it('fresh preset uses emerald', () => {
-    expect(GradientPresets.fresh[0]).toBe('#10B981');
+    expect(GradientPresets.fresh[0]).toBe('#059669');
   });
 });

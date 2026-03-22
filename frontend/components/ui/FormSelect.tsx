@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, Backdrop } from '../../constants/Colors';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { Duration } from '../../constants/Animations';
@@ -102,7 +102,7 @@ export default function FormSelect({
     chipText: isDark ? DarkColors.text.primary : Colors.text.primary,
     chipTextSelected: '#FFFFFF',
     modalBackground: isDark ? '#1F2937' : '#FFFFFF',
-    modalOverlay: 'rgba(0, 0, 0, 0.5)',
+    modalOverlay: Backdrop.light,
   };
 
   const openModal = () => {

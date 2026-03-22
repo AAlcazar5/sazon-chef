@@ -6,10 +6,14 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Text } from 'react-native';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import SplashScreen from '../components/ui/SplashScreen';
+
+// Keep native splash visible until our animated splash is ready
+ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Duration } from '../constants/Animations';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -94,7 +98,10 @@ function RootLayoutNav() {
   if (showSplash) {
     return (
       <SplashScreen
-        onFinish={() => setShowSplash(false)}
+        onFinish={() => {
+          setShowSplash(false);
+          ExpoSplashScreen.hideAsync().catch(() => {});
+        }}
         duration={2000}
       />
     );
