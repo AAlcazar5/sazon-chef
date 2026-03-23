@@ -39,7 +39,7 @@ describe('CoffeeBanner component', () => {
 
   it('renders when visible=true and user is free tier', () => {
     render(<CoffeeBanner visible={true} onDismiss={jest.fn()} />);
-    expect(screen.getByText('Enjoying Sazon?')).toBeTruthy();
+    expect(screen.getByText('Unlock the full menu')).toBeTruthy();
     expect(screen.getByText('Support Sazon ☕')).toBeTruthy();
   });
 

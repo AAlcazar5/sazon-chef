@@ -9,6 +9,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useModalAnimation } from '../../hooks/useModalAnimation';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { getCategoryColor } from '../../constants/CategoryColors';
 import { mealPlanApi } from '../../lib/api';
 
 const MEAL_TYPES = [
@@ -151,26 +152,32 @@ export default function QuickMealLogModal({
                 Meal type
               </Text>
               <View className="flex-row mb-4" style={{ gap: 8 }}>
-                {MEAL_TYPES.map(({ key, label, icon }) => (
-                  <HapticTouchableOpacity
-                    key={key}
-                    onPress={() => setMealType(key)}
-                    className="flex-1 py-2.5 rounded-full items-center"
-                    style={{
-                      backgroundColor: mealType === key
-                        ? (isDark ? DarkColors.primary : Colors.primary)
-                        : (isDark ? '#374151' : '#F3F4F6'),
-                    }}
-                    accessibilityLabel={`${label} meal type`}
-                    accessibilityState={{ selected: mealType === key }}
-                  >
-                    <Text className="text-xs font-semibold" style={{
-                      color: mealType === key ? '#FFFFFF' : (isDark ? '#D1D5DB' : '#4B5563'),
-                    }}>
-                      {icon} {label}
-                    </Text>
-                  </HapticTouchableOpacity>
-                ))}
+                {MEAL_TYPES.map(({ key, label, icon }) => {
+                  const catColor = getCategoryColor(label);
+                  const isActive = mealType === key;
+                  return (
+                    <HapticTouchableOpacity
+                      key={key}
+                      onPress={() => setMealType(key)}
+                      className="flex-1 py-2.5 rounded-full items-center"
+                      style={{
+                        backgroundColor: isActive
+                          ? (isDark ? catColor.bgDark : catColor.bg)
+                          : (isDark ? '#374151' : '#F3F4F6'),
+                        borderWidth: isActive ? 1.5 : 0,
+                        borderColor: isActive ? (isDark ? catColor.textDark : catColor.text) : 'transparent',
+                      }}
+                      accessibilityLabel={`${label} meal type`}
+                      accessibilityState={{ selected: isActive }}
+                    >
+                      <Text className="text-xs font-semibold" style={{
+                        color: isActive ? (isDark ? catColor.textDark : catColor.text) : (isDark ? '#D1D5DB' : '#4B5563'),
+                      }}>
+                        {icon} {label}
+                      </Text>
+                    </HapticTouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* Calories */}

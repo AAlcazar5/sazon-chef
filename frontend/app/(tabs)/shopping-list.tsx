@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import ScreenGradient from '../../components/ui/ScreenGradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import BrandButton from '../../components/ui/BrandButton';
 import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import SwipeableItem from '../../components/ui/SwipeableItem';
@@ -321,27 +322,15 @@ export default function ShoppingListScreen() {
                   title=""
                 />
                 <View style={{ marginTop: 32, width: '100%', paddingHorizontal: 16, gap: 12 }}>
-                  <HapticTouchableOpacity
+                  <BrandButton
+                    label={state.generatingFromMealPlan ? 'Generating...' : 'Generate from Meal Plan'}
                     onPress={handleGenerateFromMealPlan}
+                    loading={state.generatingFromMealPlan}
                     disabled={state.generatingFromMealPlan}
-                    style={[{ borderRadius: 100, overflow: 'hidden', opacity: state.generatingFromMealPlan ? 0.6 : 1 }, Shadows.MD]}
-                  >
-                    <LinearGradient
-                      colors={['#fa7e12', '#d67a0c']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={{ paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 100 }}
-                    >
-                      {state.generatingFromMealPlan ? (
-                        <AnimatedActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
-                      ) : (
-                        <Icon name={Icons.MEAL_PLAN_OUTLINE} size={IconSizes.MD} color="white" accessibilityLabel="Generate from meal plan" style={{ marginRight: 8 }} />
-                      )}
-                      <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>
-                        {state.generatingFromMealPlan ? 'Generating...' : 'Generate from Meal Plan'}
-                      </Text>
-                    </LinearGradient>
-                  </HapticTouchableOpacity>
+                    variant="brand"
+                    icon="calendar-outline"
+                    hapticStyle="medium"
+                  />
 
                   <HapticTouchableOpacity
                     onPress={handleFABPress}

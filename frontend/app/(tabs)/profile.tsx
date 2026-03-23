@@ -6,7 +6,6 @@ import SettingsRow from '../../components/ui/SettingsRow';
 import StaggerItem from '../../components/ui/StaggerItem';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import ScreenGradient from '../../components/ui/ScreenGradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -80,18 +79,18 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <ScreenGradient><View style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center">
           <Icon name={Icons.ACCOUNT_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="Loading profile" />
           <Text className="text-gray-500 dark:text-gray-200 mt-4">Loading profile...</Text>
         </View>
-      </SafeAreaView></ScreenGradient>
+      </View></ScreenGradient>
     );
   }
 
   if (!profile) {
     return (
-      <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <ScreenGradient><View style={{ flex: 1 }}>
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom, flexGrow: 1 }}>
           <AnimatedEmptyState
             useMascot
@@ -134,12 +133,12 @@ export default function ProfileScreen() {
             </View>
           </View>
         </ScrollView>
-      </SafeAreaView></ScreenGradient>
+      </View></ScreenGradient>
     );
   }
 
   return (
-    <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <ScreenGradient><View style={{ flex: 1 }}>
       <ProfileHeader
         profile={profile}
         profilePicture={profilePicture}
@@ -300,6 +299,6 @@ export default function ProfileScreen() {
           refreshSubscription();
         }}
       />
-    </SafeAreaView></ScreenGradient>
+    </View></ScreenGradient>
   );
 }

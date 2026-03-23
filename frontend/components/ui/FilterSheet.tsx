@@ -12,15 +12,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet from './BottomSheet';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
+import BrandButton from './BrandButton';
 import { ActiveFilterChip } from './FilterPill';
 import { AnimatedLogoMascot } from '../mascot';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Colors, DarkColors, Gradients } from '../../constants/Colors';
-import { Shadows } from '../../constants/Shadows';
-import { BorderRadius, Spacing } from '../../constants/Spacing';
+import { Colors, DarkColors } from '../../constants/Colors';
+import { BorderRadius } from '../../constants/Spacing';
 
 interface ActiveFilter {
   key: string;
@@ -191,26 +190,18 @@ export default function FilterSheet({
           </HapticTouchableOpacity>
         )}
 
-        <HapticTouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onApply();
-          }}
-          style={styles.applyButtonWrapper}
-        >
-          <LinearGradient
-            colors={Gradients.primary as [string, string]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.applyButton}
-          >
-            <Text style={styles.applyText}>
-              {activeFilterCount > 0
+        <View style={styles.applyButtonWrapper}>
+          <BrandButton
+            label={
+              activeFilterCount > 0
                 ? `Apply ${activeFilterCount} Filter${activeFilterCount !== 1 ? 's' : ''}`
-                : 'Apply'}
-            </Text>
-          </LinearGradient>
-        </HapticTouchableOpacity>
+                : 'Apply'
+            }
+            onPress={onApply}
+            variant="brand"
+            hapticStyle="medium"
+          />
+        </View>
       </View>
     </BottomSheet>
   );
@@ -280,17 +271,5 @@ const styles = StyleSheet.create({
   },
   applyButtonWrapper: {
     flex: 1,
-  },
-  applyButton: {
-    borderRadius: BorderRadius.full,
-    paddingVertical: 14,
-    alignItems: 'center',
-    ...Shadows.MD,
-  },
-  applyText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
 });

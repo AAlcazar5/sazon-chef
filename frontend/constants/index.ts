@@ -2,7 +2,15 @@
 // Import from '@/constants' or '../../constants' for easy access
 
 // Colors
-export { Colors, DarkColors, BackgroundColors, TextColors, Gradients, getScoreColor, getMacroColor, getFeedbackColor } from './Colors';
+export { Colors, DarkColors, BackgroundColors, TextColors, Gradients, Pastel, Accent, PastelDark, MACRO_COLORS, getScoreColor, getMacroColor, getFeedbackColor } from './Colors';
+
+// Gradient Presets
+export { GradientPresets, primaryCTA, secondaryCTA, successCTA, premiumCTA, screenBgLight, screenBgDark } from './Gradients';
+export type { GradientPair } from './Gradients';
+
+// Category Colors
+export { CATEGORY_COLORS, getCategoryColor } from './CategoryColors';
+export type { CategoryColor } from './CategoryColors';
 
 // Icons
 export { Icons, IconSizes } from './Icons';

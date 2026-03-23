@@ -7,6 +7,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
+import { Colors } from '../../constants/Colors';
 
 interface FrostedHeaderProps {
   children: React.ReactNode;
@@ -28,19 +29,14 @@ export default function FrostedHeader({
   const topPad = withTopInset ? insets.top : 0;
 
   if (Platform.OS === 'android') {
-    // BlurView on Android requires additional setup; use a semi-transparent fallback
     return (
       <View
-        style={[
-          styles.container,
-          {
-            paddingTop: topPad,
-            paddingBottom,
-            backgroundColor: isDark
-              ? 'rgba(15, 15, 15, 0.97)'
-              : 'rgba(255, 255, 255, 0.97)',
-          },
-        ]}
+        style={{
+          paddingHorizontal: 12,
+          paddingTop: topPad,
+          paddingBottom,
+          backgroundColor: isDark ? '#0F0F0F' : '#FAF7F4',
+        }}
       >
         {children}
       </View>
@@ -59,14 +55,14 @@ export default function FrostedHeader({
         },
       ]}
     >
-      {/* Tint overlay — higher opacity for seamless blend with content */}
+      {/* Tint overlay — warm cream for seamless blend with screen gradient */}
       <View
         style={[
           StyleSheet.absoluteFill,
           {
             backgroundColor: isDark
               ? 'rgba(15, 15, 15, 0.65)'
-              : 'rgba(255, 255, 255, 0.75)',
+              : 'rgba(250, 247, 244, 0.75)', // warm cream (#FAF7F4) at 75%
           },
         ]}
         pointerEvents="none"
@@ -78,7 +74,7 @@ export default function FrostedHeader({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     zIndex: 10,
   },
 });

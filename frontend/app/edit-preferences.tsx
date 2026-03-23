@@ -9,6 +9,7 @@ import { useColorScheme } from 'nativewind';
 import { userApi } from '../lib/api';
 import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
 import { Colors, DarkColors } from '../constants/Colors';
+import { getCategoryColor } from '../constants/CategoryColors';
 import { Shadows } from '../constants/Shadows';
 import { HapticPatterns } from '../constants/Haptics';
 import * as Haptics from 'expo-haptics';
@@ -56,6 +57,8 @@ function CuisineChip({
   const onPressOut = () =>
     Animated.spring(scale, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }).start();
 
+  const catColor = getCategoryColor(item.id);
+
   return (
     <Animated.View style={{ transform: [{ scale }], marginRight: 8, marginBottom: 8 }}>
       <HapticTouchableOpacity
@@ -70,15 +73,17 @@ function CuisineChip({
           alignItems: 'center',
           gap: 5,
           backgroundColor: isSelected
-            ? (isDark ? '#166534' : '#16A34A')
+            ? (isDark ? catColor.bgDark : catColor.bg)
             : (isDark ? '#374151' : '#E5E7EB'),
+          borderWidth: isSelected ? 1.5 : 0,
+          borderColor: isSelected ? (isDark ? catColor.textDark : catColor.text) : 'transparent',
         }}
       >
         <Text style={{ fontSize: 15 }}>{item.emoji}</Text>
-        <Text style={{ fontSize: 13, fontWeight: '500', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>
+        <Text style={{ fontSize: 13, fontWeight: '500', color: isSelected ? (isDark ? catColor.textDark : catColor.text) : (isDark ? '#D1D5DB' : '#374151') }}>
           {item.label}
         </Text>
-        {isSelected && <Ionicons name="checkmark" size={13} color="white" />}
+        {isSelected && <Ionicons name="checkmark" size={13} color={isDark ? catColor.textDark : catColor.text} />}
       </HapticTouchableOpacity>
     </Animated.View>
   );

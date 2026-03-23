@@ -85,7 +85,7 @@ export default function ProfileHeader({
 
   return (
     <>
-      <FrostedHeader paddingBottom={24} withTopInset={false}>
+      <FrostedHeader paddingBottom={24} withTopInset>
         <View className="items-center">
           <HapticTouchableOpacity
             onPress={onChangeProfilePicture}
