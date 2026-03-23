@@ -90,7 +90,7 @@ export default function CookbookFilterModal({
       contentContainerStyle={{ gap: 8 }}
     >
       <FilterPill
-        emoji="⚡" label="Quick" compact
+        emoji="⚡" label="Quick" compact categoryName="quick"
         active={filters.maxCookTime === 30}
         onPress={() => {
           onFilterChange({ ...filters, maxCookTime: filters.maxCookTime === 30 ? null : 30 });
@@ -111,11 +111,11 @@ export default function CookbookFilterModal({
           HapticPatterns.buttonPress();
         }}
       />
-      <FilterPill emoji="💪" label="High Protein" compact active={filters.highProtein} onPress={() => { onFilterChange({ ...filters, highProtein: !filters.highProtein }); HapticPatterns.buttonPress(); }} />
-      <FilterPill emoji="🥗" label="Low Cal" compact active={filters.lowCal} onPress={() => { onFilterChange({ ...filters, lowCal: !filters.lowCal }); HapticPatterns.buttonPress(); }} />
-      <FilterPill emoji="🍱" label="Meal Prep" compact active={filters.mealPrepOnly} onPress={() => { onFilterChange({ ...filters, mealPrepOnly: !filters.mealPrepOnly }); HapticPatterns.buttonPress(); }} />
-      <FilterPill emoji="💰" label="Budget" compact active={filters.budget} onPress={() => { onFilterChange({ ...filters, budget: !filters.budget }); HapticPatterns.buttonPress(); }} />
-      <FilterPill emoji="🍲" label="One Pot" compact active={filters.onePot} onPress={() => { onFilterChange({ ...filters, onePot: !filters.onePot }); HapticPatterns.buttonPress(); }} />
+      <FilterPill emoji="💪" label="High Protein" compact categoryName="High Protein" active={filters.highProtein} onPress={() => { onFilterChange({ ...filters, highProtein: !filters.highProtein }); HapticPatterns.buttonPress(); }} />
+      <FilterPill emoji="🥗" label="Low Cal" compact categoryName="healthy" active={filters.lowCal} onPress={() => { onFilterChange({ ...filters, lowCal: !filters.lowCal }); HapticPatterns.buttonPress(); }} />
+      <FilterPill emoji="🍱" label="Meal Prep" compact categoryName="Meal Prep" active={filters.mealPrepOnly} onPress={() => { onFilterChange({ ...filters, mealPrepOnly: !filters.mealPrepOnly }); HapticPatterns.buttonPress(); }} />
+      <FilterPill emoji="💰" label="Budget" compact categoryName="budget" active={filters.budget} onPress={() => { onFilterChange({ ...filters, budget: !filters.budget }); HapticPatterns.buttonPress(); }} />
+      <FilterPill emoji="🍲" label="One Pot" compact categoryName="Soup" active={filters.onePot} onPress={() => { onFilterChange({ ...filters, onePot: !filters.onePot }); HapticPatterns.buttonPress(); }} />
     </ScrollView>
   );
 
@@ -243,19 +243,19 @@ export default function CookbookFilterModal({
       >
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {[
-            { key: 'mealPrepOnly' as const, label: 'Meal Prep', emoji: '🍱' },
-            { key: 'highProtein' as const, label: 'High Protein', emoji: '💪' },
-            { key: 'lowCal' as const, label: 'Low Calorie', emoji: '🥗' },
-            { key: 'budget' as const, label: 'Budget', emoji: '💰' },
-            { key: 'onePot' as const, label: 'One Pot', emoji: '🍲' },
-          ].map(({ key, label, emoji }) => (
+            { key: 'mealPrepOnly' as const, label: 'Meal Prep', emoji: '🍱', cat: 'Meal Prep' },
+            { key: 'highProtein' as const, label: 'High Protein', emoji: '💪', cat: 'High Protein' },
+            { key: 'lowCal' as const, label: 'Low Calorie', emoji: '🥗', cat: 'healthy' },
+            { key: 'budget' as const, label: 'Budget', emoji: '💰', cat: 'budget' },
+            { key: 'onePot' as const, label: 'One Pot', emoji: '🍲', cat: 'Soup' },
+          ].map(({ key, label, emoji, cat }) => (
             <FilterPill
               key={key}
               emoji={emoji}
               label={label}
               active={!!filters[key]}
               onPress={() => onFilterChange({ ...filters, [key]: !filters[key] })}
-              color="green"
+              categoryName={cat}
             />
           ))}
         </View>

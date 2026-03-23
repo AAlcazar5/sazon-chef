@@ -11,6 +11,7 @@ import Icon from '../ui/Icon';
 import AnimatedEmptyState from '../ui/AnimatedEmptyState';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { getCategoryColor } from '../../constants/CategoryColors';
 import { Shadows } from '../../constants/Shadows';
 import { MealPlanEmptyStates } from '../../constants/EmptyStates';
 import SurpriseBadge from './SurpriseBadge';
@@ -45,13 +46,12 @@ const MEAL_TYPES = [
 ];
 
 function getMealTypeColor(key: string, isDark: boolean): string {
-  switch (key) {
-    case 'breakfast': return isDark ? DarkColors.primary : Colors.primary;
-    case 'lunch': return isDark ? DarkColors.secondaryRed : Colors.secondaryRed;
-    case 'dinner': return isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen;
-    case 'snacks': return isDark ? DarkColors.accent : Colors.accent;
-    default: return isDark ? DarkColors.primary : Colors.primary;
-  }
+  // Map compact view keys to CategoryColors keys
+  const keyMap: Record<string, string> = {
+    breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snack',
+  };
+  const c = getCategoryColor(keyMap[key] || key);
+  return isDark ? c.textDark : c.text;
 }
 
 function CompactMealView({

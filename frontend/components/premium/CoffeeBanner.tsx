@@ -9,6 +9,7 @@ import { View, Text, Modal, Linking, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import { SazonMascot } from '../mascot';
 import { useSubscription } from '../../hooks/useSubscription';
 import { Shadows } from '../../constants/Shadows';
@@ -63,21 +64,14 @@ export function CoffeeBanner({ visible, onDismiss }: CoffeeBannerProps) {
                 Keep Sazon cooking with a small coffee — it goes a long way.
               </Text>
 
-              {/* CTA Button with shimmer-like gradient */}
-              <HapticTouchableOpacity
+              {/* CTA Button */}
+              <BrandButton
+                label="Support Sazon ☕"
                 onPress={handleSupport}
+                variant="peach"
+                size="compact"
                 hapticStyle="medium"
-                style={styles.ctaWrapper}
-              >
-                <LinearGradient
-                  colors={['#fa7e12', '#FF9F43']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.ctaButton}
-                >
-                  <Text style={styles.ctaText}>Support Sazon ☕</Text>
-                </LinearGradient>
-              </HapticTouchableOpacity>
+              />
             </View>
           </LinearGradient>
 
@@ -133,21 +127,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     lineHeight: 18,
     marginBottom: 16,
-  },
-  ctaWrapper: {
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  ctaButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  ctaText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
   },
   dismissButton: {
     paddingVertical: 12,

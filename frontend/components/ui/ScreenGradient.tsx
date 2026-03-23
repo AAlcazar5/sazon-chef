@@ -1,16 +1,20 @@
 // frontend/components/ui/ScreenGradient.tsx
 // Soft gradient screen background wrapper — the single biggest difference
 // between "clean" and "premium." Every tab screen uses this instead of flat white.
+// Now consumes centralized Gradients.ts presets.
 
 import React from 'react';
 import { StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useColorScheme } from 'nativewind';
+import { screenBgLight, screenBgDark, authBg, paywallBg } from '../../constants/Gradients';
 
 interface ScreenGradientProps {
   children: React.ReactNode;
   /** Gradient variant */
   variant?: 'default' | 'auth' | 'onboarding' | 'paywall';
+  /** Custom gradient colors — overrides variant */
+  gradient?: readonly [string, string];
   /** Additional styles */
   style?: ViewStyle;
   /** Test ID */
@@ -22,19 +26,19 @@ interface ScreenGradientProps {
 // default app gradient, creating smooth visual continuity across screens.
 const LIGHT_GRADIENTS = {
   default: {
-    colors: ['#FFFBF7', '#FFFFFF'] as const, // subtle warm cream → white
+    colors: screenBgLight,
     locations: [0, 1] as const,
   },
   auth: {
-    colors: ['rgba(250, 126, 18, 0.10)', 'rgba(250, 126, 18, 0.03)'] as const, // stronger warm tint
+    colors: authBg,
     locations: [0, 1] as const,
   },
   onboarding: {
-    colors: ['rgba(250, 126, 18, 0.08)', 'rgba(250, 126, 18, 0.02)'] as const, // between auth and default
+    colors: ['rgba(250, 126, 18, 0.08)', 'rgba(250, 126, 18, 0.02)'] as const,
     locations: [0, 1] as const,
   },
   paywall: {
-    colors: ['#1A1A2E', 'rgba(250, 126, 18, 0.08)'] as const,
+    colors: paywallBg,
     locations: [0, 1] as const,
   },
 };
@@ -42,7 +46,7 @@ const LIGHT_GRADIENTS = {
 // Dark mode gradients — subtle deep tints with warm undertones
 const DARK_GRADIENTS = {
   default: {
-    colors: ['#141420', '#0F0F0F'] as const,
+    colors: screenBgDark,
     locations: [0, 1] as const,
   },
   auth: {
@@ -62,11 +66,27 @@ const DARK_GRADIENTS = {
 export default function ScreenGradient({
   children,
   variant = 'default',
+  gradient,
   style,
   testID,
 }: ScreenGradientProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // Custom gradient takes precedence
+  if (gradient) {
+    return (
+      <LinearGradient
+        colors={gradient as unknown as string[]}
+        locations={[0, 1]}
+        style={[styles.container, style]}
+        testID={testID}
+      >
+        {children}
+      </LinearGradient>
+    );
+  }
+
   const gradients = isDark ? DARK_GRADIENTS : LIGHT_GRADIENTS;
   const { colors, locations } = gradients[variant];
 

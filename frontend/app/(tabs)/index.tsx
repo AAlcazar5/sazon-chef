@@ -5,7 +5,6 @@ import ScreenGradient from '../../components/ui/ScreenGradient';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -798,7 +797,7 @@ export default function HomeScreen() {
 
   return (
     <ScreenGradient variant={firstRunTint > 0 ? 'onboarding' : 'default'}>
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <View style={{ flex: 1 }}>
       {/* Header */}
       <HomeHeader
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
@@ -1079,7 +1078,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
         onDismiss={handleDislikeSkip}
       />
 
-    </SafeAreaView>
+    </View>
     </ScreenGradient>
   );
 }

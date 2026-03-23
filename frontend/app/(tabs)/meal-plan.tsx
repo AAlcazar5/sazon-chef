@@ -7,7 +7,6 @@ import Toast from '../../components/ui/Toast';
 import { CelebrationOverlay } from '../../components/celebrations';
 import SkeletonLoader from '../../components/ui/SkeletonLoader';
 import ScreenGradient from '../../components/ui/ScreenGradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Spacing, ComponentSpacing } from '../../constants/Spacing';
@@ -458,7 +457,7 @@ export default function MealPlanScreen() {
 
   return (
     <>
-      <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <ScreenGradient><View style={{ flex: 1 }}>
         {loading ? (
           <>
             <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, minHeight: 56 }}>
@@ -830,7 +829,7 @@ export default function MealPlanScreen() {
         />
         </>
         )}
-      </SafeAreaView></ScreenGradient>
+      </View></ScreenGradient>
 
       {/* Meal Plan Generated Celebration */}
       <CelebrationOverlay

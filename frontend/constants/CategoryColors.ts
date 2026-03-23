@@ -43,6 +43,11 @@ export const CATEGORY_COLORS: Record<string, CategoryColor> = {
   'High Protein': { bg: '#E0F2F1', bgDark: '#1A3A38', text: '#00695C', textDark: '#E0F2F1', tint: 'rgba(224,242,241,0.15)', tintDark: 'rgba(26,58,56,0.3)', emoji: '💪' },
   'Low Carb': { bg: '#F1F8E9', bgDark: '#1F3A1A', text: '#558B2F', textDark: '#F1F8E9', tint: 'rgba(241,248,233,0.15)', tintDark: 'rgba(31,58,26,0.3)', emoji: '🥑' },
   Vegan: { bg: '#E8F5E9', bgDark: '#1B3A1F', text: '#2E7D32', textDark: '#E8F5E9', tint: 'rgba(232,245,233,0.15)', tintDark: 'rgba(27,58,31,0.3)', emoji: '🌱' },
+
+  // Attribute tags
+  quick: { bg: '#E3F2FD', bgDark: '#1A2A3E', text: '#1565C0', textDark: '#E3F2FD', tint: 'rgba(227,242,253,0.15)', tintDark: 'rgba(26,42,62,0.3)', emoji: '⚡' },
+  healthy: { bg: '#E8F5E9', bgDark: '#1B3A1F', text: '#2E7D32', textDark: '#E8F5E9', tint: 'rgba(232,245,233,0.15)', tintDark: 'rgba(27,58,31,0.3)', emoji: '💪' },
+  budget: { bg: '#FFF8E1', bgDark: '#3E3A1A', text: '#F57F17', textDark: '#FFF8E1', tint: 'rgba(255,248,225,0.15)', tintDark: 'rgba(62,58,26,0.3)', emoji: '💰' },
 };
 
 /** Get category color config, with a neutral fallback for unknown categories */

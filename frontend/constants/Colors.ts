@@ -336,6 +336,49 @@ export const Gradients = {
   rainbowBrightLight: ['#E63946', '#F77F00', '#FCBF49', '#06A77D', '#118AB2', '#7209B7', '#B5179E', '#E63946'] // Vibrant, saturated rainbow gradient for light mode - non-pastel for better legibility
 };
 
+// ─── Pastel Token System (9K) ─────────────────────────────────────────────────
+// Light pastel tints for card/widget backgrounds
+export const Pastel = {
+  sage:     '#E8F5E9', // protein, healthy, vegetables, success
+  golden:   '#FFF8E1', // carbs, breakfast, streaks, star ratings
+  lavender: '#F3E5F5', // fat/lipids, activity, premium badges
+  peach:    '#FFF3E0', // calories, meal plan, warm prompts
+  sky:      '#E3F2FD', // hydration, cooking time, info states
+  blush:    '#FCE4EC', // desserts, treats, cheat meal tags
+  orange:   '#FFF0E5', // Sazon brand tint for warm card backgrounds
+  red:      '#FFF0EE', // error state backgrounds, severity badges
+} as const;
+
+// Vivid accents for rings, charts, active indicators
+export const Accent = {
+  sage:     '#81C784',
+  golden:   '#FFD54F',
+  lavender: '#CE93D8',
+  peach:    '#FFB74D',
+  sky:      '#64B5F6',
+  blush:    '#F06292',
+} as const;
+
+// Dark mode pastel adaptation — rgba overlays at 12% opacity on dark surfaces
+export const PastelDark = {
+  sage:     'rgba(129, 199, 132, 0.12)',
+  golden:   'rgba(255, 213, 79, 0.12)',
+  lavender: 'rgba(206, 147, 216, 0.12)',
+  peach:    'rgba(255, 183, 77, 0.12)',
+  sky:      'rgba(100, 181, 246, 0.12)',
+  blush:    'rgba(240, 98, 146, 0.12)',
+  orange:   'rgba(255, 139, 65, 0.12)',
+  red:      'rgba(239, 68, 68, 0.12)',
+} as const;
+
+// Macro-to-color mapping — each macro gets a bg (pastel) + accent (vivid) pair
+export const MACRO_COLORS = {
+  protein:  { bg: Pastel.sage,     bgDark: PastelDark.sage,     accent: Accent.sage },
+  carbs:    { bg: Pastel.golden,   bgDark: PastelDark.golden,   accent: Accent.golden },
+  fat:      { bg: Pastel.lavender, bgDark: PastelDark.lavender, accent: Accent.lavender },
+  calories: { bg: Pastel.peach,    bgDark: PastelDark.peach,    accent: Accent.peach },
+} as const;
+
 // Modal backdrop tokens
 export const Backdrop = {
   light: 'rgba(0,0,0,0.4)', // Standard modals, bottom sheets

@@ -25,7 +25,7 @@ export default function MealPlanHeader({
   onJumpToToday,
 }: MealPlanHeaderProps) {
   return (
-    <FrostedHeader paddingBottom={12} withTopInset={false}>
+    <FrostedHeader paddingBottom={12} withTopInset>
       <View className="flex-row items-center justify-between" style={{ height: 28 }}>
         <View className="flex-row items-center flex-1">
           <Text className="text-2xl mr-2" style={{ lineHeight: 28 }}>🍽️</Text>

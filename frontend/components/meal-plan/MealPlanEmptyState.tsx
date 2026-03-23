@@ -2,7 +2,7 @@
 // First-time empty state with Sazon mascot and "Plan My Week" CTA
 // Redesigned: staggered entrance animations, gradient CTA, spring press
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import LoadingState from '../ui/LoadingState';
 import Animated, {
@@ -13,12 +13,10 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import { AnimatedLottieMascot } from '../mascot';
 import GoalModeSelector, { GoalMode } from './GoalModeSelector';
 import { Colors, DarkColors } from '../../constants/Colors';
-import { Shadows } from '../../constants/Shadows';
 
 interface MealPlanEmptyStateProps {
   isDark: boolean;
@@ -46,7 +44,6 @@ export default function MealPlanEmptyState({
   const goalTranslateY = useSharedValue(20);
   const ctaOpacity = useSharedValue(0);
   const ctaTranslateY = useSharedValue(20);
-  const ctaScale = useSharedValue(1);
 
   useEffect(() => {
     mascotOpacity.value = withDelay(0, withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) }));
@@ -83,16 +80,8 @@ export default function MealPlanEmptyState({
 
   const ctaAnimStyle = useAnimatedStyle(() => ({
     opacity: ctaOpacity.value,
-    transform: [{ translateY: ctaTranslateY.value }, { scale: ctaScale.value }],
+    transform: [{ translateY: ctaTranslateY.value }],
   }));
-
-  const handleCtaPressIn = useCallback(() => {
-    ctaScale.value = withSpring(0.95, { damping: 10, stiffness: 400 });
-  }, []);
-
-  const handleCtaPressOut = useCallback(() => {
-    ctaScale.value = withSpring(1, { damping: 12, stiffness: 300 });
-  }, []);
 
   return (
     <View className="flex-1 items-center justify-center px-8">
@@ -140,27 +129,12 @@ export default function MealPlanEmptyState({
           </Animated.View>
 
           <Animated.View style={[ctaAnimStyle, { width: '100%' }]}>
-            <HapticTouchableOpacity
+            <BrandButton
+              label="Plan My Week"
               onPress={() => onPlanMyWeek(selectedMode)}
-              onPressIn={handleCtaPressIn}
-              onPressOut={handleCtaPressOut}
-              style={{ borderRadius: 100, overflow: 'hidden' }}
-            >
-              <LinearGradient
-                colors={['#fa7e12', '#d67a0c']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[{
-                  paddingVertical: 18,
-                  alignItems: 'center',
-                  borderRadius: 100,
-                }, Shadows.LG]}
-              >
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>
-                  Plan My Week
-                </Text>
-              </LinearGradient>
-            </HapticTouchableOpacity>
+              variant="brand"
+              hapticStyle="medium"
+            />
           </Animated.View>
         </>
       )}

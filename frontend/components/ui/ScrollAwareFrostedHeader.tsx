@@ -106,14 +106,14 @@ export default function ScrollAwareFrostedHeader({
         },
       ]}
     >
-      {/* Progressive tint overlay — opacity tracks scroll */}
+      {/* Progressive tint overlay — warm cream for seamless blend with screen gradient */}
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
           {
             backgroundColor: isDark
               ? 'rgba(17, 24, 39, 0.55)'
-              : 'rgba(255, 255, 255, 0.65)',
+              : 'rgba(250, 247, 244, 0.65)', // warm cream (#FAF7F4)
           },
           overlayStyle,
         ]}
@@ -126,7 +126,7 @@ export default function ScrollAwareFrostedHeader({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     zIndex: 10,
   },
 });

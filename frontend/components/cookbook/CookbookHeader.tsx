@@ -89,7 +89,7 @@ function CookbookHeader({
   }));
 
   return (
-    <FrostedHeader paddingBottom={12} withTopInset={false}>
+    <FrostedHeader paddingBottom={12} withTopInset>
       <View className="flex-row items-center justify-between" style={{ height: 36 }}>
         {/* Title */}
         <View className="flex-row items-center">
@@ -209,11 +209,11 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -5,
-    right: -5,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     overflow: 'hidden',
     shadowColor: '#E84D3D',
     shadowOffset: { width: 0, height: 2 },

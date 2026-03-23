@@ -5,7 +5,7 @@ import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import LoadingState from '../../components/ui/LoadingState';
 import ScreenGradient from '../../components/ui/ScreenGradient';
 import { router, useFocusEffect } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { recipeApi, collectionsApi } from '../../lib/api';
@@ -965,28 +965,22 @@ export default function CookbookScreen() {
   // Loading state (only on first load with no cached data)
   if (cacheLoading && savedRecipes.length === 0 && allRecipes.length === 0) {
     return (
-      <ScreenGradient><SafeAreaView className="flex-1" edges={['top']}>
-        <View style={{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}>
-          <View className="mb-3 flex-row items-center">
-            <Text className="text-2xl mr-2">📚</Text>
-            <Text className="text-2xl font-black text-gray-900 dark:text-gray-100" accessibilityRole="header">My Cookbook</Text>
-        </View>
+      <ScreenGradient><View style={{ flex: 1 }}>
+        <CookbookHeader onFilterPress={() => {}} />
+        <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           <Text className="text-gray-500 dark:text-gray-200">Loading saved recipes...</Text>
         </View>
         <LoadingState config={CookbookLoadingStates.savedRecipes} fullScreen />
-      </SafeAreaView></ScreenGradient>
+      </View></ScreenGradient>
     );
   }
 
   // Offline with no cached data
   if (isOffline && allRecipes.length === 0 && !cacheLoading) {
     return (
-      <ScreenGradient><SafeAreaView className="flex-1" edges={['top']}>
-        <View style={{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}>
-          <View className="mb-3 flex-row items-center">
-            <Text className="text-2xl mr-2">📚</Text>
-            <Text className="text-2xl font-black text-gray-900 dark:text-gray-100" accessibilityRole="header">My Cookbook</Text>
-        </View>
+      <ScreenGradient><View style={{ flex: 1 }}>
+        <CookbookHeader onFilterPress={() => {}} />
+        <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           <Text className="text-gray-500 dark:text-gray-200">No cached recipes available</Text>
         </View>
         <AnimatedEmptyState
@@ -998,13 +992,13 @@ export default function CookbookScreen() {
           actionLabel="Try Again"
           onAction={() => loadRecipes(viewMode)}
         />
-      </SafeAreaView></ScreenGradient>
+      </View></ScreenGradient>
     );
   }
 
   return (
     <ScreenGradient>
-    <SafeAreaView className="flex-1" edges={['top']}>
+    <View style={{ flex: 1 }}>
       {/* Header: title + import icon + animated Filters button */}
       <CookbookHeader
         onFilterPress={() => setShowFilterModal(true)}
@@ -1465,7 +1459,7 @@ export default function CookbookScreen() {
         type={toast.type}
         onClose={() => setToast(prev => ({ ...prev, visible: false }))}
       />
-    </SafeAreaView>
+    </View>
     </ScreenGradient>
   );
 }

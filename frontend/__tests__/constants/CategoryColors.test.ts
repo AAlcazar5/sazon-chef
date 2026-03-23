@@ -52,4 +52,54 @@ describe('CategoryColors', () => {
       expect(color.tintDark).toBeTruthy();
     });
   });
+
+  it('has attribute tag categories (quick, healthy, budget)', () => {
+    const tags = ['quick', 'healthy', 'budget'];
+    tags.forEach((t) => {
+      expect(CATEGORY_COLORS[t]).toBeDefined();
+      expect(CATEGORY_COLORS[t].bg).toBeTruthy();
+      expect(CATEGORY_COLORS[t].emoji).toBeTruthy();
+    });
+  });
+
+  it('quick has sky-blue bg and lightning emoji', () => {
+    expect(CATEGORY_COLORS['quick'].bg).toBe('#E3F2FD');
+    expect(CATEGORY_COLORS['quick'].emoji).toBe('⚡');
+  });
+
+  it('has dietary categories (High Protein, Low Carb, Meal Prep)', () => {
+    const dietary = ['High Protein', 'Low Carb', 'Meal Prep', 'Vegan'];
+    dietary.forEach((d) => {
+      expect(CATEGORY_COLORS[d]).toBeDefined();
+      expect(CATEGORY_COLORS[d].bg).toBeTruthy();
+    });
+  });
+
+  it('dark mode pastels use dark backgrounds not blown-out light colors', () => {
+    Object.values(CATEGORY_COLORS).forEach((color) => {
+      // bgDark should not be a light pastel (#E or #F prefix)
+      expect(color.bgDark).not.toMatch(/^#[EF]/);
+    });
+  });
+
+  it('emojis render as single grapheme clusters', () => {
+    Object.values(CATEGORY_COLORS).forEach((color) => {
+      expect(color.emoji.length).toBeGreaterThan(0);
+      expect(color.emoji.length).toBeLessThanOrEqual(3); // emoji + potential variant selector
+    });
+  });
+
+  it('light mode bg colors are pastel (start with #E or #F)', () => {
+    Object.values(CATEGORY_COLORS).forEach((color) => {
+      const bgFirstHex = Number.parseInt(color.bg.charAt(1), 16);
+      expect(bgFirstHex).toBeGreaterThanOrEqual(14); // #E or #F prefix = light pastel
+    });
+  });
+
+  it('text and bg colors are different for contrast', () => {
+    Object.values(CATEGORY_COLORS).forEach((color) => {
+      expect(color.text).not.toBe(color.bg);
+      expect(color.textDark).not.toBe(color.bgDark);
+    });
+  });
 });

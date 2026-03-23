@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { HapticPatterns } from '../../constants/Haptics';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { getCategoryColor } from '../../constants/CategoryColors';
 import type { Mood } from '../ui/MoodSelector';
 import type { FilterState } from '../../lib/filterStorage';
 
@@ -20,6 +21,7 @@ function FilterChip({
   onPress,
   children,
   isDark,
+  categoryName,
 }: {
   active: boolean;
   emoji?: string;
@@ -27,6 +29,7 @@ function FilterChip({
   onPress: () => void;
   children?: React.ReactNode;
   isDark: boolean;
+  categoryName?: string;
 }) {
   const scale = useSharedValue(1);
 
@@ -39,6 +42,16 @@ function FilterChip({
   }, [active]);
 
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const catColor = categoryName ? getCategoryColor(categoryName) : null;
+
+  const inactiveBg = catColor
+    ? (isDark ? catColor.bgDark : catColor.bg)
+    : (isDark ? '#374151' : '#F3F4F6');
+
+  const activeTextColor = catColor
+    ? (isDark ? catColor.textDark : catColor.text)
+    : (isDark ? DarkColors.primary : Colors.primary);
 
   return (
     <Animated.View style={animStyle}>
@@ -58,7 +71,7 @@ function FilterChip({
                 justifyContent: 'center',
                 backgroundColor: active
                   ? (isDark ? DarkColors.primary : Colors.primary)
-                  : (isDark ? '#374151' : '#F3F4F6'),
+                  : inactiveBg,
                 marginBottom: 4,
               }}
             >
@@ -69,7 +82,7 @@ function FilterChip({
               style={{
                 fontSize: 11,
                 fontWeight: '600',
-                color: active ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280'),
+                color: active ? activeTextColor : (isDark ? '#9CA3AF' : '#6B7280'),
                 textAlign: 'center',
               }}
               numberOfLines={1}
@@ -209,6 +222,7 @@ function QuickFiltersBar({
             emoji="⚡"
             label="Quick"
             isDark={isDark}
+            categoryName="quick"
             onPress={() => { handleQuickFilter('maxCookTime', filters.maxCookTime === 30 ? null : 30); HapticPatterns.buttonPress(); }}
           />
 
@@ -226,13 +240,13 @@ function QuickFiltersBar({
           />
 
           {/* High Protein */}
-          <FilterChip active={quickMacroFilters.highProtein} emoji="💪" label="High Protein" isDark={isDark} onPress={() => handleQuickMacroFilter('highProtein')} />
+          <FilterChip active={quickMacroFilters.highProtein} emoji="💪" label="High Protein" isDark={isDark} categoryName="High Protein" onPress={() => handleQuickMacroFilter('highProtein')} />
 
           {/* Low Carb */}
-          <FilterChip active={quickMacroFilters.lowCarb} emoji="🥩" label="Low Carb" isDark={isDark} onPress={() => handleQuickMacroFilter('lowCarb')} />
+          <FilterChip active={quickMacroFilters.lowCarb} emoji="🥩" label="Low Carb" isDark={isDark} categoryName="Low Carb" onPress={() => handleQuickMacroFilter('lowCarb')} />
 
           {/* Low Cal */}
-          <FilterChip active={quickMacroFilters.lowCalorie} emoji="🥗" label="Low Cal" isDark={isDark} onPress={() => handleQuickMacroFilter('lowCalorie')} />
+          <FilterChip active={quickMacroFilters.lowCalorie} emoji="🥗" label="Low Cal" isDark={isDark} categoryName="healthy" onPress={() => handleQuickMacroFilter('lowCalorie')} />
 
           {/* Meal Prep */}
           <FilterChip
@@ -240,6 +254,7 @@ function QuickFiltersBar({
             emoji="🍱"
             label="Meal Prep"
             isDark={isDark}
+            categoryName="Meal Prep"
             onPress={() => { handleToggleMealPrepMode(!mealPrepMode); HapticPatterns.buttonPress(); }}
           />
 
@@ -249,6 +264,7 @@ function QuickFiltersBar({
             emoji="💰"
             label="Budget"
             isDark={isDark}
+            categoryName="budget"
             onPress={() => {
               const isActive = filters.dietaryRestrictions.includes('Budget-Friendly');
               handleQuickFilter('dietaryRestrictions', isActive ? filters.dietaryRestrictions.filter(d => d !== 'Budget-Friendly') : [...filters.dietaryRestrictions, 'Budget-Friendly']);
@@ -262,6 +278,7 @@ function QuickFiltersBar({
             emoji="🍲"
             label="One Pot"
             isDark={isDark}
+            categoryName="Soup"
             onPress={() => {
               const isActive = filters.dietaryRestrictions.includes('One-Pot');
               handleQuickFilter('dietaryRestrictions', isActive ? filters.dietaryRestrictions.filter(d => d !== 'One-Pot') : [...filters.dietaryRestrictions, 'One-Pot']);

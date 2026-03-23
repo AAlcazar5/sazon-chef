@@ -8,6 +8,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { getCategoryColor } from '../../constants/CategoryColors';
 import { HapticPatterns } from '../../constants/Haptics';
 import { useModalAnimation } from '../../hooks/useModalAnimation';
 
@@ -112,12 +113,12 @@ function DayMealsModal({
   const meals = getMealsForDay();
   const dateStr = selectedDay.toISOString().split('T')[0];
 
-  const mealColors: Record<string, { bg: string; text: string }> = {
-    'Breakfast': { bg: isDark ? '#FF914D33' : Colors.primaryLight, text: isDark ? DarkColors.primary : Colors.primary },
-    'Lunch': { bg: isDark ? '#10B98133' : Colors.tertiaryGreenLight, text: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen },
-    'Dinner': { bg: isDark ? '#EF444433' : Colors.secondaryRedLight, text: isDark ? DarkColors.secondaryRed : Colors.secondaryRed },
-    'Snack': { bg: isDark ? '#374151' : '#F3F4F6', text: isDark ? '#9CA3AF' : '#4B5563' },
-  };
+  const mealColors: Record<string, { bg: string; text: string }> = Object.fromEntries(
+    ['Breakfast', 'Lunch', 'Dinner', 'Snack'].map(type => {
+      const c = getCategoryColor(type);
+      return [type, { bg: isDark ? c.bgDark : c.bg, text: isDark ? c.textDark : c.text }];
+    })
+  );
 
   return (
     <Modal
