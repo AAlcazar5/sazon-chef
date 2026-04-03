@@ -4,7 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
 
 jest.mock('../../components/mascot', () => ({
-  SazonMascot: () => null,
+  LogoMascot: () => null,
 }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),

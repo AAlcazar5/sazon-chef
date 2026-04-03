@@ -18,7 +18,7 @@ import LoadingState from '../../components/ui/LoadingState';
 import LogoMascot from '../../components/mascot/LogoMascot';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { ComponentSpacing } from '../../constants/Spacing';
 import { ShoppingListEmptyStates } from '../../constants/EmptyStates';
@@ -28,6 +28,20 @@ import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
 import { userApi, mealPlanApi } from '../../lib/api';
 import { CelebrationOverlay } from '../../components/celebrations';
+
+// Aisle → pastel tint mapping for colorful section headers (9L)
+const AISLE_TINT: Record<string, { light: string; dark: string }> = {
+  'Produce':        { light: Pastel.sage, dark: PastelDark.sage },
+  'Bakery':         { light: Pastel.golden, dark: PastelDark.golden },
+  'Meat & Seafood': { light: Pastel.blush, dark: PastelDark.blush },
+  'Dairy':          { light: Pastel.sky, dark: PastelDark.sky },
+  'Frozen':         { light: Pastel.sky, dark: PastelDark.sky },
+  'Beverages':      { light: Pastel.lavender, dark: PastelDark.lavender },
+  'Snacks':         { light: Pastel.lavender, dark: PastelDark.lavender },
+  'Pantry':         { light: Pastel.peach, dark: PastelDark.peach },
+  'Other':          { light: Pastel.orange, dark: PastelDark.orange },
+  "Can't Find":     { light: Pastel.peach, dark: PastelDark.peach },
+};
 import {
   ShoppingListHeader,
   ShoppingListItem,
@@ -364,41 +378,48 @@ export default function ShoppingListScreen() {
               keyExtractor={item => item.id}
               stickySectionHeadersEnabled
               contentContainerStyle={{ paddingTop: 4, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
-              renderSectionHeader={({ section }) => (
-                <BlurView
-                  intensity={90}
-                  tint={isDark ? 'dark' : 'light'}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 20, marginRight: 8 }}>
-                      {AISLE_EMOJI[section.title] || '📦'}
-                    </Text>
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: '800',
-                      color: isDark ? '#E5E7EB' : '#111827',
-                    }}>
-                      {section.title}
-                    </Text>
-                    <View style={{
-                      marginLeft: 8,
-                      paddingHorizontal: 8,
-                      paddingVertical: 2,
-                      borderRadius: 100,
-                      backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
-                    }}>
-                      <Text style={{
-                        fontSize: 11,
-                        fontWeight: '600',
-                        color: isDark ? '#9CA3AF' : '#6B7280',
-                      }}>
-                        {section.remaining} left
+              renderSectionHeader={({ section }) => {
+                const tint = AISLE_TINT[section.title];
+                const allDone = section.remaining === 0 && section.data.length > 0;
+                return (
+                  <View style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    backgroundColor: isDark
+                      ? (tint?.dark || PastelDark.orange)
+                      : (tint?.light || Pastel.orange),
+                    opacity: allDone ? 0.5 : 1,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 20, marginRight: 8 }}>
+                        {AISLE_EMOJI[section.title] || '📦'}
                       </Text>
+                      <Text style={{
+                        fontSize: 14,
+                        fontWeight: '800',
+                        color: isDark ? '#E5E7EB' : '#111827',
+                      }}>
+                        {section.title}
+                      </Text>
+                      <View style={{
+                        marginLeft: 8,
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 100,
+                        backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.06)',
+                      }}>
+                        <Text style={{
+                          fontSize: 11,
+                          fontWeight: '600',
+                          color: isDark ? '#9CA3AF' : '#6B7280',
+                        }}>
+                          {allDone ? '✓ Done' : `${section.remaining} left`}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </BlurView>
-              )}
+                );
+              }}
               renderItem={({ item }) => (
                 <View style={{ paddingHorizontal: 16, paddingBottom: 0 }}>
                   <SwipeableItem

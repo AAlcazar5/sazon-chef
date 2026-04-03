@@ -16,7 +16,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import { Colors } from '../../constants/Colors';
-import { SazonMascot } from '../mascot';
+import { LogoMascot } from '../mascot';
 
 interface VoiceOverlayProps {
   visible: boolean;
@@ -115,7 +115,7 @@ export default function VoiceOverlay({
         <View style={styles.content}>
           {/* Mascot */}
           <View style={styles.mascotContainer}>
-            <SazonMascot expression={isListening ? 'thinking' : 'happy'} size="medium" />
+            <LogoMascot expression={isListening ? 'thinking' : 'happy'} size="medium" />
           </View>
 
           {/* Pulsing rings */}

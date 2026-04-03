@@ -7,7 +7,7 @@ import { View, Text, Animated, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedLottieMascot from '../mascot/AnimatedLottieMascot';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import type { SazonExpression } from '../mascot/SazonMascot';
+import type { LogoMascotExpression } from '../mascot/LogoMascot';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -33,7 +33,7 @@ interface CelebrationOverlayProps {
   visible: boolean;
   title: string;
   subtitle?: string;
-  expression?: SazonExpression;
+  expression?: LogoMascotExpression;
   stats?: StatCard[];
   primaryCTA?: CTAButton;
   secondaryCTA?: CTAButton;

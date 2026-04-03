@@ -1,6 +1,6 @@
 // frontend/__tests__/components/LottieMascot.test.tsx
 // Tests for 9G Lottie Mascot Animations:
-// - LottieMascot: renders with fallback to SVG SazonMascot when no Lottie asset
+// - LottieMascot: renders with fallback to LogoMascot when no Lottie asset
 // - AnimatedLottieMascot: animated wrapper renders without crash
 // - Lottie plays on peak moments (via CelebrationOverlay)
 
@@ -34,11 +34,11 @@ jest.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
 }));
 
-// Mock SazonMascot (the SVG fallback)
-jest.mock('../../components/mascot/SazonMascot', () => {
+// Mock LogoMascot (the fallback)
+jest.mock('../../components/mascot/LogoMascot', () => {
   const { View } = require('react-native');
-  return function MockSazonMascot({ expression, size, variant }: any) {
-    return <View testID={`sazon-mascot-${expression}`} />;
+  return function MockLogoMascot({ expression, size }: any) {
+    return <View testID={`logo-mascot-${expression}`} />;
   };
 });
 
@@ -49,35 +49,30 @@ describe('LottieMascot', () => {
 
   it('renders without crash', () => {
     const { getByTestId } = render(<LottieMascot />);
-    // Falls back to SazonMascot since no Lottie assets exist yet
-    expect(getByTestId('sazon-mascot-happy')).toBeTruthy();
+    // Falls back to LogoMascot since no Lottie assets exist yet
+    expect(getByTestId('logo-mascot-happy')).toBeTruthy();
   });
 
-  it('falls back to SazonMascot when no Lottie asset exists', () => {
+  it('falls back to LogoMascot when no Lottie asset exists', () => {
     const { getByTestId } = render(<LottieMascot expression="thinking" />);
-    expect(getByTestId('sazon-mascot-thinking')).toBeTruthy();
+    expect(getByTestId('logo-mascot-thinking')).toBeTruthy();
   });
 
-  it('passes expression to fallback SazonMascot', () => {
+  it('passes expression to fallback LogoMascot', () => {
     const expressions = ['happy', 'excited', 'chef-kiss', 'celebrating', 'thinking', 'sleepy'] as const;
     expressions.forEach((expr) => {
       const { getByTestId } = render(<LottieMascot expression={expr} />);
-      expect(getByTestId(`sazon-mascot-${expr}`)).toBeTruthy();
+      expect(getByTestId(`logo-mascot-${expr}`)).toBeTruthy();
     });
   });
 
-  it('passes size to fallback SazonMascot', () => {
+  it('passes size to fallback LogoMascot', () => {
     // Should not crash with any size
     const sizes = ['tiny', 'small', 'medium', 'large', 'hero'] as const;
     sizes.forEach((size) => {
       const { getByTestId } = render(<LottieMascot size={size} />);
-      expect(getByTestId('sazon-mascot-happy')).toBeTruthy();
+      expect(getByTestId('logo-mascot-happy')).toBeTruthy();
     });
-  });
-
-  it('passes variant to fallback SazonMascot', () => {
-    const { getByTestId } = render(<LottieMascot variant="red" />);
-    expect(getByTestId('sazon-mascot-happy')).toBeTruthy();
   });
 });
 
@@ -88,14 +83,14 @@ describe('AnimatedLottieMascot', () => {
 
   it('renders without crash', () => {
     const { getByTestId } = render(<AnimatedLottieMascot />);
-    expect(getByTestId('sazon-mascot-happy')).toBeTruthy();
+    expect(getByTestId('logo-mascot-happy')).toBeTruthy();
   });
 
   it('renders with celebrate animation type', () => {
     const { getByTestId } = render(
       <AnimatedLottieMascot expression="chef-kiss" animationType="celebrate" />
     );
-    expect(getByTestId('sazon-mascot-chef-kiss')).toBeTruthy();
+    expect(getByTestId('logo-mascot-chef-kiss')).toBeTruthy();
   });
 
   it('renders with all animation types without crash', () => {
@@ -104,7 +99,7 @@ describe('AnimatedLottieMascot', () => {
       const { getByTestId } = render(
         <AnimatedLottieMascot animationType={type} />
       );
-      expect(getByTestId('sazon-mascot-happy')).toBeTruthy();
+      expect(getByTestId('logo-mascot-happy')).toBeTruthy();
     });
   });
 
@@ -112,7 +107,7 @@ describe('AnimatedLottieMascot', () => {
     const { getByTestId } = render(
       <AnimatedLottieMascot style={{ marginTop: 20 }} />
     );
-    expect(getByTestId('sazon-mascot-happy')).toBeTruthy();
+    expect(getByTestId('logo-mascot-happy')).toBeTruthy();
   });
 });
 

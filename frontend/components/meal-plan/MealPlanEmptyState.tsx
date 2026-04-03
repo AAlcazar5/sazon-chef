@@ -16,7 +16,7 @@ import Animated, {
 import BrandButton from '../ui/BrandButton';
 import { AnimatedLottieMascot } from '../mascot';
 import GoalModeSelector, { GoalMode } from './GoalModeSelector';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
 
 interface MealPlanEmptyStateProps {
   isDark: boolean;
@@ -85,7 +85,12 @@ export default function MealPlanEmptyState({
 
   return (
     <View className="flex-1 items-center justify-center px-8">
-      <Animated.View style={mascotAnimStyle}>
+      <Animated.View style={[mascotAnimStyle, {
+        backgroundColor: isDark ? PastelDark.peach : Pastel.peach,
+        borderRadius: 999,
+        padding: 24,
+        marginBottom: 4,
+      }]}>
         <AnimatedLottieMascot
           expression={generatingPlan ? 'thinking' : 'excited'}
           size="medium"
@@ -107,7 +112,7 @@ export default function MealPlanEmptyState({
           style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}
         >
           {generatingPlan
-            ? 'Sazon is picking recipes just for you'
+            ? 'Building your perfect week...'
             : 'Pick your goal and I\'ll handle the rest. Takes about 10 seconds.'}
         </Text>
       </Animated.View>

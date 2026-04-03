@@ -10,7 +10,7 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
-import SazonMascot from '../mascot/SazonMascot';
+import { LogoMascot } from '../mascot';
 
 interface NoResultsStateProps {
   searchQuery: string;
@@ -43,7 +43,7 @@ export default function NoResultsState({
 
   return (
     <View className="flex-1 items-center px-6 pt-10 pb-6">
-      <SazonMascot expression="thinking" size="medium" />
+      <LogoMascot expression="thinking" size="medium" />
 
       <Text className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-5 text-center">
         No recipes found for &ldquo;{searchQuery}&rdquo;

@@ -1,12 +1,12 @@
 import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import LottieView from 'lottie-react-native';
-import SazonMascot, { SazonExpression, SazonSize, SazonVariant } from './SazonMascot';
+import LogoMascot, { LogoMascotExpression, LogoMascotSize } from './LogoMascot';
 
 // Map of available Lottie assets per expression
 // When a Lottie JSON is added, import it here and add to the map
-// Falls back to SVG SazonMascot when no Lottie asset exists
-const LOTTIE_ASSETS: Partial<Record<SazonExpression, any>> = {
+// Falls back to LogoMascot when no Lottie asset exists
+const LOTTIE_ASSETS: Partial<Record<LogoMascotExpression, any>> = {
   // Uncomment and add imports as Lottie files become available:
   // excited: require('./lottie/excited.json'),
   // thinking: require('./lottie/thinking.json'),
@@ -16,8 +16,9 @@ const LOTTIE_ASSETS: Partial<Record<SazonExpression, any>> = {
   // happy: require('./lottie/waving.json'),
 };
 
-const SIZE_MAP: Record<SazonSize, number> = {
+const SIZE_MAP: Record<LogoMascotSize, number> = {
   tiny: 24,
+  xsmall: 36,
   small: 48,
   medium: 96,
   large: 192,
@@ -25,9 +26,8 @@ const SIZE_MAP: Record<SazonSize, number> = {
 };
 
 interface LottieMascotProps {
-  expression?: SazonExpression;
-  size?: SazonSize;
-  variant?: SazonVariant;
+  expression?: LogoMascotExpression;
+  size?: LogoMascotSize;
   autoPlay?: boolean;
   loop?: boolean;
   speed?: number;
@@ -37,7 +37,6 @@ interface LottieMascotProps {
 export default function LottieMascot({
   expression = 'happy',
   size = 'medium',
-  variant = 'orange',
   autoPlay = true,
   loop = true,
   speed = 1,
@@ -53,13 +52,12 @@ export default function LottieMascot({
     }
   }, [lottieSource, autoPlay]);
 
-  // Fall back to SVG SazonMascot when no Lottie asset exists
+  // Fall back to LogoMascot when no Lottie asset exists
   if (!lottieSource) {
     return (
-      <SazonMascot
+      <LogoMascot
         expression={expression}
         size={size}
-        variant={variant}
         style={style}
       />
     );

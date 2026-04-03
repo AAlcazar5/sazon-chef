@@ -4592,9 +4592,10 @@ export const recipeController = {
         const selectedIndex = dateSeed % rotdCandidates.length;
         const rotdRaw = rotdCandidates[selectedIndex];
         const healthGrade = (() => { try { return calculateHealthGrade(rotdRaw); } catch { return { grade: 'B', score: 70 }; } })();
+        const rotdScored = scoreRecipe(rotdRaw);
         recipeOfTheDay = {
-          ...rotdRaw,
-          healthGrade: healthGrade?.grade || 'B',
+          ...rotdScored,
+          healthGrade: healthGrade?.grade || rotdScored?.score?.healthGrade || 'B',
           isRecipeOfTheDay: true,
           selectedDate: today.toISOString().split('T')[0],
         };

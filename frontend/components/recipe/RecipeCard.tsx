@@ -114,7 +114,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
 
   // Default dimensions based on variant
   const defaultImageHeight = variant === 'featured' ? 240 : (variant === 'carousel' ? 140 : variant === 'grid' ? 150 : 170);
-  const defaultCardHeight = variant === 'featured' ? undefined : variant === 'carousel' ? 280 : variant === 'grid' ? 260 : 310;
+  const defaultCardHeight = variant === 'featured' ? undefined : variant === 'carousel' ? 295 : variant === 'grid' ? 275 : 325;
   const finalImageHeight = imageHeight || defaultImageHeight;
   const finalCardHeight = cardHeight || defaultCardHeight;
 
@@ -379,7 +379,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
             </View>
           </View>
 
-          {/* Macro Nutrients - 4 Column Display */}
+          {/* Macro Nutrients - 5 Column Display */}
           <View className="flex-row items-center justify-between mb-3 p-2 rounded-lg" style={{ backgroundColor: (isDark || darkFeed) ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
             <View className="items-center flex-1">
               <Text className="text-xs text-gray-500 dark:text-gray-400">{recipe.calories} cal</Text>
@@ -393,6 +393,11 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
             <View className="items-center flex-1">
               <Text className="text-xs font-semibold text-purple-600 dark:text-purple-400">{recipe.fat}g fat</Text>
             </View>
+            {!!recipe.fiber && (
+              <View className="items-center flex-1">
+                <Text className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{recipe.fiber}g fi</Text>
+              </View>
+            )}
           </View>
 
           {/* Description */}
@@ -406,8 +411,13 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
           <View className="flex-row items-center justify-between">
             <HapticTouchableOpacity
               onPress={handleSavePress}
-              className="p-2 rounded-full"
+              className="rounded-full"
               style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
                 backgroundColor: onDelete
                   ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2')
                   : saveHighlighted
@@ -425,6 +435,9 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                   color={onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF')}
                 />
               </Animated.View>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF') }}>
+                {onDelete ? 'Remove' : 'Save'}
+              </Text>
             </HapticTouchableOpacity>
 
             <View className="flex-row items-center">
@@ -455,7 +468,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
 
   // Grid, List, and Carousel variants — image-first design
   const isGrid = variant === 'grid';
-  const gradientHeight = isGrid ? 130 : 150;
+  const gradientHeight = isGrid ? 145 : 165;
   const titleLines = isGrid ? 1 : 2;
   const matchPct = recipe.score?.matchPercentage;
 
@@ -612,44 +625,60 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
             {recipe.title}
           </Text>
 
+          {/* Metadata row: cook time + health grade */}
+          {(() => {
+            const grade = recipe.healthGrade || recipe.score?.healthGrade;
+            if (!recipe.cookTime && !grade) return null;
+            return (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5, gap: 8 }}>
+                {!!recipe.cookTime && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Icon name={Icons.TIME_OUTLINE} size={11} color="rgba(255,255,255,0.85)" accessibilityLabel="Cook time" />
+                    <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, fontWeight: '600' }}>
+                      {recipe.cookTime} min
+                    </Text>
+                  </View>
+                )}
+                {!!grade && (
+                  <View
+                    style={{
+                      backgroundColor: grade === 'A' ? '#22c55e' : grade === 'B' ? '#84cc16' : 'rgba(255,255,255,0.3)',
+                      paddingHorizontal: 6,
+                      paddingVertical: 1,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>
+                      Grade {grade}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })()}
+
           {/* Macro pills */}
-          <View style={{ flexDirection: 'row', gap: 4, marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
             {[
-              { label: `${recipe.calories} cal`, bg: 'rgba(255,255,255,0.18)' },
-              { label: `${recipe.protein}g P`, bg: 'rgba(59,130,246,0.50)' },
-              { label: `${recipe.carbs}g C`, bg: `${Colors.tertiaryGreen}70` },
-              { label: `${recipe.fat}g F`, bg: 'rgba(168,85,247,0.50)' },
-            ].map(({ label, bg }) => (
+              { value: recipe.calories, label: `${recipe.calories} cal`, bg: 'rgba(255,255,255,0.18)' },
+              { value: recipe.protein, label: `${recipe.protein}g P`, bg: 'rgba(59,130,246,0.50)' },
+              { value: recipe.carbs, label: `${recipe.carbs}g C`, bg: `${Colors.tertiaryGreen}70` },
+              { value: recipe.fat, label: `${recipe.fat}g F`, bg: 'rgba(168,85,247,0.50)' },
+              { value: recipe.fiber, label: `${recipe.fiber}g Fi`, bg: 'rgba(16,185,129,0.50)' },
+            ].filter(({ value }) => !!value).map(({ label, bg }) => (
               <View key={label} style={{ backgroundColor: bg, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 }}>
                 <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{label}</Text>
               </View>
             ))}
           </View>
 
-          {/* Unsplash attribution — above action row */}
-          {(() => {
-            const name = (recipe as any).unsplashPhotographerName as string | undefined;
-            const username = (recipe as any).unsplashPhotographerUsername as string | undefined;
-            if (!name || !username) return null;
-            const profileUrl = `https://unsplash.com/@${username}?utm_source=Sazon%20Chef&utm_medium=referral`;
-            return (
-              <HapticTouchableOpacity
-                onPress={() => Linking.openURL(profileUrl)}
-                style={{ alignSelf: 'flex-end', marginBottom: 4 }}
-              >
-                <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9 }}>
-                  Photo by {name} on Unsplash
-                </Text>
-              </HapticTouchableOpacity>
-            );
-          })()}
-
           {/* Action buttons */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <HapticTouchableOpacity
               onPress={handleSavePress}
               style={{
-                padding: 7, borderRadius: 999,
+                flexDirection: 'row', alignItems: 'center', gap: 4,
+                paddingHorizontal: 9, paddingVertical: 7, borderRadius: 999,
                 backgroundColor: onDelete
                   ? 'rgba(239,68,68,0.30)'
                   : saveHighlighted
@@ -663,6 +692,9 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               <Animated.View style={{ transform: [{ scale: saveScale }] }}>
                 <Icon name={onDelete ? Icons.CLOSE : Icons.SAVE_RECIPE} size={14} color={onDelete ? '#EF4444' : '#FFFFFF'} />
               </Animated.View>
+              <Text style={{ color: onDelete ? '#EF4444' : '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
+                {onDelete ? 'Remove' : 'Save'}
+              </Text>
             </HapticTouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -692,6 +724,24 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               </HapticTouchableOpacity>
             </View>
           </View>
+
+          {/* Unsplash attribution — below action row */}
+          {(() => {
+            const name = (recipe as any).unsplashPhotographerName as string | undefined;
+            const username = (recipe as any).unsplashPhotographerUsername as string | undefined;
+            if (!name || !username) return null;
+            const profileUrl = `https://unsplash.com/@${username}?utm_source=Sazon%20Chef&utm_medium=referral`;
+            return (
+              <HapticTouchableOpacity
+                onPress={() => Linking.openURL(profileUrl)}
+                style={{ alignSelf: 'flex-end', marginTop: 6 }}
+              >
+                <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9 }}>
+                  Photo by {name} on Unsplash
+                </Text>
+              </HapticTouchableOpacity>
+            );
+          })()}
 
           {footer}
         </View>

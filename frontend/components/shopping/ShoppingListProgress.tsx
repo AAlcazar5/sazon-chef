@@ -1,12 +1,16 @@
 // frontend/components/shopping/ShoppingListProgress.tsx
-// Progress bar component with estimated cost
+// Progress ring + estimated cost card for shopping list (9L).
 
 import { View, Text } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import AnimatedProgressBar from '../ui/AnimatedProgressBar';
+import ProgressRing from '../ui/ProgressRing';
+import { CountingNumber } from '../ui/AnimatedStatCounter';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, Accent } from '../../constants/Colors';
+import { FontSize, FontWeight } from '../../constants/Typography';
+import { Shadows } from '../../constants/Shadows';
+import { BorderRadius } from '../../constants/Spacing';
 import { ShoppingListItem } from '../../types';
 
 interface ShoppingListProgressProps {
@@ -31,42 +35,85 @@ export default function ShoppingListProgress({
 
   if (currentItems.length === 0) return null;
 
-  // Friendly progress text instead of raw numbers
   const remaining = progressStats.total - progressStats.purchased;
-  const progressText = progressStats.progress >= 100
+  const progress = progressStats.total > 0
+    ? progressStats.purchased / progressStats.total
+    : 0;
+
+  // Ring color transitions: orange → sage green as progress increases
+  const ringColor = progress >= 0.8
+    ? [Accent.sage, '#66BB6A']
+    : progress >= 0.4
+      ? [Accent.golden, Accent.sage]
+      : [Colors.primary, Accent.peach];
+
+  const progressText = progress >= 1
     ? 'All done! Time to cook!'
     : remaining <= 3 && remaining > 0
       ? `Almost done! ${remaining} item${remaining !== 1 ? 's' : ''} left`
-      : remaining === 0
-        ? 'All done! Time to cook!'
-        : `${progressStats.purchased} of ${progressStats.total} items`;
+      : `${progressStats.purchased} of ${progressStats.total} items`;
 
   return (
     <>
-      {/* Progress Indicator */}
-      <View className="mx-4 mt-4 mb-2">
-        <View className="flex-row items-center justify-between mb-2">
-          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      {/* Progress Ring + Summary */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginTop: 16,
+        marginBottom: 8,
+        gap: 16,
+      }}>
+        <ProgressRing
+          progress={progress}
+          size={80}
+          strokeWidth={8}
+          color={ringColor}
+          testID="shopping-progress-ring"
+        >
+          <Text style={{
+            fontSize: FontSize.lg,
+            fontWeight: FontWeight.extrabold,
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
+          }}>
+            {remaining}
+          </Text>
+          <Text style={{
+            fontSize: 8,
+            fontWeight: FontWeight.medium,
+            color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary,
+            marginTop: -1,
+          }}>
+            left
+          </Text>
+        </ProgressRing>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            fontSize: FontSize.base,
+            fontWeight: FontWeight.semibold,
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
+            marginBottom: 2,
+          }}>
             {progressText}
           </Text>
-          <Text className="text-sm font-semibold" style={{ color: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}>
-            {Math.round(progressStats.progress)}%
+          <Text style={{
+            fontSize: FontSize.sm,
+            color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
+          }}>
+            {Math.round(progressStats.progress)}% complete
           </Text>
         </View>
-        <AnimatedProgressBar
-          progress={progressStats.progress}
-          height={8}
-          backgroundColor={isDark ? '#374151' : '#E5E7EB'}
-          progressColor={isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen}
-          borderRadius={999}
-          useSpring
-        />
       </View>
 
       {/* Estimated Total Cost */}
       {estimatedCost > 0 && (
         <View className="mx-4 mb-4">
-          <View className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <View style={[{
+            backgroundColor: isDark ? DarkColors.card : Colors.card,
+            borderRadius: BorderRadius.card,
+            padding: 16,
+          }, Shadows.SM]}>
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center">
                 <Icon name={Icons.CART_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.accent : Colors.accent} accessibilityLabel="Estimated total" style={{ marginRight: 8 }} />

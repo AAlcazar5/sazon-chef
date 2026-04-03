@@ -838,6 +838,7 @@ export default function HomeScreen() {
             onPress={handleRecipePress}
             onLongPress={handleLongPress}
             onLike={handleLike}
+            onDislike={handleDislike}
             onSave={openSavePicker}
           />
         ) : (

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import Svg, { G, Path, Circle, Ellipse, Defs, LinearGradient, Stop } from 'react-native-svg';
-import SazonMascot from './SazonMascot';
+import LogoMascot from './LogoMascot';
 
 /**
  * App Icon Mascot Component
@@ -23,14 +22,12 @@ import SazonMascot from './SazonMascot';
 interface AppIconMascotProps {
   size?: number; // Icon size in pixels (default: 1024 for iOS)
   expression?: 'happy' | 'excited' | 'proud';
-  variant?: 'orange' | 'red';
   backgroundColor?: string; // Background color for the icon (default: white or brand orange)
 }
 
 export default function AppIconMascot({
   size = 1024,
   expression = 'happy',
-  variant = 'orange',
   backgroundColor = '#FFFFFF',
 }: AppIconMascotProps) {
   // Calculate mascot size - should be about 80% of icon size to leave padding
@@ -54,10 +51,9 @@ export default function AppIconMascot({
           height: mascotSize,
         }}
       >
-        <SazonMascot
+        <LogoMascot
           expression={expression}
-          size="hero" // Use hero size and scale it
-          variant={variant}
+          size="hero"
           style={{
             width: mascotSize,
             height: mascotSize,

@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import BrandButton from '../ui/BrandButton';
-import { SazonMascot } from '../mascot';
+import { LogoMascot } from '../mascot';
 import { useSubscription } from '../../hooks/useSubscription';
 import { Shadows } from '../../constants/Shadows';
 import { Backdrop } from '../../constants/Colors';
@@ -52,7 +52,7 @@ export function CoffeeBanner({ visible, onDismiss }: CoffeeBannerProps) {
           >
             {/* Mascot on the right */}
             <View style={styles.mascotContainer}>
-              <SazonMascot expression="chef-kiss" size="small" />
+              <LogoMascot expression="chef-kiss" size="small" />
             </View>
 
             {/* Content on the left */}

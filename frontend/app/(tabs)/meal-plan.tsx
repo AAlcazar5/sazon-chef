@@ -550,7 +550,7 @@ export default function MealPlanScreen() {
             />
           }
         >
-          <WeeklyNutritionSummary weeklyNutrition={weeklyNutrition} isDark={isDark} />
+          <WeeklyNutritionSummary weeklyNutrition={weeklyNutrition} weeklyPlan={weeklyPlan} weekDates={weekDates} isDark={isDark} />
 
           <WeeklyCalendar
             weekDates={weekDates}
@@ -585,6 +585,8 @@ export default function MealPlanScreen() {
             isDark={isDark}
             onToggleExpanded={handleToggleExpanded}
             getMacroColor={getMacroColor}
+            weeklyPlan={weeklyPlan}
+            weekDates={weekDates}
           />
 
           <ViewModeSelector viewMode={viewMode} onOpenPicker={handleOpenViewModePicker} />

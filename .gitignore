@@ -1,5 +1,16 @@
 # Sazon Chef - Root .gitignore
 
+# ECC (Everything Claude Code) tooling - managed locally, not committed
+# Update by re-running the ECC installer
+agents/
+commands/
+skills/
+hooks/
+scripts/
+.opencode/
+/tests/
+/docs/
+
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -37,6 +48,11 @@ dev.db
 prisma/dev.db
 backend/prisma/dev.db
 backend/dev.db
+
+# SQLite WAL mode sidecar files (auto-created, never commit)
+*.db-wal
+*.db-shm
+*.db-journal
 
 # Build outputs
 dist/

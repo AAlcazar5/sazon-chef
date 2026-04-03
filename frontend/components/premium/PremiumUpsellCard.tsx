@@ -7,7 +7,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { SazonMascot } from '../mascot';
+import { LogoMascot } from '../mascot';
 import { Shadows } from '../../constants/Shadows';
 
 interface PremiumUpsellCardProps {
@@ -38,7 +38,7 @@ export default function PremiumUpsellCard({ testID }: PremiumUpsellCardProps) {
           </View>
         </View>
         <View style={styles.mascotContainer}>
-          <SazonMascot expression="excited" size="small" />
+          <LogoMascot expression="excited" size="small" />
         </View>
       </LinearGradient>
     </HapticTouchableOpacity>
