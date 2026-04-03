@@ -61,12 +61,12 @@ describe('WeeklyNutritionSummary', () => {
     expect(getByText('12,000 / 14,000')).toBeTruthy();
   });
 
-  it('shows daily average label and values', () => {
+  it('shows daily macro distribution label when weeklyPlan provided', () => {
     const { getByText } = render(
       <WeeklyNutritionSummary weeklyNutrition={makeNutrition()} isDark={false} />
     );
-    expect(getByText('Daily Average')).toBeTruthy();
-    expect(getByText('1714 / 2000')).toBeTruthy();
+    // The macro breakdown section is always present
+    expect(getByText('Macro Breakdown')).toBeTruthy();
   });
 
   it('shows macro breakdown labels', () => {

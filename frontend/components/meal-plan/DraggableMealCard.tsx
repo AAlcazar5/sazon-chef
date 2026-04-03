@@ -19,8 +19,16 @@ import PulsingLoader from '../ui/PulsingLoader';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Shadows } from '../../constants/Shadows';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark, Accent } from '../../constants/Colors';
 import SurpriseBadge from './SurpriseBadge';
+
+const MEAL_TYPE_PILL: Record<string, { label: string; tint: string; tintDark: string; accent: string }> = {
+  breakfast: { label: 'Breakfast', tint: Pastel.golden, tintDark: PastelDark.golden, accent: Accent.golden },
+  lunch:     { label: 'Lunch', tint: Pastel.sage, tintDark: PastelDark.sage, accent: Accent.sage },
+  dinner:    { label: 'Dinner', tint: Pastel.peach, tintDark: PastelDark.peach, accent: Accent.peach },
+  snack:     { label: 'Snack', tint: Pastel.sky, tintDark: PastelDark.sky, accent: Accent.sky },
+  dessert:   { label: 'Dessert', tint: Pastel.blush, tintDark: PastelDark.blush, accent: Accent.blush },
+};
 
 interface DraggableMealCardProps {
   meal: any;
@@ -387,6 +395,28 @@ function DraggableMealCard({
                 resizeMode="cover"
                 accessibilityLabel={`${meal.name} image`}
               />
+            </View>
+          )}
+
+          {/* Meal type pill */}
+          {meal.mealType && MEAL_TYPE_PILL[meal.mealType] && (
+            <View style={{
+              alignSelf: 'flex-start',
+              backgroundColor: isDark ? MEAL_TYPE_PILL[meal.mealType].tintDark : MEAL_TYPE_PILL[meal.mealType].tint,
+              borderRadius: 8,
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              marginBottom: 6,
+            }}>
+              <Text style={{
+                fontSize: 10,
+                fontWeight: '700',
+                color: MEAL_TYPE_PILL[meal.mealType].accent,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}>
+                {MEAL_TYPE_PILL[meal.mealType].label}
+              </Text>
             </View>
           )}
 

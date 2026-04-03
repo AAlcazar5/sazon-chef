@@ -2,9 +2,9 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
-// Must be hoisted before imports that trigger SazonMascot
+// Must be hoisted before imports that trigger LogoMascot
 jest.mock('../../components/mascot', () => ({
-  SazonMascot: () => null,
+  LogoMascot: () => null,
 }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),

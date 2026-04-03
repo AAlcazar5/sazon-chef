@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Modal, View, StyleSheet, useColorScheme, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SuccessState from './SuccessState';
-import { SazonExpression } from '../mascot/SazonMascot';
+import type { LogoMascotExpression } from '../mascot/LogoMascot';
 import { Colors, DarkColors, Gradients, Backdrop } from '../../constants/Colors';
 import { Duration, Spring } from '../../constants/Animations';
 
@@ -10,7 +10,7 @@ interface SuccessModalProps {
   visible: boolean;
   title: string;
   message?: string;
-  expression?: SazonExpression;
+  expression?: LogoMascotExpression;
   onDismiss: () => void;
   actionLabel?: string;
   onAction?: () => void;

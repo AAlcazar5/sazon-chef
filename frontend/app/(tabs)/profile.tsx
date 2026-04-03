@@ -17,6 +17,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileData } from '../../hooks/useProfileData';
 import {
   ProfileHeader,
+  ProfileStatWidgets,
   AppearanceSection,
   ProfileCompletionCard,
   PhysicalProfileCard,
@@ -166,19 +167,32 @@ export default function ProfileScreen() {
         )}
         scrollEventThrottle={16}
       >
-        <StaggerItem index={0}>
+        {/* Colorful stat widgets + activity calendar (9L) */}
+        {!dataStats.loading && (
+          <StaggerItem index={0}>
+            <ProfileStatWidgets
+              savedRecipes={dataStats.savedRecipes}
+              mealsCooked={dataStats.mealHistory}
+              mealPlans={dataStats.mealPlans}
+              isDark={isDark}
+              testID="profile-stat-widgets"
+            />
+          </StaggerItem>
+        )}
+
+        <StaggerItem index={1}>
           <AppearanceSection />
         </StaggerItem>
 
-        <StaggerItem index={1}>
+        <StaggerItem index={2}>
           <ProfileCompletionCard profileCompletion={profileCompletion} />
         </StaggerItem>
 
-        <StaggerItem index={2}>
+        <StaggerItem index={3}>
           <PhysicalProfileCard physicalProfile={physicalProfile} />
         </StaggerItem>
 
-        <StaggerItem index={3}>
+        <StaggerItem index={4}>
           <WeightHistoryCard
             physicalProfile={physicalProfile}
             weightHistory={weightHistory}
@@ -186,11 +200,11 @@ export default function ProfileScreen() {
           />
         </StaggerItem>
 
-        <StaggerItem index={4}>
+        <StaggerItem index={5}>
           <MacroGoalsCard profile={profile} macroGoals={macroGoals} />
         </StaggerItem>
 
-        <StaggerItem index={5}>
+        <StaggerItem index={6}>
           <ProfilePresetsCard
             presets={presets}
             presetsLoading={presetsLoading}
@@ -200,18 +214,18 @@ export default function ProfileScreen() {
           />
         </StaggerItem>
 
-        <StaggerItem index={6}>
+        <StaggerItem index={7}>
           <CulinaryPreferencesCard
             profile={profile}
             preferences={preferences}
           />
         </StaggerItem>
 
-        <StaggerItem index={7}>
+        <StaggerItem index={8}>
           <BudgetCard budgetSettings={budgetSettings} />
         </StaggerItem>
 
-        <StaggerItem index={8}>
+        <StaggerItem index={9}>
           <NotificationsCard
             notifications={notifications}
             updatingNotification={updatingNotification}
@@ -221,7 +235,7 @@ export default function ProfileScreen() {
           />
         </StaggerItem>
 
-        <StaggerItem index={9}>
+        <StaggerItem index={10}>
           <DataPrivacyCard
             dataStats={dataStats}
             privacySettings={privacySettings}

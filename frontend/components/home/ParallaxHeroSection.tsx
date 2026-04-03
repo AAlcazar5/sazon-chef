@@ -3,7 +3,7 @@
 // The background image scrolls at ~40% of the scroll speed, creating depth.
 
 import React from 'react';
-import { View, Text, Animated, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, Animated, Dimensions, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -35,6 +35,8 @@ interface ParallaxHeroSectionProps {
   onLongPress?: (recipe: SuggestedRecipe) => void;
   /** Like the recipe */
   onLike: (recipeId: string) => void;
+  /** Dislike the recipe */
+  onDislike: (recipeId: string) => void;
   /** Save to collection */
   onSave: (recipeId: string) => void;
 }
@@ -48,6 +50,7 @@ function ParallaxHeroSection({
   onPress,
   onLongPress,
   onLike,
+  onDislike,
   onSave,
 }: ParallaxHeroSectionProps) {
   // Image translates upward at 40% of scroll speed (parallax depth)
@@ -58,6 +61,12 @@ function ParallaxHeroSection({
   });
 
   const hasImage = !!recipe.imageUrl;
+  const matchPct = recipe.score?.matchPercentage;
+  const grade = recipe.healthGrade || recipe.score?.healthGrade;
+
+  // Unsplash attribution
+  const photographerName = (recipe as any).unsplashPhotographerName as string | undefined;
+  const photographerUsername = (recipe as any).unsplashPhotographerUsername as string | undefined;
 
   return (
     <HapticTouchableOpacity
@@ -118,63 +127,60 @@ function ParallaxHeroSection({
           }}
         />
 
-        {/* Top row: badge + surprise me */}
+        {/* Top row: "Recipe of the Day" badge left */}
         <View
           style={{
             position: 'absolute',
             top: 14,
             left: 16,
-            right: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 20,
+            }}
+          >
+            <Text style={{ fontSize: 12 }}>🌟</Text>
+            <Text
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: 'rgba(0,0,0,0.35)',
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 20,
+                color: '#FFFFFF',
+                fontSize: 11,
+                fontWeight: '700',
+                marginLeft: 4,
+                letterSpacing: 0.5,
               }}
             >
-              <Text style={{ fontSize: 12 }}>🌟</Text>
-              <Text
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: 11,
-                  fontWeight: '700',
-                  marginLeft: 4,
-                  letterSpacing: 0.5,
-                }}
-              >
-                RECIPE OF THE DAY
+              RECIPE OF THE DAY
+            </Text>
+          </View>
+        </View>
+
+        {/* Match percentage badge — top right corner */}
+        {matchPct !== undefined && matchPct > 0 && (
+          <View style={{ position: 'absolute', top: 14, right: 16 }}>
+            <View
+              style={{
+                backgroundColor: matchPct >= 80
+                  ? Colors.tertiaryGreen
+                  : matchPct >= 60
+                    ? Colors.primary
+                    : Colors.secondaryRed,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 999,
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
+                {Math.round(matchPct)}%
               </Text>
             </View>
-
-            {/* Match percentage badge */}
-            {!!recipe.score?.matchPercentage && recipe.score.matchPercentage > 0 && (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: recipe.score.matchPercentage >= 85 ? 'rgba(34,197,94,0.85)' : 'rgba(0,0,0,0.35)',
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 20,
-                }}
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                  {Math.round(recipe.score.matchPercentage)}% Match
-                </Text>
-              </View>
-            )}
           </View>
-
-        </View>
+        )}
 
         {/* Bottom content overlay */}
         <View
@@ -187,6 +193,13 @@ function ParallaxHeroSection({
             paddingBottom: 16,
           }}
         >
+          {/* Cuisine label */}
+          {!!recipe.cuisine && (
+            <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: '700', letterSpacing: 0.6, marginBottom: 3, textTransform: 'uppercase' }}>
+              {recipe.cuisine}
+            </Text>
+          )}
+
           {/* Recipe title */}
           <Text
             numberOfLines={2}
@@ -205,146 +218,115 @@ function ParallaxHeroSection({
           </Text>
 
           {/* Metadata row: cook time + health grade */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 12 }}>
-            {!!recipe.cookTime && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.85)" />
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '500' }}>
-                  {recipe.cookTime} min
-                </Text>
+          {(!!recipe.cookTime || !!grade) && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 }}>
+              {!!recipe.cookTime && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  <Ionicons name="time-outline" size={11} color="rgba(255,255,255,0.85)" />
+                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, fontWeight: '600' }}>
+                    {recipe.cookTime} min
+                  </Text>
+                </View>
+              )}
+              {!!grade && (
+                <View
+                  style={{
+                    backgroundColor: grade === 'A' ? '#22c55e' : grade === 'B' ? '#84cc16' : 'rgba(255,255,255,0.3)',
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>
+                    Grade {grade}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Macros row — evenly spaced across full card width */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+            {[
+              { value: recipe.calories, label: `${recipe.calories} cal`, bg: 'rgba(255,255,255,0.18)' },
+              { value: recipe.protein, label: `${recipe.protein}g P`, bg: 'rgba(59,130,246,0.50)' },
+              { value: recipe.carbs, label: `${recipe.carbs}g C`, bg: `${Colors.tertiaryGreen}70` },
+              { value: recipe.fat, label: `${recipe.fat}g F`, bg: 'rgba(168,85,247,0.50)' },
+              { value: recipe.fiber, label: `${recipe.fiber}g Fi`, bg: 'rgba(16,185,129,0.50)' },
+            ].filter(({ value }) => !!value).map(({ label, bg }) => (
+              <View key={label} style={{ flex: 1, marginHorizontal: 2, backgroundColor: bg, paddingVertical: 3, borderRadius: 999, alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{label}</Text>
               </View>
-            )}
-            {!!recipe.healthGrade && (
-              <View
-                style={{
-                  backgroundColor: recipe.healthGrade === 'A' ? '#22c55e' : recipe.healthGrade === 'B' ? '#84cc16' : 'rgba(255,255,255,0.3)',
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                  borderRadius: 10,
-                }}
-              >
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
-                  Grade {recipe.healthGrade}
-                </Text>
-              </View>
-            )}
+            ))}
           </View>
 
-          {/* Macros row */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-            {!!recipe.calories && (
-              <View style={heroStyles.macroPill}>
-                <Text style={heroStyles.macroValue}>{recipe.calories}</Text>
-                <Text style={heroStyles.macroLabel}>cal</Text>
-              </View>
-            )}
-            {!!recipe.protein && (
-              <View style={heroStyles.macroPill}>
-                <Text style={heroStyles.macroValue}>{recipe.protein}g</Text>
-                <Text style={heroStyles.macroLabel}>protein</Text>
-              </View>
-            )}
-            {!!recipe.carbs && (
-              <View style={heroStyles.macroPill}>
-                <Text style={heroStyles.macroValue}>{recipe.carbs}g</Text>
-                <Text style={heroStyles.macroLabel}>carbs</Text>
-              </View>
-            )}
-            {!!recipe.fat && (
-              <View style={heroStyles.macroPill}>
-                <Text style={heroStyles.macroValue}>{recipe.fat}g</Text>
-                <Text style={heroStyles.macroLabel}>fat</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Action row */}
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <HapticTouchableOpacity
-              onPress={() => onLike(recipe.id)}
-              disabled={isFeedbackLoading}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 5,
-                backgroundColor: feedback.liked
-                  ? 'rgba(239,68,68,0.9)'
-                  : 'rgba(255,255,255,0.22)',
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 20,
-              }}
-            >
-              <Ionicons
-                name={feedback.liked ? 'heart' : 'heart-outline'}
-                size={15}
-                color="#FFFFFF"
-              />
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>
-                {feedback.liked ? 'Liked' : 'Like'}
-              </Text>
-            </HapticTouchableOpacity>
-
+          {/* Action row — save left, like/dislike right */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <HapticTouchableOpacity
               onPress={() => onSave(recipe.id)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 5,
-                backgroundColor: 'rgba(255,255,255,0.22)',
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 20,
+                paddingHorizontal: 10,
+                paddingVertical: 7,
+                borderRadius: 999,
+                backgroundColor: 'rgba(255,255,255,0.20)',
               }}
             >
-              <Ionicons name="bookmark-outline" size={15} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>Save</Text>
+              <Ionicons name="bookmark-outline" size={14} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Save</Text>
             </HapticTouchableOpacity>
 
-            <View style={{ flex: 1 }} />
-
-            <HapticTouchableOpacity
-              onPress={() => onPress(recipe.id)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 5,
-                backgroundColor: Colors.primary,
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 20,
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>View Recipe</Text>
-              <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
-            </HapticTouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <HapticTouchableOpacity
+                onPress={() => onLike(recipe.id)}
+                disabled={isFeedbackLoading}
+                style={{
+                  padding: 7,
+                  borderRadius: 999,
+                  backgroundColor: feedback.liked ? Colors.tertiaryGreen : 'rgba(255,255,255,0.20)',
+                }}
+              >
+                <Ionicons
+                  name={feedback.liked ? 'thumbs-up' : 'thumbs-up-outline'}
+                  size={14}
+                  color="#FFFFFF"
+                />
+              </HapticTouchableOpacity>
+              <HapticTouchableOpacity
+                onPress={() => onDislike(recipe.id)}
+                disabled={isFeedbackLoading}
+                style={{
+                  padding: 7,
+                  borderRadius: 999,
+                  backgroundColor: feedback.disliked ? Colors.secondaryRed : 'rgba(255,255,255,0.20)',
+                }}
+              >
+                <Ionicons
+                  name={feedback.disliked ? 'thumbs-down' : 'thumbs-down-outline'}
+                  size={14}
+                  color="#FFFFFF"
+                />
+              </HapticTouchableOpacity>
+            </View>
           </View>
+
+          {/* Unsplash attribution — bottom right */}
+          {!!photographerName && !!photographerUsername && (
+            <HapticTouchableOpacity
+              onPress={() => Linking.openURL(`https://unsplash.com/@${photographerUsername}?utm_source=Sazon%20Chef&utm_medium=referral`)}
+              style={{ alignSelf: 'flex-end', marginTop: 6 }}
+            >
+              <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9 }}>
+                Photo by {photographerName} on Unsplash
+              </Text>
+            </HapticTouchableOpacity>
+          )}
         </View>
       </View>
     </HapticTouchableOpacity>
   );
 }
-
-const heroStyles = StyleSheet.create({
-  macroPill: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    backgroundColor: 'rgba(0,0,0,0.30)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 3,
-  },
-  macroValue: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  macroLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 10,
-    fontWeight: '500',
-  },
-});
 
 export default React.memo(ParallaxHeroSection);

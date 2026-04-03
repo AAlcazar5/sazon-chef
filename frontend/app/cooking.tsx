@@ -358,9 +358,10 @@ export default function CookingScreen() {
       : `${elapsedSeconds}s`;
 
     const cookingStats = [
-      { value: String(totalSteps), label: 'Steps', color: '#FB923C', bgColor: 'rgba(251, 146, 60, 0.15)' },
-      { value: timeLabel, label: 'Time', color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.15)' },
-      { value: String(checkedIngredients.size), label: 'Prepped', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.15)' },
+      { value: timeLabel, label: 'Cook Time', color: '#64B5F6', bgColor: 'rgba(100, 181, 246, 0.18)' },
+      { value: `${totalSteps}/${totalSteps}`, label: 'Steps', color: '#81C784', bgColor: 'rgba(129, 199, 132, 0.18)' },
+      { value: String(checkedIngredients.size), label: 'Prepped', color: '#FFD54F', bgColor: 'rgba(255, 213, 79, 0.18)' },
+      { value: `${recipe.calories}`, label: 'Calories', color: '#FFB74D', bgColor: 'rgba(255, 183, 77, 0.18)' },
     ];
 
     const nextMealCTA = nextMealName

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { SazonMascot } from '../mascot';
+import { LogoMascot } from '../mascot';
 import { stripeApi } from '../../lib/api';
 import { Colors } from '../../constants/Colors';
 
@@ -132,7 +132,7 @@ function SurveyStep({
 }) {
   return (
     <>
-      <SazonMascot expression="supportive" size="small" />
+      <LogoMascot expression="supportive" size="small" />
       <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-1">
         Before you go...
       </Text>
@@ -187,7 +187,7 @@ function OfferStep({
 }) {
   return (
     <>
-      <SazonMascot expression="thinking" size="small" />
+      <LogoMascot expression="thinking" size="small" />
 
       {reason === 'too_expensive' && (
         <>
@@ -287,7 +287,7 @@ function ConfirmStep({
 }) {
   return (
     <>
-      <SazonMascot expression="supportive" size="small" />
+      <LogoMascot expression="supportive" size="small" />
       <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-2">
         Cancel subscription?
       </Text>

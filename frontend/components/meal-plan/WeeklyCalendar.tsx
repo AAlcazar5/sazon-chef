@@ -9,10 +9,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { FontSize } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
+
+// Alternating pastel tints for each day of the week (Mon=0 → Sun=6)
+const DAY_TINTS = [
+  { light: Pastel.peach, dark: PastelDark.peach },       // Mon
+  { light: Pastel.sage, dark: PastelDark.sage },          // Tue
+  { light: Pastel.sky, dark: PastelDark.sky },            // Wed
+  { light: Pastel.golden, dark: PastelDark.golden },      // Thu
+  { light: Pastel.lavender, dark: PastelDark.lavender },  // Fri
+  { light: Pastel.blush, dark: PastelDark.blush },        // Sat
+  { light: Pastel.orange, dark: PastelDark.orange },      // Sun
+];
 
 interface DayPillProps {
   date: Date;
@@ -83,7 +94,9 @@ function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, o
         ) : (
           <View style={{
             paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center',
-            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+            backgroundColor: isDark
+              ? DAY_TINTS[date.getDay() === 0 ? 6 : date.getDay() - 1].dark
+              : DAY_TINTS[date.getDay() === 0 ? 6 : date.getDay() - 1].light,
           }}>
             <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 2 }}>
               {date.toLocaleDateString('en-US', { weekday: 'short' })}

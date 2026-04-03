@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSubscription } from '../../hooks/useSubscription';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../ui/GradientButton';
-import { SazonMascot } from '../mascot';
+import { LogoMascot } from '../mascot';
 import { PremiumCelebration } from '../celebrations';
 
 const PREMIUM_FEATURES = [
@@ -79,7 +79,7 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 14, stiffness: 280, delay: 80 }}
         >
-          <SazonMascot expression="celebrating" size="medium" />
+          <LogoMascot expression="celebrating" size="medium" />
         </MotiView>
 
         <MotiView

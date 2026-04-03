@@ -101,6 +101,8 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
         perfectMatches: feedData.perfectMatches.length,
         liked: feedData.likedRecipes.length,
         rotd: feedData.recipeOfTheDay?.title || 'none',
+        rotdMatchPct: feedData.recipeOfTheDay?.score?.matchPercentage,
+        rotdScore: feedData.recipeOfTheDay?.score,
       });
 
       return feedData;

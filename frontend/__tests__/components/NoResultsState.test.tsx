@@ -9,9 +9,8 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
-jest.mock('../../components/mascot/SazonMascot', () => ({
-  __esModule: true,
-  default: () => null,
+jest.mock('../../components/mascot', () => ({
+  LogoMascot: () => null,
 }));
 
 import NoResultsState from '../../components/home/NoResultsState';

@@ -44,7 +44,7 @@ jest.mock('../../components/ui/GradientButton', () => {
 });
 
 jest.mock('../../components/mascot', () => ({
-  SazonMascot: function MockSazonMascot({ expression }: any) {
+  LogoMascot: function MockLogoMascot({ expression }: any) {
     const { View } = require('react-native');
     return <View testID={`mascot-${expression}`} />;
   },

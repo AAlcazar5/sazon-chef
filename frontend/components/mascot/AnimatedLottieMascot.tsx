@@ -1,12 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 import LottieMascot from './LottieMascot';
-import { SazonExpression, SazonSize, SazonVariant } from './SazonMascot';
+import { LogoMascotExpression, LogoMascotSize } from './LogoMascot';
 
 interface AnimatedLottieMascotProps {
-  expression?: SazonExpression;
-  size?: SazonSize;
-  variant?: SazonVariant;
+  expression?: LogoMascotExpression;
+  size?: LogoMascotSize;
   animationType?: 'idle' | 'bounce' | 'pulse' | 'wave' | 'celebrate' | 'none';
   autoPlay?: boolean;
   loop?: boolean;
@@ -17,7 +16,6 @@ interface AnimatedLottieMascotProps {
 export default function AnimatedLottieMascot({
   expression = 'happy',
   size = 'medium',
-  variant = 'orange',
   animationType = 'idle',
   autoPlay = true,
   loop = true,
@@ -201,7 +199,6 @@ export default function AnimatedLottieMascot({
       <LottieMascot
         expression={expression}
         size={size}
-        variant={variant}
         autoPlay={autoPlay}
         loop={loop}
         speed={speed}

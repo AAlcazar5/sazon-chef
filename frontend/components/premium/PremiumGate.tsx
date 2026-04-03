@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { useSubscription } from '../../hooks/useSubscription';
 import GradientButton, { GradientPresets } from '../ui/GradientButton';
-import { SazonMascot } from '../mascot';
+import { LogoMascot } from '../mascot';
 
 interface PremiumGateProps {
   children: React.ReactNode;
@@ -25,7 +25,7 @@ export function PremiumGate({ children, featureName, onUpgrade }: PremiumGatePro
 
   return (
     <View className="flex-1 items-center justify-center px-8 py-12">
-      <SazonMascot expression="supportive" size="medium" />
+      <LogoMascot expression="supportive" size="medium" />
 
       <Text className="text-2xl font-bold text-gray-900 dark:text-white text-center mt-6 mb-2">
         Premium Feature
