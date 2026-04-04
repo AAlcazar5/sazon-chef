@@ -1,29 +1,43 @@
 // frontend/components/premium/PaywallScreen.tsx
-// Full-screen paywall with monthly/annual toggle, feature list, and Stripe checkout.
+// 9N: Dark gradient paywall with pastel-tinted feature icon badges,
+// shimmer CTA, spring entrance for price pill.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   Platform,
+  StyleSheet,
 } from 'react-native';
-import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { MotiView } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withDelay,
+  Easing,
+} from 'react-native-reanimated';
 import { useSubscription } from '../../hooks/useSubscription';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../ui/GradientButton';
 import { LogoMascot } from '../mascot';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { PremiumCelebration } from '../celebrations';
+import { paywallBg, premiumCTA } from '../../constants/Gradients';
+import { Pastel, PastelDark } from '../../constants/Colors';
+import { FontSize, FontWeight } from '../../constants/Typography';
+import { Shadows } from '../../constants/Shadows';
 
 const PREMIUM_FEATURES = [
-  { icon: '🗓', label: 'Unlimited AI meal plans' },
-  { icon: '🛒', label: 'Smart shopping list generation' },
-  { icon: '📊', label: 'Advanced nutrition insights' },
-  { icon: '🍳', label: 'Cooking mode with timers' },
-  { icon: '🧩', label: 'Pantry & expiry tracking' },
-  { icon: '🔔', label: 'Smart reminders & alerts' },
+  { icon: '🗓', label: 'Unlimited AI meal plans', tint: Pastel.sage, tintDark: PastelDark.sage },
+  { icon: '🛒', label: 'Smart shopping list generation', tint: Pastel.sky, tintDark: PastelDark.sky },
+  { icon: '📊', label: 'Advanced nutrition insights', tint: Pastel.lavender, tintDark: PastelDark.lavender },
+  { icon: '🍳', label: 'Cooking mode with timers', tint: Pastel.peach, tintDark: PastelDark.peach },
+  { icon: '🧩', label: 'Pantry & expiry tracking', tint: Pastel.golden, tintDark: PastelDark.golden },
+  { icon: '🔔', label: 'Smart reminders & alerts', tint: Pastel.blush, tintDark: PastelDark.blush },
 ];
 
 interface PaywallScreenProps {
@@ -35,12 +49,29 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
     useSubscription();
   const [interval, setInterval] = useState<'month' | 'year'>('month');
 
+  // Shimmer animation for CTA
+  const shimmerX = useSharedValue(-1);
+  useEffect(() => {
+    shimmerX.value = withDelay(
+      3000,
+      withRepeat(
+        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        false,
+      ),
+    );
+  }, []);
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: shimmerX.value > -0.2 && shimmerX.value < 0.2 ? 0.4 : 0,
+  }));
+
   const isManageable =
     subscription.isPremium && subscription.status !== 'canceled';
 
   if (subscription.loading) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View style={styles.loadingContainer}>
         <AnimatedActivityIndicator size="large" color="#FF6B35" />
       </View>
     );
@@ -48,220 +79,378 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
 
   return (
     <>
-    <ScrollView
-      className="flex-1 bg-white dark:bg-gray-900"
-      contentContainerStyle={{ paddingBottom: 48 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Hero — gradient header */}
-      <LinearGradient
-        colors={['#A855F7', '#6366F1']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ paddingTop: 56, paddingBottom: 40, paddingHorizontal: 24, alignItems: 'center' }}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 48 }}
+        showsVerticalScrollIndicator={false}
       >
-        {onClose && (
-          <HapticTouchableOpacity
-            style={{
-              position: 'absolute', top: 16, right: 16,
-              width: 32, height: 32, borderRadius: 16,
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              alignItems: 'center', justifyContent: 'center',
-            }}
-            onPress={onClose}
+        {/* Dark gradient background — full screen */}
+        <LinearGradient
+          colors={[paywallBg[0], paywallBg[1], '#0D0D0D']}
+          locations={[0, 0.6, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Hero section */}
+        <View style={styles.hero}>
+          {onClose && (
+            <HapticTouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              accessibilityLabel="Close paywall"
+            >
+              <Text style={styles.closeX}>×</Text>
+            </HapticTouchableOpacity>
+          )}
+
+          <MotiView
+            from={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 14, stiffness: 280, delay: 80 }}
           >
-            <Text style={{ color: '#fff', fontSize: 18, lineHeight: 22 }}>×</Text>
-          </HapticTouchableOpacity>
+            <LogoMascot expression="celebrating" size="medium" />
+          </MotiView>
+
+          <MotiView
+            from={{ translateY: 16, opacity: 0 }}
+            animate={{ translateY: 0, opacity: 1 }}
+            transition={{ type: 'spring', damping: 18, stiffness: 260, delay: 200 }}
+          >
+            <Text style={styles.heroTitle}>Sazon Premium</Text>
+            <Text style={styles.heroSubtitle}>Your personal chef — unlocked</Text>
+          </MotiView>
+        </View>
+
+        {/* Trial badge */}
+        {!subscription.isPremium && (
+          <MotiView
+            from={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 16, stiffness: 280, delay: 300 }}
+            style={styles.trialBadgeContainer}
+          >
+            <LinearGradient
+              colors={['#fa7e12', '#f59e0b']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.trialBadge}
+            >
+              <Text style={styles.trialText}>✦ 7-day free trial — cancel anytime</Text>
+            </LinearGradient>
+          </MotiView>
         )}
 
-        <MotiView
-          from={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 14, stiffness: 280, delay: 80 }}
-        >
-          <LogoMascot expression="celebrating" size="medium" />
-        </MotiView>
-
-        <MotiView
-          from={{ translateY: 16, opacity: 0 }}
-          animate={{ translateY: 0, opacity: 1 }}
-          transition={{ type: 'spring', damping: 18, stiffness: 260, delay: 200 }}
-        >
-          <Text style={{ fontSize: 30, fontWeight: '800', color: '#fff', textAlign: 'center', marginTop: 16, marginBottom: 4 }}>
-            Sazon Premium
-          </Text>
-          <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
-            Your personal chef — unlocked
-          </Text>
-        </MotiView>
-      </LinearGradient>
-
-      {/* Trial / active badge */}
-      {!subscription.isPremium && (
-        <MotiView
-          from={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 16, stiffness: 280, delay: 300 }}
-          style={{ marginHorizontal: 24, marginTop: -16, marginBottom: 8 }}
-        >
-          <LinearGradient
-            colors={['#fa7e12', '#f59e0b']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{ borderRadius: 16, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center' }}
-          >
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
-              ✦ 7-day free trial — cancel anytime
+        {isManageable && (
+          <View style={styles.activeBadge}>
+            <Text style={styles.activeBadgeText}>
+              {subscription.status === 'trialing'
+                ? `Trial active — ${trialDaysLeft ?? 0} day${trialDaysLeft !== 1 ? 's' : ''} left`
+                : 'You have Sazon Premium'}
             </Text>
-          </LinearGradient>
-        </MotiView>
-      )}
-
-      {isManageable && (
-        <View className="mx-6 mt-4 mb-2 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-2xl px-4 py-3">
-          <Text className="text-green-700 dark:text-green-400 font-semibold text-center text-sm">
-            {subscription.status === 'trialing'
-              ? `Trial active — ${trialDaysLeft ?? 0} day${trialDaysLeft !== 1 ? 's' : ''} left`
-              : 'You have Sazon Premium'}
-          </Text>
-        </View>
-      )}
-
-      {/* Staggered feature list */}
-      <View style={{ marginHorizontal: 24, marginTop: 20, marginBottom: 8 }}>
-        {PREMIUM_FEATURES.map((f, i) => (
-          <MotiView
-            key={f.label}
-            from={{ translateX: -24, opacity: 0 }}
-            animate={{ translateX: 0, opacity: 1 }}
-            transition={{ type: 'spring', damping: 18, stiffness: 260, delay: 350 + i * 60 }}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}
-          >
-            <View style={{
-              width: 40, height: 40, borderRadius: 12,
-              backgroundColor: 'rgba(168,85,247,0.12)',
-              alignItems: 'center', justifyContent: 'center',
-              marginRight: 12,
-            }}>
-              <Text style={{ fontSize: 20 }}>{f.icon}</Text>
-            </View>
-            <Text style={{ flex: 1, fontSize: 15, fontWeight: '500', color: '#374151' }} className="dark:text-gray-200">
-              {f.label}
-            </Text>
-            <Text style={{ color: '#10B981', fontWeight: '800', fontSize: 16 }}>✓</Text>
-          </MotiView>
-        ))}
-      </View>
-
-      {/* Plan toggle + CTA */}
-      {!isManageable && (
-        <MotiView
-          from={{ translateY: 20, opacity: 0 }}
-          animate={{ translateY: 0, opacity: 1 }}
-          transition={{ type: 'spring', damping: 18, stiffness: 240, delay: 750 }}
-        >
-          {/* Pricing toggle */}
-          <View style={{
-            marginHorizontal: 24, borderRadius: 20,
-            backgroundColor: '#F3F4F6', padding: 4, flexDirection: 'row', marginBottom: 16,
-          }} className="dark:bg-gray-800">
-            <MotiView
-              animate={{ scale: interval === 'month' ? 1.02 : 0.98 }}
-              transition={{ type: 'spring', damping: 14, stiffness: 300 }}
-              style={{ flex: 1 }}
-            >
-              <HapticTouchableOpacity
-                style={{
-                  paddingVertical: 12, borderRadius: 16, alignItems: 'center',
-                  backgroundColor: interval === 'month' ? '#fff' : 'transparent',
-                  shadowColor: interval === 'month' ? '#000' : 'transparent',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.08,
-                  shadowRadius: 4,
-                  elevation: interval === 'month' ? 2 : 0,
-                }}
-                onPress={() => setInterval('month')}
-              >
-                <Text style={{ fontWeight: '700', fontSize: 13, color: interval === 'month' ? '#111827' : '#6B7280' }} className="dark:text-white">
-                  Monthly
-                </Text>
-                <Text style={{ fontSize: 11, marginTop: 2, color: interval === 'month' ? '#fa7e12' : '#9CA3AF' }}>$4.99 / mo</Text>
-              </HapticTouchableOpacity>
-            </MotiView>
-
-            <MotiView
-              animate={{ scale: interval === 'year' ? 1.02 : 0.98 }}
-              transition={{ type: 'spring', damping: 14, stiffness: 300 }}
-              style={{ flex: 1 }}
-            >
-              <HapticTouchableOpacity
-                style={{
-                  paddingVertical: 12, borderRadius: 16, alignItems: 'center',
-                  backgroundColor: interval === 'year' ? '#fff' : 'transparent',
-                  shadowColor: interval === 'year' ? '#000' : 'transparent',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.08,
-                  shadowRadius: 4,
-                  elevation: interval === 'year' ? 2 : 0,
-                }}
-                onPress={() => setInterval('year')}
-              >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ fontWeight: '700', fontSize: 13, color: interval === 'year' ? '#111827' : '#6B7280' }} className="dark:text-white">
-                  Annual
-                </Text>
-                <View style={{ backgroundColor: '#fa7e12', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>-33%</Text>
-                </View>
-              </View>
-              <Text style={{ fontSize: 11, marginTop: 2, color: interval === 'year' ? '#fa7e12' : '#9CA3AF' }}>$39.99 / yr</Text>
-              </HapticTouchableOpacity>
-            </MotiView>
           </View>
+        )}
 
-          {/* CTA — idle pulse every 3s to draw eye */}
-          <MotiView
-            from={{ opacity: 0.88 }}
-            animate={{ opacity: 1 }}
-            transition={{ type: 'timing', duration: 1500, loop: true, repeatReverse: true, delay: 3000 }}
-            style={{ marginHorizontal: 24 }}
-          >
-            <GradientButton
-              label="Start Free Trial"
-              onPress={() => startCheckout(interval)}
-              loading={checkoutLoading}
-              disabled={checkoutLoading}
-              colors={GradientPresets.premium}
-              icon="star-outline"
-            />
-            <Text className="text-xs text-gray-400 dark:text-gray-500 text-center mt-3">
-              No charge for 7 days. Cancel anytime in{' '}
-              {Platform.OS === 'ios' ? 'App Store' : 'Google Play'} settings.
-            </Text>
-          </MotiView>
-        </MotiView>
-      )}
-
-      {isManageable && (
-        <View style={{ marginHorizontal: 24, marginTop: 8 }}>
-          <GradientButton
-            label="Manage Subscription"
-            onPress={openPortal}
-            colors={GradientPresets.info}
-            icon="settings-outline"
-          />
+        {/* Feature list — pastel-tinted icon badges */}
+        <View style={styles.featureList}>
+          {PREMIUM_FEATURES.map((f, i) => (
+            <MotiView
+              key={f.label}
+              from={{ translateX: -24, opacity: 0 }}
+              animate={{ translateX: 0, opacity: 1 }}
+              transition={{ type: 'spring', damping: 18, stiffness: 260, delay: 350 + i * 60 }}
+              style={styles.featureRow}
+            >
+              <View style={[styles.featureIconBadge, { backgroundColor: f.tint }]}>
+                <Text style={styles.featureEmoji}>{f.icon}</Text>
+              </View>
+              <Text style={styles.featureLabel}>{f.label}</Text>
+              <Text style={styles.featureCheck}>✓</Text>
+            </MotiView>
+          ))}
         </View>
-      )}
-    </ScrollView>
 
-    {/* Premium conversion celebration */}
-    <PremiumCelebration
-      visible={showPremiumCelebration}
-      onDismiss={() => {
-        dismissPremiumCelebration();
-        onClose?.();
-      }}
-    />
+        {/* Plan toggle + CTA */}
+        {!isManageable && (
+          <MotiView
+            from={{ translateY: 20, opacity: 0 }}
+            animate={{ translateY: 0, opacity: 1 }}
+            transition={{ type: 'spring', damping: 18, stiffness: 240, delay: 750 }}
+          >
+            {/* Pricing toggle — gradient pill with spring */}
+            <View style={styles.pricingToggle}>
+              <MotiView
+                animate={{ scale: interval === 'month' ? 1.02 : 0.98 }}
+                transition={{ type: 'spring', damping: 14, stiffness: 300 }}
+                style={{ flex: 1 }}
+              >
+                <HapticTouchableOpacity
+                  style={[
+                    styles.pricingOption,
+                    interval === 'month' && styles.pricingOptionActive,
+                  ]}
+                  onPress={() => setInterval('month')}
+                >
+                  <Text style={[
+                    styles.pricingLabel,
+                    { color: interval === 'month' ? '#FFFFFF' : '#9CA3AF' },
+                  ]}>
+                    Monthly
+                  </Text>
+                  <Text style={[
+                    styles.pricingAmount,
+                    { color: interval === 'month' ? '#FFB74D' : '#6B7280' },
+                  ]}>
+                    $4.99 / mo
+                  </Text>
+                </HapticTouchableOpacity>
+              </MotiView>
+
+              <MotiView
+                animate={{ scale: interval === 'year' ? 1.02 : 0.98 }}
+                transition={{ type: 'spring', damping: 14, stiffness: 300 }}
+                style={{ flex: 1 }}
+              >
+                <HapticTouchableOpacity
+                  style={[
+                    styles.pricingOption,
+                    interval === 'year' && styles.pricingOptionActive,
+                  ]}
+                  onPress={() => setInterval('year')}
+                >
+                  <View style={styles.annualRow}>
+                    <Text style={[
+                      styles.pricingLabel,
+                      { color: interval === 'year' ? '#FFFFFF' : '#9CA3AF' },
+                    ]}>
+                      Annual
+                    </Text>
+                    <View style={styles.discountBadge}>
+                      <Text style={styles.discountText}>-33%</Text>
+                    </View>
+                  </View>
+                  <Text style={[
+                    styles.pricingAmount,
+                    { color: interval === 'year' ? '#FFB74D' : '#6B7280' },
+                  ]}>
+                    $39.99 / yr
+                  </Text>
+                </HapticTouchableOpacity>
+              </MotiView>
+            </View>
+
+            {/* CTA — shimmer every 3s */}
+            <View style={styles.ctaContainer}>
+              <View>
+                <GradientButton
+                  label="Start Free Trial"
+                  onPress={() => startCheckout(interval)}
+                  loading={checkoutLoading}
+                  disabled={checkoutLoading}
+                  colors={premiumCTA as unknown as [string, string]}
+                  icon="star-outline"
+                />
+                {/* Shimmer overlay */}
+                <Animated.View
+                  style={[styles.shimmerOverlay, shimmerStyle]}
+                  pointerEvents="none"
+                >
+                  <LinearGradient
+                    colors={['transparent', 'rgba(255,255,255,0.3)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+              </View>
+              <Text style={styles.legalText}>
+                No charge for 7 days. Cancel anytime in{' '}
+                {Platform.OS === 'ios' ? 'App Store' : 'Google Play'} settings.
+              </Text>
+            </View>
+          </MotiView>
+        )}
+
+        {isManageable && (
+          <View style={styles.ctaContainer}>
+            <GradientButton
+              label="Manage Subscription"
+              onPress={openPortal}
+              colors={GradientPresets.info}
+              icon="settings-outline"
+            />
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Premium conversion celebration */}
+      <PremiumCelebration
+        visible={showPremiumCelebration}
+        onDismiss={() => {
+          dismissPremiumCelebration();
+          onClose?.();
+        }}
+      />
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0D0D0D',
+  },
+  hero: {
+    paddingTop: 56,
+    paddingBottom: 40,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeX: {
+    color: '#fff',
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: FontWeight.extrabold,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: FontSize.md,
+    color: 'rgba(255,255,255,0.65)',
+    textAlign: 'center',
+  },
+  trialBadgeContainer: {
+    marginHorizontal: 24,
+    marginTop: -16,
+    marginBottom: 8,
+  },
+  trialBadge: {
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  trialText: {
+    color: '#fff',
+    fontWeight: FontWeight.bold,
+    fontSize: FontSize.sm,
+  },
+  activeBadge: {
+    marginHorizontal: 24,
+    marginTop: 4,
+    marginBottom: 8,
+    backgroundColor: 'rgba(16,185,129,0.15)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  activeBadgeText: {
+    color: '#34D399',
+    fontWeight: FontWeight.semibold,
+    textAlign: 'center',
+    fontSize: FontSize.sm,
+  },
+  featureList: {
+    marginHorizontal: 24,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  featureIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  featureEmoji: {
+    fontSize: 18,
+  },
+  featureLabel: {
+    flex: 1,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  featureCheck: {
+    color: '#34D399',
+    fontWeight: FontWeight.extrabold,
+    fontSize: FontSize.md,
+  },
+  pricingToggle: {
+    marginHorizontal: 24,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    padding: 4,
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  pricingOption: {
+    paddingVertical: 12,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  pricingOptionActive: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  pricingLabel: {
+    fontWeight: FontWeight.bold,
+    fontSize: FontSize.sm,
+  },
+  pricingAmount: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  annualRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  discountBadge: {
+    backgroundColor: '#fa7e12',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  discountText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: FontWeight.extrabold,
+  },
+  ctaContainer: {
+    marginHorizontal: 24,
+  },
+  shimmerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 100,
+    overflow: 'hidden',
+  },
+  legalText: {
+    fontSize: FontSize.xs,
+    color: 'rgba(255,255,255,0.35)',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+});

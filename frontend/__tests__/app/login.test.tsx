@@ -13,16 +13,16 @@ import { useRouter } from 'expo-router';
 jest.mock('../../contexts/AuthContext');
 jest.mock('expo-router');
 
-// Forward testID so gradient-background is queryable
-jest.mock('expo-linear-gradient', () => ({
-  LinearGradient: function MockLinearGradient(props: any) {
+// 9N: login wraps in ScreenGradient (variant="auth"). Mock it with a testID.
+jest.mock('../../components/ui/ScreenGradient', () => {
+  return function MockScreenGradient(props: any) {
     return require('react').createElement(
       require('react-native').View,
-      { testID: props.testID, style: props.style },
+      { testID: `screen-gradient-${props.variant ?? 'default'}` },
       props.children || null,
     );
-  },
-}));
+  };
+});
 
 jest.mock('../../components/mascot/LogoMascot', () => {
   return function MockLogoMascot({ expression }: any) {
@@ -67,14 +67,14 @@ describe('LoginScreen', () => {
 
   // ── Structure ───────────────────────────────────────────────────────────────
 
-  it('renders mascot element', () => {
+  it('renders mascot element (9N: happy when no error)', () => {
     const { getByTestId } = render(<LoginScreen />);
-    expect(getByTestId('login-mascot')).toBeTruthy();
+    expect(getByTestId('mascot-happy')).toBeTruthy();
   });
 
-  it('renders gradient background', () => {
+  it('renders auth gradient background (9N)', () => {
     const { getByTestId } = render(<LoginScreen />);
-    expect(getByTestId('gradient-background')).toBeTruthy();
+    expect(getByTestId('screen-gradient-auth')).toBeTruthy();
   });
 
   it('renders email and password inputs', () => {
@@ -182,7 +182,8 @@ describe('LoginScreen', () => {
     fireEvent.press(getByText('Sign In'));
 
     await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123'));
-    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)');
+    // 9N: login shows 300ms excited-mascot flash before navigating
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)'));
   });
 
   // ── Navigation ──────────────────────────────────────────────────────────────

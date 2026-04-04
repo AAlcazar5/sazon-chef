@@ -155,7 +155,7 @@ export default function ProfileScreen() {
         scrollY={scrollY}
       />
 
-      <ScrollView
+      <Animated.ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
         refreshControl={
@@ -303,7 +303,7 @@ export default function ProfileScreen() {
           onProceedWithDeletion={proceedWithDeletion}
           onChangePassword={changePassword}
         />
-      </ScrollView>
+      </Animated.ScrollView>
 
       <CancellationFlow
         visible={showCancellationFlow}

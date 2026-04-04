@@ -1,4 +1,6 @@
 // frontend/app/onboarding.tsx
+// 9N: 3-screen onboarding with pastel gradient backgrounds, mascot per step,
+// spring transitions, and hero typography.
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import React, { useState, useEffect } from 'react';
 import {
@@ -7,6 +9,7 @@ import {
   ScrollView,
   Alert,
   BackHandler,
+  StyleSheet,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -14,6 +17,7 @@ import Animated, {
   withSpring,
   withTiming,
   runOnJS,
+  interpolateColor,
 } from 'react-native-reanimated';
 import { MotiView } from 'moti';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,37 +29,59 @@ import AnimatedLottieMascot from '../components/mascot/AnimatedLottieMascot';
 import LogoMascot from '../components/mascot/LogoMascot';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import SuccessModal from '../components/ui/SuccessModal';
-import { Colors, DarkColors } from '../constants/Colors';
+import ScreenGradient from '../components/ui/ScreenGradient';
+import { Colors, DarkColors, Pastel, PastelDark } from '../constants/Colors';
+import { FontSize, FontWeight } from '../constants/Typography';
+import { Shadows } from '../constants/Shadows';
 import { HapticPatterns } from '../constants/Haptics';
+import { onboarding1, onboarding2, onboarding3 } from '../constants/Gradients';
 import { useColorScheme } from 'nativewind';
+import type { LogoMascotExpression } from '../components/mascot/LogoMascot';
 
 // ── 3-screen onboarding flow ──
-// Step 0: Welcome (name + Sazon mascot)
-// Step 1: Dietary Restrictions (top 5 + "More" disclosure)
-// Step 2: Goal (3 simple tiles)
+// Step 0: Welcome (peach gradient + excited mascot)
+// Step 1: Dietary Restrictions (sage gradient + thinking mascot)
+// Step 2: Goal (lavender gradient + chef-kiss mascot)
 
 const TOTAL_STEPS = 3;
 
-const DIETARY_RESTRICTIONS = [
-  { name: 'Vegetarian', icon: '🥕', description: 'No meat or fish' },
-  { name: 'Vegan', icon: '🌱', description: 'No animal products' },
-  { name: 'Gluten-Free', icon: '🌾', description: 'No wheat, barley, rye' },
-  { name: 'Dairy-Free', icon: '🥛', description: 'No milk products' },
-  { name: 'Nut-Free', icon: '🥜', description: 'No tree nuts or peanuts' },
-  { name: 'Kosher', icon: '✡️', description: 'Jewish dietary laws' },
-  { name: 'Halal', icon: '☪️', description: 'Islamic dietary laws' },
-  { name: 'Pescatarian', icon: '🐟', description: 'No meat, but fish allowed' },
-  { name: 'Keto', icon: '🥑', description: 'Low carb, high fat' },
-  { name: 'Paleo', icon: '🦴', description: 'Whole foods, no processed' },
+const STEP_GRADIENTS: readonly (readonly [string, string])[] = [
+  onboarding1, // peach → cream
+  onboarding2, // sage → cream
+  onboarding3, // lavender → cream
 ];
 
-// Top 5 shown by default; rest behind "More" disclosure
+const STEP_DARK_GRADIENTS: readonly (readonly [string, string])[] = [
+  ['rgba(255,183,77,0.08)', '#0D0D0D'],
+  ['rgba(129,199,132,0.08)', '#0D0D0D'],
+  ['rgba(206,147,216,0.08)', '#0D0D0D'],
+];
+
+const STEP_MASCOTS: readonly LogoMascotExpression[] = [
+  'excited',    // Welcome
+  'thinking',   // Dietary restrictions
+  'chef-kiss',  // Goal
+];
+
+const DIETARY_RESTRICTIONS = [
+  { name: 'Vegetarian', icon: '🥕', description: 'No meat or fish', tint: Pastel.sage, tintDark: PastelDark.sage },
+  { name: 'Vegan', icon: '🌱', description: 'No animal products', tint: Pastel.sage, tintDark: PastelDark.sage },
+  { name: 'Gluten-Free', icon: '🌾', description: 'No wheat, barley, rye', tint: Pastel.golden, tintDark: PastelDark.golden },
+  { name: 'Dairy-Free', icon: '🥛', description: 'No milk products', tint: Pastel.sky, tintDark: PastelDark.sky },
+  { name: 'Nut-Free', icon: '🥜', description: 'No tree nuts or peanuts', tint: Pastel.red, tintDark: PastelDark.red },
+  { name: 'Kosher', icon: '✡️', description: 'Jewish dietary laws', tint: Pastel.lavender, tintDark: PastelDark.lavender },
+  { name: 'Halal', icon: '☪️', description: 'Islamic dietary laws', tint: Pastel.peach, tintDark: PastelDark.peach },
+  { name: 'Pescatarian', icon: '🐟', description: 'No meat, but fish allowed', tint: Pastel.sky, tintDark: PastelDark.sky },
+  { name: 'Keto', icon: '🥑', description: 'Low carb, high fat', tint: Pastel.sage, tintDark: PastelDark.sage },
+  { name: 'Paleo', icon: '🦴', description: 'Whole foods, no processed', tint: Pastel.peach, tintDark: PastelDark.peach },
+];
+
 const TOP_DIETARY_RESTRICTIONS = DIETARY_RESTRICTIONS.slice(0, 5);
 
-const SIMPLE_GOALS = [
-  { value: 'maintain', label: 'Balanced', icon: '⚖️', description: 'Eat well and stay healthy' },
-  { value: 'gain_muscle', label: 'High Protein', icon: '💪', description: 'Build muscle and recover' },
-  { value: 'lose_weight', label: 'Lose Weight', icon: '📉', description: 'Eat lighter, feel great' },
+const GOAL_CARDS = [
+  { value: 'maintain', label: 'Eat Healthy', icon: '⚖️', description: 'Balanced meals that fuel your day', tint: Pastel.sage, tintDark: PastelDark.sage },
+  { value: 'lose_weight', label: 'Save Time', icon: '⏱️', description: 'Quick, nutritious meals in 30 min or less', tint: Pastel.sky, tintDark: PastelDark.sky },
+  { value: 'gain_muscle', label: 'Explore Cuisines', icon: '🌍', description: 'Discover flavors from around the world', tint: Pastel.peach, tintDark: PastelDark.peach },
 ];
 
 interface OnboardingData {
@@ -81,9 +107,9 @@ export default function OnboardingScreen() {
   // Android hardware back button -> go to previous step (not previous screen)
   useEffect(() => {
     const onHardwareBack = () => {
-      if (currentStep <= 0) return false; // Let OS pop the screen
+      if (currentStep <= 0) return false;
       prevStep();
-      return true; // Consumed -- don't pop the screen
+      return true;
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
     return () => sub.remove();
@@ -92,22 +118,12 @@ export default function OnboardingScreen() {
   // iOS swipe-back gesture -> go to previous step (not previous screen)
   useEffect(() => {
     const unsubscribe = (navigation as any).addListener('beforeRemove', (e: any) => {
-      if (currentStep <= 0) return; // First step -- allow the screen to be popped
-      e.preventDefault(); // Cancel the navigation event
-      prevStep();          // Move one step back within the flow instead
+      if (currentStep <= 0) return;
+      e.preventDefault();
+      prevStep();
     });
     return unsubscribe;
   }, [navigation, currentStep]);
-
-  // Mascot expression per step: excited (welcome) -> thinking (dietary) -> chef-kiss (goal)
-  const getMascotExpression = (): 'excited' | 'thinking' | 'chef-kiss' => {
-    switch (currentStep) {
-      case 0: return 'excited';
-      case 1: return 'thinking';
-      case 2: return 'chef-kiss';
-      default: return 'excited';
-    }
-  };
 
   const toggleDietaryRestriction = (name: string) => {
     setData(prev => ({
@@ -118,22 +134,27 @@ export default function OnboardingScreen() {
     }));
   };
 
-  // ── Screen transition animation ──
-  const slideX = useSharedValue(0);
+  // ── Screen transition: spring scale 0.95→1.0 + opacity ──
+  const slideScale = useSharedValue(1);
+  const slideOpacity = useSharedValue(1);
   const [visibleStep, setVisibleStep] = useState(currentStep);
 
   const animateToStep = (nextStepIndex: number) => {
-    const direction = nextStepIndex > currentStep ? 1 : -1;
-    slideX.value = withTiming(direction * -40, { duration: 120 }, () => {
+    // Exit: scale down + fade out
+    slideScale.value = withTiming(0.95, { duration: 120 });
+    slideOpacity.value = withTiming(0, { duration: 120 }, () => {
       runOnJS(setVisibleStep)(nextStepIndex);
-      slideX.value = direction * 40;
-      slideX.value = withSpring(0, { damping: 18, stiffness: 280 });
+      // Enter: spring scale up + fade in
+      slideScale.value = 0.95;
+      slideOpacity.value = 0;
+      slideScale.value = withSpring(1, { damping: 18, stiffness: 280 });
+      slideOpacity.value = withTiming(1, { duration: 200 });
     });
   };
 
   const slideStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(1, { duration: 100 }),
-    transform: [{ translateX: slideX.value }],
+    opacity: slideOpacity.value,
+    transform: [{ scale: slideScale.value }],
   }));
 
   const nextStep = () => {
@@ -169,22 +190,17 @@ export default function OnboardingScreen() {
 
       await userApi.updatePreferences(prefsPayload);
 
-      // Only update physical profile if a fitness goal was selected
       if (data.fitnessGoal) {
-        await userApi.updatePhysicalProfile({
-          fitnessGoal: data.fitnessGoal,
-        } as any);
+        await AsyncStorage.setItem('onboarding_goal', data.fitnessGoal);
       }
 
-      // Mark onboarding as complete
       await AsyncStorage.setItem('onboarding_complete', 'true');
 
       HapticPatterns.success();
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error saving onboarding data:', error);
       HapticPatterns.error();
-      Alert.alert('Oops!', 'Couldn\'t save your preferences — give it another shot?');
+      Alert.alert('Oops!', "Couldn't save your preferences — give it another shot?");
     } finally {
       setSaving(false);
     }
@@ -202,8 +218,7 @@ export default function OnboardingScreen() {
             try {
               await AsyncStorage.setItem('onboarding_complete', 'true');
               router.replace('/(tabs)');
-            } catch (error) {
-              console.error('Error skipping onboarding:', error);
+            } catch {
               router.replace('/(tabs)');
             }
           }
@@ -214,7 +229,7 @@ export default function OnboardingScreen() {
 
   // ── Render step dispatcher ──
   const renderStep = () => {
-    switch (currentStep) {
+    switch (visibleStep) {
       case 0: return renderWelcome();
       case 1: return renderDietary();
       case 2: return renderGoal();
@@ -223,41 +238,46 @@ export default function OnboardingScreen() {
   };
 
   // ════════════════════════════════════════
-  // Screen 1: Welcome
+  // Screen 1: Welcome — peach gradient
   // ════════════════════════════════════════
-
   const renderWelcome = () => (
-    <ScrollView className="flex-1 px-6 py-8" keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400, delay: 0 }}
+        from={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'spring', damping: 16, stiffness: 200 }}
       >
-        <View className="items-center mb-8">
-          <LogoMascot
-            expression="excited"
-            size="large"
-            style={{ marginBottom: 16 }}
-          />
+        <View style={styles.mascotContainer}>
+          <LogoMascot expression="excited" size="large" />
         </View>
       </MotiView>
 
       <MotiView
-        from={{ opacity: 0, translateY: 20 }}
+        from={{ opacity: 0, translateY: 24 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400, delay: 50 }}
+        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 100 }}
       >
-        <Text className="text-3xl font-bold text-center mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-          Welcome to Sazon Chef!
+        <Text
+          style={[
+            styles.heroTitle,
+            { color: isDark ? DarkColors.text.primary : Colors.text.primary },
+          ]}
+          accessibilityRole="header"
+        >
+          What's your name?
         </Text>
       </MotiView>
 
       <MotiView
         from={{ opacity: 0, translateY: 20 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400, delay: 100 }}
+        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 150 }}
       >
-        <Text className="text-lg text-center mb-8" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+        <Text style={[styles.subtitle, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
           Let's personalize your experience in just a few quick steps
         </Text>
       </MotiView>
@@ -265,32 +285,38 @@ export default function OnboardingScreen() {
       <MotiView
         from={{ opacity: 0, translateY: 20 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400, delay: 150 }}
+        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 200 }}
       >
-        <View className="rounded-2xl p-6 shadow-sm" style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}>
-          <View className="flex-row items-center mb-4">
-            <View className="rounded-full p-3 mr-4" style={{ backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenLight }}>
-              <Text className="text-2xl">🥗</Text>
+        <View style={[
+          styles.previewCard,
+          {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.8)',
+            ...(Shadows.MD as any),
+          },
+        ]}>
+          <View style={styles.previewRow}>
+            <View style={[styles.previewIconBg, { backgroundColor: isDark ? PastelDark.sage : Pastel.sage }]}>
+              <Text style={styles.previewEmoji}>🥗</Text>
             </View>
-            <View className="flex-1">
-              <Text className="text-lg font-semibold mb-1" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+            <View style={styles.previewText}>
+              <Text style={[styles.previewTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
                 Set Your Restrictions
               </Text>
-              <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+              <Text style={[styles.previewDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
                 Tell us about dietary needs
               </Text>
             </View>
           </View>
 
-          <View className="flex-row items-center">
-            <View className="rounded-full p-3 mr-4" style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight }}>
-              <Text className="text-2xl">🎯</Text>
+          <View style={styles.previewRow}>
+            <View style={[styles.previewIconBg, { backgroundColor: isDark ? PastelDark.peach : Pastel.peach }]}>
+              <Text style={styles.previewEmoji}>🎯</Text>
             </View>
-            <View className="flex-1">
-              <Text className="text-lg font-semibold mb-1" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+            <View style={styles.previewText}>
+              <Text style={[styles.previewTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
                 Pick Your Goal
               </Text>
-              <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+              <Text style={[styles.previewDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
                 What are you cooking for?
               </Text>
             </View>
@@ -299,11 +325,11 @@ export default function OnboardingScreen() {
       </MotiView>
 
       <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400, delay: 200 }}
+        from={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ type: 'timing', duration: 400, delay: 300 }}
       >
-        <Text className="text-sm text-center px-4 mt-6" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>
+        <Text style={[styles.hint, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>
           Takes less than a minute. You can skip and set this up later.
         </Text>
       </MotiView>
@@ -311,20 +337,23 @@ export default function OnboardingScreen() {
   );
 
   // ════════════════════════════════════════
-  // Screen 2: Dietary Restrictions
+  // Screen 2: Dietary Restrictions — sage gradient
   // ════════════════════════════════════════
-
   const renderDietary = () => {
     const restrictionsToShow = showMoreDietary ? DIETARY_RESTRICTIONS : TOP_DIETARY_RESTRICTIONS;
 
     return (
-      <ScrollView className="flex-1 px-6 py-6" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 400, delay: 0 }}
+          from={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', damping: 16, stiffness: 200 }}
         >
-          <View className="items-center mb-4">
+          <View style={styles.mascotContainer}>
             <AnimatedLottieMascot expression="thinking" size="small" />
           </View>
         </MotiView>
@@ -332,13 +361,19 @@ export default function OnboardingScreen() {
         <MotiView
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 400, delay: 50 }}
+          transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 50 }}
         >
-          <Text className="text-2xl font-bold mb-2 text-center" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+          <Text
+            style={[
+              styles.stepTitle,
+              { color: isDark ? DarkColors.text.primary : Colors.text.primary },
+            ]}
+            accessibilityRole="header"
+          >
             Anything you can't eat?
           </Text>
-          <Text className="text-base mb-6 text-center" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-            Optional - Skip if none apply
+          <Text style={[styles.stepSubtitle, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
+            Optional — skip if none apply
           </Text>
         </MotiView>
 
@@ -347,39 +382,40 @@ export default function OnboardingScreen() {
           return (
             <MotiView
               key={restriction.name}
-              from={{ opacity: 0, translateY: 20 }}
+              from={{ opacity: 0, translateY: 16 }}
               animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'timing', duration: 400, delay: 100 + index * 50 }}
+              transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 100 + index * 50 }}
             >
               <HapticTouchableOpacity
                 onPress={() => toggleDietaryRestriction(restriction.name)}
-                className="mb-3 p-4 rounded-xl border-2 flex-row items-center"
-                style={{
-                  borderColor: isSelected
-                    ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
-                    : (isDark ? DarkColors.border.light : Colors.border.light),
-                  backgroundColor: isSelected
-                    ? (isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenLight)
-                    : (isDark ? '#1F2937' : '#FFFFFF'),
-                }}
+                style={[
+                  styles.chipCard,
+                  {
+                    backgroundColor: isSelected
+                      ? (isDark ? restriction.tintDark : restriction.tint)
+                      : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.8)'),
+                    ...(Shadows.SM as any),
+                  },
+                ]}
                 activeOpacity={0.7}
+                accessibilityLabel={`${restriction.name}: ${restriction.description}`}
+                accessibilityState={{ selected: isSelected }}
               >
-                <Text className="text-3xl mr-3">{restriction.icon}</Text>
-                <View className="flex-1">
-                  <Text className="text-base font-semibold" style={{
-                    color: isSelected
-                      ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)
-                      : (isDark ? DarkColors.text.primary : Colors.text.primary)
-                  }}>
+                <Text style={styles.chipEmoji}>{restriction.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[
+                    styles.chipName,
+                    { color: isDark ? DarkColors.text.primary : Colors.text.primary },
+                  ]}>
                     {restriction.name}
                   </Text>
-                  <Text className="text-sm mt-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                  <Text style={[styles.chipDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
                     {restriction.description}
                   </Text>
                 </View>
                 {isSelected && (
-                  <View className="rounded-full p-1" style={{ backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}>
-                    <Ionicons name="checkmark" size={16} color="white" />
+                  <View style={[styles.checkBadge, { backgroundColor: Colors.primary }]}>
+                    <Ionicons name="checkmark" size={14} color="white" />
                   </View>
                 )}
               </HapticTouchableOpacity>
@@ -389,20 +425,21 @@ export default function OnboardingScreen() {
 
         {!showMoreDietary && (
           <MotiView
-            from={{ opacity: 0, translateY: 20 }}
+            from={{ opacity: 0, translateY: 12 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 400, delay: 350 }}
+            transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 350 }}
           >
             <HapticTouchableOpacity
               onPress={() => setShowMoreDietary(true)}
-              className="mb-3 p-4 rounded-xl flex-row items-center justify-center"
-              style={{
-                backgroundColor: isDark ? '#1F2937' : '#F3F4F6',
-              }}
+              style={[
+                styles.moreButton,
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.6)' },
+              ]}
               activeOpacity={0.7}
+              accessibilityLabel="Show more dietary options"
             >
               <Ionicons name="chevron-down" size={18} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
-              <Text className="text-base font-medium ml-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+              <Text style={[styles.moreLabel, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
                 More options
               </Text>
             </HapticTouchableOpacity>
@@ -413,17 +450,20 @@ export default function OnboardingScreen() {
   };
 
   // ════════════════════════════════════════
-  // Screen 3: Goal
+  // Screen 3: Goal — lavender gradient
   // ════════════════════════════════════════
-
   const renderGoal = () => (
-    <ScrollView className="flex-1 px-6 py-6" keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400, delay: 0 }}
+        from={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'spring', damping: 16, stiffness: 200 }}
       >
-        <View className="items-center mb-4">
+        <View style={styles.mascotContainer}>
           <AnimatedLottieMascot expression="chef-kiss" size="small" />
         </View>
       </MotiView>
@@ -431,54 +471,61 @@ export default function OnboardingScreen() {
       <MotiView
         from={{ opacity: 0, translateY: 20 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400, delay: 50 }}
+        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 50 }}
       >
-        <Text className="text-2xl font-bold mb-2 text-center" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+        <Text
+          style={[
+            styles.stepTitle,
+            { color: isDark ? DarkColors.text.primary : Colors.text.primary },
+          ]}
+          accessibilityRole="header"
+        >
           What's your goal?
         </Text>
-        <Text className="text-base mb-8 text-center" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+        <Text style={[styles.stepSubtitle, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
           We'll tailor recipes to match
         </Text>
       </MotiView>
 
-      {SIMPLE_GOALS.map((goal, index) => {
+      {GOAL_CARDS.map((goal, index) => {
         const isSelected = data.fitnessGoal === goal.value;
-        const goalColor = goal.value === 'lose_weight' ? '#DC2626'
-          : goal.value === 'maintain' ? '#10B981'
-          : '#8B5CF6';
-
         return (
           <MotiView
             key={goal.value}
-            from={{ opacity: 0, translateY: 20 }}
+            from={{ opacity: 0, translateY: 16 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 400, delay: 100 + index * 50 }}
+            transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 100 + index * 60 }}
           >
             <HapticTouchableOpacity
               onPress={() => setData({ ...data, fitnessGoal: goal.value })}
-              className="mb-4 p-5 rounded-2xl border-2 flex-row items-center"
-              style={{
-                borderColor: isSelected ? goalColor : (isDark ? DarkColors.border.light : Colors.border.light),
-                backgroundColor: isSelected
-                  ? (isDark ? `${goalColor}22` : `${goalColor}11`)
-                  : (isDark ? '#1F2937' : '#FFFFFF'),
-              }}
+              style={[
+                styles.goalCard,
+                {
+                  backgroundColor: isSelected
+                    ? (isDark ? goal.tintDark : goal.tint)
+                    : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.8)'),
+                  ...(Shadows.MD as any),
+                },
+              ]}
               activeOpacity={0.7}
+              accessibilityLabel={`${goal.label}: ${goal.description}`}
+              accessibilityState={{ selected: isSelected }}
             >
-              <Text className="text-4xl mr-4">{goal.icon}</Text>
-              <View className="flex-1">
-                <Text className="text-lg font-bold mb-1" style={{
-                  color: isSelected ? goalColor : (isDark ? DarkColors.text.primary : Colors.text.primary),
-                }}>
+              <Text style={styles.goalEmoji}>{goal.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[
+                  styles.goalLabel,
+                  { color: isDark ? DarkColors.text.primary : Colors.text.primary },
+                ]}>
                   {goal.label}
                 </Text>
-                <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                <Text style={[styles.goalDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
                   {goal.description}
                 </Text>
               </View>
               {isSelected && (
-                <View className="rounded-full p-1" style={{ backgroundColor: goalColor }}>
-                  <Ionicons name="checkmark" size={16} color="white" />
+                <View style={[styles.checkBadge, { backgroundColor: Colors.primary }]}>
+                  <Ionicons name="checkmark" size={14} color="white" />
                 </View>
               )}
             </HapticTouchableOpacity>
@@ -487,106 +534,290 @@ export default function OnboardingScreen() {
       })}
 
       <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400, delay: 250 }}
+        from={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ type: 'timing', duration: 400, delay: 280 }}
       >
-        <Text className="text-sm text-center px-4 mt-2" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>
+        <Text style={[styles.hint, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>
           You can refine this and add more details from your Profile anytime
         </Text>
       </MotiView>
     </ScrollView>
   );
 
-  // ── Main render ──
+  // ── Gradient for current step ──
+  const currentGradient = isDark
+    ? STEP_DARK_GRADIENTS[currentStep]
+    : STEP_GRADIENTS[currentStep];
 
   return (
-    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
-      <View className="flex-1">
-        {/* Header */}
-        <View className="px-6 pt-4 pb-3 border-b" style={{
-          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-          borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light,
-        }}>
-          <View className="flex-row items-center justify-between mb-4">
-            {currentStep > 0 ? (
-              <HapticTouchableOpacity onPress={prevStep} style={{ padding: 4 }}>
-                <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
-              </HapticTouchableOpacity>
-            ) : (
-              <View style={{ width: 32 }} />
-            )}
+    <ScreenGradient gradient={currentGradient}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <View style={{ flex: 1 }}>
+          {/* Header */}
+          <View style={[
+            styles.header,
+            {
+              backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.6)',
+            },
+          ]}>
+            <View style={styles.headerRow}>
+              {currentStep > 0 ? (
+                <HapticTouchableOpacity
+                  onPress={prevStep}
+                  style={{ padding: 4 }}
+                  accessibilityLabel="Go back"
+                >
+                  <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
+                </HapticTouchableOpacity>
+              ) : (
+                <View style={{ width: 32 }} />
+              )}
 
-            {/* Animated mascot reacting per step */}
-            <AnimatedLottieMascot
-              expression={getMascotExpression()}
-              size="tiny"
-            />
-
-            <HapticTouchableOpacity onPress={skipOnboarding} style={{ padding: 4 }}>
-              <Text className="text-base font-medium" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>Skip</Text>
-            </HapticTouchableOpacity>
-          </View>
-
-          {/* Spring progress dots */}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }}>
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <MotiView
-                key={i}
-                animate={{
-                  width: i === currentStep ? 20 : 6,
-                  opacity: i === currentStep ? 1 : i < currentStep ? 0.6 : 0.25,
-                }}
-                transition={{ type: 'spring', damping: 15, stiffness: 300 }}
-                style={{
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: i <= currentStep
-                    ? (isDark ? DarkColors.primary : Colors.primary)
-                    : (isDark ? '#4B5563' : '#D1D5DB'),
-                }}
+              <AnimatedLottieMascot
+                expression={STEP_MASCOTS[currentStep]}
+                size="tiny"
               />
-            ))}
+
+              <HapticTouchableOpacity
+                onPress={skipOnboarding}
+                style={{ padding: 4 }}
+                accessibilityLabel="Skip onboarding"
+              >
+                <Text style={[styles.skipLabel, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>
+                  Skip
+                </Text>
+              </HapticTouchableOpacity>
+            </View>
+
+            {/* Orange active dot progress indicator */}
+            <View style={styles.dotsRow}>
+              {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                <MotiView
+                  key={i}
+                  animate={{
+                    width: i === currentStep ? 20 : 6,
+                    opacity: i === currentStep ? 1 : i < currentStep ? 0.6 : 0.25,
+                  }}
+                  transition={{ type: 'spring', damping: 15, stiffness: 300 }}
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor: i <= currentStep
+                        ? '#FF8B41' // orange active
+                        : (isDark ? '#4B5563' : '#D1D5DB'),
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Content — spring scale transition */}
+          <Animated.View style={[{ flex: 1 }, slideStyle]}>
+            {renderStep()}
+          </Animated.View>
+
+          {/* Bottom Bar */}
+          <View style={[
+            styles.bottomBar,
+            {
+              backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.6)',
+            },
+          ]}>
+            <GradientButton
+              label={saving ? 'Setting Up...' : currentStep === TOTAL_STEPS - 1 ? 'Finish' : 'Continue'}
+              onPress={nextStep}
+              disabled={saving}
+              loading={saving}
+              colors={GradientPresets.brand}
+              icon={currentStep === TOTAL_STEPS - 1 ? 'checkmark-circle-outline' : 'arrow-forward'}
+            />
           </View>
         </View>
 
-        {/* Content -- slides between steps */}
-        <Animated.View style={[{ flex: 1 }, slideStyle]}>
-          {renderStep()}
-        </Animated.View>
-
-        {/* Bottom Bar */}
-        <View className="px-6 py-4 border-t" style={{
-          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-          borderTopColor: isDark ? DarkColors.border.light : Colors.border.light,
-        }}>
-          <GradientButton
-            label={saving ? 'Setting Up...' : currentStep === TOTAL_STEPS - 1 ? 'Finish' : 'Continue'}
-            onPress={nextStep}
-            disabled={saving}
-            loading={saving}
-            colors={GradientPresets.brand}
-            icon={currentStep === TOTAL_STEPS - 1 ? 'checkmark-circle-outline' : 'arrow-forward'}
-          />
-        </View>
-      </View>
-
-      {/* Success Modal */}
-      <SuccessModal
-        visible={showSuccessModal}
-        title="Welcome to Sazon Chef!"
-        message="Your preferences have been saved. We'll use this information to give you personalized recipe recommendations."
-        expression="excited"
-        actionLabel="Get Started"
-        onAction={() => {
-          setShowSuccessModal(false);
-          router.replace('/(tabs)');
-        }}
-        onDismiss={() => {
-          setShowSuccessModal(false);
-          router.replace('/(tabs)');
-        }}
-      />
-    </SafeAreaView>
+        {/* Success Modal */}
+        <SuccessModal
+          visible={showSuccessModal}
+          title="Welcome to Sazon Chef!"
+          message="Your preferences have been saved. We'll use this information to give you personalized recipe recommendations."
+          expression="excited"
+          actionLabel="Get Started"
+          onAction={() => {
+            setShowSuccessModal(false);
+            router.replace('/(tabs)');
+          }}
+          onDismiss={() => {
+            setShowSuccessModal(false);
+            router.replace('/(tabs)');
+          }}
+        />
+      </SafeAreaView>
+    </ScreenGradient>
   );
 }
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    paddingBottom: 40,
+  },
+  mascotContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  heroTitle: {
+    fontSize: FontSize.hero,
+    fontWeight: FontWeight.extrabold,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  stepTitle: {
+    fontSize: FontSize['2xl'],
+    fontWeight: FontWeight.bold,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: FontSize.lg,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 26,
+  },
+  stepSubtitle: {
+    fontSize: FontSize.md,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  hint: {
+    fontSize: FontSize.sm,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  // Preview card (welcome screen)
+  previewCard: {
+    borderRadius: 20,
+    padding: 20,
+    gap: 16,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  previewEmoji: {
+    fontSize: 24,
+  },
+  previewText: {
+    flex: 1,
+  },
+  previewTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    marginBottom: 2,
+  },
+  previewDesc: {
+    fontSize: FontSize.sm,
+  },
+  // Dietary chips
+  chipCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 10,
+  },
+  chipEmoji: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  chipName: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
+  },
+  chipDesc: {
+    fontSize: FontSize.sm,
+    marginTop: 2,
+  },
+  checkBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 10,
+  },
+  moreLabel: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+    marginLeft: 8,
+  },
+  // Goal cards
+  goalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+  goalEmoji: {
+    fontSize: 36,
+    marginRight: 16,
+  },
+  goalLabel: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    marginBottom: 2,
+  },
+  goalDesc: {
+    fontSize: FontSize.sm,
+    lineHeight: 18,
+  },
+  // Header
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  skipLabel: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
+  },
+  // Bottom bar
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+});

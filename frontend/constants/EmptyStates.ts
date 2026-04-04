@@ -1,7 +1,9 @@
 // Empty State Library for Sazon Chef app
 // Predefined empty state configurations for all screens
+// 9N: Pastel tint backgrounds + Sazon personality copy for every state
 
 import { Icons } from './Icons';
+import { Pastel, PastelDark } from './Colors';
 import { LogoMascotExpression } from '../components/mascot/LogoMascot';
 
 /**
@@ -22,6 +24,10 @@ export interface EmptyStateConfig {
   mascotExpression: LogoMascotExpression;
   /** Mascot size */
   mascotSize: 'tiny' | 'small' | 'medium' | 'large' | 'hero';
+  /** Pastel tint bg for light mode */
+  pastelTint?: string;
+  /** Pastel tint bg for dark mode */
+  pastelTintDark?: string;
 }
 
 /**
@@ -30,42 +36,50 @@ export interface EmptyStateConfig {
 export const HomeEmptyStates = {
   /** No recipes available */
   noRecipes: {
-    title: 'No Recipes Yet',
-    description: 'Start exploring delicious recipes tailored just for you!',
+    title: 'Your kitchen awaits',
+    description: "Let's find some delicious recipes tailored just for you!",
     actionLabel: 'Discover Recipes',
     useMascot: true,
     mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 
   /** No search results */
   noSearchResults: {
-    title: 'No Recipes Found',
-    description: 'Try adjusting your search or filters to find more recipes.',
+    title: 'Hmm, nothing came up',
+    description: 'Try tweaking your search or removing a filter — I bet we can find something.',
     actionLabel: 'Clear Filters',
     useMascot: true,
     mascotExpression: 'thinking' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 
   /** No filtered results */
   noFilteredResults: {
-    title: 'No Matching Recipes',
-    description: 'Your current filters are quite specific. Try removing some to see more options.',
+    title: "That's a very specific craving",
+    description: "Try loosening up the filters — there's a lot of good stuff hiding behind them.",
     actionLabel: 'Reset Filters',
     useMascot: true,
     mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.lavender,
+    pastelTintDark: PastelDark.lavender,
   },
 
   /** Loading failed */
   loadingFailed: {
-    title: 'Oops! Something Went Wrong',
-    description: 'We couldn\'t load recipes right now. Please try again.',
+    title: 'Hmm, something went sideways',
+    description: "Couldn't load recipes right now — let me try again for you.",
     actionLabel: 'Try Again',
     useMascot: true,
-    mascotExpression: 'supportive' as LogoMascotExpression,
+    mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.lavender,
+    pastelTintDark: PastelDark.lavender,
   },
 } as const;
 
@@ -75,72 +89,86 @@ export const HomeEmptyStates = {
 export const CookbookEmptyStates = {
   /** No saved recipes */
   noSavedRecipes: {
-    title: 'Your Cookbook is Empty',
-    description: 'Start saving recipes you love by tapping the bookmark icon!',
+    title: 'Your cookbook awaits',
+    description: 'Save recipes you love by tapping the bookmark — they\'ll live here.',
     actionLabel: 'Explore Recipes',
     useMascot: true,
     mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 
   /** No recipes in collection */
   emptyCollection: {
-    title: 'This Collection is Empty',
-    description: 'Add recipes to this collection to organize your favorites.',
+    title: 'This collection is waiting',
+    description: 'Add some recipes here to keep your favorites organized.',
     actionLabel: 'Browse Recipes',
     useMascot: true,
     mascotExpression: 'happy' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.sage,
+    pastelTintDark: PastelDark.sage,
   },
 
   /** No collections */
   noCollections: {
-    title: 'No Collections Yet',
-    description: 'Create collections to organize your favorite recipes by occasion, cuisine, or mood.',
+    title: 'Organize your way',
+    description: 'Create collections by occasion, cuisine, or whatever makes sense to you.',
     actionLabel: 'Create Collection',
     useMascot: true,
     mascotExpression: 'excited' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.lavender,
+    pastelTintDark: PastelDark.lavender,
   },
 
   /** No user-created recipes */
   noUserRecipes: {
-    title: 'No Personal Recipes',
-    description: 'Create your own recipes to add them to your cookbook!',
+    title: 'Your recipes, your rules',
+    description: 'Got a family favorite? Add your own recipes here.',
     actionLabel: 'Create Recipe',
     useMascot: true,
     mascotExpression: 'proud' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.golden,
+    pastelTintDark: PastelDark.golden,
   },
 
   /** No liked recipes */
   noLikedRecipes: {
-    title: 'No Liked Recipes',
-    description: 'Like recipes you enjoy to see them here.',
+    title: 'Nothing liked yet',
+    description: 'Heart the recipes you enjoy and they\'ll show up here.',
     actionLabel: 'Browse Recipes',
     useMascot: true,
     mascotExpression: 'happy' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.blush,
+    pastelTintDark: PastelDark.blush,
   },
 
   /** No disliked recipes */
   noDislikedRecipes: {
-    title: 'No Disliked Recipes',
-    description: 'Dislike recipes to filter them from recommendations.',
+    title: 'All good so far',
+    description: 'Dislike recipes to keep them out of your recommendations.',
     actionLabel: 'Browse Recipes',
     useMascot: true,
     mascotExpression: 'thinking' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.sky,
+    pastelTintDark: PastelDark.sky,
   },
 
   /** Search returned no results */
   noSearchResults: {
-    title: 'No Recipes Found',
-    description: 'No recipes match your search. Try searching for ingredients, cuisine, or recipe names.',
+    title: 'Nothing matched that',
+    description: 'Try different ingredients, a cuisine name, or simpler keywords.',
     actionLabel: 'Clear Search',
     useMascot: true,
     mascotExpression: 'thinking' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 } as const;
 
@@ -150,31 +178,37 @@ export const CookbookEmptyStates = {
 export const MealPlanEmptyStates = {
   /** No meal plan for today */
   noMealPlan: {
-    title: 'No Meals Planned',
-    description: 'Plan your meals for the day to stay on track with your nutrition goals.',
+    title: 'What are we eating today?',
+    description: 'Let me put together a meal plan that hits your macros and tastes amazing.',
     actionLabel: 'Generate Meal Plan',
     useMascot: true,
     mascotExpression: 'thinking' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 
   /** No meals for selected day */
   emptyDay: {
-    title: 'Nothing Planned Yet',
-    description: 'Add meals to this day or let us generate suggestions for you.',
+    title: 'This day is wide open',
+    description: 'Add meals or let me suggest something — your call.',
     actionLabel: 'Add Meal',
     useMascot: true,
     mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.sky,
+    pastelTintDark: PastelDark.sky,
   },
 
   /** Meal plan completed */
   mealPlanComplete: {
-    title: 'Great Job!',
-    description: 'You\'ve completed all meals for today. Keep up the healthy eating!',
+    title: 'Crushed it!',
+    description: 'Every meal today — done. You\'re on a roll.',
     useMascot: true,
     mascotExpression: 'celebrating' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.sage,
+    pastelTintDark: PastelDark.sage,
   },
 } as const;
 
@@ -184,31 +218,37 @@ export const MealPlanEmptyStates = {
 export const ShoppingListEmptyStates = {
   /** No shopping lists */
   noLists: {
-    title: 'No Shopping Lists',
-    description: 'Create a shopping list to keep track of ingredients you need.',
+    title: 'Ready to shop?',
+    description: 'Create a list or generate one from your meal plan — we\'ll sort it by aisle.',
     actionLabel: 'Create List',
     useMascot: true,
     mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.sky,
+    pastelTintDark: PastelDark.sky,
   },
 
   /** Empty shopping list */
   emptyList: {
-    title: 'Your List is Empty',
-    description: 'Add items to your shopping list or generate one from your meal plan.',
+    title: 'Nothing on the list yet',
+    description: 'Add items manually or pull them straight from your meal plan.',
     actionLabel: 'Add Items',
     useMascot: true,
     mascotExpression: 'happy' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 
   /** All items purchased */
   allPurchased: {
-    title: 'Shopping Complete!',
-    description: 'You\'ve checked off all items. Time to cook something delicious!',
+    title: 'All done — time to cook!',
+    description: 'Every item checked off. Your kitchen is fully stocked.',
     useMascot: true,
     mascotExpression: 'chef-kiss' as LogoMascotExpression,
     mascotSize: 'large' as const,
+    pastelTint: Pastel.sage,
+    pastelTintDark: PastelDark.sage,
   },
 } as const;
 
@@ -218,22 +258,26 @@ export const ShoppingListEmptyStates = {
 export const ProfileEmptyStates = {
   /** No weight history */
   noWeightHistory: {
-    title: 'No Weight Logs',
-    description: 'Start tracking your weight to monitor your progress.',
+    title: 'Track your progress',
+    description: 'Log your weight over time to see how your nutrition is paying off.',
     actionLabel: 'Log Weight',
     useMascot: true,
     mascotExpression: 'supportive' as LogoMascotExpression,
     mascotSize: 'small' as const,
+    pastelTint: Pastel.lavender,
+    pastelTintDark: PastelDark.lavender,
   },
 
   /** No preferences set */
   noPreferences: {
-    title: 'Set Your Preferences',
-    description: 'Tell us about your dietary preferences for personalized recommendations.',
+    title: 'Make it yours',
+    description: 'Set your dietary preferences and I\'ll tailor every recommendation to you.',
     actionLabel: 'Get Started',
     useMascot: true,
     mascotExpression: 'excited' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 } as const;
 
@@ -243,72 +287,111 @@ export const ProfileEmptyStates = {
 export const SearchEmptyStates = {
   /** Initial search state */
   initial: {
-    title: 'Search for Recipes',
-    description: 'Find recipes by name, ingredient, or cuisine.',
+    title: 'What are you craving?',
+    description: 'Search by name, ingredient, or cuisine — I\'ll find it.',
     useMascot: true,
     mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 
   /** No results found */
   noResults: {
-    title: 'No Results Found',
-    description: 'We couldn\'t find any recipes matching your search. Try different keywords.',
+    title: 'Let me think of something else...',
+    description: 'Nothing matched that search — try different keywords or an ingredient.',
     useMascot: true,
     mascotExpression: 'thinking' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 } as const;
 
 /**
  * Generic empty states for common scenarios
+ * 9N: Pastel tint backgrounds + Sazon personality copy
  */
 export const GenericEmptyStates = {
   /** Loading state */
   loading: {
-    title: 'Loading...',
-    description: 'Just a moment while we fetch your content.',
+    title: 'Cooking up something...',
+    description: 'Just a sec while we get things ready for you.',
     useMascot: true,
     mascotExpression: 'thinking' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 
-  /** Error state */
+  /** API error — confused on lavender */
   error: {
-    title: 'Something Went Wrong',
-    description: 'We encountered an error. Please try again.',
-    actionLabel: 'Retry',
+    title: 'Hmm, something went sideways',
+    description: 'Let me try that again — sometimes the kitchen gets a little chaotic.',
+    actionLabel: 'Try Again',
     useMascot: true,
-    mascotExpression: 'supportive' as LogoMascotExpression,
+    mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.lavender,
+    pastelTintDark: PastelDark.lavender,
   },
 
-  /** Offline state */
+  /** No results — thinking on peach */
+  noResults: {
+    title: 'Let me think of something else...',
+    description: 'Nothing matched that search, but I have other ideas.',
+    actionLabel: 'Try Different Keywords',
+    useMascot: true,
+    mascotExpression: 'thinking' as LogoMascotExpression,
+    mascotSize: 'medium' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
+  },
+
+  /** Network offline — sleepy on sky blue */
   offline: {
-    title: 'You\'re Offline',
-    description: 'Please check your internet connection and try again.',
+    title: "We'll be back when you're connected",
+    description: 'Looks like the internet took a break. Check your connection and try again.',
     actionLabel: 'Retry',
     useMascot: true,
-    mascotExpression: 'supportive' as LogoMascotExpression,
+    mascotExpression: 'sleepy' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.sky,
+    pastelTintDark: PastelDark.sky,
+  },
+
+  /** Timeout — sleepy on golden */
+  timeout: {
+    title: 'That took too long',
+    description: 'Want to give it another shot? Sometimes the servers need a moment.',
+    actionLabel: 'Try Again',
+    useMascot: true,
+    mascotExpression: 'sleepy' as LogoMascotExpression,
+    mascotSize: 'medium' as const,
+    pastelTint: Pastel.golden,
+    pastelTintDark: PastelDark.golden,
   },
 
   /** Coming soon */
   comingSoon: {
-    title: 'Coming Soon',
-    description: 'This feature is under development. Stay tuned!',
+    title: 'Something tasty is brewing',
+    description: "This feature is in the oven — we'll let you know when it's ready!",
     useMascot: true,
     mascotExpression: 'excited' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
   },
 
   /** No data */
   noData: {
-    title: 'Nothing Here Yet',
-    description: 'This section is empty. Start adding content!',
+    title: 'Nothing here yet',
+    description: "This spot is waiting for you to fill it up — let's get started!",
     useMascot: true,
     mascotExpression: 'curious' as LogoMascotExpression,
     mascotSize: 'medium' as const,
+    pastelTint: Pastel.sage,
+    pastelTintDark: PastelDark.sage,
   },
 } as const;
 

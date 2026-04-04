@@ -1,35 +1,40 @@
-import { View, Text, TextInput, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import LoadingState from '../components/ui/LoadingState';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
+import ScreenGradient from '../components/ui/ScreenGradient';
+import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { userApi } from '../lib/api';
 import * as Haptics from 'expo-haptics';
-import { Colors, DarkColors } from '../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark } from '../constants/Colors';
+import { Shadows } from '../constants/Shadows';
+import { FontSize, FontWeight } from '../constants/Typography';
 import { useColorScheme } from 'nativewind';
 
 const GENDERS = [
-  { value: 'male', label: 'Male', icon: 'male' },
-  { value: 'female', label: 'Female', icon: 'female' },
-  { value: 'other', label: 'Other', icon: 'transgender' }
+  { value: 'male', label: 'Male', emoji: '👨' },
+  { value: 'female', label: 'Female', emoji: '👩' },
+  { value: 'other', label: 'Other', emoji: '🧑' },
 ] as const;
 
 const ACTIVITY_LEVELS = [
-  { value: 'sedentary', label: 'Sedentary', description: 'Little or no exercise' },
-  { value: 'lightly_active', label: 'Lightly Active', description: '1-3 days/week' },
-  { value: 'moderately_active', label: 'Moderately Active', description: '3-5 days/week' },
-  { value: 'very_active', label: 'Very Active', description: '6-7 days/week' },
-  { value: 'extra_active', label: 'Extra Active', description: 'Physical job + exercise' }
+  { value: 'sedentary', label: 'Sedentary', description: 'Little or no exercise', emoji: '🛋️', tint: Pastel.sky, tintDark: PastelDark.sky },
+  { value: 'lightly_active', label: 'Lightly Active', description: '1-3 days/week', emoji: '🚶', tint: Pastel.sage, tintDark: PastelDark.sage },
+  { value: 'moderately_active', label: 'Moderately Active', description: '3-5 days/week', emoji: '🏃', tint: Pastel.golden, tintDark: PastelDark.golden },
+  { value: 'very_active', label: 'Very Active', description: '6-7 days/week', emoji: '🏋️', tint: Pastel.peach, tintDark: PastelDark.peach },
+  { value: 'extra_active', label: 'Extra Active', description: 'Physical job + exercise', emoji: '⚡', tint: Pastel.blush, tintDark: PastelDark.blush },
 ] as const;
 
 const FITNESS_GOALS = [
-  { value: 'lose_weight', label: 'Lose Weight', icon: 'trending-down', color: 'bg-red-600 dark:bg-red-400' },
-  { value: 'maintain', label: 'Maintain', icon: 'remove', color: 'bg-green-500' },
-  { value: 'gain_muscle', label: 'Gain Muscle', icon: 'fitness', color: 'bg-purple-500' },
-  { value: 'gain_weight', label: 'Gain Weight', icon: 'trending-up', color: 'bg-orange-500' }
+  { value: 'lose_weight', label: 'Lose Weight', emoji: '📉', tint: Pastel.blush, tintDark: PastelDark.blush, accent: '#E91E63' },
+  { value: 'maintain', label: 'Maintain', emoji: '⚖️', tint: Pastel.sage, tintDark: PastelDark.sage, accent: '#4CAF50' },
+  { value: 'gain_muscle', label: 'Gain Muscle', emoji: '💪', tint: Pastel.lavender, tintDark: PastelDark.lavender, accent: '#7C4DFF' },
+  { value: 'gain_weight', label: 'Gain Weight', emoji: '📈', tint: Pastel.peach, tintDark: PastelDark.peach, accent: '#FF9800' },
 ] as const;
 
 export default function EditPhysicalProfileScreen() {
@@ -37,260 +42,149 @@ export default function EditPhysicalProfileScreen() {
   const isDark = colorScheme === 'dark';
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  
-  // Form state
+
   const [gender, setGender] = useState<'male' | 'female' | 'other'>('male');
   const [age, setAge] = useState('');
-  
-  // Height - stored in cm, but can input in feet/inches
   const [heightCm, setHeightCm] = useState('');
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
-  
-  // Weight - stored in kg, but can input in lbs
   const [weightKg, setWeightKg] = useState('');
   const [weightLbs, setWeightLbs] = useState('');
-  
   const [activityLevel, setActivityLevel] = useState<string>('moderately_active');
   const [fitnessGoal, setFitnessGoal] = useState<string>('maintain');
   const [targetWeightKg, setTargetWeightKg] = useState('');
   const [targetWeightLbs, setTargetWeightLbs] = useState('');
-  const [useMetric, setUseMetric] = useState(false); // Default to imperial (US)
-  
-  // Calculated values (from backend after save)
+  const [useMetric, setUseMetric] = useState(false);
   const [bmr, setBmr] = useState<number | null>(null);
   const [tdee, setTdee] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  useEffect(() => { loadProfile(); }, []);
 
   const loadProfile = async () => {
     try {
       setLoadingData(true);
       const response = await userApi.getPhysicalProfile();
       const profile = response.data;
-      
-      console.log('📱 Edit Physical Profile: Loaded profile', profile);
-      
-      // If profile is null, user hasn't set it up yet - use defaults
-      if (!profile) {
-        console.log('📱 Edit Physical Profile: No existing profile, starting fresh');
-        setLoadingData(false);
-        return;
-      }
-      
-      // Load existing profile data
+      if (!profile) { setLoadingData(false); return; }
+
       setGender(profile.gender);
       setAge(profile.age.toString());
-      
-      // Convert and set height
       setHeightCm(profile.heightCm.toString());
       const heightFtIn = cmToFeetInches(profile.heightCm);
       setHeightFeet(heightFtIn.feet.toString());
       setHeightInches(heightFtIn.inches.toString());
-      
-      // Convert and set weight
       setWeightKg(profile.weightKg.toString());
       setWeightLbs(kgToLbs(profile.weightKg).toString());
-      
       setActivityLevel(profile.activityLevel);
       setFitnessGoal(profile.fitnessGoal);
-      
-      // Convert and set target weight
       if (profile.targetWeightKg) {
         setTargetWeightKg(profile.targetWeightKg.toString());
         setTargetWeightLbs(kgToLbs(profile.targetWeightKg).toString());
       }
-      
       setBmr(profile.bmr || null);
       setTdee(profile.tdee || null);
-    } catch (error: any) {
-      console.error('📱 Edit Physical Profile: Error loading profile', error);
-      // Non-blocking error - let user create profile
+    } catch {
       Alert.alert('Notice', 'Starting with a fresh profile. Fill in your details below.');
     } finally {
       setLoadingData(false);
     }
   };
 
-  // Unit conversions
   const kgToLbs = (kg: number) => Math.round(kg * 2.20462 * 10) / 10;
   const lbsToKg = (lbs: number) => Math.round(lbs / 2.20462 * 10) / 10;
   const cmToFeetInches = (cm: number) => {
     const totalInches = cm / 2.54;
-    const feet = Math.floor(totalInches / 12);
-    const inches = Math.round(totalInches % 12);
-    return { feet, inches };
+    return { feet: Math.floor(totalInches / 12), inches: Math.round(totalInches % 12) };
   };
   const feetInchesToCm = (feet: number, inches: number) => Math.round((feet * 12 + inches) * 2.54);
 
-  // Height change handlers
   const handleHeightFeetChange = (value: string) => {
     setHeightFeet(value);
-    const feet = parseFloat(value) || 0;
-    const inches = parseFloat(heightInches) || 0;
-    const cm = feetInchesToCm(feet, inches);
-    setHeightCm(cm.toString());
+    setHeightCm(feetInchesToCm(parseFloat(value) || 0, parseFloat(heightInches) || 0).toString());
   };
-
   const handleHeightInchesChange = (value: string) => {
     setHeightInches(value);
-    const feet = parseFloat(heightFeet) || 0;
-    const inches = parseFloat(value) || 0;
-    const cm = feetInchesToCm(feet, inches);
-    setHeightCm(cm.toString());
+    setHeightCm(feetInchesToCm(parseFloat(heightFeet) || 0, parseFloat(value) || 0).toString());
   };
-
   const handleHeightCmChange = (value: string) => {
     setHeightCm(value);
-    const cm = parseFloat(value) || 0;
-    const { feet, inches } = cmToFeetInches(cm);
+    const { feet, inches } = cmToFeetInches(parseFloat(value) || 0);
     setHeightFeet(feet.toString());
     setHeightInches(inches.toString());
   };
-
-  // Weight change handlers
   const handleWeightLbsChange = (value: string) => {
     setWeightLbs(value);
-    const lbs = parseFloat(value) || 0;
-    const kg = lbsToKg(lbs);
-    setWeightKg(kg.toString());
+    setWeightKg(lbsToKg(parseFloat(value) || 0).toString());
   };
-
   const handleWeightKgChange = (value: string) => {
     setWeightKg(value);
-    const kg = parseFloat(value) || 0;
-    const lbs = kgToLbs(kg);
-    setWeightLbs(lbs.toString());
+    setWeightLbs(kgToLbs(parseFloat(value) || 0).toString());
   };
-
   const handleTargetWeightLbsChange = (value: string) => {
     setTargetWeightLbs(value);
-    const lbs = parseFloat(value) || 0;
-    const kg = lbsToKg(lbs);
-    setTargetWeightKg(kg.toString());
+    setTargetWeightKg(lbsToKg(parseFloat(value) || 0).toString());
   };
-
   const handleTargetWeightKgChange = (value: string) => {
     setTargetWeightKg(value);
-    const kg = parseFloat(value) || 0;
-    const lbs = kgToLbs(kg);
-    setTargetWeightLbs(lbs.toString());
+    setTargetWeightLbs(kgToLbs(parseFloat(value) || 0).toString());
   };
 
   const handleSave = async () => {
-    // Calculate actual values from either metric or imperial inputs
     let finalHeightCm: number;
     let finalWeightKg: number;
 
     if (useMetric) {
-      // Using metric - get from metric inputs
       finalHeightCm = parseFloat(heightCm) || 0;
       finalWeightKg = parseFloat(weightKg) || 0;
     } else {
-      // Using imperial - convert from imperial inputs
-      const feet = parseFloat(heightFeet) || 0;
-      const inches = parseFloat(heightInches) || 0;
-      finalHeightCm = feetInchesToCm(feet, inches);
-      
-      const lbs = parseFloat(weightLbs) || 0;
-      finalWeightKg = lbsToKg(lbs);
+      finalHeightCm = feetInchesToCm(parseFloat(heightFeet) || 0, parseFloat(heightInches) || 0);
+      finalWeightKg = lbsToKg(parseFloat(weightLbs) || 0);
     }
 
-    // Validation - check for actual values
     if (!gender || !age || !activityLevel || !fitnessGoal) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Hold On', 'Please fill in all required fields');
       return;
     }
-
     const ageNum = parseInt(age);
-
-    // Validate age
     if (!age || isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Hold On', 'Age must be between 13 and 120');
       return;
     }
-
-    // Validate height - check if we have valid input
-    if (useMetric) {
-      if (!heightCm || isNaN(parseFloat(heightCm)) || finalHeightCm < 100 || finalHeightCm > 250) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
-        return;
-      }
-    } else {
-      const feet = parseFloat(heightFeet) || 0;
-      const inches = parseFloat(heightInches) || 0;
-      if ((feet === 0 && inches === 0) || finalHeightCm < 100 || finalHeightCm > 250) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
-        return;
-      }
+    if (finalHeightCm < 100 || finalHeightCm > 250) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
+      return;
     }
-
-    // Validate weight - check if we have valid input
-    if (useMetric) {
-      if (!weightKg || isNaN(parseFloat(weightKg)) || finalWeightKg < 30 || finalWeightKg > 300) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
-        return;
-      }
-    } else {
-      const lbs = parseFloat(weightLbs) || 0;
-      if (lbs === 0 || finalWeightKg < 30 || finalWeightKg > 300) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
-        return;
-      }
+    if (finalWeightKg < 30 || finalWeightKg > 300) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
+      return;
     }
-
-    // Use calculated values
-    const heightNum = finalHeightCm;
-    const weightNum = finalWeightKg;
 
     try {
       setLoading(true);
-      
-      // Ensure we have the latest converted values
       const profileData: any = {
-        gender,
-        age: ageNum,
-        heightCm: heightNum, // Always use calculated cm value
-        weightKg: weightNum, // Always use calculated kg value
-        activityLevel,
-        fitnessGoal
+        gender, age: ageNum, heightCm: finalHeightCm, weightKg: finalWeightKg,
+        activityLevel, fitnessGoal,
       };
-
       if (targetWeightKg) {
         const targetNum = parseFloat(targetWeightKg);
-        if (!isNaN(targetNum)) {
-          profileData.targetWeightKg = targetNum;
-        }
+        if (!isNaN(targetNum)) profileData.targetWeightKg = targetNum;
       }
-
       const response = await userApi.updatePhysicalProfile(profileData);
-      console.log('📱 Edit Physical Profile: Profile saved', response.data);
-      
-      // Update calculated values
       if (response.data.profile) {
         setBmr(response.data.profile.bmr);
         setTdee(response.data.profile.tdee);
       }
-      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Physical profile saved successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.back()
-        }
+      Alert.alert('Saved!', 'Your physical profile has been updated.', [
+        { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error: any) {
-      console.error('📱 Edit Physical Profile: Save error', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Oops!', error.message || 'Couldn\'t save your profile — give it another shot?');
+      Alert.alert('Oops!', error.message || "Couldn't save your profile — give it another shot?");
     } finally {
       setLoading(false);
     }
@@ -298,319 +192,516 @@ export default function EditPhysicalProfileScreen() {
 
   if (loadingData) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? DarkColors.surface : Colors.surface }} edges={['top']}>
-        <View className="flex-1 items-center justify-center">
-          <LoadingState message="Loading your profile..." expression="happy" />
-        </View>
-      </SafeAreaView>
+      <ScreenGradient>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <LoadingState message="Loading your profile..." expression="happy" />
+          </View>
+        </SafeAreaView>
+      </ScreenGradient>
     );
   }
 
+  const inputBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.8)';
+  const inputColor = isDark ? DarkColors.text.primary : Colors.text.primary;
+  const placeholderColor = isDark ? DarkColors.text.tertiary : Colors.text.tertiary;
+
   return (
-    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
-      <KeyboardAvoidingContainer>
-      {/* Header */}
-      <View className="bg-white dark:bg-gray-800 px-4 py-4 flex-row items-center justify-between">
-        <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
-          <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.primary : Colors.text.primary} />
-        </HapticTouchableOpacity>
-        <Text className="text-xl font-bold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Physical Profile</Text>
-        <HapticTouchableOpacity 
-          onPress={handleSave}
-          disabled={loading}
-          className="p-2"
-        >
-          <Text className="text-lg font-semibold" style={{ color: loading ? (isDark ? DarkColors.text.secondary : Colors.text.secondary) : (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) }}>
-            {loading ? 'Saving...' : 'Save'}
-          </Text>
-        </HapticTouchableOpacity>
-      </View>
-
-      <ScrollView className="flex-1 p-4">
-        {/* Gender Selection */}
-        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
-          <Text className="text-lg font-semibold mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Gender *</Text>
-          <View className="flex-row gap-2">
-            {GENDERS.map((g) => (
-              <HapticTouchableOpacity
-                key={g.value}
-                onPress={() => setGender(g.value)}
-                className="flex-1 py-3 rounded-lg flex-row items-center justify-center"
-                style={{
-                  backgroundColor: gender === g.value 
-                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)
-                    : (isDark ? '#374151' : '#E5E7EB')
-                }}
-              >
-                <Ionicons 
-                  name={g.icon as any} 
-                  size={18} 
-                  color={gender === g.value ? 'white' : (isDark ? DarkColors.text.primary : Colors.text.primary)} 
-                />
-                <Text className="ml-2 font-medium" style={{ color: gender === g.value ? 'white' : (isDark ? DarkColors.text.primary : Colors.text.primary) }}>
-                  {g.label}
-                </Text>
-              </HapticTouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Age */}
-        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
-          <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Age *</Text>
-          <TextInput
-            value={age}
-            onChangeText={setAge}
-            placeholder="25"
-            keyboardType="numeric"
-            className="rounded-input px-4 py-3"
-            style={{
-              backgroundColor: isDark ? DarkColors.card : Colors.surface,
-              color: isDark ? DarkColors.text.primary : Colors.text.primary,
-            }}
-            placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-          />
-        </View>
-
-        {/* Height */}
-        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-lg font-semibold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Height *</Text>
-            <HapticTouchableOpacity 
-              onPress={() => setUseMetric(!useMetric)}
-              className="px-3 py-1 rounded-lg"
-              style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}
-            >
-              <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-                {useMetric ? 'Switch to ft/in' : 'Switch to cm'}
-              </Text>
+    <ScreenGradient>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <KeyboardAvoidingContainer>
+          {/* Header */}
+          <View style={styles.header}>
+            <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 8 }} accessibilityLabel="Go back">
+              <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.primary : Colors.text.primary} />
             </HapticTouchableOpacity>
+            <Text style={[styles.headerTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
+              Physical Profile
+            </Text>
+            <View style={{ width: 40 }} />
           </View>
-          
-          {useMetric ? (
-            // Metric input (cm)
-            <TextInput
-              value={heightCm}
-              onChangeText={handleHeightCmChange}
-              placeholder="170"
-              keyboardType="numeric"
-              className="rounded-input px-4 py-3"
-              style={{
-                backgroundColor: isDark ? DarkColors.card : Colors.surface,
-                borderColor: isDark ? DarkColors.border.light : Colors.border.light,
-                borderWidth: 1,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-              }}
-              placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-            />
-          ) : (
-            // Imperial input (feet and inches)
-            <View className="flex-row gap-2">
-              <View className="flex-1">
-                <Text className="text-xs mb-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Feet</Text>
-                <TextInput
-                  value={heightFeet}
-                  onChangeText={handleHeightFeetChange}
-                  placeholder="5"
-                  keyboardType="numeric"
-                  className="rounded-input px-4 py-3"
-                  style={{
-                    backgroundColor: isDark ? DarkColors.card : Colors.surface,
-                    color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                  }}
-                  placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-                />
-              </View>
-              <View className="flex-1">
-                <Text className="text-xs mb-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Inches</Text>
-                <TextInput
-                  value={heightInches}
-                  onChangeText={handleHeightInchesChange}
-                  placeholder="10"
-                  keyboardType="numeric"
-                  className="rounded-input px-4 py-3"
-                  style={{
-                    backgroundColor: isDark ? DarkColors.card : Colors.surface,
-                    color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                  }}
-                  placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-                />
+
+          <Animated.ScrollView
+            contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* ── Gender ── */}
+            <View style={[styles.section, { backgroundColor: isDark ? PastelDark.lavender : Pastel.lavender }, Shadows.SM as any]}>
+              <Text style={[styles.sectionEmoji]}>👤</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>Gender</Text>
+              <View style={styles.chipRow}>
+                {GENDERS.map((g) => {
+                  const selected = gender === g.value;
+                  return (
+                    <HapticTouchableOpacity
+                      key={g.value}
+                      onPress={() => setGender(g.value)}
+                      style={[
+                        styles.genderChip,
+                        {
+                          backgroundColor: selected
+                            ? (isDark ? 'rgba(206,147,216,0.3)' : '#CE93D8')
+                            : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)'),
+                        },
+                      ]}
+                      accessibilityLabel={g.label}
+                      accessibilityState={{ selected }}
+                    >
+                      <Text style={styles.chipEmoji}>{g.emoji}</Text>
+                      <Text style={[
+                        styles.chipLabel,
+                        { color: selected ? '#FFFFFF' : (isDark ? DarkColors.text.primary : Colors.text.primary) },
+                      ]}>
+                        {g.label}
+                      </Text>
+                    </HapticTouchableOpacity>
+                  );
+                })}
               </View>
             </View>
-          )}
-          
-          {heightCm && parseFloat(heightCm) > 0 && (
-            <Text className="text-xs mt-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-              {useMetric ? `≈ ${cmToFeetInches(parseFloat(heightCm)).feet}' ${cmToFeetInches(parseFloat(heightCm)).inches}"` : `≈ ${heightCm} cm`}
-            </Text>
-          )}
-        </View>
 
-        {/* Weight */}
-        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
-          <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Current Weight *</Text>
-          <TextInput
-            value={useMetric ? weightKg : weightLbs}
-            onChangeText={useMetric ? handleWeightKgChange : handleWeightLbsChange}
-            placeholder={useMetric ? '70' : '154'}
-            keyboardType="numeric"
-            className="rounded-input px-4 py-3"
-            style={{
-              backgroundColor: isDark ? DarkColors.card : Colors.surface,
-              color: isDark ? DarkColors.text.primary : Colors.text.primary,
-            }}
-            placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-          />
-          {weightKg && parseFloat(weightKg) > 0 && (
-            <Text className="text-xs mt-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-              {useMetric ? `≈ ${kgToLbs(parseFloat(weightKg))} lbs` : `≈ ${weightKg} kg`}
-            </Text>
-          )}
-        </View>
+            {/* ── Age ── */}
+            <View style={[styles.section, { backgroundColor: isDark ? PastelDark.sky : Pastel.sky }, Shadows.SM as any]}>
+              <Text style={styles.sectionEmoji}>🎂</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>Age</Text>
+              <TextInput
+                value={age}
+                onChangeText={setAge}
+                placeholder="25"
+                keyboardType="numeric"
+                style={[styles.textInput, { backgroundColor: inputBg, color: inputColor }]}
+                placeholderTextColor={placeholderColor}
+              />
+            </View>
 
-        {/* Target Weight (Optional) */}
-        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
-          <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-            Target Weight <Text className="text-sm" style={{ color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>(Optional)</Text>
-          </Text>
-          <TextInput
-            value={useMetric ? targetWeightKg : targetWeightLbs}
-            onChangeText={useMetric ? handleTargetWeightKgChange : handleTargetWeightLbsChange}
-            placeholder={useMetric ? '65' : '143'}
-            keyboardType="numeric"
-            className="rounded-input px-4 py-3"
-            style={{
-              backgroundColor: isDark ? DarkColors.card : Colors.surface,
-              color: isDark ? DarkColors.text.primary : Colors.text.primary,
-            }}
-            placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-          />
-          {targetWeightKg && parseFloat(targetWeightKg) > 0 && (
-            <Text className="text-xs mt-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-              {useMetric ? `≈ ${kgToLbs(parseFloat(targetWeightKg))} lbs` : `≈ ${targetWeightKg} kg`}
-            </Text>
-          )}
-        </View>
-
-        {/* Activity Level */}
-        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
-          <Text className="text-lg font-semibold mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Activity Level *</Text>
-          {ACTIVITY_LEVELS.map((level) => {
-            const isSelected = activityLevel === level.value;
-            return (
-              <HapticTouchableOpacity
-                key={level.value}
-                onPress={() => setActivityLevel(level.value)}
-                className="p-3 rounded-lg mb-2"
-                style={{
-                  backgroundColor: isSelected 
-                    ? (isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedDark)
-                    : (isDark ? DarkColors.card : Colors.surface),
-                  borderWidth: isSelected ? 2 : 0,
-                  borderColor: isSelected 
-                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark)
-                    : 'transparent',
-                }}
-              >
-                <Text className="font-medium" style={{ 
-                  color: isSelected 
-                    ? (isDark ? DarkColors.secondaryRed : '#FFFFFF')
-                    : (isDark ? DarkColors.text.primary : Colors.text.primary)
-                }}>
-                  {level.label}
-                </Text>
-                <Text className="text-xs mt-1" style={{ 
-                  color: isSelected 
-                    ? (isDark ? DarkColors.text.secondary : '#FFFFFF')
-                    : (isDark ? DarkColors.text.secondary : Colors.text.secondary)
-                }}>
-                  {level.description}
-                </Text>
-              </HapticTouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Fitness Goal */}
-        <View className="bg-white dark:bg-gray-800 rounded-card p-4 mb-4 shadow-sm">
-          <Text className="text-lg font-semibold mb-3" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Fitness Goal *</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {FITNESS_GOALS.map((goal) => {
-              const isSelected = fitnessGoal === goal.value;
-              let bgColor = isSelected 
-                ? (goal.value === 'lose_weight' ? (isDark ? '#DC2626' : '#DC2626')
-                  : goal.value === 'maintain' ? (isDark ? '#10B981' : '#10B981')
-                  : goal.value === 'gain_muscle' ? (isDark ? '#8B5CF6' : '#8B5CF6')
-                  : (isDark ? '#F97316' : '#F97316'))
-                : (isDark ? '#374151' : '#E5E7EB');
-              
-              return (
+            {/* ── Height ── */}
+            <View style={[styles.section, { backgroundColor: isDark ? PastelDark.sage : Pastel.sage }, Shadows.SM as any]}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionHeaderLeft}>
+                  <Text style={styles.sectionEmoji}>📏</Text>
+                  <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>Height</Text>
+                </View>
                 <HapticTouchableOpacity
-                  key={goal.value}
-                  onPress={() => setFitnessGoal(goal.value)}
-                  className="flex-1 min-w-[45%] p-3 rounded-lg flex-row items-center"
-                  style={{ backgroundColor: bgColor }}
+                  onPress={() => setUseMetric(!useMetric)}
+                  style={[styles.unitToggle, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}
                 >
-                  <Ionicons 
-                    name={goal.icon as any} 
-                    size={20} 
-                    color={isSelected ? 'white' : (isDark ? DarkColors.text.primary : Colors.text.primary)} 
-                  />
-                  <Text className="ml-2 text-sm font-medium" style={{ color: isSelected ? 'white' : (isDark ? DarkColors.text.primary : Colors.text.primary) }}>
-                    {goal.label}
+                  <Text style={[styles.unitToggleText, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
+                    {useMetric ? 'ft/in' : 'cm'}
                   </Text>
                 </HapticTouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+              </View>
 
-        {/* Calculated Metrics */}
-        {(bmr || tdee) && (
-          <View className="rounded-xl p-4 mb-4 border" style={{
-            backgroundColor: isDark ? `${Colors.secondaryRedLight}1A` : Colors.secondaryRedDark,
-            borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark,
-          }}>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="calculator" size={20} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} />
-              <Text className="ml-2 text-lg font-semibold" style={{ color: isDark ? DarkColors.text.primary : '#FFFFFF' }}>Calculated Metrics</Text>
+              {useMetric ? (
+                <TextInput
+                  value={heightCm}
+                  onChangeText={handleHeightCmChange}
+                  placeholder="170 cm"
+                  keyboardType="numeric"
+                  style={[styles.textInput, { backgroundColor: inputBg, color: inputColor }]}
+                  placeholderTextColor={placeholderColor}
+                />
+              ) : (
+                <View style={styles.splitRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.subLabel, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>Feet</Text>
+                    <TextInput
+                      value={heightFeet}
+                      onChangeText={handleHeightFeetChange}
+                      placeholder="5"
+                      keyboardType="numeric"
+                      style={[styles.textInput, { backgroundColor: inputBg, color: inputColor }]}
+                      placeholderTextColor={placeholderColor}
+                    />
+                  </View>
+                  <View style={{ width: 12 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.subLabel, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>Inches</Text>
+                    <TextInput
+                      value={heightInches}
+                      onChangeText={handleHeightInchesChange}
+                      placeholder="10"
+                      keyboardType="numeric"
+                      style={[styles.textInput, { backgroundColor: inputBg, color: inputColor }]}
+                      placeholderTextColor={placeholderColor}
+                    />
+                  </View>
+                </View>
+              )}
+              {heightCm && parseFloat(heightCm) > 0 && (
+                <Text style={[styles.conversionHint, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
+                  {useMetric
+                    ? `≈ ${cmToFeetInches(parseFloat(heightCm)).feet}'${cmToFeetInches(parseFloat(heightCm)).inches}"`
+                    : `≈ ${heightCm} cm`}
+                </Text>
+              )}
             </View>
-            {bmr && (
-              <View className="mb-2">
-                <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : '#FFFFFF' }}>Basal Metabolic Rate (BMR)</Text>
-                <Text className="text-2xl font-bold" style={{ color: isDark ? DarkColors.text.primary : '#FFFFFF' }}>{Math.round(bmr)} cal/day</Text>
+
+            {/* ── Weight ── */}
+            <View style={[styles.section, { backgroundColor: isDark ? PastelDark.peach : Pastel.peach }, Shadows.SM as any]}>
+              <Text style={styles.sectionEmoji}>⚖️</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
+                Current Weight
+              </Text>
+              <TextInput
+                value={useMetric ? weightKg : weightLbs}
+                onChangeText={useMetric ? handleWeightKgChange : handleWeightLbsChange}
+                placeholder={useMetric ? '70 kg' : '154 lbs'}
+                keyboardType="numeric"
+                style={[styles.textInput, { backgroundColor: inputBg, color: inputColor }]}
+                placeholderTextColor={placeholderColor}
+              />
+              {weightKg && parseFloat(weightKg) > 0 && (
+                <Text style={[styles.conversionHint, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
+                  {useMetric ? `≈ ${kgToLbs(parseFloat(weightKg))} lbs` : `≈ ${weightKg} kg`}
+                </Text>
+              )}
+            </View>
+
+            {/* ── Target Weight ── */}
+            <View style={[styles.section, { backgroundColor: isDark ? PastelDark.sage : Pastel.sage }, Shadows.SM as any]}>
+              <Text style={styles.sectionEmoji}>🎯</Text>
+              <View style={styles.sectionHeaderLeft}>
+                <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
+                  Target Weight
+                </Text>
+                <Text style={[styles.optionalBadge, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>
+                  Optional
+                </Text>
+              </View>
+              <TextInput
+                value={useMetric ? targetWeightKg : targetWeightLbs}
+                onChangeText={useMetric ? handleTargetWeightKgChange : handleTargetWeightLbsChange}
+                placeholder={useMetric ? '65 kg' : '143 lbs'}
+                keyboardType="numeric"
+                style={[styles.textInput, { backgroundColor: inputBg, color: inputColor }]}
+                placeholderTextColor={placeholderColor}
+              />
+              {targetWeightKg && parseFloat(targetWeightKg) > 0 && (
+                <Text style={[styles.conversionHint, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
+                  {useMetric ? `≈ ${kgToLbs(parseFloat(targetWeightKg))} lbs` : `≈ ${targetWeightKg} kg`}
+                </Text>
+              )}
+            </View>
+
+            {/* ── Activity Level ── */}
+            <View style={[styles.section, { backgroundColor: isDark ? PastelDark.golden : Pastel.golden }, Shadows.SM as any]}>
+              <Text style={styles.sectionEmoji}>🏃</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>Activity Level</Text>
+              <View style={{ gap: 8, marginTop: 4 }}>
+                {ACTIVITY_LEVELS.map((level) => {
+                  const selected = activityLevel === level.value;
+                  return (
+                    <HapticTouchableOpacity
+                      key={level.value}
+                      onPress={() => setActivityLevel(level.value)}
+                      style={[
+                        styles.activityOption,
+                        {
+                          backgroundColor: selected
+                            ? (isDark ? level.tintDark : level.tint)
+                            : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)'),
+                        },
+                        selected && (Shadows.SM as any),
+                      ]}
+                      accessibilityLabel={`${level.label}: ${level.description}`}
+                      accessibilityState={{ selected }}
+                    >
+                      <Text style={styles.activityEmoji}>{level.emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.activityLabel, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
+                          {level.label}
+                        </Text>
+                        <Text style={[styles.activityDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
+                          {level.description}
+                        </Text>
+                      </View>
+                      {selected && (
+                        <View style={[styles.checkBadge, { backgroundColor: Colors.primary }]}>
+                          <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </HapticTouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* ── Fitness Goal ── */}
+            <View style={[styles.section, { backgroundColor: isDark ? PastelDark.blush : Pastel.blush }, Shadows.SM as any]}>
+              <Text style={styles.sectionEmoji}>💪</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>Fitness Goal</Text>
+              <View style={styles.goalGrid}>
+                {FITNESS_GOALS.map((goal) => {
+                  const selected = fitnessGoal === goal.value;
+                  return (
+                    <HapticTouchableOpacity
+                      key={goal.value}
+                      onPress={() => setFitnessGoal(goal.value)}
+                      style={[
+                        styles.goalCard,
+                        {
+                          backgroundColor: selected
+                            ? (isDark ? goal.tintDark : goal.tint)
+                            : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)'),
+                        },
+                        selected && (Shadows.SM as any),
+                      ]}
+                      accessibilityLabel={goal.label}
+                      accessibilityState={{ selected }}
+                    >
+                      <Text style={styles.goalEmoji}>{goal.emoji}</Text>
+                      <Text style={[
+                        styles.goalLabel,
+                        { color: selected ? goal.accent : (isDark ? DarkColors.text.primary : Colors.text.primary) },
+                      ]}>
+                        {goal.label}
+                      </Text>
+                    </HapticTouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* ── BMR/TDEE Metrics ── */}
+            {(bmr || tdee) && (
+              <View style={[
+                styles.metricsCard,
+                { backgroundColor: isDark ? 'rgba(255,139,65,0.10)' : Pastel.orange },
+                Shadows.MD as any,
+              ]}>
+                <Text style={[styles.metricsTitle, { color: isDark ? '#FFB74D' : '#E65100' }]}>
+                  Your Numbers
+                </Text>
+                <View style={styles.metricsRow}>
+                  {bmr && (
+                    <View style={styles.metricItem}>
+                      <Text style={[styles.metricLabel, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>BMR</Text>
+                      <Text style={[styles.metricValue, { color: isDark ? '#FFB74D' : '#E65100' }]}>{Math.round(bmr)}</Text>
+                      <Text style={[styles.metricUnit, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>cal/day</Text>
+                    </View>
+                  )}
+                  {tdee && (
+                    <View style={styles.metricItem}>
+                      <Text style={[styles.metricLabel, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>TDEE</Text>
+                      <Text style={[styles.metricValue, { color: isDark ? '#FFB74D' : '#E65100' }]}>{Math.round(tdee)}</Text>
+                      <Text style={[styles.metricUnit, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>cal/day</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.metricsHint, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>
+                  Updates automatically when you save
+                </Text>
               </View>
             )}
-            {tdee && (
-              <View>
-                <Text className="text-sm" style={{ color: isDark ? DarkColors.text.secondary : '#FFFFFF' }}>Total Daily Energy Expenditure (TDEE)</Text>
-                <Text className="text-2xl font-bold" style={{ color: isDark ? DarkColors.text.primary : '#FFFFFF' }}>{Math.round(tdee)} cal/day</Text>
-              </View>
-            )}
-            <Text className="text-xs mt-3" style={{ color: isDark ? DarkColors.text.secondary : '#FFFFFF' }}>
-              These values are calculated based on your physical data and will update your macro recommendations.
-            </Text>
-          </View>
-        )}
 
-        {/* Info Box */}
-        <View className="rounded-xl p-4 mb-4 border" style={{
-          backgroundColor: isDark ? `${Colors.secondaryRedLight}1A` : Colors.secondaryRedDark,
-          borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark,
-        }}>
-          <View className="flex-row items-start">
-            <Ionicons name="information-circle" size={20} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} />
-            <Text className="flex-1 ml-2 text-sm" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
-              This information helps us calculate your personalized macro nutrient goals based on scientific formulas. All fields marked with * are required.
-            </Text>
-          </View>
-        </View>
+            {/* ── Info ── */}
+            <View style={[styles.infoCard, { backgroundColor: isDark ? PastelDark.sky : Pastel.sky }]}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
+              <Text style={[styles.infoText, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
+                This helps us calculate your personalized macro goals using scientific formulas (BMR/TDEE).
+              </Text>
+            </View>
 
-        {/* Bottom padding */}
-        <View className="h-8" />
-      </ScrollView>
-      </KeyboardAvoidingContainer>
-    </SafeAreaView>
+            {/* Save button */}
+            <View style={{ marginTop: 8 }}>
+              <GradientButton
+                label={loading ? 'Saving...' : 'Save Profile'}
+                onPress={handleSave}
+                loading={loading}
+                disabled={loading}
+                colors={GradientPresets.brand}
+                icon="checkmark-circle-outline"
+              />
+            </View>
+          </Animated.ScrollView>
+        </KeyboardAvoidingContainer>
+      </SafeAreaView>
+    </ScreenGradient>
   );
 }
 
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  headerTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+  },
+  section: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+  },
+  sectionEmoji: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    marginBottom: 10,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  unitToggle: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  unitToggleText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+  },
+  optionalBadge: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+    marginBottom: 10,
+  },
+  textInput: {
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+  },
+  splitRow: {
+    flexDirection: 'row',
+  },
+  subLabel: {
+    fontSize: FontSize.xs,
+    marginBottom: 4,
+    fontWeight: FontWeight.medium,
+  },
+  conversionHint: {
+    fontSize: FontSize.xs,
+    marginTop: 6,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  genderChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 14,
+    gap: 6,
+  },
+  chipEmoji: {
+    fontSize: 18,
+  },
+  chipLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+  },
+  activityOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+  },
+  activityEmoji: {
+    fontSize: 20,
+    marginRight: 10,
+    width: 28,
+    textAlign: 'center',
+  },
+  activityLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+  },
+  activityDesc: {
+    fontSize: FontSize.xs,
+    marginTop: 1,
+  },
+  checkBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  goalCard: {
+    width: '47%' as any,
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    gap: 4,
+  },
+  goalEmoji: {
+    fontSize: 28,
+  },
+  goalLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+  },
+  metricsCard: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  metricsTitle: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    marginBottom: 10,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  metricItem: {
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: FontSize['3xl'],
+    fontWeight: FontWeight.extrabold,
+  },
+  metricUnit: {
+    fontSize: FontSize.xs,
+    marginTop: 1,
+  },
+  metricsHint: {
+    fontSize: FontSize.xs,
+    marginTop: 8,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    lineHeight: 18,
+  },
+});

@@ -10,6 +10,7 @@ import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing
 import { FontSize } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Shadows } from '../../constants/Shadows';
 import { EmptyStateConfig } from '../../constants/EmptyStates';
 import { buttonAccessibility } from '../../utils/accessibility';
 
@@ -34,6 +35,10 @@ interface AnimatedEmptyStateProps {
   mascotExpression?: LogoMascotExpression;
   /** Mascot size */
   mascotSize?: 'tiny' | 'small' | 'medium' | 'large' | 'hero';
+  /** Pastel tint background color (light mode) — wraps content in a tinted card */
+  pastelTint?: string;
+  /** Pastel tint background color (dark mode) */
+  pastelTintDark?: string;
   /** Use predefined empty state config */
   config?: EmptyStateConfig;
 }
@@ -49,6 +54,8 @@ export default function AnimatedEmptyState({
   useMascot = false,
   mascotExpression = 'curious',
   mascotSize = 'medium',
+  pastelTint,
+  pastelTintDark,
   config,
 }: AnimatedEmptyStateProps) {
   const { colorScheme } = useColorScheme();
@@ -61,16 +68,20 @@ export default function AnimatedEmptyState({
   const displayUseMascot = config?.useMascot ?? useMascot;
   const displayMascotExpression = config?.mascotExpression ?? mascotExpression;
   const displayMascotSize = config?.mascotSize ?? mascotSize;
+  const displayPastelTint = config?.pastelTint ?? pastelTint;
+  const displayPastelTintDark = config?.pastelTintDark ?? pastelTintDark;
 
   const defaultIconColor = isDark ? DarkColors.text.tertiary : Colors.text.tertiary;
+  const hasTint = !!(displayPastelTint || displayPastelTintDark);
+  const tintBg = isDark ? displayPastelTintDark : displayPastelTint;
 
   const handleAction = () => {
     HapticPatterns.buttonPressPrimary();
     onAction?.();
   };
 
-  return (
-    <View style={styles.container}>
+  const content = (
+    <>
       {/* Icon/mascot — entrance fade+scale, then gentle float loop */}
       <MotiView
         from={{ opacity: 0, scale: 0.8 }}
@@ -159,6 +170,29 @@ export default function AnimatedEmptyState({
           </MotiView>
         </MotiView>
       )}
+    </>
+  );
+
+  // Wrap in tinted card if pastel tint is provided
+  if (hasTint && tintBg) {
+    return (
+      <View style={styles.container}>
+        <View
+          style={[
+            styles.tintCard,
+            { backgroundColor: tintBg },
+            Shadows.SM as any,
+          ]}
+        >
+          {content}
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {content}
     </View>
   );
 }
@@ -169,6 +203,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: ComponentSpacing.emptyState.padding,
+  },
+  tintCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
+    padding: ComponentSpacing.emptyState.padding,
+    width: '100%',
   },
   title: {
     fontSize: FontSize.xl,
