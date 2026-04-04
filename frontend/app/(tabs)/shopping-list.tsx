@@ -42,10 +42,12 @@ const AISLE_TINT: Record<string, { light: string; dark: string }> = {
   'Other':          { light: Pastel.orange, dark: PastelDark.orange },
   "Can't Find":     { light: Pastel.peach, dark: PastelDark.peach },
 };
+import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import {
   ShoppingListHeader,
   ShoppingListItem,
   ShoppingListCategory,
+  ShoppingListProgress,
   AddItemModal,
   MergeListsModal,
   OfflineBanner,
@@ -103,6 +105,7 @@ export default function ShoppingListScreen() {
     handleAddToPantry,
     handleRemoveFromPantry,
     handleSetupDefaultPantry,
+    handleRefresh,
   } = useShoppingList();
 
   // Weekly grocery budget from user preferences
@@ -230,76 +233,13 @@ export default function ShoppingListScreen() {
             />
           )}
 
-          {/* Progress Card */}
-          {currentItems.length > 0 && (
-            <View style={[{
-              marginHorizontal: 16,
-              marginTop: 12,
-              marginBottom: 4,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              borderRadius: 20,
-              backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-            }, Shadows.SM]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#D1D5DB' : '#374151' }}>
-                  {progressStats.purchased} of {progressStats.total} items
-                </Text>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#34D399' : '#047857' }}>
-                  ${estimatedCost.toFixed(2)} est.
-                </Text>
-              </View>
-              <View style={{ height: 6, borderRadius: 100, overflow: 'hidden', backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}>
-                <View
-                  style={{
-                    height: '100%',
-                    borderRadius: 100,
-                    width: `${progressStats.total > 0 ? (progressStats.purchased / progressStats.total) * 100 : 0}%`,
-                    backgroundColor: isDark ? DarkColors.success : Colors.success,
-                  }}
-                />
-              </View>
-
-              {/* Budget bar — only when user has a weekly budget set */}
-              {weeklyBudget != null && estimatedCost > 0 && (() => {
-                const totalCost = estimatedCost + (state.selectedList
-                  ? currentItems.filter(i => i.purchased && i.price != null && i.price > 0).reduce((s, i) => s + (i.price ?? 0), 0)
-                  : 0);
-                const budgetPct = Math.min((totalCost / weeklyBudget) * 100, 100);
-                const overBudget = totalCost > weeklyBudget;
-                return (
-                  <View style={{ marginTop: 10 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text style={{ fontSize: 11, fontWeight: '500', color: isDark ? '#9CA3AF' : '#6B7280' }}>
-                        Budget
-                      </Text>
-                      <Text style={{
-                        fontSize: 11,
-                        fontWeight: '600',
-                        color: overBudget
-                          ? (isDark ? DarkColors.error : Colors.error)
-                          : (isDark ? '#9CA3AF' : '#6B7280'),
-                      }}>
-                        ${totalCost.toFixed(2)} / ${weeklyBudget.toFixed(2)}
-                      </Text>
-                    </View>
-                    <View style={{ height: 4, borderRadius: 100, overflow: 'hidden', backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}>
-                      <View
-                        style={{
-                          height: '100%',
-                          borderRadius: 100,
-                          width: `${budgetPct}%`,
-                          backgroundColor: overBudget
-                            ? (isDark ? DarkColors.error : Colors.error)
-                            : (isDark ? DarkColors.info : Colors.info),
-                        }}
-                      />
-                    </View>
-                  </View>
-                );
-              })()}
-            </View>
-          )}
+          {/* Progress Ring + Cost Card (9L) */}
+          <ShoppingListProgress
+            progressStats={progressStats}
+            estimatedCost={estimatedCost}
+            spentSoFar={currentItems.filter(i => i.purchased && i.price != null && i.price > 0).reduce((s, i) => s + (i.price ?? 0), 0)}
+            currentItems={currentItems}
+          />
 
           {/* Items List — in-store aisle view uses SectionList for native sticky headers */}
           {visibleItems.length === 0 && currentItems.length > 0 ? (
@@ -378,6 +318,9 @@ export default function ShoppingListScreen() {
               keyExtractor={item => item.id}
               stickySectionHeadersEnabled
               contentContainerStyle={{ paddingTop: 4, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
+              refreshControl={
+                <SazonRefreshControl refreshing={state.refreshing} onRefresh={handleRefresh} />
+              }
               renderSectionHeader={({ section }) => {
                 const tint = AISLE_TINT[section.title];
                 const allDone = section.remaining === 0 && section.data.length > 0;
@@ -448,7 +391,10 @@ export default function ShoppingListScreen() {
           ) : (
             <ScrollView
               className="flex-1"
-              contentContainerStyle={{ paddingBottom: state.selectionMode ? ComponentSpacing.tabBar.scrollPaddingBottom : ComponentSpacing.tabBar.scrollPaddingBottom }}
+              contentContainerStyle={{ paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
+              refreshControl={
+                <SazonRefreshControl refreshing={state.refreshing} onRefresh={handleRefresh} />
+              }
             >
               <View className="p-4">
                 {state.groupByRecipe && itemsByRecipe ? (

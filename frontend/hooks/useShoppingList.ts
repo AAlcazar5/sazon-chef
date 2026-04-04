@@ -637,44 +637,64 @@ export function useShoppingList() {
 
     dispatch({ type: 'UPDATE', payload: { loadingSuggestions: true } });
     try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
       const allLists = await shoppingListApi.getShoppingLists();
-      const recentItems = new Set<string>();
 
+      // Count how often each item name appears across all lists
+      const frequencyMap = new Map<string, { name: string; count: number }>();
       for (const list of allLists.data || []) {
         if (list.items && list.items.length > 0) {
           list.items.forEach((item: ShoppingListItem) => {
-            if (new Date(item.createdAt) >= thirtyDaysAgo) {
-              recentItems.add(item.name);
+            const key = item.name.toLowerCase().trim();
+            const existing = frequencyMap.get(key);
+            if (existing) {
+              existing.count += 1;
+            } else {
+              frequencyMap.set(key, { name: item.name, count: 1 });
             }
           });
         }
       }
 
-      const commonItems = [
-        'Milk', 'Eggs', 'Bread', 'Butter', 'Cheese', 'Chicken', 'Beef',
-        'Onions', 'Garlic', 'Tomatoes', 'Lettuce', 'Carrots', 'Potatoes',
-        'Rice', 'Pasta', 'Olive Oil', 'Salt', 'Pepper', 'Sugar', 'Flour'
-      ];
+      // Also fold in purchase history counts for better ranking
+      for (const historyItem of state.purchaseHistory) {
+        const key = historyItem.itemName.toLowerCase().trim();
+        const existing = frequencyMap.get(key);
+        if (existing) {
+          existing.count += historyItem.purchaseCount;
+        } else {
+          frequencyMap.set(key, { name: historyItem.itemName, count: historyItem.purchaseCount });
+        }
+      }
 
       const currentItemNames = new Set(
-        (state.selectedList?.items || []).map(item => item.name.toLowerCase())
+        (state.selectedList?.items || []).map(item => item.name.toLowerCase().trim())
       );
-      const suggestions = Array.from(recentItems)
-        .concat(commonItems)
-        .filter(name => !currentItemNames.has(name.toLowerCase()))
-        .slice(0, 12);
 
-      dispatch({ type: 'UPDATE', payload: { quickSuggestions: suggestions } });
+      // Sort by frequency, filter out items already on list
+      const ranked = Array.from(frequencyMap.values())
+        .filter(entry => !currentItemNames.has(entry.name.toLowerCase().trim()))
+        .sort((a, b) => b.count - a.count)
+        .map(entry => entry.name);
+
+      // If user has history, use it; otherwise fall back to common defaults
+      const commonDefaults = [
+        'Milk', 'Eggs', 'Bread', 'Butter', 'Cheese', 'Chicken Breast', 'Ground Beef',
+        'Onions', 'Garlic', 'Tomatoes', 'Lettuce', 'Carrots', 'Potatoes',
+        'Rice', 'Pasta', 'Olive Oil', 'Salt', 'Pepper', 'Bananas', 'Avocados'
+      ];
+
+      const suggestions = ranked.length > 0
+        ? ranked.slice(0, 16)
+        : commonDefaults.filter(name => !currentItemNames.has(name.toLowerCase()));
+
+      dispatch({ type: 'UPDATE', payload: { quickSuggestions: suggestions.slice(0, 16) } });
     } catch (error) {
       console.error('Error loading quick suggestions:', error);
       const currentItemNames = new Set(
         (state.selectedList?.items || []).map(item => item.name.toLowerCase())
       );
       const commonItems = [
-        'Milk', 'Eggs', 'Bread', 'Butter', 'Cheese', 'Chicken', 'Beef',
+        'Milk', 'Eggs', 'Bread', 'Butter', 'Cheese', 'Chicken Breast', 'Ground Beef',
         'Onions', 'Garlic', 'Tomatoes', 'Lettuce', 'Carrots'
       ];
       dispatch({
@@ -684,7 +704,7 @@ export function useShoppingList() {
     } finally {
       dispatch({ type: 'UPDATE', payload: { loadingSuggestions: false } });
     }
-  }, [state.selectedList]);
+  }, [state.selectedList, state.purchaseHistory]);
 
   // ─── Pantry Loading ─────────────────────────────────────────────────
 

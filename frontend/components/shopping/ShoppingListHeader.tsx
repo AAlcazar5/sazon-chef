@@ -2,14 +2,17 @@
 // Simplified header with list picker, "+" add button, and "..." overflow menu
 
 import { View, Text, ScrollView, TextInput, Modal, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import ActionSheet, { ActionSheetItem } from '../ui/ActionSheet';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark, Accent } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
+import { BorderRadius } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
 import { ShoppingList } from '../../types';
 import type { ShoppingListState } from '../../hooks/useShoppingList';
@@ -149,7 +152,8 @@ export default function ShoppingListHeader({
           </View>
         </View>
 
-        <View className="flex-row items-center" style={{ gap: 8 }}>
+        <View className="flex-row items-center" style={{ gap: 10 }}>
+          {/* List Picker Dropdown */}
           <HapticTouchableOpacity
             onPress={() => dispatch({ type: 'UPDATE', payload: { showListPicker: true } })}
             style={[{
@@ -157,47 +161,66 @@ export default function ShoppingListHeader({
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
-              borderRadius: 14,
+              backgroundColor: isDark ? PastelDark.peach : Pastel.peach,
+              borderRadius: BorderRadius.card,
               paddingHorizontal: 16,
-              paddingVertical: 12,
-            }]}
+              paddingVertical: 13,
+            }, Shadows.SM]}
           >
             <View className="flex-1 flex-row items-center">
-              <Icon name={Icons.SHOPPING_LIST_OUTLINE} size={IconSizes.MD} color={isDark ? '#9CA3AF' : '#6B7280'} accessibilityLabel="Shopping list" style={{ marginRight: 8 }} />
-              <Text className="text-gray-900 dark:text-gray-100 font-semibold flex-1" numberOfLines={1}>
+              <View style={{
+                width: 32,
+                height: 32,
+                borderRadius: BorderRadius.full,
+                backgroundColor: isDark ? 'rgba(255,183,77,0.2)' : 'rgba(250,126,18,0.12)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 10,
+              }}>
+                <Icon name={Icons.SHOPPING_LIST_OUTLINE} size={IconSizes.SM} color={isDark ? Accent.peach : Colors.primary} accessibilityLabel="Shopping list" />
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#F3F4F6' : Colors.text.primary, flex: 1 }} numberOfLines={1}>
                 {state.selectedList?.name || 'Select a list'}
               </Text>
             </View>
-            <Icon name={Icons.CHEVRON_DOWN} size={IconSizes.MD} color={isDark ? '#9CA3AF' : '#6B7280'} accessibilityLabel="Open dropdown" />
+            <View style={{
+              backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+              borderRadius: BorderRadius.full,
+              padding: 4,
+            }}>
+              <Icon name={Icons.CHEVRON_DOWN} size={IconSizes.SM} color={isDark ? '#9CA3AF' : '#6B7280'} accessibilityLabel="Open dropdown" />
+            </View>
           </HapticTouchableOpacity>
 
           {state.selectedList && (
             <>
-              {/* Add Item Button */}
+              {/* Add Item Button — gradient circle */}
               <HapticTouchableOpacity
                 onPress={onAddItem}
-                style={[{
-                  padding: 12,
-                  borderRadius: 100,
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                }, Shadows.SM]}
                 accessibilityLabel="Add item"
+                style={{ borderRadius: BorderRadius.full, overflow: 'hidden', ...Shadows.MD }}
               >
-                <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Add item" />
+                <LinearGradient
+                  colors={['#fa7e12', '#EF4444']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ padding: 12, borderRadius: BorderRadius.full }}
+                >
+                  <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Add item" />
+                </LinearGradient>
               </HapticTouchableOpacity>
 
               {/* Overflow Menu Button */}
               <HapticTouchableOpacity
                 onPress={() => dispatch({ type: 'UPDATE', payload: { showOverflowMenu: true } })}
-                style={{
+                style={[{
                   padding: 12,
-                  borderRadius: 100,
-                  backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
-                }}
+                  borderRadius: BorderRadius.full,
+                  backgroundColor: isDark ? PastelDark.lavender : Pastel.lavender,
+                }, Shadows.SM]}
                 accessibilityLabel="More options"
               >
-                <Icon name={Icons.MORE} size={IconSizes.MD} color={isDark ? '#E5E7EB' : '#6B7280'} accessibilityLabel="More options" />
+                <Icon name={Icons.MORE} size={IconSizes.MD} color={isDark ? Accent.lavender : '#7B1FA2'} accessibilityLabel="More options" />
               </HapticTouchableOpacity>
             </>
           )}
@@ -235,48 +258,88 @@ export default function ShoppingListHeader({
               <Animated.View
                 style={[{
                   backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-                  borderRadius: 24,
+                  borderRadius: BorderRadius['2xl'],
                   width: '100%',
                   maxWidth: 360,
                   overflow: 'hidden',
                 }, Shadows.XL, { transform: [{ scale: listPickerScale }] }]}
               >
-                <View style={{ padding: 20, paddingBottom: 12 }}>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Pick a list</Text>
+                {/* Header with pastel accent bar */}
+                <View style={{
+                  padding: 20,
+                  paddingBottom: 14,
+                  backgroundColor: isDark ? PastelDark.peach : Pastel.peach,
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 22, marginRight: 8 }}>📋</Text>
+                    <Text style={{ fontSize: 19, fontWeight: '800', color: isDark ? '#F3F4F6' : Colors.text.primary }}>Pick a list</Text>
+                  </View>
                 </View>
 
-                <ScrollView className="max-h-80">
+                <ScrollView className="max-h-80" style={{ paddingVertical: 8 }}>
                   {state.shoppingLists.map((list) => {
                     const isActive = state.selectedList?.id === list.id;
                     return (
                       <HapticTouchableOpacity
                         key={list.id}
                         onPress={() => onSelectList(list.id)}
-                        style={{
-                          paddingHorizontal: 20,
+                        style={[{
+                          marginHorizontal: 12,
+                          marginVertical: 4,
+                          paddingHorizontal: 16,
                           paddingVertical: 14,
                           flexDirection: 'row',
                           alignItems: 'center',
+                          borderRadius: BorderRadius.lg,
                           backgroundColor: isActive
-                            ? (isDark ? `${Colors.primaryLight}33` : Colors.primaryLight)
-                            : 'transparent',
-                        }}
+                            ? (isDark ? PastelDark.peach : Pastel.peach)
+                            : (isDark ? 'rgba(255,255,255,0.04)' : Colors.surfaceTint),
+                        }, isActive ? Shadows.SM : {}]}
                       >
-                        <Icon
-                          name={isActive ? Icons.CHECKMARK_CIRCLE : Icons.ELLIPSE_OUTLINE}
-                          size={IconSizes.MD}
-                          color={isActive ? (isDark ? DarkColors.primary : Colors.primary) : "#9CA3AF"}
-                          accessibilityLabel={isActive ? "Selected" : "Not selected"}
-                          style={{ marginRight: 12 }}
-                        />
+                        <View style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: BorderRadius.full,
+                          backgroundColor: isActive
+                            ? (isDark ? 'rgba(250,126,18,0.25)' : 'rgba(250,126,18,0.15)')
+                            : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                        }}>
+                          <Icon
+                            name={isActive ? Icons.CHECKMARK_CIRCLE : Icons.CART_OUTLINE}
+                            size={IconSizes.SM}
+                            color={isActive ? (isDark ? Accent.peach : Colors.primary) : (isDark ? '#6B7280' : '#9CA3AF')}
+                            accessibilityLabel={isActive ? "Selected" : "Not selected"}
+                          />
+                        </View>
                         <View className="flex-1">
-                          <Text style={{ fontSize: 16, fontWeight: isActive ? '600' : '400', color: isActive ? (isDark ? DarkColors.primaryDark : Colors.primaryDark) : (isDark ? DarkColors.text.primary : Colors.text.primary) }}>
+                          <Text style={{
+                            fontSize: 16,
+                            fontWeight: isActive ? '700' : '500',
+                            color: isActive
+                              ? (isDark ? Accent.peach : Colors.primaryDark)
+                              : (isDark ? '#E5E7EB' : Colors.text.primary),
+                          }}>
                             {list.name}
                           </Text>
                           <Text style={{ fontSize: 12, color: isDark ? '#6B7280' : '#9CA3AF', marginTop: 2 }}>
                             {list.items?.length || 0} items
                           </Text>
                         </View>
+                        {isActive && (
+                          <View style={{
+                            backgroundColor: isDark ? 'rgba(250,126,18,0.2)' : 'rgba(250,126,18,0.12)',
+                            borderRadius: BorderRadius.full,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                          }}>
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: isDark ? Accent.peach : Colors.primary }}>
+                              Active
+                            </Text>
+                          </View>
+                        )}
                       </HapticTouchableOpacity>
                     );
                   })}
@@ -289,26 +352,19 @@ export default function ShoppingListHeader({
                   )}
                 </ScrollView>
 
-                <HapticTouchableOpacity
-                  onPress={() => {
-                    dispatch({ type: 'UPDATE', payload: { showListPicker: false } });
-                    onCreateList();
-                  }}
-                  style={{
-                    marginHorizontal: 20,
-                    marginTop: 8,
-                    marginBottom: 20,
-                    paddingVertical: 14,
-                    borderRadius: 100,
-                    backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryLight,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icon name={Icons.ADD_CIRCLE_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Create new list" style={{ marginRight: 8 }} />
-                  <Text style={{ fontWeight: '600', color: isDark ? DarkColors.primaryDark : Colors.primaryDark }}>Create New List</Text>
-                </HapticTouchableOpacity>
+                {/* Create New List — gradient button */}
+                <View style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 20 }}>
+                  <BrandButton
+                    label="Create New List"
+                    onPress={() => {
+                      dispatch({ type: 'UPDATE', payload: { showListPicker: false } });
+                      onCreateList();
+                    }}
+                    variant="brand"
+                    icon="add-circle-outline"
+                    accessibilityLabel="Create new list"
+                  />
+                </View>
               </Animated.View>
             </HapticTouchableOpacity>
           </HapticTouchableOpacity>
@@ -329,13 +385,26 @@ export default function ShoppingListHeader({
           <Animated.View
             style={[{
               backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-              borderRadius: 24,
+              borderRadius: BorderRadius['2xl'],
               padding: 24,
               width: '100%',
               maxWidth: 360,
+              overflow: 'hidden',
             }, Shadows.XL, { transform: [{ scale: createListScale }] }]}
           >
-            <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 4 }}>
+            {/* Pastel header accent */}
+            <View style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 4,
+              backgroundColor: isDark ? Accent.sage : Colors.primary,
+              borderTopLeftRadius: BorderRadius['2xl'],
+              borderTopRightRadius: BorderRadius['2xl'],
+            }} />
+
+            <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#F3F4F6' : Colors.text.primary, marginBottom: 4, marginTop: 4 }}>
               New list
             </Text>
             <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 16 }}>
@@ -346,44 +415,41 @@ export default function ShoppingListHeader({
               value={state.newListName}
               onChangeText={(text) => dispatch({ type: 'UPDATE', payload: { newListName: text } })}
               style={{
-                backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : Colors.surfaceTint,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
-                borderRadius: 14,
-                marginBottom: 16,
+                borderRadius: BorderRadius.input,
+                marginBottom: 20,
                 fontSize: 16,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                color: isDark ? '#F3F4F6' : Colors.text.primary,
+                ...Shadows.SM,
               }}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={Colors.text.tertiary}
               autoFocus={true}
               onSubmitEditing={onSaveNewList}
               maxLength={100}
             />
-            <View className="flex-row" style={{ gap: 10 }}>
-              <HapticTouchableOpacity
-                onPress={() => dispatch({ type: 'CLOSE_CREATE_LIST' })}
-                style={{ flex: 1, paddingVertical: 14, borderRadius: 100, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
-                disabled={state.creatingList}
-              >
-                <Text style={{ textAlign: 'center', fontWeight: '600', color: isDark ? '#E5E7EB' : '#374151' }}>Cancel</Text>
-              </HapticTouchableOpacity>
-              <HapticTouchableOpacity
-                onPress={onSaveNewList}
-                style={[{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 100,
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                  opacity: state.creatingList || !state.newListName.trim() ? 0.5 : 1,
-                }, Shadows.SM]}
-                disabled={state.creatingList || !state.newListName.trim()}
-              >
-                {state.creatingList ? (
-                  <AnimatedActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text style={{ textAlign: 'center', fontWeight: '600', color: '#FFFFFF' }}>Create</Text>
-                )}
-              </HapticTouchableOpacity>
+            <View className="flex-row" style={{ gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <BrandButton
+                  label="Cancel"
+                  onPress={() => dispatch({ type: 'CLOSE_CREATE_LIST' })}
+                  variant="ghost"
+                  disabled={state.creatingList}
+                  accessibilityLabel="Cancel"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <BrandButton
+                  label="Create"
+                  onPress={onSaveNewList}
+                  variant="sage"
+                  icon="add-circle-outline"
+                  loading={state.creatingList}
+                  disabled={state.creatingList || !state.newListName.trim()}
+                  accessibilityLabel="Create new list"
+                />
+              </View>
             </View>
           </Animated.View>
         </Animated.View>
@@ -403,13 +469,26 @@ export default function ShoppingListHeader({
           <Animated.View
             style={[{
               backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-              borderRadius: 24,
+              borderRadius: BorderRadius['2xl'],
               padding: 24,
               width: '100%',
               maxWidth: 360,
+              overflow: 'hidden',
             }, Shadows.XL, { transform: [{ scale: editNameScale }] }]}
           >
-            <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 16 }}>
+            {/* Pastel header accent */}
+            <View style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 4,
+              backgroundColor: isDark ? Accent.sky : '#42A5F5',
+              borderTopLeftRadius: BorderRadius['2xl'],
+              borderTopRightRadius: BorderRadius['2xl'],
+            }} />
+
+            <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#F3F4F6' : Colors.text.primary, marginBottom: 16, marginTop: 4 }}>
               Rename list
             </Text>
 
@@ -418,43 +497,41 @@ export default function ShoppingListHeader({
               onChangeText={(text) => dispatch({ type: 'UPDATE', payload: { editingListName: text } })}
               placeholder="Enter list name"
               style={{
-                backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : Colors.surfaceTint,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
-                borderRadius: 14,
-                marginBottom: 16,
+                borderRadius: BorderRadius.input,
+                marginBottom: 20,
                 fontSize: 16,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                color: isDark ? '#F3F4F6' : Colors.text.primary,
+                ...Shadows.SM,
               }}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={Colors.text.tertiary}
               autoFocus={true}
               maxLength={100}
             />
 
-            <View className="flex-row" style={{ gap: 10 }}>
-              <HapticTouchableOpacity
-                onPress={() => dispatch({ type: 'CLOSE_EDIT_NAME' })}
-                disabled={state.updatingName}
-                style={{ flex: 1, paddingVertical: 14, borderRadius: 100, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
-              >
-                <Text style={{ textAlign: 'center', fontWeight: '600', color: isDark ? '#E5E7EB' : '#374151' }}>Cancel</Text>
-              </HapticTouchableOpacity>
-
-              <HapticTouchableOpacity
-                onPress={onSaveName}
-                disabled={state.updatingName}
-                style={[{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 100,
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                  opacity: state.updatingName ? 0.5 : 1,
-                }, Shadows.SM]}
-              >
-                <Text style={{ textAlign: 'center', fontWeight: '600', color: '#FFFFFF' }}>
-                  {state.updatingName ? 'Saving...' : 'Save'}
-                </Text>
-              </HapticTouchableOpacity>
+            <View className="flex-row" style={{ gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <BrandButton
+                  label="Cancel"
+                  onPress={() => dispatch({ type: 'CLOSE_EDIT_NAME' })}
+                  variant="ghost"
+                  disabled={state.updatingName}
+                  accessibilityLabel="Cancel"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <BrandButton
+                  label={state.updatingName ? 'Saving...' : 'Save'}
+                  onPress={onSaveName}
+                  variant="sky"
+                  icon="checkmark-circle"
+                  disabled={state.updatingName}
+                  loading={state.updatingName}
+                  accessibilityLabel="Save list name"
+                />
+              </View>
             </View>
           </Animated.View>
         </Animated.View>
