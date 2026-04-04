@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 14,
     minWidth: 80,

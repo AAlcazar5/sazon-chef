@@ -34,6 +34,8 @@ import FrostedCard from '../components/ui/FrostedCard';
 import MacroRingGrid from '../components/ui/MacroRingGrid';
 import { getIngredientEmoji } from '../constants/IngredientEmoji';
 import CookingStepsTimeline from '../components/recipe/CookingStepsTimeline';
+import VisualIngredientList from '../components/recipe/VisualIngredientList';
+import MacroPillsRow from '../components/recipe/MacroPillsRow';
 
 const HERO_HEIGHT = 300;
 
@@ -819,6 +821,18 @@ export default function RecipeModal() {
             </View>
           )}
 
+          {/* Macro pills row — pastel tinted */}
+          <View style={{ marginBottom: 12 }}>
+            <MacroPillsRow
+              calories={recipe.calories}
+              protein={recipe.protein}
+              carbs={recipe.carbs}
+              fat={recipe.fat}
+              fiber={recipe.fiber}
+              isDark={isDark}
+            />
+          </View>
+
           {/* Description */}
           <AnimatedText className="text-gray-600 dark:text-gray-300 mb-4">
             {recipe.description}
@@ -1269,56 +1283,15 @@ export default function RecipeModal() {
             </View>
           )}
 
-          {/* Ingredients */}
+          {/* Ingredients — Visual list with emoji, bold amounts, serving adjuster */}
           <View className="mb-6">
-            <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Ingredients</Text>
-            {/* Horizontal ingredient thumbnail row */}
-            {recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 12, gap: 12 }}
-              >
-                {recipe.ingredients.map((ingredient: any, index: number) => {
-                  const text = getTextContent(ingredient);
-                  const shortLabel = text.split(',')[0].replace(/^\d[\d./]*\s*(cup|tbsp|tsp|oz|lb|g|kg|ml|l|clove|bunch|piece|stalk|head|can|pkg|package|pinch|dash)s?\s*/i, '').trim();
-                  return (
-                    <View key={index} style={{ alignItems: 'center', width: 56 }}>
-                      <View style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 22,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: isDark ? '#374151' : '#F3F4F6',
-                        marginBottom: 4,
-                      }}>
-                        <Text style={{ fontSize: 20 }}>{getIngredientEmoji(text)}</Text>
-                      </View>
-                      <Text
-                        style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center' }}
-                        numberOfLines={1}
-                      >
-                        {shortLabel.length > 8 ? shortLabel.slice(0, 7) + '…' : shortLabel}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </ScrollView>
+            {recipe.ingredients && Array.isArray(recipe.ingredients) && (
+              <VisualIngredientList
+                ingredients={recipe.ingredients}
+                baseServings={recipe.servings || 4}
+                isDark={isDark}
+              />
             )}
-            {recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.map((ingredient: any, index: number) => (
-              <MotiView
-                key={index}
-                from={{ opacity: 0, translateX: -12 }}
-                animate={{ opacity: 1, translateX: 0 }}
-                transition={{ type: 'spring', delay: index * 35, damping: 20, stiffness: 200 }}
-              >
-                <View className="flex-row items-center mb-2">
-                  <Text style={{ fontSize: 16, marginRight: 8, width: 24, textAlign: 'center' }}>{getIngredientEmoji(getTextContent(ingredient))}</Text>
-                  <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
-                </View>
-              </MotiView>
-            ))}
           </View>
 
           {/* Instructions — Vertical Timeline */}

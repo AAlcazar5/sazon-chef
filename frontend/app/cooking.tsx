@@ -59,6 +59,7 @@ interface CookingRecipe {
   cookTime?: number;
   calories?: number;
   protein?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
 }
 
 // --- Helpers ---
@@ -357,11 +358,14 @@ export default function CookingScreen() {
       ? `${elapsedMin}m ${elapsedSec}s`
       : `${elapsedSeconds}s`;
 
+    const difficultyLabel = recipe.difficulty
+      ? recipe.difficulty.charAt(0).toUpperCase() + recipe.difficulty.slice(1)
+      : 'Medium';
     const cookingStats = [
-      { value: timeLabel, label: 'Cook Time', color: '#64B5F6', bgColor: 'rgba(100, 181, 246, 0.18)' },
-      { value: `${totalSteps}/${totalSteps}`, label: 'Steps', color: '#81C784', bgColor: 'rgba(129, 199, 132, 0.18)' },
-      { value: String(checkedIngredients.size), label: 'Prepped', color: '#FFD54F', bgColor: 'rgba(255, 213, 79, 0.18)' },
-      { value: `${recipe.calories}`, label: 'Calories', color: '#FFB74D', bgColor: 'rgba(255, 183, 77, 0.18)' },
+      { value: timeLabel, label: 'Cook Time', color: '#64B5F6', bgColor: '#E3F2FD' },
+      { value: `${totalSteps}/${totalSteps}`, label: 'Steps', color: '#81C784', bgColor: '#E8F5E9' },
+      { value: `${recipe.calories}`, label: 'Calories', color: '#FFB74D', bgColor: '#FFF3E0' },
+      { value: difficultyLabel, label: 'Difficulty', color: '#CE93D8', bgColor: '#F3E5F5' },
     ];
 
     const nextMealCTA = nextMealName

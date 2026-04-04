@@ -7,6 +7,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { RecipeCard } from '../recipe/RecipeCard';
+import CollectionCollageGrid from '../collection/CollectionCollageGrid';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -78,15 +79,12 @@ function CollectionCarousel({
           className="mb-3 flex-row items-center justify-between"
         >
           <View className="flex-row items-center flex-1">
-            <View
-              className="w-8 h-8 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: isDark ? '#374151' : '#F3F4F6' }}
-            >
-              <Icon
-                name={Icons.BOOKMARK}
-                size={IconSizes.SM}
-                color={isDark ? '#D1D5DB' : '#6B7280'}
-                accessibilityLabel={collection.name}
+            <View style={{ marginRight: 12 }}>
+              <CollectionCollageGrid
+                imageUrls={recipes.slice(0, 4).map(r => r.imageUrl).filter(Boolean) as string[]}
+                recipeCount={recipes.length}
+                size={44}
+                borderRadius={12}
               />
             </View>
             <View className="flex-1">
