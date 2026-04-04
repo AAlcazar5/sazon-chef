@@ -65,6 +65,23 @@ jest.mock('../../components/recipe/RecipeRoulette', () => {
   return function MockRecipeRoulette() { return <View testID="recipe-roulette" />; };
 });
 
+// Execute reanimated callbacks synchronously so visibleStep advances on press.
+jest.mock('react-native-reanimated', () => {
+  const actual = jest.requireActual('react-native-reanimated/mock');
+  return {
+    ...actual,
+    withTiming: (_toValue: any, _config: any, cb?: (f: boolean) => void) => {
+      if (cb) cb(true);
+      return _toValue;
+    },
+    withSpring: (_toValue: any, _config: any, cb?: (f: boolean) => void) => {
+      if (cb) cb(true);
+      return _toValue;
+    },
+    runOnJS: (fn: any) => fn,
+  };
+});
+
 jest.mock('moti', () => ({
   MotiView: function MockMotiView({ children }: any) {
     const { View } = require('react-native');
@@ -104,10 +121,10 @@ jest.mock('expo-router', () => ({
 describe('Onboarding', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  describe('Step 0 — Welcome', () => {
-    it('renders "Welcome to Sazon Chef!" heading', () => {
+  describe('Step 0 — Welcome (9N: peach gradient, name prompt)', () => {
+    it('renders "What\'s your name?" heading', () => {
       const { getByText } = render(<OnboardingScreen />);
-      expect(getByText('Welcome to Sazon Chef!')).toBeTruthy();
+      expect(getByText("What's your name?")).toBeTruthy();
     });
 
     it('renders the "Continue" CTA button', () => {
@@ -123,15 +140,14 @@ describe('Onboarding', () => {
 
     it('renders the excited mascot on step 0', () => {
       const { getByTestId } = render(<OnboardingScreen />);
-      expect(getByTestId('animated-sazon-excited')).toBeTruthy();
+      expect(getByTestId('logo-mascot-excited')).toBeTruthy();
     });
 
-    it('renders 8 progress dots (totalSteps = 8)', () => {
-      // MotiView renders each dot — we check that there are 8 dot containers
-      // by verifying the welcome content is present alongside multiple dots
-      const { getByText, getAllByText } = render(<OnboardingScreen />);
-      // The subtitle mentions personalization steps
-      expect(getByText("Let's personalize your experience in just a few steps")).toBeTruthy();
+    it('renders welcome subtitle', () => {
+      const { getByText } = render(<OnboardingScreen />);
+      expect(
+        getByText("Let's personalize your experience in just a few quick steps")
+      ).toBeTruthy();
     });
 
     it('renders the "Skip" button', () => {
@@ -140,54 +156,43 @@ describe('Onboarding', () => {
     });
   });
 
-  describe('Step 1 — Cuisines (after pressing Continue)', () => {
-    it('advances to cuisine step after pressing Continue on welcome', async () => {
+  describe('Step 1 — Dietary Restrictions (9N: sage gradient)', () => {
+    it('advances to dietary step after pressing Continue on welcome', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => {
         fireEvent.press(getByTestId('gradient-cta'));
       });
-      expect(getByText('Select Your Favorite Cuisines')).toBeTruthy();
+      expect(getByText("Anything you can't eat?")).toBeTruthy();
     });
 
-    it('"Continue" is disabled on cuisine step before selecting any cuisine', async () => {
+    it('renders the thinking mascot on dietary step', async () => {
+      const { getByTestId, getAllByTestId } = render(<OnboardingScreen />);
+      await act(async () => {
+        fireEvent.press(getByTestId('gradient-cta'));
+      });
+      expect(getAllByTestId('animated-sazon-thinking').length).toBeGreaterThan(0);
+    });
+
+    it('dietary step is optional — "Continue" stays enabled', async () => {
       const { getByTestId } = render(<OnboardingScreen />);
       await act(async () => {
         fireEvent.press(getByTestId('gradient-cta'));
-      });
-      const btn = getByTestId('gradient-cta');
-      expect(btn.props.accessibilityState?.disabled).toBe(true);
-    });
-
-    it('enables "Continue" after selecting a cuisine', async () => {
-      const { getByText, getByTestId } = render(<OnboardingScreen />);
-      await act(async () => {
-        fireEvent.press(getByTestId('gradient-cta'));
-      });
-      // Select "Italian" cuisine
-      await act(async () => {
-        fireEvent.press(getByText('Italian'));
       });
       const btn = getByTestId('gradient-cta');
       expect(btn.props.accessibilityState?.disabled).toBeFalsy();
     });
+  });
 
-    it('renders the curious mascot on step 1', async () => {
-      const { getByTestId } = render(<OnboardingScreen />);
+  describe('Step 2 — Goal (9N: lavender gradient, final step)', () => {
+    it('advances to goal step and shows "Finish" label on CTA', async () => {
+      const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => {
         fireEvent.press(getByTestId('gradient-cta'));
       });
-      expect(getByTestId('animated-sazon-curious')).toBeTruthy();
-    });
-  });
-
-  describe('Final step (step 7) — shows "Finish" label', () => {
-    it('renders "Finish" on the last step', () => {
-      // We test the button label logic directly: currentStep === totalSteps - 1
-      // Rather than navigating through 7 steps, verify label mapping is correct
-      // by checking the GradientButton mock renders correct label
-      const { getByText } = render(<OnboardingScreen />);
-      // On step 0 it shows "Continue" (not the last step)
-      expect(getByText('Continue')).toBeTruthy();
+      await act(async () => {
+        fireEvent.press(getByTestId('gradient-cta'));
+      });
+      expect(getByText('Finish')).toBeTruthy();
     });
   });
 });

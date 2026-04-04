@@ -1,31 +1,30 @@
 // frontend/app/register.tsx
-// Registration screen with FormInput validation
+// 9N: Registration with brand gradient, FrostedCard form, mascot error/success states.
 
 import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  Alert,
 } from 'react-native';
-import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAuth';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import ScreenGradient from '../components/ui/ScreenGradient';
+import FrostedCard from '../components/ui/FrostedCard';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import FormInput from '../components/ui/FormInput';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import LogoMascot from '../components/mascot/LogoMascot';
-import { Colors, DarkColors } from '../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark } from '../constants/Colors';
 import { Shadows } from '../constants/Shadows';
+import { FontSize, FontWeight } from '../constants/Typography';
 
 interface FormErrors {
   name?: string;
@@ -51,7 +50,6 @@ export default function RegisterScreen() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // Clear field error when user starts typing
   const clearError = (field: keyof FormErrors) => {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -62,13 +60,11 @@ export default function RegisterScreen() {
     const newErrors: FormErrors = {};
     let isValid = true;
 
-    // Name validation
     if (!name.trim()) {
       newErrors.name = 'Name is required';
       isValid = false;
     }
 
-    // Email validation
     if (!email.trim()) {
       newErrors.email = 'Email is required';
       isValid = false;
@@ -80,7 +76,6 @@ export default function RegisterScreen() {
       }
     }
 
-    // Password validation
     if (!password.trim()) {
       newErrors.password = 'Password is required';
       isValid = false;
@@ -89,7 +84,6 @@ export default function RegisterScreen() {
       isValid = false;
     }
 
-    // Confirm password validation
     if (!confirmPassword.trim()) {
       newErrors.confirmPassword = 'Please confirm your password';
       isValid = false;
@@ -108,12 +102,9 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-    // Clear previous form error
     setErrors(prev => ({ ...prev, form: undefined }));
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     try {
@@ -123,51 +114,21 @@ export default function RegisterScreen() {
       setTimeout(() => {
         setShowSuccessMascot(false);
         router.replace('/(tabs)');
-      }, 800);
+      }, 300);
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setErrors(prev => ({ ...prev, form: error.message || 'An error occurred during registration' }));
+      setErrors(prev => ({ ...prev, form: error.message || 'Something went wrong — give it another shot?' }));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setSocialLoading('google');
+  const handleSocialLogin = async (provider: 'google' | 'apple') => {
+    setSocialLoading(provider);
     try {
-      const result = await authenticateWithGoogle();
-      
-      if (result) {
-        await socialLogin(
-          result.provider,
-          result.providerId,
-          result.email,
-          result.name,
-          result.idToken,
-          result.accessToken
-        );
-        router.replace('/(tabs)');
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert(
-          'Google Sign-In',
-          'For development, please use email/password registration or configure Google OAuth credentials.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error: any) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Google Sign-In Failed', error.message || 'An error occurred during Google sign-in');
-    } finally {
-      setSocialLoading(null);
-    }
-  };
+      const authenticator = provider === 'google' ? authenticateWithGoogle : authenticateWithApple;
+      const result = await authenticator();
 
-  const handleAppleLogin = async () => {
-    setSocialLoading('apple');
-    try {
-      const result = await authenticateWithApple();
-      
       if (result) {
         await socialLogin(
           result.provider,
@@ -180,152 +141,178 @@ export default function RegisterScreen() {
         router.replace('/(tabs)');
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert(
-          'Apple Sign-In',
-          'For development, please use email/password registration or configure Apple Sign-In credentials.',
-          [{ text: 'OK' }]
-        );
+        setErrors(prev => ({
+          ...prev,
+          form: `${provider === 'google' ? 'Google' : 'Apple'} sign-in isn't configured yet — try email for now.`,
+        }));
       }
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Apple Sign-In Failed', error.message || 'An error occurred during Apple sign-in');
+      setErrors(prev => ({
+        ...prev,
+        form: error.message || `Something went wrong with ${provider === 'google' ? 'Google' : 'Apple'} sign-in.`,
+      }));
     } finally {
       setSocialLoading(null);
     }
   };
 
   return (
-    <ScreenGradient variant="auth"><SafeAreaView className="flex-1" edges={['top']}>
-      {/* Success mascot flash — excited expression for 800ms after registration */}
-      {showSuccessMascot && (
-        <View
-          testID="register-success-mascot"
-          pointerEvents="none"
-          style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', zIndex: 99 }}
-        >
-          <LogoMascot expression="excited" size="hero" />
-        </View>
-      )}
-      {/* Animated gradient accent */}
-      <MotiView
-        from={{ opacity: 0.3 }}
-        animate={{ opacity: 0.65 }}
-        transition={{ type: 'timing', duration: 3000, loop: true, repeatReverse: true }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 280 }}
-        pointerEvents="none"
-      >
-        <LinearGradient
-          colors={isDark
-            ? ['rgba(239,68,68,0.18)', 'rgba(249,115,22,0.08)', 'transparent']
-            : ['rgba(239,68,68,0.10)', 'rgba(249,115,22,0.04)', 'transparent']}
-          style={{ flex: 1 }}
-        />
-      </MotiView>
+    <ScreenGradient variant="auth">
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Success mascot flash */}
+        {showSuccessMascot && (
+          <MotiView
+            from={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', damping: 12, stiffness: 300 }}
+            pointerEvents="none"
+            style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', zIndex: 99 }}
+          >
+            <LogoMascot expression="excited" size="hero" />
+          </MotiView>
+        )}
 
-      <KeyboardAvoidingContainer>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View className="w-full max-w-md self-center">
-            {/* Title */}
-            <MotiView
-              from={{ opacity: 0, translateY: 24 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'spring', delay: 0, damping: 20, stiffness: 180 }}
-            >
-              <Text className="text-3xl font-black text-red-600 dark:text-red-400 mb-2 text-center">
-                Create Account
-              </Text>
-              <Text className="text-base text-gray-600 dark:text-gray-200 mb-8 text-center">
-                Sign up to get started
-              </Text>
-            </MotiView>
+        <KeyboardAvoidingContainer>
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20, paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={{ width: '100%', maxWidth: 400, alignSelf: 'center' }}>
+              {/* Title */}
+              <MotiView
+                from={{ opacity: 0, translateY: 24 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: 'spring', delay: 0, damping: 20, stiffness: 180 }}
+              >
+                <Text style={{
+                  fontSize: FontSize['3xl'],
+                  fontWeight: FontWeight.extrabold,
+                  color: isDark ? DarkColors.text.primary : Colors.primary,
+                  textAlign: 'center',
+                  marginBottom: 4,
+                }}>
+                  Create Account
+                </Text>
+                <Text style={{
+                  fontSize: FontSize.md,
+                  color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
+                  textAlign: 'center',
+                  marginBottom: 20,
+                }}>
+                  Sign up to get started
+                </Text>
+              </MotiView>
 
-            <View className="w-full">
-              {/* Form-level error */}
+              {/* Form-level error — mascot + pastel red tint */}
               {errors.form && (
-                <View className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4 flex-row items-center">
-                  <Ionicons name="alert-circle" size={18} color={Colors.error} />
-                  <Text className="text-red-600 dark:text-red-400 text-sm ml-2 flex-1">{errors.form}</Text>
-                </View>
+                <MotiView
+                  from={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', damping: 16, stiffness: 240 }}
+                >
+                  <View style={{
+                    backgroundColor: isDark ? PastelDark.red : Pastel.red,
+                    borderRadius: 16,
+                    padding: 14,
+                    marginBottom: 14,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    ...(Shadows.SM as any),
+                  }}>
+                    <LogoMascot expression="curious" size="tiny" />
+                    <Text style={{
+                      flex: 1,
+                      marginLeft: 10,
+                      fontSize: FontSize.sm,
+                      color: isDark ? '#F87171' : '#B91C1C',
+                      lineHeight: 18,
+                    }}>
+                      {errors.form}
+                    </Text>
+                  </View>
+                </MotiView>
               )}
 
-              {/* Name + Email */}
+              {/* Form fields — grouped in FrostedCard */}
               <MotiView
                 from={{ opacity: 0, translateY: 18 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ type: 'spring', delay: 100, damping: 20, stiffness: 180 }}
               >
-                <View className="mb-2" style={{ gap: 4 }}>
-                  <FormInput
-                    label="Name"
-                    placeholder="Enter your name"
-                    value={name}
-                    onChangeText={(value) => { setName(value); clearError('name'); }}
-                    error={errors.name}
-                    autoCapitalize="words"
-                    autoComplete="name"
-                    disabled={loading}
-                    leftIcon="person-outline"
-                    required
-                  />
+                <FrostedCard style={{ padding: 16, marginBottom: 14 }}>
+                  <View style={{ gap: 4 }}>
+                    <FormInput
+                      label="Name"
+                      placeholder="Enter your name"
+                      value={name}
+                      onChangeText={(value) => { setName(value); clearError('name'); }}
+                      error={errors.name}
+                      autoCapitalize="words"
+                      autoComplete="name"
+                      disabled={loading}
+                      leftIcon="person-outline"
+                      required
+                    />
 
-                  <FormInput
-                    label="Email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChangeText={(value) => { setEmail(value); clearError('email'); }}
-                    error={errors.email}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    disabled={loading}
-                    leftIcon="mail-outline"
-                    required
-                  />
-                </View>
+                    <FormInput
+                      label="Email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChangeText={(value) => { setEmail(value); clearError('email'); }}
+                      error={errors.email}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      disabled={loading}
+                      leftIcon="mail-outline"
+                      required
+                    />
+                  </View>
+                </FrostedCard>
               </MotiView>
 
-              {/* Password fields */}
+              {/* Password fields — separate FrostedCard */}
               <MotiView
                 from={{ opacity: 0, translateY: 16 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ type: 'spring', delay: 180, damping: 20, stiffness: 180 }}
               >
-                <View className="mb-2" style={{ gap: 4 }}>
-                  <FormInput
-                    label="Password"
-                    placeholder="Enter your password (min 8 characters)"
-                    value={password}
-                    onChangeText={(value) => { setPassword(value); clearError('password'); }}
-                    error={errors.password}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    disabled={loading}
-                    leftIcon="lock-closed-outline"
-                    rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    onRightIconPress={() => setShowPassword(!showPassword)}
-                    hint="Must be at least 8 characters"
-                    required
-                  />
+                <FrostedCard style={{ padding: 16, marginBottom: 14 }}>
+                  <View style={{ gap: 4 }}>
+                    <FormInput
+                      label="Password"
+                      placeholder="Enter your password (min 8 characters)"
+                      value={password}
+                      onChangeText={(value) => { setPassword(value); clearError('password'); }}
+                      error={errors.password}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      disabled={loading}
+                      leftIcon="lock-closed-outline"
+                      rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      onRightIconPress={() => setShowPassword(!showPassword)}
+                      hint="Must be at least 8 characters"
+                      required
+                    />
 
-                  <FormInput
-                    label="Confirm Password"
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChangeText={(value) => { setConfirmPassword(value); clearError('confirmPassword'); }}
-                    error={errors.confirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                    autoCapitalize="none"
-                    disabled={loading}
-                    leftIcon="lock-closed-outline"
-                    rightIcon={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                    onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    required
-                  />
-                </View>
+                    <FormInput
+                      label="Confirm Password"
+                      placeholder="Confirm your password"
+                      value={confirmPassword}
+                      onChangeText={(value) => { setConfirmPassword(value); clearError('confirmPassword'); }}
+                      error={errors.confirmPassword}
+                      secureTextEntry={!showConfirmPassword}
+                      autoCapitalize="none"
+                      disabled={loading}
+                      leftIcon="lock-closed-outline"
+                      rightIcon={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                      onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      required
+                    />
+                  </View>
+                </FrostedCard>
               </MotiView>
 
               {/* Sign up button */}
@@ -341,53 +328,77 @@ export default function RegisterScreen() {
                   disabled={loading}
                   colors={GradientPresets.fresh}
                   icon="person-add-outline"
-                  style={{ marginTop: 8, minHeight: 50 }}
+                  style={{ minHeight: 50 }}
                 />
               </MotiView>
 
-              {/* Divider + social */}
+              {/* Divider + social buttons on white cards */}
               <MotiView
                 from={{ opacity: 0, translateY: 12 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ type: 'spring', delay: 340, damping: 20, stiffness: 180 }}
               >
-                <View className="flex-row items-center my-6">
-                  <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
-                  <Text className="mx-4 text-gray-600 dark:text-gray-200 text-sm">OR</Text>
-                  <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#374151' : '#D1D5DB' }} />
+                  <Text style={{ marginHorizontal: 16, color: isDark ? '#9CA3AF' : '#6B7280', fontSize: FontSize.sm }}>
+                    OR
+                  </Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#374151' : '#D1D5DB' }} />
                 </View>
 
                 <View style={{ gap: 12 }}>
                   <HapticTouchableOpacity
-                    className={`flex-row items-center justify-center rounded-xl px-4 py-4 min-h-[50px] bg-blue-500 ${socialLoading === 'google' ? 'opacity-60' : ''}`}
-                    style={Shadows.SM}
-                    onPress={handleGoogleLogin}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                      borderRadius: 14,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      minHeight: 50,
+                      ...(Shadows.SM as any),
+                    }}
+                    onPress={() => handleSocialLogin('google')}
                     disabled={loading || socialLoading !== null}
+                    accessibilityLabel="Continue with Google"
                   >
-                    {socialLoading === 'google' ? (
-                      <AnimatedActivityIndicator color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="logo-google" size={20} color="#fff" />
-                        <Text className="text-white text-base font-semibold ml-2">Continue with Google</Text>
-                      </>
-                    )}
+                    <Ionicons name="logo-google" size={20} color="#4285F4" />
+                    <Text style={{
+                      marginLeft: 10,
+                      fontSize: FontSize.md,
+                      fontWeight: FontWeight.semibold,
+                      color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                    }}>
+                      Continue with Google
+                    </Text>
                   </HapticTouchableOpacity>
 
                   <HapticTouchableOpacity
-                    className={`flex-row items-center justify-center rounded-xl px-4 py-4 min-h-[50px] bg-black dark:bg-gray-800 ${socialLoading === 'apple' ? 'opacity-60' : ''}`}
-                    style={Shadows.SM}
-                    onPress={handleAppleLogin}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                      borderRadius: 14,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      minHeight: 50,
+                      ...(Shadows.SM as any),
+                    }}
+                    onPress={() => handleSocialLogin('apple')}
                     disabled={loading || socialLoading !== null}
+                    accessibilityLabel="Continue with Apple"
                   >
-                    {socialLoading === 'apple' ? (
-                      <AnimatedActivityIndicator color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="logo-apple" size={20} color="#fff" />
-                        <Text className="text-white text-base font-semibold ml-2">Continue with Apple</Text>
-                      </>
-                    )}
+                    <Ionicons name="logo-apple" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+                    <Text style={{
+                      marginLeft: 10,
+                      fontSize: FontSize.md,
+                      fontWeight: FontWeight.semibold,
+                      color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                    }}>
+                      Continue with Apple
+                    </Text>
                   </HapticTouchableOpacity>
                 </View>
               </MotiView>
@@ -398,20 +409,28 @@ export default function RegisterScreen() {
                 animate={{ opacity: 1 }}
                 transition={{ type: 'timing', delay: 440, duration: 400 }}
               >
-                <View className="flex-row justify-center mt-6">
-                  <Text className="text-gray-600 dark:text-gray-200 text-sm">Already have an account? </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 24 }}>
+                  <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: FontSize.sm }}>
+                    Already have an account?{' '}
+                  </Text>
                   <HapticTouchableOpacity
                     onPress={() => router.push('/login')}
                     disabled={loading}
                   >
-                    <Text className="text-red-600 dark:text-red-400 text-sm font-semibold">Sign In</Text>
+                    <Text style={{
+                      color: isDark ? '#F87171' : Colors.primary,
+                      fontSize: FontSize.sm,
+                      fontWeight: FontWeight.semibold,
+                    }}>
+                      Sign In
+                    </Text>
                   </HapticTouchableOpacity>
                 </View>
               </MotiView>
             </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingContainer>
-    </SafeAreaView></ScreenGradient>
+          </ScrollView>
+        </KeyboardAvoidingContainer>
+      </SafeAreaView>
+    </ScreenGradient>
   );
 }
