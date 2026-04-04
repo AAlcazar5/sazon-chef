@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import ModalBackdrop from '../ui/ModalBackdrop';
 import { Colors, DarkColors } from '../../constants/Colors';
 
 const STORAGE_KEY = 'sazon:fiber_tooltip_seen';
@@ -42,7 +43,8 @@ export default function FiberTooltip() {
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={dismiss}>
-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }} onPress={dismiss}>
+      <ModalBackdrop visible={visible} onPress={dismiss} />
+      <View pointerEvents="box-none" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Animated.View
           style={{
             transform: [{ scale: scaleAnim }],
@@ -81,7 +83,7 @@ export default function FiberTooltip() {
             <Text className="text-white font-semibold">Got it</Text>
           </HapticTouchableOpacity>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }

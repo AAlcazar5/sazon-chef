@@ -11,6 +11,57 @@ import { getIngredientEmoji } from '../../constants/IngredientEmoji';
 
 // ── Helpers ────────────────────────────────────────────────
 
+type UnitSystem = 'us' | 'metric';
+
+/** US ↔ metric conversion factors for volume/weight units */
+const UNIT_CONVERSIONS: Record<string, { to: string; factor: number; system: UnitSystem }> = {
+  // US → metric
+  cup: { to: 'ml', factor: 240, system: 'us' },
+  cups: { to: 'ml', factor: 240, system: 'us' },
+  tbsp: { to: 'ml', factor: 15, system: 'us' },
+  tablespoon: { to: 'ml', factor: 15, system: 'us' },
+  tablespoons: { to: 'ml', factor: 15, system: 'us' },
+  tsp: { to: 'ml', factor: 5, system: 'us' },
+  teaspoon: { to: 'ml', factor: 5, system: 'us' },
+  teaspoons: { to: 'ml', factor: 5, system: 'us' },
+  oz: { to: 'g', factor: 28.35, system: 'us' },
+  ounce: { to: 'g', factor: 28.35, system: 'us' },
+  ounces: { to: 'g', factor: 28.35, system: 'us' },
+  lb: { to: 'g', factor: 453.6, system: 'us' },
+  lbs: { to: 'g', factor: 453.6, system: 'us' },
+  pound: { to: 'g', factor: 453.6, system: 'us' },
+  pounds: { to: 'g', factor: 453.6, system: 'us' },
+  // metric → US
+  ml: { to: 'cup', factor: 1 / 240, system: 'metric' },
+  l: { to: 'cup', factor: 1000 / 240, system: 'metric' },
+  g: { to: 'oz', factor: 1 / 28.35, system: 'metric' },
+  kg: { to: 'lb', factor: 1000 / 453.6, system: 'metric' },
+};
+
+/** Convert an amount string to target unit system. "2 cups" → "480 ml" */
+function convertToSystem(amount: string, system: UnitSystem): string {
+  if (!amount) return amount;
+  const m = amount.match(/^([\d./]+)\s*([a-zA-Z]+)(.*)$/);
+  if (!m) return amount;
+  const [, numStr, unitRaw, rest] = m;
+  const unit = unitRaw.toLowerCase();
+  const conv = UNIT_CONVERSIONS[unit];
+  if (!conv || conv.system === system) return amount;
+
+  let num: number;
+  if (numStr.includes('/')) {
+    const [n, d] = numStr.split('/');
+    num = parseFloat(n) / (parseFloat(d) || 1);
+  } else {
+    num = parseFloat(numStr);
+  }
+  if (isNaN(num)) return amount;
+
+  const converted = num * conv.factor;
+  const rounded = converted >= 10 ? Math.round(converted) : Math.round(converted * 10) / 10;
+  return `${rounded} ${conv.to}${rest}`;
+}
+
 /** Parse "2 cups diced tomatoes" → { amount: "2 cups", name: "diced tomatoes" } */
 function parseIngredient(raw: string): { amount: string; name: string } {
   // Match leading amount: numbers, fractions, ranges, and common units
@@ -59,6 +110,7 @@ export default function VisualIngredientList({
   isDark,
 }: VisualIngredientListProps) {
   const [servings, setServings] = useState(baseServings);
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>('us');
   const scale = baseServings > 0 ? servings / baseServings : 1;
 
   const adjustServings = (delta: number) => {
@@ -179,6 +231,39 @@ export default function VisualIngredientList({
         </View>
       </View>
 
+      {/* Metric/US unit toggle pill */}
+      <View style={{ flexDirection: 'row', alignSelf: 'flex-start', backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6', borderRadius: 100, padding: 3, marginBottom: 12 }}>
+        {(['us', 'metric'] as UnitSystem[]).map((sys) => {
+          const active = unitSystem === sys;
+          return (
+            <HapticTouchableOpacity
+              key={sys}
+              onPress={() => setUnitSystem(sys)}
+              hapticStyle="light"
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: 100,
+                backgroundColor: active ? (isDark ? PastelDark.peach : Pastel.orange) : 'transparent',
+              }}
+              accessibilityLabel={`Show ingredients in ${sys === 'us' ? 'US customary' : 'metric'} units`}
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={{
+                fontSize: 12,
+                fontWeight: '700',
+                letterSpacing: 0.3,
+                color: active
+                  ? (isDark ? '#FFB74D' : '#EA580C')
+                  : (isDark ? DarkColors.text.secondary : Colors.text.secondary),
+              }}>
+                {sys === 'us' ? 'US' : 'METRIC'}
+              </Text>
+            </HapticTouchableOpacity>
+          );
+        })}
+      </View>
+
       {/* Horizontal emoji thumbnail strip */}
       {itemCount > 4 && (
         <ScrollView
@@ -219,7 +304,7 @@ export default function VisualIngredientList({
           )}
           {section.items.map((item, iIdx) => {
             const globalIdx = sections.slice(0, sIdx).reduce((s, sec) => s + sec.items.length, 0) + iIdx;
-            const scaledAmount = scaleAmount(item.amount);
+            const scaledAmount = convertToSystem(scaleAmount(item.amount), unitSystem);
 
             return (
               <MotiView

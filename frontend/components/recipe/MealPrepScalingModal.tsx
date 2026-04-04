@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton from '../ui/GradientButton';
+import ModalBackdrop from '../ui/ModalBackdrop';
 import { scaleRecipe, ScaledRecipe } from '../../utils/recipeScaling';
 import { mealPrepApi } from '../../lib/api';
 import { getStorageMethods } from '../../utils/storageInstructions';
@@ -252,7 +253,8 @@ export default function MealPrepScalingModal({
       animationType="none"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 items-center justify-center px-4">
+      <ModalBackdrop visible={visible} onPress={onClose} />
+      <View pointerEvents="box-none" className="flex-1 items-center justify-center px-4">
         <Animated.View
           style={{
             transform: [{ scale }],
