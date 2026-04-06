@@ -131,6 +131,9 @@ interface UseMealPlanActionsProps {
 
   // Goal mode state (from useGenerationState)
   planningMode: 'cut' | 'maintain' | 'build';
+
+  // 10C: Find Me a Meal
+  onFindMeAMeal?: () => void;
 }
 
 interface UseMealPlanActionsReturn {
@@ -269,6 +272,7 @@ export function useMealPlanActions({
   recurringRules,
   setRecurringRules,
   planningMode,
+  onFindMeAMeal,
 }: UseMealPlanActionsProps): UseMealPlanActionsReturn {
 
   // Load target macros from user profile on mount
@@ -849,21 +853,22 @@ export function useMealPlanActions({
       ? `Add another meal at ${hours[hour].displayTime}? (${existingMealsCount} meal${existingMealsCount > 1 ? 's' : ''} already planned)`
       : `Add a meal at ${hours[hour].displayTime}?`;
 
-      Alert.alert(
+    Alert.alert(
       'Add Meal',
       mealText,
-        [
-          { text: 'Cancel', style: 'cancel' },
+      [
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'From Cookbook',
-          onPress: () => {
-            router.push('/cookbook');
-          },
+          text: 'Find Me a Meal',
+          onPress: () => { onFindMeAMeal?.(); },
         },
         {
-          text: 'Custom Meal',
+          text: 'From Cookbook',
+          onPress: () => { router.push('/cookbook'); },
+        },
+        {
+          text: 'Quick Log',
           onPress: () => {
-            // TODO: Open custom meal form
             Alert.alert('Coming Soon', 'Custom meal entry will be available soon');
           },
         },

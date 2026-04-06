@@ -55,3 +55,7 @@ export { default as GoalModeSelector } from './GoalModeSelector';
 export type { GoalMode } from './GoalModeSelector';
 export { default as MealPlanEmptyState } from './MealPlanEmptyState';
 export { default as SurpriseBadge } from './SurpriseBadge';
+
+// Group 10C: Find Me a Meal
+export { default as MealRequestModal } from './MealRequestModal';
+export { default as MealRequestResults } from './MealRequestResults';

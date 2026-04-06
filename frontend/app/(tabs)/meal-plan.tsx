@@ -51,6 +51,7 @@ import {
   RecurringMealsManagerModal,
   MealPlanEmptyState,
   GoalModeSelector,
+  MealRequestModal,
 } from '../../components/meal-plan';
 import type { RecurringMeal } from '../../types';
 
@@ -65,6 +66,9 @@ export default function MealPlanScreen() {
   const [editingRule, setEditingRule] = useState<RecurringMeal | undefined>(undefined);
   const [managerModalVisible, setManagerModalVisible] = useState(false);
   const [recurringRules, setRecurringRules] = useState<RecurringMeal[]>([]);
+
+  // Find Me a Meal state
+  const [showFindMeAMealModal, setShowFindMeAMealModal] = useState(false);
 
   // Use meal plan UI hook (state, utilities, constants)
   const {
@@ -334,6 +338,7 @@ export default function MealPlanScreen() {
     recurringRules,
     setRecurringRules,
     planningMode,
+    onFindMeAMeal: () => setShowFindMeAMealModal(true),
   });
 
   // Use shopping list generation hook
@@ -533,6 +538,7 @@ export default function MealPlanScreen() {
             setHourlyMeals({});
             setDailyMacros({ calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
           }}
+          onFindMeAMeal={() => setShowFindMeAMealModal(true)}
         />
 
         <ScrollView
@@ -829,6 +835,26 @@ export default function MealPlanScreen() {
           }}
           onDelete={handleDeleteRecurringRule}
           onToggleActive={handleToggleRecurringActive}
+        />
+
+        <MealRequestModal
+          visible={showFindMeAMealModal}
+          onClose={() => setShowFindMeAMealModal(false)}
+          onMealSelected={(recipe) => {
+            handleAddRecipeToMeal(recipe.id, selectedDate.toISOString().split('T')[0], 'dinner');
+            setShowFindMeAMealModal(false);
+          }}
+          targetDate={selectedDate.toISOString().split('T')[0]}
+          remainingCalories={
+            targetMacros.calories > 0 && dailyMacros.calories >= 0
+              ? Math.max(0, targetMacros.calories - dailyMacros.calories)
+              : undefined
+          }
+          remainingProtein={
+            targetMacros.protein > 0 && dailyMacros.protein >= 0
+              ? Math.max(0, targetMacros.protein - dailyMacros.protein)
+              : undefined
+          }
         />
         </>
         )}
