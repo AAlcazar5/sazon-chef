@@ -76,6 +76,7 @@ router.delete('/:id/save', recipeController.unsaveRecipe);
 router.post('/:id/like', recipeController.likeRecipe);
 router.post('/:id/dislike', recipeController.dislikeRecipe);
 router.get('/:id/similar', recipeController.getSimilarRecipes); // Must come before /:id
+router.get('/:id/saved-meta', recipeController.getSavedMeta);
 router.put('/:id/saved-meta', recipeController.updateSavedMeta);
 router.post('/:id/view', recipeController.recordView);
 router.post('/:id/cook', recipeController.recordCook);

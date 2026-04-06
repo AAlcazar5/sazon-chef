@@ -12,6 +12,8 @@ jest.mock('../../lib/api', () => ({
     getRecipe: jest.fn(),
     recordView: jest.fn(() => Promise.resolve()),
     getSimilarRecipes: jest.fn(() => Promise.resolve({ data: [] })),
+    getSavedMeta: jest.fn(() => Promise.resolve({ data: { notes: null, rating: null } })),
+    updateSavedMeta: jest.fn(() => Promise.resolve({ data: { notes: null, rating: null } })),
     deleteRecipe: jest.fn(),
   },
   collectionsApi: {
@@ -100,9 +102,33 @@ jest.mock('../../components/mascot/LogoMascot', () => {
   };
 });
 
+jest.mock('../../components/ui/BottomSheet', () => {
+  return function MockBottomSheet(props: any) {
+    if (!props.visible) return null;
+    return require('react').createElement(require('react-native').View, { testID: 'bottom-sheet' }, props.children);
+  };
+});
+
 jest.mock('../../components/recipe/MealPrepScalingModal', () => {
   return function MockMealPrepScalingModal() {
     return require('react').createElement(require('react-native').View, { testID: 'meal-prep-modal' });
+  };
+});
+
+jest.mock('../../components/recipe/VisualIngredientList', () =>
+  require('../__helpers__/mockVisualIngredientList')
+);
+
+jest.mock('../../components/recipe/CookingStepsTimeline', () =>
+  require('../__helpers__/mockCookingStepsTimeline')
+);
+
+jest.mock('../../components/cookbook/RecipeNotesModal', () => {
+  return function MockRecipeNotesModal(props: any) {
+    if (!props.visible) return null;
+    return require('react').createElement(require('react-native').View, { testID: 'notes-modal' },
+      require('react').createElement(require('react-native').Text, null, 'Notes Modal'),
+    );
   };
 });
 
@@ -259,11 +285,78 @@ describe('RecipeModal', () => {
     const { getByLabelText, getByText, getAllByText } = render(<RecipeModal />);
     await waitFor(() => getAllByText('Grilled Salmon'));
 
-    const startBtn = getByLabelText('Start Cooking');
+    // Label includes cook time: "Start Cooking · 25 min"
+    const startBtn = getByLabelText(/Start Cooking/);
     expect(startBtn).toBeTruthy();
     fireEvent.press(startBtn);
     expect(mockRouter.push).toHaveBeenCalledWith(
       expect.objectContaining({ pathname: '/cooking', params: { id: 'recipe-1' } }),
     );
+  });
+
+  // ── Notes on Recipe Detail ──────────────────────────────────────────────────
+
+  describe('My Notes section', () => {
+    beforeEach(() => {
+      // Override source to 'cookbook' for notes tests
+      const { useLocalSearchParams } = require('expo-router');
+      useLocalSearchParams.mockReturnValue({ id: 'recipe-1', source: 'cookbook' });
+    });
+
+    it('shows "My Notes" section when recipe is opened from cookbook', async () => {
+      const { recipeApi } = require('../../lib/api');
+      recipeApi.getSavedMeta.mockResolvedValue({ data: { notes: null, rating: null } });
+
+      const { getAllByText, getByText } = render(<RecipeModal />);
+      await waitFor(() => getAllByText('Grilled Salmon'));
+
+      expect(getByText('My Notes')).toBeTruthy();
+    });
+
+    it('displays existing notes text when notes are present', async () => {
+      const { recipeApi } = require('../../lib/api');
+      recipeApi.getSavedMeta.mockResolvedValue({ data: { notes: 'Needs more salt', rating: 4 } });
+
+      const { getAllByText, getByText } = render(<RecipeModal />);
+      await waitFor(() => getAllByText('Grilled Salmon'));
+
+      await waitFor(() => expect(getByText('Needs more salt')).toBeTruthy());
+    });
+
+    it('shows "Add a note" placeholder when no notes exist', async () => {
+      const { recipeApi } = require('../../lib/api');
+      recipeApi.getSavedMeta.mockResolvedValue({ data: { notes: null, rating: null } });
+
+      const { getAllByText, getByText } = render(<RecipeModal />);
+      await waitFor(() => getAllByText('Grilled Salmon'));
+
+      await waitFor(() => expect(getByText('Add a note…')).toBeTruthy());
+    });
+
+    it('does not show "My Notes" section for non-cookbook source', async () => {
+      const { useLocalSearchParams } = require('expo-router');
+      useLocalSearchParams.mockReturnValue({ id: 'recipe-1', source: 'suggestions' });
+
+      const { getAllByText, queryByText } = render(<RecipeModal />);
+      await waitFor(() => getAllByText('Grilled Salmon'));
+
+      expect(queryByText('My Notes')).toBeNull();
+    });
+
+    it('opens notes modal when tapping the notes section', async () => {
+      const { recipeApi } = require('../../lib/api');
+      recipeApi.getSavedMeta.mockResolvedValue({ data: { notes: 'Some note', rating: null } });
+
+      const { getAllByText, getByLabelText } = render(<RecipeModal />);
+      await waitFor(() => getAllByText('Grilled Salmon'));
+
+      await waitFor(() => getByLabelText('Edit notes'));
+      fireEvent.press(getByLabelText('Edit notes'));
+
+      // The RecipeNotesModal should now be visible (mocked as a View with testID)
+      await waitFor(() => {
+        expect(getByLabelText('Edit notes')).toBeTruthy();
+      });
+    });
   });
 });

@@ -4,6 +4,7 @@
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   Animated,
   Platform,
@@ -108,6 +109,10 @@ export default function CookingScreen() {
   const startTimeRef = useRef<number>(Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [nextMealName, setNextMealName] = useState<string | null>(null);
+
+  // Quick note state
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [noteText, setNoteText] = useState('');
 
   // Share card
   const shareCardRef = useRef<ViewShot>(null);
@@ -283,6 +288,26 @@ export default function CookingScreen() {
       }
     }).catch(() => {});
   }
+
+  // --- Quick Note Save ---
+  const handleSaveNote = useCallback(async () => {
+    if (!recipe || !noteText.trim()) return;
+    const timestamp = new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const entry = `[${timestamp}] ${noteText.trim()}`;
+
+    try {
+      // Fetch existing notes so we append
+      const res = await recipeApi.getSavedMeta(recipe.id);
+      const existing = res.data?.notes || '';
+      const updated = existing ? `${existing}\n${entry}` : entry;
+      await recipeApi.updateSavedMeta(recipe.id, { notes: updated });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      // Best-effort — don't block cooking
+    }
+    setNoteText('');
+    setShowNoteInput(false);
+  }, [recipe, noteText]);
 
   // --- Timer handlers ---
   const handleTimerTick = useCallback((timerId: string) => {
@@ -620,35 +645,82 @@ export default function CookingScreen() {
 
         {/* Bottom bar */}
         <View className="px-4 pb-2 gap-3">
-          {/* Ingredients toggle */}
-          <HapticTouchableOpacity
-            onPress={() => {
-              setShowIngredients((s) => !s);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-            hapticStyle="light"
-            className="flex-row items-center justify-center py-2.5 rounded-xl border border-gray-700"
-          >
-            <Ionicons
-              name={showIngredients ? 'list' : 'list-outline'}
-              size={18}
-              color={showIngredients ? '#F97316' : '#9CA3AF'}
-              style={{ marginRight: 8 }}
-            />
-            <Text
-              className="font-semibold text-sm"
-              style={{ color: showIngredients ? '#F97316' : '#9CA3AF' }}
-            >
-              {showIngredients ? 'Back to Steps' : `Ingredients (${ingredientStrings.length})`}
-            </Text>
-            {checkedIngredients.size > 0 && !showIngredients && (
-              <View className="ml-2 bg-green-500 rounded-full px-1.5 py-0.5">
-                <Text className="text-white text-xs font-bold">
-                  {checkedIngredients.size}
-                </Text>
+          {/* Quick Note Input Overlay */}
+          {showNoteInput && (
+            <View className="rounded-xl border border-amber-500/30 p-3 mb-2" style={{ backgroundColor: 'rgba(251,191,36,0.08)' }}>
+              <TextInput
+                placeholder="Jot down a quick note…"
+                placeholderTextColor="#9CA3AF"
+                value={noteText}
+                onChangeText={setNoteText}
+                multiline
+                maxLength={200}
+                autoFocus
+                className="text-sm text-white mb-2"
+                style={{ minHeight: 40, maxHeight: 80 }}
+              />
+              <View className="flex-row justify-end gap-3">
+                <HapticTouchableOpacity
+                  onPress={() => { setShowNoteInput(false); setNoteText(''); }}
+                  hapticStyle="light"
+                  accessibilityLabel="Cancel note"
+                >
+                  <Text className="text-gray-400 text-sm font-medium">Cancel</Text>
+                </HapticTouchableOpacity>
+                <HapticTouchableOpacity
+                  onPress={handleSaveNote}
+                  hapticStyle="medium"
+                  accessibilityLabel="Save note"
+                  disabled={!noteText.trim()}
+                  style={{ opacity: noteText.trim() ? 1 : 0.4 }}
+                >
+                  <Text className="text-amber-400 text-sm font-semibold">Save</Text>
+                </HapticTouchableOpacity>
               </View>
-            )}
-          </HapticTouchableOpacity>
+            </View>
+          )}
+
+          {/* Add Note + Ingredients row */}
+          <View className="flex-row gap-2">
+            <HapticTouchableOpacity
+              onPress={() => setShowNoteInput((s) => !s)}
+              hapticStyle="light"
+              accessibilityLabel="Add note"
+              className="flex-row items-center justify-center py-2.5 px-3 rounded-xl border border-gray-700"
+            >
+              <Ionicons name="document-text-outline" size={16} color="#FBBF24" />
+              <Text className="text-amber-400 font-semibold text-xs ml-1.5">Note</Text>
+            </HapticTouchableOpacity>
+
+            <HapticTouchableOpacity
+              onPress={() => {
+                setShowIngredients((s) => !s);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              hapticStyle="light"
+              className="flex-1 flex-row items-center justify-center py-2.5 rounded-xl border border-gray-700"
+            >
+              <Ionicons
+                name={showIngredients ? 'list' : 'list-outline'}
+                size={18}
+                color={showIngredients ? '#F97316' : '#9CA3AF'}
+                style={{ marginRight: 8 }}
+              />
+              <Text
+                className="font-semibold text-sm"
+                style={{ color: showIngredients ? '#F97316' : '#9CA3AF' }}
+              >
+                {showIngredients ? 'Back to Steps' : `Ingredients (${ingredientStrings.length})`}
+              </Text>
+              {checkedIngredients.size > 0 && !showIngredients && (
+                <View className="ml-2 bg-green-500 rounded-full px-1.5 py-0.5">
+                  <Text className="text-white text-xs font-bold">
+                    {checkedIngredients.size}
+                  </Text>
+                </View>
+              )}
+            </HapticTouchableOpacity>
+          </View>
 
           {/* Prev / Next */}
           {!showIngredients && (

@@ -35,6 +35,7 @@ jest.mock('expo-router', () => ({
   router: mockRouter,
   useSegments: jest.fn(() => []),
   useLocalSearchParams: jest.fn(() => ({})),
+  useNavigation: jest.fn(() => ({ setOptions: jest.fn(), addListener: jest.fn(() => jest.fn()) })),
   useFocusEffect: jest.fn((callback) => {
     // Call the callback immediately for testing
     if (typeof callback === 'function') {
@@ -144,3 +145,8 @@ global.console = {
   warn: jest.fn(),
   error: jest.fn(),
 };
+
+// Polyfill window.dispatchEvent for react-test-renderer (React 19 error reporting)
+if (typeof window !== 'undefined' && typeof window.dispatchEvent !== 'function') {
+  window.dispatchEvent = jest.fn();
+}

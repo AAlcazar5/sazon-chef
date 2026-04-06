@@ -1496,6 +1496,9 @@ export default function CookbookScreen() {
               onRate={handleUpdateRating}
               selectionMode={selectionMode}
               selectedRecipeIds={selectedRecipeIds}
+              onSwipeEdit={(recipe) => router.push(`/recipe-form?id=${recipe.id}` as any)}
+              onSwipeNotes={(recipe) => { setNotesRecipe(recipe); setNotesModalVisible(true); }}
+              onSwipeCollection={(recipe) => openSavePicker(recipe.id)}
             />
           </View>
 

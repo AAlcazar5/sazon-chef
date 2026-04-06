@@ -654,6 +654,10 @@ export const recipeApi = {
   },
 
   // Cookbook Quick Wins
+  getSavedMeta: (id: string): Promise<{ data: { notes: string | null; rating: number | null } }> => {
+    return apiClient.get(`/recipes/${id}/saved-meta`);
+  },
+
   updateSavedMeta: (id: string, data: { notes?: string | null; rating?: number | null }) => {
     return apiClient.put(`/recipes/${id}/saved-meta`, data);
   },

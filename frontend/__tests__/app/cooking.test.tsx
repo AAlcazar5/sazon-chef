@@ -35,11 +35,21 @@ jest.mock('../../lib/api', () => ({
   recipeApi: {
     getRecipe: jest.fn(),
     recordCook: jest.fn(() => Promise.resolve()),
+    getSavedMeta: jest.fn(() => Promise.resolve({ data: { notes: null, rating: null } })),
+    updateSavedMeta: jest.fn(() => Promise.resolve({ data: { notes: null, rating: null } })),
+  },
+  mealPlanApi: {
+    getWeeklyPlan: jest.fn(() => Promise.resolve({ data: { days: [] } })),
   },
 }));
 
 jest.mock('../../utils/timerExtraction', () => ({
   extractTimers: jest.fn(() => []),
+}));
+
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: jest.fn(),
+  MediaTypeOptions: { Images: 'Images' },
 }));
 
 jest.mock('../../components/recipe/CookingModeTimers', () => () => null);
@@ -51,6 +61,19 @@ jest.mock('../../components/mascot/AnimatedLottieMascot', () => {
     return <View testID={`sazon-${expression}`} />;
   };
 });
+
+jest.mock('../../components/celebrations', () => ({
+  CelebrationOverlay: () => null,
+}));
+
+jest.mock('../../components/celebrations/ShareCardCapture', () => {
+  const React = require('react');
+  return React.forwardRef(function MockShareCardCapture() { return null; });
+});
+
+jest.mock('../../utils/hapticChoreography', () => ({
+  HapticChoreography: { cookingComplete: jest.fn() },
+}));
 
 jest.mock('../../components/premium/CoffeeBanner', () => ({
   CoffeeBanner: () => null,
@@ -273,6 +296,65 @@ describe('CookingScreen — completion screen', () => {
     await reachDoneScreen();
     await waitFor(() =>
       expect(recipeApi.recordCook).toHaveBeenCalledWith('recipe-1')
+    );
+  });
+});
+
+describe('CookingScreen — Add Note button', () => {
+  let timingSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    const routerMock = require('expo-router');
+    routerMock.useLocalSearchParams.mockReturnValue({ id: 'recipe-1' });
+
+    timingSpy = jest
+      .spyOn(Animated, 'timing')
+      .mockImplementation((value: any, config: any) => ({
+        start: (callback?: ((result: { finished: boolean }) => void)) => {
+          if (typeof config.toValue === 'number') value.setValue(config.toValue);
+          callback?.({ finished: true });
+        },
+        stop: jest.fn(),
+        reset: jest.fn(),
+      }));
+  });
+
+  afterEach(() => {
+    timingSpy.mockRestore();
+  });
+
+  it('renders "Add Note" button in the bottom bar during cooking', async () => {
+    const { getByText, getByLabelText } = setup();
+    await waitFor(() => expect(getByText('Boil the water')).toBeTruthy());
+
+    expect(getByLabelText('Add note')).toBeTruthy();
+  });
+
+  it('opens note input overlay when "Add Note" is pressed', async () => {
+    const { getByText, getByLabelText, getByPlaceholderText } = setup();
+    await waitFor(() => expect(getByText('Boil the water')).toBeTruthy());
+
+    fireEvent.press(getByLabelText('Add note'));
+
+    await waitFor(() => expect(getByPlaceholderText("Jot down a quick note…")).toBeTruthy());
+  });
+
+  it('saves note via API when submitted', async () => {
+    const { recipeApi } = require('../../lib/api');
+    const { getByText, getByLabelText, getByPlaceholderText } = setup();
+    await waitFor(() => expect(getByText('Boil the water')).toBeTruthy());
+
+    fireEvent.press(getByLabelText('Add note'));
+    await waitFor(() => getByPlaceholderText("Jot down a quick note…"));
+
+    fireEvent.changeText(getByPlaceholderText("Jot down a quick note…"), 'Needs more salt');
+    fireEvent.press(getByLabelText('Save note'));
+
+    await waitFor(() =>
+      expect(recipeApi.updateSavedMeta).toHaveBeenCalledWith('recipe-1', expect.objectContaining({
+        notes: expect.stringContaining('Needs more salt'),
+      }))
     );
   });
 });

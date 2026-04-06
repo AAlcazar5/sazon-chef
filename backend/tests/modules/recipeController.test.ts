@@ -823,4 +823,55 @@ describe('Recipe Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(500);
     });
   });
+
+  describe('getSavedMeta', () => {
+    test('returns notes and rating when saved recipe exists', async () => {
+      mockReq.params = { id: 'recipe-1' };
+      (prisma.savedRecipe.findFirst as jest.Mock).mockResolvedValue({
+        notes: 'Use extra garlic next time',
+        rating: 4,
+      });
+
+      await recipeController.getSavedMeta(mockReq as Request, mockRes as Response);
+
+      expect(prisma.savedRecipe.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'test-user-id', recipeId: 'recipe-1' },
+        select: { notes: true, rating: true },
+      });
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0];
+      expect(payload).toEqual({ notes: 'Use extra garlic next time', rating: 4 });
+    });
+
+    test('returns nulls when recipe is not saved', async () => {
+      mockReq.params = { id: 'unsaved-recipe' };
+      (prisma.savedRecipe.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await recipeController.getSavedMeta(mockReq as Request, mockRes as Response);
+
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0];
+      expect(payload).toEqual({ notes: null, rating: null });
+    });
+
+    test('returns nulls for undefined notes/rating fields', async () => {
+      mockReq.params = { id: 'recipe-1' };
+      (prisma.savedRecipe.findFirst as jest.Mock).mockResolvedValue({
+        notes: undefined,
+        rating: undefined,
+      });
+
+      await recipeController.getSavedMeta(mockReq as Request, mockRes as Response);
+
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0];
+      expect(payload).toEqual({ notes: null, rating: null });
+    });
+
+    test('returns 500 on db failure', async () => {
+      mockReq.params = { id: 'recipe-1' };
+      (prisma.savedRecipe.findFirst as jest.Mock).mockRejectedValue(new Error('db down'));
+
+      await recipeController.getSavedMeta(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+  });
 });
