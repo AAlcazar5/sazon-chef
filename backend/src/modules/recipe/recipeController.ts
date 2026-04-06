@@ -2907,10 +2907,10 @@ export const recipeController = {
   async createCollection(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      const { name, description, coverImageUrl } = req.body as { name: string; description?: string; coverImageUrl?: string };
+      const { name, description, coverImageUrl, category } = req.body as { name: string; description?: string; coverImageUrl?: string; category?: string };
       if (!name) return res.status(400).json({ error: 'Name is required' });
       const collection = await (prisma as any).collection.create({
-        data: { userId, name, description: description || null, coverImageUrl: coverImageUrl || null, isDefault: false },
+        data: { userId, name, description: description || null, coverImageUrl: coverImageUrl || null, category: category || null, isDefault: false },
       });
       res.json({ success: true, data: collection });
     } catch (error: any) {
@@ -2927,14 +2927,15 @@ export const recipeController = {
     try {
       const userId = getUserId(req);
       const { id } = req.params;
-      const { name, description, coverImageUrl, isPinned } = req.body as {
-        name?: string; description?: string | null; coverImageUrl?: string | null; isPinned?: boolean;
+      const { name, description, coverImageUrl, isPinned, category } = req.body as {
+        name?: string; description?: string | null; coverImageUrl?: string | null; isPinned?: boolean; category?: string | null;
       };
       const data: any = {};
       if (name !== undefined) data.name = name;
       if (description !== undefined) data.description = description;
       if (coverImageUrl !== undefined) data.coverImageUrl = coverImageUrl;
       if (isPinned !== undefined) data.isPinned = isPinned;
+      if (category !== undefined) data.category = category;
       const updated = await (prisma as any).collection.update({ where: { id }, data });
       res.json({ success: true, data: updated });
     } catch (error: any) {

@@ -684,11 +684,11 @@ export const recipeApi = {
 // Collections API
 export const collectionsApi = {
   list: () => apiClient.get('/recipes/collections'),
-  create: (data: string | { name: string; description?: string; coverImageUrl?: string }) => {
+  create: (data: string | { name: string; description?: string; coverImageUrl?: string; category?: string | null }) => {
     const body = typeof data === 'string' ? { name: data } : data;
     return apiClient.post('/recipes/collections', body);
   },
-  update: (id: string, data: { name?: string; description?: string | null; coverImageUrl?: string | null; isPinned?: boolean }) =>
+  update: (id: string, data: { name?: string; description?: string | null; coverImageUrl?: string | null; isPinned?: boolean; category?: string | null }) =>
     apiClient.put(`/recipes/collections/${id}`, data),
   remove: (id: string) => apiClient.delete(`/recipes/collections/${id}`),
   togglePin: (id: string) => apiClient.patch(`/recipes/collections/${id}/pin`),

@@ -91,6 +91,14 @@ export default function CookbookScreen() {
   const [smartCollectionsLoading, setSmartCollectionsLoading] = useState(false);
   const [collectionsSearchQuery, setCollectionsSearchQuery] = useState('');
   const { collection: weatherCollection } = useWeatherSmartCollection();
+  const [collapsedCategorySections, setCollapsedCategorySections] = useState<Set<string>>(new Set());
+  const toggleCategorySection = (key: string) => {
+    setCollapsedCategorySections(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
 
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('list');
   const DISPLAY_MODE_STORAGE_KEY = '@sazon_cookbook_view_mode';
@@ -701,7 +709,7 @@ export default function CookbookScreen() {
   };
 
   // Collection edit modal save handler
-  const handleCollectionEditSave = async (data: { name: string; description?: string; coverImageUrl?: string | null }) => {
+  const handleCollectionEditSave = async (data: { name: string; description?: string; coverImageUrl?: string | null; category?: import('../../types').CollectionCategory | null }) => {
     try {
       if (editingCollection) {
         // Edit mode
@@ -709,6 +717,7 @@ export default function CookbookScreen() {
           name: data.name,
           description: data.description || null,
           coverImageUrl: data.coverImageUrl,
+          category: data.category ?? null,
         });
       } else {
         // Create mode
@@ -716,6 +725,7 @@ export default function CookbookScreen() {
           name: data.name,
           description: data.description,
           coverImageUrl: data.coverImageUrl || undefined,
+          category: data.category ?? null,
         });
       }
       setEditModalVisible(false);
@@ -1316,81 +1326,107 @@ export default function CookbookScreen() {
             );
           })()}
 
-          {/* Custom Collections section */}
+          {/* My Collections — grouped by category with collapsible sections */}
           {(() => {
             const q = collectionsSearchQuery.toLowerCase().trim();
-            const sorted = collections.slice().sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
-            const filtered = q
-              ? sorted.filter(col =>
-                  col.name.toLowerCase().includes(q) ||
-                  allRecipes.some((r: any) =>
-                    (r.collections?.some((c: any) => c.id === col.id) || r.collectionIds?.includes(col.id)) &&
-                    (r.title?.toLowerCase().includes(q) || r.recipe?.title?.toLowerCase().includes(q))
-                  )
-                )
-              : sorted;
-            if (filtered.length === 0) return null;
+            const matchesQuery = (col: typeof collections[number]) =>
+              col.name.toLowerCase().includes(q) ||
+              allRecipes.some((r: any) =>
+                (r.collections?.some((c: any) => c.id === col.id) || r.collectionIds?.includes(col.id)) &&
+                (r.title?.toLowerCase().includes(q) || r.recipe?.title?.toLowerCase().includes(q))
+              );
+
+            const allFiltered = q ? collections.filter(matchesQuery) : collections;
+            if (allFiltered.length === 0) return null;
+
+            const SECTIONS: { key: string; label: string; emoji: string; filter: (c: typeof collections[number]) => boolean }[] = [
+              { key: 'pinned',    label: 'Pinned',          emoji: '📌', filter: c => !!c.isPinned },
+              { key: 'meal_type', label: 'Meal Type',       emoji: '🍽️', filter: c => !c.isPinned && c.category === 'meal_type' },
+              { key: 'cuisine',   label: 'Cuisine',         emoji: '🌍', filter: c => !c.isPinned && c.category === 'cuisine' },
+              { key: 'mood',      label: 'Mood & Occasion', emoji: '✨', filter: c => !c.isPinned && c.category === 'mood' },
+              { key: 'dietary',   label: 'Dietary',         emoji: '🥗', filter: c => !c.isPinned && c.category === 'dietary' },
+              { key: 'seasonal',  label: 'Seasonal',        emoji: '🌸', filter: c => !c.isPinned && c.category === 'seasonal' },
+              { key: 'other',     label: 'My Collections',  emoji: '📚', filter: c => !c.isPinned && (!c.category || c.category === 'custom') },
+            ];
+
+            const renderCollectionCard = (col: typeof collections[number]) => {
+              const colRecipes = allRecipes.filter((r: any) =>
+                r.collections?.some((c: any) => c.id === col.id) || r.collectionIds?.includes(col.id)
+              ) as any[];
+              const previewImages = col.coverImageUrl
+                ? [col.coverImageUrl]
+                : colRecipes.map((r: any) => r.imageUrl ?? r.recipe?.imageUrl).filter(Boolean).slice(0, 3) as string[];
+              return (
+                <HapticTouchableOpacity
+                  key={col.id}
+                  testID={`collection-card-${col.id}`}
+                  accessibilityLabel={`${col.name} collection, ${col.recipeCount ?? 0} recipes`}
+                  accessibilityRole="button"
+                  style={{
+                    width: '47.5%', borderRadius: 20, overflow: 'hidden', minHeight: 130,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#F5F5F5',
+                    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2,
+                  }}
+                  onPress={() => { HapticPatterns.buttonPress(); handleSelectList(col.id); setViewMode('saved'); }}
+                >
+                  {previewImages.length > 0 && (
+                    <View style={{ flexDirection: 'row', height: 72, overflow: 'hidden' }}>
+                      {previewImages.map((uri, i) => (
+                        <Image key={i} source={{ uri }} style={{ flex: 1, height: 72 }} resizeMode="cover" />
+                      ))}
+                      {Array.from({ length: Math.max(0, 3 - previewImages.length) }).map((_, i) => (
+                        <View key={`ph-${i}`} style={{ flex: 1, height: 72, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />
+                      ))}
+                    </View>
+                  )}
+                  <View style={{ padding: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }} numberOfLines={2}>
+                      {col.name}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 4 }}>
+                      {col.recipeCount ?? 0} {(col.recipeCount ?? 0) === 1 ? 'recipe' : 'recipes'}
+                    </Text>
+                  </View>
+                </HapticTouchableOpacity>
+              );
+            };
+
             return (
               <>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, marginBottom: 10, textTransform: 'uppercase' }}>
-                  My Collections
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                  {filtered.map((col) => {
-                    const colRecipes = allRecipes.filter((r: any) =>
-                      r.collections?.some((c: any) => c.id === col.id) || r.collectionIds?.includes(col.id)
-                    ) as any[];
-                    const previewImages = col.coverImageUrl
-                      ? [col.coverImageUrl]
-                      : colRecipes.map((r: any) => r.imageUrl ?? r.recipe?.imageUrl).filter(Boolean).slice(0, 3) as string[];
-                    return (
+                {SECTIONS.map((section) => {
+                  const sectionCols = allFiltered.filter(section.filter);
+                  if (sectionCols.length === 0) return null;
+                  const isCollapsed = collapsedCategorySections.has(section.key);
+                  return (
+                    <View key={section.key} style={{ marginBottom: 20 }}>
                       <HapticTouchableOpacity
-                        key={col.id}
-                        testID={`collection-card-${col.id}`}
-                        accessibilityLabel={`${col.name} collection, ${col.recipeCount ?? 0} recipes`}
+                        onPress={() => toggleCategorySection(section.key)}
+                        accessibilityLabel={`${section.label} section, ${isCollapsed ? 'collapsed' : 'expanded'}`}
                         accessibilityRole="button"
-                        style={{
-                          width: '47.5%', borderRadius: 20, overflow: 'hidden', minHeight: 130,
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#F5F5F5',
-                          shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2,
-                        }}
-                        onPress={() => { HapticPatterns.buttonPress(); handleSelectList(col.id); setViewMode('saved'); }}
+                        testID={`section-header-${section.key}`}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}
                       >
-                        {/* 3-image preview strip */}
-                        {previewImages.length > 0 && (
-                          <View style={{ flexDirection: 'row', height: 72, overflow: 'hidden' }}>
-                            {previewImages.map((uri, i) => (
-                              <Image
-                                key={i}
-                                source={{ uri }}
-                                style={{ flex: 1, height: 72 }}
-                                resizeMode="cover"
-                              />
-                            ))}
-                            {/* fill empty slots with a grey placeholder */}
-                            {Array.from({ length: Math.max(0, 3 - previewImages.length) }).map((_, i) => (
-                              <View key={`ph-${i}`} style={{ flex: 1, height: 72, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />
-                            ))}
-                          </View>
-                        )}
-                        <View style={{ padding: 12 }}>
-                          {col.isPinned && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                              <Ionicons name="pin" size={10} color={isDark ? '#9CA3AF' : '#6B7280'} />
-                              <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginLeft: 3, fontWeight: '600' }}>Pinned</Text>
-                            </View>
-                          )}
-                          <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }} numberOfLines={2}>
-                            {col.name}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 4 }}>
-                            {col.recipeCount ?? 0} {(col.recipeCount ?? 0) === 1 ? 'recipe' : 'recipes'}
-                          </Text>
-                        </View>
+                        <Text style={{ fontSize: 13, marginRight: 6 }}>{section.emoji}</Text>
+                        <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                          {section.label}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: isDark ? '#6B7280' : '#9CA3AF', marginRight: 4 }}>
+                          {sectionCols.length}
+                        </Text>
+                        <Ionicons
+                          name={isCollapsed ? 'chevron-forward' : 'chevron-down'}
+                          size={14}
+                          color={isDark ? '#6B7280' : '#9CA3AF'}
+                        />
                       </HapticTouchableOpacity>
-                    );
-                  })}
-                </View>
+                      {!isCollapsed && (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                          {sectionCols.map(renderCollectionCard)}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
               </>
             );
           })()}
