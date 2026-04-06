@@ -10,7 +10,9 @@ import { recommendationCache } from '@/utils/recommendationCache';
 import { cacheService } from '@/utils/cacheService';
 import {
   SMART_COLLECTION_DEFINITIONS,
+  WEATHER_COLLECTION_DEFINITION,
   buildRecipeFilter,
+  buildWeatherFilter,
   recipeMatchesSmartCollection,
   getSmartCollectionById,
 } from '@/services/smartCollectionsService';
@@ -4933,6 +4935,7 @@ export const recipeController = {
               fat: true,
               fiber: true,
               estimatedCostPerServing: true,
+              mealType: true,
             },
           },
         },
@@ -4998,6 +5001,51 @@ export const recipeController = {
     } catch (error: any) {
       console.error('❌ [getSmartCollectionRecipes] Error:', error);
       return res.status(500).json({ error: 'Failed to load smart collection recipes' });
+    }
+  },
+
+  /**
+   * GET /api/recipes/smart-collections/weather-today?lat=X&lon=Y
+   * Returns the weather-aware smart collection with a recipe count for the user.
+   * Requires lat/lon query params. Returns 503 if weather data is unavailable.
+   */
+  async getWeatherSmartCollection(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const lat = parseFloat(req.query.lat as string);
+      const lon = parseFloat(req.query.lon as string);
+
+      if (isNaN(lat) || isNaN(lon)) {
+        return res.status(400).json({ error: 'lat and lon query params are required' });
+      }
+
+      const { getWeatherContext } = require('@/services/weatherService');
+      const weatherContext = await getWeatherContext(lat, lon).catch(() => null);
+      if (!weatherContext) {
+        return res.status(503).json({ error: 'Weather data unavailable' });
+      }
+
+      const filter = buildWeatherFilter(weatherContext.condition);
+      const where = Object.keys(filter).length > 0
+        ? { userId, recipe: filter }
+        : { userId };
+
+      const count = await (prisma as any).savedRecipe.count({ where });
+
+      return res.json({
+        collection: {
+          ...WEATHER_COLLECTION_DEFINITION,
+          count,
+          weather: {
+            condition: weatherContext.condition,
+            description: weatherContext.description,
+            tempCelsius: weatherContext.tempCelsius,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error('❌ [getWeatherSmartCollection] Error:', error);
+      return res.status(500).json({ error: 'Failed to load weather collection' });
     }
   },
 };

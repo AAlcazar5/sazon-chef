@@ -640,6 +640,9 @@ export const recipeApi = {
   getSmartCollectionRecipes: (id: string) => {
     return apiClient.get(`/recipes/smart-collections/${id}`);
   },
+  getWeatherSmartCollection: (lat: number, lon: number) => {
+    return apiClient.get(`/recipes/smart-collections/weather-today?lat=${lat}&lon=${lon}`);
+  },
 
   updateRecipe: (id: string, data: any) => {
     return apiClient.put(`/recipes/${id}`, data);

@@ -62,6 +62,7 @@ router.get('/popular-searches', recipeController.getPopularSearches);
 
 // Smart collections - specific routes before parameterized
 router.get('/smart-collections', recipeController.getSmartCollections);
+router.get('/smart-collections/weather-today', recipeController.getWeatherSmartCollection);
 router.get('/smart-collections/:id', recipeController.getSmartCollectionRecipes);
 
 // Parameterized routes - MUST come last
