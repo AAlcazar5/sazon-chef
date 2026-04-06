@@ -6,6 +6,7 @@ import SettingsRow from '../../components/ui/SettingsRow';
 import StaggerItem from '../../components/ui/StaggerItem';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import ScreenGradient from '../../components/ui/ScreenGradient';
+import FrostedHeader from '../../components/ui/FrostedHeader';
 import Icon from '../../components/ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -81,6 +82,10 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <ScreenGradient><View style={{ flex: 1 }}>
+        <FrostedHeader paddingBottom={24} withTopInset>
+          {/* Placeholder matching ProfileHeader's height (80px avatar + 12 margin + ~24 name row) */}
+          <View style={{ height: 116 }} />
+        </FrostedHeader>
         <View className="flex-1 items-center justify-center">
           <Icon name={Icons.ACCOUNT_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="Loading profile" />
           <Text className="text-gray-500 dark:text-gray-200 mt-4">Loading profile...</Text>

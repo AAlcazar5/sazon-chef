@@ -7,6 +7,7 @@ import Toast from '../../components/ui/Toast';
 import { CelebrationOverlay } from '../../components/celebrations';
 import SkeletonLoader from '../../components/ui/SkeletonLoader';
 import ScreenGradient from '../../components/ui/ScreenGradient';
+import FrostedHeader from '../../components/ui/FrostedHeader';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Spacing, ComponentSpacing } from '../../constants/Spacing';
@@ -460,11 +461,11 @@ export default function MealPlanScreen() {
       <ScreenGradient><View style={{ flex: 1 }}>
         {loading ? (
           <>
-            <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, minHeight: 56 }}>
+            <FrostedHeader paddingBottom={12} withTopInset>
               <View className="flex-row items-center justify-center" style={{ height: 28 }}>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Meal Plan</Text>
               </View>
-            </View>
+            </FrostedHeader>
             <ScrollView className="flex-1" contentContainerStyle={{ padding: Spacing.lg }} nestedScrollEnabled={true}>
               <WeeklyCalendarSkeleton />
               <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>

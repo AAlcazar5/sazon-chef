@@ -3,9 +3,10 @@
 
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimatedLogoMascot } from '../mascot';
 import RecipeCardSkeleton from '../recipe/RecipeCardSkeleton';
+import FrostedHeader from '../ui/FrostedHeader';
+import ScreenGradient from '../ui/ScreenGradient';
 import { Spacing } from '../../constants/Spacing';
 
 interface HomeLoadingStateProps {
@@ -14,34 +15,35 @@ interface HomeLoadingStateProps {
 
 function HomeLoadingState({ viewMode }: HomeLoadingStateProps) {
   return (
-    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 ">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-            <AnimatedLogoMascot
-              expression="happy"
-              size="xsmall"
-              animationType="pulse"
-            />
-            <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2 }} accessibilityRole="header">Sazon Chef</Text>
+    <ScreenGradient>
+      <View style={{ flex: 1 }}>
+        <FrostedHeader paddingBottom={12} withTopInset>
+          <View className="flex-row items-center justify-between" style={{ height: 36 }}>
+            <View className="flex-row items-center flex-1">
+              <AnimatedLogoMascot
+                expression="happy"
+                size="xsmall"
+                animationType="pulse"
+              />
+              <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2 }} accessibilityRole="header">Sazon Chef</Text>
+            </View>
+            {/* View Mode Toggle Skeleton */}
+            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <View className="w-10 h-8 rounded bg-gray-200 dark:bg-gray-600" />
+              <View className="w-10 h-8 rounded bg-gray-200 dark:bg-gray-600 ml-1" />
+            </View>
           </View>
-          {/* View Mode Toggle Skeleton */}
-          <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <View className="w-10 h-8 rounded bg-gray-200 dark:bg-gray-600" />
-            <View className="w-10 h-8 rounded bg-gray-200 dark:bg-gray-600 ml-1" />
+        </FrostedHeader>
+        {/* Quick Filter Chips Skeleton */}
+        <View className="px-4 py-3">
+          <View className="flex-row" style={{ gap: 8 }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <View key={i} className="h-9 w-20 rounded-full bg-gray-200 dark:bg-gray-700" />
+            ))}
           </View>
         </View>
-      </View>
-      {/* Quick Filter Chips Skeleton */}
-      <View className="bg-white dark:bg-gray-800 px-4 py-3 ">
-        <View className="flex-row" style={{ gap: 8 }}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <View key={i} className="h-9 w-20 rounded-full bg-gray-200 dark:bg-gray-700" />
-          ))}
-        </View>
-      </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
         {/* Featured Recipe Skeleton */}
         <View className="px-4 mb-4" style={{ marginTop: Spacing.xl }}>
           <View className="flex-row items-center justify-between mb-4">
@@ -73,8 +75,9 @@ function HomeLoadingState({ viewMode }: HomeLoadingStateProps) {
             </>
           )}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </View>
+    </ScreenGradient>
   );
 }
 
