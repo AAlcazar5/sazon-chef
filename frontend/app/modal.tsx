@@ -36,6 +36,7 @@ import { getIngredientEmoji } from '../constants/IngredientEmoji';
 import CookingStepsTimeline from '../components/recipe/CookingStepsTimeline';
 import VisualIngredientList from '../components/recipe/VisualIngredientList';
 import MacroPillsRow from '../components/recipe/MacroPillsRow';
+import RecipeNotesModal from '../components/cookbook/RecipeNotesModal';
 
 const HERO_HEIGHT = 300;
 
@@ -141,6 +142,10 @@ export default function RecipeModal() {
   const [similarRecipes, setSimilarRecipes] = useState<Recipe[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
 
+  // Notes state
+  const [savedNotes, setSavedNotes] = useState<string | null>(null);
+  const [notesModalVisible, setNotesModalVisible] = useState(false);
+
   // Animate modal entrance
   useEffect(() => {
     Animated.parallel([
@@ -238,6 +243,14 @@ export default function RecipeModal() {
 
     fetchRecipe();
   }, [id]);
+
+  // Load saved notes/rating when opened from cookbook
+  useEffect(() => {
+    if (source !== 'cookbook' || !id) return;
+    recipeApi.getSavedMeta(id as string)
+      .then((res) => setSavedNotes(res.data?.notes ?? null))
+      .catch(() => {});
+  }, [id, source]);
 
   // Load similar recipes when recipe is loaded
   useEffect(() => {
@@ -1323,6 +1336,32 @@ export default function RecipeModal() {
             )}
           </View>
 
+          {/* My Notes — only for cookbook recipes */}
+          {source === 'cookbook' && (
+            <HapticTouchableOpacity
+              onPress={() => setNotesModalVisible(true)}
+              hapticStyle="light"
+              accessibilityLabel="Edit notes"
+              className="mb-6 p-4 rounded-2xl"
+              style={{
+                backgroundColor: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.06)',
+                ...Shadows.SM,
+              }}
+            >
+              <View className="flex-row items-center mb-2">
+                <Ionicons name="document-text-outline" size={18} color={isDark ? '#FBBF24' : '#D97706'} />
+                <Text className="text-base font-semibold ml-2" style={{ color: isDark ? '#FBBF24' : '#D97706' }}>My Notes</Text>
+              </View>
+              <Text
+                className="text-sm"
+                style={{ color: savedNotes ? (isDark ? '#D1D5DB' : '#4B5563') : (isDark ? '#6B7280' : '#9CA3AF') }}
+                numberOfLines={3}
+              >
+                {savedNotes || 'Add a note…'}
+              </Text>
+            </HapticTouchableOpacity>
+          )}
+
           {/* You Might Like Section */}
           {similarRecipes.length > 0 && (
             <View className="mb-6">
@@ -2055,6 +2094,21 @@ export default function RecipeModal() {
         onClose={() => setShowMealPrepModal(false)}
         onConfirm={handleMealPrepScaling}
       />
+
+      {/* Recipe Notes Modal */}
+      {source === 'cookbook' && recipe && (
+        <RecipeNotesModal
+          visible={notesModalVisible}
+          onClose={() => setNotesModalVisible(false)}
+          recipeTitle={recipe.title}
+          initialNotes={savedNotes}
+          onSave={async (notes) => {
+            setSavedNotes(notes);
+            setNotesModalVisible(false);
+            recipeApi.updateSavedMeta(recipe.id, { notes }).catch(() => {});
+          }}
+        />
+      )}
     </Animated.View>
     </>
   );

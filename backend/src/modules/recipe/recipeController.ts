@@ -3959,6 +3959,28 @@ export const recipeController = {
     }
   },
 
+  // Get saved recipe notes/rating
+  async getSavedMeta(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+
+      const savedRecipe = await prisma.savedRecipe.findFirst({
+        where: { userId, recipeId: id },
+        select: { notes: true, rating: true },
+      });
+
+      if (!savedRecipe) {
+        return res.json({ notes: null, rating: null });
+      }
+
+      res.json({ notes: savedRecipe.notes ?? null, rating: savedRecipe.rating ?? null });
+    } catch (error: any) {
+      console.error('❌ Get saved meta error:', error);
+      res.status(500).json({ error: 'Failed to get saved recipe metadata' });
+    }
+  },
+
   // Update saved recipe notes/rating
   async updateSavedMeta(req: Request, res: Response) {
     try {

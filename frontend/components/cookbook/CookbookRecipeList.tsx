@@ -15,6 +15,7 @@ import { Icons } from '../../constants/Icons';
 import LogoMascot from '../mascot/LogoMascot';
 import AnimatedEmptyState from '../ui/AnimatedEmptyState';
 import { CookbookEmptyStates } from '../../constants/EmptyStates';
+import SwipeableRecipeCard from './SwipeableRecipeCard';
 import type { SavedRecipe } from '../../types';
 
 interface RecipeFeedback {
@@ -53,6 +54,12 @@ interface CookbookRecipeListProps {
   selectionMode?: boolean;
   /** Set of selected recipe IDs */
   selectedRecipeIds?: Set<string>;
+  /** Swipe quick-edit: opens edit form for recipe */
+  onSwipeEdit?: (recipe: SavedRecipe) => void;
+  /** Swipe quick-edit: opens notes modal for recipe */
+  onSwipeNotes?: (recipe: SavedRecipe) => void;
+  /** Swipe quick-edit: opens collection picker for recipe */
+  onSwipeCollection?: (recipe: SavedRecipe) => void;
 }
 
 const DEFAULT_FEEDBACK = { liked: false, disliked: false };
@@ -73,6 +80,9 @@ function CookbookRecipeList({
   onRate,
   selectionMode = false,
   selectedRecipeIds,
+  onSwipeEdit,
+  onSwipeNotes,
+  onSwipeCollection,
 }: CookbookRecipeListProps) {
   const [showChefKiss, setShowChefKiss] = useState(false);
 
@@ -170,40 +180,47 @@ function CookbookRecipeList({
         animatedIds={animatedRecipeIds}
         onAnimated={onAnimated}
       >
-        <View style={[
-          { flexDirection: 'row', alignItems: 'center' },
-          isSelected && { opacity: 0.85 },
-        ]}>
-          {selectionMode && (
-            <View style={{
-              width: 24, height: 24, borderRadius: 12, borderWidth: 2, marginRight: 8,
-              borderColor: isSelected ? '#10B981' : (isDark ? '#6B7280' : '#D1D5DB'),
-              backgroundColor: isSelected ? '#10B981' : 'transparent',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              {isSelected && (
-                <Icon name={Icons.CHECKMARK as any} size={14} color="#FFFFFF" />
-              )}
+        <SwipeableRecipeCard
+          disabled={selectionMode}
+          onEdit={onSwipeEdit ? () => onSwipeEdit(recipe) : undefined}
+          onNotes={onSwipeNotes ? () => onSwipeNotes(recipe) : undefined}
+          onCollection={onSwipeCollection ? () => onSwipeCollection(recipe) : undefined}
+        >
+          <View style={[
+            { flexDirection: 'row', alignItems: 'center' },
+            isSelected && { opacity: 0.85 },
+          ]}>
+            {selectionMode && (
+              <View style={{
+                width: 24, height: 24, borderRadius: 12, borderWidth: 2, marginRight: 8,
+                borderColor: isSelected ? '#10B981' : (isDark ? '#6B7280' : '#D1D5DB'),
+                backgroundColor: isSelected ? '#10B981' : 'transparent',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                {isSelected && (
+                  <Icon name={Icons.CHECKMARK as any} size={14} color="#FFFFFF" />
+                )}
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <RecipeCard
+                recipe={recipe as any}
+                variant="list"
+                onPress={onRecipePress}
+                onLongPress={() => onRecipeLongPress(recipe)}
+                onLike={selectionMode ? undefined : onLike}
+                onDislike={selectionMode ? undefined : onDislike}
+                onSave={selectionMode ? undefined : onSave}
+                feedback={feedback}
+                isFeedbackLoading={isFeedbackLoading}
+                isDark={isDark}
+                showDescription={!selectionMode}
+                className="mb-1"
+                footer={selectionMode ? undefined : <RecipeMeta recipe={recipe} />}
+              />
             </View>
-          )}
-          <View style={{ flex: 1 }}>
-            <RecipeCard
-              recipe={recipe as any}
-              variant="list"
-              onPress={onRecipePress}
-              onLongPress={() => onRecipeLongPress(recipe)}
-              onLike={selectionMode ? undefined : onLike}
-              onDislike={selectionMode ? undefined : onDislike}
-              onSave={selectionMode ? undefined : onSave}
-              feedback={feedback}
-              isFeedbackLoading={isFeedbackLoading}
-              isDark={isDark}
-              showDescription={!selectionMode}
-              className="mb-1"
-              footer={selectionMode ? undefined : <RecipeMeta recipe={recipe} />}
-            />
           </View>
-        </View>
+        </SwipeableRecipeCard>
       </AnimatedRecipeCard>
     );
   }, [userFeedback, feedbackLoading, isDark, animatedRecipeIds, onAnimated, onRecipePress, onRecipeLongPress, onLike, onDislike, onSave, RecipeMeta, selectionMode, selectedRecipeIds]);

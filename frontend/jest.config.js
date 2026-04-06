@@ -10,6 +10,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^moti$': '<rootDir>/__mocks__/moti.js',
+    '^react-native-reanimated$': '<rootDir>/__mocks__/react-native-reanimated.js',
     // Redirect nativewind/react-native-css-interop JSX runtime to React's standard runtime
     // This prevents wrap-jsx from crashing in tests when component types are undefined
     '^nativewind/jsx-runtime$': require.resolve('react/jsx-runtime'),
