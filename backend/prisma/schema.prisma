@@ -401,6 +401,7 @@ model Collection {
   isPinned      Boolean  @default(false)
   sortOrder     Int      @default(0)
   isDefault     Boolean  @default(false)
+  category      String?  // meal_type | cuisine | mood | dietary | seasonal | custom
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

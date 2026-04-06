@@ -11,12 +11,21 @@ import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useModalAnimation } from '../../hooks/useModalAnimation';
-import type { Collection } from '../../types';
+import type { Collection, CollectionCategory } from '../../types';
+
+const CATEGORY_OPTIONS: { value: CollectionCategory; label: string; emoji: string }[] = [
+  { value: 'meal_type', label: 'Meal Type', emoji: '🍽️' },
+  { value: 'cuisine', label: 'Cuisine', emoji: '🌍' },
+  { value: 'mood', label: 'Mood', emoji: '✨' },
+  { value: 'dietary', label: 'Dietary', emoji: '🥗' },
+  { value: 'seasonal', label: 'Seasonal', emoji: '🌸' },
+  { value: 'custom', label: 'Custom', emoji: '📁' },
+];
 
 interface CollectionEditModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; description?: string; coverImageUrl?: string | null }) => void;
+  onSave: (data: { name: string; description?: string; coverImageUrl?: string | null; category?: CollectionCategory | null }) => void;
   /** If provided, modal is in edit mode. Otherwise create mode. */
   collection?: Collection | null;
   /** Recipe images available for cover selection (from recipes in this collection) */
@@ -37,6 +46,7 @@ export default function CollectionEditModal({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [category, setCategory] = useState<CollectionCategory | null>(null);
 
   const isEditMode = !!collection;
 
@@ -45,6 +55,7 @@ export default function CollectionEditModal({
       setName(collection?.name || '');
       setDescription(collection?.description || '');
       setCoverImageUrl(collection?.coverImageUrl || null);
+      setCategory((collection?.category as CollectionCategory | null) ?? null);
     }
   }, [visible, collection]);
 
@@ -56,6 +67,7 @@ export default function CollectionEditModal({
       name: trimmedName,
       description: description.trim() || undefined,
       coverImageUrl,
+      category,
     });
   };
 
@@ -134,6 +146,50 @@ export default function CollectionEditModal({
                       textAlignVertical: 'top',
                     }}
                   />
+                </View>
+
+                {/* Category Picker */}
+                <View>
+                  <Text className="text-sm font-semibold mb-1.5" style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}>
+                    Category (optional)
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {/* "None" chip */}
+                      <HapticTouchableOpacity
+                        onPress={() => setCategory(null)}
+                        accessibilityLabel="No category"
+                        style={{
+                          paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5,
+                          borderColor: category === null ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#4B5563' : '#D1D5DB'),
+                          backgroundColor: category === null ? (isDark ? `${DarkColors.primary}22` : `${Colors.primary}15`) : 'transparent',
+                        }}
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: category === null ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280') }}>
+                          None
+                        </Text>
+                      </HapticTouchableOpacity>
+                      {CATEGORY_OPTIONS.map((opt) => (
+                        <HapticTouchableOpacity
+                          key={opt.value}
+                          onPress={() => setCategory(opt.value)}
+                          accessibilityLabel={`Category: ${opt.label}`}
+                          testID={`category-chip-${opt.value}`}
+                          style={{
+                            flexDirection: 'row', alignItems: 'center', gap: 5,
+                            paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5,
+                            borderColor: category === opt.value ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#4B5563' : '#D1D5DB'),
+                            backgroundColor: category === opt.value ? (isDark ? `${DarkColors.primary}22` : `${Colors.primary}15`) : 'transparent',
+                          }}
+                        >
+                          <Text style={{ fontSize: 13 }}>{opt.emoji}</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: category === opt.value ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280') }}>
+                            {opt.label}
+                          </Text>
+                        </HapticTouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
                 </View>
 
                 {/* Cover Image Picker */}

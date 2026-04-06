@@ -149,6 +149,8 @@ export interface SavedRecipe extends Recipe {
 
 // Collection Types
 
+export type CollectionCategory = 'meal_type' | 'cuisine' | 'mood' | 'dietary' | 'seasonal' | 'custom';
+
 export interface Collection {
   id: string;
   name: string;
@@ -157,6 +159,7 @@ export interface Collection {
   isPinned?: boolean;
   isDefault?: boolean;
   sortOrder?: number;
+  category?: CollectionCategory | null;
   recipeCount?: number;
   updatedAt?: string;
 }
