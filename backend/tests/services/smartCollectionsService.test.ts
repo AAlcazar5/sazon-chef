@@ -1,11 +1,15 @@
 // backend/tests/services/smartCollectionsService.test.ts
 import {
   SMART_COLLECTION_DEFINITIONS,
+  WEATHER_COLLECTION_DEFINITION,
   getSmartCollectionById,
   buildRecipeFilter,
+  buildWeatherFilter,
   recipeMatchesSmartCollection,
+  recipeMatchesWeather,
   getCurrentMealType,
   type Recipe,
+  type WeatherCondition,
 } from '../../src/services/smartCollectionsService';
 
 describe('smartCollectionsService', () => {
@@ -228,6 +232,75 @@ describe('smartCollectionsService', () => {
       expect(getCurrentMealType(d)).toBe('snack');
       d.setHours(15, 30, 0, 0);
       expect(getCurrentMealType(d)).toBe('snack');
+    });
+  });
+
+  describe('WEATHER_COLLECTION_DEFINITION', () => {
+    it('has id weather_today', () => {
+      expect(WEATHER_COLLECTION_DEFINITION.id).toBe('weather_today');
+    });
+    it('has required fields', () => {
+      expect(WEATHER_COLLECTION_DEFINITION.name).toBeTruthy();
+      expect(WEATHER_COLLECTION_DEFINITION.icon).toBeTruthy();
+      expect(WEATHER_COLLECTION_DEFINITION.description).toBeTruthy();
+    });
+    it('is not in SMART_COLLECTION_DEFINITIONS (separate endpoint)', () => {
+      const ids = SMART_COLLECTION_DEFINITIONS.map((d) => d.id);
+      expect(ids).not.toContain('weather_today');
+    });
+  });
+
+  describe('buildWeatherFilter', () => {
+    it('returns OR filter with mealType=dinner or cookTime>=20 for cold', () => {
+      const filter = buildWeatherFilter('cold') as any;
+      expect(filter.OR).toBeDefined();
+      expect(filter.OR.some((c: any) => c.mealType === 'dinner')).toBe(true);
+    });
+    it('returns same filter for rainy as cold', () => {
+      expect(buildWeatherFilter('rainy')).toEqual(buildWeatherFilter('cold'));
+    });
+    it('returns light-meal filter for hot', () => {
+      const filter = buildWeatherFilter('hot') as any;
+      expect(filter.OR).toBeDefined();
+    });
+    it('returns empty filter for mild (all recipes match)', () => {
+      expect(buildWeatherFilter('mild')).toEqual({});
+    });
+  });
+
+  describe('recipeMatchesWeather', () => {
+    const base: Recipe = {
+      title: 'Test',
+      description: '',
+      cookTime: 30,
+      difficulty: 'medium',
+      calories: 400,
+      protein: 20,
+      carbs: 40,
+      fat: 10,
+      mealType: 'dinner',
+    };
+
+    it('cold: matches dinner recipes', () => {
+      expect(recipeMatchesWeather({ ...base, mealType: 'dinner' }, 'cold')).toBe(true);
+    });
+    it('cold: matches recipes with cookTime >= 20', () => {
+      expect(recipeMatchesWeather({ ...base, mealType: 'lunch', cookTime: 25 }, 'cold')).toBe(true);
+    });
+    it('cold: does not match quick breakfast', () => {
+      expect(recipeMatchesWeather({ ...base, mealType: 'breakfast', cookTime: 10 }, 'cold')).toBe(false);
+    });
+    it('hot: matches low-calorie recipes', () => {
+      expect(recipeMatchesWeather({ ...base, calories: 350, cookTime: 30 }, 'hot')).toBe(true);
+    });
+    it('hot: matches quick recipes', () => {
+      expect(recipeMatchesWeather({ ...base, calories: 700, cookTime: 15 }, 'hot')).toBe(true);
+    });
+    it('mild: matches all recipes', () => {
+      const conditions: WeatherCondition[] = ['mild'];
+      conditions.forEach((c) => {
+        expect(recipeMatchesWeather(base, c)).toBe(true);
+      });
     });
   });
 });

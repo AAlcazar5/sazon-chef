@@ -24,6 +24,44 @@ export interface Recipe {
   mealType?: string | null;
 }
 
+export type WeatherCondition = 'hot' | 'cold' | 'rainy' | 'mild';
+
+/** Weather-aware smart collection — computed via separate endpoint, not in SMART_COLLECTION_DEFINITIONS */
+export const WEATHER_COLLECTION_DEFINITION: SmartCollectionDefinition = {
+  id: 'weather_today',
+  name: 'Perfect for Today',
+  icon: '⛅',
+  description: 'Matched to your current weather',
+};
+
+/** Prisma where-clause for weather-appropriate recipes */
+export function buildWeatherFilter(condition: WeatherCondition): Record<string, unknown> {
+  switch (condition) {
+    case 'cold':
+    case 'rainy':
+      return { OR: [{ mealType: 'dinner' }, { cookTime: { gte: 20 } }] };
+    case 'hot':
+      return { OR: [{ calories: { lte: 500 } }, { cookTime: { lte: 20 } }] };
+    case 'mild':
+    default:
+      return {};
+  }
+}
+
+/** Client-side predicate for weather-appropriate recipes */
+export function recipeMatchesWeather(recipe: Recipe, condition: WeatherCondition): boolean {
+  switch (condition) {
+    case 'cold':
+    case 'rainy':
+      return recipe.mealType === 'dinner' || recipe.cookTime >= 20;
+    case 'hot':
+      return typeof recipe.calories !== 'number' || recipe.calories <= 500 || recipe.cookTime <= 20;
+    case 'mild':
+    default:
+      return true;
+  }
+}
+
 export const SMART_COLLECTION_DEFINITIONS: readonly SmartCollectionDefinition[] = [
   {
     id: 'quick_easy',

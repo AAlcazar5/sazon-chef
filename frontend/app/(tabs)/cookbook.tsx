@@ -20,6 +20,7 @@ import { CookbookEmptyStates } from '../../constants/EmptyStates';
 import { CookbookLoadingStates } from '../../constants/LoadingStates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRecentCollectionIds, recordRecentCollections } from '../../lib/recentCollections';
+import { useWeatherSmartCollection } from '../../hooks/useWeatherSmartCollection';
 import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import { HeartBurstAnimation } from '../../components/celebrations';
 import Toast, { ToastType } from '../../components/ui/Toast';
@@ -36,7 +37,6 @@ import {
   MergeCollectionsModal,
   SimilarRecipesCarousel,
   CollectionCarousel,
-  CookbookPagination,
   CollectionSavePicker,
   StarRating,
   RecipeNotesModal,
@@ -90,6 +90,7 @@ export default function CookbookScreen() {
   const [smartCollections, setSmartCollections] = useState<Array<{id: string; name: string; icon: string; description: string; count: number}>>([]);
   const [smartCollectionsLoading, setSmartCollectionsLoading] = useState(false);
   const [collectionsSearchQuery, setCollectionsSearchQuery] = useState('');
+  const { collection: weatherCollection } = useWeatherSmartCollection();
 
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('list');
   const DISPLAY_MODE_STORAGE_KEY = '@sazon_cookbook_view_mode';
@@ -191,10 +192,11 @@ export default function CookbookScreen() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(0);
-  const RECIPES_PER_PAGE = displayMode === 'grid' ? 20 : 10; // More items in grid view (20) vs list view (10)
-  const [allRecipes, setAllRecipes] = useState<SavedRecipe[]>([]); // Store all recipes for pagination
+  // Infinite scroll state
+  const INITIAL_VISIBLE = 20;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const isLoadingMoreLocal = useRef(false);
+  const [allRecipes, setAllRecipes] = useState<SavedRecipe[]>([]); // All recipes from cache
   
 
   // Load display mode and sort preference on mount
@@ -266,7 +268,7 @@ export default function CookbookScreen() {
     try {
       setSortBy(newSort);
       await AsyncStorage.setItem(SORT_PREFERENCE_KEY, newSort);
-      setCurrentPage(0); // Reset to first page when sorting changes
+      setVisibleCount(INITIAL_VISIBLE);
       HapticPatterns.buttonPress();
       setShowSortPicker(false);
     } catch (error) {
@@ -326,7 +328,7 @@ export default function CookbookScreen() {
   // Update local state when cached recipes change
   useEffect(() => {
     setAllRecipes(cachedRecipes);
-    setCurrentPage(0);
+    setVisibleCount(INITIAL_VISIBLE);
 
     // Initialize feedback state based on view mode
     const initialFeedback: Record<string, { liked: boolean; disliked: boolean }> = {};
@@ -481,6 +483,28 @@ export default function CookbookScreen() {
     });
   }, [sortedRecipes, searchQuery]);
 
+  // Collections sorted for navigation: pinned first, then alphabetical
+  const sortedCollectionsForNav = useMemo(
+    () => collections.slice().sort((a, b) => {
+      const pinDiff = (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0);
+      if (pinDiff !== 0) return pinDiff;
+      return a.name.localeCompare(b.name);
+    }),
+    [collections],
+  );
+
+  const currentCollectionNavIndex = selectedListId
+    ? sortedCollectionsForNav.findIndex((c) => c.id === selectedListId)
+    : -1;
+
+  const prevCollectionNav = currentCollectionNavIndex > 0
+    ? sortedCollectionsForNav[currentCollectionNavIndex - 1]
+    : null;
+
+  const nextCollectionNav = currentCollectionNavIndex >= 0 && currentCollectionNavIndex < sortedCollectionsForNav.length - 1
+    ? sortedCollectionsForNav[currentCollectionNavIndex + 1]
+    : null;
+
   // Group recipes by collection for collection carousels
   const recipesByCollection = useMemo(() => {
     const map = new Map<string, SavedRecipe[]>();
@@ -496,48 +520,41 @@ export default function CookbookScreen() {
     return map;
   }, [allRecipes]);
 
-  // Current page slice
-  const pagedRecipes = useMemo(() => {
-    const start = currentPage * RECIPES_PER_PAGE;
-    return filteredAndSortedRecipes.slice(start, start + RECIPES_PER_PAGE);
-  }, [filteredAndSortedRecipes, currentPage, RECIPES_PER_PAGE]);
+  // Visible slice for infinite scroll
+  const displayedRecipes = useMemo(
+    () => filteredAndSortedRecipes.slice(0, visibleCount),
+    [filteredAndSortedRecipes, visibleCount],
+  );
 
-  // Pagination info (single source of truth)
-  const paginationInfo = useMemo(() => {
-    const totalItems = filteredAndSortedRecipes.length;
-    const totalPages = Math.max(1, Math.ceil(totalItems / RECIPES_PER_PAGE));
-    const isFirstPage = currentPage === 0;
-    const isLastPage = currentPage >= totalPages - 1;
-    const hasMultiplePages = totalItems > RECIPES_PER_PAGE;
-
-    const from = totalItems === 0 ? 0 : currentPage * RECIPES_PER_PAGE + 1;
-    const to = totalItems === 0 ? 0 : Math.min((currentPage + 1) * RECIPES_PER_PAGE, totalItems);
-
-    return { totalItems, totalPages, isFirstPage, isLastPage, hasMultiplePages, from, to };
-  }, [filteredAndSortedRecipes.length, RECIPES_PER_PAGE, currentPage]);
-
-  // Clamp current page when filters/search/sort changes shrink results
+  // Keep `savedRecipes` in sync with visible slice (used by rendering + stats widgets)
   useEffect(() => {
-    if (paginationInfo.totalPages <= 1) {
-      if (currentPage !== 0) setCurrentPage(0);
-      return;
-    }
-    if (currentPage > paginationInfo.totalPages - 1) {
-      setCurrentPage(paginationInfo.totalPages - 1);
-    }
-  }, [paginationInfo.totalPages, currentPage]);
+    setSavedRecipes(displayedRecipes);
+  }, [displayedRecipes]);
 
-  // Keep `savedRecipes` as the current page list (used by rendering + stats widgets)
-  useEffect(() => {
-    setSavedRecipes(pagedRecipes);
-  }, [pagedRecipes]);
+  // Load more: expand visible window, fetch from server when local supply is exhausted
+  const handleLoadMore = useCallback(() => {
+    if (isLoadingMoreLocal.current) return;
+    isLoadingMoreLocal.current = true;
+    setVisibleCount((prev) => {
+      const next = prev + INITIAL_VISIBLE;
+      if (next >= filteredAndSortedRecipes.length && serverHasMore && !loadingMore) {
+        loadMore();
+      }
+      return next;
+    });
+    setTimeout(() => { isLoadingMoreLocal.current = false; }, 300);
+  }, [filteredAndSortedRecipes.length, serverHasMore, loadingMore, loadMore]);
 
-  // Auto-load more from server when approaching the end of loaded data
-  useEffect(() => {
-    if (serverHasMore && !loadingMore && paginationInfo.isLastPage && filteredAndSortedRecipes.length > 0) {
-      loadMore();
+  // Trigger load more when scroll reaches 30% from bottom
+  const handleRecipeListScroll = useCallback((event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+    const threshold = layoutMeasurement.height * 0.3;
+    const hasMore = visibleCount < filteredAndSortedRecipes.length || serverHasMore;
+    if (distanceFromBottom <= threshold && hasMore && !loadingMore) {
+      handleLoadMore();
     }
-  }, [serverHasMore, loadingMore, paginationInfo.isLastPage, filteredAndSortedRecipes.length, loadMore]);
+  }, [visibleCount, filteredAndSortedRecipes.length, serverHasMore, loadingMore, handleLoadMore]);
 
 
   // Filter raw similar recipes: only exclude ones already in the user's cookbook.
@@ -554,14 +571,14 @@ export default function CookbookScreen() {
   // Skips the network call when only filters change (base recipe ID unchanged).
   useEffect(() => {
     const fetchSimilarRecipes = async () => {
-      if (pagedRecipes.length === 0) {
+      if (displayedRecipes.length === 0) {
         setSimilarRecipes([]);
         lastSimilarBaseIdRef.current = null;
         rawSimilarRecipesRef.current = [];
         return;
       }
 
-      const baseRecipe = pagedRecipes[0];
+      const baseRecipe = displayedRecipes[0];
       if (!baseRecipe?.id) {
         setSimilarRecipes([]);
         return;
@@ -592,27 +609,27 @@ export default function CookbookScreen() {
     };
 
     fetchSimilarRecipes();
-  }, [pagedRecipes, applyFiltersToSimilarRecipes]);
+  }, [displayedRecipes, applyFiltersToSimilarRecipes]);
   
   // Reset pagination when display mode changes (grid/list)
   useEffect(() => {
-    setCurrentPage(0); // Reset to first page when switching between grid and list view
+    setVisibleCount(INITIAL_VISIBLE);
   }, [displayMode]);
   
   // Refetch when view mode changes
   useEffect(() => {
     setNeedsRefresh(true);
-    setCurrentPage(0);
+    setVisibleCount(INITIAL_VISIBLE);
   }, [viewMode]);
 
-  // Reset pagination when search query changes
+  // Reset visible window when search query changes
   useEffect(() => {
-    setCurrentPage(0);
+    setVisibleCount(INITIAL_VISIBLE);
   }, [searchQuery]);
 
-  // Reset pagination when cookbook filters change
+  // Reset visible window when cookbook filters change
   useEffect(() => {
-    setCurrentPage(0);
+    setVisibleCount(INITIAL_VISIBLE);
   }, [cookbookFilters]);
 
   // Manual refresh function
@@ -1107,7 +1124,7 @@ export default function CookbookScreen() {
         filters={cookbookFilters}
         onFilterChange={(newFilters) => {
           setCookbookFilters(newFilters);
-          setCurrentPage(0);
+          setVisibleCount(INITIAL_VISIBLE);
         }}
       />
 
@@ -1240,13 +1257,37 @@ export default function CookbookScreen() {
                   )
                 )
               : smartCollections;
-            if (filtered.length === 0) return null;
+            // Weather collection passes the search filter if name/description matches
+            const showWeather = weatherCollection && (!q ||
+              weatherCollection.name.toLowerCase().includes(q) ||
+              weatherCollection.weather?.description.toLowerCase().includes(q)
+            );
+            if (filtered.length === 0 && !showWeather) return null;
             return (
               <>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, marginBottom: 10, textTransform: 'uppercase' }}>
                   Smart Collections
                 </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+                  {/* Weather-aware collection — always first */}
+                  {showWeather && (
+                    <View key="weather_today" style={{ width: '47.5%' }}>
+                      <SmartCollectionCard
+                        id="weather_today"
+                        name={weatherCollection!.name}
+                        icon={weatherCollection!.icon}
+                        description={weatherCollection!.weather
+                          ? `${weatherCollection!.weather.description}, ${Math.round(weatherCollection!.weather.tempCelsius)}°C`
+                          : weatherCollection!.description}
+                        count={weatherCollection!.count}
+                        previewImages={[]}
+                        onPress={() => {
+                          HapticPatterns.buttonPress();
+                          router.push(`/smart-collection?id=weather_today&name=${encodeURIComponent(weatherCollection!.name)}` as any);
+                        }}
+                      />
+                    </View>
+                  )}
                   {filtered.map((col) => {
                     const previewImages = allRecipes
                       .filter((r: any) => recipeMatchesSmartCollectionClient(r, col.id))
@@ -1411,7 +1452,7 @@ export default function CookbookScreen() {
               budget: false,
               onePot: false,
             });
-            setCurrentPage(0);
+            setVisibleCount(INITIAL_VISIBLE);
             HapticPatterns.buttonPress();
           }}
         />
@@ -1422,14 +1463,15 @@ export default function CookbookScreen() {
           title=""
           onAction={() => {
             setSearchQuery('');
-            setCurrentPage(0);
+            setVisibleCount(INITIAL_VISIBLE);
             HapticPatterns.buttonPress();
           }}
         />
       ) : (allRecipes.length > 0 && !cacheLoading) ? (
         // Recipes list (show if we have recipes and not loading)
         <ScrollView
-          scrollEventThrottle={16}
+          scrollEventThrottle={200}
+          onScroll={handleRecipeListScroll}
           contentContainerStyle={{ paddingTop: 0, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
             refreshControl={
               <SazonRefreshControl
@@ -1446,14 +1488,52 @@ export default function CookbookScreen() {
 
           <View className="px-4">
 
+            {/* Collection navigation bar — shown when browsing a specific collection */}
+            {selectedListId && viewMode === 'saved' && sortedCollectionsForNav.length > 1 && (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12,
+              }}>
+                <HapticTouchableOpacity
+                  onPress={prevCollectionNav ? () => { HapticPatterns.buttonPress(); handleSelectList(prevCollectionNav.id); } : undefined}
+                  disabled={!prevCollectionNav}
+                  style={{ padding: 4 }}
+                  accessibilityLabel={prevCollectionNav ? `Go to ${prevCollectionNav.name}` : undefined}
+                >
+                  <Ionicons
+                    name="chevron-back"
+                    size={18}
+                    color={prevCollectionNav ? (isDark ? '#E5E7EB' : '#374151') : (isDark ? '#374151' : '#D1D5DB')}
+                  />
+                </HapticTouchableOpacity>
+                <Text
+                  numberOfLines={1}
+                  style={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginHorizontal: 8 }}
+                  accessibilityRole="header"
+                >
+                  {sortedCollectionsForNav[currentCollectionNavIndex]?.name ?? ''}
+                </Text>
+                <HapticTouchableOpacity
+                  onPress={nextCollectionNav ? () => { HapticPatterns.buttonPress(); handleSelectList(nextCollectionNav.id); } : undefined}
+                  disabled={!nextCollectionNav}
+                  style={{ padding: 4 }}
+                  accessibilityLabel={nextCollectionNav ? `Go to ${nextCollectionNav.name}` : undefined}
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={nextCollectionNav ? (isDark ? '#E5E7EB' : '#374151') : (isDark ? '#374151' : '#D1D5DB')}
+                  />
+                </HapticTouchableOpacity>
+              </View>
+            )}
+
             {/* Recipe count + grid/list toggle */}
             {filteredAndSortedRecipes.length > 0 && (
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {paginationInfo.hasMultiplePages
-                    ? `${paginationInfo.from}–${paginationInfo.to} of ${paginationInfo.totalItems} recipe${paginationInfo.totalItems !== 1 ? 's' : ''}`
-                    : `${filteredAndSortedRecipes.length} recipe${filteredAndSortedRecipes.length !== 1 ? 's' : ''}`
-                  }{serverHasMore ? ` (${serverTotal} total)` : ''}
+                  {filteredAndSortedRecipes.length} recipe{filteredAndSortedRecipes.length !== 1 ? 's' : ''}{serverHasMore ? ` (${serverTotal} total)` : ''}
                 </Text>
                 <View
                   className="flex-row items-center rounded-lg p-1"
@@ -1502,30 +1582,12 @@ export default function CookbookScreen() {
             />
           </View>
 
-          {/* Pagination controls */}
-          <CookbookPagination
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            paginationInfo={paginationInfo}
-          />
-
-          {/* Loading more indicator */}
-          {loadingMore && (
+          {/* Infinite scroll footer */}
+          {(visibleCount < filteredAndSortedRecipes.length || loadingMore) && (
             <View className="py-3 items-center">
-              <Text className="text-sm text-gray-500 dark:text-gray-400">Loading more recipes...</Text>
-            </View>
-          )}
-
-          {/* Load more from server */}
-          {serverHasMore && !loadingMore && (
-            <View className="py-4 items-center">
-              <HapticTouchableOpacity
-                onPress={() => { loadMore(); HapticPatterns.buttonPress(); }}
-                className="px-6 py-3 rounded-full"
-                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                <Text className="text-white font-semibold text-sm">Load more recipes</Text>
-              </HapticTouchableOpacity>
+              <Text className="text-sm text-gray-500 dark:text-gray-400">
+                {loadingMore ? 'Loading more recipes...' : `Showing ${displayedRecipes.length} of ${filteredAndSortedRecipes.length}${serverHasMore ? `+ (${serverTotal} total)` : ''}`}
+              </Text>
             </View>
           )}
           
