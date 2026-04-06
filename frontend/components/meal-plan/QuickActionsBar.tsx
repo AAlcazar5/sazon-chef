@@ -85,6 +85,7 @@ interface QuickActionsBarProps {
   onSaveAsTemplate: () => void;
   onUseTemplate: () => void;
   onRecurring: () => void;
+  onFindMeAMeal?: () => void;
 }
 
 export default function QuickActionsBar({
@@ -100,6 +101,7 @@ export default function QuickActionsBar({
   onSaveAsTemplate,
   onUseTemplate,
   onRecurring,
+  onFindMeAMeal,
 }: QuickActionsBarProps) {
   return (
     <View style={{ paddingTop: 12, paddingBottom: 8 }}>
@@ -110,6 +112,14 @@ export default function QuickActionsBar({
         style={{ flexGrow: 0 }}
         nestedScrollEnabled
       >
+        {onFindMeAMeal && (
+          <ActionBadge
+            emoji="🎯"
+            label="Find Me a Meal"
+            onPress={onFindMeAMeal}
+            isDark={isDark}
+          />
+        )}
         <ActionBadge
           emoji="🤖"
           label={generatingPlan ? 'Creating...' : 'Full Day'}

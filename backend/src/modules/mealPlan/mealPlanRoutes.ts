@@ -25,6 +25,7 @@ import {
   deleteTemplate
 } from './mealPlanTemplateController';
 import { duplicateMeals } from './mealPlanDuplicateController';
+import { findRecipes } from './mealPlanFindRecipesController';
 import {
   getRecurringMeals,
   createRecurringMeal,
@@ -50,6 +51,9 @@ router.delete('/templates/:id', deleteTemplate);
 
 // Duplicate routes (must come before /:id routes)
 router.post('/duplicate', duplicateMeals);
+
+// Find Me a Meal
+router.post('/find-recipes', findRecipes);
 
 // Meal plan routes
 router.get('/daily', getDailySuggestion);

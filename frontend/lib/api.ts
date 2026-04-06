@@ -1134,6 +1134,23 @@ export const mealPlanApi = {
   applyRecurringMeals: (weekStartDate: string) => {
     return apiClient.post('/meal-plan/recurring/apply', { weekStartDate });
   },
+
+  findRecipes: (params: {
+    count: number;
+    cuisines?: string[];
+    cuisineFamilies?: string[];
+    calories?: { min?: number; max?: number };
+    protein?: { min?: number };
+    fat?: { max?: number };
+    carbs?: { min?: number; max?: number };
+    fiber?: { min?: number };
+    mealType?: string;
+    maxCookTime?: number;
+    difficulty?: string;
+    dietaryRestrictions?: string[];
+  }) => {
+    return apiClient.post('/meal-plan/find-recipes', params);
+  },
 };
 
 // Search 2.0 API

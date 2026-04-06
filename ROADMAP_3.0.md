@@ -1518,117 +1518,36 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 **The Request Flow**
 
-* [ ] **"Find Me a Meal" button** — New action available in two places:
-  1. **Empty meal slot** — Tap the `+` on any empty hour → alongside "Add from Cookbook" and "Quick Log", add "Find Me a Meal" option
-  2. **Quick Actions Bar** — New button alongside "Generate Full Day" and "Generate Remaining"
+* [x] **"Find Me a Meal" button** — New action available in two places:
+  1. ✅ **Quick Actions Bar** — "Find Me a Meal" 🎯 badge added to `QuickActionsBar.tsx`
+  2. ✅ **Empty meal slot** — "Find Me a Meal" option in `handleAddMealToHour` Alert (alongside "From Cookbook", "Quick Log")
   * 📍 Tapping opens the `MealRequestModal` (new component)
 
-* [ ] **`MealRequestModal` — The constraint builder** — A clean, step-by-step bottom sheet where the user specifies exactly what they want:
+* [x] **`MealRequestModal` — The constraint builder** — Bottom sheet modal `frontend/components/meal-plan/MealRequestModal.tsx`
+  - ✅ Count selector: 1 / 3 / 5 options (pill buttons, default 3)
+  - ✅ Smart presets: High Protein, Low Cal, Low Fat, Balanced, Post-Workout, Light Snack
+  - ✅ Macro sliders: Calories max, Protein min, Fat max, Fiber min — custom `MacroSlider` (Reanimated + GestureDetector, "Any" when at minimum)
+  - ✅ Meal type filter: any / breakfast / lunch / dinner / snack / dessert
+  - ✅ Cuisine filter (cuisines array passed to API)
+  - (deferred) Cuisine family expansion with CUISINE_FAMILIES — depends on Group 11 Phase 1 (tracked there)
 
-  **Step 1: How many options?**
-  - Pill selector: 1 / 3 / 5 options (default: 3)
-  - "1" = auto-add to slot, "3"/"5" = show options to pick from
+* [x] **Backend: `POST /api/meal-plan/find-recipes`** — `mealPlanFindRecipesController.ts`
+  - ✅ Two-tier: DB-first with in-memory macro filtering, AI fallback for shortfalls
+  - ✅ Full request/response shape per spec
+  - ✅ matchScore (0-100) + matchBreakdown per option
+  - ✅ 14 passing tests in `tests/integration/findRecipes-integration.test.ts`
 
-  **Step 2: Cuisine (optional)**
-  - "Any cuisine" toggle (default on)
-  - When toggled off → show cuisine family chips (Latin American, Asian, African, European, Middle Eastern, etc.)
-  - Tapping a family expands to specific cuisines (Latin American → Puerto Rican, Mexican, Peruvian, etc.)
-  - Multi-select allowed: "Latin American OR Mediterranean"
-  - Uses `CUISINE_FAMILIES` constant from Group 11 Phase 1
+* [x] **Results view: `MealRequestResults` component** — `frontend/components/meal-plan/MealRequestResults.tsx`
+  - ✅ Recipe cards with matchScore badge, cuisine badge, cook time, difficulty
+  - ✅ Macro pills (green = constraint met)
+  - ✅ "Add to Plan" button per card
+  - ✅ "None of these — generate more" link re-runs with same constraints
+  - ✅ AI-generated count badge
 
-  **Step 3: Macro targets (the core)**
-  - Each macro has a **range slider** or quick-set buttons:
+* [x] **Remaining calories integration** — Pre-populates from `dailyMacros` vs `targetMacros` in meal-plan screen
+  - ✅ Shows "You have ~X calories and Yg protein remaining today" context banner
 
-  | Macro | Input Style | Default | Example |
-  |-------|------------|---------|---------|
-  | **Calories** | Range slider (100–1200) | "Any" | "350–450 cal" |
-  | **Protein** | Min slider (0–80g) | "Any" | "At least 30g" |
-  | **Fat** | Max slider (0–60g) | "Any" | "Under 8g" |
-  | **Carbs** | Range or "Any" | "Any" | "Any amount" |
-  | **Fiber** | Min slider (0–25g) | "Any" | "At least 5g" |
-
-  - **Smart presets** at top for fast selection:
-    - "High Protein" → protein ≥ 35g, any cal
-    - "Low Cal" → calories ≤ 400, any macros
-    - "Low Fat" → fat ≤ 10g, any cal
-    - "Balanced" → 400-600 cal, 25-35g protein, 15-25g fat
-    - "Post-Workout" → 300-500 cal, protein ≥ 35g, carbs ≥ 40g, fat ≤ 15g
-    - "Light Snack" → calories ≤ 250, protein ≥ 10g
-
-  **Step 4: Additional filters (optional, collapsed by default)**
-  - Meal type: breakfast / lunch / dinner / snack / dessert / any
-  - Max cook time: slider (5–120 min)
-  - Difficulty: easy / medium / hard / any
-  - Dietary: auto-populated from user profile (but overridable per request)
-
-  * 📍 Component: `frontend/components/meal-plan/MealRequestModal.tsx`
-  * 📍 Design: bottom sheet with spring animation, each step is a collapsible section (not separate screens — user can see/adjust all constraints at once)
-
-* [ ] **Backend: `POST /api/meal-plan/find-recipes`** — The targeted search + generation endpoint:
-
-  ```typescript
-  // Request
-  {
-    count: 3,                           // How many options to return
-    cuisines?: string[],                // ["Puerto Rican", "Mexican"] or empty for any
-    cuisineFamilies?: string[],         // ["Latin American"] — expands to all subcuisines
-    calories?: { min?: number, max?: number },  // { min: 350, max: 450 }
-    protein?: { min?: number },                 // { min: 30 }
-    fat?: { max?: number },                     // { max: 8 }
-    carbs?: { min?: number, max?: number },     // null = any
-    fiber?: { min?: number },                   // { min: 5 }
-    mealType?: string,                  // "dinner" or null for any
-    maxCookTime?: number,               // 30 (minutes)
-    difficulty?: string,                // "easy" or null for any
-    dietaryRestrictions?: string[],     // auto from profile, overridable
-  }
-
-  // Response
-  {
-    options: [
-      {
-        recipe: Recipe,              // Full recipe object
-        matchScore: number,          // How well it matches constraints (0-100)
-        matchBreakdown: {
-          caloriesInRange: boolean,
-          proteinMet: boolean,
-          fatMet: boolean,
-          carbsMet: boolean,
-          fiberMet: boolean,
-          cuisineMatch: boolean,
-        }
-      }
-    ],
-    totalMatches: number,            // How many recipes in DB matched
-    generatedCount: number,          // How many were AI-generated (if DB had < count)
-  }
-  ```
-
-  * 📍 **Search strategy (two-tier):**
-    1. **Database-first** — Query saved + system recipes matching ALL constraints. Score by match quality. Return up to `count` results.
-    2. **AI-generation fallback** — If database returns fewer than `count` matches, generate remaining via `aiRecipeService` with the macro constraints baked into the prompt. This ensures the user always gets the requested number of options.
-  * 📍 Cuisine family expansion: if `cuisineFamilies: ["Latin American"]`, expand to all subcuisines in that family using `CUISINE_FAMILIES` constant
-  * 📍 Adjacency boost: results from adjacent cuisines score slightly lower but still appear if exact-match cuisine pool is thin
-
-* [ ] **Results view: `MealRequestResults` component** — Shows the returned options as swipeable cards:
-  - Each card: recipe image, title, cuisine badge, macro pills (green = meets constraint, gray = "any"), cook time, difficulty
-  - Macro pills highlight which constraints are met: "✓ 32g protein" (green), "✓ 410 cal" (green), "✓ 6g fat" (green)
-  - **Tap card** → expand to full recipe detail (inline, not navigation)
-  - **"Add to Plan" button** on each card → adds to the selected meal slot → closes modal with celebration
-  - **"Save to Cookbook" button** → saves recipe without adding to plan
-  - **"None of these — generate more" link** at bottom → re-runs AI generation with same constraints for fresh options
-  - If only 1 option was requested and it matches, auto-add to slot with brief confirmation toast
-
-* [ ] **Remaining calories integration** — When "Find Me a Meal" is opened from an existing meal plan day, pre-populate the calorie field with remaining calories for that day:
-  - Example: daily target 2000 cal, already planned 1600 → default calorie range = "350–450" (centered on remaining)
-  - Pre-populate protein with remaining protein gap too
-  - Show context: "You have ~400 calories and 35g protein remaining today"
-  * 📍 Calculate from `useNutritionTracking` hook's daily totals vs user macro goals
-
-* [ ] **Request history** — Save the last 5 request configurations so users can re-run them quickly:
-  - "Your recent searches" section at top of MealRequestModal
-  - Tap to re-run with same constraints
-  - Stored in AsyncStorage (client-side only, no backend)
+* [x] **Request history** — Last 5 request configs saved to AsyncStorage, shown as re-runnable chips
 
 ---
 
@@ -2175,7 +2094,13 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   * 📍 Export: `getAdjacentCuisines(cuisine: string): { cuisine: string; relationship: string; weight: number }[]`
   * 📍 Export: `getCuisineFamily(cuisine: string): string` — returns the parent family (e.g., "Latin American" for "Puerto Rican")
 
-* [ ] **Add `CUISINE_FAMILIES` constant** — Group all cuisines into families for UI browse and recommendation context:
+* [ ] **Add `CUISINE_FAMILIES` constant** — Group all cuisines into families for UI browse, recommendation context, and MealRequestModal cuisine picker (10C dependency):
+
+  > **10C dependency:** Once `CUISINE_FAMILIES` is defined, wire it into `MealRequestModal` — replace the flat cuisines text input with expandable family chips (e.g. "Latin American" expands to Puerto Rican, Mexican, Peruvian, etc.) with multi-select. Each family chip is a collapsible row; tapping a family selects/deselects all its cuisines; tapping individual sub-chips fine-tunes the selection.
+  > 📍 Frontend: `frontend/constants/CuisineFamilies.ts` — export `CUISINE_FAMILIES: Record<string, string[]>`
+  > 📍 Wire into `MealRequestModal` Step 2 (Cuisine) below the "Any Cuisine" toggle
+
+* [ ] **Add `CUISINE_FAMILIES` constant data** — Group all cuisines into families for UI browse and recommendation context:
 
   | Family | Cuisines |
   |--------|----------|
