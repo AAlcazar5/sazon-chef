@@ -97,7 +97,13 @@ See `docs/COMMAND-AGENT-MAP.md` for slash command → agent mappings.
 6. **Copy = texting a friend** — "I'm allergic" not "strict restriction"
 
 ### Roadmap (`ROADMAP_3.0.md`)
-The active roadmap lives in the project root. Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps. Mark tasks as complete as you go.
+The active roadmap lives in the project root. Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps.
+
+**Roadmap Hygiene — Non-Negotiable:**
+- Mark every `- [ ]` item as `- [x]` **immediately** when its implementation is complete — not at the end of a session, not in a batch later.
+- If a bullet is partially done (some sub-points complete, others deferred), change `[ ]` to `[x]` and annotate with `✅` on completed sub-points and `(deferred)` on skipped ones.
+- Test lines (`**Test:**`) must also be marked `[x]` once the described tests are green. If only a subset of test cases are covered, mark `[x] **Test (partial):**` and note what remains.
+- Never leave a shipped feature as `[ ]`. A stale unchecked box creates false backlog and misleads future planning.
 
 ### Plans (`plans/`)
 Check here before planning new features — prior architectural decisions may already be documented.
