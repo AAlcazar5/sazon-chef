@@ -28,6 +28,7 @@ interface MacroData {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
 }
 
 interface DailyMacrosSummaryProps {
@@ -130,10 +131,11 @@ function MacroSparkline({
 }
 
 const MACRO_WIDGET_CONFIG = [
+  { key: 'calories' as const, icon: '🔥', label: 'Calories', unit: 'kcal', tint: Pastel.peach, tintDark: PastelDark.peach, accent: Accent.peach },
   { key: 'protein' as const, icon: '🥩', label: 'Protein', unit: 'g', tint: Pastel.sage, tintDark: PastelDark.sage, accent: Accent.sage },
   { key: 'carbs' as const, icon: '🌾', label: 'Carbs', unit: 'g', tint: Pastel.golden, tintDark: PastelDark.golden, accent: Accent.golden },
   { key: 'fat' as const, icon: '🥑', label: 'Fat', unit: 'g', tint: Pastel.lavender, tintDark: PastelDark.lavender, accent: Accent.lavender },
-  { key: 'calories' as const, icon: '🔥', label: 'Calories', unit: 'kcal', tint: Pastel.peach, tintDark: PastelDark.peach, accent: Accent.peach },
+  { key: 'fiber' as const, icon: '🌿', label: 'Fiber', unit: 'g', tint: Pastel.sky, tintDark: PastelDark.sky, accent: Accent.sky },
 ];
 
 function DailyMacrosSummary({
@@ -156,6 +158,7 @@ function DailyMacrosSummary({
       carbs: extractWeeklyMacroValues(weeklyPlan, weekDates, 'carbs'),
       fat: extractWeeklyMacroValues(weeklyPlan, weekDates, 'fat'),
       calories: extractWeeklyMacroValues(weeklyPlan, weekDates, 'calories'),
+      fiber: extractWeeklyMacroValues(weeklyPlan, weekDates, 'fiber'),
     };
   }, [weeklyPlan, weekDates]);
 
@@ -230,7 +233,7 @@ function DailyMacrosSummary({
                 tint={cfg.tint}
                 tintDark={cfg.tintDark}
                 icon={cfg.icon}
-                statValue={dailyMacros[cfg.key]}
+                statValue={dailyMacros[cfg.key] ?? 0}
                 statUnit={cfg.unit}
                 label={cfg.label}
                 onPress={weeklyMacroData ? () => handleMacroCardPress(cfg.key) : undefined}
@@ -265,42 +268,72 @@ function DailyMacrosSummary({
           )}
         </View>
       ) : (
-        /* Compact collapsed view — pastel mini cards */
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {MACRO_WIDGET_CONFIG.map((cfg) => {
-            const value = dailyMacros[cfg.key];
-            const target = targetMacros[cfg.key];
-            return (
-              <View
-                key={cfg.key}
-                style={{
-                  flex: 1,
-                  backgroundColor: isDark ? cfg.tintDark : cfg.tint,
-                  borderRadius: 14,
-                  paddingVertical: 10,
-                  paddingHorizontal: 8,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ fontSize: 11, color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                  {cfg.label}
-                </Text>
-                <CountingNumber
-                  value={value}
-                  suffix={cfg.key === 'calories' ? '' : 'g'}
-                  delay={0}
+        /* Compact collapsed view — pastel mini cards (4-card row + fiber full-width) */
+        <View style={{ gap: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {MACRO_WIDGET_CONFIG.filter(cfg => cfg.key !== 'fiber').map((cfg) => {
+              const value = dailyMacros[cfg.key];
+              const target = targetMacros[cfg.key];
+              return (
+                <View
+                  key={cfg.key}
                   style={{
-                    fontSize: 15,
-                    fontWeight: '700',
-                    color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                    flex: 1,
+                    backgroundColor: isDark ? cfg.tintDark : cfg.tint,
+                    borderRadius: 14,
+                    paddingVertical: 10,
+                    paddingHorizontal: 8,
+                    alignItems: 'center',
                   }}
-                />
-                <Text style={{ fontSize: 9, color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary, marginTop: 1 }}>
-                  / {target}{cfg.key === 'calories' ? '' : 'g'}
-                </Text>
-              </View>
-            );
-          })}
+                >
+                  <Text style={{ fontSize: 11, color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                    {cfg.label}
+                  </Text>
+                  <CountingNumber
+                    value={value}
+                    suffix={cfg.key === 'calories' ? '' : 'g'}
+                    delay={0}
+                    style={{
+                      fontSize: 15,
+                      fontWeight: '700',
+                      color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                    }}
+                  />
+                  <Text style={{ fontSize: 9, color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary, marginTop: 1 }}>
+                    / {target}{cfg.key === 'calories' ? '' : 'g'}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+          {/* Fiber — full-width compact pill */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: isDark ? PastelDark.sky : Pastel.sky,
+            borderRadius: 14,
+            paddingVertical: 8,
+            paddingHorizontal: 14,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ fontSize: 14 }}>🌿</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                Fiber
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+              <CountingNumber
+                value={dailyMacros.fiber ?? 0}
+                suffix="g"
+                delay={0}
+                style={{ fontSize: 15, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary }}
+              />
+              <Text style={{ fontSize: 10, color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>
+                / {targetMacros.fiber ?? 25}g
+              </Text>
+            </View>
+          </View>
         </View>
       )}
     </View>

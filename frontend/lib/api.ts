@@ -623,6 +623,24 @@ export const recipeApi = {
     return apiClient.post('/recipes/import-url', { url });
   },
 
+  // AI-assisted recipe creation from free-text description
+  generateFromDescription: (description: string) => {
+    return apiClient.post('/recipes/generate-from-description', { description });
+  },
+
+  // Fork a system recipe into a user-owned copy ("Save My Version")
+  forkRecipe: (id: string) => {
+    return apiClient.post(`/recipes/${id}/fork`);
+  },
+
+  // Smart collections — rule-driven, auto-populated from saved recipes
+  getSmartCollections: () => {
+    return apiClient.get('/recipes/smart-collections');
+  },
+  getSmartCollectionRecipes: (id: string) => {
+    return apiClient.get(`/recipes/smart-collections/${id}`);
+  },
+
   updateRecipe: (id: string, data: any) => {
     return apiClient.put(`/recipes/${id}`, data);
   },

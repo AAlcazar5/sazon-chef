@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, TextInput, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
@@ -19,6 +19,7 @@ import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { CookbookEmptyStates } from '../../constants/EmptyStates';
 import { CookbookLoadingStates } from '../../constants/LoadingStates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getRecentCollectionIds, recordRecentCollections } from '../../lib/recentCollections';
 import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import { HeartBurstAnimation } from '../../components/celebrations';
 import Toast, { ToastType } from '../../components/ui/Toast';
@@ -41,10 +42,41 @@ import {
   RecipeNotesModal,
   MarkCookedModal,
   ImportFromUrlModal,
+  QuickAddRecipeModal,
   BulkActionBar,
+  SmartCollectionCard,
+  CollectionStatsBar,
+  CollectionSuggestionBanner,
   type CookbookFilters,
   type CollectionSortMode,
 } from '../../components/cookbook';
+
+// Client-side predicate mirroring smartCollectionsService.recipeMatchesSmartCollection
+// r can be a SavedRecipe (has r.recipe) or a raw recipe object
+const ONE_POT_KEYWORDS = ['one-pot', 'one pot', 'sheet pan', 'sheet-pan', 'skillet'];
+function recipeMatchesSmartCollectionClient(r: any, id: string): boolean {
+  const recipe = r.recipe ?? r;
+  const hour = new Date().getHours();
+  switch (id) {
+    case 'quick_easy': return recipe.cookTime <= 15 && recipe.difficulty === 'easy';
+    case 'high_protein': return recipe.protein >= 30;
+    case 'under_400_cal': return recipe.calories <= 400;
+    case 'high_fiber': return typeof recipe.fiber === 'number' && recipe.fiber >= 8;
+    case 'budget_friendly': return typeof recipe.estimatedCostPerServing === 'number' && recipe.estimatedCostPerServing <= 3;
+    case 'one_pot': {
+      const hay = `${recipe.title ?? ''} ${recipe.description ?? ''}`.toLowerCase();
+      return ONE_POT_KEYWORDS.some(kw => hay.includes(kw));
+    }
+    case 'right_now': {
+      const mt = recipe.mealType?.toLowerCase();
+      if (hour >= 5 && hour < 11) return mt === 'breakfast';
+      if (hour >= 11 && hour < 15) return mt === 'lunch';
+      if (hour >= 17 && hour < 22) return mt === 'dinner';
+      return mt === 'snack';
+    }
+    default: return false;
+  }
+}
 
 export default function CookbookScreen() {
   const { colorScheme } = useColorScheme();
@@ -54,8 +86,11 @@ export default function CookbookScreen() {
   const [collections, setCollections] = useState<Collection[]>([]);
   // Multi-select: empty array => All
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'saved' | 'liked' | 'disliked'>('saved');
-  
+  const [viewMode, setViewMode] = useState<'saved' | 'liked' | 'disliked' | 'collections'>('saved');
+  const [smartCollections, setSmartCollections] = useState<Array<{id: string; name: string; icon: string; description: string; count: number}>>([]);
+  const [smartCollectionsLoading, setSmartCollectionsLoading] = useState(false);
+  const [collectionsSearchQuery, setCollectionsSearchQuery] = useState('');
+
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('list');
   const DISPLAY_MODE_STORAGE_KEY = '@sazon_cookbook_view_mode';
   const [sortBy, setSortBy] = useState<'recent' | 'alphabetical' | 'cuisine' | 'matchScore' | 'cookTime' | 'rating' | 'mostCooked'>('recent');
@@ -77,6 +112,7 @@ export default function CookbookScreen() {
   const [savePickerVisible, setSavePickerVisible] = useState(false);
   const [savePickerRecipeId, setSavePickerRecipeId] = useState<string | null>(null);
   const [savePickerCollectionIds, setSavePickerCollectionIds] = useState<string[]>([]);
+  const [recentCollectionIds, setRecentCollectionIds] = useState<string[]>([]);
 
   // Filters & Preferences (client-side filters for cookbook lists)
   const COOKBOOK_FILTERS_STORAGE_KEY = '@sazon_cookbook_filters';
@@ -153,6 +189,7 @@ export default function CookbookScreen() {
 
   // Import from URL state
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
@@ -260,8 +297,23 @@ export default function CookbookScreen() {
     useCallback(() => {
       loadCollections();
       loadRecipes(viewMode);
+      getRecentCollectionIds().then(setRecentCollectionIds);
     }, [viewMode])
   );
+
+  // Load smart collections when switching to the collections view
+  useEffect(() => {
+    if (viewMode !== 'collections') return;
+    let cancelled = false;
+    setSmartCollectionsLoading(true);
+    recipeApi.getSmartCollections()
+      .then((res: any) => {
+        if (!cancelled) setSmartCollections(res.data?.collections ?? []);
+      })
+      .catch(() => { /* silently fail — empty state handles it */ })
+      .finally(() => { if (!cancelled) setSmartCollectionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [viewMode]);
 
   // Also refresh when needsRefresh is triggered
   useEffect(() => {
@@ -837,6 +889,11 @@ export default function CookbookScreen() {
       // Save to cookbook with selected collections (multi-collection support)
       await recipeApi.saveRecipe(savePickerRecipeId, savePickerCollectionIds.length > 0 ? { collectionIds: savePickerCollectionIds } : undefined);
 
+      if (savePickerCollectionIds.length > 0) {
+        recordRecentCollections(savePickerCollectionIds).then(() =>
+          getRecentCollectionIds().then(setRecentCollectionIds)
+        );
+      }
       setSavePickerVisible(false);
       setSavePickerRecipeId(null);
       setSavePickerCollectionIds([]);
@@ -1130,7 +1187,184 @@ export default function CookbookScreen() {
         onMerge={handleMergeCollections}
       />
 
-      {!cacheLoading && allRecipes.length === 0 ? (
+      {/* Collections View — 2-column grid of smart + custom collections */}
+      {viewMode === 'collections' && (
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
+          refreshControl={<SazonRefreshControl refreshing={smartCollectionsLoading} onRefresh={() => { setCollectionsSearchQuery(''); setViewMode('collections'); }} />}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Search input */}
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 8,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+            borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 20,
+          }}>
+            <Ionicons name="search" size={15} color={isDark ? '#9CA3AF' : '#9CA3AF'} />
+            <TextInput
+              value={collectionsSearchQuery}
+              onChangeText={setCollectionsSearchQuery}
+              placeholder="Search collections..."
+              placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+              style={{ flex: 1, fontSize: 14, color: isDark ? '#F9FAFB' : '#111827' }}
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+              testID="collections-search-input"
+              accessibilityLabel="Search collections"
+            />
+          </View>
+
+          {/* First-use suggestion banner */}
+          <CollectionSuggestionBanner
+            savedCount={allRecipes.length}
+            customCollectionCount={collections.length}
+            onDismiss={() => {}}
+            onCreateSuggested={async (name) => {
+              try {
+                await collectionsApi.create({ name });
+                await loadCollections();
+              } catch { /* ignore */ }
+            }}
+          />
+
+          {/* Smart Collections section */}
+          {(() => {
+            const q = collectionsSearchQuery.toLowerCase().trim();
+            const filtered = q
+              ? smartCollections.filter(c =>
+                  c.name.toLowerCase().includes(q) ||
+                  allRecipes.some((r: any) =>
+                    recipeMatchesSmartCollectionClient(r, c.id) &&
+                    (r.title?.toLowerCase().includes(q) || r.recipe?.title?.toLowerCase().includes(q))
+                  )
+                )
+              : smartCollections;
+            if (filtered.length === 0) return null;
+            return (
+              <>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, marginBottom: 10, textTransform: 'uppercase' }}>
+                  Smart Collections
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+                  {filtered.map((col) => {
+                    const previewImages = allRecipes
+                      .filter((r: any) => recipeMatchesSmartCollectionClient(r, col.id))
+                      .map((r: any) => r.imageUrl ?? r.recipe?.imageUrl)
+                      .filter(Boolean)
+                      .slice(0, 3) as string[];
+                    return (
+                      <View key={col.id} style={{ width: '47.5%' }}>
+                        <SmartCollectionCard
+                          id={col.id}
+                          name={col.name}
+                          icon={col.icon}
+                          description={col.description}
+                          count={col.count}
+                          previewImages={previewImages}
+                          onPress={() => {
+                            HapticPatterns.buttonPress();
+                            router.push(`/smart-collection?id=${col.id}&name=${encodeURIComponent(col.name)}` as any);
+                          }}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            );
+          })()}
+
+          {/* Custom Collections section */}
+          {(() => {
+            const q = collectionsSearchQuery.toLowerCase().trim();
+            const sorted = collections.slice().sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+            const filtered = q
+              ? sorted.filter(col =>
+                  col.name.toLowerCase().includes(q) ||
+                  allRecipes.some((r: any) =>
+                    (r.collections?.some((c: any) => c.id === col.id) || r.collectionIds?.includes(col.id)) &&
+                    (r.title?.toLowerCase().includes(q) || r.recipe?.title?.toLowerCase().includes(q))
+                  )
+                )
+              : sorted;
+            if (filtered.length === 0) return null;
+            return (
+              <>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, marginBottom: 10, textTransform: 'uppercase' }}>
+                  My Collections
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                  {filtered.map((col) => {
+                    const colRecipes = allRecipes.filter((r: any) =>
+                      r.collections?.some((c: any) => c.id === col.id) || r.collectionIds?.includes(col.id)
+                    ) as any[];
+                    const previewImages = col.coverImageUrl
+                      ? [col.coverImageUrl]
+                      : colRecipes.map((r: any) => r.imageUrl ?? r.recipe?.imageUrl).filter(Boolean).slice(0, 3) as string[];
+                    return (
+                      <HapticTouchableOpacity
+                        key={col.id}
+                        testID={`collection-card-${col.id}`}
+                        accessibilityLabel={`${col.name} collection, ${col.recipeCount ?? 0} recipes`}
+                        accessibilityRole="button"
+                        style={{
+                          width: '47.5%', borderRadius: 20, overflow: 'hidden', minHeight: 130,
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#F5F5F5',
+                          shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2,
+                        }}
+                        onPress={() => { HapticPatterns.buttonPress(); handleSelectList(col.id); setViewMode('saved'); }}
+                      >
+                        {/* 3-image preview strip */}
+                        {previewImages.length > 0 && (
+                          <View style={{ flexDirection: 'row', height: 72, overflow: 'hidden' }}>
+                            {previewImages.map((uri, i) => (
+                              <Image
+                                key={i}
+                                source={{ uri }}
+                                style={{ flex: 1, height: 72 }}
+                                resizeMode="cover"
+                              />
+                            ))}
+                            {/* fill empty slots with a grey placeholder */}
+                            {Array.from({ length: Math.max(0, 3 - previewImages.length) }).map((_, i) => (
+                              <View key={`ph-${i}`} style={{ flex: 1, height: 72, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />
+                            ))}
+                          </View>
+                        )}
+                        <View style={{ padding: 12 }}>
+                          {col.isPinned && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                              <Ionicons name="pin" size={10} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                              <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginLeft: 3, fontWeight: '600' }}>Pinned</Text>
+                            </View>
+                          )}
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }} numberOfLines={2}>
+                            {col.name}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 4 }}>
+                            {col.recipeCount ?? 0} {(col.recipeCount ?? 0) === 1 ? 'recipe' : 'recipes'}
+                          </Text>
+                        </View>
+                      </HapticTouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            );
+          })()}
+
+          {smartCollections.length === 0 && collections.length === 0 && !smartCollectionsLoading && (
+            <AnimatedEmptyState
+              config={CookbookEmptyStates.noSavedRecipes}
+              title=""
+              onAction={() => router.push('/')}
+            />
+          )}
+        </ScrollView>
+      )}
+
+      {viewMode !== 'collections' && !cacheLoading && allRecipes.length === 0 ? (
         // No recipes found (but API call succeeded with null/empty response)
         <>
           {viewMode === 'saved' && (
@@ -1205,6 +1439,11 @@ export default function CookbookScreen() {
             }
             showsVerticalScrollIndicator={true}
           >
+          {/* Stats bar — shown when a collection filter is active */}
+          {selectedListId && viewMode === 'saved' && filteredAndSortedRecipes.length > 0 && (
+            <CollectionStatsBar recipes={filteredAndSortedRecipes} />
+          )}
+
           <View className="px-4">
 
             {/* Recipe count + grid/list toggle */}
@@ -1370,6 +1609,7 @@ export default function CookbookScreen() {
         selectedCollectionIds={savePickerCollectionIds}
         onSelectionChange={setSavePickerCollectionIds}
         onSave={handleSaveToCollections}
+        recentCollectionIds={recentCollectionIds}
         onCreateCollection={async (name) => {
           setNewCollectionName(name);
           await handleCreateCollection();
@@ -1445,6 +1685,19 @@ export default function CookbookScreen() {
         onClose={() => setShowImportModal(false)}
         onSuccess={() => {
           setShowImportModal(false);
+          setNeedsRefresh(true);
+        }}
+      />
+
+      {/* Quick Add Recipe Modal — fast-path name + ingredients + macros */}
+      <QuickAddRecipeModal
+        visible={showQuickAddModal}
+        onClose={() => setShowQuickAddModal(false)}
+        activeCollectionId={
+          selectedCollectionIds.length === 1 ? selectedCollectionIds[0] : undefined
+        }
+        onSuccess={() => {
+          setShowQuickAddModal(false);
           setNeedsRefresh(true);
         }}
       />

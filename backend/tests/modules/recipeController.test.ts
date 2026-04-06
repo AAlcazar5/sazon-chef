@@ -13,6 +13,13 @@ jest.mock('../../src/services/healthifyService', () => ({
   healthifyService: { healthifyRecipe: jest.fn() }
 }));
 
+// Mock aiRecipeService (used via dynamic import in generateFromDescription)
+jest.mock('../../src/services/aiRecipeService', () => ({
+  aiRecipeService: {
+    generateFromDescription: jest.fn(),
+  },
+}));
+
 // Mock recipeImportService
 jest.mock('../../src/services/recipeImportService', () => ({
   importRecipeFromUrl: jest.fn(),
@@ -576,6 +583,244 @@ describe('Recipe Controller', () => {
       expect(mockRes.json).toHaveBeenCalledWith({
         message: 'Recipe disliked successfully'
       });
+    });
+  });
+
+  describe('generateFromDescription', () => {
+    const { aiRecipeService } = require('../../src/services/aiRecipeService');
+
+    test('returns 400 when description is missing', async () => {
+      mockReq.body = {};
+      await recipeController.generateFromDescription(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Description is required' });
+    });
+
+    test('returns 400 when description is not a string', async () => {
+      mockReq.body = { description: 123 };
+      await recipeController.generateFromDescription(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+    });
+
+    test('returns generated recipe with flattened ingredients + instructions', async () => {
+      aiRecipeService.generateFromDescription.mockResolvedValueOnce({
+        title: 'Oat Protein Pancakes',
+        description: 'Fluffy high-protein breakfast pancakes.',
+        cuisine: 'American',
+        mealType: 'breakfast',
+        cookTime: 15,
+        difficulty: 'easy',
+        servings: 1,
+        calories: 410,
+        protein: 32,
+        carbs: 50,
+        fat: 8,
+        fiber: 6,
+        ingredients: [
+          { name: 'oats', amount: 50, unit: 'g' },
+          { name: 'protein powder', amount: 1, unit: 'scoop' },
+        ],
+        instructions: [
+          { step: 1, instruction: 'Blend oats into flour.' },
+          { step: 2, instruction: 'Mix with protein powder and water.' },
+        ],
+        tips: ['Use almond milk'],
+        tags: ['high-protein'],
+      });
+
+      mockReq.body = { description: 'oat protein pancakes with chia seeds' };
+      await recipeController.generateFromDescription(mockReq as Request, mockRes as Response);
+
+      expect(aiRecipeService.generateFromDescription).toHaveBeenCalledWith(
+        'oat protein pancakes with chia seeds'
+      );
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({
+            recipe: expect.objectContaining({
+              title: 'Oat Protein Pancakes',
+              protein: 32,
+              ingredients: ['50 g oats', '1 scoop protein powder'],
+              instructions: [
+                'Blend oats into flour.',
+                'Mix with protein powder and water.',
+              ],
+            }),
+          }),
+        })
+      );
+    });
+
+    test('returns 429 on quota errors', async () => {
+      const err: any = new Error('quota exceeded');
+      err.isQuotaError = true;
+      aiRecipeService.generateFromDescription.mockRejectedValueOnce(err);
+
+      mockReq.body = { description: 'something' };
+      await recipeController.generateFromDescription(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(429);
+    });
+
+    test('returns 500 on generic failure', async () => {
+      aiRecipeService.generateFromDescription.mockRejectedValueOnce(new Error('boom'));
+      mockReq.body = { description: 'something' };
+      await recipeController.generateFromDescription(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('forkRecipe', () => {
+    const mockOriginal = {
+      id: 'orig-1',
+      title: 'Thai Basil Chicken',
+      description: 'Spicy stir fry',
+      cookTime: 20,
+      cuisine: 'Thai',
+      mealType: 'dinner',
+      difficulty: 'easy',
+      servings: 2,
+      calories: 450,
+      protein: 35,
+      carbs: 30,
+      fat: 18,
+      fiber: 4,
+      imageUrl: null,
+      ingredients: [
+        { text: '1 lb chicken', order: 1 },
+        { text: '1 cup basil', order: 2 },
+      ],
+      instructions: [
+        { step: 1, text: 'Heat oil' },
+        { step: 2, text: 'Add chicken' },
+      ],
+    };
+
+    test('returns 400 when id is missing', async () => {
+      mockReq.params = {};
+      await recipeController.forkRecipe(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+    });
+
+    test('returns 404 when recipe not found', async () => {
+      (prisma.recipe.findUnique as jest.Mock).mockResolvedValueOnce(null);
+      mockReq.params = { id: 'missing' };
+      await recipeController.forkRecipe(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+    });
+
+    test('creates a user-owned copy with ingredients + instructions + auto-saves', async () => {
+      (prisma.recipe.findUnique as jest.Mock)
+        .mockResolvedValueOnce(mockOriginal)
+        .mockResolvedValueOnce({ ...mockOriginal, id: 'fork-1', isUserCreated: true, source: 'user-created' });
+      (prisma.recipe.create as jest.Mock).mockResolvedValue({ id: 'fork-1', ingredients: [] });
+      (prisma.recipeInstruction.create as jest.Mock).mockResolvedValue({});
+      (prisma.savedRecipe.create as jest.Mock).mockResolvedValue({ id: 'saved-1' });
+
+      mockReq.params = { id: 'orig-1' };
+      await recipeController.forkRecipe(mockReq as Request, mockRes as Response);
+
+      const createCall = (prisma.recipe.create as jest.Mock).mock.calls[0][0];
+      expect(createCall.data.isUserCreated).toBe(true);
+      expect(createCall.data.source).toBe('user-created');
+      expect(createCall.data.userId).toBe('test-user-id');
+      expect(createCall.data.title).toBe('Thai Basil Chicken');
+      expect(createCall.data.ingredients.create).toHaveLength(2);
+
+      // Two instructions created
+      expect((prisma.recipeInstruction.create as jest.Mock).mock.calls).toHaveLength(2);
+
+      // Auto-saved
+      expect(prisma.savedRecipe.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'test-user-id',
+          recipeId: 'fork-1',
+        }),
+      });
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+    });
+
+    test('returns 500 on db failure', async () => {
+      (prisma.recipe.findUnique as jest.Mock).mockRejectedValueOnce(new Error('db down'));
+      mockReq.params = { id: 'orig-1' };
+      await recipeController.forkRecipe(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('getSmartCollections', () => {
+    test('returns all smart collection definitions with per-user counts', async () => {
+      (prisma.savedRecipe.findMany as jest.Mock).mockResolvedValue([
+        { recipe: { title: 'A', description: '', cookTime: 10, difficulty: 'easy', calories: 350, protein: 35, carbs: 20, fat: 10, fiber: 9, estimatedCostPerServing: 2 } },
+        { recipe: { title: 'B', description: '', cookTime: 30, difficulty: 'medium', calories: 600, protein: 20, carbs: 50, fat: 25, fiber: 3, estimatedCostPerServing: 5 } },
+        { recipe: { title: 'Sheet Pan Salmon', description: '', cookTime: 25, difficulty: 'easy', calories: 420, protein: 32, carbs: 10, fat: 22, fiber: 2, estimatedCostPerServing: 4 } },
+      ]);
+
+      await recipeController.getSmartCollections(mockReq as Request, mockRes as Response);
+
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0];
+      expect(payload.collections).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'quick_easy', count: 1 }),
+          expect.objectContaining({ id: 'high_protein', count: 2 }),
+          expect.objectContaining({ id: 'under_400_cal', count: 1 }),
+          expect.objectContaining({ id: 'one_pot', count: 1 }),
+          expect.objectContaining({ id: 'budget_friendly', count: 1 }),
+          expect.objectContaining({ id: 'high_fiber', count: 1 }),
+        ]),
+      );
+    });
+
+    test('returns zero counts when the user has no saved recipes', async () => {
+      (prisma.savedRecipe.findMany as jest.Mock).mockResolvedValue([]);
+
+      await recipeController.getSmartCollections(mockReq as Request, mockRes as Response);
+
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0];
+      payload.collections.forEach((c: any) => expect(c.count).toBe(0));
+    });
+
+    test('returns 500 on db failure', async () => {
+      (prisma.savedRecipe.findMany as jest.Mock).mockRejectedValue(new Error('db down'));
+      await recipeController.getSmartCollections(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('getSmartCollectionRecipes', () => {
+    test('returns 404 for unknown smart collection id', async () => {
+      mockReq.params = { id: 'nonexistent' };
+      await recipeController.getSmartCollectionRecipes(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+    });
+
+    test('returns matching recipes for a valid smart collection id', async () => {
+      mockReq.params = { id: 'high_protein' };
+      (prisma.savedRecipe.findMany as jest.Mock).mockResolvedValue([
+        { recipe: { id: 'r1', title: 'Protein Bowl', protein: 40 } },
+        { recipe: { id: 'r2', title: 'Steak', protein: 55 } },
+      ]);
+
+      await recipeController.getSmartCollectionRecipes(mockReq as Request, mockRes as Response);
+
+      const findManyArgs = (prisma.savedRecipe.findMany as jest.Mock).mock.calls[0][0];
+      expect(findManyArgs.where.userId).toBe('test-user-id');
+      expect(findManyArgs.where.recipe).toEqual({ protein: { gte: 30 } });
+
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0];
+      expect(payload.collection.id).toBe('high_protein');
+      expect(payload.recipes).toHaveLength(2);
+      expect(payload.total).toBe(2);
+    });
+
+    test('returns 500 on db failure', async () => {
+      mockReq.params = { id: 'high_protein' };
+      (prisma.savedRecipe.findMany as jest.Mock).mockRejectedValue(new Error('db down'));
+      await recipeController.getSmartCollectionRecipes(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
     });
   });
 });

@@ -737,7 +737,6 @@ export default function HomeScreen() {
   const recipeSections = useMemo(() => {
     return groupRecipesIntoSections(suggestedRecipes, {
       quickMealsRecipes,
-      perfectMatchRecipes: [],
       mealPrepMode,
       searchQuery,
     });

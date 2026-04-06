@@ -17,6 +17,7 @@ interface Macros {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
 }
 
 interface UseMealPlanActionsProps {
@@ -281,6 +282,7 @@ export function useMealPlanActions({
             protein: macroGoalsResponse.data.protein || 150,
             carbs: macroGoalsResponse.data.carbs || 200,
             fat: macroGoalsResponse.data.fat || 67,
+            fiber: macroGoalsResponse.data.fiber || 25,
           });
         }
       } catch (error) {
@@ -404,7 +406,7 @@ export function useMealPlanActions({
   // ─── Generate weekly plan via server-side AI generation ───────────────
   const generateWeeklyViaServer = async () => {
     try {
-      setDailyMacros({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+      setDailyMacros({ calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
 
       const weekStart = weekDates[0];
       const startDateStr = weekStart.toISOString().split('T')[0];
@@ -454,7 +456,7 @@ export function useMealPlanActions({
   const generateWeeklyWithSelectionClientSide = async () => {
     try {
       // Reset daily macros before generating (only show selected day's meals)
-      setDailyMacros({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+      setDailyMacros({ calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
 
       // Track meals generated across the week for variety and leftover planning
       const weeklyMeals: Array<{
@@ -478,7 +480,7 @@ export function useMealPlanActions({
         currentDate.setDate(weekStart.getDate() + i);
 
         let mealPlan: any = {};
-        let total: any = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+        let total: any = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
 
         // Strategy: Reuse batch-friendly meals (dinner/lunch) from previous days
         // This simulates cooking large batches that feed multiple people (leftovers)
@@ -701,6 +703,7 @@ export function useMealPlanActions({
             protein: total.protein,
             carbs: total.carbs,
             fat: total.fat,
+            fiber: total.fiber,
           });
         }
 
@@ -936,7 +939,8 @@ export function useMealPlanActions({
               calories: prev.calories - (meal.calories || 0),
               protein: prev.protein - (meal.protein || 0),
               carbs: prev.carbs - (meal.carbs || 0),
-              fat: prev.fat - (meal.fat || 0)
+              fat: prev.fat - (meal.fat || 0),
+              fiber: prev.fiber - (meal.fiber || 0),
             }));
           },
         },
@@ -950,7 +954,8 @@ export function useMealPlanActions({
       calories: prev.calories + (newMeal.calories || 0),
       protein: prev.protein + (newMeal.protein || 0),
       carbs: prev.carbs + (newMeal.carbs || 0),
-      fat: prev.fat + (newMeal.fat || 0)
+      fat: prev.fat + (newMeal.fat || 0),
+      fiber: prev.fiber + (newMeal.fiber || 0),
     }));
     // Update total prep time
     setTotalPrepTime(prev => prev + (newMeal.cookTime || 0));
@@ -1208,6 +1213,7 @@ export function useMealPlanActions({
         protein: prev.protein + total.protein,
         carbs: prev.carbs + total.carbs,
         fat: prev.fat + total.fat,
+        fiber: prev.fiber + (total.fiber || 0),
       }));
 
       setSuccessMessage({
@@ -1314,7 +1320,7 @@ export function useMealPlanActions({
 
                 // Add meals to appropriate hours (same logic as full day)
                 const newHourlyMeals = { ...hourlyMeals };
-                let totalAdded = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+                let totalAdded = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
 
                 Object.entries(mealPlan).forEach(([mealType, recipe]: [string, any]) => {
                   if (recipe && mealTypeToHour[mealType]) {
@@ -1329,6 +1335,7 @@ export function useMealPlanActions({
                         protein: recipe.protein,
                         carbs: recipe.carbs,
                         fat: recipe.fat,
+                        fiber: recipe.fiber,
                         cookTime: recipe.cookTime,
                         difficulty: recipe.difficulty,
                         imageUrl: recipe.imageUrl,
@@ -1338,6 +1345,7 @@ export function useMealPlanActions({
                     totalAdded.protein += recipe.protein;
                     totalAdded.carbs += recipe.carbs;
                     totalAdded.fat += recipe.fat;
+                    totalAdded.fiber += recipe.fiber || 0;
                   }
                 });
 
@@ -1349,6 +1357,7 @@ export function useMealPlanActions({
                   protein: prev.protein + totalAdded.protein,
                   carbs: prev.carbs + totalAdded.carbs,
                   fat: prev.fat + totalAdded.fat,
+                  fiber: prev.fiber + totalAdded.fiber,
                 }));
 
                 setSuccessMessage({

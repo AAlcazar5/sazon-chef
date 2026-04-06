@@ -24,7 +24,7 @@ export interface CookbookFilters {
 
 export type { Collection } from '../../types';
 
-export type ViewMode = 'saved' | 'liked' | 'disliked';
+export type ViewMode = 'saved' | 'liked' | 'disliked' | 'collections';
 export type SortOption = 'recent' | 'alphabetical' | 'cuisine' | 'matchScore' | 'cookTime' | 'rating' | 'mostCooked';
 
 interface CookbookFilterModalProps {
@@ -143,6 +143,7 @@ export default function CookbookFilterModal({
           <FilterPill label="Saved" active={viewMode === 'saved'} onPress={() => onViewModeChange('saved')} />
           <FilterPill label="Liked" active={viewMode === 'liked'} onPress={() => onViewModeChange('liked')} />
           <FilterPill label="Disliked" active={viewMode === 'disliked'} onPress={() => onViewModeChange('disliked')} />
+          <FilterPill label="Collections" active={viewMode === 'collections'} onPress={() => onViewModeChange('collections')} />
         </View>
       </FilterSection>
 

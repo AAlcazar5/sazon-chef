@@ -1,6 +1,7 @@
 // frontend/components/cookbook/CollectionSavePicker.tsx
 // Modal for selecting collections to save a recipe to
 
+import React from 'react';
 import { View, Text, ScrollView, Modal, TextInput, Dimensions } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useState } from 'react';
@@ -32,6 +33,8 @@ interface CollectionSavePickerProps {
   onSave: () => void;
   /** Called when a new collection should be created */
   onCreateCollection: (name: string) => void;
+  /** MRU-ordered list of recently-used collection IDs — floated to the top */
+  recentCollectionIds?: string[];
 }
 
 /**
@@ -46,11 +49,24 @@ export default function CollectionSavePicker({
   onSelectionChange,
   onSave,
   onCreateCollection,
+  recentCollectionIds = [],
 }: CollectionSavePickerProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
+
+  const recentSet = new Set(recentCollectionIds);
+  const hasRecent = recentCollectionIds.some(id => collections.some(c => c.id === id));
+  const sortedCollections = hasRecent
+    ? [
+        ...recentCollectionIds.flatMap(id => {
+          const c = collections.find(c => c.id === id);
+          return c ? [c] : [];
+        }),
+        ...collections.filter(c => !recentSet.has(c.id)),
+      ]
+    : collections;
 
   const handleToggleCollection = (collectionId: string) => {
     const newSelection = selectedCollectionIds.includes(collectionId)
@@ -90,9 +106,28 @@ export default function CollectionSavePicker({
           </Text>
 
           <ScrollView scrollEventThrottle={16} className="mb-3">
-            {collections.map((collection) => (
+            {hasRecent && (
+              <Text
+                testID="recent-section-header"
+                className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 mt-1"
+              >
+                Recent
+              </Text>
+            )}
+            {sortedCollections.map((collection, index) => {
+              const isLastRecent =
+                hasRecent && index === recentCollectionIds.filter(id => collections.some(c => c.id === id)).length - 1;
+              const isFirstNonRecent = hasRecent && !recentSet.has(collection.id) &&
+                (index === 0 || recentSet.has(sortedCollections[index - 1]?.id ?? ''));
+              return (
+              <React.Fragment key={collection.id}>
+                {isFirstNonRecent && (
+                  <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 mt-3">
+                    All Collections
+                  </Text>
+                )}
               <HapticTouchableOpacity
-                key={collection.id}
+                testID={`collection-row-${collection.id}`}
                 onPress={() => handleToggleCollection(collection.id)}
                 className="flex-row items-center py-3 border-b border-gray-100 dark:border-gray-700"
               >
@@ -130,7 +165,9 @@ export default function CollectionSavePicker({
                   </Text>
                 )}
               </HapticTouchableOpacity>
-            ))}
+              </React.Fragment>
+              );
+            })}
 
             {creatingCollection ? (
               <View className="flex-row items-center py-3">

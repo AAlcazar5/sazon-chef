@@ -150,10 +150,17 @@ export interface RecipeSection {
  */
 export interface GroupRecipesOptions {
   quickMealsRecipes: SuggestedRecipe[];
-  perfectMatchRecipes: SuggestedRecipe[];
   mealPrepMode: boolean;
   searchQuery: string;
 }
+
+/**
+ * Macro Optimized threshold: min protein (g) and min protein-to-calorie ratio (g/kcal).
+ * A recipe qualifies if both are met — i.e. a meaningful protein amount AND
+ * a strong protein-to-calorie density. Tuned to ~25g+ protein and ~8g per 100 cal.
+ */
+const MACRO_OPTIMIZED_MIN_PROTEIN = 20;
+const MACRO_OPTIMIZED_MIN_RATIO = 0.08;
 
 /**
  * Group recipes into contextual display sections
@@ -162,7 +169,7 @@ export function groupRecipesIntoSections(
   suggestedRecipes: SuggestedRecipe[],
   options: GroupRecipesOptions
 ): RecipeSection[] {
-  const { quickMealsRecipes, perfectMatchRecipes, mealPrepMode, searchQuery } = options;
+  const { quickMealsRecipes, mealPrepMode, searchQuery } = options;
 
   if (suggestedRecipes.length <= 1) return [];
 
@@ -217,19 +224,32 @@ export function groupRecipesIntoSections(
     });
   }
 
-  // High in Superfoods — always show (placeholder if empty)
-  const superfoodRecipes = takeUnique(
-    remainingRecipes,
-    (r) => r.healthGrade === 'A' || r.healthGrade === 'B',
-    10
-  );
-  sections.push({
-    title: 'High in Superfoods',
-    emoji: '🥗',
-    recipes: superfoodRecipes,
-    key: 'superfoods',
-    priority: 50,
-  });
+  // Macro Optimized — recipes with high protein-to-calorie density.
+  // Sorted by ratio descending so the most macro-friendly picks surface first.
+  const macroCandidates = remainingRecipes
+    .filter((r) => !usedHighlightIds.has(r.id))
+    .filter((r) => {
+      const protein = (r as any).protein ?? 0;
+      const calories = (r as any).calories ?? 0;
+      if (calories <= 0 || protein < MACRO_OPTIMIZED_MIN_PROTEIN) return false;
+      return protein / calories >= MACRO_OPTIMIZED_MIN_RATIO;
+    })
+    .sort((a, b) => {
+      const ra = ((a as any).protein ?? 0) / ((a as any).calories || 1);
+      const rb = ((b as any).protein ?? 0) / ((b as any).calories || 1);
+      return rb - ra;
+    })
+    .slice(0, 10);
+  if (macroCandidates.length > 0) {
+    macroCandidates.forEach((r) => usedHighlightIds.add(r.id));
+    sections.push({
+      title: 'Macro Optimized',
+      emoji: '💪',
+      recipes: macroCandidates,
+      key: 'macro-optimized',
+      priority: 50,
+    });
+  }
 
   // Recipes for You
   const recipesForYou = [

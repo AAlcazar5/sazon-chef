@@ -8,6 +8,7 @@ interface Macros {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
 }
 
 interface UseNutritionTrackingReturn {
@@ -39,6 +40,7 @@ export function useNutritionTracking(): UseNutritionTrackingReturn {
     protein: 150,
     carbs: 200,
     fat: 67,
+    fiber: 25,
   });
 
   return {

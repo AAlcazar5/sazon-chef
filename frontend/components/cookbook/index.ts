@@ -17,9 +17,14 @@ export { default as StarRating } from './StarRating';
 export { default as RecipeNotesModal } from './RecipeNotesModal';
 export { default as MarkCookedModal } from './MarkCookedModal';
 export { default as ImportFromUrlModal } from './ImportFromUrlModal';
+export { default as QuickAddRecipeModal } from './QuickAddRecipeModal';
 export { default as CollectionFilterRow } from './CollectionFilterRow';
 export { default as CollectionCarousel } from './CollectionCarousel';
 export { default as BulkActionBar } from './BulkActionBar';
+export { default as CreateRecipeFAB } from './CreateRecipeFAB';
+export { default as SmartCollectionCard } from './SmartCollectionCard';
+export { default as CollectionStatsBar } from './CollectionStatsBar';
+export { default as CollectionSuggestionBanner } from './CollectionSuggestionBanner';
 
 // Re-export types
 export type {

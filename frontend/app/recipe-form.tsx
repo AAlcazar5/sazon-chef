@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TextInput, Alert, Modal, Animated, NativeSynthe
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import PulsingLoader from '../components/ui/PulsingLoader';
+import AIDescriptionAssist, { type GeneratedRecipeShape } from '../components/recipe/AIDescriptionAssist';
 import SuccessModal from '../components/ui/SuccessModal';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -88,6 +89,7 @@ export default function RecipeFormScreen() {
   const params = useLocalSearchParams();
   const recipeId = params.id as string | undefined;
   const isEditMode = !!recipeId;
+  const initialCollectionId = params.collectionId as string | undefined;
 
   const [loading, setLoading] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(isEditMode);
@@ -113,7 +115,9 @@ export default function RecipeFormScreen() {
   
   // Collections state
   const [collections, setCollections] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
-  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(
+    initialCollectionId ? [initialCollectionId] : []
+  );
   const [pickerVisible, setPickerVisible] = useState(false);
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
@@ -285,6 +289,33 @@ export default function RecipeFormScreen() {
       setLoadingRecipe(false);
       router.back();
     }
+  };
+
+  const handleAIRecipeGenerated = (generated: GeneratedRecipeShape) => {
+    if (generated.title) setTitle(generated.title);
+    if (generated.description) setDescription(generated.description);
+    if (generated.cookTime != null) setCookTime(String(generated.cookTime));
+    if (generated.cuisine) setCuisine(generated.cuisine);
+    if (generated.calories != null) setCalories(String(generated.calories));
+    if (generated.protein != null) setProtein(String(generated.protein));
+    if (generated.carbs != null) setCarbs(String(generated.carbs));
+    if (generated.fat != null) setFat(String(generated.fat));
+    if (generated.fiber != null) setFiber(String(generated.fiber));
+    if (generated.ingredients && generated.ingredients.length > 0) {
+      setIngredients(generated.ingredients);
+    }
+    if (generated.instructions && generated.instructions.length > 0) {
+      setInstructions(generated.instructions);
+    }
+    if (generated.mealType === 'breakfast' || generated.mealType === 'lunch' || generated.mealType === 'dinner') {
+      setMealType(generated.mealType);
+      setRecipeType('meal');
+    } else if (generated.mealType === 'snack') {
+      setRecipeType('snack');
+    } else if (generated.mealType === 'dessert') {
+      setRecipeType('dessert');
+    }
+    HapticPatterns.success();
   };
 
   const addIngredient = () => {
@@ -750,7 +781,11 @@ export default function RecipeFormScreen() {
         >
         <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-card p-4 mb-4 shadow-sm`}>
           <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Details</Text>
-          
+
+          {!isEditMode && (
+            <AIDescriptionAssist onRecipeGenerated={handleAIRecipeGenerated} />
+          )}
+
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>Recipe Title *</Text>
           <View className="mb-3">
           <AnimatedInput

@@ -3,7 +3,6 @@
 
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useColorScheme } from 'nativewind';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -15,9 +14,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import FrostedHeader from '../ui/FrostedHeader';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import Icon from '../ui/Icon';
-import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
 
 interface CookbookHeaderProps {
@@ -37,9 +33,6 @@ function CookbookHeader({
   activeFilterCount = 0,
   onImportPress,
 }: CookbookHeaderProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-
   // Press animation
   const pressScale = useSharedValue(1);
 
@@ -105,36 +98,23 @@ function CookbookHeader({
 
         {/* Right actions */}
         <View className="flex-row items-center" style={{ gap: 4 }}>
-          {/* Import from URL */}
+          {/* Import from URL — sky gradient pill */}
           {onImportPress && (
             <HapticTouchableOpacity
               onPress={() => { onImportPress(); HapticPatterns.buttonPress(); }}
               accessibilityLabel="Import recipe from URL"
               accessibilityRole="button"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 100,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.05)',
-                gap: 5,
-              }}
+              style={{ borderRadius: 100, overflow: 'hidden' }}
             >
-              <Icon
-                name={Icons.LINK_OUTLINE}
-                size={14}
-                color={isDark ? DarkColors.primary : Colors.primary}
-              />
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: '600',
-                  color: isDark ? DarkColors.primary : Colors.primary,
-                }}
+              <LinearGradient
+                colors={['#64B5F6', '#42A5F5']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.gradient}
               >
-                Import
-              </Text>
+                <Ionicons name="link" size={15} color="#FFF" />
+                <Text style={[styles.label, { color: '#FFF' }]}>Import</Text>
+              </LinearGradient>
             </HapticTouchableOpacity>
           )}
 

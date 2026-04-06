@@ -44,6 +44,7 @@ router.patch('/bulk-move-collection', recipeController.bulkMoveToCollection);
 // Recipe actions - specific routes before parameterized
 router.post('/generate', recipeController.generateRecipe);
 router.post('/import-url', recipeController.importRecipeFromUrl);
+router.post('/generate-from-description', recipeController.generateFromDescription);
 
 // External data enrichment - specific routes before parameterized
 router.post('/enrich/batch', recipeController.batchEnrichRecipes);
@@ -59,12 +60,17 @@ router.get('/export', recipeController.exportCookbook);
 router.get('/autocomplete', recipeController.getAutoCompleteSuggestions);
 router.get('/popular-searches', recipeController.getPopularSearches);
 
+// Smart collections - specific routes before parameterized
+router.get('/smart-collections', recipeController.getSmartCollections);
+router.get('/smart-collections/:id', recipeController.getSmartCollectionRecipes);
+
 // Parameterized routes - MUST come last
 router.put('/:id', recipeController.updateRecipe);
 router.delete('/:id', recipeController.deleteRecipe);
 router.patch('/:id/move-to-collection', recipeController.moveSavedRecipe);
 router.post('/:id/enrich', recipeController.enrichRecipe);
 router.post('/:id/healthify', recipeController.healthifyRecipe);
+router.post('/:id/fork', recipeController.forkRecipe);
 router.post('/:id/save', recipeController.saveRecipe);
 router.delete('/:id/save', recipeController.unsaveRecipe);
 router.post('/:id/like', recipeController.likeRecipe);

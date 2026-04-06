@@ -123,7 +123,6 @@ describe('recipeUtils', () => {
   describe('groupRecipesIntoSections', () => {
     const baseOptions = {
       quickMealsRecipes: [] as SuggestedRecipe[],
-      perfectMatchRecipes: [] as SuggestedRecipe[],
       mealPrepMode: false,
       searchQuery: '',
     };
@@ -142,30 +141,15 @@ describe('recipeUtils', () => {
       expect(quickSection!.recipes).toHaveLength(2);
     });
 
-    it('should create Perfect Match section sorted by matchPercentage', () => {
-      const recipes = Array.from({ length: 5 }, (_, i) => makeRecipe({ id: `r${i}` }));
-      const perfectMatches = [
-        makeRecipe({ id: 'pm1', score: { matchPercentage: 90 } } as any),
-        makeRecipe({ id: 'pm2', score: { matchPercentage: 95 } } as any),
-      ];
-      const sections = groupRecipesIntoSections(recipes, { ...baseOptions, perfectMatchRecipes: perfectMatches });
-      const perfectSection = sections.find(s => s.key === 'perfect-match');
-      expect(perfectSection).toBeDefined();
-      expect((perfectSection!.recipes[0] as any).score.matchPercentage).toBe(95);
-    });
-
-    it('should skip Quick Meals and Perfect Match sections during search', () => {
+    it('should skip Quick Meals section during search', () => {
       const recipes = Array.from({ length: 5 }, (_, i) => makeRecipe({ id: `r${i}` }));
       const quickMeals = [makeRecipe({ id: 'qm1' })];
-      const perfectMatches = [makeRecipe({ id: 'pm1' })];
       const sections = groupRecipesIntoSections(recipes, {
         ...baseOptions,
         quickMealsRecipes: quickMeals,
-        perfectMatchRecipes: perfectMatches,
         searchQuery: 'chicken',
       });
       expect(sections.find(s => s.key === 'quick-meals')).toBeUndefined();
-      expect(sections.find(s => s.key === 'perfect-match')).toBeUndefined();
     });
 
     it('should create Meal Prep section when not in mealPrepMode', () => {
@@ -188,16 +172,54 @@ describe('recipeUtils', () => {
       expect(sections.find(s => s.key === 'meal-prep')).toBeUndefined();
     });
 
-    it('should create Superfoods section for healthGrade A/B recipes', () => {
+    it('should create Macro Optimized section for high protein-to-calorie ratio recipes', () => {
+      const recipes = [
+        makeRecipe({ id: 'r0' }),
+        // 40g protein / 400 cal = 0.10 ratio (qualifies)
+        makeRecipe({ id: 'mo1', protein: 40, calories: 400 }),
+        // 30g protein / 300 cal = 0.10 ratio (qualifies)
+        makeRecipe({ id: 'mo2', protein: 30, calories: 300 }),
+        // 10g protein / 500 cal = 0.02 ratio (does NOT qualify — too low protein)
+        makeRecipe({ id: 'lo1', protein: 10, calories: 500 }),
+      ];
+      const sections = groupRecipesIntoSections(recipes, baseOptions);
+      const macroSection = sections.find(s => s.key === 'macro-optimized');
+      expect(macroSection).toBeDefined();
+      expect(macroSection!.title).toBe('Macro Optimized');
+      expect(macroSection!.recipes.map(r => r.id)).toEqual(expect.arrayContaining(['mo1', 'mo2']));
+      expect(macroSection!.recipes.map(r => r.id)).not.toContain('lo1');
+    });
+
+    it('should sort Macro Optimized recipes by protein-to-calorie ratio descending', () => {
+      const recipes = [
+        makeRecipe({ id: 'r0' }),
+        makeRecipe({ id: 'low', protein: 25, calories: 300 }),   // ratio 0.083
+        makeRecipe({ id: 'high', protein: 45, calories: 350 }),  // ratio 0.128
+        makeRecipe({ id: 'mid', protein: 35, calories: 350 }),   // ratio 0.100
+      ];
+      const sections = groupRecipesIntoSections(recipes, baseOptions);
+      const macroSection = sections.find(s => s.key === 'macro-optimized');
+      expect(macroSection).toBeDefined();
+      expect(macroSection!.recipes.map(r => r.id)).toEqual(['high', 'mid', 'low']);
+    });
+
+    it('should not create Macro Optimized section when no recipes qualify', () => {
+      const recipes = [
+        makeRecipe({ id: 'r0' }),
+        makeRecipe({ id: 'lo1', protein: 5, calories: 500 }),
+        makeRecipe({ id: 'lo2', protein: 8, calories: 600 }),
+      ];
+      const sections = groupRecipesIntoSections(recipes, baseOptions);
+      expect(sections.find(s => s.key === 'macro-optimized')).toBeUndefined();
+    });
+
+    it('should no longer create the legacy Superfoods section', () => {
       const recipes = [
         makeRecipe({ id: 'r0' }),
         makeRecipe({ id: 'sf1', healthGrade: 'A' } as any),
-        makeRecipe({ id: 'sf2', healthGrade: 'B' } as any),
       ];
       const sections = groupRecipesIntoSections(recipes, baseOptions);
-      const superfoodSection = sections.find(s => s.key === 'superfoods');
-      expect(superfoodSection).toBeDefined();
-      expect(superfoodSection!.recipes.length).toBeGreaterThanOrEqual(1);
+      expect(sections.find(s => s.key === 'superfoods')).toBeUndefined();
     });
 
     it('should always create For You section with remaining recipes', () => {

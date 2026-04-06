@@ -11,6 +11,7 @@ import ActionSheet, { ActionSheetItem } from '../ui/ActionSheet';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors, Pastel, PastelDark, Accent } from '../../constants/Colors';
+import { GradientPresets } from '../../constants/Gradients';
 import { Shadows } from '../../constants/Shadows';
 import { BorderRadius } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -201,7 +202,7 @@ export default function ShoppingListHeader({
                 style={{ borderRadius: BorderRadius.full, overflow: 'hidden', ...Shadows.MD }}
               >
                 <LinearGradient
-                  colors={['#fa7e12', '#EF4444']}
+                  colors={GradientPresets.secondaryCTA}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{ padding: 12, borderRadius: BorderRadius.full }}

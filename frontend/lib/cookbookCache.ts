@@ -9,7 +9,7 @@ import type { SavedRecipe } from '../types';
 const CACHE_KEY_PREFIX = 'cookbook_cache_';
 const SYNC_QUEUE_KEY = 'cookbook_sync_queue';
 
-type ViewMode = 'saved' | 'liked' | 'disliked';
+type ViewMode = 'saved' | 'liked' | 'disliked' | 'collections';
 
 function cacheKeyFor(viewMode: ViewMode): string {
   return `${CACHE_KEY_PREFIX}${viewMode}`;

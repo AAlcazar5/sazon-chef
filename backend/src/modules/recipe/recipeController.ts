@@ -8,6 +8,12 @@ import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecomme
 import { varyImageUrlsForPage } from '@/utils/runtimeImageVariation';
 import { recommendationCache } from '@/utils/recommendationCache';
 import { cacheService } from '@/utils/cacheService';
+import {
+  SMART_COLLECTION_DEFINITIONS,
+  buildRecipeFilter,
+  recipeMatchesSmartCollection,
+  getSmartCollectionById,
+} from '@/services/smartCollectionsService';
 
 // Note: Request.user type is declared in authMiddleware.ts
 // This ensures consistency across the application
@@ -4746,6 +4752,230 @@ export const recipeController = {
       }
       console.error('❌ [importRecipe] Error:', error);
       res.status(500).json({ error: 'Failed to import recipe', details: error.message });
+    }
+  },
+
+  /**
+   * POST /api/recipes/:id/fork
+   * Duplicates a system recipe as a user-owned copy. The original remains untouched.
+   * The forked recipe is auto-saved to the user's cookbook.
+   */
+  async forkRecipe(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      if (!id) return res.status(400).json({ error: 'Recipe id is required' });
+
+      const original = await prisma.recipe.findUnique({
+        where: { id },
+        include: {
+          ingredients: { orderBy: { order: 'asc' } },
+          instructions: { orderBy: { step: 'asc' } },
+        },
+      });
+      if (!original) {
+        return res.status(404).json({ error: 'Recipe not found' });
+      }
+
+      const forked = await prisma.recipe.create({
+        data: {
+          userId,
+          isUserCreated: true,
+          source: 'user-created',
+          title: original.title,
+          description: original.description,
+          cookTime: original.cookTime,
+          cuisine: original.cuisine,
+          mealType: original.mealType,
+          difficulty: original.difficulty,
+          servings: original.servings,
+          calories: original.calories,
+          protein: original.protein,
+          carbs: original.carbs,
+          fat: original.fat,
+          fiber: original.fiber,
+          imageUrl: original.imageUrl,
+          ingredients: {
+            create: original.ingredients.map((ing) => ({
+              text: ing.text,
+              order: ing.order,
+            })),
+          },
+        },
+        include: { ingredients: true },
+      });
+
+      // Create instructions separately (avoids nested create constraints)
+      await Promise.all(
+        original.instructions.map((inst) =>
+          prisma.recipeInstruction.create({
+            data: { recipeId: forked.id, step: inst.step, text: inst.text },
+          })
+        )
+      );
+
+      // Auto-save to cookbook
+      await prisma.savedRecipe.create({
+        data: { userId, recipeId: forked.id, savedDate: new Date() },
+      });
+
+      const full = await prisma.recipe.findUnique({
+        where: { id: forked.id },
+        include: { ingredients: true, instructions: true },
+      });
+
+      res.json({ success: true, data: full });
+    } catch (error: any) {
+      console.error('❌ [forkRecipe] Error:', error);
+      res.status(500).json({ error: 'Failed to fork recipe', details: error.message });
+    }
+  },
+
+  /**
+   * POST /api/recipes/generate-from-description
+   * Takes a free-text description and returns a structured recipe for user review.
+   * Does NOT persist — client sends the user's edited version back through createRecipe.
+   */
+  async generateFromDescription(req: Request, res: Response) {
+    try {
+      const { description } = req.body || {};
+      if (!description || typeof description !== 'string') {
+        return res.status(400).json({ error: 'Description is required' });
+      }
+
+      const { aiRecipeService } = await import('@/services/aiRecipeService');
+      const generated = await aiRecipeService.generateFromDescription(description);
+
+      // Flatten ingredients to plain text for easy form pre-fill
+      const ingredients = (generated.ingredients || []).map((ing) => {
+        const amount = ing.amount ? String(ing.amount) : '';
+        const unit = ing.unit ? String(ing.unit) : '';
+        return `${amount}${unit ? ' ' + unit : ''} ${ing.name}`.trim();
+      });
+      const instructions = (generated.instructions || []).map((i) => i.instruction);
+
+      res.json({
+        success: true,
+        data: {
+          recipe: {
+            title: generated.title,
+            description: generated.description,
+            cuisine: generated.cuisine,
+            mealType: generated.mealType,
+            cookTime: generated.cookTime,
+            difficulty: generated.difficulty,
+            servings: generated.servings,
+            calories: generated.calories,
+            protein: generated.protein,
+            carbs: generated.carbs,
+            fat: generated.fat,
+            fiber: generated.fiber,
+            ingredients,
+            instructions,
+            tips: generated.tips || [],
+            tags: generated.tags || [],
+          },
+        },
+      });
+    } catch (error: any) {
+      if (error?.isQuotaError || error?.status === 429) {
+        return res.status(429).json({ error: 'AI quota exceeded. Try again later.' });
+      }
+      console.error('❌ [generateFromDescription] Error:', error);
+      res.status(500).json({ error: 'Failed to generate recipe', details: error.message });
+    }
+  },
+
+  /**
+   * GET /api/recipes/smart-collections
+   * Returns all smart collection definitions with live recipe counts scoped to
+   * the user's saved recipes. Counts are computed in-memory so they stay in
+   * sync with the predicate logic in smartCollectionsService.
+   */
+  async getSmartCollections(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+
+      const savedRecipes = await (prisma as any).savedRecipe.findMany({
+        where: { userId },
+        select: {
+          recipe: {
+            select: {
+              title: true,
+              description: true,
+              cookTime: true,
+              difficulty: true,
+              calories: true,
+              protein: true,
+              carbs: true,
+              fat: true,
+              fiber: true,
+              estimatedCostPerServing: true,
+            },
+          },
+        },
+      });
+
+      const recipes = savedRecipes
+        .map((s: any) => s.recipe)
+        .filter((r: any): r is NonNullable<typeof r> => r != null);
+
+      const now = new Date();
+      const collections = SMART_COLLECTION_DEFINITIONS.map((def) => ({
+        ...def,
+        count: recipes.filter((r: any) => recipeMatchesSmartCollection(r, def.id, now)).length,
+      }));
+
+      return res.json({ collections });
+    } catch (error: any) {
+      console.error('❌ [getSmartCollections] Error:', error);
+      return res.status(500).json({ error: 'Failed to load smart collections' });
+    }
+  },
+
+  /**
+   * GET /api/recipes/smart-collections/:id
+   * Returns saved recipes that match the given smart collection rule.
+   */
+  async getSmartCollectionRecipes(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const definition = getSmartCollectionById(id);
+      if (!definition) {
+        return res.status(404).json({ error: 'Smart collection not found' });
+      }
+
+      const recipeFilter = buildRecipeFilter(id);
+      if (!recipeFilter) {
+        return res.status(404).json({ error: 'Smart collection not found' });
+      }
+
+      const savedRecipes = await (prisma as any).savedRecipe.findMany({
+        where: {
+          userId,
+          recipe: recipeFilter,
+        },
+        include: {
+          recipe: {
+            include: {
+              ingredients: { orderBy: { order: 'asc' as const } },
+              instructions: { orderBy: { step: 'asc' as const } },
+            },
+          },
+        },
+        orderBy: { savedDate: 'desc' },
+      });
+
+      return res.json({
+        collection: definition,
+        recipes: savedRecipes.map((s: any) => s.recipe).filter(Boolean),
+        total: savedRecipes.length,
+      });
+    } catch (error: any) {
+      console.error('❌ [getSmartCollectionRecipes] Error:', error);
+      return res.status(500).json({ error: 'Failed to load smart collection recipes' });
     }
   },
 };
