@@ -10,6 +10,7 @@ interface Macros {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
 }
 
 interface UseMealSwapProps {
@@ -157,6 +158,7 @@ export function useMealSwap({
         let totalProtein = 0;
         let totalCarbs = 0;
         let totalFat = 0;
+        let totalFiber = 0;
         let totalCookTime = 0;
 
         Object.values(updated).forEach((meals) => {
@@ -165,6 +167,7 @@ export function useMealSwap({
             totalProtein += m.protein || 0;
             totalCarbs += m.carbs || 0;
             totalFat += m.fat || 0;
+            totalFiber += m.fiber || 0;
             totalCookTime += m.cookTime || 0;
           });
         });
@@ -174,6 +177,7 @@ export function useMealSwap({
           protein: totalProtein,
           carbs: totalCarbs,
           fat: totalFat,
+          fiber: totalFiber,
         });
 
         setTotalPrepTime(totalCookTime);

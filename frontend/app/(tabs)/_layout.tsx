@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SearchBar from '../../components/ui/SearchBar';
 import { router, usePathname, useSegments } from 'expo-router';
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Spacing, ComponentSpacing, Gap } from '../../constants/Spacing';
+import { GradientPresets } from '../../constants/Gradients';
 
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { QuickMealLogModal } from '../../components/meal-plan';
@@ -548,19 +550,21 @@ export default function TabLayout() {
             }}
           >
             <Animated.View style={{ transform: [{ scale: fabScale }] }}>
-              <View
+              <LinearGradient
+                colors={GradientPresets.primaryCTA}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   paddingHorizontal: 12,
                   paddingVertical: 10,
                   borderRadius: 100,
-                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
                   gap: 5,
                 }}
               >
-                <Ionicons name="add" size={18} color="white" />
-              </View>
+                <Ionicons name="add" size={18} color="#FFF" />
+              </LinearGradient>
             </Animated.View>
           </HapticTouchableOpacity>
         </View>

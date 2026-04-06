@@ -595,6 +595,24 @@ export default function RecipeModal() {
     router.push(`/recipe-form?id=${recipe.id}`);
   };
 
+  const [isForking, setIsForking] = useState(false);
+  const handleSaveMyVersion = async () => {
+    if (!recipe || isForking) return;
+    try {
+      setIsForking(true);
+      const response = await recipeApi.forkRecipe(recipe.id);
+      const forked = (response as any)?.data?.data || (response as any)?.data;
+      if (!forked?.id) throw new Error('Fork did not return a recipe');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace(`/recipe-form?id=${forked.id}` as any);
+    } catch (error: any) {
+      console.error('📱 Modal: Fork error', error);
+      Alert.alert('Oops!', error?.message || "Couldn't create your version — try again?");
+    } finally {
+      setIsForking(false);
+    }
+  };
+
   const handleDeleteRecipe = async () => {
     if (!recipe) return;
     
@@ -1659,6 +1677,15 @@ export default function RecipeModal() {
         ) : source === 'cookbook' ? (
           // System recipe actions (in cookbook context)
           <>
+            <GradientButton
+              label={isForking ? 'Saving...' : 'Save My Version'}
+              onPress={handleSaveMyVersion}
+              disabled={isForking}
+              loading={isForking}
+              colors={GradientPresets.brand}
+              icon="create-outline"
+              style={{ marginBottom: 8 }}
+            />
             <GradientButton
               label="Remove from Cookbook"
               onPress={handleRemoveFromCookbook}

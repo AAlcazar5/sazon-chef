@@ -221,6 +221,54 @@ export class AIRecipeService {
   }
 
   /**
+   * Generate a structured recipe from a free-text description.
+   * Returns for user review — does NOT persist. The user may edit everything
+   * before saving through the normal createRecipe flow.
+   */
+  async generateFromDescription(description: string): Promise<GeneratedRecipe> {
+    const trimmed = (description || '').trim();
+    if (trimmed.length < 3) {
+      throw new Error('Description is too short to generate a recipe');
+    }
+    if (trimmed.length > 500) {
+      throw new Error('Description is too long (max 500 characters)');
+    }
+
+    const systemPrompt = this.getSystemPrompt();
+    const prompt = `The user described a recipe they made or want to make:
+
+"${trimmed}"
+
+Your task: turn this free-text description into a complete, realistic recipe.
+- Infer title, cuisine, cookTime, difficulty, and servings from context (default to 1 serving).
+- Pick a mealType that fits (breakfast, lunch, dinner, snack, or dessert).
+- Estimate macros accurately from the ingredients the user hinted at. If the user only named a few ingredients, add the minimum supporting items needed to make the recipe work (oil, salt, etc.) but do NOT invent a totally different recipe.
+- Write 4-10 clear instruction steps.
+- Stay faithful to what the user described. Do not replace their protein, base grain, or key technique.
+
+Return JSON only.`;
+
+    try {
+      const recipe = await this.providerManager.generateRecipe({
+        prompt,
+        systemPrompt,
+        temperature: 0.8,
+        maxTokens: 2000,
+      });
+      return this.validateAndNormalizeRecipe(recipe);
+    } catch (error: any) {
+      if (error?.isQuotaError || error?.status === 429) {
+        const quotaError: any = new Error(`Failed to generate recipe: ${error.message}`);
+        quotaError.code = 'insufficient_quota';
+        quotaError.status = 429;
+        quotaError.isQuotaError = true;
+        throw quotaError;
+      }
+      throw new Error(`Failed to generate recipe from description: ${error.message || error}`);
+    }
+  }
+
+  /**
    * Generate multiple recipes for daily meal suggestions
    * @param params - Recipe generation parameters
    * @param options - Optional: specify which meals to generate and custom meal count

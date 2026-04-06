@@ -20,6 +20,33 @@ Automatically switch role based on the file being modified — no explicit instr
 - **Confirm before:** Prisma schema changes, new API endpoints, removing features, modifying the 70/30 scoring algorithm, any migration
 - **Proceed without asking:** UI polish, bug fixes, tests, roadmap tasks already scoped in `ROADMAP_3.0.md`
 
+## TDD is the Default — No Exceptions
+
+**Every feature ships with tests. Tests are written first. This is non-negotiable.**
+
+### When planning Roadmap sections (or any new feature)
+- **Every feature bullet MUST have a paired `**Test:**` line** describing what the test verifies. No bullet is "done" being planned until its test is written next to it.
+- For groups of related features, either inline `**Test:**` per bullet OR a dedicated `#### Tests` block at the end listing every file + case. Both patterns exist in `ROADMAP_3.0.md` — pick one and apply consistently within a section.
+- Non-code sections (marketing, ops, launch) use `#### Verification & Metrics` instead of tests — define success criteria, metrics to track, and the measurement method.
+- If you write a roadmap entry with no testing guidance, you're not done. Stop and add it.
+
+### When implementing
+1. Read the `**Test:**` line for the task → write the test first (RED).
+2. Implement minimally to pass (GREEN).
+3. Refactor. Verify backend coverage stays ≥85%.
+4. Use `tdd-guide` agent proactively — do not wait to be asked.
+5. After implementation, run `typescript-reviewer` + `code-reviewer`.
+
+### Testing allocation by surface
+| Surface | Required tests |
+|---------|---------------|
+| Backend routes/services (`backend/**`) | Unit + integration (supertest). Coverage ≥85%. |
+| Frontend hooks/lib/services | Unit (Jest). Test pure logic + API shapes. |
+| Frontend components | RTL render tests: renders, a11y labels, press handlers, empty/loading/error states. |
+| Algorithms (scoring, macros, adjacency) | Property/edge-case tests. Never refactor without a characterization test first. |
+| AI-generated recipes | Must include `performSafetyChecks()` verification test. |
+| Webhooks (Stripe, RevenueCat) | Signature validation + idempotency + every event type. |
+
 ## Sources — What to Use / Avoid
 - Check `skills/<name>/SKILL.md` **before** web search for any implementation pattern
 - Check `plans/` before designing any new feature architecture

@@ -25,8 +25,8 @@ const SORT_OPTIONS: { key: CollectionSortMode; label: string }[] = [
 interface CollectionPickerProps {
   visible: boolean;
   onClose: () => void;
-  viewMode: 'saved' | 'liked' | 'disliked';
-  onViewModeChange: (mode: 'saved' | 'liked' | 'disliked') => void;
+  viewMode: 'saved' | 'liked' | 'disliked' | 'collections';
+  onViewModeChange: (mode: 'saved' | 'liked' | 'disliked' | 'collections') => void;
   collections: Collection[];
   selectedListId: string | null;
   onSelectList: (listId: string | null) => void;
@@ -105,6 +105,13 @@ export default function CollectionPicker({
       activeColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
       activeBg: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedLight,
       activeDark: isDark ? DarkColors.secondaryRedDark : Colors.secondaryRedDark,
+    },
+    {
+      mode: 'collections' as const,
+      label: 'Collections',
+      activeColor: '#AB47BC',
+      activeBg: isDark ? 'rgba(206,147,216,0.15)' : '#F3E5F5',
+      activeDark: '#9C27B0',
     },
   ];
 

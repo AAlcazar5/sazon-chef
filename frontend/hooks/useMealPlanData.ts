@@ -10,6 +10,7 @@ interface Macros {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
 }
 
 interface UseMealPlanDataProps {
@@ -105,6 +106,7 @@ export function useMealPlanData({
     protein: 0,
     carbs: 0,
     fat: 0,
+    fiber: 0,
   });
   const [totalPrepTime, setTotalPrepTime] = useState(0);
   const [thawingReminders, setThawingReminders] = useState<any[]>([]);
@@ -233,12 +235,14 @@ export function useMealPlanData({
         let totalProtein = 0;
         let totalCarbs = 0;
         let totalFat = 0;
+        let totalFiber = 0;
 
         Object.values(savedMeals).flat().forEach((meal: any) => {
           totalCalories += meal.calories || 0;
           totalProtein += meal.protein || 0;
           totalCarbs += meal.carbs || 0;
           totalFat += meal.fat || 0;
+          totalFiber += meal.fiber || 0;
         });
 
         // Calculate total prep time
@@ -268,6 +272,7 @@ export function useMealPlanData({
           protein: totalProtein,
           carbs: totalCarbs,
           fat: totalFat,
+          fiber: totalFiber,
         });
       }
 
