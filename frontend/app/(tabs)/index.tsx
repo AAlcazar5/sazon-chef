@@ -66,6 +66,7 @@ import { useDarkFeed } from '../../hooks/useDarkFeed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubscription } from '../../hooks/useSubscription';
 import PremiumUpsellCard from '../../components/premium/PremiumUpsellCard';
+import { searchApi } from '../../lib/api';
 
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
@@ -339,7 +340,10 @@ export default function HomeScreen() {
 
   // Recipe of the Day — pulled directly from home feed so it always reflects current filters.
   // Bypasses the useRecipeOfTheDay intermediate state to prevent stale values after refetch.
-  const recipeOfTheDay = homeFeed.recipeOfTheDay;
+  // When a craving search is active, promote the top craving result as the hero recipe.
+  const recipeOfTheDay = isCravingSearch && suggestedRecipes.length > 0
+    ? suggestedRecipes[0]
+    : homeFeed.recipeOfTheDay;
   const loadingRecipeOfTheDay = homeFeed.loading && !homeFeed.recipeOfTheDay;
 
   // Use consolidated home feed data instead of separate useApi('/recipes/suggested')
@@ -598,9 +602,22 @@ export default function HomeScreen() {
     // Track recipe view for "Continue Cooking" section (using extracted hook)
     addRecentlyViewed(recipeId);
 
+    // 10D-ii: Log craving search event (fire-and-forget)
+    if (isCravingSearch && cravingQuery) {
+      searchApi.cravingSearchEvent(cravingQuery, recipeId, 'tap').catch(() => undefined);
+    }
+
     // Navigate to modal
     router.push(`../modal?id=${recipeId}`);
-  }, [addRecentlyViewed]);
+  }, [addRecentlyViewed, isCravingSearch, cravingQuery]);
+
+  // 10D-ii: Wrap openSavePicker to log 'save' event when craving search is active
+  const handleSave = useCallback(async (recipeId: string) => {
+    if (isCravingSearch && cravingQuery) {
+      searchApi.cravingSearchEvent(cravingQuery, recipeId, 'save').catch(() => undefined);
+    }
+    await openSavePicker(recipeId);
+  }, [openSavePicker, isCravingSearch, cravingQuery]);
 
   // Collection functions now provided by useCollectionSave hook
 
@@ -736,13 +753,17 @@ export default function HomeScreen() {
   }, []);
 
   // Group recipes into contextual sections - using extracted utility function
+  // When craving search is active, skip the top result (it's shown in the hero)
   const recipeSections = useMemo(() => {
-    return groupRecipesIntoSections(suggestedRecipes, {
+    const recipesForGrid = isCravingSearch && suggestedRecipes.length > 1
+      ? suggestedRecipes.slice(1)
+      : suggestedRecipes;
+    return groupRecipesIntoSections(recipesForGrid, {
       quickMealsRecipes,
       mealPrepMode,
       searchQuery,
     });
-  }, [suggestedRecipes, quickMealsRecipes, mealPrepMode, searchQuery]);
+  }, [suggestedRecipes, quickMealsRecipes, mealPrepMode, searchQuery, isCravingSearch]);
 
   // Loading state with skeleton loaders
   if ((loading || initialLoading) && suggestedRecipes.length === 0) {
@@ -828,8 +849,8 @@ export default function HomeScreen() {
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
 
-        {/* Parallax Hero — Recipe of the Day with match %, macros */}
-        {recipeOfTheDay && !searchQuery && !cravingQuery && !mealPrepMode ? (
+        {/* Parallax Hero — Recipe of the Day (or top craving result when craving search is active) */}
+        {recipeOfTheDay && !searchQuery && !mealPrepMode ? (
           <ParallaxHeroSection
             recipe={recipeOfTheDay}
             scrollY={scrollY}
@@ -840,7 +861,9 @@ export default function HomeScreen() {
             onLongPress={handleLongPress}
             onLike={handleLike}
             onDislike={handleDislike}
-            onSave={openSavePicker}
+            onSave={handleSave}
+            badgeLabel={isCravingSearch ? 'TOP CRAVING MATCH' : 'RECIPE OF THE DAY'}
+            badgeEmoji={isCravingSearch ? '🍕' : '🌟'}
           />
         ) : (
           /* Spacer when hero is not shown */
@@ -861,7 +884,7 @@ export default function HomeScreen() {
           onRecipeLongPress={handleLongPress}
           onLike={handleLike}
           onDislike={handleDislike}
-          onSave={openSavePicker}
+          onSave={handleSave}
           animatedRecipeIds={animatedRecipeIds}
           onAnimatedRecipeId={(id) => setAnimatedRecipeIds(prev => new Set(prev).add(id))}
           quickMealsScrollViewRef={quickMealsScrollViewRef}
@@ -905,7 +928,7 @@ export default function HomeScreen() {
                   onRecipeLongPress={handleLongPress}
                   onLike={handleLike}
                   onDislike={handleShowDislikeSheet}
-                  onSave={openSavePicker}
+                  onSave={handleSave}
                 />
               );
             })()}

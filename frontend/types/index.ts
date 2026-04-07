@@ -132,6 +132,8 @@ export interface Recipe {
   // Optional timestamps
   createdAt?: string;
   updatedAt?: string;
+  // 10D-ii: craving search relevance
+  perfectMatch?: boolean;
 }
 
 export interface SuggestedRecipe extends Recipe {

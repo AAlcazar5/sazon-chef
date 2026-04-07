@@ -62,6 +62,7 @@ router.get('/popular-searches', recipeController.getPopularSearches);
 
 // 10D: "I'm Craving..." Search
 router.post('/craving-search', recipeController.cravingSearch);
+router.post('/craving-search/event', recipeController.logCravingSearchEvent);
 
 // Smart collections - specific routes before parameterized
 router.get('/smart-collections', recipeController.getSmartCollections);

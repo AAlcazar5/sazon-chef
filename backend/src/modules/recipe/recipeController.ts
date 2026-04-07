@@ -20,6 +20,15 @@ import {
 // Note: Request.user type is declared in authMiddleware.ts
 // This ensures consistency across the application
 
+// Simple deterministic hash for seeding random candidate pool offset
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
 // Map user's 4-level skill to scoring system's 3-level
 function mapSkillLevel(level: string | null | undefined): 'beginner' | 'intermediate' | 'advanced' {
   switch (level) {
@@ -5051,6 +5060,30 @@ export const recipeController = {
   },
 
   // 10D: "I'm Craving..." Search
+  async logCravingSearchEvent(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { cravingQuery, recipeId, action } = req.body as {
+        cravingQuery?: string;
+        recipeId?: string;
+        action?: string;
+      };
+
+      if (!cravingQuery || !recipeId || !['tap', 'save', 'cook'].includes(action || '')) {
+        return res.status(400).json({ error: 'cravingQuery, recipeId, and action (tap|save|cook) are required' });
+      }
+
+      await prisma.cravingSearchEvent.create({
+        data: { userId, cravingQuery, recipeId, action: action! },
+      });
+
+      return res.status(201).json({ success: true });
+    } catch (error: any) {
+      console.error('❌ [logCravingSearchEvent] Error:', error);
+      return res.status(500).json({ error: 'Failed to log craving search event' });
+    }
+  },
+
   async cravingSearch(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
@@ -5095,29 +5128,105 @@ export const recipeController = {
       const strictRestrictions = [...new Set([...profileRestrictions, ...filterRestrictions])];
 
       // Build Prisma where clause incorporating active filters
-      const where: any = { isUserCreated: false };
+      const baseWhere: any = { isUserCreated: false };
       if (cuisines && cuisines.length > 0) {
-        where.cuisine = { in: cuisines };
+        baseWhere.cuisine = { in: cuisines };
       }
       if (maxCookTime) {
-        where.cookTime = { lte: maxCookTime };
+        baseWhere.cookTime = { lte: maxCookTime };
       }
       if (difficulty) {
-        where.difficulty = difficulty.toLowerCase();
+        baseWhere.difficulty = difficulty.toLowerCase();
       }
       if (mealPrepMode) {
-        where.mealPrepSuitable = true;
+        baseWhere.mealPrepSuitable = true;
       }
 
-      // Fetch a broad candidate pool with filters applied
-      const candidates = await prisma.recipe.findMany({
-        where,
-        take: 400,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          ingredients: { orderBy: { order: 'asc' }, select: { text: true } },
-        },
-      });
+      const includeFields = {
+        ingredients: { orderBy: { order: 'asc' as const }, select: { text: true } },
+        instructions: { orderBy: { step: 'asc' as const }, select: { text: true } },
+      };
+
+      // Pre-filter by craving keywords at DB level for better relevance
+      // Build OR conditions from searchTerms against title and description
+      const keywordOrConditions = mapping.searchTerms.flatMap(term => [
+        { title: { contains: term } },
+        { description: { contains: term } },
+      ]);
+
+      let candidates: any[];
+
+      if (keywordOrConditions.length > 0) {
+        const keywordWhere = { ...baseWhere, OR: keywordOrConditions };
+        const keywordFiltered = await prisma.recipe.findMany({
+          where: keywordWhere,
+          take: 400,
+          orderBy: { createdAt: 'desc' },
+          include: includeFields,
+        });
+
+        if (keywordFiltered.length >= 20) {
+          candidates = keywordFiltered;
+        } else {
+          // Fall through to broad pool if keyword filter returns too few
+          const totalCount = await prisma.recipe.count({ where: baseWhere });
+          const offset = totalCount > 200 ? (hashString(trimmedQuery) % Math.max(1, totalCount - 200)) : 0;
+
+          const [recent, random] = await Promise.all([
+            prisma.recipe.findMany({
+              where: baseWhere,
+              take: 200,
+              orderBy: { createdAt: 'desc' },
+              include: includeFields,
+            }),
+            prisma.recipe.findMany({
+              where: baseWhere,
+              take: 200,
+              skip: offset,
+              orderBy: { id: 'asc' },
+              include: includeFields,
+            }),
+          ]);
+
+          const seenIds = new Set<string>();
+          candidates = [];
+          for (const r of [...recent, ...random]) {
+            if (!seenIds.has(r.id)) {
+              seenIds.add(r.id);
+              candidates.push(r);
+            }
+          }
+        }
+      } else {
+        // No search terms — fetch broad pool (200 recent + 200 random)
+        const totalCount = await prisma.recipe.count({ where: baseWhere });
+        const offset = totalCount > 200 ? (hashString(trimmedQuery) % Math.max(1, totalCount - 200)) : 0;
+
+        const [recent, random] = await Promise.all([
+          prisma.recipe.findMany({
+            where: baseWhere,
+            take: 200,
+            orderBy: { createdAt: 'desc' },
+            include: includeFields,
+          }),
+          prisma.recipe.findMany({
+            where: baseWhere,
+            take: 200,
+            skip: offset,
+            orderBy: { id: 'asc' },
+            include: includeFields,
+          }),
+        ]);
+
+        const seenIds = new Set<string>();
+        candidates = [];
+        for (const r of [...recent, ...random]) {
+          if (!seenIds.has(r.id)) {
+            seenIds.add(r.id);
+            candidates.push(r);
+          }
+        }
+      }
 
       // Helper: check if recipe likely violates a dietary restriction
       function violatesRestrictions(recipe: any, restrictions: string[]): boolean {
@@ -5139,20 +5248,36 @@ export const recipeController = {
         });
       }
 
+      const activeFilters = {
+        cuisines: cuisines && cuisines.length > 0 ? cuisines : undefined,
+        maxCookTime: maxCookTime || undefined,
+        difficulty: difficulty || undefined,
+      };
+
       // Score and filter candidates
-      const scored = candidates
+      const scoredWithValues = candidates
         .filter(recipe => !violatesRestrictions(recipe, strictRestrictions))
-        .map(recipe => ({ recipe, score: scoreCravingMatch(recipe as any, mapping) }))
+        .map(recipe => ({ recipe, score: scoreCravingMatch(recipe as any, mapping, activeFilters) }))
         .filter(({ score }) => score > 0)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 20)
-        .map(({ recipe }) => recipe);
+        .slice(0, 20);
+
+      // Perfect match: top 10th percentile AND matches all active filters
+      const scoreValues = scoredWithValues.map(s => s.score);
+      const p90Threshold = scoreValues.length > 0
+        ? scoreValues[Math.floor(scoreValues.length * 0.1)]
+        : Infinity;
+
+      const recipes = scoredWithValues.map(({ recipe, score }) => ({
+        ...recipe,
+        perfectMatch: score >= p90Threshold,
+      }));
 
       return res.json({
-        recipes: scored,
+        recipes,
         query: trimmedQuery,
         searchTerms: mapping.searchTerms,
-        totalMatches: scored.length,
+        totalMatches: recipes.length,
       });
     } catch (error: any) {
       console.error('❌ [cravingSearch] Error:', error);

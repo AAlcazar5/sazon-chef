@@ -24,6 +24,7 @@ const createPrismaMock = () => ({
     },
     userPreferences: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       upsert: jest.fn()
@@ -138,6 +139,10 @@ const createPrismaMock = () => ({
       create: jest.fn(),
     },
     cancellationSurvey: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
+    cravingSearchEvent: {
       create: jest.fn(),
       findMany: jest.fn(),
     },
