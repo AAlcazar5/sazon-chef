@@ -1641,12 +1641,12 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 **`frontend/__tests__/hooks/useCravingSearch.test.ts`** (regression — extend existing, guard against 10D bugs re-emerging)
 - [x] **No infinite loop:** craving search fires exactly once per unique (query + filter) combination; calling `applyFetchResult` does not trigger a second API call (guards against the `userFeedback` dep-chain loop)
 - [x] **Filter badge count:** `isCravingSearch = true` contributes +1 to the active filter count (verify the `activeFilterCount` computation includes the craving flag)
-- [ ] **Chip deselection:** tapping an active craving chip (same label as `activeCravingQuery`) calls `onCravingSearch('')` — not `onCravingSearch(chip.label)` again
-- [ ] **Filter modal stays open on chip tap:** `onCravingSearch` with a non-empty query does NOT call `closeFilterModal` (modal remains open for further filter selection)
+- [x] **Chip deselection:** tapping an active craving chip (same label as `activeCravingQuery`) calls `onCravingSearch('')` — not `onCravingSearch(chip.label)` again
+- [x] **Filter modal stays open on chip tap:** `onCravingSearch` with a non-empty query does NOT call `closeFilterModal` (modal remains open for further filter selection)
 - [x] **Applying filters preserves craving:** when `isCravingSearch = true` and `applyFilters` is called, `fetchRecipes` (regular GET) is NOT called — `onRerunCravingSearch` is called instead
 - [x] **Quick filter toggle preserves craving:** when `isCravingSearch = true` and `handleQuickFilter` is called, `fetchRecipes` is NOT called — `onRerunCravingSearch` is called instead (verified by existing `useFilterActions` implementation)
 - [x] **Filters change re-runs craving:** changing any filter value while `cravingParam` is set triggers a new `cravingSearch` API call with the updated filter params (dedup key includes filter state)
-- [ ] **`clearSearch` resets all craving state:** after `clearSearch()`, `isCravingSearch = false`, `cravingQuery = ''`, `searchQuery = ''`, and the dedup ref is cleared so the next craving param fires fresh
+- [x] **`clearSearch` resets all craving state:** after `clearSearch()`, `isCravingSearch = false`, `cravingQuery = ''`, `searchQuery = ''`, and the dedup ref is cleared so the next craving param fires fresh
 
 ---
 
@@ -1654,7 +1654,7 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *"I don't have Greek yogurt" or "chicken breast is boring." Let users swap ingredients with macro-aware alternatives that preserve flavor.*
 
-* [ ] **"Swap Ingredient" button on recipe detail** — Each ingredient in the ingredient list gets a subtle swap icon. Tapping it shows 3-5 alternatives with macro impact:
+* [x] **"Swap Ingredient" button on recipe detail** — Each ingredient in the ingredient list gets a subtle swap icon. Tapping it shows 3-5 alternatives with macro impact:
 
   | Original | Swap | Macro Impact | Flavor Note |
   |----------|------|-------------|-------------|
@@ -1672,10 +1672,10 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   * 📍 Frontend: tapping an ingredient shows a compact bottom sheet with swap options. Tapping a swap updates the recipe view temporarily (doesn't save unless user confirms "Save My Version")
   * 📍 Macro impact shown inline: "+6g fat" in orange, "-150 cal" in green, "+3g fiber" in blue
 
-* [ ] **"Make It Healthier" one-tap** — Already exists as "Healthify" for D/F rated recipes. Expand this: show on ALL recipes (not just low-rated ones) as a persistent "Lighter Version" toggle at the top of the ingredient list. Toggle on → all substitutions applied at once, macro summary updates live.
+* [x] **"Make It Healthier" one-tap** — Already exists as "Healthify" for D/F rated recipes. Expand this: show on ALL recipes (not just low-rated ones) as a persistent "Lighter Version" toggle at the top of the ingredient list. Toggle on → all substitutions applied at once, macro summary updates live.
   * 📍 Backend: `POST /api/recipes/:id/healthify` already exists — extend to accept custom swap preferences (e.g., "I prefer oat flour over almond flour")
 
-* [ ] **"Make It Exciting" button** — The opposite of healthify. Take a bland-looking recipe and get AI suggestions for sauce/spice/topping additions that add flavor without blowing macros:
+* [x] **"Make It Exciting" button** — The opposite of healthify. Take a bland-looking recipe and get AI suggestions for sauce/spice/topping additions that add flavor without blowing macros:
   - "Add 1 tbsp gochujang (+15 cal, +2g carbs) for a Korean kick"
   - "Finish with a squeeze of lime and fresh cilantro (+0 cal) for brightness"
   - "Top with everything bagel seasoning (+5 cal) for crunch"
@@ -1683,7 +1683,7 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   * 📍 Backend: `POST /api/recipes/:id/flavor-boost` — AI analyzes recipe's flavor profile and suggests 3-5 additions with macro costs. Prioritizes high-impact, low-calorie additions.
   * 📍 Frontend: expandable section on recipe detail below instructions: "Flavor Boosters" with each suggestion as a chip the user can tap to add to the recipe
 
-* [ ] **Test:** Ingredient swap for "chicken breast" returns ≥3 alternatives with macro deltas; "Make It Healthier" reduces total calories by ≥10%; "Make It Exciting" suggestions each add ≤50 calories; swaps respect dietary restrictions (vegan user doesn't see meat swaps)
+* [x] **Test:** Ingredient swap for "chicken breast" returns ≥3 alternatives with macro deltas; "Make It Healthier" reduces total calories by ≥10%; "Make It Exciting" suggestions each add ≤50 calories; swaps respect dietary restrictions (vegan user doesn't see meat swaps)
 
 **AI-Assisted Substitutions & "Save My Version" Flow** *(cross-cuts 10A editing + 10E swaps)*
 

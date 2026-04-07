@@ -305,13 +305,15 @@ export const userController = {
       
       if (!macroGoals) {
         // Create default macro goals if they don't exist
+        // Fiber default: 14g per 1,000 kcal × 2,000 cal = 28g
         const defaultGoals = await prisma.macroGoals.create({
           data: {
             userId,
             calories: 2000,
             protein: 150,
             carbs: 200,
-            fat: 65
+            fat: 65,
+            fiber: 28,
           }
         });
         return res.json(defaultGoals);
@@ -329,26 +331,33 @@ export const userController = {
     try {
       // TODO: Get user ID from authentication
       const userId = getUserId(req);
-      const { calories, protein, carbs, fat } = req.body;
-      
+      const { calories, protein, carbs, fat, fiber } = req.body;
+
       if (!calories || !protein || !carbs || !fat) {
         return res.status(400).json({ error: 'All macro fields are required' });
       }
-      
+
+      // Derive fiber default from calories if not provided: 14g per 1,000 kcal
+      const fiberValue = fiber !== undefined
+        ? parseInt(fiber)
+        : Math.max(20, Math.round((parseInt(calories) / 1000) * 14));
+
       const macroGoals = await prisma.macroGoals.upsert({
         where: { userId },
         update: {
           calories: parseInt(calories),
           protein: parseInt(protein),
           carbs: parseInt(carbs),
-          fat: parseInt(fat)
+          fat: parseInt(fat),
+          fiber: fiberValue,
         },
         create: {
           userId,
           calories: parseInt(calories),
           protein: parseInt(protein),
           carbs: parseInt(carbs),
-          fat: parseInt(fat)
+          fat: parseInt(fat),
+          fiber: fiberValue,
         }
       });
       
@@ -693,14 +702,16 @@ export const userController = {
           calories: recommendations.calories,
           protein: recommendations.protein,
           carbs: recommendations.carbs,
-          fat: recommendations.fat
+          fat: recommendations.fat,
+          fiber: recommendations.fiber,
         },
         create: {
           userId,
           calories: recommendations.calories,
           protein: recommendations.protein,
           carbs: recommendations.carbs,
-          fat: recommendations.fat
+          fat: recommendations.fat,
+          fiber: recommendations.fiber,
         }
       });
 

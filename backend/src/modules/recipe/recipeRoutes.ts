@@ -64,6 +64,9 @@ router.get('/popular-searches', recipeController.getPopularSearches);
 router.post('/craving-search', recipeController.cravingSearch);
 router.post('/craving-search/event', recipeController.logCravingSearchEvent);
 
+// 10E: Ingredient substitution engine
+router.get('/ingredient-swaps', recipeController.getIngredientSwaps);
+
 // Smart collections - specific routes before parameterized
 router.get('/smart-collections', recipeController.getSmartCollections);
 router.get('/smart-collections/weather-today', recipeController.getWeatherSmartCollection);
@@ -75,6 +78,7 @@ router.delete('/:id', recipeController.deleteRecipe);
 router.patch('/:id/move-to-collection', recipeController.moveSavedRecipe);
 router.post('/:id/enrich', recipeController.enrichRecipe);
 router.post('/:id/healthify', recipeController.healthifyRecipe);
+router.post('/:id/flavor-boost', recipeController.flavorBoost);
 router.post('/:id/fork', recipeController.forkRecipe);
 router.post('/:id/save', recipeController.saveRecipe);
 router.delete('/:id/save', recipeController.unsaveRecipe);

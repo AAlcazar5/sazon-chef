@@ -173,6 +173,7 @@ export interface MacroGoals {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
 }
 
 export interface DietaryRestrictionItem {
@@ -548,6 +549,7 @@ export interface MacroGoalsFormData {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
 }
 
 export interface UserPhysicalProfile {

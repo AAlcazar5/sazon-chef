@@ -652,8 +652,16 @@ export const recipeApi = {
     return apiClient.delete(`/recipes/${id}`);
   },
 
-  healthifyRecipe: (id: string) => {
-    return apiClient.post(`/recipes/${id}/healthify`);
+  healthifyRecipe: (id: string, force = false) => {
+    return apiClient.post(`/recipes/${id}/healthify`, { force });
+  },
+
+  getIngredientSwaps: (ingredient: string) => {
+    return apiClient.get(`/recipes/ingredient-swaps`, { params: { ingredient } });
+  },
+
+  flavorBoost: (id: string) => {
+    return apiClient.post(`/recipes/${id}/flavor-boost`);
   },
 
   // Cookbook Quick Wins

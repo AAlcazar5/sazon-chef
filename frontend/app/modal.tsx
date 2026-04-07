@@ -17,7 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useState, useEffect, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { useApi } from '../hooks/useApi';
-import { recipeApi, collectionsApi, shoppingListApi, costTrackingApi, shoppingAppApi } from '../lib/api';
+import { recipeApi, collectionsApi, shoppingListApi, costTrackingApi, shoppingAppApi, userApi } from '../lib/api';
 import type { Recipe } from '../types';
 import { ScaledRecipe } from '../utils/recipeScaling';
 import { optimizedImageUrl } from '../utils/imageUtils';
@@ -37,6 +37,8 @@ import CookingStepsTimeline from '../components/recipe/CookingStepsTimeline';
 import VisualIngredientList from '../components/recipe/VisualIngredientList';
 import MacroPillsRow from '../components/recipe/MacroPillsRow';
 import RecipeNotesModal from '../components/cookbook/RecipeNotesModal';
+import IngredientSwapSheet from '../components/recipe/IngredientSwapSheet';
+import type { IngredientSwap } from '../components/recipe/IngredientSwapSheet';
 
 const HERO_HEIGHT = 300;
 
@@ -146,6 +148,22 @@ export default function RecipeModal() {
   const [savedNotes, setSavedNotes] = useState<string | null>(null);
   const [notesModalVisible, setNotesModalVisible] = useState(false);
 
+  // Daily macro targets for ring progress
+  const [macroTargets, setMacroTargets] = useState<{ calories: number; protein: number; carbs: number; fat: number; fiber: number } | null>(null);
+
+  // 10E: Ingredient swap state
+  const [swapSheetVisible, setSwapSheetVisible] = useState(false);
+  const [swapIngredient, setSwapIngredient] = useState('');
+  const [activeSwaps, setActiveSwaps] = useState<Record<string, string>>({}); // ingredientText → swapped text
+
+  // 10E: "Make It Healthier" lighter-version toggle
+  const [lighterVersionActive, setLighterVersionActive] = useState(false);
+
+  // 10E: "Make It Exciting" flavor boost state
+  const [flavorBoosts, setFlavorBoosts] = useState<Array<{ addition: string; description: string; category: string; macroCost: { calories: number } }>>([]);
+  const [loadingFlavorBoosts, setLoadingFlavorBoosts] = useState(false);
+  const [flavorBoostsExpanded, setFlavorBoostsExpanded] = useState(false);
+
   // Animate modal entrance
   useEffect(() => {
     Animated.parallel([
@@ -243,6 +261,25 @@ export default function RecipeModal() {
 
     fetchRecipe();
   }, [id]);
+
+  // Fetch user's daily macro targets for ring progress display
+  useEffect(() => {
+    userApi.getMacroGoals()
+      .then((res: any) => {
+        const g = res.data;
+        if (g && g.calories) {
+          setMacroTargets({
+            calories: g.calories,
+            protein:  g.protein,
+            carbs:    g.carbs,
+            fat:      g.fat,
+            // Fiber is stored in DB; fall back to 14g/1000kcal if missing (old records)
+            fiber:    g.fiber ?? Math.max(20, Math.round((g.calories / 1000) * 14)),
+          });
+        }
+      })
+      .catch(() => {}); // non-critical — rings fall back to 100% fill
+  }, []);
 
   // Load saved notes/rating when opened from cookbook
   useEffect(() => {
@@ -529,6 +566,72 @@ export default function RecipeModal() {
       );
     } finally {
       setHealthifying(false);
+    }
+  };
+
+  // 10E: Handle ingredient swap icon tap
+  const handleSwapIngredient = (ingredientText: string) => {
+    setSwapIngredient(ingredientText);
+    setSwapSheetVisible(true);
+  };
+
+  // 10E: Apply selected swap — updates activeSwaps map
+  const handleSelectSwap = (swap: IngredientSwap) => {
+    setActiveSwaps((prev) => ({ ...prev, [swapIngredient]: swap.alternative }));
+    setSwapSheetVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  // 10E: "Make It Healthier" toggle — calls healthify with force=true
+  const handleLighterVersion = async () => {
+    if (!recipe) return;
+    if (lighterVersionActive) {
+      setLighterVersionActive(false);
+      setHealthifiedRecipe(null);
+      return;
+    }
+    try {
+      setHealthifying(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const response = await recipeApi.healthifyRecipe(recipe.id, true);
+      if (response.data.success && response.data.recipe) {
+        setHealthifiedRecipe(response.data.recipe);
+        setLighterVersionActive(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error: any) {
+      const isQuotaError = error.code === 'insufficient_quota' || error.message?.includes('quota');
+      Alert.alert(
+        'Hmm, That Didn\'t Work',
+        isQuotaError
+          ? 'Our AI is a bit overwhelmed right now — try again in a few minutes!'
+          : 'Couldn\'t build a lighter version right now — give it another shot?',
+        [{ text: 'OK' }],
+      );
+    } finally {
+      setHealthifying(false);
+    }
+  };
+
+  // 10E: Load flavor boosts when "Make It Exciting" is expanded
+  const handleToggleFlavorBoosts = async () => {
+    if (flavorBoostsExpanded) {
+      setFlavorBoostsExpanded(false);
+      return;
+    }
+    setFlavorBoostsExpanded(true);
+    if (flavorBoosts.length > 0 || !recipe) return;
+
+    try {
+      setLoadingFlavorBoosts(true);
+      const response = await recipeApi.flavorBoost(recipe.id);
+      if (response.data.success) {
+        setFlavorBoosts(response.data.suggestions ?? []);
+      }
+    } catch {
+      setFlavorBoosts([]);
+    } finally {
+      setLoadingFlavorBoosts(false);
     }
   };
 
@@ -904,7 +1007,9 @@ export default function RecipeModal() {
                   protein: recipe.protein || 0,
                   carbs: recipe.carbs || 0,
                   fat: recipe.fat || 0,
+                  fiber: recipe.fiber || 0,
                 }}
+                targets={macroTargets ?? undefined}
                 testID="recipe-macro-grid"
               />
             </FrostedCard>
@@ -1316,11 +1421,48 @@ export default function RecipeModal() {
 
           {/* Ingredients — Visual list with emoji, bold amounts, serving adjuster */}
           <View className="mb-6">
+            {/* 10E: Make It Healthier toggle */}
+            <HapticTouchableOpacity
+              onPress={handleLighterVersion}
+              hapticStyle="light"
+              pressedScale={0.97}
+              disabled={healthifying}
+              accessibilityLabel={lighterVersionActive ? 'Disable lighter version' : 'Make it healthier'}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                alignSelf: 'flex-start',
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 100,
+                marginBottom: 14,
+                backgroundColor: lighterVersionActive
+                  ? (isDark ? 'rgba(34,197,94,0.2)' : 'rgba(34,197,94,0.12)')
+                  : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)'),
+              }}
+            >
+              <Text style={{ fontSize: 14, marginRight: 6 }}>
+                {healthifying ? '⏳' : lighterVersionActive ? '✅' : '🥗'}
+              </Text>
+              <Text style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: lighterVersionActive
+                  ? '#16A34A'
+                  : (isDark ? '#D1D5DB' : '#374151'),
+              }}>
+                {healthifying ? 'Building lighter version…' : lighterVersionActive ? 'Lighter Version On' : 'Make It Healthier'}
+              </Text>
+            </HapticTouchableOpacity>
+
             {recipe.ingredients && Array.isArray(recipe.ingredients) && (
               <VisualIngredientList
-                ingredients={recipe.ingredients}
+                ingredients={lighterVersionActive && healthifiedRecipe?.ingredients
+                  ? healthifiedRecipe.ingredients
+                  : recipe.ingredients}
                 baseServings={recipe.servings || 4}
                 isDark={isDark}
+                onSwapIngredient={handleSwapIngredient}
               />
             )}
           </View>
@@ -1333,6 +1475,95 @@ export default function RecipeModal() {
                 steps={recipe.instructions.map((i: any) => getTextContent(i))}
                 testID="recipe-instructions-timeline"
               />
+            )}
+          </View>
+
+          {/* 10E: Make It Exciting — Flavor Boosters */}
+          <View className="mb-6">
+            <HapticTouchableOpacity
+              onPress={handleToggleFlavorBoosts}
+              hapticStyle="light"
+              pressedScale={0.97}
+              accessibilityLabel={flavorBoostsExpanded ? 'Collapse flavor boosters' : 'Make it exciting'}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                borderRadius: 16,
+                backgroundColor: isDark ? 'rgba(251,146,60,0.12)' : 'rgba(251,146,60,0.08)',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, marginRight: 8 }}>🌶️</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#FED7AA' : '#C2410C' }}>
+                  Make It Exciting
+                </Text>
+              </View>
+              <Text style={{ fontSize: 13, color: isDark ? '#FED7AA' : '#C2410C' }}>
+                {flavorBoostsExpanded ? '▲' : '▼'}
+              </Text>
+            </HapticTouchableOpacity>
+
+            {flavorBoostsExpanded && (
+              <View style={{ marginTop: 10 }}>
+                {loadingFlavorBoosts && (
+                  <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                    <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: 13 }}>
+                      Asking Sazon for ideas…
+                    </Text>
+                  </View>
+                )}
+                {!loadingFlavorBoosts && flavorBoosts.length === 0 && (
+                  <Text style={{ fontSize: 13, color: isDark ? '#6B7280' : '#9CA3AF', paddingVertical: 8 }}>
+                    No flavor boosts available right now.
+                  </Text>
+                )}
+                {!loadingFlavorBoosts && flavorBoosts.map((boost, idx) => (
+                  <MotiView
+                    key={idx}
+                    from={{ opacity: 0, translateY: 6 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: 'spring', delay: idx * 60, damping: 20, stiffness: 200 }}
+                  >
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 10,
+                      paddingHorizontal: 4,
+                      borderBottomWidth: 1,
+                      borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                    }}>
+                      <Text style={{ fontSize: 16, marginRight: 10 }}>✨</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{
+                          fontSize: 14,
+                          fontWeight: '600',
+                          color: isDark ? '#FED7AA' : '#C2410C',
+                        }}>
+                          {boost.addition}
+                        </Text>
+                        <Text style={{
+                          fontSize: 12,
+                          color: isDark ? '#9CA3AF' : '#6B7280',
+                          marginTop: 2,
+                        }}>
+                          {boost.description}
+                        </Text>
+                      </View>
+                      <Text style={{
+                        fontSize: 11,
+                        fontWeight: '600',
+                        color: isDark ? '#86EFAC' : '#16A34A',
+                        marginLeft: 8,
+                      }}>
+                        +{boost.macroCost.calories} cal
+                      </Text>
+                    </View>
+                  </MotiView>
+                ))}
+              </View>
             )}
           </View>
 
@@ -2093,6 +2324,15 @@ export default function RecipeModal() {
         recipe={recipe}
         onClose={() => setShowMealPrepModal(false)}
         onConfirm={handleMealPrepScaling}
+      />
+
+      {/* 10E: Ingredient Swap Sheet */}
+      <IngredientSwapSheet
+        visible={swapSheetVisible}
+        ingredient={swapIngredient}
+        isDark={isDark}
+        onClose={() => setSwapSheetVisible(false)}
+        onSelectSwap={handleSelectSwap}
       />
 
       {/* Recipe Notes Modal */}
