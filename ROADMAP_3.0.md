@@ -1555,7 +1555,7 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *The anti-meal-prep-boredom feature. The user doesn't always know a cuisine or recipe name — they know a FEELING. "Something cheesy", "warm and comforting", "crunchy and spicy", "sweet but not heavy." Match cravings to healthy recipes.*
 
-* [ ] **Craving-based search mode** — On the home screen search bar, add a toggle: "Search" (current) vs "I'm Craving..." mode. In craving mode, the user types natural language and the AI maps it to recipes.
+* [x] **Craving-based search mode** — On the home screen search bar, add a toggle: "Search" (current) vs "I'm Craving..." mode. In craving mode, the user types natural language and the AI maps it to recipes.
   * 📍 Backend: `POST /api/recipes/craving-search` — takes free-text craving → Claude maps it to flavor profiles + texture + temperature preferences → queries recipe database with expanded search (title, description, ingredients, cuisine) → returns ranked results
   * 📍 Examples that should work:
     - "something cheesy and warm" → mac & cheese (lightened), quesadillas, khachapuri, grilled cheese, cheese fondue
@@ -1565,9 +1565,88 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
     - "something sweet after dinner" → protein ice cream, Greek yogurt parfait, dark chocolate mousse, mochi
   * 📍 Craving search should respect user's dietary restrictions automatically
 
-* [ ] **Craving chips** — Below the search bar, show scrollable craving chips for common moods: "Comfort Food", "Something Light", "Spicy", "Sweet Tooth", "Crunchy", "Warm & Cozy", "Fresh & Cold", "Cheesy", "Carb Fix", "Snacky". Tapping a chip runs the craving search.
+* [x] **Craving chips** — In the filter modal's "I'm Craving..." section, show wrapping craving chips: "Comfort Food", "Something Light", "Spicy", "Sweet Tooth", "Crunchy", "Warm & Cozy", "Fresh & Cold", "Cheesy", "Carb Fix", "Snacky". Chips toggle on/off (tap active chip to deselect). Filter modal stays open while selecting so craving + other filters can be combined.
+  * ✅ Bug fixed: infinite re-render loop caused by `applyFetchResult` dep chain — resolved with `useRef` dedup key
+  * ✅ Bug fixed: filter badge count now includes active craving (+1 when craving active)
+  * ✅ Filter combination: craving search passes active cuisine/dietary/cookTime/difficulty/mealPrepMode filters to backend — results respect all active filters simultaneously
+  * ✅ Bug fixed: applying traditional filters while craving is active now re-runs the craving search instead of overwriting with a generic `GET /recipes` fetch
 
-* [ ] **Test:** Craving search for "something cheesy" returns recipes containing cheese; respects dietary restrictions (vegan user doesn't get dairy-based results); craving chips trigger search with correct query
+* [x] **Test:** Craving search for "something cheesy" returns recipes containing cheese; respects dietary restrictions (vegan user doesn't get dairy-based results); craving chips trigger search with correct query; `searchQuery` stays empty during craving search (prevents `useInitialRecipeLoad` re-fire)
+
+---
+
+#### **10D-ii: Search & Filter Relevance** 🎯 *(Home Screen + Backend)*
+
+*The craving search works, but the results feel random. A user who taps "Cheesy" and "Mexican" and "≤30 min" expects cheesy quesadillas, not a vaguely related chicken bowl that happens to mention "sprinkle of cheese" in step 7. This section makes every filter combination return results the user would actually screenshot and cook.*
+
+> **Core problem:** The current craving scoring is keyword-frequency-based — a recipe that says "cheese" once in its ingredients scores the same whether it's a cheese-centric dish or one that uses a tablespoon of parmesan as garnish. Filters narrow the candidate pool but don't influence ranking. The result: technically correct but emotionally wrong results.
+
+**Smarter Craving Scoring**
+- [ ] **Weighted field scoring with diminishing returns** — Title matches are the strongest signal (a recipe *named* "Cheesy Quesadillas" is more relevant than one that *contains* cheese). Current scoring already weights title > description > ingredients, but multiple hits in the same field shouldn't multiply linearly. Apply diminishing returns: first title hit = +5, second = +3, third = +1. This prevents recipes with repetitive titles from dominating.
+  * 📍 Backend: refactor `scoreCravingMatch()` in `cravingSearchService.ts` — per-field hit counting with decay
+  * **Test:** recipe titled "Cheesy Mac and Cheese" scores higher than "Grilled Chicken with Cheese Garnish"; but not absurdly higher than "Four Cheese Pasta" (diminishing returns prevent runaway scores from keyword-stuffed titles)
+
+- [ ] **"Hero ingredient" detection** — Distinguish between a recipe where the craving term is the *star* vs. a *supporting player*. If a search term appears in the recipe title OR in ≥3 ingredients, mark it as a hero match and apply a 2x multiplier to the recipe's total score. A "cheesy" search should heavily favor recipes where cheese is central.
+  * 📍 Backend: add `isHeroIngredient()` check in `scoreCravingMatch()` — count ingredient lines containing the term
+  * **Test:** "Mac and Cheese" (cheese in title + 3 ingredients) scores ≥2x higher than "Greek Salad" (feta mentioned once)
+
+- [ ] **Negative signal filtering** — Some recipes technically match but are clearly wrong. A "Spicy" search shouldn't return a recipe whose only spicy element is "pinch of cayenne" in step 4. If a search term appears *only* in instructions (not title, description, or ingredients), apply a penalty (score × 0.5) rather than a bonus.
+  * 📍 Backend: add instruction-only detection in `scoreCravingMatch()` — if a term matches instructions but nothing else, halve rather than boost
+  * **Test:** recipe with "cayenne" only in instructions scores lower than recipe with "spicy" in title
+
+**Improved Candidate Selection**
+- [ ] **Expand candidate pool intelligently** — Currently fetches 400 most recent recipes. This misses older high-quality recipes. Instead: fetch 200 recent + 200 random (seeded by craving hash for consistency) to ensure coverage across the full database. As the recipe DB grows past 1000+, this becomes critical.
+  * 📍 Backend: split `prisma.recipe.findMany` in `cravingSearch` into two queries — recent (200, `orderBy: createdAt desc`) + random (200, `orderBy: id` with offset = hash(query) % totalCount) — then deduplicate by ID before scoring
+  * **Test:** craving search with >400 recipes in DB returns results from both recent and older recipes (not just the latest 400)
+
+- [ ] **Pre-filter by craving keywords at the DB level** — Instead of fetching 400 recipes and scoring all of them in JS, add a Prisma `OR` filter that matches craving search terms against `title` and `description` using `contains` (case-insensitive via `LOWER()`). This reduces the candidate pool to already-relevant recipes, improving both speed and relevance. Fall through to the broad pool only if the filtered set returns <20 results.
+  * 📍 Backend: build dynamic `OR` conditions from `mapping.searchTerms` — `title: { contains: term }` and `description: { contains: term }` — applied to the Prisma query. Use SQLite-compatible `LOWER()` via raw query or Prisma's built-in string filtering (no `mode: 'insensitive'`)
+  * **Test:** craving search for "cheesy" queries DB with title/description containing "chees" (stemmed); recipes with no keyword match in title or description are excluded from initial pool
+
+**Filter-Aware Ranking**
+- [x] **Craving search respects active filters** — ✅ Shipped. The backend `cravingSearch` endpoint now accepts `cuisines`, `dietaryRestrictions`, `maxCookTime`, `difficulty`, and `mealPrepMode` from the request body and applies them as Prisma `where` clauses before scoring. The frontend hook passes all active filter state to the API call. The craving dedup key includes filters so changing filters triggers a fresh search. `applyFilters` and `handleQuickFilter` now re-run the craving search instead of overwriting with a generic fetch when a craving is active.
+- [ ] **Boost recipes matching active filters in scoring** — Filters currently narrow the candidate pool but don't affect ranking within it. When both a craving AND traditional filters are active, recipes that match the filter criteria more precisely should score higher. Add a +3 bonus per active filter match to the craving score, so e.g. "Cheesy" + "Mexican" strongly favors cheesy Mexican recipes over cheesy non-Mexican ones.
+  * 📍 Backend: pass active filters into `scoreCravingMatch()` — if recipe cuisine matches a selected cuisine filter, +3; if recipe cook time is under selected max, +2; if difficulty matches, +2
+  * **Test:** with "Cheesy" craving + "Mexican" cuisine filter, "Cheesy Quesadillas" (Mexican) scores higher than "Mac and Cheese" (American) even though both are strongly cheesy
+
+- [ ] **"Perfect match" indicator** — When a recipe scores in the top 90th percentile of results AND matches all active filters, tag it with a `perfectMatch: true` flag in the API response. Frontend renders a subtle sparkle badge or "Perfect Match" label on the card.
+  * 📍 Backend: calculate score threshold after scoring, tag top results
+  * 📍 Frontend: render badge on recipe card when `perfectMatch` is true — use existing `FrostedCard` style with accent tint
+  * **Test:** top-scoring recipe in a filtered craving search has `perfectMatch: true`; recipe at position 15 does not
+
+**Result Quality Feedback Loop**
+- [ ] **Implicit relevance signal from user actions** — Track which craving search results users actually tap, save, or cook. Over time, use these signals to adjust scoring weights. Phase 1 (this task): log the event `{ cravingQuery, recipeId, action: 'tap' | 'save' | 'cook' }` to a new `CravingSearchEvent` table. Phase 2 (future): use logged data to train a simple scoring boost for recipes that historically perform well for similar cravings.
+  * 📍 Backend: new `CravingSearchEvent` model in Prisma schema (id, userId, cravingQuery, recipeId, action, createdAt). New `POST /api/recipes/craving-search/event` endpoint. Frontend fires on recipe card tap and save from craving results.
+  * **Test:** tapping a recipe card from craving results fires the event endpoint; event is persisted with correct query and action
+
+#### Tests
+
+**`backend/src/services/__tests__/cravingSearchService.test.ts`** (extend existing)
+- [ ] Diminishing returns: 3 title hits score less than 3× a single title hit
+- [ ] Hero ingredient detection: cheese in title + 3 ingredients → 2x score vs. cheese in 1 ingredient
+- [ ] Instruction-only match applies 0.5x penalty
+- [ ] Filter-aware boost: matching cuisine adds +3 to score
+
+**`backend/src/modules/recipe/__tests__/cravingSearch.integration.test.ts`** (new)
+- [ ] Craving search with cuisine filter returns only matching cuisine recipes
+- [ ] Craving search with maxCookTime filter excludes slow recipes
+- [ ] Combined craving + multiple filters narrows results correctly
+- [ ] Perfect match flag present on top result, absent on low-ranked result
+- [ ] Candidate pool includes both recent and older recipes when DB is large
+
+**`frontend/__tests__/components/home/CravingPerfectMatch.test.tsx`** (new)
+- [ ] Recipe card renders "Perfect Match" badge when `perfectMatch: true`
+- [ ] Badge not rendered when `perfectMatch` is absent or false
+
+**`frontend/__tests__/hooks/useCravingSearch.test.ts`** (regression — extend existing, guard against 10D bugs re-emerging)
+- [ ] **No infinite loop:** craving search fires exactly once per unique (query + filter) combination; calling `applyFetchResult` does not trigger a second API call (guards against the `userFeedback` dep-chain loop)
+- [ ] **Filter badge count:** `isCravingSearch = true` contributes +1 to the active filter count (verify the `activeFilterCount` computation includes the craving flag)
+- [ ] **Chip deselection:** tapping an active craving chip (same label as `activeCravingQuery`) calls `onCravingSearch('')` — not `onCravingSearch(chip.label)` again
+- [ ] **Filter modal stays open on chip tap:** `onCravingSearch` with a non-empty query does NOT call `closeFilterModal` (modal remains open for further filter selection)
+- [ ] **Applying filters preserves craving:** when `isCravingSearch = true` and `applyFilters` is called, `fetchRecipes` (regular GET) is NOT called — `onRerunCravingSearch` is called instead
+- [ ] **Quick filter toggle preserves craving:** when `isCravingSearch = true` and `handleQuickFilter` is called, `fetchRecipes` is NOT called — `onRerunCravingSearch` is called instead
+- [ ] **Filters change re-runs craving:** changing any filter value while `cravingParam` is set triggers a new `cravingSearch` API call with the updated filter params (dedup key includes filter state)
+- [ ] **`clearSearch` resets all craving state:** after `clearSearch()`, `isCravingSearch = false`, `cravingQuery = ''`, `searchQuery = ''`, and the dedup ref is cleared so the next craving param fires fresh
 
 ---
 

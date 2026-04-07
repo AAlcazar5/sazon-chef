@@ -16,6 +16,8 @@ interface UseFilterActionsOptions {
   resetFilters: () => Promise<void>;
   mealPrepMode: boolean;
   searchQuery: string;
+  isCravingSearch: boolean;
+  onRerunCravingSearch: () => void;
   recipesPerPage: number;
   getMacroFilterParams: () => Record<string, any>;
   timeAwareMode: boolean;
@@ -40,6 +42,8 @@ export function useFilterActions(options: UseFilterActionsOptions): UseFilterAct
     resetFilters,
     mealPrepMode,
     searchQuery,
+    isCravingSearch,
+    onRerunCravingSearch,
     recipesPerPage,
     getMacroFilterParams,
     timeAwareMode,
@@ -72,6 +76,12 @@ export function useFilterActions(options: UseFilterActionsOptions): UseFilterAct
     await saveFilters();
     updateActiveFilters();
 
+    // If a craving search is active, re-run it with the new filters instead of a regular fetch
+    if (isCravingSearch) {
+      onRerunCravingSearch();
+      return;
+    }
+
     console.log(`🔍 Applying filter with recipesPerPage: ${recipesPerPage}`);
 
     setPaginationLoading(true);
@@ -93,12 +103,18 @@ export function useFilterActions(options: UseFilterActionsOptions): UseFilterAct
       console.log(`✅ Filter applied: Received ${result.recipes.length} recipes, total: ${result.total}`);
     }
     setPaginationLoading(false);
-  }, [filters, setFilters, saveFilters, updateActiveFilters, mealPrepMode, searchQuery, recipesPerPage, getMacroFilterParams, timeAwareMode, fetchRecipes, applyFetchResult, setPaginationLoading]);
+  }, [filters, setFilters, saveFilters, updateActiveFilters, isCravingSearch, onRerunCravingSearch, mealPrepMode, searchQuery, recipesPerPage, getMacroFilterParams, timeAwareMode, fetchRecipes, applyFetchResult, setPaginationLoading]);
 
   const applyFilters = useCallback(async () => {
     updateActiveFilters();
     await saveFilters();
     closeFilterModal();
+
+    // If a craving search is active, re-run it with the new filters instead of a regular fetch
+    if (isCravingSearch) {
+      onRerunCravingSearch();
+      return;
+    }
 
     console.log('🔍 Filters applied:', filters);
     console.log(`🔍 Applying filters with recipesPerPage: ${recipesPerPage}`);
@@ -122,7 +138,7 @@ export function useFilterActions(options: UseFilterActionsOptions): UseFilterAct
       Alert.alert('Error', 'Failed to apply filters. Please try again.');
     }
     setPaginationLoading(false);
-  }, [filters, updateActiveFilters, saveFilters, closeFilterModal, mealPrepMode, searchQuery, recipesPerPage, fetchRecipes, applyFetchResult, setPaginationLoading]);
+  }, [filters, updateActiveFilters, saveFilters, closeFilterModal, isCravingSearch, onRerunCravingSearch, mealPrepMode, searchQuery, recipesPerPage, fetchRecipes, applyFetchResult, setPaginationLoading]);
 
   const clearFilters = useCallback(async () => {
     await resetFilters();
