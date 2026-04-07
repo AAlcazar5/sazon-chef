@@ -2,6 +2,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { healthifyService } from '@/services/healthifyService';
+import { getIngredientSwaps } from '@/services/ingredientSwapService';
+import { flavorBoostService } from '@/services/flavorBoostService';
 import { importRecipeFromUrl as importFromUrl, RecipeImportError } from '@/services/recipeImportService';
 import { getUserId } from '@/utils/authHelper';
 import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
@@ -3682,9 +3684,10 @@ export const recipeController = {
         return res.status(404).json({ error: 'Recipe not found' });
       }
       
-      // Check if recipe already has a healthy grade (A, B, or C) - no need to healthify
+      // Check if recipe already has a healthy grade (A, B, or C) - skip check when force=true
+      const force = req.body?.force === true || req.query.force === 'true';
       const healthGrade = (recipe as any).healthGrade;
-      if (healthGrade && (healthGrade.toUpperCase() === 'A' || healthGrade.toUpperCase() === 'B' || healthGrade.toUpperCase() === 'C')) {
+      if (!force && healthGrade && (healthGrade.toUpperCase() === 'A' || healthGrade.toUpperCase() === 'B' || healthGrade.toUpperCase() === 'C')) {
         return res.status(400).json({
           success: false,
           error: 'Recipe already healthy',
@@ -3763,6 +3766,75 @@ export const recipeController = {
         message: error.message,
         code: error.code || (isQuotaError ? 'insufficient_quota' : 'HEALTHIFY_ERROR'),
       });
+    }
+  },
+
+  // 10E: Get ingredient swap alternatives
+  async getIngredientSwaps(req: Request, res: Response) {
+    try {
+      const ingredient = req.query.ingredient as string;
+      if (!ingredient || ingredient.trim().length === 0) {
+        return res.status(400).json({ error: 'ingredient query parameter is required' });
+      }
+
+      const userId = getUserId(req);
+      const preferences = await prisma.userPreferences.findUnique({
+        where: { userId },
+        include: { dietaryRestrictions: true },
+      });
+      const restrictions = preferences?.dietaryRestrictions?.map((dr: any) => dr.name) ?? [];
+
+      const swaps = getIngredientSwaps(ingredient.trim(), restrictions);
+      return res.json({ success: true, ingredient: ingredient.trim(), swaps });
+    } catch (error: any) {
+      console.error('❌ getIngredientSwaps error:', error);
+      return res.status(500).json({ error: 'Failed to fetch ingredient swaps' });
+    }
+  },
+
+  // 10E: Flavor boost — AI suggests exciting additions for a recipe
+  async flavorBoost(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+
+      const [recipe, preferences] = await Promise.all([
+        prisma.recipe.findUnique({
+          where: { id },
+          include: {
+            ingredients: { orderBy: { order: 'asc' } },
+            instructions: { orderBy: { step: 'asc' } },
+          },
+        }),
+        prisma.userPreferences.findUnique({
+          where: { userId },
+          include: { dietaryRestrictions: true },
+        }),
+      ]);
+
+      if (!recipe) {
+        return res.status(404).json({ error: 'Recipe not found' });
+      }
+
+      const restrictions = preferences?.dietaryRestrictions?.map((dr: any) => dr.name) ?? [];
+      const result = await flavorBoostService.getFlavorBoosts(
+        {
+          title: recipe.title,
+          cuisine: recipe.cuisine,
+          ingredients: recipe.ingredients.map((i: any) => i.text),
+          instructions: recipe.instructions.map((i: any) => i.text),
+          calories: recipe.calories,
+          protein: recipe.protein,
+          carbs: recipe.carbs,
+          fat: recipe.fat,
+        },
+        restrictions,
+      );
+
+      return res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error('❌ flavorBoost error:', error);
+      return res.status(500).json({ error: 'Failed to get flavor boosts' });
     }
   },
 

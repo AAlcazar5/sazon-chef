@@ -102,7 +102,9 @@ function computeMacros(goal: EatingGoal, tdee: number) {
   const protein = Math.round((cal * goal.ratios.protein) / 4);
   const carbs = Math.round((cal * goal.ratios.carbs) / 4);
   const fat = Math.round((cal * goal.ratios.fat) / 9);
-  return { calories: cal, protein, carbs, fat };
+  // Fiber: 14g per 1,000 kcal (IOM Adequate Intake), min 20g
+  const fiber = Math.max(20, Math.round((cal / 1000) * 14));
+  return { calories: cal, protein, carbs, fat, fiber };
 }
 
 export default function EditMacroGoalsScreen() {
@@ -123,15 +125,16 @@ export default function EditMacroGoalsScreen() {
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
+  const [fiber, setFiber] = useState('');
 
   // Animated bar values (0–100, representing % of caloric total)
   const proteinAnim = useRef(new Animated.Value(30)).current;
   const carbsAnim = useRef(new Animated.Value(40)).current;
   const fatAnim = useRef(new Animated.Value(30)).current;
 
-  // Customize section collapse
+  // Customize section collapse — extra height for fiber field
   const customizeAnim = useRef(new Animated.Value(0)).current;
-  const customizeHeight = customizeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 340] });
+  const customizeHeight = customizeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 420] });
 
   // ── Derived macros from selected goal ──────────────────────────────────
   const derivedMacros = useMemo(() => {
@@ -142,13 +145,16 @@ export default function EditMacroGoalsScreen() {
   // ── Active macros: either derived or custom ────────────────────────────
   const activeMacros = useMemo(() => {
     if (!showCustomize) return derivedMacros;
+    const cal = parseInt(calories) || 0;
     return {
-      calories: parseInt(calories) || 0,
+      calories: cal,
       protein: parseInt(protein) || 0,
       carbs: parseInt(carbs) || 0,
       fat: parseInt(fat) || 0,
+      // If user left fiber blank, derive from calories
+      fiber: fiber ? parseInt(fiber) : Math.max(20, Math.round((cal / 1000) * 14)),
     };
-  }, [showCustomize, derivedMacros, calories, protein, carbs, fat]);
+  }, [showCustomize, derivedMacros, calories, protein, carbs, fat, fiber]);
 
   // ── Populate custom inputs when customize opens ────────────────────────
   useEffect(() => {
@@ -157,6 +163,7 @@ export default function EditMacroGoalsScreen() {
       setProtein(derivedMacros.protein.toString());
       setCarbs(derivedMacros.carbs.toString());
       setFat(derivedMacros.fat.toString());
+      setFiber(derivedMacros.fiber.toString());
     }
     Animated.spring(customizeAnim, {
       toValue: showCustomize ? 1 : 0,
@@ -195,6 +202,7 @@ export default function EditMacroGoalsScreen() {
       setProtein(goals.protein.toString());
       setCarbs(goals.carbs.toString());
       setFat(goals.fat.toString());
+      if (goals.fiber) setFiber(goals.fiber.toString());
 
       // Fetch TDEE if physical profile exists
       try {
@@ -235,6 +243,7 @@ export default function EditMacroGoalsScreen() {
         protein: m.protein,
         carbs: m.carbs,
         fat: m.fat,
+        fiber: m.fiber,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
@@ -356,20 +365,24 @@ export default function EditMacroGoalsScreen() {
             {/* Numbers */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, fontWeight: '700', color: label }}>{activeMacros.calories}</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: label }}>{activeMacros.calories}</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>calories</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, fontWeight: '700', color: '#3B82F6' }}>{activeMacros.protein}g</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#3B82F6' }}>{activeMacros.protein}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>protein</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, fontWeight: '700', color: '#F97316' }}>{activeMacros.carbs}g</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#F97316' }}>{activeMacros.carbs}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>carbs</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, fontWeight: '700', color: '#EAB308' }}>{activeMacros.fat}g</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#EAB308' }}>{activeMacros.fat}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>fat</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#059669' }}>{activeMacros.fiber}g</Text>
+                <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>fiber</Text>
               </View>
             </View>
 
@@ -422,7 +435,8 @@ export default function EditMacroGoalsScreen() {
                 { label: 'Protein (g)', value: protein, onChange: setProtein, placeholder: '150', hint: '~0.8–1.2g per lb body weight' },
                 { label: 'Carbs (g)', value: carbs, onChange: setCarbs, placeholder: '200', hint: 'Adjust based on activity level' },
                 { label: 'Fat (g)', value: fat, onChange: setFat, placeholder: '65', hint: 'Essential for hormone production' },
-              ] as const).map(({ label: fieldLabel, value, onChange, placeholder, hint }) => (
+                { label: 'Fiber (g)', value: fiber, onChange: setFiber, placeholder: '28', hint: 'Recommended: ~14g per 1,000 calories' },
+              ]).map(({ label: fieldLabel, value, onChange, placeholder, hint }) => (
                 <View key={fieldLabel} style={{ marginBottom: 14 }}>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: label, marginBottom: 6 }}>{fieldLabel}</Text>
                   <TextInput

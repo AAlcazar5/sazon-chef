@@ -100,6 +100,8 @@ interface VisualIngredientListProps {
   /** Base servings count from recipe */
   baseServings?: number;
   isDark: boolean;
+  /** Called when user taps the swap icon on an ingredient row */
+  onSwapIngredient?: (ingredientText: string) => void;
 }
 
 // ── Component ──────────────────────────────────────────────
@@ -108,6 +110,7 @@ export default function VisualIngredientList({
   ingredients,
   baseServings = 4,
   isDark,
+  onSwapIngredient,
 }: VisualIngredientListProps) {
   const [servings, setServings] = useState(baseServings);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('us');
@@ -346,6 +349,26 @@ export default function VisualIngredientList({
                       {scaledAmount}
                     </Text>
                   ) : null}
+                  {/* Swap icon */}
+                  {onSwapIngredient && (
+                    <HapticTouchableOpacity
+                      onPress={() => onSwapIngredient(item.text)}
+                      hapticStyle="light"
+                      pressedScale={0.9}
+                      style={{
+                        marginLeft: 8,
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)',
+                      }}
+                      accessibilityLabel={`Find swaps for ${item.name || item.text}`}
+                    >
+                      <Text style={{ fontSize: 13 }}>🔄</Text>
+                    </HapticTouchableOpacity>
+                  )}
                 </View>
               </MotiView>
             );

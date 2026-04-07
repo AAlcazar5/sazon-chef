@@ -21,6 +21,7 @@ export interface MacroRecommendations {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
   bmr: number;
   tdee: number;
 }
@@ -129,11 +130,15 @@ export function calculateMacros(profile: PhysicalProfile): MacroRecommendations 
   const remainingCalories = targetCalories - proteinCalories - fatCalories;
   const carbGrams = Math.round(remainingCalories / 4); // 4 cal/gram
   
+  // Fiber: 14g per 1,000 kcal (IOM Adequate Intake recommendation), min 20g
+  const fiberGrams = Math.max(20, Math.round((targetCalories / 1000) * 14));
+
   return {
     calories: targetCalories,
     protein: proteinGrams,
     carbs: Math.max(50, carbGrams), // Minimum 50g carbs
     fat: fatGrams,
+    fiber: fiberGrams,
     bmr: Math.round(bmr),
     tdee: tdee
   };
