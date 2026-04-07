@@ -19,6 +19,19 @@ import {
 import type { Mood } from '../ui/MoodSelector';
 import type { QuickMacroFilters } from './QuickFiltersBar';
 
+const CRAVING_CHIPS = [
+  { label: 'Comfort Food', emoji: '🤗' },
+  { label: 'Something Light', emoji: '🥗' },
+  { label: 'Spicy', emoji: '🌶️' },
+  { label: 'Sweet Tooth', emoji: '🍫' },
+  { label: 'Crunchy', emoji: '🥨' },
+  { label: 'Warm & Cozy', emoji: '☕' },
+  { label: 'Fresh & Cold', emoji: '❄️' },
+  { label: 'Cheesy', emoji: '🧀' },
+  { label: 'Carb Fix', emoji: '🍝' },
+  { label: 'Snacky', emoji: '🍿' },
+] as const;
+
 interface FilterModalProps {
   visible: boolean;
   onClose: () => void;
@@ -35,6 +48,8 @@ interface FilterModalProps {
   handleToggleMealPrepMode?: (enabled: boolean) => void;
   darkFeed?: boolean;
   onToggleDarkFeed?: () => void;
+  onCravingSearch?: (query: string) => void;
+  activeCravingQuery?: string;
 }
 
 export default function FilterModal({
@@ -53,6 +68,8 @@ export default function FilterModal({
   handleToggleMealPrepMode,
   darkFeed = false,
   onToggleDarkFeed,
+  onCravingSearch,
+  activeCravingQuery,
 }: FilterModalProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -124,6 +141,45 @@ export default function FilterModal({
       onApply={onApply}
       quickFilters={quickFiltersRow}
     >
+      {/* I'm Craving... */}
+      {onCravingSearch && (
+        <FilterSection title="I'm Craving..." icon="restaurant-outline" activeCount={activeCravingQuery ? 1 : 0}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {CRAVING_CHIPS.map(chip => (
+              <HapticTouchableOpacity
+                key={chip.label}
+                onPress={() => onCravingSearch(activeCravingQuery === chip.label ? '' : chip.label)}
+                accessibilityLabel={`Craving ${chip.label}`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 100,
+                  gap: 5,
+                  backgroundColor: activeCravingQuery === chip.label
+                    ? (isDark ? Colors.primary : Colors.primary)
+                    : (isDark ? '#374151' : '#F3F4F6'),
+                }}
+              >
+                <Text style={{ fontSize: 15 }}>{chip.emoji}</Text>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '500',
+                    color: activeCravingQuery === chip.label
+                      ? '#FFF'
+                      : (isDark ? '#D1D5DB' : '#374151'),
+                  }}
+                >
+                  {chip.label}
+                </Text>
+              </HapticTouchableOpacity>
+            ))}
+          </View>
+        </FilterSection>
+      )}
+
       {/* Cuisine */}
       <FilterSection
         title="Cuisine"

@@ -60,6 +60,9 @@ router.get('/export', recipeController.exportCookbook);
 router.get('/autocomplete', recipeController.getAutoCompleteSuggestions);
 router.get('/popular-searches', recipeController.getPopularSearches);
 
+// 10D: "I'm Craving..." Search
+router.post('/craving-search', recipeController.cravingSearch);
+
 // Smart collections - specific routes before parameterized
 router.get('/smart-collections', recipeController.getSmartCollections);
 router.get('/smart-collections/weather-today', recipeController.getWeatherSmartCollection);

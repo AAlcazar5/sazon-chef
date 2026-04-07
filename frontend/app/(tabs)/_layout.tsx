@@ -81,6 +81,9 @@ export default function TabLayout() {
   const fabScale = useRef(new Animated.Value(1)).current;
 
 
+  const lastSegment = segments[segments.length - 1] as string;
+  const isOnHomeTab = pathname === '/(tabs)/index' || pathname === '/index' || pathname === '/' || lastSegment === 'index' || pathname === '/(tabs)';
+
   // Execute a search query
   const executeSearch = useCallback((query: string) => {
     const trimmed = query.trim();
@@ -90,18 +93,12 @@ export default function TabLayout() {
     setIsSearchFocused(false);
     Keyboard.dismiss();
 
-    const lastSegment = segments[segments.length - 1] as string;
-    const isOnIndexTab = pathname === '/(tabs)/index' || pathname === '/index' || pathname === '/' || lastSegment === 'index' || pathname === '/(tabs)';
-
-    if (isOnIndexTab) {
-      router.setParams({ search: trimmed });
+    if (isOnHomeTab) {
+      router.setParams({ search: trimmed, craving: '' });
     } else {
-      router.push({
-        pathname: '/(tabs)',
-        params: { search: trimmed },
-      });
+      router.push({ pathname: '/(tabs)', params: { search: trimmed } });
     }
-  }, [pathname, segments, addToHistory]);
+  }, [isOnHomeTab, addToHistory]);
 
   // Debounced instant search - triggers as user types
   const handleSearchChange = useCallback((text: string) => {
@@ -502,6 +499,7 @@ export default function TabLayout() {
           </View>
 
           {/* Quick Actions Button — gradient pill matching header buttons */}
+
           <HapticTouchableOpacity
             onPress={async () => {
               Animated.sequence([
@@ -568,6 +566,7 @@ export default function TabLayout() {
             </Animated.View>
           </HapticTouchableOpacity>
         </View>
+
       </View>
 
       {/* Action Sheet */}

@@ -5049,4 +5049,114 @@ export const recipeController = {
       return res.status(500).json({ error: 'Failed to load weather collection' });
     }
   },
+
+  // 10D: "I'm Craving..." Search
+  async cravingSearch(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const {
+        query,
+        cuisines,
+        dietaryRestrictions,
+        maxCookTime,
+        difficulty,
+        mealPrepMode,
+      } = req.body as {
+        query?: string;
+        cuisines?: string[];
+        dietaryRestrictions?: string[];
+        maxCookTime?: number | null;
+        difficulty?: string;
+        mealPrepMode?: boolean;
+      };
+
+      if (!query || typeof query !== 'string' || !query.trim()) {
+        return res.status(400).json({ error: 'query is required' });
+      }
+
+      const trimmedQuery = query.trim();
+
+      // Load user dietary restrictions in parallel with the AI mapping call
+      const { mapCravingToSearchTerms, scoreCravingMatch } = await import('../../services/cravingSearchService');
+
+      const [userPreferences, mapping] = await Promise.all([
+        prisma.userPreferences.findFirst({
+          where: { userId },
+          include: { dietaryRestrictions: true },
+        }),
+        mapCravingToSearchTerms(trimmedQuery),
+      ]);
+
+      // Merge user-preference dietary restrictions with filter-selected ones
+      const profileRestrictions = (userPreferences?.dietaryRestrictions || [])
+        .filter((d: any) => d.severity === 'strict')
+        .map((d: any) => (d.name as string).toLowerCase());
+      const filterRestrictions = (dietaryRestrictions || []).map(d => d.toLowerCase());
+      const strictRestrictions = [...new Set([...profileRestrictions, ...filterRestrictions])];
+
+      // Build Prisma where clause incorporating active filters
+      const where: any = { isUserCreated: false };
+      if (cuisines && cuisines.length > 0) {
+        where.cuisine = { in: cuisines };
+      }
+      if (maxCookTime) {
+        where.cookTime = { lte: maxCookTime };
+      }
+      if (difficulty) {
+        where.difficulty = difficulty.toLowerCase();
+      }
+      if (mealPrepMode) {
+        where.mealPrepSuitable = true;
+      }
+
+      // Fetch a broad candidate pool with filters applied
+      const candidates = await prisma.recipe.findMany({
+        where,
+        take: 400,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          ingredients: { orderBy: { order: 'asc' }, select: { text: true } },
+        },
+      });
+
+      // Helper: check if recipe likely violates a dietary restriction
+      function violatesRestrictions(recipe: any, restrictions: string[]): boolean {
+        if (restrictions.length === 0) return false;
+        const text = [
+          recipe.title,
+          recipe.description || '',
+          recipe.cuisine || '',
+          ...(recipe.ingredients || []).map((i: any) => i.text || ''),
+        ].join(' ').toLowerCase();
+
+        return restrictions.some(r => {
+          if (r === 'vegan') return /\b(meat|chicken|beef|pork|lamb|fish|shrimp|tuna|salmon|dairy|egg|cheese|milk|butter|cream|honey|gelatin)\b/.test(text);
+          if (r === 'vegetarian') return /\b(meat|chicken|beef|pork|lamb|fish|shrimp|tuna|salmon|seafood|bacon|sausage)\b/.test(text);
+          if (r === 'gluten-free' || r === 'gluten free') return /\b(wheat|flour|bread|pasta|barley|rye|gluten|couscous|bulgur)\b/.test(text);
+          if (r === 'dairy-free' || r === 'dairy free') return /\b(milk|cheese|butter|cream|yogurt|dairy|whey|casein)\b/.test(text);
+          if (r === 'nut-free' || r === 'nut free') return /\b(almond|peanut|walnut|cashew|pecan|pistachio|hazelnut|pine nut)\b/.test(text);
+          return false;
+        });
+      }
+
+      // Score and filter candidates
+      const scored = candidates
+        .filter(recipe => !violatesRestrictions(recipe, strictRestrictions))
+        .map(recipe => ({ recipe, score: scoreCravingMatch(recipe as any, mapping) }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20)
+        .map(({ recipe }) => recipe);
+
+      return res.json({
+        recipes: scored,
+        query: trimmedQuery,
+        searchTerms: mapping.searchTerms,
+        totalMatches: scored.length,
+      });
+    } catch (error: any) {
+      console.error('❌ [cravingSearch] Error:', error);
+      return res.status(500).json({ error: 'Craving search failed' });
+    }
+  },
 };

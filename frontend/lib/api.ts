@@ -1164,6 +1164,16 @@ export const searchApi = {
   naturalLanguageSearch: (query: string) => {
     return apiClient.post('/search/natural', { query });
   },
+  // 10D: "I'm Craving..." Search
+  cravingSearch: (query: string, filters?: {
+    cuisines?: string[];
+    dietaryRestrictions?: string[];
+    maxCookTime?: number | null;
+    difficulty?: string;
+    mealPrepMode?: boolean;
+  }) => {
+    return apiClient.post('/recipes/craving-search', { query, ...filters });
+  },
 };
 
 // AI Recipe API

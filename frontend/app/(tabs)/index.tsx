@@ -253,7 +253,7 @@ export default function HomeScreen() {
   const [searchScope, setSearchScope] = useState<SearchScope>('all');
 
   // Search state - using extracted hook
-  const { searchQuery, handleSearchChange, clearSearch } = useRecipeSearch({
+  const { searchQuery, cravingQuery, isCravingSearch, handleSearchChange, clearSearch, rerunCravingSearch } = useRecipeSearch({
     filtersLoaded,
     filters,
     mealPrepMode,
@@ -322,7 +322,7 @@ export default function HomeScreen() {
       dietaryRestrictions: filters.dietaryRestrictions,
       mealPrepMode,
     },
-    enabled: filtersLoaded && !searchQuery,
+    enabled: filtersLoaded && !searchQuery && !cravingQuery,
     initialData: homeFeed.quickMeals,
   });
   const {
@@ -414,6 +414,8 @@ export default function HomeScreen() {
     resetFilters,
     mealPrepMode,
     searchQuery,
+    isCravingSearch,
+    onRerunCravingSearch: rerunCravingSearch,
     recipesPerPage: RECIPES_PER_PAGE,
     getMacroFilterParams,
     timeAwareMode,
@@ -754,11 +756,11 @@ export default function HomeScreen() {
 
   // Empty state — smart no-results when searching, generic otherwise
   if (suggestedRecipes.length === 0 && !loading && !loadingFromFilters && !initialLoading) {
-    if (searchQuery.trim()) {
+    if (searchQuery.trim() || cravingQuery.trim()) {
       return (
         <NoResultsState
-          searchQuery={searchQuery}
-          suggestions={homeFeed.searchSuggestions}
+          searchQuery={isCravingSearch ? `craving: ${cravingQuery}` : searchQuery}
+          suggestions={isCravingSearch ? [] : homeFeed.searchSuggestions}
           hasActiveFilters={activeFilters.length > 0}
           onSelectSuggestion={(query) => {
             handleSearchChange(query);
@@ -801,7 +803,7 @@ export default function HomeScreen() {
       <HomeHeader
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
         onFilterPress={handleFilterPress}
-        activeFilterCount={activeFilters.length + (mealPrepMode ? 1 : 0)}
+        activeFilterCount={activeFilters.length + (mealPrepMode ? 1 : 0) + (isCravingSearch ? 1 : 0)}
         onSurpriseMe={handleRandomRecipe}
       />
 
@@ -827,7 +829,7 @@ export default function HomeScreen() {
         {mealPrepMode && <MealPrepModeHeader />}
 
         {/* Parallax Hero — Recipe of the Day with match %, macros */}
-        {recipeOfTheDay && !searchQuery && !mealPrepMode ? (
+        {recipeOfTheDay && !searchQuery && !cravingQuery && !mealPrepMode ? (
           <ParallaxHeroSection
             recipe={recipeOfTheDay}
             scrollY={scrollY}
@@ -938,6 +940,15 @@ export default function HomeScreen() {
         handleToggleMealPrepMode={handleToggleMealPrepMode}
         darkFeed={darkFeed}
         onToggleDarkFeed={toggleDarkFeed}
+        onCravingSearch={(query) => {
+          if (query) {
+            router.setParams({ craving: query, search: '' });
+          } else {
+            clearSearch();
+            router.setParams({ craving: '', search: '' });
+          }
+        }}
+        activeCravingQuery={isCravingSearch ? cravingQuery : undefined}
       />
 
       {/* Mood Selector Modal (Home Page 2.0) */}
