@@ -1174,6 +1174,10 @@ export const searchApi = {
   }) => {
     return apiClient.post('/recipes/craving-search', { query, ...filters });
   },
+  // 10D-ii: Log implicit relevance signal from craving search results
+  cravingSearchEvent: (cravingQuery: string, recipeId: string, action: 'tap' | 'save' | 'cook') => {
+    return apiClient.post('/recipes/craving-search/event', { cravingQuery, recipeId, action });
+  },
 };
 
 // AI Recipe API

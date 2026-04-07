@@ -261,7 +261,22 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                 </View>
               </View>
             )}
-            
+
+            {/* Perfect Match Badge — 10D-ii craving search */}
+            {!showTopMatchBadge && (recipe as any).perfectMatch && (
+              <View className="absolute top-4 left-4">
+                <LinearGradient
+                  colors={['#F59E0B', '#F97316']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <Text style={{ fontSize: 11 }}>✨</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700', marginLeft: 3 }}>Perfect Match</Text>
+                </LinearGradient>
+              </View>
+            )}
+
             {/* Recommendation Reason Badge */}
             {recommendationReason && (
               <View className="absolute top-4 right-4">
@@ -577,6 +592,21 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               <Icon name={Icons.STAR} size={11} color="#FFFFFF" accessibilityLabel="Top match" />
               <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', marginLeft: 3 }}>Top Match</Text>
             </View>
+          </View>
+        )}
+
+        {/* Perfect Match badge — 10D-ii craving search */}
+        {!showTopMatchBadge && (recipe as any).perfectMatch && (
+          <View style={{ position: 'absolute', top: 8, left: 8 }} accessibilityLabel="Perfect Match">
+            <LinearGradient
+              colors={['#F59E0B', '#F97316']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, flexDirection: 'row', alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 10 }}>✨</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', marginLeft: 2 }}>Perfect Match</Text>
+            </LinearGradient>
           </View>
         )}
 

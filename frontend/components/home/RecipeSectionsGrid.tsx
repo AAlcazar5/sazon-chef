@@ -97,6 +97,7 @@ function RecipeSectionsGrid({
         const isCollapsed = collapsedSections[section.key];
         const isQuickMeals = section.key === 'quick-meals';
         const isMealPrep = section.key === 'meal-prep';
+        const isMacroOptimized = section.key === 'macro-optimized';
         const isRecipesForYou = section.key === 'quick-easy';
 
         return (
@@ -165,7 +166,7 @@ function RecipeSectionsGrid({
             )}
             {!isCollapsed && section.recipes.length > 0 && (
               <View>
-                {isQuickMeals || isMealPrep ? (
+                {isQuickMeals || isMealPrep || isMacroOptimized ? (
                   /* Carousel view for Quick Meals / Meal Prep */
                   <ScrollView
                     ref={isQuickMeals ? quickMealsScrollViewRef : undefined}

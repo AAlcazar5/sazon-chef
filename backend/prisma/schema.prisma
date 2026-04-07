@@ -61,6 +61,7 @@ model User {
   searchQueries           SearchQuery[]
   pushTokens              PushToken[]
   stripeWebhookEvents     StripeWebhookEvent[]
+  cravingSearchEvents     CravingSearchEvent[]
 
   // Group 6: Email verification
   emailVerified           Boolean  @default(false)
@@ -911,6 +912,21 @@ model CancellationSurvey {
 
   @@index([userId])
   @@map("cancellation_surveys")
+}
+
+// 10D-ii: Craving search event tracking for future relevance scoring
+model CravingSearchEvent {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cravingQuery String
+  recipeId     String
+  action       String   // "tap" | "save" | "cook"
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([cravingQuery])
+  @@map("craving_search_events")
 }
 
 // Push notification device tokens (Group 6: Growth & Marketing)

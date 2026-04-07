@@ -140,13 +140,6 @@ export function useRecipeSearch(options: UseRecipeSearchOptions): UseRecipeSearc
         };
 
         applyFetchResult(result);
-        showToast(
-          data.recipes.length > 0
-            ? `🍕 Found ${data.recipes.length} recipes matching "${query}"`
-            : `😔 No craving matches for "${query}"`,
-          data.recipes.length > 0 ? 'success' : 'error',
-          2000
-        );
       } catch {
         showToast('❌ Craving search failed', 'error');
       }

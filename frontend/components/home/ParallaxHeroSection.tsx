@@ -39,6 +39,10 @@ interface ParallaxHeroSectionProps {
   onDislike: (recipeId: string) => void;
   /** Save to collection */
   onSave: (recipeId: string) => void;
+  /** Override the top-left badge label. Defaults to "RECIPE OF THE DAY". */
+  badgeLabel?: string;
+  /** Override the top-left badge emoji. Defaults to "🌟". */
+  badgeEmoji?: string;
 }
 
 function ParallaxHeroSection({
@@ -52,6 +56,8 @@ function ParallaxHeroSection({
   onLike,
   onDislike,
   onSave,
+  badgeLabel = 'RECIPE OF THE DAY',
+  badgeEmoji = '🌟',
 }: ParallaxHeroSectionProps) {
   // Image translates upward at 40% of scroll speed (parallax depth)
   const imageTranslate = scrollY.interpolate({
@@ -145,7 +151,7 @@ function ParallaxHeroSection({
               borderRadius: 20,
             }}
           >
-            <Text style={{ fontSize: 12 }}>🌟</Text>
+            <Text style={{ fontSize: 12 }}>{badgeEmoji}</Text>
             <Text
               style={{
                 color: '#FFFFFF',
@@ -155,7 +161,7 @@ function ParallaxHeroSection({
                 letterSpacing: 0.5,
               }}
             >
-              RECIPE OF THE DAY
+              {badgeLabel}
             </Text>
           </View>
         </View>
