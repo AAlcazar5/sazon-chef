@@ -1,8 +1,8 @@
 // frontend/components/recipe/IngredientSwapSheet.tsx
 // Bottom sheet showing macro-aware ingredient swap alternatives for 10E.
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, TextInput } from 'react-native';
 import { MotiView } from 'moti';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import BottomSheet from '../ui/BottomSheet';
@@ -77,6 +77,82 @@ function macroPillsForDelta(delta: IngredientSwap['macroDelta'], isDark: boolean
   if (delta.carbs !== undefined) entries.push({ label: 'carbs', value: delta.carbs });
   if (delta.fiber !== undefined) entries.push({ label: 'fiber', value: delta.fiber });
   return entries.filter((e) => e.value !== 0);
+}
+
+// ── Manual Entry ──────────────────────────────────────────────────────────────
+
+function ManualEntry({ isDark, onConfirm }: { isDark: boolean; onConfirm: (value: string) => void }) {
+  const [value, setValue] = useState('');
+  const inputRef = useRef<TextInput>(null);
+
+  const handleConfirm = () => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    onConfirm(trimmed);
+    setValue('');
+  };
+
+  return (
+    <View style={{ marginTop: 8, marginBottom: 4 }}>
+      <Text style={{
+        fontSize: 12,
+        fontWeight: '600',
+        color: isDark ? '#9CA3AF' : '#6B7280',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 8,
+      }}>
+        Enter your own
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <TextInput
+          ref={inputRef}
+          value={value}
+          onChangeText={setValue}
+          placeholder="e.g. almond milk"
+          placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+          onSubmitEditing={handleConfirm}
+          returnKeyType="done"
+          style={{
+            flex: 1,
+            height: 44,
+            borderRadius: 12,
+            paddingHorizontal: 14,
+            fontSize: 15,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#F3F4F6',
+            color: isDark ? '#F9FAFB' : '#111827',
+          }}
+        />
+        <HapticTouchableOpacity
+          onPress={handleConfirm}
+          hapticStyle="medium"
+          pressedScale={0.95}
+          disabled={!value.trim()}
+          style={{
+            height: 44,
+            paddingHorizontal: 16,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: value.trim()
+              ? (isDark ? '#FFB74D' : '#EA580C')
+              : (isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB'),
+          }}
+          accessibilityLabel="Apply custom swap"
+        >
+          <Text style={{
+            fontSize: 14,
+            fontWeight: '700',
+            color: value.trim()
+              ? '#FFFFFF'
+              : (isDark ? '#6B7280' : '#9CA3AF'),
+          }}>
+            Use
+          </Text>
+        </HapticTouchableOpacity>
+      </View>
+    </View>
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -238,6 +314,11 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
             </MotiView>
           );
         })}
+
+        {/* Manual entry */}
+        {!loading && (
+          <ManualEntry isDark={isDark} onConfirm={(value) => onSelectSwap({ alternative: value, macroDelta: {}, flavorNote: 'Custom swap' })} />
+        )}
 
         {/* "I don't have this" — triggers AI conversational substitution */}
         {!loading && onDontHaveThis && (
