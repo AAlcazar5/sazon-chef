@@ -1101,6 +1101,10 @@ export const mealPlanApi = {
     return apiClient.get(`/meal-plan/meals/${mealId}/swap-suggestions`);
   },
 
+  submitTasteFeedback: (mealId: string, data: { tasteRating: number; flavorTags: string[] }) => {
+    return apiClient.post(`/meal-plan/meals/${mealId}/taste-feedback`, data);
+  },
+
   getWeeklyNutritionSummary: (params?: { startDate?: string; endDate?: string }) => {
     return apiClient.get('/meal-plan/weekly-nutrition', { params });
   },

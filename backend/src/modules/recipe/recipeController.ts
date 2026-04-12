@@ -4632,6 +4632,8 @@ export const recipeController = {
       const { calculateDiscriminatoryScore, getUserPreferencesForScoring } = require('../../utils/discriminatoryScoring');
       const { calculateHealthGoalMatch } = require('@/utils/healthGoalScoring');
       const { calculateHealthGrade } = require('@/utils/healthGrade');
+      const { detectFlavorProfile } = require('@/utils/flavorProfile');
+      const { generateRecommendationReason } = require('@/utils/recommendationReason');
 
       // Weather-aware scoring — non-blocking, defaults to null if unavailable
       const { getWeatherContext } = require('@/services/weatherService');
@@ -4709,8 +4711,23 @@ export const recipeController = {
 
           const finalScore = Math.round(Math.min(100, internalScore + cuisineBoost + qualityBoost + weatherNudge));
 
+          // Flavor profile (rules-based, no AI)
+          const flavorProfile = (() => { try { return detectFlavorProfile(recipe.ingredients || [], recipe.cuisine, recipe.title); } catch { return { icons: [], tags: [] }; } })();
+
+          // Recommendation reason (why this recipe was suggested)
+          const recommendationReason = (() => { try { return generateRecommendationReason({
+            recipe: { cuisine: recipe.cuisine, cookTime: recipe.cookTime, protein: recipe.protein, calories: recipe.calories, mealType: recipe.mealType },
+            scoreBreakdown: { discriminatoryScore: discriminatoryScore.total, macroScore: baseScore.macroScore, tasteScore: baseScore.tasteScore, healthGoalScore: healthGoalScore.total, behavioralScore: behavioralScore.total, temporalScore: temporalScore.total, healthGrade: healthGrade.grade, healthGradeScore: healthGrade.score },
+            likedCuisines: (userPreferences?.likedCuisines || []).map((c: any) => c.name),
+            fitnessGoal: physicalProfile?.fitnessGoal || null,
+            isWeekend: temporalContext.isWeekend,
+            mealPeriod: temporalContext.mealPeriod,
+          }); } catch { return 'Picked for you by Sazon'; } })();
+
           return {
             ...recipe,
+            flavorProfile,
+            recommendationReason,
             score: {
               total: finalScore,
               matchPercentage: finalScore,
@@ -4728,6 +4745,8 @@ export const recipeController = {
         } catch {
           return {
             ...recipe,
+            flavorProfile: { icons: [], tags: [] },
+            recommendationReason: 'Picked for you by Sazon',
             score: { total: 50, matchPercentage: 50, macroScore: 50, tasteScore: 50, behavioralScore: 0, temporalScore: 0, enhancedScore: 0, discriminatoryScore: 50, healthGoalScore: 50, healthGrade: 'C', healthGradeScore: 50 },
           };
         }

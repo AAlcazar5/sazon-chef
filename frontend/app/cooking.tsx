@@ -37,6 +37,8 @@ import ShareCardCapture from '../components/celebrations/ShareCardCapture';
 import { LinearGradient } from 'expo-linear-gradient';
 import { HapticChoreography } from '../utils/hapticChoreography';
 import { mealPlanApi } from '../lib/api';
+import TasteSurveySheet from '../components/recipe/TasteSurveySheet';
+import { useVoicePlayback, } from '../hooks/useVoicePlayback';
 
 // --- Types ---
 
@@ -87,7 +89,7 @@ function uid(): string {
 // --- Component ---
 
 export default function CookingScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mealId: mealIdParam } = useLocalSearchParams<{ id: string; mealId?: string }>();
 
   const [recipe, setRecipe] = useState<CookingRecipe | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,15 @@ export default function CookingScreen() {
   // Timer state
   const [timers, setTimers] = useState<CookingTimer[]>([]);
   const [showCoffeeBanner, setShowCoffeeBanner] = useState(false);
+
+  // Taste survey state
+  const [resolvedMealId, setResolvedMealId] = useState<string | null>(mealIdParam || null);
+  const [showTasteSurvey, setShowTasteSurvey] = useState(false);
+
+  // Voice mode state
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [voiceRate, setVoiceRate] = useState(1.0);
+  const voice = useVoicePlayback();
 
   // Track elapsed cooking time
   const startTimeRef = useRef<number>(Date.now());
@@ -173,6 +184,25 @@ export default function CookingScreen() {
     activateKeepAwakeAsync();
     return () => { deactivateKeepAwake(); };
   }, []);
+
+  // Voice mode: speak the current step when it changes
+  useEffect(() => {
+    if (!voiceMode || !recipe) return;
+    const step = recipe.instructions[currentStep];
+    const text = typeof step === 'string' ? step : step?.text;
+    if (!text) return;
+    voice.speak(`Step ${currentStep + 1}. ${text}`);
+  }, [voiceMode, currentStep, recipe]);
+
+  // Sync rate changes to playback
+  useEffect(() => {
+    voice.setRate(voiceRate);
+  }, [voiceRate]);
+
+  // Stop when voice mode is turned off
+  useEffect(() => {
+    if (!voiceMode) voice.stop();
+  }, [voiceMode]);
 
   // --- Timer suggestions: derived from current step text, no state side-effects ---
   // Computed per-render so there's no useEffect that can run twice (Strict Mode safe).
@@ -268,7 +298,7 @@ export default function CookingScreen() {
     // Record cooking (non-blocking)
     recipeApi.recordCook(recipe.id).catch(() => {});
 
-    // Fetch next meal from today's plan (non-blocking)
+    // Fetch next meal from today's plan + resolve mealId for taste survey (non-blocking)
     mealPlanApi.getWeeklyPlan().then((res: any) => {
       const days = res?.data?.days || res?.data?.data?.days || [];
       if (Array.isArray(days)) {
@@ -277,6 +307,12 @@ export default function CookingScreen() {
         const meals = todayPlan?.meals || [];
         const next = meals.find((m: any) => !m.completed && m.recipe?.title !== recipe.title);
         if (next?.recipe?.title) setNextMealName(next.recipe.title);
+
+        // Resolve mealId for taste survey if not passed as param
+        if (!resolvedMealId) {
+          const matchingMeal = meals.find((m: any) => m.recipeId === recipe.id || m.recipe?.id === recipe.id);
+          if (matchingMeal?.id) setResolvedMealId(matchingMeal.id);
+        }
       }
     }).catch(() => {});
 
@@ -482,6 +518,28 @@ export default function CookingScreen() {
             userPhotoUri={userPhotoUri ?? undefined}
           />
         </CelebrationOverlay>
+
+        {/* Rate this meal — shows after celebration */}
+        {resolvedMealId && !showTasteSurvey && (
+          <View style={{ position: 'absolute', bottom: 100, alignSelf: 'center' }}>
+            <HapticTouchableOpacity
+              onPress={() => setShowTasteSurvey(true)}
+              hapticStyle="light"
+              accessibilityLabel="Rate this meal"
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>⭐</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>Rate This Meal</Text>
+            </HapticTouchableOpacity>
+          </View>
+        )}
+
+        <TasteSurveySheet
+          visible={showTasteSurvey}
+          mealId={resolvedMealId}
+          isDark={true}
+          onClose={() => setShowTasteSurvey(false)}
+        />
 
         <CoffeeBanner
           visible={showCoffeeBanner}
@@ -694,7 +752,34 @@ export default function CookingScreen() {
 
             <HapticTouchableOpacity
               onPress={() => {
-                setShowIngredients((s) => !s);
+                setVoiceMode((v) => !v);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }}
+              hapticStyle="light"
+              accessibilityLabel={voiceMode ? 'Turn off voice mode' : 'Turn on voice mode — reads steps aloud'}
+              accessibilityState={{ selected: voiceMode }}
+              className="flex-row items-center justify-center py-2.5 px-3 rounded-xl border"
+              style={{
+                borderColor: voiceMode ? '#60A5FA' : '#374151',
+                backgroundColor: voiceMode ? 'rgba(96,165,250,0.12)' : 'transparent',
+              }}
+            >
+              <Ionicons
+                name={voiceMode ? 'volume-high' : 'volume-medium-outline'}
+                size={16}
+                color={voiceMode ? '#60A5FA' : '#9CA3AF'}
+              />
+              <Text
+                className="font-semibold text-xs ml-1.5"
+                style={{ color: voiceMode ? '#60A5FA' : '#9CA3AF' }}
+              >
+                {voiceMode ? 'Voice On' : 'Voice'}
+              </Text>
+            </HapticTouchableOpacity>
+
+            <HapticTouchableOpacity
+              onPress={() => {
+                setShowIngredients((v) => !v);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               hapticStyle="light"
@@ -721,6 +806,125 @@ export default function CookingScreen() {
               )}
             </HapticTouchableOpacity>
           </View>
+
+          {/* Voice playback controls + speed — only visible when voice mode is on */}
+          {voiceMode && (
+            <View style={{ paddingHorizontal: 4 }}>
+              {/* Prev Step / Rewind 5s / Pause-Play */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+                <HapticTouchableOpacity
+                  onPress={goPrev}
+                  hapticStyle="light"
+                  disabled={currentStep === 0}
+                  accessibilityLabel="Previous step"
+                  style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'rgba(96,165,250,0.12)',
+                    opacity: currentStep === 0 ? 0.3 : 1,
+                  }}
+                >
+                  <Ionicons name="play-skip-back" size={18} color="#60A5FA" />
+                </HapticTouchableOpacity>
+
+                <HapticTouchableOpacity
+                  onPress={() => voice.seekBack(5)}
+                  hapticStyle="light"
+                  disabled={voice.engine === 'system'}
+                  accessibilityLabel="Rewind 5 seconds"
+                  style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'rgba(96,165,250,0.12)',
+                    opacity: voice.engine === 'system' ? 0.3 : 1,
+                  }}
+                >
+                  <View style={{ alignItems: 'center' }}>
+                    <Ionicons name="play-back" size={16} color="#60A5FA" />
+                    <Text style={{ color: '#60A5FA', fontSize: 8, fontWeight: '800', marginTop: -1 }}>5s</Text>
+                  </View>
+                </HapticTouchableOpacity>
+
+                {voice.isLoading ? (
+                  <View
+                    style={{
+                      width: 52, height: 52, borderRadius: 26,
+                      alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: 'rgba(96,165,250,0.25)',
+                    }}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={22} color="#60A5FA" />
+                  </View>
+                ) : (
+                  <HapticTouchableOpacity
+                    onPress={voice.isPaused ? voice.resume : voice.pause}
+                    hapticStyle="medium"
+                    accessibilityLabel={voice.isPaused ? 'Resume voice' : 'Pause voice'}
+                    style={{
+                      width: 52, height: 52, borderRadius: 26,
+                      alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: '#60A5FA',
+                    }}
+                  >
+                    <Ionicons name={voice.isPaused ? 'play' : 'pause'} size={22} color="#fff" />
+                  </HapticTouchableOpacity>
+                )}
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={{ color: '#60A5FA', fontSize: 11, fontWeight: '600', flex: 1 }}>
+                  Speed
+                </Text>
+                <Text style={{ color: '#60A5FA', fontSize: 11, fontWeight: '700' }}>
+                  {voiceRate <= 0.6 ? 'Slow' : voiceRate >= 1.3 ? 'Fast' : 'Normal'}
+                  {' '}({voiceRate.toFixed(1)}×)
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ color: '#6B7280', fontSize: 11 }}>🐢</Text>
+                <View style={{ flex: 1, height: 28, justifyContent: 'center' }}>
+                  <View
+                    style={{ height: 4, backgroundColor: '#374151', borderRadius: 2 }}
+                    onStartShouldSetResponder={() => true}
+                    onResponderGrant={(e) => {
+                      const x = e.nativeEvent.locationX;
+                      const width = e.nativeEvent.target;
+                      // handled by touch move
+                    }}
+                    onLayout={(e) => {
+                      // width available for gesture math
+                    }}
+                  />
+                  {/* Use simple TouchableOpacity segments for speed presets */}
+                  <View style={{ position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', top: -10 }}>
+                    {[0.5, 0.75, 1.0, 1.5, 2.0].map((rate) => (
+                      <HapticTouchableOpacity
+                        key={rate}
+                        onPress={() => setVoiceRate(rate)}
+                        hapticStyle="light"
+                        accessibilityLabel={`Set speed to ${rate}x`}
+                        style={{
+                          width: 28, height: 28, borderRadius: 14,
+                          alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: Math.abs(voiceRate - rate) < 0.05
+                            ? '#60A5FA'
+                            : 'rgba(96,165,250,0.15)',
+                        }}
+                      >
+                        <Text style={{
+                          fontSize: 9, fontWeight: '700',
+                          color: Math.abs(voiceRate - rate) < 0.05 ? '#fff' : '#60A5FA',
+                        }}>
+                          {rate}×
+                        </Text>
+                      </HapticTouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <Text style={{ color: '#6B7280', fontSize: 11 }}>🐇</Text>
+              </View>
+            </View>
+          )}
 
           {/* Prev / Next */}
           {!showIngredients && (

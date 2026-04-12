@@ -3,7 +3,7 @@
 // Used for cooking complete, shopping complete, and paywall conversion peaks.
 
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Animated, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedLottieMascot from '../mascot/AnimatedLottieMascot';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -250,7 +250,12 @@ export default function CelebrationOverlay({
 
           {/* Stat cards */}
           {stats && stats.length > 0 && (
-            <View style={styles.statsRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.statsRow}
+              style={styles.statsScroll}
+            >
               {stats.map((stat, i) => (
                 <Animated.View
                   key={i}
@@ -267,7 +272,7 @@ export default function CelebrationOverlay({
                   <Text style={styles.statLabel}>{stat.label}</Text>
                 </Animated.View>
               ))}
-            </View>
+            </ScrollView>
           )}
 
           {/* Custom children */}
@@ -334,10 +339,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
+  statsScroll: {
+    marginTop: 24,
+    alignSelf: 'stretch',
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   statsRow: {
     flexDirection: 'row',
-    marginTop: 24,
     gap: 12,
+    paddingHorizontal: 4,
   },
   statCard: {
     alignItems: 'center',

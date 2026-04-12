@@ -1724,26 +1724,33 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *The current feedback loop is: like/dislike + star rating. But "I liked it" doesn't tell the engine WHY. Was it the spice? The texture? The cuisine? Better taste feedback = dramatically better recommendations.*
 
-* [ ] **Post-cook taste survey (2 taps, not a form)** — After marking a meal as cooked, show a quick 2-question overlay (not a modal wall):
+* [x] **Post-cook taste survey (2 taps, not a form)** ✅ — `TasteSurveySheet` bottom sheet shown after cooking completion via "Rate This Meal" button.
 
-  **Question 1: "How did it taste?"** — 5-point emoji scale: 😐 → 😊 → 🤤 (replaces star rating for cooked meals)
+  **Question 1: "How did it taste?"** — 5-emoji scale (😐 😕 😊 😄 🤤) mapped to tasteRating 1-5
 
-  **Question 2: "What stood out?"** — Quick-tap flavor tags (select 1-3):
+  **Question 2: "What stood out?"** — Quick-tap flavor tag chips (select 1-3):
   `Too bland` · `Perfect spice` · `Great texture` · `Too salty` · `Loved the sauce` · `Kid-approved` · `Would make again` · `Needs more protein` · `Too much effort` · `Great leftovers`
 
-  * 📍 Backend: new fields on `Meal` or `RecipeFeedback`: `tasteRating` (1-5), `flavorTags` (string[] — stores selected tags)
-  * 📍 These feed directly into behavioral scoring: if user tags "Too bland" on 3 recipes from the same cuisine, reduce that cuisine's score. If "Perfect spice" appears on Thai + Korean + Indian, boost spicy cuisines.
-  * 📍 "Would make again" is the strongest positive signal — weight it 2x in scoring
+  * 📍 Backend: `tasteRating Int?` + `flavorTags String?` (JSON) on `Meal` model ✅; `POST /api/meal-plan/meals/:mealId/taste-feedback` endpoint in `tasteFeedbackController.ts` ✅
+  * 📍 Syncs to `RecipeFeedback`: tasteRating >= 4 → liked=true, <= 2 → disliked=true, always consumed=true ✅
+  * 📍 Behavioral scoring integration deferred to future iteration (requires taste-tag aggregation per cuisine — data collection ships first)
+  * 📍 "Would make again" 2x weight deferred to scoring pass when enough data collected
 
-* [ ] **Flavor profile on recipe cards** — Show subtle flavor icons on recipe cards in the home feed:
+* [x] **Flavor profile on recipe cards** ✅ — `flavorProfile.ts` rules engine detects flavors from ingredients + cuisine (no AI):
   🌶️ (spicy), 🧀 (cheesy/rich), 🥗 (light/fresh), 🍯 (sweet), 🔥 (smoky), ❄️ (cold/refreshing)
-  * 📍 Auto-detected from ingredients + cuisine via a simple rules engine (not AI per-recipe)
-  * 📍 Helps users browse by flavor at a glance — "I want something spicy, let me scan for 🌶️"
+  * 📍 `detectFlavorProfile()` — keyword matching for 6 flavor categories, spicy cuisine set, max 3 icons ✅
+  * 📍 Icons rendered on `RecipeCard` (list + grid/carousel variants) after macro row ✅
+  * 📍 Returned in home feed API response via `scoreRecipe()` ✅
 
-* [ ] **"Why this recipe?" transparency** — When tapping a recommended recipe from the home feed, show a one-line reason: "Because you loved Thai food last week" or "High protein + under 20 min" or "You haven't tried Peruvian yet — adventure time!" Makes the algorithm feel like a friend, not a black box.
-  * 📍 Backend: add `recommendationReason: string` to recipe response when served from the home feed. Generate from the scoring breakdown (highest-weight factor → reason text).
+* [x] **"Why this recipe?" transparency** ✅ — `recommendationReason.ts` generates one-liner from scoring breakdown:
+  * 📍 Priority-ranked candidates: liked cuisine (90), high protein for muscle gain (85), low cal for weight loss (85), behavioral history (80), weekend adventure (75), quick cook (70), macro match (65), health grade A (60), temporal (55), fallback "Picked for you by Sazon"
+  * 📍 Displayed as a purple ✨ chip on recipe detail screen (modal.tsx) — hidden for generic fallback and non-recommendation contexts ✅
 
-* [ ] **Test:** Taste survey shows after cooking completion; flavor tags persist to RecipeFeedback; "Would make again" tag boosts recipe's behavioral score; flavor profile icons render on recipe cards; recommendation reason string is non-empty for home feed recipes
+* [x] **Test:** ✅
+  - `flavorProfile.test.ts` (17 tests): spicy detection (cuisine + ingredient), cheesy vs rich, fresh, sweet, smoky, cold/refreshing, multiple flavors, max 3 cap, string[] format, edge cases
+  - `recommendationReason.test.ts` (9 tests): liked cuisine, high protein, low calorie, quick cook, behavioral, weekend adventure, fallback, priority ordering, non-empty guarantee
+  - `tasteFeedback.test.ts` (9 tests): 400 on missing/invalid tasteRating, 404 on bad meal, saves rating + tags, defaults empty tags, updates vs creates RecipeFeedback, liked=true when >= 4, skips feedback for custom meals
+  - All 837 backend tests pass
 
 ---
 

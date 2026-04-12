@@ -25,6 +25,7 @@ import {
   deleteTemplate
 } from './mealPlanTemplateController';
 import { duplicateMeals } from './mealPlanDuplicateController';
+import { submitTasteFeedback } from './tasteFeedbackController';
 import { findRecipes } from './mealPlanFindRecipesController';
 import {
   getRecurringMeals,
@@ -68,6 +69,7 @@ router.post('/quick-log', quickLogMeal);
 // Meal enhancement routes
 router.put('/meals/:mealId/complete', updateMealCompletion);
 router.put('/meals/:mealId/notes', updateMealNotes);
+router.post('/meals/:mealId/taste-feedback', submitTasteFeedback);
 router.get('/meals/:mealId/swap-suggestions', getMealSwapSuggestions);
 router.get('/weekly-nutrition', getWeeklyNutritionSummary);
 
