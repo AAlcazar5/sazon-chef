@@ -1064,6 +1064,20 @@ export default function RecipeModal() {
             </View>
           )}
 
+          {/* "Why this recipe?" one-liner (only for home-feed recommendations) */}
+          {!!(recipe as any).recommendationReason && (recipe as any).recommendationReason !== 'Picked for you by Sazon' && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', marginBottom: 8,
+              paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100, alignSelf: 'flex-start',
+              backgroundColor: isDark ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.08)',
+            }}>
+              <Text style={{ fontSize: 12, marginRight: 4 }}>✨</Text>
+              <Text style={{ fontSize: 12, color: isDark ? '#C084FC' : '#7C3AED', fontWeight: '500' }}>
+                {(recipe as any).recommendationReason}
+              </Text>
+            </View>
+          )}
+
           {/* Macro pills row — pastel tinted */}
           <View style={{ marginBottom: 12 }}>
             <MacroPillsRow

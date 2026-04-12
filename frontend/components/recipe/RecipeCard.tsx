@@ -155,6 +155,19 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
     );
   };
 
+  // Flavor profile icons (from backend rules engine)
+  const flavorIcons = (recipe as any).flavorProfile?.icons as string[] | undefined;
+  const renderFlavorIcons = () => {
+    if (!flavorIcons || flavorIcons.length === 0) return null;
+    return (
+      <View style={{ flexDirection: 'row', gap: 4, marginBottom: 6 }}>
+        {flavorIcons.slice(0, 3).map((icon: string, i: number) => (
+          <Text key={i} style={{ fontSize: 14 }} accessibilityLabel={`flavor: ${(recipe as any).flavorProfile?.tags?.[i] || ''}`}>{icon}</Text>
+        ))}
+      </View>
+    );
+  };
+
   // Render based on variant
   if (variant === 'featured') {
   return (
@@ -414,6 +427,9 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               </View>
             )}
           </View>
+
+          {/* Flavor Icons */}
+          {renderFlavorIcons()}
 
           {/* Description */}
           {showDescription && recipe.description && (
@@ -701,6 +717,15 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               </View>
             ))}
           </View>
+
+          {/* Flavor Icons */}
+          {flavorIcons && flavorIcons.length > 0 && (
+            <View style={{ flexDirection: 'row', gap: 3, marginBottom: 4 }}>
+              {flavorIcons.slice(0, 3).map((icon: string, i: number) => (
+                <Text key={i} style={{ fontSize: 12 }}>{icon}</Text>
+              ))}
+            </View>
+          )}
 
           {/* Action buttons */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

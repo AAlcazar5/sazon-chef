@@ -100,7 +100,9 @@ function RootLayoutNav() {
       <SplashScreen
         onFinish={() => {
           setShowSplash(false);
-          ExpoSplashScreen.hideAsync().catch(() => {});
+          ExpoSplashScreen.hideAsync().catch((_e: unknown) => {
+            // Harmless in dev: fires when native splash wasn't registered (hot reload)
+          });
         }}
         duration={2000}
       />

@@ -50,6 +50,16 @@ export function CoffeeBanner({ visible, onDismiss }: CoffeeBannerProps) {
             end={{ x: 1, y: 1 }}
             style={styles.card}
           >
+            {/* Close button */}
+            <HapticTouchableOpacity
+              onPress={onDismiss}
+              hapticStyle="light"
+              accessibilityLabel="Close"
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeText}>✕</Text>
+            </HapticTouchableOpacity>
+
             {/* Mascot on the right */}
             <View style={styles.mascotContainer}>
               <LogoMascot expression="chef-kiss" size="small" />
@@ -111,6 +121,23 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     marginRight: 16,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  closeText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontWeight: '600',
   },
   mascotContainer: {
     alignItems: 'center',

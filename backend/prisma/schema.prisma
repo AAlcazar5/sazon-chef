@@ -493,6 +493,10 @@ model Meal {
   rating Int?
   notes  String?
 
+  // 10F: Taste feedback
+  tasteRating Int?      // 1-5 emoji scale
+  flavorTags  String?   // JSON array of selected tags (e.g. '["Perfect spice","Great texture"]')
+
   isFromRecurring   Boolean @default(false)
   recurringMealId   String?
 

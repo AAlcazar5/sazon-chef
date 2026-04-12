@@ -134,6 +134,9 @@ export interface Recipe {
   updatedAt?: string;
   // 10D-ii: craving search relevance
   perfectMatch?: boolean;
+  // 10F: flavor profile + recommendation reason
+  flavorProfile?: { icons: string[]; tags: string[] };
+  recommendationReason?: string;
 }
 
 export interface SuggestedRecipe extends Recipe {
