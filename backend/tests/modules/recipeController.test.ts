@@ -749,6 +749,135 @@ describe('Recipe Controller', () => {
       await recipeController.forkRecipe(mockReq as Request, mockRes as Response);
       expect(mockRes.status).toHaveBeenCalledWith(500);
     });
+
+    test('fork applies substitutions, sets parentRecipeId, adjusts macros, and marks source as user-modified', async () => {
+      (prisma.recipe.findUnique as jest.Mock)
+        .mockResolvedValueOnce(mockOriginal)
+        .mockResolvedValueOnce({ ...mockOriginal, id: 'fork-1', isUserCreated: true, source: 'user-modified' });
+      (prisma.recipe.create as jest.Mock).mockResolvedValue({ id: 'fork-1', ingredients: [] });
+      (prisma.recipeInstruction.create as jest.Mock).mockResolvedValue({});
+      (prisma.savedRecipe.create as jest.Mock).mockResolvedValue({ id: 'saved-1' });
+
+      mockReq.params = { id: 'orig-1' };
+      mockReq.body = {
+        substitutions: {
+          '1 lb chicken': '1 lb firm tofu, cubed',
+        },
+        macroAdjustments: {
+          calories: -50,
+          protein: -10,
+          carbs: 3,
+          fat: -5,
+          fiber: 2,
+        },
+        instructionChanges: [
+          { step: 2, text: 'Add tofu cubes gently and stir' },
+        ],
+      };
+
+      await recipeController.forkRecipe(mockReq as Request, mockRes as Response);
+
+      const createCall = (prisma.recipe.create as jest.Mock).mock.calls[0][0];
+      // Lineage tracked
+      expect(createCall.data.parentRecipeId).toBe('orig-1');
+      // Source flag flipped to user-modified when swaps are applied
+      expect(createCall.data.source).toBe('user-modified');
+      // Macros adjusted
+      expect(createCall.data.calories).toBe(450 - 50);
+      expect(createCall.data.protein).toBe(35 - 10);
+      expect(createCall.data.carbs).toBe(30 + 3);
+      expect(createCall.data.fat).toBe(18 - 5);
+      expect(createCall.data.fiber).toBe(4 + 2);
+
+      // Substituted ingredient used replacement text
+      const ingredientTexts = createCall.data.ingredients.create.map((i: any) => i.text);
+      expect(ingredientTexts).toContain('1 lb firm tofu, cubed');
+      expect(ingredientTexts).toContain('1 cup basil'); // unchanged ingredient preserved
+
+      // Instruction change applied to the right step
+      const instructionCalls = (prisma.recipeInstruction.create as jest.Mock).mock.calls;
+      const step2Call = instructionCalls.find((c) => c[0].data.step === 2);
+      expect(step2Call[0].data.text).toBe('Add tofu cubes gently and stir');
+      // Step 1 preserved
+      const step1Call = instructionCalls.find((c) => c[0].data.step === 1);
+      expect(step1Call[0].data.text).toBe('Heat oil');
+    });
+
+    test('fork without substitutions keeps source as user-created and still sets parentRecipeId', async () => {
+      (prisma.recipe.findUnique as jest.Mock)
+        .mockResolvedValueOnce(mockOriginal)
+        .mockResolvedValueOnce({ ...mockOriginal, id: 'fork-2' });
+      (prisma.recipe.create as jest.Mock).mockResolvedValue({ id: 'fork-2', ingredients: [] });
+      (prisma.recipeInstruction.create as jest.Mock).mockResolvedValue({});
+      (prisma.savedRecipe.create as jest.Mock).mockResolvedValue({ id: 'saved-2' });
+
+      mockReq.params = { id: 'orig-1' };
+      mockReq.body = {};
+
+      await recipeController.forkRecipe(mockReq as Request, mockRes as Response);
+
+      const createCall = (prisma.recipe.create as jest.Mock).mock.calls[0][0];
+      expect(createCall.data.source).toBe('user-created');
+      expect(createCall.data.parentRecipeId).toBe('orig-1');
+      // Macros unchanged when no adjustments
+      expect(createCall.data.calories).toBe(450);
+      expect(createCall.data.protein).toBe(35);
+    });
+
+    test('fork clamps negative macros to zero', async () => {
+      (prisma.recipe.findUnique as jest.Mock)
+        .mockResolvedValueOnce(mockOriginal)
+        .mockResolvedValueOnce({ ...mockOriginal, id: 'fork-3' });
+      (prisma.recipe.create as jest.Mock).mockResolvedValue({ id: 'fork-3', ingredients: [] });
+      (prisma.recipeInstruction.create as jest.Mock).mockResolvedValue({});
+      (prisma.savedRecipe.create as jest.Mock).mockResolvedValue({ id: 'saved-3' });
+
+      mockReq.params = { id: 'orig-1' };
+      mockReq.body = {
+        substitutions: { '1 lb chicken': 'water' },
+        macroAdjustments: { calories: -9999, protein: -9999, carbs: -9999, fat: -9999, fiber: -9999 },
+      };
+
+      await recipeController.forkRecipe(mockReq as Request, mockRes as Response);
+
+      const createCall = (prisma.recipe.create as jest.Mock).mock.calls[0][0];
+      expect(createCall.data.calories).toBe(0);
+      expect(createCall.data.protein).toBe(0);
+      expect(createCall.data.carbs).toBe(0);
+      expect(createCall.data.fat).toBe(0);
+      expect(createCall.data.fiber).toBe(0);
+    });
+  });
+
+  describe('askSubstitution', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('returns 400 when question is missing', async () => {
+      mockReq.params = { id: 'recipe-1' };
+      mockReq.body = {};
+      await recipeController.askSubstitution(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+    });
+
+    test('returns 400 when question is empty string', async () => {
+      mockReq.params = { id: 'recipe-1' };
+      mockReq.body = { question: '   ' };
+      await recipeController.askSubstitution(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+    });
+
+    test('returns 404 when recipe not found', async () => {
+      (prisma.recipe.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.userPreferences.findUnique as jest.Mock).mockResolvedValue(null);
+      mockReq.params = { id: 'missing' };
+      mockReq.body = { question: 'Make this dairy-free' };
+
+      await recipeController.askSubstitution(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+    });
   });
 
   describe('getSmartCollections', () => {

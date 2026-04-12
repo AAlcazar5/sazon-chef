@@ -232,7 +232,12 @@ model Recipe {
   isUserCreated Boolean @default(false)
 
   // Recipe source tracking
-  source String @default("database") // "database", "user-created", "ai-generated", "external"
+  source String @default("database") // "database", "user-created", "ai-generated", "external", "user-modified"
+
+  // Fork lineage — tracks which recipe this was forked/modified from
+  parentRecipeId String?
+  parentRecipe   Recipe?  @relation("RecipeForks", fields: [parentRecipeId], references: [id], onDelete: SetNull)
+  forks          Recipe[] @relation("RecipeForks")
 
   // External data integration (Phase 5)
   externalId       String? // ID from external source (e.g., Spoonacular)

@@ -102,6 +102,10 @@ interface VisualIngredientListProps {
   isDark: boolean;
   /** Called when user taps the swap icon on an ingredient row */
   onSwapIngredient?: (ingredientText: string) => void;
+  /** Map of original ingredient text → swapped text (from activeSwaps) */
+  activeSwaps?: Record<string, string>;
+  /** Called when user taps "undo" on a swapped ingredient */
+  onUndoSwap?: (ingredientText: string) => void;
 }
 
 // ── Component ──────────────────────────────────────────────
@@ -111,6 +115,8 @@ export default function VisualIngredientList({
   baseServings = 4,
   isDark,
   onSwapIngredient,
+  activeSwaps,
+  onUndoSwap,
 }: VisualIngredientListProps) {
   const [servings, setServings] = useState(baseServings);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('us');
@@ -308,6 +314,11 @@ export default function VisualIngredientList({
           {section.items.map((item, iIdx) => {
             const globalIdx = sections.slice(0, sIdx).reduce((s, sec) => s + sec.items.length, 0) + iIdx;
             const scaledAmount = convertToSystem(scaleAmount(item.amount), unitSystem);
+            const swappedText = activeSwaps?.[item.text];
+            const isSwapped = !!swappedText;
+            const swappedParsed = isSwapped ? parseIngredient(swappedText!) : null;
+            const displayName = isSwapped ? (swappedParsed!.name || swappedText!) : (item.name || item.text);
+            const displayEmoji = isSwapped ? getIngredientEmoji(swappedText!) : item.emoji;
 
             return (
               <MotiView
@@ -321,24 +332,42 @@ export default function VisualIngredientList({
                   alignItems: 'center',
                   minHeight: 48,
                   paddingVertical: 8,
+                  paddingHorizontal: isSwapped ? 8 : 0,
                   borderBottomWidth: 1,
                   borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                  backgroundColor: isSwapped
+                    ? (isDark ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.06)')
+                    : 'transparent',
+                  borderRadius: isSwapped ? 12 : 0,
                 }}>
                   {/* Emoji */}
                   <Text style={{ fontSize: 18, width: 28, textAlign: 'center', marginRight: 10 }}>
-                    {item.emoji}
+                    {displayEmoji}
                   </Text>
                   {/* Name */}
-                  <Text style={{
-                    flex: 1,
-                    fontSize: 15,
-                    fontWeight: '400',
-                    color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                  }} numberOfLines={2}>
-                    {item.name || item.text}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{
+                      fontSize: 15,
+                      fontWeight: isSwapped ? '500' : '400',
+                      color: isSwapped
+                        ? (isDark ? '#86EFAC' : '#16A34A')
+                        : (isDark ? DarkColors.text.primary : Colors.text.primary),
+                    }} numberOfLines={2}>
+                      {displayName}
+                    </Text>
+                    {isSwapped && (
+                      <Text style={{
+                        fontSize: 12,
+                        color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)',
+                        textDecorationLine: 'line-through',
+                        marginTop: 1,
+                      }} numberOfLines={1}>
+                        {item.name || item.text}
+                      </Text>
+                    )}
+                  </View>
                   {/* Amount — right-aligned, bold */}
-                  {scaledAmount ? (
+                  {scaledAmount && !isSwapped ? (
                     <Text style={{
                       fontSize: 15,
                       fontWeight: '600',
@@ -349,8 +378,28 @@ export default function VisualIngredientList({
                       {scaledAmount}
                     </Text>
                   ) : null}
-                  {/* Swap icon */}
-                  {onSwapIngredient && (
+                  {/* Undo swap button (when swapped) */}
+                  {isSwapped && onUndoSwap && (
+                    <HapticTouchableOpacity
+                      onPress={() => onUndoSwap(item.text)}
+                      hapticStyle="light"
+                      pressedScale={0.9}
+                      style={{
+                        marginLeft: 8,
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                      }}
+                      accessibilityLabel={`Undo swap for ${item.name || item.text}`}
+                    >
+                      <Text style={{ fontSize: 13 }}>↩️</Text>
+                    </HapticTouchableOpacity>
+                  )}
+                  {/* Swap icon (when not swapped) */}
+                  {!isSwapped && onSwapIngredient && (
                     <HapticTouchableOpacity
                       onPress={() => onSwapIngredient(item.text)}
                       hapticStyle="light"
