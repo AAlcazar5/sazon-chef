@@ -1689,17 +1689,20 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 > **NOTE — Future feature with significant complexity.** The idea: when a user doesn't have an ingredient or wants to change something, they can ask Sazon (conversationally or via a swap button) for substitutions. Accepting a substitution creates a personal copy ("fork") of the recipe in their cookbook with the changes applied, preserving the original recipe untouched.
 
-* [ ] **"I don't have this" per-ingredient action** — Alongside the existing swap icon, add an "I don't have this" option. Sazon suggests replacements based on what's commonly available + the user's pantry (if tracked). User picks a substitute → triggers the fork flow.
+* [x] **"I don't have this" per-ingredient action** ✅ — Added an "I don't have this" option inside `IngredientSwapSheet` (below the curated swaps list). Tapping it closes the swap sheet and opens `AskSazonSheet` pre-filled with `"I don't have {ingredient}"`, auto-submitting the question. (Pantry integration deferred — suggestions are currently generic via AI.)
 
-* [ ] **Conversational substitution request** — From the recipe detail screen, a "Ask Sazon" button opens a compact chat-like input: "I don't have coconut milk, what can I use?" or "Make this dairy-free" or "I only have an air fryer, not an oven." Sazon responds with specific substitutions + adjusted instructions where needed.
-  * 📍 Backend: `POST /api/recipes/:id/ask-substitution` — sends recipe context + user question to AI, returns suggested edits as a structured diff (ingredient swaps + instruction changes)
-  * 📍 Frontend: chat-style UI anchored to recipe detail, shows Sazon's suggestion with "Apply Changes" CTA
+* [x] **Conversational substitution request** ✅ — `AskSazonSheet` is a chat-style bottom sheet with a free-text input. Users can ask "I don't have coconut milk, what can I use?" or "Make this dairy-free" and Sazon returns a structured diff.
+  * 📍 Backend: `POST /api/recipes/:id/ask-substitution` ✅ — `substitutionService.ts` sends recipe context (title, cuisine, ingredients, instructions, macros) + user question + dietary restrictions to AI, parses back a validated `SubstitutionDiff` with `ingredientChanges`, `instructionChanges`, `macroImpact`, and a friendly `summary`. Rejects AI-hallucinated ingredients/steps; partial-match normalization maps loose AI text back to exact recipe ingredients.
+  * 📍 Frontend: `AskSazonSheet.tsx` ✅ — input bar + send button, loading state, result view showing strikethrough→new ingredient swaps, updated instruction steps (blue cards with step number), macro impact pills (green/orange), `BrandButton` "Apply Changes" CTA, and a disclaimer noting that applying creates a personal copy.
 
-* [ ] **Fork-on-edit ("Save My Version")** — When the user accepts any substitution (from swap engine, "I don't have this", or conversational), the system creates a forked copy:
-  * 📍 Reuses `POST /api/recipes/:id/fork` from 10A editing
-  * 📍 Forked recipe gets `source: 'user-modified'`, `parentRecipeId` pointing to the original, and `isUserCreated: true`
-  * 📍 The fork includes ALL accepted substitutions applied, with updated macros recalculated
-  * 📍 Original recipe remains unchanged in the database and for other users
+* [x] **Fork-on-edit ("Save My Version")** ✅ — When the user accepts substitutions from the swap engine, "I don't have this", or the conversational flow, `handleSaveMyVersion` in `modal.tsx` now passes the full state to the fork endpoint.
+  * 📍 Extended `POST /api/recipes/:id/fork` ✅ — accepts `substitutions: Record<originalText, replacementText>`, `macroAdjustments`, and `instructionChanges`. Applies all substitutions atomically in one fork operation (no per-swap forks).
+  * 📍 Forked recipe gets `source: 'user-modified'` (when swaps applied) or `user-created` (plain fork), `parentRecipeId` pointing to the original, and `isUserCreated: true` ✅
+  * 📍 Prisma schema: added `parentRecipeId String?` + self-relation `parentRecipe`/`forks` on `Recipe` model; `onDelete: SetNull` so deleting an original doesn't cascade-delete user forks ✅
+  * 📍 The fork includes ALL accepted substitutions applied, with macros recalculated and clamped to ≥0 ✅
+  * 📍 Instruction changes from the AI diff are merged by step number — only changed steps are updated; untouched steps are preserved verbatim ✅
+  * 📍 Original recipe remains unchanged in the database and for other users ✅
+  * 📍 Frontend `VisualIngredientList` now accepts `activeSwaps` + `onUndoSwap` props and renders swapped ingredients with a green tint, the new name, a strikethrough original below, and a ↩️ undo button ✅
 
 * **⚠️ Complexity notes:**
   - **Fork divergence:** If the original recipe is updated (e.g., corrected macros, better instructions), the user's fork won't get those updates. Need to decide: (a) forks are fully independent (simple, current plan), (b) forks track upstream changes and surface "Original recipe was updated — review changes?" (complex, deferred). Start with (a).
@@ -1709,7 +1712,11 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   - **Pantry integration dependency:** "I don't have this" is most powerful when connected to a pantry/inventory system (knows what the user DOES have). Without it, suggestions are generic. Can launch with generic suggestions first, enhance later if pantry tracking is added.
   - **AI cost per request:** Conversational substitution hits the AI on every question. Rate-limit to prevent abuse, and cache common substitution Q&A pairs (e.g., "dairy-free swap for Greek yogurt" is asked constantly — cache the answer).
 
-* [ ] **Test:** Accepting a substitution creates a forked recipe with `parentRecipeId` set; forked recipe has updated ingredients and recalculated macros; original recipe is unchanged after fork; conversational substitution returns structured diff with ingredient + instruction changes; multiple swaps in one session produce a single fork (not one per swap); fork appears in cookbook with visual link to original
+* [x] **Test:** ✅
+  - `substitutionService.test.ts` (7 tests): parses ingredient-only swaps, parses instruction changes, rejects AI-hallucinated ingredients, rejects invalid step numbers, accepts partial matches and normalizes to exact original text, handles malformed JSON safely, threads dietary restrictions into the prompt
+  - `recipeController.test.ts` forkRecipe (7 tests): 400/404 guards, original fork preserves data, **substitution fork sets `parentRecipeId`**, **adjusts macros**, **flips source to `user-modified`**, **applies replacement ingredient text**, **applies instruction changes by step number**, plain fork without swaps keeps `user-created` source, **macros clamp to ≥0** on large negative deltas
+  - `recipeController.test.ts` askSubstitution (3 tests): 400 when question missing/empty, 404 when recipe not found
+  - All 60 tests pass: `substitutionService` (7), `ingredientSwapService` (12), `recipeController` (41)
 
 ---
 

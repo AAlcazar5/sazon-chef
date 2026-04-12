@@ -628,9 +628,18 @@ export const recipeApi = {
     return apiClient.post('/recipes/generate-from-description', { description });
   },
 
-  // Fork a system recipe into a user-owned copy ("Save My Version")
-  forkRecipe: (id: string) => {
-    return apiClient.post(`/recipes/${id}/fork`);
+  // Fork a recipe into a user-owned copy with optional substitutions applied
+  forkRecipe: (id: string, options?: {
+    substitutions?: Record<string, string>;
+    macroAdjustments?: { calories?: number; protein?: number; carbs?: number; fat?: number; fiber?: number };
+    instructionChanges?: Array<{ step: number; text: string }>;
+  }) => {
+    return apiClient.post(`/recipes/${id}/fork`, options ?? {});
+  },
+
+  // Conversational substitution — ask Sazon about swaps ("I don't have X", "Make this dairy-free")
+  askSubstitution: (id: string, question: string) => {
+    return apiClient.post(`/recipes/${id}/ask-substitution`, { question });
   },
 
   // Smart collections — rule-driven, auto-populated from saved recipes

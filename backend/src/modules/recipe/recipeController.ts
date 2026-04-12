@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { healthifyService } from '@/services/healthifyService';
 import { getIngredientSwaps } from '@/services/ingredientSwapService';
 import { flavorBoostService } from '@/services/flavorBoostService';
+import { substitutionService } from '@/services/substitutionService';
 import { importRecipeFromUrl as importFromUrl, RecipeImportError } from '@/services/recipeImportService';
 import { getUserId } from '@/utils/authHelper';
 import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
@@ -3838,6 +3839,67 @@ export const recipeController = {
     }
   },
 
+  // 10E Advanced: Conversational substitution — "I don't have coconut milk" / "Make this dairy-free"
+  async askSubstitution(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { question } = req.body as { question: string };
+
+      if (!question || question.trim().length === 0) {
+        return res.status(400).json({ error: 'question is required' });
+      }
+
+      const [recipe, preferences] = await Promise.all([
+        prisma.recipe.findUnique({
+          where: { id },
+          include: {
+            ingredients: { orderBy: { order: 'asc' } },
+            instructions: { orderBy: { step: 'asc' } },
+          },
+        }),
+        prisma.userPreferences.findUnique({
+          where: { userId },
+          include: { dietaryRestrictions: true },
+        }),
+      ]);
+
+      if (!recipe) {
+        return res.status(404).json({ error: 'Recipe not found' });
+      }
+
+      const restrictions = preferences?.dietaryRestrictions?.map((dr: any) => dr.name) ?? [];
+
+      const diff = await substitutionService.askSubstitution(
+        {
+          title: recipe.title,
+          cuisine: recipe.cuisine,
+          ingredients: recipe.ingredients.map((i) => ({ text: i.text, order: i.order })),
+          instructions: recipe.instructions.map((i) => ({ text: i.text, step: i.step })),
+          calories: recipe.calories,
+          protein: recipe.protein,
+          carbs: recipe.carbs,
+          fat: recipe.fat,
+          fiber: recipe.fiber ?? undefined,
+        },
+        question.trim(),
+        restrictions,
+      );
+
+      return res.json({ success: true, diff });
+    } catch (error: any) {
+      console.error('❌ askSubstitution error:', error);
+
+      const isQuotaError = error.code === 'insufficient_quota' || error.message?.includes('quota');
+      const statusCode = isQuotaError ? 429 : 500;
+      return res.status(statusCode).json({
+        success: false,
+        error: isQuotaError ? 'Quota exceeded' : 'Failed to process substitution request',
+        code: error.code || (isQuotaError ? 'insufficient_quota' : 'SUBSTITUTION_ERROR'),
+      });
+    }
+  },
+
   // Get batch cooking recommendations based on user preferences
   async getBatchCookingRecommendations(req: Request, res: Response) {
     try {
@@ -4863,14 +4925,25 @@ export const recipeController = {
 
   /**
    * POST /api/recipes/:id/fork
-   * Duplicates a system recipe as a user-owned copy. The original remains untouched.
-   * The forked recipe is auto-saved to the user's cookbook.
+   * Duplicates a recipe as a user-owned copy with optional substitutions applied.
+   * The original remains untouched. Forked recipe tracks lineage via parentRecipeId.
+   *
+   * Body (all optional):
+   *   substitutions: Record<string, string>  — map of original ingredient text → replacement text
+   *   macroAdjustments: { calories?, protein?, carbs?, fat?, fiber? } — net macro deltas from all swaps
+   *   instructionChanges: Array<{ step: number, text: string }> — replacement instructions (from AI substitution)
    */
   async forkRecipe(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
       const { id } = req.params;
       if (!id) return res.status(400).json({ error: 'Recipe id is required' });
+
+      const { substitutions, macroAdjustments, instructionChanges } = req.body as {
+        substitutions?: Record<string, string>;
+        macroAdjustments?: { calories?: number; protein?: number; carbs?: number; fat?: number; fiber?: number };
+        instructionChanges?: Array<{ step: number; text: string }>;
+      };
 
       const original = await prisma.recipe.findUnique({
         where: { id },
@@ -4883,11 +4956,28 @@ export const recipeController = {
         return res.status(404).json({ error: 'Recipe not found' });
       }
 
+      // Apply substitutions to ingredients if provided
+      const hasSubstitutions = substitutions && Object.keys(substitutions).length > 0;
+      const forkedIngredients = original.ingredients.map((ing) => {
+        if (hasSubstitutions && substitutions[ing.text]) {
+          return { text: substitutions[ing.text], order: ing.order };
+        }
+        return { text: ing.text, order: ing.order };
+      });
+
+      // Recalculate macros if adjustments provided
+      const adjustedCalories = original.calories + (macroAdjustments?.calories ?? 0);
+      const adjustedProtein = original.protein + (macroAdjustments?.protein ?? 0);
+      const adjustedCarbs = original.carbs + (macroAdjustments?.carbs ?? 0);
+      const adjustedFat = original.fat + (macroAdjustments?.fat ?? 0);
+      const adjustedFiber = (original.fiber ?? 0) + (macroAdjustments?.fiber ?? 0);
+
       const forked = await prisma.recipe.create({
         data: {
           userId,
           isUserCreated: true,
-          source: 'user-created',
+          source: hasSubstitutions ? 'user-modified' : 'user-created',
+          parentRecipeId: original.id,
           title: original.title,
           description: original.description,
           cookTime: original.cookTime,
@@ -4895,27 +4985,31 @@ export const recipeController = {
           mealType: original.mealType,
           difficulty: original.difficulty,
           servings: original.servings,
-          calories: original.calories,
-          protein: original.protein,
-          carbs: original.carbs,
-          fat: original.fat,
-          fiber: original.fiber,
+          calories: Math.max(0, adjustedCalories),
+          protein: Math.max(0, adjustedProtein),
+          carbs: Math.max(0, adjustedCarbs),
+          fat: Math.max(0, adjustedFat),
+          fiber: Math.max(0, adjustedFiber),
           imageUrl: original.imageUrl,
           ingredients: {
-            create: original.ingredients.map((ing) => ({
-              text: ing.text,
-              order: ing.order,
-            })),
+            create: forkedIngredients,
           },
         },
         include: { ingredients: true },
       });
 
-      // Create instructions separately (avoids nested create constraints)
+      // Build instruction list — apply instructionChanges if provided
+      const instructionMap = new Map(
+        (instructionChanges ?? []).map((ic) => [ic.step, ic.text])
+      );
       await Promise.all(
         original.instructions.map((inst) =>
           prisma.recipeInstruction.create({
-            data: { recipeId: forked.id, step: inst.step, text: inst.text },
+            data: {
+              recipeId: forked.id,
+              step: inst.step,
+              text: instructionMap.get(inst.step) ?? inst.text,
+            },
           })
         )
       );

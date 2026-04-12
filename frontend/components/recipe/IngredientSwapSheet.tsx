@@ -30,6 +30,8 @@ interface Props {
   isDark: boolean;
   onClose: () => void;
   onSelectSwap: (swap: IngredientSwap) => void;
+  /** Called when user taps "I don't have this" — triggers AI conversational flow */
+  onDontHaveThis?: (ingredientText: string) => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -79,7 +81,7 @@ function macroPillsForDelta(delta: IngredientSwap['macroDelta'], isDark: boolean
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function IngredientSwapSheet({ visible, ingredient, isDark, onClose, onSelectSwap }: Props) {
+export default function IngredientSwapSheet({ visible, ingredient, isDark, onClose, onSelectSwap, onDontHaveThis }: Props) {
   const [swaps, setSwaps] = useState<IngredientSwap[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState('');
@@ -236,6 +238,46 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
             </MotiView>
           );
         })}
+
+        {/* "I don't have this" — triggers AI conversational substitution */}
+        {!loading && onDontHaveThis && (
+          <HapticTouchableOpacity
+            onPress={() => {
+              onClose();
+              onDontHaveThis(ingredient);
+            }}
+            hapticStyle="medium"
+            pressedScale={0.97}
+            style={{
+              backgroundColor: isDark ? 'rgba(251,146,60,0.12)' : 'rgba(251,146,60,0.08)',
+              borderRadius: 16,
+              padding: 14,
+              marginTop: 4,
+              marginBottom: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+            accessibilityLabel={`Tell Sazon you don't have ${displayName}`}
+          >
+            <Text style={{ fontSize: 20, marginRight: 10 }}>🤷</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{
+                fontSize: 15,
+                fontWeight: '600',
+                color: isDark ? '#FFB74D' : '#EA580C',
+              }}>
+                I don't have this
+              </Text>
+              <Text style={{
+                fontSize: 12,
+                color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
+                marginTop: 2,
+              }}>
+                Ask Sazon for a personalized replacement
+              </Text>
+            </View>
+          </HapticTouchableOpacity>
+        )}
       </View>
     </BottomSheet>
   );

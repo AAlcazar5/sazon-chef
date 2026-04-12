@@ -39,6 +39,8 @@ import MacroPillsRow from '../components/recipe/MacroPillsRow';
 import RecipeNotesModal from '../components/cookbook/RecipeNotesModal';
 import IngredientSwapSheet from '../components/recipe/IngredientSwapSheet';
 import type { IngredientSwap } from '../components/recipe/IngredientSwapSheet';
+import AskSazonSheet from '../components/recipe/AskSazonSheet';
+import type { SubstitutionDiff } from '../components/recipe/AskSazonSheet';
 
 const HERO_HEIGHT = 300;
 
@@ -155,6 +157,13 @@ export default function RecipeModal() {
   const [swapSheetVisible, setSwapSheetVisible] = useState(false);
   const [swapIngredient, setSwapIngredient] = useState('');
   const [activeSwaps, setActiveSwaps] = useState<Record<string, string>>({}); // ingredientText → swapped text
+  const [swapMacroDeltas, setSwapMacroDeltas] = useState<{ calories: number; protein: number; carbs: number; fat: number; fiber: number }>({ calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+
+  // 10E Advanced: "Ask Sazon" conversational substitution
+  const [askSazonVisible, setAskSazonVisible] = useState(false);
+  const [askSazonQuestion, setAskSazonQuestion] = useState<string | undefined>(undefined);
+  // Track instruction changes from AI substitutions
+  const [pendingInstructionChanges, setPendingInstructionChanges] = useState<Array<{ step: number; text: string }>>([]);
 
   // 10E: "Make It Healthier" lighter-version toggle
   const [lighterVersionActive, setLighterVersionActive] = useState(false);
@@ -575,10 +584,67 @@ export default function RecipeModal() {
     setSwapSheetVisible(true);
   };
 
-  // 10E: Apply selected swap — updates activeSwaps map
+  // 10E: Apply selected swap — updates activeSwaps map + macro deltas
   const handleSelectSwap = (swap: IngredientSwap) => {
     setActiveSwaps((prev) => ({ ...prev, [swapIngredient]: swap.alternative }));
+    setSwapMacroDeltas((prev) => ({
+      calories: prev.calories + (swap.macroDelta.calories ?? 0),
+      protein: prev.protein + (swap.macroDelta.protein ?? 0),
+      carbs: prev.carbs + (swap.macroDelta.carbs ?? 0),
+      fat: prev.fat + (swap.macroDelta.fat ?? 0),
+      fiber: prev.fiber + (swap.macroDelta.fiber ?? 0),
+    }));
     setSwapSheetVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  // 10E: Undo a single swap
+  const handleUndoSwap = (ingredientText: string) => {
+    setActiveSwaps((prev) => {
+      const { [ingredientText]: _, ...rest } = prev;
+      return rest;
+    });
+    // Note: we don't reverse macro deltas because we'd need the original swap's deltas.
+    // Macro impact recalculation happens at fork time via the backend.
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  // 10E Advanced: "I don't have this" → opens Ask Sazon with pre-filled question
+  const handleDontHaveThis = (ingredientText: string) => {
+    const displayName = ingredientText.replace(/^[\d./½¼¾⅓⅔⅛\s-]+\s*(?:cups?|tbsp|tsp|oz|g|kg|ml|l|cloves?|heads?|cans?|medium|large|small|pieces?)?\s*/i, '');
+    setAskSazonQuestion(`I don't have ${displayName}`);
+    setAskSazonVisible(true);
+  };
+
+  // 10E Advanced: Apply AI substitution diff — merges into activeSwaps
+  const handleApplySubstitutionDiff = (diff: SubstitutionDiff) => {
+    // Apply ingredient changes to activeSwaps
+    const newSwaps: Record<string, string> = {};
+    for (const change of diff.ingredientChanges) {
+      newSwaps[change.original] = change.replacement;
+    }
+    setActiveSwaps((prev) => ({ ...prev, ...newSwaps }));
+
+    // Track macro impact
+    setSwapMacroDeltas((prev) => ({
+      calories: prev.calories + diff.macroImpact.calories,
+      protein: prev.protein + diff.macroImpact.protein,
+      carbs: prev.carbs + diff.macroImpact.carbs,
+      fat: prev.fat + diff.macroImpact.fat,
+      fiber: prev.fiber + diff.macroImpact.fiber,
+    }));
+
+    // Track instruction changes
+    if (diff.instructionChanges.length > 0) {
+      setPendingInstructionChanges((prev) => {
+        const stepMap = new Map(prev.map((ic) => [ic.step, ic.text]));
+        for (const ic of diff.instructionChanges) {
+          stepMap.set(ic.step, ic.updated);
+        }
+        return [...stepMap.entries()].map(([step, text]) => ({ step, text }));
+      });
+    }
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -716,7 +782,18 @@ export default function RecipeModal() {
     if (!recipe || isForking) return;
     try {
       setIsForking(true);
-      const response = await recipeApi.forkRecipe(recipe.id);
+      const hasSwaps = Object.keys(activeSwaps).length > 0;
+      const hasInstructionChanges = pendingInstructionChanges.length > 0;
+      const response = await recipeApi.forkRecipe(
+        recipe.id,
+        hasSwaps || hasInstructionChanges
+          ? {
+              substitutions: activeSwaps,
+              macroAdjustments: swapMacroDeltas,
+              instructionChanges: pendingInstructionChanges,
+            }
+          : undefined,
+      );
       const forked = (response as any)?.data?.data || (response as any)?.data;
       if (!forked?.id) throw new Error('Fork did not return a recipe');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -1463,6 +1540,8 @@ export default function RecipeModal() {
                 baseServings={recipe.servings || 4}
                 isDark={isDark}
                 onSwapIngredient={handleSwapIngredient}
+                activeSwaps={activeSwaps}
+                onUndoSwap={handleUndoSwap}
               />
             )}
           </View>
@@ -2333,7 +2412,23 @@ export default function RecipeModal() {
         isDark={isDark}
         onClose={() => setSwapSheetVisible(false)}
         onSelectSwap={handleSelectSwap}
+        onDontHaveThis={handleDontHaveThis}
       />
+
+      {/* 10E Advanced: Ask Sazon conversational substitution */}
+      {recipe && (
+        <AskSazonSheet
+          visible={askSazonVisible}
+          recipeId={recipe.id}
+          isDark={isDark}
+          initialQuestion={askSazonQuestion}
+          onClose={() => {
+            setAskSazonVisible(false);
+            setAskSazonQuestion(undefined);
+          }}
+          onApplyChanges={handleApplySubstitutionDiff}
+        />
+      )}
 
       {/* Recipe Notes Modal */}
       {source === 'cookbook' && recipe && (
