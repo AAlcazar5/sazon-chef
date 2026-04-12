@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, StyleSheet } from 'react-native';
-import ReAnimated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation } from 'react-native-reanimated';
+import ReAnimated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation, withSpring, runOnJS } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { MotiView } from 'moti';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -41,6 +41,7 @@ import IngredientSwapSheet from '../components/recipe/IngredientSwapSheet';
 import type { IngredientSwap } from '../components/recipe/IngredientSwapSheet';
 import AskSazonSheet from '../components/recipe/AskSazonSheet';
 import type { SubstitutionDiff } from '../components/recipe/AskSazonSheet';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 const HERO_HEIGHT = 300;
 
@@ -95,9 +96,29 @@ export default function RecipeModal() {
   // Scroll-driven hero parallax + collapsing header (Reanimated)
   const modalScrollY = useSharedValue(0);
 
+  // Action bar auto-hide on scroll
+  const actionBarCollapsed = useSharedValue(0); // 0 = visible, 1 = hidden
+  const actionBarHeight = useSharedValue(0);
+  const prevScrollY = useSharedValue(0);
+  const [actionBarManuallyHidden, setActionBarManuallyHidden] = useState(false);
+  const [actionBarHeightJS, setActionBarHeightJS] = useState(0);
+
+  const collapseActionBar = (hidden: boolean) => setActionBarManuallyHidden(hidden);
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
-      modalScrollY.value = event.contentOffset.y;
+      const y = event.contentOffset.y;
+      const delta = y - prevScrollY.value;
+      // Collapse when scrolling down past 60px from top; expand when scrolling up or near top
+      if (delta > 8 && y > 60) {
+        actionBarCollapsed.value = withSpring(1, { damping: 20, stiffness: 200 });
+        runOnJS(collapseActionBar)(true);
+      } else if (delta < -8 || y < 60) {
+        actionBarCollapsed.value = withSpring(0, { damping: 20, stiffness: 200 });
+        runOnJS(collapseActionBar)(false);
+      }
+      prevScrollY.value = y;
+      modalScrollY.value = y;
     },
   });
 
@@ -126,6 +147,15 @@ export default function RecipeModal() {
       [1, 0.4],
       Extrapolation.CLAMP
     ),
+  }));
+
+  const actionBarAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(actionBarCollapsed.value, [0, 1], [0, actionBarHeight.value], Extrapolation.CLAMP) }],
+  }));
+
+  const revealPillAnimStyle = useAnimatedStyle(() => ({
+    opacity: actionBarCollapsed.value,
+    transform: [{ translateY: interpolate(actionBarCollapsed.value, [0, 1], [12, 0], Extrapolation.CLAMP) }],
   }));
   
   const [isSaving, setIsSaving] = useState(false);
@@ -936,6 +966,7 @@ export default function RecipeModal() {
   }
 
   return (
+    <BottomSheetModalProvider>
     <>
     <Animated.View
       style={{
@@ -950,6 +981,7 @@ export default function RecipeModal() {
         className="flex-1"
         scrollEventThrottle={16}
         onScroll={scrollHandler}
+        contentContainerStyle={{ paddingBottom: actionBarHeightJS }}
       >
         {/* Hero image — full-bleed with blur-up loading via expo-image */}
         <View style={{ height: HERO_HEIGHT, overflow: 'hidden' }}>
@@ -1928,7 +1960,24 @@ export default function RecipeModal() {
         )}
       </ReAnimated.View>
 
-      {/* Action Buttons */}
+      {/* Action Buttons — absolutely positioned so it doesn't leave a layout gap when translated away */}
+      <ReAnimated.View
+        style={[
+          actionBarAnimStyle,
+          {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: isDark ? '#111827' : '#FFFFFF',
+          },
+        ]}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          actionBarHeight.value = h;
+          setActionBarHeightJS(h);
+        }}
+      >
       <View className="p-4" style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
         {/* Start Cooking — top of action buttons */}
         <GradientButton
@@ -2110,8 +2159,51 @@ export default function RecipeModal() {
           </>
         )}
       </View>
+      </ReAnimated.View>
     </SafeAreaView>
-    
+
+    {/* Reveal pill — floats over the bottom safe area when action bar is hidden */}
+    <ReAnimated.View
+      style={[
+        revealPillAnimStyle,
+        {
+          position: 'absolute',
+          bottom: insets.bottom + 12,
+          alignSelf: 'center',
+          zIndex: 20,
+        },
+      ]}
+      pointerEvents={actionBarManuallyHidden ? 'auto' : 'none'}
+    >
+      <HapticTouchableOpacity
+        onPress={() => {
+          actionBarCollapsed.value = withSpring(0, { damping: 20, stiffness: 200 });
+          setActionBarManuallyHidden(false);
+        }}
+        hapticStyle="light"
+        pressedScale={0.94}
+        accessibilityLabel="Show action buttons"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 14,
+          paddingVertical: 8,
+          borderRadius: 100,
+          backgroundColor: isDark ? 'rgba(28,28,30,0.94)' : 'rgba(255,255,255,0.96)',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 8,
+          elevation: 6,
+        }}
+      >
+        <Ionicons name="chevron-up" size={15} color={isDark ? '#FFB74D' : '#EA580C'} />
+        <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#FFB74D' : '#EA580C', marginLeft: 5 }}>
+          Actions
+        </Text>
+      </HapticTouchableOpacity>
+    </ReAnimated.View>
+
     {/* Collection Picker Modal */}
     <BottomSheet
       visible={pickerVisible}
@@ -2446,5 +2538,6 @@ export default function RecipeModal() {
       )}
     </Animated.View>
     </>
+    </BottomSheetModalProvider>
   );
 }
