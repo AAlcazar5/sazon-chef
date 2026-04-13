@@ -39,6 +39,7 @@ import { HapticChoreography } from '../utils/hapticChoreography';
 import { mealPlanApi } from '../lib/api';
 import TasteSurveySheet from '../components/recipe/TasteSurveySheet';
 import ConsumeIngredientsSheet from '../components/cooking/ConsumeIngredientsSheet';
+import LeftoverIdeasSheet from '../components/cooking/LeftoverIdeasSheet';
 import { useVoicePlayback, } from '../hooks/useVoicePlayback';
 
 // --- Types ---
@@ -64,6 +65,7 @@ interface CookingRecipe {
   calories?: number;
   protein?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
+  cuisine?: string;
 }
 
 // --- Helpers ---
@@ -112,6 +114,7 @@ export default function CookingScreen() {
   const [resolvedMealId, setResolvedMealId] = useState<string | null>(mealIdParam || null);
   const [showTasteSurvey, setShowTasteSurvey] = useState(false);
   const [showConsumeSheet, setShowConsumeSheet] = useState(false);
+  const [showLeftoverSheet, setShowLeftoverSheet] = useState(false);
 
   // Voice mode state
   const [voiceMode, setVoiceMode] = useState(false);
@@ -302,6 +305,9 @@ export default function CookingScreen() {
 
     // Prompt user to mark ingredients as consumed from pantry (opt-in, non-silent)
     setShowConsumeSheet(true);
+
+    // 10H: offer leftover-transformer recipes (silent if none found)
+    setShowLeftoverSheet(true);
 
     // Fetch next meal from today's plan + resolve mealId for taste survey (non-blocking)
     mealPlanApi.getWeeklyPlan().then((res: any) => {
@@ -550,6 +556,15 @@ export default function CookingScreen() {
           visible={showConsumeSheet}
           ingredients={recipe.ingredients.map((ing) => ing.text)}
           onClose={() => setShowConsumeSheet(false)}
+        />
+
+        <LeftoverIdeasSheet
+          visible={showLeftoverSheet}
+          ingredients={recipe.ingredients.map((ing) => ing.text)}
+          excludeRecipeId={recipe.id}
+          excludeCuisine={recipe.cuisine}
+          onClose={() => setShowLeftoverSheet(false)}
+          onSelectRecipe={(recipeId) => router.push(`/recipe/${recipeId}` as any)}
         />
 
         <CoffeeBanner

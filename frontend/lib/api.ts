@@ -1526,6 +1526,38 @@ export const pantryApi = {
   removeItem: (id: string) => apiClient.delete(`/pantry/${id}`),
   removeByName: (name: string) => apiClient.delete(`/pantry/by-name/${encodeURIComponent(name)}`),
   consume: (ingredients: string[]) => apiClient.post<{ consumed: string[]; unmatched: string[] }>('/pantry/consume', { ingredients }),
+  // 10H: "What can I make right now?" pantry-based recipe matching
+  pantryMatch: (params?: { minMatch?: number; maxMissing?: number; limit?: number }) =>
+    apiClient.get<{
+      recipes: Array<{
+        id: string;
+        title: string;
+        description: string;
+        cuisine: string;
+        cookTime: number;
+        imageUrl: string | null;
+        calories: number;
+        protein: number;
+        matchPercentage: number;
+        missingIngredients: string[];
+        canSubstitute: boolean;
+      }>;
+      pantrySize: number;
+    }>('/recipes/pantry-match', { params }),
+  leftoverIdeas: (ingredients: string[], options?: { excludeCuisine?: string; excludeRecipeId?: string; limit?: number }) =>
+    apiClient.post<{
+      recipes: Array<{
+        id: string;
+        title: string;
+        description: string;
+        cuisine: string;
+        cookTime: number;
+        imageUrl: string | null;
+        calories: number;
+        protein: number;
+        reuseCount: number;
+      }>;
+    }>('/recipes/leftover-ideas', { ingredients, ...options }),
 };
 
 // ─── Push Notifications (Group 6) ────────────────────────────────────────────
