@@ -26,7 +26,9 @@ import { ShoppingListLoadingStates } from '../../constants/LoadingStates';
 import { useShoppingList, categorizeItem, AISLE_ORDER, DEFAULT_AISLE_ORDER, AISLE_EMOJI } from '../../hooks/useShoppingList';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
-import { userApi, mealPlanApi } from '../../lib/api';
+import { mealPlanApi } from '../../lib/api';
+import { useBudget } from '../../hooks/useBudget';
+import ContinuityCTA from '../../components/ui/ContinuityCTA';
 import { CelebrationOverlay } from '../../components/celebrations';
 
 // Aisle → pastel tint mapping for colorful section headers (9L)
@@ -108,17 +110,8 @@ export default function ShoppingListScreen() {
     handleRefresh,
   } = useShoppingList();
 
-  // Weekly grocery budget from user preferences
-  const [weeklyBudget, setWeeklyBudget] = useState<number | null>(null);
-
-  useEffect(() => {
-    userApi.getPreferences()
-      .then(res => {
-        const budget = res.data?.maxDailyFoodBudget;
-        if (budget && budget > 0) setWeeklyBudget(budget);
-      })
-      .catch(() => {}); // Non-critical
-  }, []);
+  // Weekly grocery budget — unified source of truth
+  const { weeklyGrocery: weeklyBudget } = useBudget();
 
   // All-done celebration
   const [showCelebration, setShowCelebration] = useState(false);
@@ -232,6 +225,18 @@ export default function ShoppingListScreen() {
               cacheAge={state.cacheAge}
             />
           )}
+
+          {/* Pantry deep-link (10G-Pre continuity) */}
+          <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+            <ContinuityCTA
+              label={`${pantrySet.size} items in your pantry`}
+              icon="archive"
+              onPress={() => router.push('/pantry' as any)}
+              tint="sage"
+              accessibilityLabel="Open pantry"
+              testID="pantry-chip"
+            />
+          </View>
 
           {/* Progress Ring + Cost Card (9L) */}
           <ShoppingListProgress

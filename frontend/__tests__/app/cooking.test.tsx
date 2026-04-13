@@ -54,6 +54,10 @@ jest.mock('expo-image-picker', () => ({
 
 jest.mock('../../components/recipe/CookingModeTimers', () => () => null);
 jest.mock('../../components/recipe/IngredientChecklist', () => () => null);
+jest.mock('../../components/cooking/ConsumeIngredientsSheet', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 
 jest.mock('../../components/mascot/AnimatedLottieMascot', () => {
   const { View } = require('react-native');

@@ -7,6 +7,48 @@ import { getUserId } from '../../utils/authHelper';
 import { notificationTriggerService } from '../../services/notificationTriggerService';
 
 /**
+ * Auto-stock pantry when a shopping item is marked purchased.
+ * Upserts a PantryItem with source='shopping'. Non-blocking.
+ */
+async function syncPantryForPurchase(userId: string, itemName: string, category: string | null) {
+  const normalizedName = itemName.toLowerCase().trim();
+  if (!normalizedName) return;
+  try {
+    const existing = await prisma.pantryItem.findUnique({
+      where: { userId_name: { userId, name: normalizedName } },
+    });
+    // Never overwrite a manual pantry entry
+    if (existing && existing.source === 'manual') return;
+    await prisma.pantryItem.upsert({
+      where: { userId_name: { userId, name: normalizedName } },
+      create: { userId, name: normalizedName, category: category ?? null, source: 'shopping' },
+      update: { category: category ?? existing?.category ?? null, source: 'shopping' },
+    });
+  } catch (error) {
+    console.error('[PANTRY_SYNC] Error auto-stocking pantry:', error);
+  }
+}
+
+/**
+ * Remove an auto-stocked pantry item when a shopping item is untoggled back to unpurchased.
+ * Only deletes entries with source='shopping' — manual entries are preserved.
+ */
+async function unsyncPantryForPurchase(userId: string, itemName: string) {
+  const normalizedName = itemName.toLowerCase().trim();
+  if (!normalizedName) return;
+  try {
+    const existing = await prisma.pantryItem.findUnique({
+      where: { userId_name: { userId, name: normalizedName } },
+    });
+    if (existing && existing.source === 'shopping') {
+      await prisma.pantryItem.delete({ where: { id: existing.id } });
+    }
+  } catch (error) {
+    console.error('[PANTRY_SYNC] Error unstocking pantry:', error);
+  }
+}
+
+/**
  * Record a purchase to history. Uses upsert to increment count on duplicates.
  * Non-blocking -- errors are logged but don't fail the caller.
  */
@@ -338,6 +380,9 @@ export const shoppingListController = {
       if (purchased === true && !item.purchased) {
         const finalPrice = price !== undefined ? price : item.price;
         recordPurchase(userId, item.name, item.quantity, item.category, finalPrice);
+        syncPantryForPurchase(userId, item.name, item.category);
+      } else if (purchased === false && item.purchased) {
+        unsyncPantryForPurchase(userId, item.name);
       }
 
       res.json(updated);
@@ -439,14 +484,16 @@ export const shoppingListController = {
         console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Updated ${updatedItems.length} items, ${missingItemIds.length} items were missing`);
       }
 
-      // Record purchases for items newly marked as purchased
+      // Record purchases for items newly marked as purchased and sync pantry
       for (const update of validUpdates) {
-        if (update.purchased === true) {
-          const originalItem = existingItemMap.get(update.itemId);
-          if (originalItem && !originalItem.purchased) {
-            const finalPrice = update.price !== undefined ? update.price : originalItem.price;
-            recordPurchase(userId, originalItem.name, originalItem.quantity, originalItem.category, finalPrice);
-          }
+        const originalItem = existingItemMap.get(update.itemId);
+        if (!originalItem) continue;
+        if (update.purchased === true && !originalItem.purchased) {
+          const finalPrice = update.price !== undefined ? update.price : originalItem.price;
+          recordPurchase(userId, originalItem.name, originalItem.quantity, originalItem.category, finalPrice);
+          syncPantryForPurchase(userId, originalItem.name, originalItem.category);
+        } else if (update.purchased === false && originalItem.purchased) {
+          unsyncPantryForPurchase(userId, originalItem.name);
         }
       }
 

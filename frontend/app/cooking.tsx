@@ -38,6 +38,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { HapticChoreography } from '../utils/hapticChoreography';
 import { mealPlanApi } from '../lib/api';
 import TasteSurveySheet from '../components/recipe/TasteSurveySheet';
+import ConsumeIngredientsSheet from '../components/cooking/ConsumeIngredientsSheet';
 import { useVoicePlayback, } from '../hooks/useVoicePlayback';
 
 // --- Types ---
@@ -110,6 +111,7 @@ export default function CookingScreen() {
   // Taste survey state
   const [resolvedMealId, setResolvedMealId] = useState<string | null>(mealIdParam || null);
   const [showTasteSurvey, setShowTasteSurvey] = useState(false);
+  const [showConsumeSheet, setShowConsumeSheet] = useState(false);
 
   // Voice mode state
   const [voiceMode, setVoiceMode] = useState(false);
@@ -297,6 +299,9 @@ export default function CookingScreen() {
 
     // Record cooking (non-blocking)
     recipeApi.recordCook(recipe.id).catch(() => {});
+
+    // Prompt user to mark ingredients as consumed from pantry (opt-in, non-silent)
+    setShowConsumeSheet(true);
 
     // Fetch next meal from today's plan + resolve mealId for taste survey (non-blocking)
     mealPlanApi.getWeeklyPlan().then((res: any) => {
@@ -539,6 +544,12 @@ export default function CookingScreen() {
           mealId={resolvedMealId}
           isDark={true}
           onClose={() => setShowTasteSurvey(false)}
+        />
+
+        <ConsumeIngredientsSheet
+          visible={showConsumeSheet}
+          ingredients={recipe.ingredients.map((ing) => ing.text)}
+          onClose={() => setShowConsumeSheet(false)}
         />
 
         <CoffeeBanner

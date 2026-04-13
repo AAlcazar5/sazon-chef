@@ -68,6 +68,23 @@ jest.mock('../../lib/api', () => ({
   mealPlanApi: { getWeeklyPlan: jest.fn().mockResolvedValue({ data: { days: [] } }) },
 }));
 
+jest.mock('../../components/ui/ContinuityCTA', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../hooks/useBudget', () => ({
+  useBudget: () => ({
+    weeklyGrocery: null,
+    dailyGrocery: null,
+    dailyCalories: null,
+    weeklyCalories: null,
+    dailyProtein: null,
+    weeklyProtein: null,
+    loading: false,
+    refresh: jest.fn(),
+  }),
+}));
+
 jest.mock('expo-blur', () => ({
   BlurView: ({ children }: any) => {
     const { View } = require('react-native');

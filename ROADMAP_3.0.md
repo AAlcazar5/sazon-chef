@@ -1758,6 +1758,39 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *Real life isn't perfectly balanced every day. Had a light Monday? Eat richer on Tuesday. Want pizza tonight? Adjust lunch to compensate. The app should say YES to cravings and help you budget around them — not just say "that doesn't fit your macros."*
 
+**10G-Pre: Continuity Audit — Shopping ↔ Meal Plan ↔ Pantry ↔ Cooking** 🔗
+
+*Before the weekly budget bar and craving flow land, fix the broken seams between the four surfaces. Audit found: shopping check-off never populates pantry, cooking never consumes pantry, budget state is duplicated across two screens, pantry has no first-class surface, cross-surface handoffs are inconsistent. If we ship 10G (and 10H) on top of this, the new features inherit the disjointedness.*
+
+* [x] **Shopping check-off → Pantry auto-stock** — When a shopping item is toggled `purchased: true`, upsert a `PantryItem` with the same name + category (non-blocking, parallel to existing `recordPurchase()`). When toggled back to unpurchased, remove the matching pantry item if it was auto-added (track via a `source: 'shopping'` column on PantryItem, new field).
+  * 📍 Backend: extend `shoppingListController.toggleItemPurchased` (line ~1262) + bulk variants to also call `pantryService.markPurchased()`. Add `source` to `PantryItem` schema (`'manual' | 'shopping' | 'cooking'`). ✅
+  * 📍 Frontend: no UI change — this is a silent auto-sync. Pantry list in shopping-list screen reflects the update on refetch. ✅
+  * [x] **Test:** `backend/tests/modules/shoppingPantrySync.test.ts` — toggling an item creates a PantryItem with `source: 'shopping'`; toggling back removes it; manual entries are preserved; batch update stocks multiple (5/5 passing).
+
+* [x] **Cooking complete → Pantry consume** — After `handleToggleMealCompletion(isCompleted: true)` fires in `useMealCompletion.ts`, show an opt-in `ConsumeIngredientsSheet` listing the recipe's ingredients with checkboxes (pre-checked). User confirms → POST `/api/pantry/consume` with the ingredient list → backend removes/decrements matching pantry items. Not silent (users must trust the mapping).
+  * 📍 Backend: `POST /api/pantry/consume` accepts `{ ingredients: string[] }` → fuzzy token match against user's pantry → remove matches. Returns `{ consumed, unmatched }`. ✅
+  * 📍 Frontend: new `components/cooking/ConsumeIngredientsSheet.tsx` triggered from `cooking.tsx` on completion. Pre-checked list, "Mark as used" CTA, dismissable, non-blocking on failure. ✅
+  * [x] **Test:** `backend/tests/modules/pantryConsume.test.ts` (8/8) — exact + fuzzy match, no double-consume, error handling; `frontend/__tests__/components/ConsumeIngredientsSheet.test.tsx` (6/6) — pre-checked render, API payload, toggle, Skip, disabled empty, non-blocking failure.
+
+* [x] **Pantry as a first-class surface** — Promote `PantrySection` out of shopping-list into its own `/pantry` screen accessible from shopping-list header chip. Shopping-list keeps an inline collapsed summary ("N items in pantry") that deep-links to the new screen.
+  * 📍 Frontend: new `app/pantry.tsx` reuses `PantrySection`, adds header + back button + "Recipes you can make right now" ContinuityCTA. Shopping-list shows a `pantry-chip` ContinuityCTA deep-linking to `/pantry`. ✅
+  * [x] **Test:** `frontend/__tests__/app/pantry.test.tsx` (5/5) — loads pantry on mount + focus, renders count, back button, empty state, API error graceful.
+
+* [x] **Unified `useBudget()` hook** — Kill the duplicated `userApi.getPreferences()` calls. Create `frontend/hooks/useBudget.ts` returning `{ weeklyGrocery, dailyGrocery, weeklyCalories, dailyCalories, weeklyProtein, dailyProtein, loading, refresh }`. Consumed by shopping-list (and available for meal-plan + 10G weekly budget bar).
+  * 📍 Frontend: `hooks/useBudget.ts` reads `userApi.getPreferences()` once, filters zero/negative as null, converts weekly↔daily; `shopping-list.tsx` consumes it (meal-plan migration deferred). ✅
+  * 📍 Backend: no change — composes from existing `userApi.getPreferences()`. (10G's `GET /api/meal-plan/weekly-budget` will replace the client-side computation later.)
+  * [x] **Test:** `frontend/__tests__/hooks/useBudget.test.ts` (6/6) — returns expected shape, refresh, handles missing budget (nulls not zeros), weekly↔daily conversion.
+
+* [x] **`ContinuityCTA` primitive** — A single small component for cross-surface handoffs so they look and behave identically. Props: `{ icon, label, onPress, tint, accessibilityLabel, testID }`. Supports 6 pastel tints (sage, golden, lavender, peach, sky, blush). Currently used by shopping-list (pantry chip) and pantry screen (recipes CTA). Remaining call-sites land with 10G/10H.
+  * 📍 Frontend: `components/ui/ContinuityCTA.tsx` — pastel pill with icon + arrow, haptic on press via `HapticTouchableOpacity`. ✅
+  * [x] **Test:** `frontend/__tests__/components/ContinuityCTA.test.tsx` (4/4) — renders label + icon, fires onPress, a11y label, tint variants.
+
+* [x] **Prisma: `PantryItem.source` column** — Added `source String @default("manual")` to track how each pantry item got there (`manual | shopping | cooking`). Needed for the auto-remove-on-untoggle logic and for future analytics.
+  * 📍 Backend: `schema.prisma` updated + `npx prisma db push`. Existing rows default to `'manual'`. ✅
+  * [x] **Test:** covered by `shoppingPantrySync.test.ts` — upsert writes source, manual entries preserved on both toggle directions.
+
+---
+
 * [ ] **Weekly macro view (not just daily)** — The `WeeklyNutritionSummary` already shows weekly totals, but add a **weekly budget bar** that shows how much macro "runway" remains. If you're under on Monday, Tuesday's suggestions auto-adjust upward.
   * 📍 Backend: `GET /api/meal-plan/weekly-budget` — returns daily targets adjusted by previous days' actuals. Monday was 300 cal under → Tuesday target = daily + 150 (split deficit across remaining days, not all at once)
   * 📍 Frontend: "Weekly Budget" card on meal plan screen showing remaining weekly calories/protein as a progress bar with "X remaining across Y days"
