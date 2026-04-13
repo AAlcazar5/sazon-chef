@@ -1162,3 +1162,121 @@ export const getWeeklyNutritionSummary = async (req: Request, res: Response) => 
     res.status(500).json({ error: 'Failed to get weekly nutrition summary' });
   }
 };
+
+/**
+ * GET /api/meal-plan/weekly-budget
+ * Returns this week's macro budget with an *adjusted* daily target that
+ * redistributes prior days' surplus/deficit across the remaining days.
+ *
+ * Week definition: Monday 00:00 → Sunday 23:59 (local server time).
+ * Consumed = sum of completed meals so far this week (Mon → yesterday).
+ * Remaining = max(weeklyTarget - consumed, 0)
+ * Adjusted today target = remaining / daysRemaining (inclusive of today).
+ */
+export const getWeeklyBudget = async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+
+    // Compute this week's Monday 00:00 and Sunday 23:59 (local server TZ).
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun … 6=Sat
+    const daysSinceMonday = (dayOfWeek + 6) % 7; // Mon=0, Sun=6
+    const weekStart = new Date(now);
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - daysSinceMonday);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    // "Today" bucket: meals dated before today count as prior consumption.
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+
+    const daysRemaining = 7 - daysSinceMonday; // Mon=7, Wed=5, Sun=1
+
+    // Load user's macro goals — if missing, return null shape.
+    const macroGoals = await prisma.macroGoals.findUnique({ where: { userId } });
+
+    if (!macroGoals) {
+      return res.json({
+        weekStart: weekStart.toISOString().split('T')[0],
+        weekEnd: weekEnd.toISOString().split('T')[0],
+        daysRemaining,
+        targets: null,
+        consumed: null,
+        remaining: null,
+        adjusted: null,
+      });
+    }
+
+    const mealPlans = await prisma.mealPlan.findMany({
+      where: {
+        userId,
+        isActive: true,
+        startDate: { lte: weekEnd },
+        endDate: { gte: weekStart },
+      },
+      include: {
+        meals: {
+          where: { date: { gte: weekStart, lte: weekEnd } },
+          include: { recipe: true },
+        },
+      },
+    });
+
+    // Only completed meals *before* today count as prior consumption.
+    const priorCompleted = mealPlans
+      .flatMap((plan) => plan.meals)
+      .filter((m) => m.isCompleted && new Date(m.date).getTime() < todayStart.getTime());
+
+    const consumedCalories = priorCompleted.reduce((sum, m) => {
+      if (m.recipe) return sum + m.recipe.calories;
+      return sum + (m.customCalories || 0);
+    }, 0);
+
+    const consumedProtein = priorCompleted.reduce((sum, m) => {
+      if (m.recipe) return sum + m.recipe.protein;
+      return sum + (m.customProtein || 0);
+    }, 0);
+
+    const dailyCalories = macroGoals.calories;
+    const dailyProtein = macroGoals.protein;
+    const weeklyCalories = dailyCalories * 7;
+    const weeklyProtein = dailyProtein * 7;
+
+    const remainingCalories = Math.max(weeklyCalories - consumedCalories, 0);
+    const remainingProtein = Math.max(weeklyProtein - consumedProtein, 0);
+
+    const todayCalories = Math.round(remainingCalories / daysRemaining);
+    const todayProtein = Math.round(remainingProtein / daysRemaining);
+
+    return res.json({
+      weekStart: weekStart.toISOString().split('T')[0],
+      weekEnd: weekEnd.toISOString().split('T')[0],
+      daysRemaining,
+      targets: {
+        dailyCalories,
+        dailyProtein,
+        weeklyCalories,
+        weeklyProtein,
+      },
+      consumed: {
+        calories: consumedCalories,
+        protein: consumedProtein,
+      },
+      remaining: {
+        calories: remainingCalories,
+        protein: remainingProtein,
+      },
+      adjusted: {
+        todayCalories,
+        todayProtein,
+        deltaCalories: todayCalories - dailyCalories,
+        deltaProtein: todayProtein - dailyProtein,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting weekly budget:', error);
+    return res.status(500).json({ error: 'Failed to get weekly budget' });
+  }
+};

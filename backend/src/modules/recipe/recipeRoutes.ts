@@ -64,6 +64,9 @@ router.get('/popular-searches', recipeController.getPopularSearches);
 router.post('/craving-search', recipeController.cravingSearch);
 router.post('/craving-search/event', recipeController.logCravingSearchEvent);
 
+// 10G-C: "I want to eat X tonight" flow — estimate + healthify + lighter suggestions
+router.post('/craving-flow', recipeController.cravingFlow);
+
 // 10E: Ingredient substitution engine
 router.get('/ingredient-swaps', recipeController.getIngredientSwaps);
 

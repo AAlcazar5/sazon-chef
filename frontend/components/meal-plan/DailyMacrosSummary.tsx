@@ -31,6 +31,13 @@ interface MacroData {
   fiber?: number;
 }
 
+interface DailyRolloverDisplay {
+  /** Calorie delta carried from yesterday. Positive = surplus, negative = deficit. */
+  delta: number;
+  /** ISO date key (YYYY-MM-DD) the delta was carried from. */
+  fromDate: string;
+}
+
 interface DailyMacrosSummaryProps {
   dailyMacros: MacroData;
   targetMacros: MacroData;
@@ -43,6 +50,8 @@ interface DailyMacrosSummaryProps {
   weeklyPlan?: any;
   /** Week dates for extracting daily values */
   weekDates?: Date[];
+  /** Optional calorie rollover carried in from yesterday (10G-B). */
+  rollover?: DailyRolloverDisplay | null;
 }
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -148,6 +157,7 @@ function DailyMacrosSummary({
   getMacroColor,
   weeklyPlan,
   weekDates,
+  rollover,
 }: DailyMacrosSummaryProps) {
   const [expandedMacro, setExpandedMacro] = useState<keyof MacroData | null>(null);
 
@@ -199,6 +209,43 @@ function DailyMacrosSummary({
           accessibilityLabel={macrosExpanded ? "Collapse macros" : "Expand macros"}
         />
       </HapticTouchableOpacity>
+
+      {rollover && rollover.delta !== 0 && (
+        <View
+          testID="daily-rollover-pill"
+          accessibilityLabel={
+            rollover.delta > 0
+              ? `${rollover.delta} calorie surplus carried from yesterday`
+              : `${Math.abs(rollover.delta)} calorie deficit to recover from yesterday`
+          }
+          style={{
+            alignSelf: 'flex-start',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: isDark
+              ? rollover.delta > 0 ? PastelDark.sage : PastelDark.peach
+              : rollover.delta > 0 ? Pastel.sage : Pastel.peach,
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 100,
+            marginBottom: 10,
+          }}
+        >
+          <Icon
+            name={rollover.delta > 0 ? Icons.CHEVRON_UP : Icons.CHEVRON_DOWN}
+            size={IconSizes.SM}
+            color={rollover.delta > 0 ? Accent.sage : Accent.peach}
+          />
+          <Text style={{
+            fontSize: 12,
+            fontWeight: '700',
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
+          }}>
+            {rollover.delta > 0 ? '+' : '−'}{Math.abs(rollover.delta)} cal {rollover.delta > 0 ? 'from yesterday' : 'to make up'}
+          </Text>
+        </View>
+      )}
 
       {macrosExpanded ? (
         <View>

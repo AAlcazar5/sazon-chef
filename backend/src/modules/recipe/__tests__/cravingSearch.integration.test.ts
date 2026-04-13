@@ -10,6 +10,21 @@ jest.mock('../../../services/healthifyService', () => ({
   },
 }));
 
+// Mock flavorBoostService — it instantiates AIProviderManager at module load
+jest.mock('../../../services/flavorBoostService', () => ({
+  flavorBoostService: {
+    boost: jest.fn().mockResolvedValue({}),
+  },
+}));
+
+// Mock substitutionService — also instantiates AIProviderManager at module load
+jest.mock('../../../services/substitutionService', () => ({
+  substitutionService: {
+    getSubstitutions: jest.fn().mockResolvedValue([]),
+    applySubstitution: jest.fn().mockResolvedValue({}),
+  },
+}));
+
 jest.mock('../../../services/cravingSearchService', () => ({
   mapCravingToSearchTerms: jest.fn().mockResolvedValue({
     searchTerms: ['cheese'],
@@ -128,6 +143,36 @@ describe('cravingSearch controller — filter integration', () => {
     expect(call.where.cuisine).toEqual({ in: ['Mexican'] });
     expect(call.where.cookTime).toEqual({ lte: 30 });
     expect(call.where.difficulty).toBe('easy');
+  });
+
+  it('with maxCalories filter: excludes recipes above the cap', async () => {
+    (mockPrisma.recipe.findMany as jest.Mock).mockResolvedValue([
+      makeRecipe({ id: 'r1', title: 'Lighter Cheesy Bowl' }),
+    ]);
+
+    const { res } = makeRes();
+    await recipeController.cravingSearch(
+      makeReq({ query: 'cheesy', maxCalories: 400 }) as Request,
+      res as Response,
+    );
+
+    const call = (mockPrisma.recipe.findMany as jest.Mock).mock.calls[0][0];
+    expect(call.where.calories).toEqual({ lte: 400 });
+  });
+
+  it('ignores maxCalories when zero or negative', async () => {
+    (mockPrisma.recipe.findMany as jest.Mock).mockResolvedValue([
+      makeRecipe({ id: 'r1', title: 'Cheesy Bowl' }),
+    ]);
+
+    const { res } = makeRes();
+    await recipeController.cravingSearch(
+      makeReq({ query: 'cheesy', maxCalories: 0 }) as Request,
+      res as Response,
+    );
+
+    const call = (mockPrisma.recipe.findMany as jest.Mock).mock.calls[0][0];
+    expect(call.where.calories).toBeUndefined();
   });
 
   it('perfect match flag present on top result, absent on lower result', async () => {

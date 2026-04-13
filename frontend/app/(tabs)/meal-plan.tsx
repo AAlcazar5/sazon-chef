@@ -9,6 +9,7 @@ import SkeletonLoader from '../../components/ui/SkeletonLoader';
 import ScreenGradient from '../../components/ui/ScreenGradient';
 import FrostedHeader from '../../components/ui/FrostedHeader';
 import { router, useLocalSearchParams } from 'expo-router';
+import { recipeApi } from '../../lib/api';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Spacing, ComponentSpacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -52,7 +53,11 @@ import {
   MealPlanEmptyState,
   GoalModeSelector,
   MealRequestModal,
+  WeeklyBudgetBar,
+  CravingFlowModal,
 } from '../../components/meal-plan';
+import { useBudget } from '../../hooks/useBudget';
+import { computeDailyRollovers } from '../../utils/dailyRollover';
 import type { RecurringMeal } from '../../types';
 
 export default function MealPlanScreen() {
@@ -69,6 +74,12 @@ export default function MealPlanScreen() {
 
   // Find Me a Meal state
   const [showFindMeAMealModal, setShowFindMeAMealModal] = useState(false);
+
+  // Group 10G-C: "I have a craving" flow state
+  const [showCravingFlowModal, setShowCravingFlowModal] = useState(false);
+
+  // Weekly budget bar (Group 10G-A)
+  const { weeklyBudget } = useBudget();
 
   // Use meal plan UI hook (state, utilities, constants)
   const {
@@ -361,6 +372,37 @@ export default function MealPlanScreen() {
   const memoizedGroupedMeals = useMemo(() => groupMealsByType(hourlyMeals), [hourlyMeals]);
   const formattedSelectedDate = useMemo(() => formatDate(selectedDate), [selectedDate]);
 
+  // ── 10G-B: Per-day calorie rollover from yesterday ──
+  const dailyRolloverForSelected = useMemo(() => {
+    if (!weeklyPlan?.weeklyPlan || !targetMacros?.calories || targetMacros.calories <= 0) {
+      return null;
+    }
+    const dailyConsumed: Record<string, number> = {};
+    Object.keys(weeklyPlan.weeklyPlan).forEach((dateKey: string) => {
+      const dayMeals = weeklyPlan.weeklyPlan[dateKey]?.meals || {};
+      let total = 0;
+      const addIfCompleted = (meal: any) => {
+        if (meal?.isCompleted && meal?.recipe) {
+          total += meal.recipe.calories || 0;
+        }
+      };
+      addIfCompleted(dayMeals.breakfast);
+      addIfCompleted(dayMeals.lunch);
+      addIfCompleted(dayMeals.dinner);
+      if (Array.isArray(dayMeals.snacks)) {
+        dayMeals.snacks.forEach(addIfCompleted);
+      }
+      dailyConsumed[dateKey] = total;
+    });
+    const rollovers = computeDailyRollovers({
+      dailyConsumed,
+      dailyTarget: targetMacros.calories,
+    });
+    const selectedKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+    const entry = rollovers.get(selectedKey);
+    return entry ? { delta: Math.round(entry.delta), fromDate: entry.fromDate } : null;
+  }, [weeklyPlan, targetMacros?.calories, selectedDate]);
+
   // ── Memoized callbacks for child components ──
   const handlePreviousWeek = useCallback(() => {
     HapticPatterns.buttonPress();
@@ -539,6 +581,7 @@ export default function MealPlanScreen() {
             setDailyMacros({ calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
           }}
           onFindMeAMeal={() => setShowFindMeAMealModal(true)}
+          onCraving={() => setShowCravingFlowModal(true)}
         />
 
         <ScrollView
@@ -557,6 +600,8 @@ export default function MealPlanScreen() {
             />
           }
         >
+          <WeeklyBudgetBar budget={weeklyBudget} />
+
           <WeeklyNutritionSummary weeklyNutrition={weeklyNutrition} weeklyPlan={weeklyPlan} weekDates={weekDates} isDark={isDark} />
 
           <WeeklyCalendar
@@ -594,6 +639,7 @@ export default function MealPlanScreen() {
             getMacroColor={getMacroColor}
             weeklyPlan={weeklyPlan}
             weekDates={weekDates}
+            rollover={dailyRolloverForSelected}
           />
 
           <ViewModeSelector viewMode={viewMode} onOpenPicker={handleOpenViewModePicker} />
@@ -855,6 +901,48 @@ export default function MealPlanScreen() {
               ? Math.max(0, targetMacros.protein - dailyMacros.protein)
               : undefined
           }
+        />
+
+        <CravingFlowModal
+          visible={showCravingFlowModal}
+          onClose={() => setShowCravingFlowModal(false)}
+          onGoForIt={(original) => {
+            setShowCravingFlowModal(false);
+            Alert.alert(
+              'Craving logged',
+              `${original.name} (~${original.calories} cal) — we'll adjust the rest of your meals to stay on budget.`,
+            );
+          }}
+          onSaveHealthified={async (healthified) => {
+            setShowCravingFlowModal(false);
+            try {
+              await recipeApi.createRecipe({
+                title: healthified.title,
+                description: healthified.description,
+                cuisine: healthified.cuisine,
+                cookTime: healthified.cookTime,
+                servings: healthified.servings,
+                calories: healthified.calories,
+                protein: healthified.protein,
+                carbs: healthified.carbs,
+                fat: healthified.fat,
+                ingredients: healthified.ingredients,
+                instructions: healthified.instructions,
+              });
+              Alert.alert('Saved to cookbook', `${healthified.title} is ready to cook.`);
+            } catch (err) {
+              Alert.alert('Almost there', "Couldn't save to your cookbook — try again in a sec.");
+            }
+          }}
+          onBrowseLighter={(suggestions) => {
+            setShowCravingFlowModal(false);
+            if (suggestions.length === 0) {
+              Alert.alert('No lighter options yet', "We couldn't find similar-but-lighter recipes for that craving.");
+              return;
+            }
+            const first = suggestions[0];
+            router.push(`/recipe/${first.id}` as any);
+          }}
         />
         </>
         )}
