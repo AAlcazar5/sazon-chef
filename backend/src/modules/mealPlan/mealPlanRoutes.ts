@@ -11,7 +11,8 @@ import {
   updateMealCompletion,
   updateMealNotes,
   getMealSwapSuggestions,
-  getWeeklyNutritionSummary
+  getWeeklyNutritionSummary,
+  getWeeklyBudget
 } from './mealPlanController';
 import {
   getMealPlanCostAnalysis,
@@ -72,6 +73,7 @@ router.put('/meals/:mealId/notes', updateMealNotes);
 router.post('/meals/:mealId/taste-feedback', submitTasteFeedback);
 router.get('/meals/:mealId/swap-suggestions', getMealSwapSuggestions);
 router.get('/weekly-nutrition', getWeeklyNutritionSummary);
+router.get('/weekly-budget', getWeeklyBudget);
 
 // Cost optimization routes (must come before /:id routes)
 router.get('/recipes/:recipeId/cheaper-alternatives', getCheaperAlternatives);

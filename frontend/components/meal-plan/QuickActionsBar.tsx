@@ -86,6 +86,7 @@ interface QuickActionsBarProps {
   onUseTemplate: () => void;
   onRecurring: () => void;
   onFindMeAMeal?: () => void;
+  onCraving?: () => void;
 }
 
 export default function QuickActionsBar({
@@ -102,6 +103,7 @@ export default function QuickActionsBar({
   onUseTemplate,
   onRecurring,
   onFindMeAMeal,
+  onCraving,
 }: QuickActionsBarProps) {
   return (
     <View style={{ paddingTop: 12, paddingBottom: 8 }}>
@@ -117,6 +119,14 @@ export default function QuickActionsBar({
             emoji="🎯"
             label="Find Me a Meal"
             onPress={onFindMeAMeal}
+            isDark={isDark}
+          />
+        )}
+        {onCraving && (
+          <ActionBadge
+            emoji="🍕"
+            label="I have a craving"
+            onPress={onCraving}
             isDark={isDark}
           />
         )}

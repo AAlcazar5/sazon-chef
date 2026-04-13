@@ -192,6 +192,73 @@ describe('DailyMacrosSummary', () => {
     expect(queryByTestId('sparkline-container')).toBeNull();
   });
 
+  it('renders surplus rollover pill when yesterday under target', () => {
+    const { getByTestId, getByText } = render(
+      <DailyMacrosSummary
+        dailyMacros={defaultMacros}
+        targetMacros={targetMacros}
+        formattedDate="Tue, Apr 14"
+        macrosExpanded={true}
+        isDark={false}
+        onToggleExpanded={jest.fn()}
+        getMacroColor={getMacroColor}
+        rollover={{ delta: 200, fromDate: '2026-04-13' }}
+      />
+    );
+    const pill = getByTestId('daily-rollover-pill');
+    expect(pill).toBeTruthy();
+    expect(getByText(/\+200/)).toBeTruthy();
+  });
+
+  it('renders deficit rollover pill when yesterday over target', () => {
+    const { getByTestId, getByText } = render(
+      <DailyMacrosSummary
+        dailyMacros={defaultMacros}
+        targetMacros={targetMacros}
+        formattedDate="Tue, Apr 14"
+        macrosExpanded={true}
+        isDark={false}
+        onToggleExpanded={jest.fn()}
+        getMacroColor={getMacroColor}
+        rollover={{ delta: -300, fromDate: '2026-04-13' }}
+      />
+    );
+    expect(getByTestId('daily-rollover-pill')).toBeTruthy();
+    expect(getByText(/300/)).toBeTruthy();
+  });
+
+  it('hides rollover pill when rollover is null', () => {
+    const { queryByTestId } = render(
+      <DailyMacrosSummary
+        dailyMacros={defaultMacros}
+        targetMacros={targetMacros}
+        formattedDate="Mon, Apr 13"
+        macrosExpanded={true}
+        isDark={false}
+        onToggleExpanded={jest.fn()}
+        getMacroColor={getMacroColor}
+        rollover={null}
+      />
+    );
+    expect(queryByTestId('daily-rollover-pill')).toBeNull();
+  });
+
+  it('hides rollover pill when delta is exactly zero', () => {
+    const { queryByTestId } = render(
+      <DailyMacrosSummary
+        dailyMacros={defaultMacros}
+        targetMacros={targetMacros}
+        formattedDate="Tue, Apr 14"
+        macrosExpanded={true}
+        isDark={false}
+        onToggleExpanded={jest.fn()}
+        getMacroColor={getMacroColor}
+        rollover={{ delta: 0, fromDate: '2026-04-13' }}
+      />
+    );
+    expect(queryByTestId('daily-rollover-pill')).toBeNull();
+  });
+
   it('renders in dark mode without crashing', () => {
     const { getByTestId } = render(
       <DailyMacrosSummary

@@ -1053,6 +1053,28 @@ export const mealPlanApi = {
     return apiClient.get('/meal-plan/weekly', { params });
   },
 
+  getWeeklyBudget: () => {
+    return apiClient.get<{
+      weekStart: string;
+      weekEnd: string;
+      daysRemaining: number;
+      targets: {
+        dailyCalories: number;
+        dailyProtein: number;
+        weeklyCalories: number;
+        weeklyProtein: number;
+      } | null;
+      consumed: { calories: number; protein: number } | null;
+      remaining: { calories: number; protein: number } | null;
+      adjusted: {
+        todayCalories: number;
+        todayProtein: number;
+        deltaCalories: number;
+        deltaProtein: number;
+      } | null;
+    }>('/meal-plan/weekly-budget');
+  },
+
   generateMealPlan: (params: {
     days?: number;
     startDate?: string;
@@ -1198,6 +1220,37 @@ export const searchApi = {
   // 10D-ii: Log implicit relevance signal from craving search results
   cravingSearchEvent: (cravingQuery: string, recipeId: string, action: 'tap' | 'save' | 'cook') => {
     return apiClient.post('/recipes/craving-search/event', { cravingQuery, recipeId, action });
+  },
+  // 10G-C: "I want to eat X tonight" full flow
+  cravingFlow: (craving: string) => {
+    return apiClient.post<{
+      original: { name: string; description: string; calories: number; protein: number; carbs: number; fat: number };
+      healthified: {
+        title: string;
+        description: string;
+        cuisine: string;
+        cookTime: number;
+        servings: number;
+        calories: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+        ingredients: Array<{ text: string; order: number }>;
+        instructions: Array<{ text: string; step: number }>;
+      };
+      honestyNote: string;
+      lighterSuggestions: Array<{
+        id: string;
+        title: string;
+        description?: string;
+        cuisine?: string;
+        cookTime?: number;
+        calories?: number;
+        protein?: number;
+        carbs?: number;
+        fat?: number;
+      }>;
+    }>('/recipes/craving-flow', { craving });
   },
 };
 

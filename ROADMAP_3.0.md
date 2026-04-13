@@ -1791,11 +1791,12 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 ---
 
-* [ ] **Weekly macro view (not just daily)** — The `WeeklyNutritionSummary` already shows weekly totals, but add a **weekly budget bar** that shows how much macro "runway" remains. If you're under on Monday, Tuesday's suggestions auto-adjust upward.
-  * 📍 Backend: `GET /api/meal-plan/weekly-budget` — returns daily targets adjusted by previous days' actuals. Monday was 300 cal under → Tuesday target = daily + 150 (split deficit across remaining days, not all at once)
-  * 📍 Frontend: "Weekly Budget" card on meal plan screen showing remaining weekly calories/protein as a progress bar with "X remaining across Y days"
+* [x] **Weekly macro view (not just daily)** — The `WeeklyNutritionSummary` already shows weekly totals, but add a **weekly budget bar** that shows how much macro "runway" remains. If you're under on Monday, Tuesday's suggestions auto-adjust upward.
+  * 📍 Backend: `GET /api/meal-plan/weekly-budget` — returns daily targets adjusted by previous days' actuals. Monday was 300 cal under → Tuesday target = daily + 150 (split deficit across remaining days, not all at once) ✅
+  * 📍 Frontend: "Weekly Budget" card on meal plan screen showing remaining weekly calories/protein as a progress bar with "X remaining across Y days" ✅
+  * [x] **Test:** `backend/tests/modules/weeklyBudget.test.ts` (6/6) — null shape when no macro goals, surplus adjustment, deficit adjustment, ignores incomplete meals, clamps at 0 when over budget, daysRemaining=7 on Monday. `frontend/__tests__/components/WeeklyBudgetBar.test.tsx` (7/7) — renders nothing when null, remaining + days, surplus/deficit rollover, on-target hides rollover, a11y label, protein row. `frontend/__tests__/hooks/useBudget.test.ts` extended (9/9) — exposes `weeklyBudget`, null when no goals, refresh re-fetches.
 
-* [ ] **"I want to eat [X] tonight" flow** — User declares a craving or specific meal (pizza, burger, pasta) and the app presents **three paths**, not just one:
+* [x] **"I want to eat [X] tonight" flow** — User declares a craving or specific meal (pizza, burger, pasta) and the app presents **three paths**, not just one:
 
   1. User taps "I have a craving" on meal plan
   2. Enters or selects the craving (free text → AI estimates macros, or select from recipes)
@@ -1816,8 +1817,15 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
     - Backend: reuse craving search (`/api/recipes/craving-search`) with the craving text + calorie ceiling (user's remaining daily budget)
     - Return 3-5 recipes from the database that match the craving's flavor profile but fit the macros
   * 📍 This is the anti-guilt feature. It never says "no." It says "yes, AND here are two smarter ways if you want them."
+  * ✅ Backend: `cravingFlowService` wraps AIProviderManager to return `{ original, healthified, honestyNote }`; clamps absurd AI output. `POST /api/recipes/craving-flow` runs healthify + lighter-recipe search in parallel (calorie ceiling = `macroGoals.calories / 3`). `maxCalories` filter added to existing craving-search.
+  * ✅ Frontend: `CravingFlowModal` (bottom sheet, FlowState union `input | loading | error | options`) — input step, 3 OptionCards (peach/sage/sky), original macros strip, honesty note. Wired into meal plan via new "🍕 I have a craving" quick action badge. Handlers: `onGoForIt` → alert acknowledging, `onSaveHealthified` → `recipeApi.createRecipe` to cookbook, `onBrowseLighter` → router.push first suggestion.
+  * [x] **Test:** `backend/src/services/__tests__/cravingFlowService.test.ts` (5/5) — parses response, forwards user goals, throws on invalid, throws on empty craving, clamps absurd values. `backend/src/modules/recipe/__tests__/cravingFlow.integration.test.ts` (5/5) — 400 on empty, returns full shape, forwards macro goals + calorie ceiling, 500 on service error. `backend/src/modules/recipe/__tests__/cravingSearch.integration.test.ts` extended (10/10) — maxCalories filter applied, zero/negative ignored. `frontend/__tests__/components/CravingFlowModal.test.tsx` (9/9) — renders input, hidden when invisible, 3 option cards, original + honesty, rejects empty, each callback fires with correct payload, error state.
 
-* [ ] **Macro rollover display** — On each day in the meal plan, show a subtle indicator: "↑ 150 cal from yesterday" (surplus carried forward) or "↓ 200 cal to make up" (deficit to recover). Visual: green arrow for surplus (eat more today), orange for deficit (eat lighter).
+* [x] **Macro rollover display** — On each day in the meal plan, show a subtle indicator: "↑ 150 cal from yesterday" (surplus carried forward) or "↓ 200 cal to make up" (deficit to recover). Visual: green arrow for surplus (eat more today), orange for deficit (eat lighter).
+  * ✅ Pure `computeDailyRollovers` util (`frontend/utils/dailyRollover.ts`) — takes `{ dailyConsumed, dailyTarget }` and emits `Map<nextDayKey, { delta, fromDate }>`; skips zero-consumption days, handles DST-safe date math via UTC.
+  * ✅ `DailyMacrosSummary` accepts optional `rollover` prop and renders a pastel pill (sage + chevron-up for surplus, peach + chevron-down for deficit) above the macros grid with accessibility labels. Hides when delta === 0 or rollover is null.
+  * ✅ Wired into `app/(tabs)/meal-plan.tsx` — builds `dailyConsumed` from completed meals in `weeklyPlan`, computes rollover for the selected date, passes to `DailyMacrosSummary`.
+  * [x] **Test:** `frontend/__tests__/utils/dailyRollover.test.ts` (8/8) — empty input, first-day no-prior, surplus (+delta), deficit (−delta), zero-consumption skip, multi-day chain, exact-match emits 0, zero/negative target returns empty. `frontend/__tests__/components/DailyMacrosSummary.test.tsx` extended (10/10) — surplus pill renders `+N`, deficit pill renders `N`, hidden when null, hidden when delta=0.
 
 * [ ] **Test:** Weekly budget adjusts Tuesday target when Monday was under; "I want pizza" flow shows all 3 options (go for it, healthier version, similar but lighter); healthier version has fewer calories than original estimate; "similar but lighter" results fit within daily remaining budget; daily macro rollover indicator shows correct surplus/deficit; weekly budget bar reflects actual consumption; healthified recipe can be saved to cookbook
 

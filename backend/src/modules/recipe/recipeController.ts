@@ -5269,6 +5269,89 @@ export const recipeController = {
     }
   },
 
+  async cravingFlow(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { craving } = req.body as { craving?: string };
+
+      if (!craving || typeof craving !== 'string' || !craving.trim()) {
+        return res.status(400).json({ error: 'craving text is required' });
+      }
+
+      const trimmed = craving.trim();
+
+      const { cravingFlowService } = await import('../../services/cravingFlowService');
+
+      const [userPreferences, macroGoals] = await Promise.all([
+        prisma.userPreferences.findFirst({
+          where: { userId },
+          include: { dietaryRestrictions: true },
+        }),
+        prisma.macroGoals.findUnique({ where: { userId } }).catch(() => null),
+      ]);
+
+      const strictRestrictions = (userPreferences?.dietaryRestrictions || [])
+        .filter((d: any) => d.severity === 'strict')
+        .map((d: any) => (d.name as string).toLowerCase());
+
+      const userMacroGoals = macroGoals
+        ? {
+            calories: macroGoals.calories,
+            protein: macroGoals.protein,
+            carbs: macroGoals.carbs,
+            fat: macroGoals.fat,
+          }
+        : undefined;
+
+      // Run healthify + lighter-search in parallel.
+      const lighterCalorieCeiling = userMacroGoals
+        ? Math.round(userMacroGoals.calories / 3) // ~one meal worth
+        : undefined;
+
+      const [flowResult, lighterSuggestions] = await Promise.all([
+        cravingFlowService.healthifyCraving({
+          craving: trimmed,
+          userMacroGoals,
+          dietaryRestrictions: strictRestrictions,
+        }),
+        (async () => {
+          const where: any = { isUserCreated: false };
+          if (lighterCalorieCeiling && lighterCalorieCeiling > 0) {
+            where.calories = { lte: lighterCalorieCeiling };
+          }
+          // Basic keyword match against the craving so results feel related.
+          const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 3);
+          if (tokens.length > 0) {
+            where.OR = tokens.flatMap(t => [
+              { title: { contains: t } },
+              { description: { contains: t } },
+            ]);
+          }
+          const recipes = await prisma.recipe.findMany({
+            where,
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            include: {
+              ingredients: { orderBy: { order: 'asc' as const }, select: { text: true } },
+              instructions: { orderBy: { step: 'asc' as const }, select: { text: true } },
+            },
+          });
+          return recipes;
+        })(),
+      ]);
+
+      return res.json({
+        original: flowResult.original,
+        healthified: flowResult.healthified,
+        honestyNote: flowResult.honestyNote,
+        lighterSuggestions,
+      });
+    } catch (error) {
+      console.error('❌ [cravingFlow] Error:', error);
+      return res.status(500).json({ error: 'Failed to run craving flow' });
+    }
+  },
+
   async cravingSearch(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
@@ -5279,6 +5362,7 @@ export const recipeController = {
         maxCookTime,
         difficulty,
         mealPrepMode,
+        maxCalories,
       } = req.body as {
         query?: string;
         cuisines?: string[];
@@ -5286,6 +5370,7 @@ export const recipeController = {
         maxCookTime?: number | null;
         difficulty?: string;
         mealPrepMode?: boolean;
+        maxCalories?: number | null;
       };
 
       if (!query || typeof query !== 'string' || !query.trim()) {
@@ -5325,6 +5410,9 @@ export const recipeController = {
       }
       if (mealPrepMode) {
         baseWhere.mealPrepSuitable = true;
+      }
+      if (typeof maxCalories === 'number' && maxCalories > 0) {
+        baseWhere.calories = { lte: maxCalories };
       }
 
       const includeFields = {

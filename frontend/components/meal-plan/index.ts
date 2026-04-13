@@ -59,3 +59,9 @@ export { default as SurpriseBadge } from './SurpriseBadge';
 // Group 10C: Find Me a Meal
 export { default as MealRequestModal } from './MealRequestModal';
 export { default as MealRequestResults } from './MealRequestResults';
+
+// Group 10G-A: Weekly Budget Bar
+export { default as WeeklyBudgetBar } from './WeeklyBudgetBar';
+
+// Group 10G-C: Craving Flow ("I want to eat X tonight")
+export { default as CravingFlowModal } from './CravingFlowModal';
