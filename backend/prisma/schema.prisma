@@ -767,6 +767,7 @@ model PantryItem {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   category  String?
+  source    String   @default("manual") // 'manual' | 'shopping' | 'cooking'
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

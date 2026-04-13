@@ -22,6 +22,23 @@ jest.mock('../../components/shopping', () => ({
   OfflineBanner: () => null,
 }));
 
+jest.mock('../../components/ui/ContinuityCTA', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../hooks/useBudget', () => ({
+  useBudget: () => ({
+    weeklyGrocery: null,
+    dailyGrocery: null,
+    dailyCalories: null,
+    weeklyCalories: null,
+    dailyProtein: null,
+    weeklyProtein: null,
+    loading: false,
+    refresh: jest.fn(),
+  }),
+}));
+
 jest.mock('../../components/ui/AnimatedActivityIndicator', () => () => null);
 jest.mock('../../components/ui/AnimatedEmptyState', () => () => null);
 jest.mock('../../components/ui/SwipeableItem', () => {

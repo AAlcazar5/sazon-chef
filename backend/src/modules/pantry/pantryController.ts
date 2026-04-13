@@ -132,6 +132,67 @@ export const pantryController = {
   },
 
   /**
+   * Consume pantry items by ingredient name.
+   * POST /api/pantry/consume
+   * Body: { ingredients: string[] }
+   * Fuzzy-matches ingredient strings against user's pantry (token containment),
+   * deletes matches, returns { consumed, unmatched }.
+   */
+  async consume(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { ingredients } = req.body;
+
+      if (!Array.isArray(ingredients) || ingredients.length === 0) {
+        return res.status(400).json({ error: 'Ingredients array is required and must not be empty' });
+      }
+
+      const pantryItems = await prisma.pantryItem.findMany({ where: { userId } });
+      const consumed: string[] = [];
+      const unmatched: string[] = [];
+      const toDeleteIds = new Set<string>();
+
+      for (const rawIngredient of ingredients) {
+        if (typeof rawIngredient !== 'string' || !rawIngredient.trim()) {
+          continue;
+        }
+        const normalized = rawIngredient.toLowerCase().trim();
+        // Try exact match first, then token containment (either direction)
+        const match = pantryItems.find((p) => {
+          if (toDeleteIds.has(p.id)) return false;
+          const pantryName = p.name.toLowerCase();
+          if (pantryName === normalized) return true;
+          // Token-level: any pantry word appears as a word in ingredient, or vice versa
+          const pantryTokens = pantryName.split(/\s+/).filter((t) => t.length > 2);
+          const ingTokens = normalized.split(/\s+/).filter((t) => t.length > 2);
+          return (
+            pantryTokens.some((t) => ingTokens.includes(t)) ||
+            ingTokens.some((t) => pantryTokens.includes(t))
+          );
+        });
+
+        if (match) {
+          toDeleteIds.add(match.id);
+          consumed.push(rawIngredient);
+        } else {
+          unmatched.push(rawIngredient);
+        }
+      }
+
+      if (toDeleteIds.size > 0) {
+        await prisma.pantryItem.deleteMany({
+          where: { id: { in: Array.from(toDeleteIds) }, userId },
+        });
+      }
+
+      res.json({ consumed, unmatched });
+    } catch (error: any) {
+      console.error('Error consuming pantry items:', error);
+      res.status(500).json({ error: 'Failed to consume pantry items' });
+    }
+  },
+
+  /**
    * Remove a pantry item by name
    * DELETE /api/pantry/by-name/:name
    */

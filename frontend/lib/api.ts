@@ -1472,6 +1472,7 @@ export const pantryApi = {
   addMany: (items: Array<{ name: string; category?: string }>) => apiClient.post('/pantry/bulk', { items }),
   removeItem: (id: string) => apiClient.delete(`/pantry/${id}`),
   removeByName: (name: string) => apiClient.delete(`/pantry/by-name/${encodeURIComponent(name)}`),
+  consume: (ingredients: string[]) => apiClient.post<{ consumed: string[]; unmatched: string[] }>('/pantry/consume', { ingredients }),
 };
 
 // ─── Push Notifications (Group 6) ────────────────────────────────────────────
