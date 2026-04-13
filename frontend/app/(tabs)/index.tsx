@@ -30,6 +30,7 @@ import NoResultsState from '../../components/home/NoResultsState';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
+import PantryMatchCard from '../../components/home/PantryMatchCard';
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
 import { SurpriseMeModal, type SurpriseFilters } from '../../components/home';
 import { Accelerometer } from 'expo-sensors';
@@ -869,6 +870,17 @@ export default function HomeScreen() {
           /* Spacer when hero is not shown */
           <View style={{ height: Spacing.xl }} />
         )}
+
+        {/* 10H: Pantry-based recipe matching */}
+        <PantryMatchCard
+          onPress={(filter) => {
+            const path =
+              filter.maxMissing != null
+                ? `/pantry-matches?maxMissing=${filter.maxMissing}`
+                : '/pantry-matches';
+            router.push(path as any);
+          }}
+        />
 
         {/* Contextual Recipe Sections */}
         <RecipeSectionsGrid

@@ -1827,7 +1827,7 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   * ✅ Wired into `app/(tabs)/meal-plan.tsx` — builds `dailyConsumed` from completed meals in `weeklyPlan`, computes rollover for the selected date, passes to `DailyMacrosSummary`.
   * [x] **Test:** `frontend/__tests__/utils/dailyRollover.test.ts` (8/8) — empty input, first-day no-prior, surplus (+delta), deficit (−delta), zero-consumption skip, multi-day chain, exact-match emits 0, zero/negative target returns empty. `frontend/__tests__/components/DailyMacrosSummary.test.tsx` extended (10/10) — surplus pill renders `+N`, deficit pill renders `N`, hidden when null, hidden when delta=0.
 
-* [ ] **Test:** Weekly budget adjusts Tuesday target when Monday was under; "I want pizza" flow shows all 3 options (go for it, healthier version, similar but lighter); healthier version has fewer calories than original estimate; "similar but lighter" results fit within daily remaining budget; daily macro rollover indicator shows correct surplus/deficit; weekly budget bar reflects actual consumption; healthified recipe can be saved to cookbook
+* [x] **Test:** Weekly budget adjusts Tuesday target when Monday was under; "I want pizza" flow shows all 3 options (go for it, healthier version, similar but lighter); healthier version has fewer calories than original estimate; "similar but lighter" results fit within daily remaining budget; daily macro rollover indicator shows correct surplus/deficit; weekly budget bar reflects actual consumption; healthified recipe can be saved to cookbook — **all covered by sub-section tests 10G-A/B/C (weeklyBudget 6/6, cravingFlowService 5/5, cravingFlow integration 5/5, cravingSearch maxCalories 10/10, CravingFlowModal 9/9, dailyRollover 8/8, DailyMacrosSummary 10/10, WeeklyBudgetBar 7/7, useBudget 9/9).**
 
 ---
 
@@ -1835,21 +1835,20 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *Don't make me shop to cook. Show me what I can make with what I already have.*
 
-* [ ] **Pantry-based recipe matching** — New section on home screen: "Cook with What You Have". User's pantry is inferred from:
+* [x] **Pantry-based recipe matching** — New section on home screen: "Cook with What You Have". User's pantry is inferred from:
   1. **Shopping list completion** — items checked off = items in pantry (auto-tracked)
   2. **Manual pantry** — simple add/remove list in profile (already partially exists via "Add to pantry" on shopping list)
   3. **Recipe completion** — if user cooked a recipe, leftover ingredients likely still available for 3-5 days
-  * 📍 Backend: `GET /api/recipes/pantry-match` — takes user's pantry items → finds recipes where ≥70% of ingredients are already available → ranks by match percentage
-  * 📍 Response includes: `matchPercentage` (85% = you have 6 of 7 ingredients), `missingIngredients` (["fresh basil"]), `canSubstitute` (true if missing items have common pantry swaps)
-  * 📍 Frontend: "You can make 12 recipes right now" card → tap to see list sorted by match %
+  * ✅ Backend: `GET /api/recipes/pantry-match` — `pantryMatchService.computePantryMatch` normalizes ingredients (quantity-strip + token fuzzy match), counts staples (salt/pepper/oil/water) as always-matched, returns `{ matched, missing, matchPercentage, canSubstitute }`. Controller pulls pantry + candidate pool (500 recipes), filters by `minMatch` (default 70%) and optional `maxMissing`, sorts by percentage DESC.
+  * ✅ Response: `{ recipes: [{ id, title, cuisine, calories, protein, matchPercentage, missingIngredients, canSubstitute }], pantrySize }`
+  * ✅ Frontend: `PantryMatchCard` home widget (hidden when pantry empty) + `/pantry-matches` list screen with per-recipe match badge, missing-ingredient hint, and "you have everything" confirmation.
 
-* [ ] **"Just need 1-2 more items"** filter — Within pantry match results, highlight recipes where you're only missing 1-2 cheap items. "You're one lime away from ceviche" is a powerful motivator.
+* [x] **"Just need 1-2 more items"** filter — `PantryMatchCard` has a toggle between "All matches" and "Just 1–2 more items"; the list screen respects `maxMissing` query param. "You're one lime away from ceviche."
 
-* [ ] **Leftover transformer** — After cooking, prompt: "Have leftover [rice/chicken/vegetables]? Here are 5 recipes to use them up." Uses the cooked recipe's ingredients as a pantry signal.
-  * 📍 Backend: `POST /api/recipes/leftover-ideas` — takes ingredient list → finds recipes that use those ingredients in a different way (different cuisine, different preparation)
-  * 📍 Example: leftover rice → fried rice, rice pudding, stuffed peppers, congee, arancini
+* [x] **Leftover transformer** — After `handleDone()` in cooking mode, `LeftoverIdeasSheet` opens with up to 5 recipes that reuse ≥2 ingredients from the recipe just cooked, excluding the source recipe + its cuisine so suggestions feel genuinely different. Silent (unmounts) when no ideas are found — no guilt prompt.
+  * ✅ Backend: `POST /api/recipes/leftover-ideas` — reuses `computePantryMatch` with leftovers as pantry, filters `reuseCount >= 2`, excludes source recipe + cuisine.
 
-* [ ] **Test:** Pantry match returns recipes where ≥70% of ingredients are in user's pantry; "just need 1-2 items" filter works correctly; leftover transformer returns recipes using at least 2 of the provided ingredients; match percentage is accurate
+* [x] **Test:** `backend/src/services/__tests__/pantryMatchService.test.ts` (14/14) — normalize, isStaple, matchesPantry, computePantryMatch (100%, staples, partial, zero, canSubstitute true/false, empty input, quantity prefixes). `backend/src/modules/recipe/__tests__/pantryMatch.integration.test.ts` (11/11) — pantryMatch (empty pantry, 70% threshold, custom minMatch, maxMissing filter, sort DESC, 500 on error) + leftoverIdeas (400 on missing/empty, reuses ≥2, excludeCuisine/excludeRecipeId applied to where, limit clamp). `frontend/__tests__/components/PantryMatchCard.test.tsx` (8/8) — loading, empty-pantry hidden, error hidden, total count, near-match toggle, onPress with/without filter, API params. `frontend/__tests__/components/LeftoverIdeasSheet.test.tsx` (7/7) — invisible no-fetch, fetches with exclusions, renders cards, onSelect+onClose, empty-result silent, API error silent, empty ingredients no-fetch.
 
 ---
 

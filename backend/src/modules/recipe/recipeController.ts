@@ -5352,6 +5352,160 @@ export const recipeController = {
     }
   },
 
+  /**
+   * 10H: "What can I make right now?" — finds recipes where at least
+   * `minMatchPercentage` (default 70) of ingredients are in the user's pantry.
+   * Returns results sorted by match percentage DESC.
+   *
+   * Query params:
+   *   - minMatch: number (0-100, default 70)
+   *   - maxMissing: number (if set, only returns recipes with <= N missing items)
+   *   - limit: number (default 20)
+   */
+  async pantryMatch(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const minMatch = Math.max(0, Math.min(100, Number(req.query.minMatch) || 70));
+      const maxMissing = req.query.maxMissing != null ? Number(req.query.maxMissing) : null;
+      const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 20));
+
+      const pantryItems = await prisma.pantryItem.findMany({
+        where: { userId },
+        select: { name: true },
+      });
+      const pantryNames = pantryItems.map((p) => p.name);
+
+      if (pantryNames.length === 0) {
+        return res.json({ recipes: [], pantrySize: 0 });
+      }
+
+      // Pull a candidate pool — system recipes plus the user's own.
+      const candidates = await prisma.recipe.findMany({
+        where: {
+          OR: [{ isUserCreated: false }, { userId }],
+        },
+        take: 500,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          ingredients: { orderBy: { order: 'asc' as const }, select: { text: true } },
+        },
+      });
+
+      const { computePantryMatch } = await import('../../services/pantryMatchService');
+
+      const scored = candidates
+        .map((recipe: any) => {
+          const match = computePantryMatch(recipe.ingredients || [], pantryNames);
+          return { recipe, match };
+        })
+        .filter(({ match }) => match.matchPercentage >= minMatch)
+        .filter(({ match }) =>
+          maxMissing == null ? true : match.missing.length <= maxMissing,
+        )
+        .sort((a, b) => {
+          if (b.match.matchPercentage !== a.match.matchPercentage) {
+            return b.match.matchPercentage - a.match.matchPercentage;
+          }
+          return a.match.missing.length - b.match.missing.length;
+        })
+        .slice(0, limit)
+        .map(({ recipe, match }) => ({
+          id: recipe.id,
+          title: recipe.title,
+          description: recipe.description,
+          cuisine: recipe.cuisine,
+          cookTime: recipe.cookTime,
+          imageUrl: recipe.imageUrl,
+          calories: recipe.calories,
+          protein: recipe.protein,
+          matchPercentage: match.matchPercentage,
+          missingIngredients: match.missing,
+          canSubstitute: match.canSubstitute,
+        }));
+
+      return res.json({ recipes: scored, pantrySize: pantryNames.length });
+    } catch (error) {
+      console.error('❌ [pantryMatch] Error:', error);
+      return res.status(500).json({ error: 'Failed to match pantry' });
+    }
+  },
+
+  /**
+   * 10H: Leftover transformer — given a list of ingredients (e.g. from a
+   * recipe the user just cooked), find recipes that use at least 2 of those
+   * ingredients but in a different cuisine/preparation from the source.
+   *
+   * Body:
+   *   - ingredients: string[] (required)
+   *   - excludeCuisine?: string (skip recipes matching this cuisine)
+   *   - excludeRecipeId?: string (skip the source recipe itself)
+   *   - limit?: number (default 5)
+   */
+  async leftoverIdeas(req: Request, res: Response) {
+    try {
+      const { ingredients, excludeCuisine, excludeRecipeId, limit } = req.body as {
+        ingredients?: string[];
+        excludeCuisine?: string;
+        excludeRecipeId?: string;
+        limit?: number;
+      };
+
+      if (!Array.isArray(ingredients) || ingredients.length === 0) {
+        return res.status(400).json({ error: 'ingredients array is required' });
+      }
+
+      const cleaned = ingredients
+        .filter((i): i is string => typeof i === 'string' && i.trim().length > 0)
+        .map((i) => i.trim());
+      if (cleaned.length === 0) {
+        return res.status(400).json({ error: 'ingredients array is required' });
+      }
+
+      const take = Math.max(1, Math.min(20, Number(limit) || 5));
+
+      const where: any = { isUserCreated: false };
+      if (excludeRecipeId) where.id = { not: excludeRecipeId };
+      if (excludeCuisine) where.cuisine = { not: excludeCuisine };
+
+      const candidates = await prisma.recipe.findMany({
+        where,
+        take: 200,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          ingredients: { orderBy: { order: 'asc' as const }, select: { text: true } },
+        },
+      });
+
+      const { computePantryMatch } = await import('../../services/pantryMatchService');
+
+      // Use the same pantry-match engine with leftover ingredients as the "pantry".
+      const scored = candidates
+        .map((recipe: any) => {
+          const match = computePantryMatch(recipe.ingredients || [], cleaned);
+          return { recipe, match, reuseCount: match.matched.length };
+        })
+        .filter(({ reuseCount }) => reuseCount >= 2)
+        .sort((a, b) => b.reuseCount - a.reuseCount)
+        .slice(0, take)
+        .map(({ recipe, reuseCount }) => ({
+          id: recipe.id,
+          title: recipe.title,
+          description: recipe.description,
+          cuisine: recipe.cuisine,
+          cookTime: recipe.cookTime,
+          imageUrl: recipe.imageUrl,
+          calories: recipe.calories,
+          protein: recipe.protein,
+          reuseCount,
+        }));
+
+      return res.json({ recipes: scored });
+    } catch (error) {
+      console.error('❌ [leftoverIdeas] Error:', error);
+      return res.status(500).json({ error: 'Failed to find leftover ideas' });
+    }
+  },
+
   async cravingSearch(req: Request, res: Response) {
     try {
       const userId = getUserId(req);

@@ -146,6 +146,15 @@ const createPrismaMock = () => ({
       create: jest.fn(),
       findMany: jest.fn(),
     },
+    pantryItem: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      upsert: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+    },
   }
 });
 

@@ -67,6 +67,10 @@ router.post('/craving-search/event', recipeController.logCravingSearchEvent);
 // 10G-C: "I want to eat X tonight" flow — estimate + healthify + lighter suggestions
 router.post('/craving-flow', recipeController.cravingFlow);
 
+// 10H: "What can I make right now?" — pantry-based recipe matching + leftover transformer
+router.get('/pantry-match', recipeController.pantryMatch);
+router.post('/leftover-ideas', recipeController.leftoverIdeas);
+
 // 10E: Ingredient substitution engine
 router.get('/ingredient-swaps', recipeController.getIngredientSwaps);
 
