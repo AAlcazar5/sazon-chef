@@ -55,7 +55,9 @@ import {
   MealRequestModal,
   WeeklyBudgetBar,
   CravingFlowModal,
+  BoringWeekNudge,
 } from '../../components/meal-plan';
+import { useVarietyScore } from '../../hooks/useVarietyScore';
 import { useBudget } from '../../hooks/useBudget';
 import { computeDailyRollovers } from '../../utils/dailyRollover';
 import type { RecurringMeal } from '../../types';
@@ -372,6 +374,29 @@ export default function MealPlanScreen() {
   const memoizedGroupedMeals = useMemo(() => groupMealsByType(hourlyMeals), [hourlyMeals]);
   const formattedSelectedDate = useMemo(() => formatDate(selectedDate), [selectedDate]);
 
+  // ── 10J: Variety enforcer — fetch variety score for the active plan ──
+  const activeMealPlanId: string | null = weeklyPlan?.mealPlanId ?? null;
+  const { result: varietyResult, refresh: refreshVariety } = useVarietyScore(activeMealPlanId);
+  const [varietyDismissed, setVarietyDismissed] = useState(false);
+
+  const handleMixItUp = useCallback(() => {
+    const ids = varietyResult?.repetitiveMealIds ?? [];
+    if (ids.length === 0) return;
+    const datesToRegenerate = new Set<string>();
+    Object.keys(weeklyPlan?.weeklyPlan ?? {}).forEach((dateKey: string) => {
+      const dayMeals = weeklyPlan?.weeklyPlan?.[dateKey]?.meals ?? {};
+      ['breakfast', 'lunch', 'dinner'].forEach((type) => {
+        const meal = dayMeals[type];
+        if (meal?.id && ids.includes(meal.id)) {
+          datesToRegenerate.add(dateKey);
+        }
+      });
+    });
+    datesToRegenerate.forEach((dateKey) => handleRegenerateDay(new Date(dateKey)));
+    setVarietyDismissed(true);
+    setTimeout(() => refreshVariety(), 3000);
+  }, [varietyResult, weeklyPlan, handleRegenerateDay, refreshVariety]);
+
   // ── 10G-B: Per-day calorie rollover from yesterday ──
   const dailyRolloverForSelected = useMemo(() => {
     if (!weeklyPlan?.weeklyPlan || !targetMacros?.calories || targetMacros.calories <= 0) {
@@ -601,6 +626,16 @@ export default function MealPlanScreen() {
           }
         >
           <WeeklyBudgetBar budget={weeklyBudget} />
+
+          {varietyResult?.varietyScore.isBoringWeek && !varietyDismissed && varietyResult.nudgeMessage ? (
+            <BoringWeekNudge
+              message={varietyResult.nudgeMessage}
+              varietyScore={varietyResult.varietyScore.score}
+              isDark={isDark}
+              onMixItUp={handleMixItUp}
+              onDismiss={() => setVarietyDismissed(true)}
+            />
+          ) : null}
 
           <WeeklyNutritionSummary weeklyNutrition={weeklyNutrition} weeklyPlan={weeklyPlan} weekDates={weekDates} isDark={isDark} />
 

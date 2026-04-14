@@ -65,3 +65,6 @@ export { default as WeeklyBudgetBar } from './WeeklyBudgetBar';
 
 // Group 10G-C: Craving Flow ("I want to eat X tonight")
 export { default as CravingFlowModal } from './CravingFlowModal';
+
+// Group 10J: Meal Prep Variety Enforcer
+export { default as BoringWeekNudge } from './BoringWeekNudge';

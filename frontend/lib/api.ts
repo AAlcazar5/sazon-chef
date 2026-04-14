@@ -1133,6 +1133,23 @@ export const mealPlanApi = {
     return apiClient.post('/meal-plan/regenerate-day', params);
   },
 
+  getVarietyScore: (mealPlanId: string) => {
+    return apiClient.get<{
+      success: boolean;
+      varietyScore: {
+        score: number;
+        isBoringWeek: boolean;
+        uniqueProteins: number;
+        uniqueCuisines: number;
+        consecutiveProteinRepeats: number;
+        consecutiveCuisineRepeats: number;
+        repeatedMealTitles: number;
+      };
+      repetitiveMealIds: string[];
+      nudgeMessage: string | null;
+    }>(`/meal-plan/${mealPlanId}/variety-score`);
+  },
+
   getCookedRecipeIds: () => {
     return apiClient.get('/meal-plan/cooked-recipe-ids');
   },

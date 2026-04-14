@@ -286,6 +286,7 @@ Return JSON only.`;
       };
       maxTotalPrepTime?: number; // Maximum total prep time in minutes (default: 60)
       maxDailyBudget?: number; // Maximum daily budget in dollars
+      priorDayMeals?: Array<{ title: string; cuisine: string; mainProtein?: string }>;
     }
   ): Promise<{
     breakfast?: GeneratedRecipe;
@@ -345,7 +346,8 @@ Return JSON only.`;
       dessert?: GeneratedRecipe;
     } = {};
 
-    const previousMeals: Array<{ title: string; cuisine: string; mainProtein?: string }> = [];
+    const previousMeals: Array<{ title: string; cuisine: string; mainProtein?: string }> =
+      options?.priorDayMeals ? [...options.priorDayMeals] : [];
     
     // Track total prep time to keep under maxTotalPrepTime (default 60 minutes)
     const maxTotalPrepTime = options?.maxTotalPrepTime || 60;
