@@ -1041,6 +1041,45 @@ export const userApi = {
   applyPreset: (id: string) => {
     return apiClient.post(`/user/presets/${id}/apply`);
   },
+
+  // Group 10I: Cooking Journey
+  getCookingStats: () => {
+    return apiClient.get<{
+      recipesCookedThisMonth: number;
+      recipesCookedAllTime: number;
+      cuisinesExplored: string[];
+      cuisinesExploredThisMonth: string[];
+      averageDifficulty: number;
+      averageDifficultyLabel: 'easy' | 'medium' | 'hard' | null;
+      difficultyTrend: 'leveling_up' | 'steady' | 'leveling_down' | 'insufficient_data';
+      longestStreakDays: number;
+      currentStreakDays: number;
+      firstCookedCuisines: Array<{ cuisine: string; firstCookedAt: string }>;
+    }>('/user/cooking-stats');
+  },
+
+  getSkillProgress: () => {
+    return apiClient.get<{
+      currentLevel: 'beginner' | 'home_cook' | 'confident' | 'chef';
+      effectiveLevel: 'beginner' | 'home_cook' | 'confident' | 'chef';
+      readyToLevelUp: boolean;
+      nextLevel: 'beginner' | 'home_cook' | 'confident' | 'chef' | null;
+      reason: string;
+      easyRecipesCookedWithGoodRating: number;
+      mediumRecipesCooked: number;
+    }>('/user/skill-progress');
+  },
+
+  acceptSkillLevelUp: (newLevel: string) => {
+    return apiClient.post<{ cookingSkillLevel: string }>('/user/skill-progress/accept', { newLevel });
+  },
+
+  seedCookingJourney: (data: { seededCuisines?: string[]; cookingSkillLevel?: string }) => {
+    return apiClient.put<{ seededCuisines: string[]; cookingSkillLevel: string | null }>(
+      '/user/cooking-journey/seed',
+      data,
+    );
+  },
 };
 
 export const mealPlanApi = {

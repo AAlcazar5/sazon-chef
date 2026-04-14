@@ -25,6 +25,7 @@ import {
   WeightHistoryCard,
   MacroGoalsCard,
   CulinaryPreferencesCard,
+  CookingJourneyCard,
   BudgetCard,
   NotificationsCard,
   DataPrivacyCard,
@@ -224,6 +225,10 @@ export default function ProfileScreen() {
             profile={profile}
             preferences={preferences}
           />
+        </StaggerItem>
+
+        <StaggerItem index={7}>
+          <CookingJourneyCard testID="cooking-journey-card" />
         </StaggerItem>
 
         <StaggerItem index={8}>

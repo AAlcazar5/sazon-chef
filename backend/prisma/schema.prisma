@@ -97,6 +97,10 @@ model UserPreferences {
   weekdayCookTime     Int?    // max cooking minutes on weekdays
   weekendCookTime     Int?    // max cooking minutes on weekends
 
+  // Group 10I: Cooking Journey — user-seeded cuisines they already know how to cook
+  // (JSON-stringified array, e.g. '["Italian","Thai"]') — merged into cuisinesExplored stat
+  seededCuisines      String?
+
   // Cost tracking & budget preferences (Phase 6, Group 13)
   maxRecipeCost      Float? // Maximum cost per recipe
   maxMealCost        Float? // Maximum cost per meal

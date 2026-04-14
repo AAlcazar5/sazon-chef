@@ -1856,25 +1856,17 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *The skill level setting is static — "beginner" forever. Real users grow. The app should notice and celebrate growth without making beginners feel inadequate.*
 
-* [ ] **Cooking stats dashboard** — New section in Profile: "Your Cooking Journey"
-  - Recipes cooked this month / all time
-  - Cuisines explored (with a mini world map or flag grid showing coverage)
-  - Average difficulty of recipes cooked (trend line: are you leveling up?)
-  - "New this month" — cuisines or techniques tried for the first time
-  - Longest cooking streak (days in a row with at least 1 cooked meal)
-  * 📍 All data already exists in `Meal.isCompleted` + `Recipe.cuisine` + `Recipe.difficulty` — just needs aggregation
+* [x] **Cooking stats dashboard** — `CookingJourneyCard` lives in profile (`frontend/components/profile/CookingJourneyCard.tsx`), backed by `useCookingJourney` hook → `GET /api/user/cooking-stats`. Renders pastel widget tiles for cooked-this-month / all-time, cuisines explored count, current + longest streak, skill level + difficulty trend, plus a horizontal flag chip strip of all cuisines collected. Backend service `cookingStatsService.computeCookingStats` aggregates from existing `CookingLog` + `Recipe` joins (cuisine, difficulty, cookedAt) — no schema change.
 
-* [ ] **Gentle skill-up nudges** — When the user has cooked 10+ "easy" recipes with good taste ratings, suggest: "You've been crushing easy recipes — ready for a medium challenge? Here are 3 that build on techniques you already know." Not a nag — a celebration of progress.
-  * 📍 Backend: `GET /api/user/skill-progress` — analyzes cooking history, returns current effective skill level + suggestion if ready to level up
-  * 📍 Auto-updates `cookingSkillLevel` in preferences if user accepts the nudge (beginner → home_cook → confident → chef)
+* [x] **Gentle skill-up nudges** — `GET /api/user/skill-progress` joins `CookingLog` with `Meal.tasteRating` per recipe and runs `computeSkillProgress`. Thresholds: beginner→home_cook = 10 easy cooks with tasteRating ≥ 3; home_cook→confident = 10 medium cooks; confident→chef = 5 hard cooks with tasteRating ≥ 3. Returns `{ readyToLevelUp, nextLevel, reason }`. The `CookingJourneyCard` shows a peach-tinted nudge banner when ready; tapping calls `POST /api/user/skill-progress/accept` which upserts `UserPreferences.cookingSkillLevel`.
 
-* [ ] **"First time cooking [X]" badges** — When a user cooks a cuisine for the first time (first Ethiopian dish, first Persian dish), show a brief celebration: "You just cooked your first Ethiopian dish!" with the cuisine flag. Subtle, not gamified — just acknowledgment.
-  * 📍 Track in `RecipeFeedback` or a new `CuisineExploration` table: `{ userId, cuisine, firstCookedAt }`
+* [x] **"First time cooking [X]" badges** — Derivable without a new table: `cookingStatsService` returns `firstCookedCuisines: [{ cuisine, firstCookedAt }]` computed from the earliest `CookingLog.cookedAt` per cuisine. Surfaced in the cuisine flag chip strip on `CookingJourneyCard`. (CuisineExploration table deferred — pure aggregation works for the v1 flag grid.)
 
-* [ ] **Technique tips in cooking mode** — When a cooking step mentions a technique the user hasn't done before (braising, tempering spices, making a roux), show a collapsible "What's this?" tip with a 1-sentence explanation + optional video link.
-  * 📍 Curated technique glossary: ~50 common techniques with explanations. Pattern-match against instruction text.
+* [x] **Technique tips in cooking mode** — Curated 35-technique glossary in `frontend/lib/cookingTechniques.ts` with regex pattern-match (`detectTechniques(stepText, seenIds)`). `cooking.tsx` tracks a `seenTechniques` Set per cooking session and renders a collapsible `<TechniqueTip />` below each step text whenever a new technique appears (braise, deglaze, temper, fold, bloom spices, roux, julienne, chiffonade, sauté, caramelize, poach, marinate, rest, proof, knead, baste, render, score, brine, emulsify, etc.). Once opened, the technique is added to `seenTechniques` so it doesn't re-prompt later in the session.
 
-* [ ] **Test:** Cooking stats show correct counts and cuisine coverage; skill-up nudge appears after 10+ easy recipes with taste rating ≥ 3; first-cuisine badge triggers on first cook of a new cuisine; technique tips show for recognized cooking terms
+* [x] **Seed-your-journey edit sheet** — `CookingJourneyCard` header is tappable (`testID="cooking-journey-edit-trigger"`) and opens `CookingJourneyEditSheet`, a bottom sheet with a 14-cuisine multi-select grid + skill level picker. Persists via `PUT /api/user/cooking-journey/seed` → `UserPreferences.seededCuisines` (JSON array) + `cookingSkillLevel`. Seeded cuisines merge into `cuisinesExplored` (so the flag grid reflects reality) but NOT `firstCookedCuisines` (which must be earned through real `CookingLog` entries). Onboarding promotion deferred — A/B test in profile first, feature more prominently if engagement is high.
+
+* [x] **Test:** `cookingStats.test.ts` (14 tests + 2 seeded-cuisine tests = 16) — empty input zeros, this-month vs all-time counts, cuisine dedup + first-cooked-at, difficulty average + leveling-up trend detection, null-safe handling, streak edge cases (broken streaks, today/yesterday detection, multi-cooks-same-day). `cookingJourney.controller.test.ts` (12 tests — adds seededCuisines merge, malformed JSON, PUT validation + dedup + skill-only update) — `getCookingStats` aggregation, 500 on db error, `getSkillProgress` joining logs with taste ratings, default-to-beginner when prefs missing, `acceptSkillLevelUp` validation + upsert. `cookingTechniques.test.ts` (7 tests) — braise/deglaze/temper detection, seen-set filtering, no false positives, no duplicates, glossary size guard. `CookingJourneyCard.test.tsx` (4 tests) — stats render, level-up nudge appears + fires `acceptSkillLevelUp`, nudge hidden when not ready, header tap opens edit sheet. `CookingJourneyEditSheet.test.tsx` (2 tests) — toggles cuisines + skill and fires `onSave` with current selection, renders nothing when not visible.
 
 ---
 

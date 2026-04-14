@@ -15,3 +15,4 @@ export { default as DataPrivacyCard } from './DataPrivacyCard';
 export { default as ProfilePresetsCard } from './ProfilePresetsCard';
 export { default as AccountCard } from './AccountCard';
 export { default as ProfileStatWidgets } from './ProfileStatWidgets';
+export { default as CookingJourneyCard } from './CookingJourneyCard';
