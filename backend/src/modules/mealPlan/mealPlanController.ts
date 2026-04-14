@@ -231,6 +231,7 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
       startDate: start.toISOString().split('T')[0],
       endDate: end.toISOString().split('T')[0],
       weeklyPlan,
+      mealPlanId: mealPlans[0]?.id ?? null,
       totalPlannedMeals: mealPlans.reduce((sum, plan) => sum + plan.meals.length, 0),
       mealPrepPortions, // Available meal prep portions
     });
@@ -410,6 +411,10 @@ export const generateMealPlan = async (req: Request, res: Response) => {
     const cuisines = ['Italian', 'Mexican', 'Asian', 'Mediterranean', 'American', 'Indian', 'Thai'];
     const daysResult: any[] = [];
     const totalNutrition = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    // Cross-day variety history — carries the last 2 days of meals so the AI avoids
+    // repeating proteins/cuisines on consecutive days. See Group 10J.
+    const crossDayHistory: Array<{ title: string; cuisine: string; mainProtein?: string }> = [];
+    const MAX_CROSS_DAY_HISTORY = 8;
 
     for (let dayIndex = 0; dayIndex < days; dayIndex++) {
       const currentDate = new Date(startDate);
@@ -437,6 +442,7 @@ export const generateMealPlan = async (req: Request, res: Response) => {
             mealsToGenerate: mealsPerDay as Array<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert'>,
             maxTotalPrepTime,
             maxDailyBudget,
+            priorDayMeals: crossDayHistory.slice(-MAX_CROSS_DAY_HISTORY),
           }
         );
 
@@ -480,6 +486,12 @@ export const generateMealPlan = async (req: Request, res: Response) => {
           totalNutrition.protein += recipe.protein || 0;
           totalNutrition.carbs += recipe.carbs || 0;
           totalNutrition.fat += recipe.fat || 0;
+
+          crossDayHistory.push({
+            title: recipe.title,
+            cuisine: recipe.cuisine,
+            mainProtein: (recipe as any).ingredients?.[0]?.name,
+          });
         }
 
         daysResult.push({ date: dateStr, meals: dayMeals });

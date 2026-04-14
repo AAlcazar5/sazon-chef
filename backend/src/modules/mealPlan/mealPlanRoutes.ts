@@ -28,6 +28,7 @@ import {
 import { duplicateMeals } from './mealPlanDuplicateController';
 import { submitTasteFeedback } from './tasteFeedbackController';
 import { findRecipes } from './mealPlanFindRecipesController';
+import { getMealPlanVarietyScore } from './mealPlanVarietyController';
 import {
   getRecurringMeals,
   createRecurringMeal,
@@ -78,6 +79,7 @@ router.get('/weekly-budget', getWeeklyBudget);
 // Cost optimization routes (must come before /:id routes)
 router.get('/recipes/:recipeId/cheaper-alternatives', getCheaperAlternatives);
 router.get('/:id/cost-analysis', getMealPlanCostAnalysis);
+router.get('/:id/variety-score', getMealPlanVarietyScore);
 router.post('/:id/optimize-cost', optimizeMealPlan);
 
 export default router;

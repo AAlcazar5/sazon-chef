@@ -1874,7 +1874,7 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *If you're prepping 5 lunches for the week, they should NOT all be chicken + rice + broccoli. The AI should enforce variety across flavor profiles, textures, cuisines, and colors — because eating the same thing 5 days in a row is what makes people quit.*
 
-* [ ] **Variety scoring in meal plan generation** — When generating multiple meals for the same meal type across a week, enforce:
+* [x] **Variety scoring in meal plan generation** — When generating multiple meals for the same meal type across a week, enforce:
   - **No repeated proteins** across consecutive days (chicken Mon → fish Tue → beef Wed → tofu Thu → chicken Fri is OK; chicken Mon-Wed is not)
   - **No repeated cuisines** on consecutive days
   - **Texture variety** — not all soft foods; mix grilled, roasted, raw, steamed
@@ -1883,10 +1883,10 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   * 📍 Add variety constraints to `generateMealPlan` AI prompt: "Ensure no protein source repeats on consecutive days. Vary textures (grilled, steamed, raw) and ensure visual color variety across the week."
   * 📍 Post-generation validation: score the week for variety and flag if too repetitive
 
-* [ ] **"Boring week" detection** — After a meal plan is generated (or manually filled), if the variety score is low, show a subtle nudge: "Your lunches are looking a bit samey — want Sazon to mix it up?" → one tap regenerates just the repetitive meals.
+* [x] **"Boring week" detection** — After a meal plan is generated (or manually filled), if the variety score is low, show a subtle nudge: "Your lunches are looking a bit samey — want Sazon to mix it up?" → one tap regenerates just the repetitive meals.
   * 📍 Variety score: count unique proteins, cuisines, cooking methods. Score 0-100. Below 40 → show nudge.
 
-* [ ] **Test:** Generated meal plan has no repeated protein on consecutive days; generated plan spans ≥3 different cuisines across the week; "boring week" detection triggers when variety score < 40; regeneration only replaces repetitive meals, not the whole plan
+* [x] **Test:** Generated meal plan has no repeated protein on consecutive days; generated plan spans ≥3 different cuisines across the week; "boring week" detection triggers when variety score < 40; regeneration only replaces repetitive meals, not the whole plan ✅ `backend/tests/modules/varietyScore.test.ts`, `varietyController.test.ts`, `frontend/__tests__/components/BoringWeekNudge.test.tsx`
 
 ---
 
