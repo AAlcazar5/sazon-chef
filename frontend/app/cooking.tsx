@@ -40,6 +40,8 @@ import { mealPlanApi } from '../lib/api';
 import TasteSurveySheet from '../components/recipe/TasteSurveySheet';
 import ConsumeIngredientsSheet from '../components/cooking/ConsumeIngredientsSheet';
 import LeftoverIdeasSheet from '../components/cooking/LeftoverIdeasSheet';
+import TechniqueTip from '../components/cooking/TechniqueTip';
+import { detectTechniques } from '../lib/cookingTechniques';
 import { useVoicePlayback, } from '../hooks/useVoicePlayback';
 
 // --- Types ---
@@ -100,6 +102,8 @@ export default function CookingScreen() {
 
   // Step state
   const [currentStep, setCurrentStep] = useState(0);
+  // 10I: techniques the user has already opened this session → don't re-prompt
+  const [seenTechniques, setSeenTechniques] = useState<Set<string>>(new Set());
   const [showIngredients, setShowIngredients] = useState(false);
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
   const [servings, setServings] = useState(1);
@@ -679,6 +683,24 @@ export default function CookingScreen() {
                 <Text className="text-white text-2xl leading-10 font-medium">
                   {currentInstruction?.text || ''}
                 </Text>
+
+                {/* 10I: Technique tips — collapsible "What's this?" for new techniques */}
+                {currentInstruction?.text &&
+                  detectTechniques(currentInstruction.text, seenTechniques).map((technique) => (
+                    <TechniqueTip
+                      key={technique.id}
+                      testID={`technique-tip-${technique.id}`}
+                      term={technique.term}
+                      explanation={technique.explanation}
+                      onOpen={() =>
+                        setSeenTechniques((prev) => {
+                          const next = new Set(prev);
+                          next.add(technique.id);
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
 
                 {/* Timer suggestion buttons — tap to start */}
                 {stepTimerSuggestions.length > 0 && (

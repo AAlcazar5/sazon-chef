@@ -45,6 +45,12 @@ router.post('/superfoods', userController.addPreferredSuperfood);
 router.put('/superfoods', userController.updatePreferredSuperfoods);
 router.delete('/superfoods/:category', userController.removePreferredSuperfood);
 
+// Group 10I: Cooking Journey
+router.get('/cooking-stats', userController.getCookingStats);
+router.get('/skill-progress', userController.getSkillProgress);
+router.post('/skill-progress/accept', userController.acceptSkillLevelUp);
+router.put('/cooking-journey/seed', userController.seedCookingJourney);
+
 // Profile preset routes
 router.get('/presets', userPresetController.getPresets);
 router.post('/presets', userPresetController.createPreset);

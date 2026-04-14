@@ -6,6 +6,11 @@ import { getUserId } from '@/utils/authHelper';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import {
+  computeCookingStats,
+  computeSkillProgress,
+  SkillLevel,
+} from './cookingStatsService';
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'profile-pictures');
@@ -38,6 +43,18 @@ const profilePictureUpload = multer({
 });
 
 export const uploadProfilePictureMiddleware = profilePictureUpload.single('profilePicture');
+
+// Group 10I: Safely parse UserPreferences.seededCuisines (JSON-stringified array).
+function parseSeededCuisines(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((c): c is string => typeof c === 'string');
+  } catch {
+    return [];
+  }
+}
 
 export const userController = {
   // Get user profile
@@ -948,6 +965,179 @@ export const userController = {
     } catch (error) {
       console.error('Delete profile picture error:', error);
       res.status(500).json({ error: 'Failed to remove profile picture' });
+    }
+  },
+
+  // Group 10I: Cooking Journey stats
+  async getCookingStats(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+
+      const [logs, preferences] = await Promise.all([
+        prisma.cookingLog.findMany({
+          where: { userId },
+          select: {
+            cookedAt: true,
+            recipe: { select: { cuisine: true, difficulty: true } },
+          },
+          orderBy: { cookedAt: 'desc' },
+        }),
+        prisma.userPreferences.findUnique({
+          where: { userId },
+          select: { seededCuisines: true },
+        }),
+      ]);
+
+      const seeded = parseSeededCuisines(preferences?.seededCuisines);
+      const stats = computeCookingStats(logs, new Date(), seeded);
+      res.json({ ...stats, seededCuisines: seeded });
+    } catch (error) {
+      console.error('Get cooking stats error:', error);
+      res.status(500).json({ error: 'Failed to fetch cooking stats' });
+    }
+  },
+
+  // Group 10I: Seed cooking journey — user edits their skill + known cuisines
+  async seedCookingJourney(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { seededCuisines, cookingSkillLevel } = req.body as {
+        seededCuisines?: unknown;
+        cookingSkillLevel?: unknown;
+      };
+
+      if (seededCuisines !== undefined && !Array.isArray(seededCuisines)) {
+        return res.status(400).json({ error: 'seededCuisines must be an array' });
+      }
+      const cleaned =
+        Array.isArray(seededCuisines)
+          ? seededCuisines
+              .filter((c): c is string => typeof c === 'string')
+              .map((c) => c.trim())
+              .filter((c) => c.length > 0 && c.length <= 60)
+          : undefined;
+      const uniqueCleaned = cleaned ? [...new Set(cleaned)] : undefined;
+
+      const allowedLevels = ['beginner', 'home_cook', 'confident', 'chef'];
+      if (
+        cookingSkillLevel !== undefined &&
+        (typeof cookingSkillLevel !== 'string' || !allowedLevels.includes(cookingSkillLevel))
+      ) {
+        return res.status(400).json({ error: 'Invalid cookingSkillLevel' });
+      }
+
+      const updateData: {
+        seededCuisines?: string;
+        cookingSkillLevel?: string;
+      } = {};
+      if (uniqueCleaned !== undefined) {
+        updateData.seededCuisines = JSON.stringify(uniqueCleaned);
+      }
+      if (typeof cookingSkillLevel === 'string') {
+        updateData.cookingSkillLevel = cookingSkillLevel;
+      }
+
+      const prefs = await prisma.userPreferences.upsert({
+        where: { userId },
+        update: updateData,
+        create: {
+          userId,
+          cookTimePreference: 30,
+          ...updateData,
+        },
+        select: { seededCuisines: true, cookingSkillLevel: true },
+      });
+
+      res.json({
+        seededCuisines: parseSeededCuisines(prefs.seededCuisines),
+        cookingSkillLevel: prefs.cookingSkillLevel,
+      });
+    } catch (error) {
+      console.error('Seed cooking journey error:', error);
+      res.status(500).json({ error: 'Failed to seed cooking journey' });
+    }
+  },
+
+  // Group 10I: Skill progression evaluation
+  async getSkillProgress(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+
+      const preferences = await prisma.userPreferences.findUnique({
+        where: { userId },
+        select: { cookingSkillLevel: true },
+      });
+
+      const currentLevel = (preferences?.cookingSkillLevel as SkillLevel) || 'beginner';
+
+      // Pair CookingLog with Meal.tasteRating (via recipeId, most recent meal per recipe)
+      const logs = await prisma.cookingLog.findMany({
+        where: { userId },
+        select: {
+          recipeId: true,
+          cookedAt: true,
+          recipe: { select: { difficulty: true } },
+        },
+        orderBy: { cookedAt: 'desc' },
+      });
+
+      const recipeIds = [...new Set(logs.map((l) => l.recipeId))];
+      const meals = recipeIds.length
+        ? await prisma.meal.findMany({
+            where: {
+              mealPlan: { userId },
+              recipeId: { in: recipeIds },
+              tasteRating: { not: null },
+            },
+            select: { recipeId: true, tasteRating: true },
+          })
+        : [];
+
+      const ratingByRecipe = new Map<string, number>();
+      for (const meal of meals) {
+        if (meal.recipeId && meal.tasteRating != null && !ratingByRecipe.has(meal.recipeId)) {
+          ratingByRecipe.set(meal.recipeId, meal.tasteRating);
+        }
+      }
+
+      const logsWithRatings = logs.map((l) => ({
+        difficulty: l.recipe?.difficulty ?? null,
+        tasteRating: ratingByRecipe.get(l.recipeId) ?? null,
+      }));
+
+      const progress = computeSkillProgress({
+        currentLevel,
+        cookingLogsWithRatings: logsWithRatings,
+      });
+      res.json(progress);
+    } catch (error) {
+      console.error('Get skill progress error:', error);
+      res.status(500).json({ error: 'Failed to fetch skill progress' });
+    }
+  },
+
+  // Group 10I: Accept the skill-up nudge — bumps cookingSkillLevel
+  async acceptSkillLevelUp(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { newLevel } = req.body as { newLevel?: string };
+
+      const allowed: SkillLevel[] = ['beginner', 'home_cook', 'confident', 'chef'];
+      if (!newLevel || !allowed.includes(newLevel as SkillLevel)) {
+        return res.status(400).json({ error: 'Invalid skill level' });
+      }
+
+      const preferences = await prisma.userPreferences.upsert({
+        where: { userId },
+        update: { cookingSkillLevel: newLevel },
+        create: { userId, cookTimePreference: 30, cookingSkillLevel: newLevel },
+        select: { cookingSkillLevel: true },
+      });
+
+      res.json({ cookingSkillLevel: preferences.cookingSkillLevel });
+    } catch (error) {
+      console.error('Accept skill level-up error:', error);
+      res.status(500).json({ error: 'Failed to update skill level' });
     }
   },
 };
