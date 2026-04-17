@@ -1894,7 +1894,7 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *Users want to adjust portions instantly — "I need this to be 500 cal, not 700" or "make this for 4 people". The macros and ingredients should update in real time.*
 
-* [ ] **Scaling pills on recipe detail** — Below the recipe title, show quick-tap pills: `½×` `1×` `2×` `4×` + "Custom" pill for exact serving count. Tapping instantly updates:
+* [x] **Scaling pills on recipe detail** — Below the recipe title, show quick-tap pills: `½×` `1×` `2×` `4×` + "Custom" pill for exact serving count. Tapping instantly updates:
   - All ingredient quantities
   - All macro values (calories, protein, carbs, fat, fiber)
   - Estimated cost
@@ -1902,11 +1902,11 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   * 📍 Frontend-only calculation (multiply by scale factor) — no backend call needed
   * 📍 "Custom" opens a small input: "How many servings?" or "Target calories:" (reverse-calculates serving size to hit a calorie target)
 
-* [ ] **"Hit my macros" scaler** — Instead of choosing servings, user enters their remaining macro budget ("I have 450 cal and 35g protein left") → the app calculates the exact portion size to fit. Shows: "1.3 servings = 442 cal, 34g protein."
+* [x] **"Hit my macros" scaler** — Instead of choosing servings, user enters their remaining macro budget ("I have 450 cal and 35g protein left") → the app calculates the exact portion size to fit. Shows: "1.3 servings = 442 cal, 34g protein."
   * 📍 Frontend calculation: `targetCalories / perServingCalories = scaleFactor`
   * 📍 Integrates with meal plan "remaining calories" context
 
-* [ ] **Test:** Scaling pills update ingredient quantities and macros correctly; 2× doubles all values; custom serving input accepts decimal values; "Hit my macros" scaler calculates correct portion to match target calories within 5%
+* [x] **Test:** Scaling pills update ingredient quantities and macros correctly; 2× doubles all values; custom serving input accepts decimal values; "Hit my macros" scaler calculates correct portion to match target calories within 5%
 
 ---
 
@@ -2197,6 +2197,113 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 - [ ] Current recipe is excluded from related results
 - [ ] Returns empty array gracefully when no related recipes found
 - [ ] Results limited to 6 recipes max
+
+---
+
+#### **10Q: Shopping List Intelligence — Recipe-Driven Lists & Usability** 🛒 *(Shopping List)*
+
+> **Why.** Users already save recipes in the cookbook, but rebuilding a shopping list ingredient-by-ingredient is the biggest drop-off in the cooking funnel. The `generateFromRecipes` / `generateFromMealPlan` endpoints already exist — this group wires them to a first-class UX and adds merge/pantry/budget smarts on top. Goal: zero-typing path from "I want to cook these 3 recipes" to "here's an aisle-sorted, pantry-subtracted, cost-estimated list."
+
+**Scope — Recipe → List core flow**
+- [ ] **"Build from Recipes" entry point** — new FAB action on shopping list screen + empty-state CTA. Opens `BuildFromRecipesSheet` bottom sheet.
+  - **Test:** `frontend/__tests__/components/shopping/BuildFromRecipesSheet.test.tsx` — FAB opens sheet; empty state shows "Build from Recipes" chip; sheet dismisses on backdrop tap.
+- [ ] **Cookbook picker with multi-select** — paginated grid inside sheet, thumbnail + title + cook time, recently cooked row at top (last 5), search bar.
+  - **Test:** same file — multi-select toggles, recent row renders last 5 cooked recipes, search filters by title/cuisine.
+- [ ] **Per-recipe servings stepper** — each selected recipe shows a `1×/2×/custom` stepper that scales ingredient quantities before generation.
+  - **Test:** `frontend/__tests__/hooks/useRecipeScaling.test.ts` — 2× doubles all numeric ingredient quantities; fractional (1.5×) handles mixed numbers; non-numeric ("to taste") passes through unchanged.
+- [ ] **Smart ingredient merge with unit normalization** — same ingredient across recipes combines into one line (e.g., "2 tbsp olive oil" + "1/4 cup olive oil" → "6 tbsp olive oil"); different units normalize via a shared unit table.
+  - **Test:** `backend/tests/modules/shoppingListMerge.test.ts` — merges duplicate ingredients across recipes; normalizes tbsp/cup/ml/g; preserves distinct ingredients; rounds to sensible precision.
+- [ ] **Pantry subtraction toggle** — "I already have these" toggle in the sheet pre-filters out items present in `pantrySet` before the list is created.
+  - **Test:** `backend/tests/modules/shoppingListPantrySubtraction.test.ts` — items in pantry omitted from generated list; toggle off returns full list; partial-match (e.g. "olive oil" vs "extra-virgin olive oil") handled correctly.
+- [ ] **Budget preview before confirmation** — sheet shows estimated total using `purchaseHistoryPriceMap`; items without price history fall back to category averages.
+  - **Test:** `frontend/__tests__/components/shopping/BuildFromRecipesSheet.test.tsx` — preview reflects checked items only; updates live as servings change; shows "~" prefix when estimates are used.
+- [ ] **Duplicate-list protection** — if a list generated from the same recipe set was created in the last 7 days, show "Merge into existing list" as primary action.
+  - **Test:** `backend/tests/modules/shoppingListDuplicateDetection.test.ts` — returns duplicate match within 7d window; no match after 7d; partial recipe overlap (≥80%) still flagged.
+
+**Scope — cross-surface shortcuts**
+- [ ] **"Add to shopping list" long-press action** on recipe cards in cookbook, home, and recipe detail → skips the sheet, generates directly with default servings.
+  - **Test:** `frontend/__tests__/components/recipe/RecipeCardLongPress.test.tsx` — long-press surfaces action sheet; tapping "Add to shopping list" calls `generateFromRecipes` with correct recipeId; toast confirms success.
+- [ ] **"Shop for this week" chip on empty state** — single-tap path calling `generateFromMealPlan` for the current week.
+  - **Test:** `frontend/__tests__/app/shopping-list.emptystate.test.tsx` — chip renders when no current list; tap calls `generateFromMealPlan` with current week range; navigates into generated list.
+- [ ] **Voice-add with recipe resolution** — "Add everything for Thai basil chicken" matches a cookbook recipe via fuzzy title search before falling back to literal add.
+  - **Test:** `backend/tests/modules/voiceRecipeResolver.test.ts` — fuzzy-matches recipe by spoken title; confidence ≥0.7 triggers recipe path; lower falls back to literal item add; handles typos and partial titles.
+
+**Scope — general usability polish**
+- [ ] **Recipe source pills on list items** — each item generated from a recipe shows a tiny emoji pill; tap reveals which recipe(s) need it.
+  - **Test:** `frontend/__tests__/components/shopping/ShoppingListItem.test.tsx` — renders recipe pill when `sourceRecipeIds` present; tap opens recipe attribution sheet; hides pill for manually added items.
+- [ ] **"Missing for \<recipe\>" banner** — deleting an item from a recipe-sourced list surfaces a banner on the source recipe card flagging the missing ingredient.
+  - **Test:** `frontend/__tests__/components/recipe/MissingIngredientBanner.test.tsx` — banner renders when any recipe-sourced item is deleted; dismisses on re-add; lists missing items correctly.
+- [ ] **Aisle-optimized reorder on generation** — generated items auto-sort into `AISLE_ORDER` before first render.
+  - **Test:** `frontend/__tests__/hooks/useShoppingList.generation.test.ts` — new generated list renders items grouped and ordered by `AISLE_ORDER`; uncategorized items fall to "Other".
+- [ ] **Imperial ↔ metric toggle** on the list view; conversion is non-destructive (display-only).
+  - **Test:** `frontend/__tests__/components/shopping/UnitToggle.test.tsx` — toggle flips units for known conversions; persists across renders; does not mutate underlying data.
+- [ ] **Share list deep link** — generates an `/import/shopping-list/:token` URL that another user can open to import the same items.
+  - **Test:** `backend/tests/modules/shoppingListShare.test.ts` — share endpoint returns signed token; import endpoint creates new list for target user; expired tokens rejected; token cannot be reused after expiry.
+
+#### **10Q Tests (consolidated)**
+
+- [ ] `frontend/__tests__/components/shopping/BuildFromRecipesSheet.test.tsx` — entry point, picker, servings stepper UX, budget preview
+- [ ] `frontend/__tests__/hooks/useRecipeScaling.test.ts` — scaling math
+- [ ] `backend/tests/modules/shoppingListMerge.test.ts` — ingredient dedupe + unit normalization
+- [ ] `backend/tests/modules/shoppingListPantrySubtraction.test.ts` — pantry exclusion
+- [ ] `backend/tests/modules/shoppingListDuplicateDetection.test.ts` — 7-day duplicate guard
+- [ ] `frontend/__tests__/components/recipe/RecipeCardLongPress.test.tsx` — long-press shortcut
+- [ ] `frontend/__tests__/app/shopping-list.emptystate.test.tsx` — "Shop for this week" chip
+- [ ] `backend/tests/modules/voiceRecipeResolver.test.ts` — fuzzy voice recipe match
+- [ ] `frontend/__tests__/components/shopping/ShoppingListItem.test.tsx` — recipe source pills
+- [ ] `frontend/__tests__/components/recipe/MissingIngredientBanner.test.tsx` — missing-ingredient feedback loop
+- [ ] `frontend/__tests__/hooks/useShoppingList.generation.test.ts` — aisle-optimized ordering
+- [ ] `frontend/__tests__/components/shopping/UnitToggle.test.tsx` — imperial/metric toggle
+- [ ] `backend/tests/modules/shoppingListShare.test.ts` — share/import deep link
+
+> **Dependencies:** reuses existing `generateFromRecipes` and `generateFromMealPlan` endpoints; pantry subtraction depends on Group 10H pantry match. Share deep link should land after Group 13 deep-linking setup.
+
+**Scope — List Management (first-principles cleanup)**
+
+> **Framing.** A shopping list exists for one window: between "I decided to cook X" and "I'm done at the store." Outside that window it should disappear on its own. Today, lists pile up because (1) finished lists look identical to active ones, (2) the UI treats lists as a plural collection to curate, (3) user-typed names create duplicates, (4) dedupe is manual, (5) archival requires a tap. Fix all five by making *the active list* a singleton and everything else an auto-managed archive.
+
+- [ ] **Singleton active list model** — exactly one list is "active" at any time; all others are archived. Switching active list auto-archives the previous one (with 5s undo toast). Shopping list screen opens directly to the active list, never a picker.
+  - **Test:** `backend/tests/modules/shoppingListActiveState.test.ts` — only one list has `isActive: true` at a time; setting a new active list flips the previous; restoring from undo reverses the swap; default active list auto-created on user signup.
+  - **Test:** `frontend/__tests__/app/shopping-list.activeList.test.tsx` — screen opens to active list on mount; no list picker shown by default; picker accessed via explicit header button.
+- [ ] **Auto-archive on completion** — when all items in the active list are purchased, a "Done!" celebration fires, purchase history is captured, and the list auto-archives after a 10s grace window. A fresh empty list becomes active.
+  - **Test:** `frontend/__tests__/hooks/useShoppingList.autoArchive.test.ts` — all-items-checked triggers celebration + archive after 10s; grace window cancellable by unchecking any item; new empty list created as replacement active; purchase history records all purchased items.
+- [ ] **"I'm done shopping" explicit button** — header action during in-store mode forces terminal state regardless of checked count. Unchecked items roll over into a new active list labeled "Unfinished from \<date\>".
+  - **Test:** `frontend/__tests__/components/shopping/InStoreDoneButton.test.tsx` — button visible only in in-store mode; tap archives current list; unchecked items become new active list with correct name; confirms via sheet before destructive move.
+- [ ] **Stale auto-archive** — any non-active list untouched for 14 days auto-archives on next app open; a batched toast shows "Archived N old lists — tap to view".
+  - **Test:** `backend/tests/modules/shoppingListStaleArchive.test.ts` — lists with `updatedAt` older than 14d auto-archive; active list never auto-archived regardless of age; toast payload lists archived IDs; archival is idempotent on repeated opens.
+- [ ] **Auto-naming from contents** — no name prompt on creation. Name derives from source: recipe titles ("Thai basil chicken + 2 more"), week range ("This week"), dominant aisles ("Produce + Dairy run"). User can rename but is never required to.
+  - **Test:** `backend/tests/services/shoppingListAutoName.test.ts` — recipe-sourced list uses top recipe + overflow count; meal-plan-sourced uses week range; manual list uses dominant categories; user rename overrides auto-name and persists across updates.
+- [ ] **Duplicate detection at creation** — if a new list overlaps ≥70% by item name with an existing active/recent list, the default CTA flips to "Merge into existing"; "Create new anyway" becomes secondary.
+  - **Test:** `backend/tests/modules/shoppingListDuplicateCreation.test.ts` — 70%+ overlap detected using normalized item names; partial overlap (<70%) allows silent creation; merge preserves purchased state from target list; "create anyway" bypass works.
+- [ ] **Compact archive view** — a single "Archive" pill at the bottom of the (rarely-used) list picker opens a searchable, one-line-per-list history: name, date, item count, total spent. No nested screens.
+  - **Test:** `frontend/__tests__/components/shopping/ArchiveView.test.tsx` — renders one row per archived list with summary stats; search filters by name/date; empty state shows Sazon `sleepy` mascot; lists older than 90 days collapse into "Older" bucket.
+- [ ] **Restore via long-press** — long-press any archived list row → becomes active, prior active list auto-archives.
+  - **Test:** same file — long-press restores list to active; prior active goes to archive; undo toast appears; haptic feedback fires.
+- [ ] **Silent cleanup of orphans** — on app open, delete any list with 0 items and `updatedAt` >7d. Runs once per session, no user notification.
+  - **Test:** `backend/tests/modules/shoppingListOrphanCleanup.test.ts` — empty lists older than 7d deleted; empty lists younger than 7d preserved; non-empty stale lists preserved; active list never deleted.
+- [ ] **"Start fresh" single action** — header menu option that clears all items from the active list in one tap with a 5s undo banner. Replaces manual item-by-item deletion.
+  - **Test:** `frontend/__tests__/components/shopping/StartFreshAction.test.tsx` — clears all items on tap; undo banner restores items within 5s window; after window items are permanently removed; confirms via sheet only if list has >10 items.
+- [ ] **Merge suggestion banner** — when active list shares ≥70% items with a list archived in the last 48h, show a dismissible banner: "This looks similar to '\<name\>' — merge?" Never re-nags after dismiss.
+  - **Test:** `frontend/__tests__/components/shopping/MergeSuggestionBanner.test.tsx` — banner renders on 70%+ overlap with recent archive; tap merges items; dismiss hides permanently for that list pair; does not render for <70% overlap.
+- [ ] **Archive tiering & lightweight storage** — archived lists older than 90 days collapse into a single "Older" bucket with aggregate stats only. Item-level detail is purged; purchase history remains the source of truth for individual items.
+  - **Test:** `backend/tests/modules/shoppingListArchiveTiering.test.ts` — lists older than 90d have their items purged but summary stats preserved; purchase history untouched; "Older" bucket returns aggregate count + total spent; archived list record cannot be un-tiered.
+
+#### **10Q-ListMgmt Tests (consolidated)**
+
+- [ ] `backend/tests/modules/shoppingListActiveState.test.ts` — singleton active list invariant
+- [ ] `frontend/__tests__/app/shopping-list.activeList.test.tsx` — screen opens to active list
+- [ ] `frontend/__tests__/hooks/useShoppingList.autoArchive.test.ts` — auto-archive on completion
+- [ ] `frontend/__tests__/components/shopping/InStoreDoneButton.test.tsx` — explicit terminal state
+- [ ] `backend/tests/modules/shoppingListStaleArchive.test.ts` — 14-day stale auto-archive
+- [ ] `backend/tests/services/shoppingListAutoName.test.ts` — content-derived naming
+- [ ] `backend/tests/modules/shoppingListDuplicateCreation.test.ts` — 70% dedupe at creation
+- [ ] `frontend/__tests__/components/shopping/ArchiveView.test.tsx` — compact archive + search
+- [ ] `backend/tests/modules/shoppingListOrphanCleanup.test.ts` — silent orphan GC
+- [ ] `frontend/__tests__/components/shopping/StartFreshAction.test.tsx` — one-tap clear with undo
+- [ ] `frontend/__tests__/components/shopping/MergeSuggestionBanner.test.tsx` — in-list merge nudge
+- [ ] `backend/tests/modules/shoppingListArchiveTiering.test.ts` — 90-day collapse to summary
+
+> **Data model note.** Adds `isActive: Boolean`, `archivedAt: DateTime?`, `autoNamedFrom: Json?`, and `tier: "active" | "archived" | "older"` to the `ShoppingList` Prisma model. Singleton invariant enforced by a partial unique index on `(userId) WHERE isActive = true`. Confirm schema diff before running `npx prisma db push`.
 
 ---
 

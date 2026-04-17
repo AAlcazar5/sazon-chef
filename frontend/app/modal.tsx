@@ -42,6 +42,9 @@ import type { IngredientSwap } from '../components/recipe/IngredientSwapSheet';
 import AskSazonSheet from '../components/recipe/AskSazonSheet';
 import type { SubstitutionDiff } from '../components/recipe/AskSazonSheet';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { useServingScaler } from '../hooks/useServingScaler';
+import ServingSelector from '../components/recipe/ServingSelector';
+import HitMyMacrosSheet from '../components/recipe/HitMyMacrosSheet';
 
 const HERO_HEIGHT = 300;
 
@@ -202,6 +205,21 @@ export default function RecipeModal() {
   const [flavorBoosts, setFlavorBoosts] = useState<Array<{ addition: string; description: string; category: string; macroCost: { calories: number } }>>([]);
   const [loadingFlavorBoosts, setLoadingFlavorBoosts] = useState(false);
   const [flavorBoostsExpanded, setFlavorBoostsExpanded] = useState(false);
+
+  // 10K: Serving scaler state
+  const [showHitMyMacros, setShowHitMyMacros] = useState(false);
+
+  // 10K: Serving scaler hook — uses recipe data when available, safe defaults otherwise
+  const scaler = useServingScaler({
+    servings: recipe?.servings,
+    calories: recipe?.calories ?? 0,
+    protein: recipe?.protein ?? 0,
+    carbs: recipe?.carbs ?? 0,
+    fat: recipe?.fat ?? 0,
+    fiber: recipe?.fiber,
+    estimatedCost: recipe?.estimatedCost,
+    cookTime: recipe?.cookTime,
+  });
 
   // Animate modal entrance
   useEffect(() => {
@@ -1078,14 +1096,37 @@ export default function RecipeModal() {
             </View>
           )}
 
-          {/* Macro pills row — pastel tinted */}
+          {/* 10K: Unified serving selector — stepper + tick track */}
+          <View style={{ marginBottom: 12 }}>
+            <ServingSelector
+              servings={scaler.scaledServings}
+              baseServings={recipe.servings || 1}
+              onServingsChange={(s) => scaler.setCustomServings(s)}
+              onHitMyMacrosPress={() => setShowHitMyMacros(true)}
+              isDark={isDark}
+            />
+          </View>
+
+          {/* 10K: Cook time hint for large batches */}
+          {scaler.cookTimeHint && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center',
+              backgroundColor: isDark ? 'rgba(100,181,246,0.12)' : '#E3F2FD',
+              borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12, alignSelf: 'flex-start',
+            }}>
+              <Text style={{ fontSize: 12, marginRight: 4 }}>⏱</Text>
+              <Text style={{ fontSize: 12, fontWeight: '500', color: isDark ? '#64B5F6' : '#0369A1' }}>{scaler.cookTimeHint}</Text>
+            </View>
+          )}
+
+          {/* Macro pills row — pastel tinted, uses scaled macros */}
           <View style={{ marginBottom: 12 }}>
             <MacroPillsRow
-              calories={recipe.calories}
-              protein={recipe.protein}
-              carbs={recipe.carbs}
-              fat={recipe.fat}
-              fiber={recipe.fiber}
+              calories={scaler.scaledMacros.calories}
+              protein={scaler.scaledMacros.protein}
+              carbs={scaler.scaledMacros.carbs}
+              fat={scaler.scaledMacros.fat}
+              fiber={scaler.scaledMacros.fiber}
               isDark={isDark}
             />
           </View>
@@ -1095,7 +1136,7 @@ export default function RecipeModal() {
             {recipe.description}
           </AnimatedText>
 
-          {/* Quick Stats */}
+          {/* Quick Stats — uses scaled macros */}
           <FrostedCard style={{ marginBottom: 24, padding: 16 }}>
             <View className="flex-row items-center mb-3">
               <Text className="text-xl mr-2">⏱️</Text>
@@ -1108,16 +1149,16 @@ export default function RecipeModal() {
             </View>
             <View className="items-center">
               <Text className="text-gray-500 dark:text-gray-400 text-sm">Calories</Text>
-              <CountingNumber value={recipe.calories} delay={100} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
+              <CountingNumber value={scaler.scaledMacros.calories} delay={100} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
             </View>
             <View className="items-center">
               <Text className="text-gray-500 dark:text-gray-400 text-sm">Protein</Text>
-              <CountingNumber value={recipe.protein} suffix="g" delay={200} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
+              <CountingNumber value={scaler.scaledMacros.protein} suffix="g" delay={200} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
             </View>
             </View>
           </FrostedCard>
 
-          {/* Macro Nutrients — 2×2 Ring Grid */}
+          {/* Macro Nutrients — 2×2 Ring Grid, uses scaled macros */}
           <View style={{ marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ fontSize: 20, marginRight: 8 }}>🥗</Text>
@@ -1126,11 +1167,11 @@ export default function RecipeModal() {
             <FrostedCard style={{ padding: 16 }}>
               <MacroRingGrid
                 macros={{
-                  calories: recipe.calories || 0,
-                  protein: recipe.protein || 0,
-                  carbs: recipe.carbs || 0,
-                  fat: recipe.fat || 0,
-                  fiber: recipe.fiber || 0,
+                  calories: scaler.scaledMacros.calories,
+                  protein: scaler.scaledMacros.protein,
+                  carbs: scaler.scaledMacros.carbs,
+                  fat: scaler.scaledMacros.fat,
+                  fiber: scaler.scaledMacros.fiber,
                 }}
                 targets={macroTargets ?? undefined}
                 testID="recipe-macro-grid"
@@ -1346,7 +1387,7 @@ export default function RecipeModal() {
                 <View>
                   <Text className="text-gray-500 text-sm">Total Cost</Text>
                   <Text className="text-2xl font-bold text-emerald-700">
-                    ${recipe.estimatedCost ? Math.round(recipe.estimatedCost * 100) / 100 : (recipe.pricePerServing && recipe.servings ? Math.round(recipe.pricePerServing * recipe.servings * 100) / 100 : 'N/A')}
+                    ${scaler.scaledCost != null ? Math.round(scaler.scaledCost * 100) / 100 : (recipe.pricePerServing && recipe.servings ? Math.round(recipe.pricePerServing * recipe.servings * scaler.scaleFactor * 100) / 100 : 'N/A')}
                   </Text>
                 </View>
                 <View className="items-end">
@@ -1584,6 +1625,8 @@ export default function RecipeModal() {
                   ? healthifiedRecipe.ingredients
                   : recipe.ingredients}
                 baseServings={recipe.servings || 4}
+                scaledServings={scaler.scaledServings}
+                onServingsChange={(s) => scaler.setCustomServings(s)}
                 isDark={isDark}
                 onSwapIngredient={handleSwapIngredient}
                 activeSwaps={activeSwaps}
@@ -2502,6 +2545,20 @@ export default function RecipeModal() {
       </View>
     </SafeAreaView>
       </Modal>
+
+      {/* 10K: Hit My Macros Sheet */}
+      <HitMyMacrosSheet
+        visible={showHitMyMacros}
+        onClose={() => setShowHitMyMacros(false)}
+        onApply={(target) => {
+          scaler.hitMyMacros(target);
+          setShowHitMyMacros(false);
+        }}
+        perServingCalories={recipe?.calories ?? 0}
+        perServingProtein={recipe?.protein ?? 0}
+        baseServings={recipe?.servings || 1}
+        isDark={isDark}
+      />
 
       {/* Meal Prep Scaling Modal */}
       <MealPrepScalingModal

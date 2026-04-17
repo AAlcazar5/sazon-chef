@@ -99,6 +99,10 @@ interface VisualIngredientListProps {
   ingredients: Array<string | { id?: string; text: string; order?: number }>;
   /** Base servings count from recipe */
   baseServings?: number;
+  /** Controlled serving count driven by parent (10K scaler). When provided, the +/- buttons call onServingsChange instead of managing internal state. */
+  scaledServings?: number;
+  /** Callback when user taps +/- in controlled mode. Parent updates the scaler. */
+  onServingsChange?: (newServings: number) => void;
   isDark: boolean;
   /** Called when user taps the swap icon on an ingredient row */
   onSwapIngredient?: (ingredientText: string) => void;
@@ -113,17 +117,29 @@ interface VisualIngredientListProps {
 export default function VisualIngredientList({
   ingredients,
   baseServings = 4,
+  scaledServings: controlledServings,
+  onServingsChange,
   isDark,
   onSwapIngredient,
   activeSwaps,
   onUndoSwap,
 }: VisualIngredientListProps) {
-  const [servings, setServings] = useState(baseServings);
+  // Controlled mode: parent owns serving count via scaledServings + onServingsChange
+  // Uncontrolled mode: internal state (backward-compatible for non-10K usage)
+  const isControlled = controlledServings != null;
+  const [internalServings, setInternalServings] = useState(baseServings);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('us');
+
+  const servings = isControlled ? controlledServings : internalServings;
   const scale = baseServings > 0 ? servings / baseServings : 1;
 
   const adjustServings = (delta: number) => {
-    setServings((prev) => Math.max(1, prev + delta));
+    const next = Math.max(1, Math.round((servings + delta) * 10) / 10);
+    if (isControlled && onServingsChange) {
+      onServingsChange(next);
+    } else {
+      setInternalServings(next);
+    }
   };
 
   /** Scale an amount string by the serving ratio */
@@ -178,7 +194,7 @@ export default function VisualIngredientList({
 
   return (
     <View>
-      {/* Section header with serving adjuster */}
+      {/* Section header with serving badge or adjuster */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <Text style={{
           fontSize: 20,
@@ -188,56 +204,79 @@ export default function VisualIngredientList({
           Ingredients
         </Text>
 
-        {/* Serving adjuster */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: isDark ? PastelDark.peach : Pastel.peach,
-          borderRadius: 100,
-          paddingHorizontal: 4,
-          paddingVertical: 2,
-        }}>
-          <HapticTouchableOpacity
-            onPress={() => adjustServings(-1)}
-            hapticStyle="light"
+        {isControlled ? (
+          /* Controlled mode: read-only badge — ServingSelector above is the single control */
+          <View
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: 14,
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: isDark ? 'rgba(255,183,77,0.2)' : 'rgba(251,146,60,0.15)',
+              backgroundColor: isDark ? PastelDark.peach : Pastel.peach,
+              borderRadius: 100,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
             }}
-            accessibilityLabel="Decrease servings"
+            accessibilityLabel={`for ${servings} serving${servings !== 1 ? 's' : ''}`}
           >
-            <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#FFB74D' : '#EA580C', lineHeight: 20 }}>−</Text>
-          </HapticTouchableOpacity>
-          <Text style={{
-            fontSize: 13,
-            fontWeight: '700',
-            color: isDark ? '#FFB74D' : '#EA580C',
-            marginHorizontal: 8,
-            minWidth: 56,
-            textAlign: 'center',
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: isDark ? '#FFB74D' : '#EA580C',
+            }}>
+              for {servings === Math.floor(servings) ? servings : servings.toFixed(1)} serving{servings !== 1 ? 's' : ''}
+            </Text>
+          </View>
+        ) : (
+          /* Uncontrolled mode: full +/- adjuster (backward-compatible) */
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: isDark ? PastelDark.peach : Pastel.peach,
+            borderRadius: 100,
+            paddingHorizontal: 4,
+            paddingVertical: 2,
           }}>
-            {servings} serving{servings !== 1 ? 's' : ''}
-          </Text>
-          <HapticTouchableOpacity
-            onPress={() => adjustServings(1)}
-            hapticStyle="light"
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 14,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: isDark ? 'rgba(255,183,77,0.2)' : 'rgba(251,146,60,0.15)',
-            }}
-            accessibilityLabel="Increase servings"
-          >
-            <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#FFB74D' : '#EA580C', lineHeight: 20 }}>+</Text>
-          </HapticTouchableOpacity>
-        </View>
+            <HapticTouchableOpacity
+              onPress={() => adjustServings(-1)}
+              hapticStyle="light"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: isDark ? 'rgba(255,183,77,0.2)' : 'rgba(251,146,60,0.15)',
+              }}
+              accessibilityLabel="Decrease servings"
+            >
+              <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#FFB74D' : '#EA580C', lineHeight: 20 }}>−</Text>
+            </HapticTouchableOpacity>
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: isDark ? '#FFB74D' : '#EA580C',
+              marginHorizontal: 8,
+              minWidth: 56,
+              textAlign: 'center',
+            }}>
+              {servings} serving{servings !== 1 ? 's' : ''}
+            </Text>
+            <HapticTouchableOpacity
+              onPress={() => adjustServings(1)}
+              hapticStyle="light"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: isDark ? 'rgba(255,183,77,0.2)' : 'rgba(251,146,60,0.15)',
+              }}
+              accessibilityLabel="Increase servings"
+            >
+              <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#FFB74D' : '#EA580C', lineHeight: 20 }}>+</Text>
+            </HapticTouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Metric/US unit toggle pill */}
