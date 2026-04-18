@@ -470,6 +470,25 @@ export interface QuickMealLogData {
   notes?: string;
 }
 
+// 10L: Branded Food & Restaurant Tracking
+export interface FoodItem {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: string | null;
+  servingSize: string | null;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number | null;
+  source: 'nutritionix' | 'openfoodfacts' | 'user';
+  externalId: string | null;
+  imageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface RecurringMeal {
   id: string;
   mealType: string;

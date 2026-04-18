@@ -484,6 +484,9 @@ model Meal {
   recipeId String?
   recipe   Recipe?  @relation(fields: [recipeId], references: [id])
 
+  foodItemId String?
+  foodItem   FoodItem? @relation(fields: [foodItemId], references: [id])
+
   customName        String?
   customDescription String?
   customCalories    Int?
@@ -956,4 +959,28 @@ model PushToken {
 
   @@index([userId])
   @@map("push_tokens")
+}
+
+// Branded/restaurant food item cache (Group 10L)
+model FoodItem {
+  id          String   @id @default(cuid())
+  name        String                    // "Round Table Pepperoni Pizza (1 slice)"
+  brand       String?                   // "Round Table"
+  category    String?                   // "restaurant" | "packaged" | "fast_food"
+  servingSize String?                   // "1 slice (125g)"
+  calories    Float
+  protein     Float
+  carbs       Float
+  fat         Float
+  fiber       Float?
+  source      String                    // "nutritionix" | "openfoodfacts" | "user"
+  externalId  String?                   // Nutritionix item_id or OFF barcode for dedup
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  meals       Meal[]
+
+  @@unique([source, externalId])
+  @@index([name])
+  @@map("food_items")
 }

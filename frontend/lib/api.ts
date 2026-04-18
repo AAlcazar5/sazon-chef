@@ -1639,4 +1639,29 @@ export const stripeApi = {
   }) => apiClient.post('/stripe/cancel', payload),
 };
 
+// 10L: Branded Food & Restaurant Tracking
+export const foodApi = {
+  search: (query: string) =>
+    apiClient.get(`/food/search?q=${encodeURIComponent(query)}`),
+  getRecent: () => apiClient.get('/food/recent'),
+  getFrequent: () => apiClient.get('/food/frequent'),
+  logFood: (data: {
+    foodItemId: string;
+    mealType: string;
+    servings?: number;
+    date?: string;
+  }) => apiClient.post('/food/log', data),
+  createItem: (data: {
+    name: string;
+    brand?: string;
+    category?: string;
+    servingSize?: string;
+    calories: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    fiber?: number;
+  }) => apiClient.post('/food/items', data),
+};
+
 export type { ApiResponse, ApiError };

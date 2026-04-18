@@ -139,7 +139,7 @@ export function useInitialRecipeLoad(options: UseInitialRecipeLoadOptions): UseI
     };
 
     fetchInitialRecipes();
-  }, [filtersLoaded, activeFilters, mealPrepMode, loadingFromFilters, searchQuery, fetchRecipes, applyFetchResult, recipesPerPage, getMacroFilterParams, timeAwareMode]);
+  }, [filtersLoaded, activeFilters, mealPrepMode, searchQuery, fetchRecipes, applyFetchResult, recipesPerPage, getMacroFilterParams, timeAwareMode]); // eslint-disable-line react-hooks/exhaustive-deps — loadingFromFilters is a guard, not a trigger
 
   // Refetch when view mode changes (grid ↔ list) to adjust page size
   useEffect(() => {
