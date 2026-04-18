@@ -53,6 +53,7 @@ import {
   MealPlanEmptyState,
   GoalModeSelector,
   MealRequestModal,
+  LogFoodSheet,
   WeeklyBudgetBar,
   CravingFlowModal,
   BoringWeekNudge,
@@ -76,6 +77,9 @@ export default function MealPlanScreen() {
 
   // Find Me a Meal state
   const [showFindMeAMealModal, setShowFindMeAMealModal] = useState(false);
+
+  // 10L: Log Food (branded/restaurant) state
+  const [showLogFoodSheet, setShowLogFoodSheet] = useState(false);
 
   // Group 10G-C: "I have a craving" flow state
   const [showCravingFlowModal, setShowCravingFlowModal] = useState(false);
@@ -352,6 +356,7 @@ export default function MealPlanScreen() {
     setRecurringRules,
     planningMode,
     onFindMeAMeal: () => setShowFindMeAMealModal(true),
+    onLogFood: () => setShowLogFoodSheet(true),
   });
 
   // Use shopping list generation hook
@@ -935,6 +940,24 @@ export default function MealPlanScreen() {
             targetMacros.protein > 0 && dailyMacros.protein >= 0
               ? Math.max(0, targetMacros.protein - dailyMacros.protein)
               : undefined
+          }
+        />
+
+        <LogFoodSheet
+          visible={showLogFoodSheet}
+          onClose={() => setShowLogFoodSheet(false)}
+          onFoodLogged={() => {
+            setShowLogFoodSheet(false);
+            loadMealPlan();
+          }}
+          mealType={
+            (() => {
+              const h = new Date().getHours();
+              if (h < 11) return 'breakfast';
+              if (h < 15) return 'lunch';
+              if (h < 21) return 'dinner';
+              return 'snack';
+            })() as 'breakfast' | 'lunch' | 'dinner' | 'snack'
           }
         />
 

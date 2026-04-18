@@ -221,10 +221,9 @@ export default function HomeScreen() {
     if (resetPage) {
       setCurrentPage(0);
     }
-    // Merge new feedback with existing (hook expects direct object, not functional update)
-    setUserFeedback({ ...userFeedback, ...result.feedback });
+    setUserFeedback(prev => ({ ...prev, ...result.feedback }));
     setInitialRecipesLoaded(true);
-  }, [userFeedback, setUserFeedback]);
+  }, []);
 
   // Collections state for save to collection - using extracted hook
   const collectionSave = useCollectionSave({ userId: user?.id, source: 'home_screen' });

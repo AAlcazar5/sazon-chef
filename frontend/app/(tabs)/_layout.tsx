@@ -84,7 +84,7 @@ export default function TabLayout() {
   const lastSegment = segments[segments.length - 1] as string;
   const isOnHomeTab = pathname === '/(tabs)/index' || pathname === '/index' || pathname === '/' || lastSegment === 'index' || pathname === '/(tabs)';
 
-  // Execute a search query
+  // Execute a search query (explicit submit — dismisses keyboard)
   const executeSearch = useCallback((query: string) => {
     const trimmed = query.trim();
     if (!trimmed) return;
@@ -100,7 +100,19 @@ export default function TabLayout() {
     }
   }, [isOnHomeTab, addToHistory]);
 
-  // Debounced instant search - triggers as user types
+  // Live search — sets route param without dismissing keyboard so user can keep typing
+  const executeLiveSearch = useCallback((query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    if (isOnHomeTab) {
+      router.setParams({ search: trimmed, craving: '' });
+    } else {
+      router.push({ pathname: '/(tabs)', params: { search: trimmed } });
+    }
+  }, [isOnHomeTab]);
+
+  // Debounced instant search - triggers as user types (keeps keyboard open)
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text);
 
@@ -108,12 +120,12 @@ export default function TabLayout() {
       clearTimeout(debounceRef.current);
     }
 
-    if (text.trim().length >= 2) {
+    if (text.trim().length >= 3) {
       debounceRef.current = setTimeout(() => {
-        executeSearch(text);
-      }, 500);
+        executeLiveSearch(text);
+      }, 800);
     }
-  }, [executeSearch]);
+  }, [executeLiveSearch]);
 
   // Clean up debounce on unmount
   useEffect(() => {

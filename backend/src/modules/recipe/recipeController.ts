@@ -409,11 +409,12 @@ export const recipeController = {
       }
 
       // Search filter - combine with mealType filter using AND
+      // Note: SQLite LIKE is case-insensitive for ASCII by default, so no mode needed
       if (search) {
         andConditions.push({
           OR: [
-            { title: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } }
+            { title: { contains: search } },
+            { description: { contains: search } }
           ]
         });
       }
@@ -4540,8 +4541,8 @@ export const recipeController = {
       if (search) {
         andConditions.push({
           OR: [
-            { title: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
+            { title: { contains: search } },
+            { description: { contains: search } },
           ],
         });
       }
@@ -4818,7 +4819,7 @@ export const recipeController = {
         if (words.length > 0) {
           const fuzzyMatches = await prisma.recipe.findMany({
             where: {
-              OR: words.map(word => ({ title: { contains: word, mode: 'insensitive' as const } })),
+              OR: words.map(word => ({ title: { contains: word } })),
             },
             select: { title: true },
             take: 6,

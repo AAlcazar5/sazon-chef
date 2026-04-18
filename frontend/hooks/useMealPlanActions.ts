@@ -134,6 +134,9 @@ interface UseMealPlanActionsProps {
 
   // 10C: Find Me a Meal
   onFindMeAMeal?: () => void;
+
+  // 10L: Log Food (branded/restaurant)
+  onLogFood?: () => void;
 }
 
 interface UseMealPlanActionsReturn {
@@ -273,6 +276,7 @@ export function useMealPlanActions({
   setRecurringRules,
   planningMode,
   onFindMeAMeal,
+  onLogFood,
 }: UseMealPlanActionsProps): UseMealPlanActionsReturn {
 
   // Load target macros from user profile on mount
@@ -867,10 +871,8 @@ export function useMealPlanActions({
           onPress: () => { router.push('/cookbook'); },
         },
         {
-          text: 'Quick Log',
-          onPress: () => {
-            Alert.alert('Coming Soon', 'Custom meal entry will be available soon');
-          },
+          text: 'Log Food',
+          onPress: () => { onLogFood?.(); },
         },
       ]
     );

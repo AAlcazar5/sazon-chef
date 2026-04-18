@@ -1925,7 +1925,7 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 - Cached food items for instant re-logging (no API call for frequently eaten items)
 - "Recent Foods" and "Frequent Foods" lists for one-tap logging
 
-* [ ] **`FoodItem` model** — New Prisma model for caching branded/restaurant food items:
+* [x] **`FoodItem` model** — New Prisma model for caching branded/restaurant food items:
   ```
   model FoodItem {
     id            String   @id @default(uuid())
@@ -1949,14 +1949,14 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   ```
   * 📍 Also add `foodItemId` optional FK on `Meal` model — links a logged meal to a cached food item for easy re-logging
 
-* [ ] **Branded food search endpoint** — `GET /api/food/search?q=round+table+pizza`
+* [x] **Branded food search endpoint** — `GET /api/food/search?q=round+table+pizza`
   * 📍 Two-tier search: (1) local `FoodItem` cache first, (2) external API fallback
   * 📍 **Nutritionix Instant API** for restaurant items — covers 900k+ restaurant menu items (Chipotle, McDonald's, local chains). Requires API key (`NUTRITIONIX_APP_ID`, `NUTRITIONIX_API_KEY` — already used for barcode scanning)
   * 📍 **OpenFoodFacts text search** for packaged goods — free, no key required
   * 📍 Cache results to `FoodItem` on first lookup (avoids repeat API calls)
   * 📍 Response: `{ results: FoodItem[], source: "cache" | "nutritionix" | "openfoodfacts" }`
 
-* [ ] **"Log Food" quick-add flow** — Streamlined alternative to QuickMealLogModal:
+* [x] **"Log Food" quick-add flow** — Streamlined alternative to QuickMealLogModal:
   1. User taps "+" on a meal slot in the meal plan → shows options: "Add Recipe" (existing), **"Log Food"** (new)
   2. "Log Food" opens a search sheet with: **search bar** + **Recent Foods** (last 10 logged) + **Frequent Foods** (top 10 by count)
   3. User searches → taps result → confirms serving size → logged to meal plan as a `Meal` with `foodItemId` + auto-filled macros
@@ -1965,11 +1965,11 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   * 📍 Backend: `GET /api/food/recent` (user's recent logged food items), `GET /api/food/frequent` (user's most-logged food items, sorted by frequency)
   * 📍 Backend: `POST /api/food/log` — creates `Meal` entry with `foodItemId`, updates usage count for frequency sorting
 
-* [ ] **Serving size adjustment** — When logging a branded food, show a simple stepper: "How many servings?" (default 1, support decimals like 1.5 or 2). Macros recalculate live (same frontend-only pattern as serving scaler).
+* [x] **Serving size adjustment** — When logging a branded food, show a simple stepper: "How many servings?" (default 1, support decimals like 1.5 or 2). Macros recalculate live (same frontend-only pattern as serving scaler).
 
-* [ ] **User-submitted food items** — If a branded food isn't found in search, allow manual entry (like current QuickMealLogModal) but save it to `FoodItem` with `source: "user"` so it's available for future re-logging. "You entered Round Table Gourmet Veggie Pizza — we'll remember this for next time."
+* [x] **User-submitted food items** — If a branded food isn't found in search, allow manual entry (like current QuickMealLogModal) but save it to `FoodItem` with `source: "user"` so it's available for future re-logging. "You entered Round Table Gourmet Veggie Pizza — we'll remember this for next time."
 
-* [ ] **Test:** Search for "Chipotle" returns restaurant items with macros; search checks local cache before external API; first external lookup caches to FoodItem; recent foods returns user's last 10 logged items in order; frequent foods returns top 10 by usage count; logging a branded food creates Meal with correct macros and foodItemId; serving size adjustment recalculates macros correctly; user-submitted food items appear in future searches
+* [x] **Test:** Search for "Chipotle" returns restaurant items with macros; search checks local cache before external API; first external lookup caches to FoodItem; recent foods returns user's last 10 logged items in order; frequent foods returns top 10 by usage count; logging a branded food creates Meal with correct macros and foodItemId; serving size adjustment recalculates macros correctly; user-submitted food items appear in future searches
 
 ---
 
@@ -2505,6 +2505,29 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 * [ ] **New Zealand/Maori** (20 recipes) — Hangi (earth oven), pavlova, whitebait fritters, rewena bread, boil-up. *Health angle: earth-oven slow cooking (hangi = no added fat), seafood-forward, kumara (sweet potato). Adjacent: Australian, Polynesian.*
 * [ ] **Fijian** (15 recipes) — Kokoda (Fijian ceviche), lovo (earth oven), palusami, cassava dishes, rourou. *Health angle: raw fish in coconut (kokoda), taro leaves (rourou = iron + calcium), earth-oven technique. Adjacent: Polynesian.*
 * [ ] **Polynesian** (15 recipes) — Poi, kalua pig (lightened), laulau, poisson cru, oka i'a. *Health angle: taro-based (poi = prebiotic fiber), raw fish salads, coconut-based, breadfruit.*
+
+##### **Common Search Staples** *(seed these first — users expect them on day one)*
+
+> These are the recipes users will type before anything else. If "pizza" returns 0 results, the app feels broken regardless of how deep the global cuisine library is. These must exist in the database at launch.
+
+* [ ] **American Comfort Classics** (40 recipes) — Pizza (pepperoni, margherita, BBQ chicken, veggie), hamburger/cheeseburger, hot dog, grilled cheese, mac & cheese, fried chicken, chicken tenders, BLT, club sandwich, Reuben, sloppy joe, meatloaf, pot roast, beef stew, clam chowder, corn chowder, mashed potatoes, coleslaw, potato salad. *Macro angle: high-protein lean versions — turkey burger, cauliflower pizza crust, baked "fried" chicken.*
+* [ ] **Mexican-American Staples** (25 recipes) — Tacos (beef, chicken, fish, shrimp), burritos, quesadillas, nachos, enchiladas, fajitas, chili con carne, guacamole + chips, salsa, taco bowl. *Macro angle: lean protein swaps, lettuce wraps, high-fiber bean variations.*
+* [ ] **Italian-American Staples** (25 recipes) — Spaghetti & meatballs, fettuccine alfredo, lasagna, chicken parmesan, pasta primavera, Caesar salad, caprese, bruschetta, chicken piccata, shrimp scampi. *Macro angle: zucchini noodles, whole wheat pasta, Greek yogurt alfredo.*
+* [ ] **Asian-American Staples** (20 recipes) — Fried rice, lo mein, orange chicken, General Tso's chicken, sesame noodles, egg rolls, spring rolls, hot and sour soup, wonton soup, teriyaki bowl, sushi bowl. *Macro angle: cauliflower fried rice, lean protein stir-fry, brown rice bowls.*
+* [ ] **Fast Food Makeovers** (20 recipes) — Protein-forward versions of what people actually crave: chipotle-style burrito bowl, Chick-fil-A-style chicken sandwich, In-N-Out-style smash burger, Subway-style loaded sub, Shake Shack-style smash burger, Wendy's-style chili, McDonald's-style egg muffin. *Macro angle: these ARE the macro angle — same taste, 30-40% fewer calories.*
+* [ ] **Breakfast Classics** (20 recipes) — Pancakes, waffles, French toast, scrambled eggs, omelette, eggs benedict, avocado toast, granola, smoothie bowl, acai bowl, bagel + lox, breakfast burrito, breakfast sandwich, overnight oats, yogurt parfait.
+
+**Test:** `backend/tests/seeds/searchStaples.test.ts`
+- [ ] `GET /api/recipes?search=pizza` returns ≥5 results
+- [ ] `GET /api/recipes?search=hamburger` returns ≥3 results
+- [ ] `GET /api/recipes?search=taco` returns ≥5 results
+- [ ] `GET /api/recipes?search=pasta` returns ≥5 results
+- [ ] `GET /api/recipes?search=chicken` returns ≥10 results
+- [ ] `GET /api/recipes?search=salad` returns ≥5 results
+- [ ] Every staple category has ≥1 recipe under 500 calories per serving
+- [ ] Every staple category has ≥1 recipe with ≥25g protein per serving
+
+---
 
 ##### **Expanded Existing Cuisines** (fill gaps in current seed)
 
