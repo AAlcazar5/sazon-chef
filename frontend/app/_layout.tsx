@@ -158,6 +158,7 @@ function RootLayoutNav() {
           <Stack.Screen name="recipe-form" />
           <Stack.Screen name="scanner-results" />
           <Stack.Screen name="cooking" />
+          <Stack.Screen name="pantry-matches" />
           <Stack.Screen name="edit-budget" />
           <Stack.Screen name="onboarding" />
           <Stack.Screen

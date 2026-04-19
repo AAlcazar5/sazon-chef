@@ -333,6 +333,10 @@ export default function HomeScreen() {
     scrollViewRef: quickMealsScrollViewRef,
     fetch: fetchQuickMeals,
     setCurrentIndex: setQuickMealsCurrentIndex,
+    onTouchStart: onQuickMealsTouchStart,
+    onTouchEnd: onQuickMealsTouchEnd,
+    onScrollBeginDrag: onQuickMealsScrollBeginDrag,
+    onScrollEndDrag: onQuickMealsScrollEndDrag,
   } = quickMeals;
 
   // Time-aware suggestions toggle (Home Page 2.0) - using extracted hook
@@ -826,6 +830,7 @@ export default function HomeScreen() {
         onFilterPress={handleFilterPress}
         activeFilterCount={activeFilters.length + (mealPrepMode ? 1 : 0) + (isCravingSearch ? 1 : 0)}
         onSurpriseMe={handleRandomRecipe}
+        onCameraPress={() => router.push('/scanner' as any)}
       />
 
       {/* Main content area */}
@@ -903,6 +908,10 @@ export default function HomeScreen() {
           onQuickMealsIndexChange={setQuickMealsCurrentIndex}
           refreshingQuickMeals={refreshingQuickMeals}
           onRefreshQuickMeals={() => fetchQuickMeals(true)}
+          onQuickMealsTouchStart={onQuickMealsTouchStart}
+          onQuickMealsTouchEnd={onQuickMealsTouchEnd}
+          onQuickMealsScrollBeginDrag={onQuickMealsScrollBeginDrag}
+          onQuickMealsScrollEndDrag={onQuickMealsScrollEndDrag}
           currentPage={currentPage}
           totalRecipes={totalRecipes}
           suggestedRecipesCount={suggestedRecipes.length}
@@ -940,6 +949,7 @@ export default function HomeScreen() {
                   onLike={handleLike}
                   onDislike={handleShowDislikeSheet}
                   onSave={handleSave}
+                  autoScroll
                 />
               );
             })()}

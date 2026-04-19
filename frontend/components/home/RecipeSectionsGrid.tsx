@@ -2,7 +2,7 @@
 // Renders the contextual recipe sections with collapse/expand, grid/list/carousel views, and inline pagination
 
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
@@ -45,6 +45,10 @@ interface RecipeSectionsGridProps {
   onQuickMealsIndexChange: (index: number) => void;
   refreshingQuickMeals: boolean;
   onRefreshQuickMeals: () => void;
+  onQuickMealsTouchStart?: () => void;
+  onQuickMealsTouchEnd?: () => void;
+  onQuickMealsScrollBeginDrag?: () => void;
+  onQuickMealsScrollEndDrag?: (event: any) => void;
 
   // Pagination (for "Recipes for You" section)
   currentPage: number;
@@ -79,6 +83,10 @@ function RecipeSectionsGrid({
   onQuickMealsIndexChange,
   refreshingQuickMeals,
   onRefreshQuickMeals,
+  onQuickMealsTouchStart,
+  onQuickMealsTouchEnd,
+  onQuickMealsScrollBeginDrag,
+  onQuickMealsScrollEndDrag,
   currentPage,
   totalRecipes,
   suggestedRecipesCount,
@@ -168,6 +176,10 @@ function RecipeSectionsGrid({
               <View>
                 {isQuickMeals || isMealPrep || isMacroOptimized ? (
                   /* Carousel view for Quick Meals / Meal Prep */
+                  <Pressable
+                    onHoverIn={isQuickMeals ? onQuickMealsTouchStart : undefined}
+                    onHoverOut={isQuickMeals ? onQuickMealsTouchEnd : undefined}
+                  >
                   <ScrollView
                     ref={isQuickMeals ? quickMealsScrollViewRef : undefined}
                     horizontal
@@ -177,6 +189,10 @@ function RecipeSectionsGrid({
                     decelerationRate="fast"
                     snapToInterval={280}
                     snapToAlignment="start"
+                    onTouchStart={isQuickMeals ? onQuickMealsTouchStart : undefined}
+                    onTouchEnd={isQuickMeals ? onQuickMealsTouchEnd : undefined}
+                    onScrollBeginDrag={isQuickMeals ? onQuickMealsScrollBeginDrag : undefined}
+                    onScrollEndDrag={isQuickMeals ? onQuickMealsScrollEndDrag : undefined}
                     onScroll={(event) => {
                       if (!isQuickMeals) return;
                       const scrollPosition = event.nativeEvent.contentOffset.x;
@@ -266,6 +282,7 @@ function RecipeSectionsGrid({
                       </View>
                     )}
                   </ScrollView>
+                  </Pressable>
 
                 ) : viewMode === 'grid' ? (
                   /* Grid view — 2-column layout */

@@ -2,7 +2,7 @@
 // Scanner API controller (Phase 6, Group 13)
 
 import { Request, Response } from 'express';
-import { foodRecognitionService } from '@/services/foodRecognitionService';
+import { foodRecognitionService, FoodRecognitionError } from '@/services/foodRecognitionService';
 import { getUserId } from '@/utils/authHelper';
 import multer from 'multer';
 
@@ -50,9 +50,17 @@ export const scannerController = {
       });
     } catch (error: any) {
       console.error('❌ Food recognition error:', error);
-      res.status(500).json({
+
+      const code = error instanceof FoodRecognitionError ? error.code : 'unknown';
+      const status = code === 'not_food' ? 422
+        : code === 'rate_limit' ? 429
+        : code === 'auth_error' || code === 'no_provider' ? 503
+        : 500;
+
+      res.status(status).json({
         error: 'Failed to recognize food',
         message: error.message,
+        code,
       });
     }
   },

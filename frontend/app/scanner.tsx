@@ -13,15 +13,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { scannerApi, shoppingListApi } from '../lib/api';
+import { scannerApi, shoppingListApi, foodApi } from '../lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import LoadingState from '../components/ui/LoadingState';
 import LogoMascot from '../components/mascot/LogoMascot';
-import { Colors, DarkColors } from '../constants/Colors';
+import { Colors, DarkColors, MACRO_COLORS } from '../constants/Colors';
 import { Shadows } from '../constants/Shadows';
+import { BorderRadius } from '../constants/Spacing';
 import Icon from '../components/ui/Icon';
 import { Icons } from '../constants/Icons';
+import { useLocalSearchParams } from 'expo-router';
 
 type ScannerMode = 'food' | 'barcode';
 
@@ -30,10 +32,18 @@ interface FoodRecognitionResult {
     name: string;
     confidence: number;
     estimatedCalories: number;
+    estimatedProtein: number;
+    estimatedCarbs: number;
+    estimatedFat: number;
+    estimatedFiber: number;
     estimatedPortion?: string;
+    portionGrams?: number;
     ingredients?: string[];
   }>;
   totalEstimatedCalories: number;
+  totalEstimatedProtein: number;
+  totalEstimatedCarbs: number;
+  totalEstimatedFat: number;
   mealDescription: string;
   confidence: number;
 }
@@ -58,7 +68,18 @@ const CORNER_THICKNESS = 3;
 const FRAME_SIZE = 256;
 const PRIMARY_RED = '#DC2626';
 
+type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+function getDefaultMealSlot(): MealSlot {
+  const h = new Date().getHours();
+  if (h < 11) return 'breakfast';
+  if (h < 15) return 'lunch';
+  if (h < 21) return 'dinner';
+  return 'snack';
+}
+
 export default function ScannerScreen() {
+  const params = useLocalSearchParams<{ mealType?: string; fromMealPlan?: string }>();
   const [mode, setMode] = useState<ScannerMode>('food');
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
@@ -69,6 +90,15 @@ export default function ScannerScreen() {
   const [barcodeScanned, setBarcodeScanned] = useState(false);
   const [addingToList, setAddingToList] = useState(false);
   const [noMatch, setNoMatch] = useState(false);
+
+  // 10M: Snap to Log state
+  const [foodServings, setFoodServings] = useState<Record<number, number>>({});
+  const [removedFoods, setRemovedFoods] = useState<Set<number>>(new Set());
+  const [selectedMealSlot, setSelectedMealSlot] = useState<MealSlot>(
+    (params.mealType as MealSlot) || getDefaultMealSlot()
+  );
+  const [loggingMeal, setLoggingMeal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // ── Animation refs ──────────────────────────────────────────────────────────
   const cornerScale = useRef(new Animated.Value(0)).current;
@@ -242,6 +272,7 @@ export default function ScannerScreen() {
     try {
       setProcessing(true);
       setNoMatch(false);
+      setErrorMessage(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       if (mode === 'food') {
@@ -255,6 +286,23 @@ export default function ScannerScreen() {
     } catch (error: any) {
       console.error('❌ Processing error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+      // Extract error code + message from API response
+      const apiCode = error?.response?.data?.code;
+      const apiMessage = error?.response?.data?.message;
+
+      if (apiCode === 'not_food') {
+        setErrorMessage("Hmm, I can't tell what food that is. Try a clearer photo with the food front and center!");
+      } else if (apiCode === 'rate_limit') {
+        setErrorMessage("Whoa, slow down! I'm a bit overwhelmed right now. Give me a sec and try again.");
+      } else if (apiCode === 'auth_error' || apiCode === 'no_provider') {
+        setErrorMessage("Food recognition isn't available right now. Try scanning a barcode instead!");
+      } else if (apiMessage) {
+        setErrorMessage(apiMessage);
+      } else {
+        setErrorMessage("Something went wrong analyzing that photo. Want to try again?");
+      }
+
       setNoMatch(true);
     } finally {
       setProcessing(false);
@@ -292,6 +340,82 @@ export default function ScannerScreen() {
     setImageUri(null);
     setBarcodeScanned(false);
     setNoMatch(false);
+    setErrorMessage(null);
+    setFoodServings({});
+    setRemovedFoods(new Set());
+    setLoggingMeal(false);
+  };
+
+  // 10M: Serving adjustment helpers
+  const getFoodServing = (index: number) => foodServings[index] ?? 1;
+  const adjustFoodServing = (index: number, delta: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setFoodServings((prev) => ({
+      ...prev,
+      [index]: Math.max(0.5, Math.round(((prev[index] ?? 1) + delta) * 10) / 10),
+    }));
+  };
+
+  const removeFood = (index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setRemovedFoods((prev) => new Set([...prev, index]));
+  };
+
+  // 10M: Compute totals from visible (non-removed) foods with serving adjustments
+  const getVisibleFoods = () => {
+    if (!result || !('foods' in result)) return [];
+    return result.foods
+      .map((food, i) => ({ ...food, originalIndex: i }))
+      .filter((_, i) => !removedFoods.has(i));
+  };
+
+  const getAdjustedTotals = () => {
+    const visible = getVisibleFoods();
+    return {
+      calories: Math.round(visible.reduce((s, f) => s + f.estimatedCalories * getFoodServing(f.originalIndex), 0)),
+      protein: Math.round(visible.reduce((s, f) => s + f.estimatedProtein * getFoodServing(f.originalIndex), 0) * 10) / 10,
+      carbs: Math.round(visible.reduce((s, f) => s + f.estimatedCarbs * getFoodServing(f.originalIndex), 0) * 10) / 10,
+      fat: Math.round(visible.reduce((s, f) => s + f.estimatedFat * getFoodServing(f.originalIndex), 0) * 10) / 10,
+    };
+  };
+
+  // 10M: Log This Meal handler — cache each food as FoodItem, create Meal entry
+  const handleLogMeal = async () => {
+    if (!result || !('foods' in result) || loggingMeal) return;
+    setLoggingMeal(true);
+
+    try {
+      const visible = getVisibleFoods();
+      const totals = getAdjustedTotals();
+
+      // Cache each detected food as a FoodItem, then log as a single combined meal
+      const createdItem = await foodApi.createItem({
+        name: result.mealDescription || visible.map((f) => f.name).join(', '),
+        calories: totals.calories,
+        protein: totals.protein,
+        carbs: totals.carbs,
+        fat: totals.fat,
+      });
+
+      const foodItem = createdItem.data.foodItem;
+
+      await foodApi.logFood({
+        foodItemId: foodItem.id,
+        mealType: selectedMealSlot,
+        servings: 1,
+      });
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Logged!', `${result.mealDescription} added to ${selectedMealSlot}.`, [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (error: any) {
+      console.error('Log meal error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Oops!', 'Couldn\'t log that meal — try again?');
+    } finally {
+      setLoggingMeal(false);
+    }
   };
 
   // ── Permission states ────────────────────────────────────────────────────────
@@ -421,18 +545,21 @@ export default function ScannerScreen() {
           <LogoMascot expression="surprised" size="medium" />
           <Text style={styles.noMatchTitle}>Couldn't find that one</Text>
           <Text style={styles.noMatchSubtitle}>
-            Try searching by name instead?
+            {errorMessage || 'Try searching by name instead?'}
           </Text>
           <HapticTouchableOpacity
-            onPress={() => router.replace('/' as any)}
+            onPress={reset}
             style={styles.noMatchSearchBtn}
             hapticStyle="medium"
           >
-            <Icon name={Icons.SEARCH} size={18} color="white" />
-            <Text style={styles.noMatchSearchBtnText}>Search Recipes</Text>
+            <Ionicons name="camera-outline" size={18} color="white" />
+            <Text style={styles.noMatchSearchBtnText}>Try Again</Text>
           </HapticTouchableOpacity>
-          <HapticTouchableOpacity onPress={reset} style={styles.noMatchRetryBtn}>
-            <Text style={styles.noMatchRetryText}>Try again</Text>
+          <HapticTouchableOpacity
+            onPress={() => router.replace('/' as any)}
+            style={styles.noMatchRetryBtn}
+          >
+            <Text style={styles.noMatchRetryText}>Search by name instead</Text>
           </HapticTouchableOpacity>
         </View>
       )}
@@ -497,45 +624,170 @@ export default function ScannerScreen() {
                 </MotiView>
               )}
 
-              {/* Food Recognition Results */}
-              {mode === 'food' && 'foods' in result && (
-                <View>
-                  <MotiView
-                    from={{ opacity: 0, translateY: 10 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ type: 'spring', delay: 160, damping: 18, stiffness: 200 }}
-                  >
-                    <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl mb-4" style={Shadows.MD}>
-                      <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                        {result.mealDescription}
-                      </Text>
-                      <Text className="text-3xl font-bold text-red-600 dark:text-red-400">
-                        {result.totalEstimatedCalories} calories
-                      </Text>
-                    </View>
-                  </MotiView>
-
-                  <Text className="text-lg font-semibold text-gray-900 mb-2">Food Items:</Text>
-                  {result.foods.map((food, index) => (
+              {/* Food Recognition Results — 10M enhanced with macros, portions, log */}
+              {mode === 'food' && 'foods' in result && (() => {
+                const totals = getAdjustedTotals();
+                const visibleFoods = getVisibleFoods();
+                return (
+                  <View>
+                    {/* Meal summary with full macros */}
                     <MotiView
-                      key={index}
-                      from={{ opacity: 0, translateY: 8 }}
+                      from={{ opacity: 0, translateY: 10 }}
                       animate={{ opacity: 1, translateY: 0 }}
-                      transition={{ type: 'spring', delay: 240 + index * 80, damping: 18, stiffness: 200 }}
+                      transition={{ type: 'spring', delay: 160, damping: 18, stiffness: 200 }}
                     >
-                      <View className="bg-surface p-3 rounded-xl mb-2" style={Shadows.SM}>
-                        <View className="flex-row justify-between items-center">
-                          <Text className="font-semibold text-gray-900">{food.name}</Text>
-                          <Text className="text-red-600 dark:text-red-400 font-bold">{food.estimatedCalories} cal</Text>
+                      <View style={[{ padding: 16, borderRadius: BorderRadius.card, backgroundColor: '#FFF5F0', marginBottom: 16 }, Shadows.MD]}>
+                        <Text style={{ fontSize: 17, fontWeight: '600', color: '#1F2937', marginBottom: 4 }}>
+                          {result.mealDescription}
+                        </Text>
+                        <Text style={{ fontSize: 28, fontWeight: '800', color: MACRO_COLORS.calories.accent, marginBottom: 12 }}>
+                          {totals.calories} cal
+                        </Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+                          {([
+                            { label: 'Protein', value: `${totals.protein}g`, color: MACRO_COLORS.protein },
+                            { label: 'Carbs', value: `${totals.carbs}g`, color: MACRO_COLORS.carbs },
+                            { label: 'Fat', value: `${totals.fat}g`, color: MACRO_COLORS.fat },
+                          ] as const).map(({ label, value, color }) => (
+                            <View key={label} style={{ alignItems: 'center' }}>
+                              <Text style={{ fontSize: 18, fontWeight: '700', color: color.accent }}>{value}</Text>
+                              <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{label}</Text>
+                            </View>
+                          ))}
                         </View>
-                        {food.estimatedPortion && (
-                          <Text className="text-sm text-gray-600 mt-1">Portion: {food.estimatedPortion}</Text>
-                        )}
                       </View>
                     </MotiView>
-                  ))}
-                </View>
-              )}
+
+                    {/* Per-food cards with serving steppers */}
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 }}>
+                      Food Items ({visibleFoods.length})
+                    </Text>
+                    {result.foods.map((food, index) => {
+                      if (removedFoods.has(index)) return null;
+                      const s = getFoodServing(index);
+                      return (
+                        <MotiView
+                          key={index}
+                          from={{ opacity: 0, translateY: 8 }}
+                          animate={{ opacity: 1, translateY: 0 }}
+                          transition={{ type: 'spring', delay: 240 + index * 80, damping: 18, stiffness: 200 }}
+                        >
+                          <View style={[{ padding: 14, borderRadius: BorderRadius.card, backgroundColor: '#FFFFFF', marginBottom: 10 }, Shadows.SM]}>
+                            {/* Name + remove */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                              <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontSize: 15, fontWeight: '600', color: '#1F2937' }}>{food.name}</Text>
+                                {food.estimatedPortion && (
+                                  <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>
+                                    {food.estimatedPortion}{food.portionGrams ? ` (${food.portionGrams}g)` : ''}
+                                  </Text>
+                                )}
+                              </View>
+                              <HapticTouchableOpacity
+                                onPress={() => removeFood(index)}
+                                pressedScale={0.9}
+                                accessibilityLabel={`Remove ${food.name}`}
+                              >
+                                <Ionicons name="close-circle" size={24} color="#D1D5DB" />
+                              </HapticTouchableOpacity>
+                            </View>
+
+                            {/* Scaled macros */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 10 }}>
+                              {([
+                                { label: 'Cal', value: Math.round(food.estimatedCalories * s), color: MACRO_COLORS.calories },
+                                { label: 'P', value: Math.round(food.estimatedProtein * s * 10) / 10, color: MACRO_COLORS.protein },
+                                { label: 'C', value: Math.round(food.estimatedCarbs * s * 10) / 10, color: MACRO_COLORS.carbs },
+                                { label: 'F', value: Math.round(food.estimatedFat * s * 10) / 10, color: MACRO_COLORS.fat },
+                              ] as const).map(({ label, value, color }) => (
+                                <View key={label} style={{ alignItems: 'center' }}>
+                                  <Text style={{ fontSize: 15, fontWeight: '700', color: color.accent }}>{value}</Text>
+                                  <Text style={{ fontSize: 11, color: '#9CA3AF' }}>{label}</Text>
+                                </View>
+                              ))}
+                            </View>
+
+                            {/* Serving stepper */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F4F0', borderRadius: 12, paddingVertical: 6 }}>
+                              {[0.5, 1, 1.5, 2].map((val) => (
+                                <HapticTouchableOpacity
+                                  key={val}
+                                  onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setFoodServings((prev) => ({ ...prev, [index]: val }));
+                                  }}
+                                  pressedScale={0.9}
+                                  accessibilityLabel={`${val}x serving`}
+                                  style={{
+                                    paddingHorizontal: 14,
+                                    paddingVertical: 6,
+                                    borderRadius: 8,
+                                    backgroundColor: s === val ? MACRO_COLORS.calories.accent : 'transparent',
+                                    marginHorizontal: 2,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: s === val ? '#FFFFFF' : '#6B7280' }}>
+                                    {val === 0.5 ? '½' : `${val}`}×
+                                  </Text>
+                                </HapticTouchableOpacity>
+                              ))}
+                            </View>
+                          </View>
+                        </MotiView>
+                      );
+                    })}
+
+                    {/* Add an item the AI missed */}
+                    <HapticTouchableOpacity
+                      onPress={() => router.push('/scanner-results?addFood=1' as any)}
+                      pressedScale={0.97}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 8 }}
+                      accessibilityLabel="Add a food item"
+                    >
+                      <Ionicons name="add-circle-outline" size={20} color={MACRO_COLORS.calories.accent} />
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: MACRO_COLORS.calories.accent, marginLeft: 6 }}>
+                        Add an item the AI missed
+                      </Text>
+                    </HapticTouchableOpacity>
+
+                    {/* Meal slot picker */}
+                    <View style={{ marginTop: 4, marginBottom: 8 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Log to
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => (
+                          <HapticTouchableOpacity
+                            key={slot}
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                              setSelectedMealSlot(slot);
+                            }}
+                            pressedScale={0.95}
+                            accessibilityLabel={`Log to ${slot}`}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 10,
+                              borderRadius: 12,
+                              backgroundColor: selectedMealSlot === slot ? MACRO_COLORS.calories.accent : '#F0EDE8',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text style={{
+                              fontSize: 13,
+                              fontWeight: '600',
+                              color: selectedMealSlot === slot ? '#FFFFFF' : '#6B7280',
+                              textTransform: 'capitalize',
+                            }}>
+                              {slot}
+                            </Text>
+                          </HapticTouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                );
+              })()}
 
               {/* Barcode Results */}
               {mode === 'barcode' && 'productName' in result && (
@@ -607,19 +859,56 @@ export default function ScannerScreen() {
               )}
 
               {/* Smart Action Buttons */}
-              <View className="mt-6" style={{ gap: 10 }}>
+              <View style={{ marginTop: 20, gap: 10 }}>
+                {/* 10M: Log This Meal — most prominent */}
+                {mode === 'food' && 'foods' in result && (
+                  <HapticTouchableOpacity
+                    onPress={handleLogMeal}
+                    disabled={loggingMeal || getVisibleFoods().length === 0}
+                    pressedScale={0.97}
+                    accessibilityLabel="Log this meal"
+                    style={[
+                      {
+                        paddingVertical: 16,
+                        borderRadius: BorderRadius.xl,
+                        backgroundColor: MACRO_COLORS.calories.accent,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: loggingMeal ? 0.6 : 1,
+                        gap: 8,
+                      },
+                      Shadows.MD,
+                    ]}
+                  >
+                    <Ionicons name="checkmark-circle" size={22} color="white" />
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+                      {loggingMeal ? 'Logging...' : 'Log This Meal'}
+                    </Text>
+                  </HapticTouchableOpacity>
+                )}
+
                 <HapticTouchableOpacity
                   onPress={handleAddToShoppingList}
                   disabled={addingToList}
-                  className="bg-green-600 py-3 rounded-lg flex-row items-center justify-center"
-                  style={{ gap: 8 }}
+                  pressedScale={0.97}
+                  accessibilityLabel="Add to shopping list"
+                  style={{
+                    paddingVertical: 13,
+                    borderRadius: 12,
+                    backgroundColor: '#16A34A',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
                 >
                   {addingToList ? (
                     <AnimatedActivityIndicator size="small" color="white" />
                   ) : (
                     <Icon name={Icons.CART} size={20} color="white" />
                   )}
-                  <Text className="text-white text-center font-semibold">
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 15 }}>
                     {addingToList ? 'Adding...' : 'Add to Shopping List'}
                   </Text>
                 </HapticTouchableOpacity>
@@ -638,9 +927,10 @@ export default function ScannerScreen() {
                 />
                 <HapticTouchableOpacity
                   onPress={() => router.back()}
-                  className="bg-gray-200 py-3 rounded-lg"
+                  pressedScale={0.97}
+                  style={{ paddingVertical: 13, borderRadius: 12, backgroundColor: '#E5E7EB', alignItems: 'center' }}
                 >
-                  <Text className="text-gray-700 text-center font-semibold">Done</Text>
+                  <Text style={{ color: '#374151', fontWeight: '600', fontSize: 15 }}>Done</Text>
                 </HapticTouchableOpacity>
               </View>
             </View>

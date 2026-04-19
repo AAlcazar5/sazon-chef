@@ -17,12 +17,12 @@
 | **Group 7** | Stripe Integration & Subscriptions | ✅ 0h |
 | **Group 8** | Revenue Optimization | ✅ 0h |
 | **Group 9** | Final App Polish | 62h |
-| **Group 10** | User Empowerment — "Healthy Food That Doesn't Suck" | 56h |
+| **Group 10** | User Empowerment — "Healthy Food That Doesn't Suck" | 66h |
 | **Group 11** | Recipe Database & Recommendation Engine (CRITICAL) | 45h |
 | **Group 12** | App Store Launch | 20h |
 | **Group 13** | User Acquisition & Growth Hacking | 10h |
 | **Group 14** | User Testing & Optimization | 11h |
-| **TOTAL** | | **~204h** |
+| **TOTAL** | | **~214h** |
 
 ---
 
@@ -1990,41 +1990,41 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 - **No portion adjustment** — AI estimates a portion but user can't say "that was actually 2 servings."
 - **No connection to FoodItem cache** — photo-scanned foods aren't saved for re-logging.
 
-* [ ] **Enhanced GPT-4V prompt for full macros** — Update `foodRecognitionService.ts` prompt to request full macro breakdown per food item, not just calories:
-  * 📍 Current response shape: `{ name, confidence, estimatedCalories, estimatedPortion }`
-  * 📍 New response shape: `{ name, confidence, estimatedCalories, estimatedProtein, estimatedCarbs, estimatedFat, estimatedFiber, estimatedPortion, portionGrams }`
-  * 📍 Update the GPT-4V system prompt: "For each food item, estimate calories, protein (g), carbs (g), fat (g), and fiber (g) per the visible portion. Include estimated portion size in grams."
-  * 📍 Update `FoodRecognitionResult` interface and all consumers
+* [x] **Enhanced GPT-4V prompt for full macros** — Update `foodRecognitionService.ts` prompt to request full macro breakdown per food item, not just calories:
+  * ✅ Current response shape: `{ name, confidence, estimatedCalories, estimatedPortion }`
+  * ✅ New response shape: `{ name, confidence, estimatedCalories, estimatedProtein, estimatedCarbs, estimatedFat, estimatedFiber, estimatedPortion, portionGrams }`
+  * ✅ Update the GPT-4V system prompt: "For each food item, estimate calories, protein (g), carbs (g), fat (g), and fiber (g) per the visible portion. Include estimated portion size in grams."
+  * ✅ Update `FoodRecognitionResult` interface and all consumers
 
-* [ ] **"Log This Meal" button on scan results** — After photo recognition returns results, add a prominent "Log to Meal Plan" CTA alongside the existing "Add to Shopping List" and "Find Recipes" buttons.
-  * 📍 On `scanner.tsx` results view: new orange "Log This Meal" button (most prominent position)
-  * 📍 On `scanner-results.tsx`: same button added
-  * 📍 Tapping opens a confirmation sheet: shows detected foods with full macros, total meal macros, serving adjustment (stepper: ½×, 1×, 1.5×, 2×), and meal slot picker (Breakfast / Lunch / Dinner / Snack + date selector defaulting to today's next empty slot)
-  * 📍 Confirm → creates `Meal` entry with `customName` (AI meal description), full macros from recognition, and `source: "photo_scan"`
-  * 📍 Also cache each detected food to `FoodItem` with `source: "photo_scan"` so it appears in the Branded Food "Recent Foods" list for instant re-logging
+* [x] **"Log This Meal" button on scan results** — After photo recognition returns results, add a prominent "Log to Meal Plan" CTA alongside the existing "Add to Shopping List" and "Find Recipes" buttons.
+  * ✅ On `scanner.tsx` results view: new orange "Log This Meal" button (most prominent position)
+  * ✅ On `scanner-results.tsx`: same button added
+  * ✅ Tapping opens a confirmation sheet: shows detected foods with full macros, total meal macros, serving adjustment (stepper: ½×, 1×, 1.5×, 2×), and meal slot picker (Breakfast / Lunch / Dinner / Snack + date selector defaulting to today's next empty slot)
+  * ✅ Confirm → creates `Meal` entry with `customName` (AI meal description), full macros from recognition, and `source: "photo_scan"`
+  * ✅ Also cache each detected food to `FoodItem` with `source: "photo_scan"` so it appears in the Branded Food "Recent Foods" list for instant re-logging
 
-* [ ] **Camera icon on meal plan "+" menu** — When user taps "+" on a meal slot, add a camera icon option alongside "Add Recipe" and "Log Food":
-  * 📍 "Snap a Photo" → opens camera directly (skip the Quick Actions detour)
-  * 📍 After scan → same "Log This Meal" confirmation sheet, but pre-selects the meal slot the user tapped "+" on
-  * 📍 This makes the flow: tap "+" on lunch → snap photo → confirm → logged. Under 10 seconds.
+* [x] **Camera icon on meal plan "+" menu** — When user taps "+" on a meal slot, add a camera icon option alongside "Add Recipe" and "Log Food":
+  * ✅ "Snap a Photo" → opens camera directly (skip the Quick Actions detour)
+  * ✅ After scan → same "Log This Meal" confirmation sheet, but pre-selects the meal slot the user tapped "+" on
+  * ✅ This makes the flow: tap "+" on lunch → snap photo → confirm → logged. Under 10 seconds.
 
-* [ ] **Camera shortcut on home screen** — Add a persistent camera icon/button on the home screen (near the search bar or as a floating action) for quick access:
-  * 📍 Not a replacement for the Quick Actions menu — an additional shortcut for the most common use case
-  * 📍 Tapping opens camera directly → scan → "Log This Meal" flow
-  * 📍 Subtle and non-intrusive — small camera icon, not a giant FAB
+* [x] **Camera shortcut on home screen** — Add a persistent camera icon/button on the home screen (near the search bar or as a floating action) for quick access:
+  * ✅ Not a replacement for the Quick Actions menu — an additional shortcut for the most common use case
+  * ✅ Tapping opens camera directly → scan → "Log This Meal" flow
+  * ✅ Subtle and non-intrusive — small camera icon in header, not a giant FAB
 
-* [ ] **Portion adjustment on results** — After AI estimates "1 serving of pasta (~350 cal)", let the user adjust:
-  * 📍 Serving stepper on each detected food item: ½×, 1×, 1.5×, 2×, Custom
-  * 📍 Macros recalculate live as user adjusts (frontend-only math)
-  * 📍 "That looks like more than 1 serving" nudge — if the AI detects a large portion, proactively show: "This looks like a large serving — adjust if needed"
+* [x] **Portion adjustment on results** — After AI estimates "1 serving of pasta (~350 cal)", let the user adjust:
+  * ✅ Serving stepper on each detected food item: ½×, 1×, 1.5×, 2×
+  * ✅ Macros recalculate live as user adjusts (frontend-only math)
+  * (deferred) "That looks like more than 1 serving" nudge — lower priority UX polish
 
-* [ ] **Multi-food meal support** — The AI often detects multiple items in one photo (e.g., "grilled chicken, rice, and salad"). Each item should be individually editable:
-  * 📍 Show each food as a separate card with its own macros and serving adjuster
-  * 📍 User can remove items they didn't actually eat ("I skipped the rice")
-  * 📍 Total meal macros update live as items are adjusted or removed
-  * 📍 "Add an item" button for things the AI missed (opens the branded food text search)
+* [x] **Multi-food meal support** — The AI often detects multiple items in one photo (e.g., "grilled chicken, rice, and salad"). Each item should be individually editable:
+  * ✅ Show each food as a separate card with its own macros and serving adjuster
+  * ✅ User can remove items they didn't actually eat ("I skipped the rice")
+  * ✅ Total meal macros update live as items are adjusted or removed
+  * ✅ "Add an item" button for things the AI missed (opens the branded food text search)
 
-* [ ] **Test:** Enhanced GPT-4V prompt returns protein/carbs/fat/fiber (not just calories); "Log This Meal" creates Meal entry with full macros; photo-scanned foods cache to FoodItem table; portion adjustment at 2× doubles all macro values; removing a food item from multi-food result updates total macros; camera shortcut on meal plan "+" opens camera directly; logged meal appears in correct meal slot and date; home screen camera shortcut opens camera without going through Quick Actions
+* [x] **Test:** Enhanced GPT-4V prompt returns protein/carbs/fat/fiber (not just calories); "Log This Meal" creates Meal entry with full macros; photo-scanned foods cache to FoodItem table; portion adjustment at 2× doubles all macro values; removing a food item from multi-food result updates total macros; camera shortcut on meal plan "+" opens camera directly; logged meal appears in correct meal slot and date; home screen camera shortcut opens camera without going through Quick Actions
 
 ---
 
@@ -2053,7 +2053,9 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 | **Phase 8** | 10I: Skill progression + 10J: Variety enforcer + 10K: Serving scaler | 5h | Phase 5 |
 | **Phase 9** | 10L: Branded food tracking (FoodItem model, search API, LogFoodSheet) | 5h | Phase 1 |
 | **Phase 10** | 10M: Snap to Log (enhanced macros, camera shortcuts, portion adjust) | 5h | Phase 9 (shares FoodItem model) |
-| **TOTAL** | | **~56h** | |
+| **Phase 11** | 10R: Food Intel (tip library, 5 surface points, matching engine) | 4h | Phase 5 (reuses cooking mode + home feed) |
+| **Phase 12** | 10S: Kitchen IQ (card library, browse screen, progressive unlocks) | 6h | Phase 8 (reuses cooking stats from 10I) |
+| **TOTAL** | | **~66h** | |
 
 ---
 
@@ -2304,6 +2306,181 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 - [ ] `backend/tests/modules/shoppingListArchiveTiering.test.ts` — 90-day collapse to summary
 
 > **Data model note.** Adds `isActive: Boolean`, `archivedAt: DateTime?`, `autoNamedFrom: Json?`, and `tier: "active" | "archived" | "older"` to the `ShoppingList` Prisma model. Singleton invariant enforced by a partial unique index on `(userId) WHERE isActive = true`. Confirm schema diff before running `npx prisma db push`.
+
+---
+
+#### **10R: Food Intel — Contextual Tips & "Did You Know?" Snippets** 💡 *(Throughout App)*
+
+> **Philosophy:** Users don't read nutrition textbooks — but they'll absorb a 15-word tip that appears *right when it's relevant*. "Pair turmeric with black pepper — increases curcumin absorption by 2,000%" hits different when you're looking at a turmeric recipe. Food Intel turns every screen into a quiet learning surface. No dedicated section to visit, no homework — just smart context that makes users feel like insiders.
+
+**Tip Content Database**
+
+- [ ] **`foodIntelTips.ts` — curated tip library** — A flat array of `FoodIntelTip` objects, each with: `id`, `category` (superfood | nutrient | technique | myth_bust | pairing), `trigger` (ingredient name, nutrient keyword, or context tag), `title` (short hook, ≤8 words), `body` (the tip, ≤30 words), `source?` (optional citation), `tags` (ingredient/nutrient keywords for matching). Ship with 80+ tips across categories:
+  * **Superfood usage** (~20 tips): Turmeric + black pepper synergy, ginger anti-inflammatory properties, apple cider vinegar blood sugar benefits, fermented foods and gut health, dark leafy greens iron content, chia seed omega-3s, cinnamon blood sugar regulation, garlic allicin activation (crush and wait 10 min), matcha vs coffee antioxidants, hemp seeds complete protein
+  * **Mineral & vitamin intel** (~20 tips): Magnesium-rich foods (pumpkin seeds, dark chocolate, spinach), iron absorption boosters (vitamin C pairing) and blockers (calcium, tannins), zinc from shellfish/legumes, potassium beyond bananas (sweet potato, white beans), B12 for plant-based eaters, vitamin D + K2 synergy, selenium from Brazil nuts (2/day = 100% DV), omega-3 sources beyond salmon (sardines, walnuts, flax)
+  * **Macro goal tips** (~20 tips): Protein timing doesn't matter as much as daily total, fiber keeps you full longer than fat, leucine threshold for muscle synthesis (~2.5g per meal), casein before bed (Greek yogurt, cottage cheese), carb timing around workouts, fat doesn't make you fat — excess calories do, 30g protein per meal benchmark, complete vs incomplete proteins (and why it doesn't matter daily)
+  * **Technique tips** (~10 tips): Soaking beans reduces antinutrients, blanching preserves nutrients vs boiling, roasting garlic mellows flavor + keeps benefits, sprouting grains increases bioavailability, marinating with acid (lime/vinegar) + how long is too long, cold-brew vs hot tea antioxidant differences
+  * **Myth busters** (~10 tips): "Egg yolks are bad" is outdated — they're nutrient-dense, celery juice isn't magic — but celery is genuinely good, "detox" foods don't detox — your liver does — but they support liver function, brown rice isn't always better than white (context matters), raw isn't always healthier than cooked (tomatoes release more lycopene when cooked)
+  * **Test:** `frontend/__tests__/lib/foodIntelTips.test.ts` — ≥80 tips in library; every tip has non-empty title + body; no duplicate IDs; every category has ≥8 tips; all trigger keywords are lowercase trimmed
+
+- [ ] **Tip matching engine** — `matchFoodIntelTips(context: TipContext): FoodIntelTip[]` — given a context object `{ ingredients?: string[], nutrients?: string[], screenType: 'recipe_detail' | 'cooking' | 'shopping' | 'meal_plan' | 'home', recipeId?: string }`, returns 1–2 relevant tips by fuzzy-matching `trigger` keywords against the context. Deduplicates against a `seenTipIds: Set<string>` (AsyncStorage-backed, per-user) so users don't see the same tip twice in 7 days. Falls back to a random unseen tip if no contextual match.
+  * **Test:** `frontend/__tests__/lib/foodIntelMatcher.test.ts` — returns turmeric tip when ingredients include "turmeric"; respects seen-set (no repeats within 7 days); falls back to random when no match; returns max 2 tips; empty context returns a random tip
+
+**Surface Points (where tips appear)**
+
+- [ ] **Recipe detail — ingredient intel** — When viewing a recipe, scan the ingredient list for tip triggers. Show a collapsible `FoodIntelCard` (pastel mint tint, 💡 icon, title + body) below the ingredient list. Max 1 tip per recipe view. Tapping expands the full body; collapsed shows just the title as a teaser line.
+  * 📍 Frontend: `components/recipe/FoodIntelCard.tsx` — renders in `modal.tsx` below ingredients section, only when a match is found
+  * **Test:** `frontend/__tests__/components/recipe/FoodIntelCard.test.tsx` — renders when tip matched; hidden when no match; collapsed by default; expands on tap; shows correct tip content; a11y label present
+
+- [ ] **Cooking mode — step-adjacent tips** — During cooking, if a step mentions a tip trigger ingredient (e.g., "add turmeric and black pepper"), show a brief inline tip below the step text. Shares the collapsible pattern from 10I technique tips but with a distinct 💡 icon and mint tint (vs technique tips' blue tint). Max 1 Food Intel tip per cooking session (don't overwhelm mid-cook).
+  * 📍 Frontend: integrate into `cooking.tsx` step renderer alongside existing `TechniqueTip` — use `matchFoodIntelTips({ ingredients: stepIngredients, screenType: 'cooking' })`
+  * **Test:** `frontend/__tests__/components/cooking/FoodIntelCookingTip.test.tsx` — renders when step text contains trigger keyword; max 1 per session; doesn't conflict with technique tips; hidden when no match
+
+- [ ] **Home feed — "Did You Know?" card** — A rotating `DidYouKnowCard` in the home feed section list (positioned after the hero, before Quick Meals). Shows one random unseen tip per session with the hook "Did you know?" + tip body. Dismissable (swipe or X) — dismissed tips don't reappear for 30 days. Subtle animation: fade-in on mount.
+  * 📍 Frontend: `components/home/DidYouKnowCard.tsx` — inserted into home feed section order in `index.tsx`
+  * **Test:** `frontend/__tests__/components/home/DidYouKnowCard.test.tsx` — renders a tip; dismiss removes card; dismissed tip doesn't reappear; rotates to new tip on next session; a11y label; fade-in animation fires
+
+- [ ] **Shopping list — purchase intel** — When the user checks off an item that matches a tip trigger (e.g., checking off "spinach"), show a brief toast-style tip at the bottom: "Iron tip: squeeze lemon on your spinach — vitamin C boosts absorption 3×". Uses `Haptics.impactAsync(Light)` on appear. Auto-dismisses after 5s. Max 1 per shopping session.
+  * 📍 Frontend: `components/shopping/FoodIntelToast.tsx` — triggered from item toggle handler in shopping list
+  * **Test:** `frontend/__tests__/components/shopping/FoodIntelToast.test.tsx` — appears on matching item check-off; auto-dismisses after 5s; max 1 per session; haptic fires; hidden for non-matching items
+
+- [ ] **Meal plan — daily nutrition nudge** — On the daily macro summary, if a specific nutrient is low across the day's meals, surface a contextual tip: "Low on magnesium today? Add a handful of pumpkin seeds (~150 cal, 37% DV magnesium) to any meal." Requires basic nutrient gap detection against the day's logged macros.
+  * 📍 Frontend: `components/meal-plan/NutrientNudge.tsx` — renders below `DailyMacrosSummary` when a gap is detected
+  * 📍 Gap detection: simple threshold checks on fiber (<15g), protein (<80% of target), iron (heuristic from ingredients — not tracked in macros, so ingredient-keyword-based)
+  * **Test:** `frontend/__tests__/components/meal-plan/NutrientNudge.test.tsx` — shows fiber nudge when day total <15g; shows protein nudge when <80% target; hidden when all adequate; max 1 nudge per day view; actionable text includes a food suggestion
+
+#### 10R Tests (consolidated)
+
+- [ ] `frontend/__tests__/lib/foodIntelTips.test.ts` — tip library integrity (≥80 tips, categories, no dupes)
+- [ ] `frontend/__tests__/lib/foodIntelMatcher.test.ts` — matching, dedup, fallback
+- [ ] `frontend/__tests__/components/recipe/FoodIntelCard.test.tsx` — recipe detail surface
+- [ ] `frontend/__tests__/components/cooking/FoodIntelCookingTip.test.tsx` — cooking mode surface
+- [ ] `frontend/__tests__/components/home/DidYouKnowCard.test.tsx` — home feed card
+- [ ] `frontend/__tests__/components/shopping/FoodIntelToast.test.tsx` — shopping list toast
+- [ ] `frontend/__tests__/components/meal-plan/NutrientNudge.test.tsx` — meal plan nudge
+
+---
+
+#### **10S: Kitchen IQ — Food Knowledge Hub** 🧠 *(Profile + Home Screen)*
+
+> **Philosophy:** You've been eating 3× a day your entire life and nobody ever explained *why* certain foods matter. Kitchen IQ is the "things I wish someone told me at 18" feature — not a textbook, not a lecture, but short, visual, opinionated deep dives into nutrients, ingredients, and how food affects your body. The tone is a smart friend at dinner, not a nutritionist's office wall. Content unlocks progressively as users cook more and explore more cuisines — learning earned through doing, not assigned.
+
+**Content Architecture**
+
+- [ ] **`KitchenIQCard` model** — Each knowledge card is a self-contained learning unit:
+  ```
+  {
+    id: string
+    type: 'nutrient' | 'ingredient' | 'concept' | 'cuisine_health'
+    title: string                    // "Your Body on Magnesium"
+    subtitle: string                 // "The mineral 68% of people are low on"
+    heroEmoji: string                // "🧲" (magnesium), "🔥" (iron), "🧬" (protein)
+    sections: [
+      { heading: string, body: string, visual?: 'icon_list' | 'comparison' | 'scale' }
+    ]
+    topFoods: { name: string, amount: string, dvPercent: number }[]   // "Pumpkin seeds — 1oz — 37% DV"
+    recipes: string[]               // recipe IDs that feature this nutrient/ingredient heavily
+    tags: string[]                  // for search + matching
+    unlockCondition?: {             // progressive unlock
+      type: 'cook_count' | 'cuisine_count' | 'ingredient_used' | 'none'
+      threshold?: number
+      value?: string
+    }
+  }
+  ```
+  * 📍 Frontend-only data — no backend model needed. Ship as `frontend/lib/kitchenIQ/cards.ts`. Backend endpoint `GET /api/user/kitchen-iq/progress` returns unlock state based on cooking history.
+
+- [ ] **Seed 30+ Kitchen IQ cards at launch** — Organized by type:
+
+  **Nutrient deep dives** (~12 cards):
+  - "Your Body on Magnesium" — what it does (muscle recovery, sleep, 300+ enzyme reactions), deficiency signs (cramps, poor sleep, anxiety), top foods (pumpkin seeds, dark chocolate, spinach, almonds, black beans), daily target, recipes rich in it
+  - "Your Body on Iron" — two types (heme vs non-heme), absorption boosters (vitamin C) and blockers (calcium, coffee/tea with meals), why it matters (energy, oxygen transport, immune), top foods (red meat, lentils, spinach + lemon, dark chocolate), special note for women/plant-based eaters
+  - "Your Body on Zinc" — immune function, wound healing, taste/smell, top foods (oysters, beef, pumpkin seeds, chickpeas, cashews), why athletes need more
+  - "Your Body on Omega-3s" — EPA vs DHA vs ALA, brain health, inflammation, top foods (salmon, sardines, walnuts, flax, chia, hemp), supplement vs food debate
+  - "Your Body on Fiber" — soluble vs insoluble, gut microbiome, satiety, blood sugar, top foods (lentils, chia, avocado, oats, beans), the 30g target most people miss
+  - "Your Body on Potassium" — not just bananas (sweet potato, white beans, spinach, avocado all have more), blood pressure, muscle function, sodium balance
+  - "Your Body on B12" — energy, nerve function, why plant-based eaters must supplement, top foods (clams, liver, nutritional yeast, fortified foods)
+  - "Your Body on Vitamin D" — the sunshine vitamin most people are low on, bone health, immune function, mood, food sources (fatty fish, egg yolks, fortified), why supplementation is often necessary
+  - "Your Body on Protein" — how much you actually need (0.7–1g per lb for active people), complete vs incomplete (and why daily totals matter more than per-meal), leucine threshold, timing myths debunked, best sources by protein-per-calorie ratio
+  - "Your Body on Creatine" — not just for gym bros — cognitive function, found naturally in red meat and fish, one of the most studied supplements, vegetarians respond more because baseline is lower
+  - "Your Body on Collagen" — skin, joints, gut lining, bone broth as source, whether supplements work (the evidence is mixed but promising), vitamin C needed for synthesis
+  - "Your Body on Electrolytes" — sodium isn't the enemy (especially for active people), potassium, magnesium — the trio, why you feel terrible on low-carb diets (electrolyte flush), homemade electrolyte drink recipe
+
+  **Ingredient spotlights** (~10 cards):
+  - "Turmeric: The Golden Anti-Inflammatory" — curcumin, black pepper synergy, how to use (golden milk, curries, scrambles, smoothies), dosage that matters, cuisine traditions (Indian, Persian, Okinawan, Burmese)
+  - "Ginger: Nature's Digestive Aid" — gingerol, anti-nausea, anti-inflammatory, fresh vs dried vs powdered, how to use (stir-fry, tea, marinades, dressings), cuisines that rely on it
+  - "Apple Cider Vinegar: What It Actually Does" — blood sugar modulation (real evidence), digestion, what it doesn't do (weight loss miracle — no), how to use (dressings, marinades, 1 tbsp before starchy meals), the "mother" explained
+  - "Fermented Foods: Your Gut's Best Friends" — kimchi, sauerkraut, miso, kefir, yogurt, injera, curtido, pikliz — probiotic diversity, gut-brain axis, how different cultures ferment, why diversity of fermented foods > one type daily
+  - "Dark Leafy Greens: The Most Underrated Superfood" — spinach, kale, collards, ugu, moringa, chard — iron, calcium, folate, fiber, how to make them taste good (not just smoothies), Nigerian/Southern/Ethiopian traditions
+  - "Legumes: The World's Most Perfect Food" — protein + fiber + minerals, every cuisine has them (black beans, lentils, chickpeas, black-eyed peas, fava beans), soaking/sprouting, the gas problem and how to minimize it, Blue Zone staple
+  - "Seeds: Tiny Nutrition Powerhouses" — chia (omega-3, fiber), flax (lignans), hemp (complete protein), pumpkin (magnesium, zinc), sesame (calcium), sunflower (vitamin E) — how to incorporate without thinking about it
+  - "Garlic: The 10-Minute Rule" — crush and wait 10 minutes before cooking to activate allicin, cardiovascular benefits, immune support, raw vs cooked, how much matters
+  - "Cinnamon: Blood Sugar's Best Friend" — Ceylon vs Cassia (why it matters), insulin sensitivity, how to add to coffee/oatmeal/smoothies, dosage, which type to buy
+  - "Bone Broth & Collagen-Rich Foods" — amino acids (glycine, proline), gut lining support, joint health, how to make it vs buy it, slow cooker method, which cultures have broth traditions (pho, ramen, consommé, bulalo)
+
+  **Concepts** (~5 cards):
+  - "The Protein-Per-Calorie Ratio" — ranking foods by how much protein you get per calorie, why chicken breast wins but isn't the only option, cottage cheese/Greek yogurt/egg whites as unsung heroes, how to evaluate any food
+  - "Why Meal Timing Matters Less Than You Think" — intermittent fasting, meal frequency myths, what actually matters (daily totals, protein distribution), when timing DOES matter (pre/post workout, protein before bed)
+  - "The Volume Eating Playbook" — eating more food for fewer calories, high-volume low-calorie foods (vegetables, air-popped popcorn, egg whites, watermelon), how to build satisfying plates, why fiber and water content matter more than portion size
+  - "Reading Nutrition Labels Like a Pro" — serving size tricks, what "% Daily Value" actually means, the ingredients-list order rule, added sugars vs natural sugars, what to ignore (cholesterol for most people), red flags
+  - "The Anti-Inflammatory Diet (Without the BS)" — what chronic inflammation actually is, foods that help (omega-3, turmeric, berries, leafy greens, olive oil), foods that hurt (refined sugar, processed oils, excessive alcohol), why "anti-inflammatory" has become a marketing buzzword but the core science is real
+
+  **Cuisine health stories** (~5 cards):
+  - "Why Okinawans Live to 100" — Blue Zone diet, sweet potato staple, tofu, bitter melon, hara hachi bu (eat until 80% full), turmeric in everything, social eating
+  - "The Mediterranean Diet: Why It Actually Works" — olive oil, seafood, legumes, red wine (in moderation), why it's the most studied diet with the most consistent results, it's not a diet — it's how people actually eat
+  - "Ethiopian Cuisine: The Hidden Health Powerhouse" — teff (iron, calcium, protein, gluten-free), lentil-based stews, injera fermentation, communal eating, naturally plant-forward
+  - "Korean Fermentation Culture" — kimchi at every meal, doenjang, gochujang, jeotgal — probiotic diversity unmatched by any other cuisine, gut microbiome research, the fermentation-longevity connection
+  - "Latin American Superfoods You Already Know" — quinoa (Bolivian/Peruvian), chia (Mexican/Guatemalan), black beans (everywhere), plantains (resistant starch), sofrito (tomato + onion + pepper + garlic = antioxidant base), aguacate (avocado is from Mexico)
+
+  * **Test:** `frontend/__tests__/lib/kitchenIQ/cards.test.ts` — ≥30 cards in library; every card has non-empty title + subtitle + ≥1 section + ≥3 topFoods; every type has ≥4 cards; no duplicate IDs; all recipe references are valid IDs (or empty array)
+
+**Frontend Experience**
+
+- [ ] **Kitchen IQ tab in Profile** — New section on the profile screen (below Cooking Journey card from 10I): "Kitchen IQ" header with a brain 🧠 icon and progress indicator ("12 of 30 unlocked"). Tapping opens the Kitchen IQ browse screen.
+  * 📍 Frontend: `components/profile/KitchenIQSection.tsx` — compact card showing unlocked count + 3 preview thumbnails of recent unlocks
+  * **Test:** `frontend/__tests__/components/profile/KitchenIQSection.test.tsx` — renders unlock count; shows preview cards; tapping navigates to browse screen; hidden when 0 cards unlocked (first-time users see it after their first cook)
+
+- [ ] **Kitchen IQ browse screen** — `app/kitchen-iq.tsx` — scrollable grid of `KitchenIQCardPreview` tiles organized by type (Nutrients, Ingredients, Concepts, Cuisine Stories). Unlocked cards show full color; locked cards show greyed silhouette with unlock hint ("Cook 3 more recipes to unlock"). Tapping an unlocked card opens the full `KitchenIQDetailSheet` bottom sheet.
+  * 📍 4 section headers (collapsible): Nutrients 🧬, Ingredients 🌿, Concepts 📐, Cuisine Stories 🌍
+  * 📍 Locked card hint: "Cook 5 recipes" / "Try 3 cuisines" / "Use turmeric in a recipe" — specific, achievable, tied to actual cooking behavior
+  * **Test:** `frontend/__tests__/app/kitchen-iq.test.tsx` — renders sections with correct headers; unlocked cards are tappable; locked cards show hint text; tapping locked card does NOT navigate; section collapse/expand works; progress bar reflects unlock ratio
+
+- [ ] **Kitchen IQ detail sheet** — `components/kitchen-iq/KitchenIQDetailSheet.tsx` — bottom sheet (85% height) with:
+  * Hero: large emoji + title + subtitle
+  * Sections: rendered as styled cards (each `section` in the card data), with optional visual types (icon list for "top foods", comparison for "vs" content, scale for "how much do you need")
+  * "Top Foods" horizontal scroll: each food as a mini pill showing name + amount + %DV bar
+  * "Recipes with this" carousel: links to recipes in the user's cookbook (or database) that feature this nutrient/ingredient heavily — tapping navigates to recipe detail
+  * Share button: generates a shareable card image (deferred — text share first)
+  * **Test:** `frontend/__tests__/components/kitchen-iq/KitchenIQDetailSheet.test.tsx` — renders hero + sections; top foods show DV percentages; recipe carousel links navigate; hidden when not visible; close button works; a11y labels on all interactive elements
+
+- [ ] **Progressive unlock system** — `useKitchenIQProgress` hook:
+  * Fetches user's cooking stats (reuses `GET /api/user/cooking-stats` from 10I)
+  * Evaluates each card's `unlockCondition` against the stats:
+    - `cook_count >= 5` → unlocks first batch (basics: protein, fiber, magnesium)
+    - `cook_count >= 15` → unlocks intermediate (iron, omega-3, zinc, turmeric, ginger)
+    - `cuisine_count >= 5` → unlocks cuisine stories
+    - `ingredient_used: "turmeric"` → unlocks turmeric spotlight (detected from cooking history)
+    - `none` → always unlocked (2-3 "starter" cards available immediately: protein, volume eating, reading labels)
+  * Persists unlock state in AsyncStorage (source of truth is cooking stats, but cache avoids re-computation)
+  * New unlock → subtle celebration: toast with confetti particle + "New Kitchen IQ card unlocked: [title]" — fires once per card
+  * **Test:** `frontend/__tests__/hooks/useKitchenIQProgress.test.ts` — starter cards unlocked with 0 cooks; cook_count threshold unlocks correct cards; cuisine_count threshold unlocks cuisine stories; ingredient_used checks cooking log; new unlock fires celebration; already-seen unlock doesn't re-fire
+
+- [ ] **Home feed integration** — `KitchenIQPromoCard` — a compact card in the home feed (below Did You Know, above Quick Meals) that promotes the most recently unlocked Kitchen IQ card: "New: Your Body on Magnesium 🧲 — the mineral 68% of people are low on." Tapping navigates to the detail sheet. Only appears when a new card was unlocked in the last 48 hours. Dismissable.
+  * **Test:** `frontend/__tests__/components/home/KitchenIQPromoCard.test.tsx` — renders when new unlock within 48h; hidden when no recent unlocks; tapping navigates to detail; dismiss hides card; shows correct card title
+
+- [ ] **Backend: `GET /api/user/kitchen-iq/progress`** — Returns `{ totalCards, unlockedCount, unlockedIds: string[], newUnlocks: string[] }` computed from `cookingStatsService` data + card unlock conditions. `newUnlocks` = cards whose conditions are now met but weren't on the last check (compared against a `lastCheckedUnlocks` JSON field on `UserPreferences`).
+  * 📍 No new Prisma model — uses existing `UserPreferences.lastCheckedUnlocks: String?` (JSON array of previously unlocked IDs). Avoids a separate table for what's essentially a derived + cached value.
+  * **Test:** `backend/tests/modules/kitchenIQProgress.test.ts` — returns starter cards for new user; returns additional cards after 5 cooks; `newUnlocks` contains only cards not in `lastCheckedUnlocks`; updates `lastCheckedUnlocks` on read; empty cooking history returns only `none`-condition cards
+
+#### 10S Tests (consolidated)
+
+- [ ] `frontend/__tests__/lib/kitchenIQ/cards.test.ts` — card library integrity (≥30 cards, types, fields)
+- [ ] `frontend/__tests__/components/profile/KitchenIQSection.test.tsx` — profile section rendering
+- [ ] `frontend/__tests__/app/kitchen-iq.test.tsx` — browse screen grid, lock/unlock, sections
+- [ ] `frontend/__tests__/components/kitchen-iq/KitchenIQDetailSheet.test.tsx` — detail view
+- [ ] `frontend/__tests__/hooks/useKitchenIQProgress.test.ts` — progressive unlock logic
+- [ ] `frontend/__tests__/components/home/KitchenIQPromoCard.test.tsx` — home feed promotion
+- [ ] `backend/tests/modules/kitchenIQProgress.test.ts` — backend unlock computation
 
 ---
 

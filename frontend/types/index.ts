@@ -470,6 +470,30 @@ export interface QuickMealLogData {
   notes?: string;
 }
 
+// 10M: Food Recognition Result (photo-based meal tracking)
+export interface RecognizedFood {
+  name: string;
+  confidence: number;
+  estimatedCalories: number;
+  estimatedProtein: number;
+  estimatedCarbs: number;
+  estimatedFat: number;
+  estimatedFiber: number;
+  estimatedPortion?: string;
+  portionGrams?: number;
+  ingredients?: string[];
+}
+
+export interface FoodRecognitionResult {
+  foods: RecognizedFood[];
+  totalEstimatedCalories: number;
+  totalEstimatedProtein: number;
+  totalEstimatedCarbs: number;
+  totalEstimatedFat: number;
+  mealDescription: string;
+  confidence: number;
+}
+
 // 10L: Branded Food & Restaurant Tracking
 export interface FoodItem {
   id: string;
@@ -482,7 +506,7 @@ export interface FoodItem {
   carbs: number;
   fat: number;
   fiber: number | null;
-  source: 'nutritionix' | 'openfoodfacts' | 'user';
+  source: 'nutritionix' | 'openfoodfacts' | 'user' | 'photo_scan';
   externalId: string | null;
   imageUrl: string | null;
   createdAt: string;

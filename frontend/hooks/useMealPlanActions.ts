@@ -857,11 +857,24 @@ export function useMealPlanActions({
       ? `Add another meal at ${hours[hour].displayTime}? (${existingMealsCount} meal${existingMealsCount > 1 ? 's' : ''} already planned)`
       : `Add a meal at ${hours[hour].displayTime}?`;
 
+    // 10M: Determine meal type from hour for camera shortcut
+    const hourToMealType = (h: number): string => {
+      if (h <= 10) return 'breakfast';
+      if (h <= 14) return 'lunch';
+      if (h <= 16) return 'snack';
+      return 'dinner';
+    };
+    const mealType = hourToMealType(hour);
+
     Alert.alert(
       'Add Meal',
       mealText,
       [
         { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Snap a Photo',
+          onPress: () => { router.push(`/scanner?mealType=${mealType}&fromMealPlan=1` as any); },
+        },
         {
           text: 'Find Me a Meal',
           onPress: () => { onFindMeAMeal?.(); },

@@ -1,8 +1,8 @@
 // frontend/components/home/RecipeCarouselSection.tsx
 // Reusable collapsible carousel section for recipe lists
 
-import React, { useCallback } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -46,6 +46,8 @@ interface RecipeCarouselSectionProps {
   scrollRef?: React.RefObject<ScrollView | null>;
   onScroll?: (event: any) => void;
   onMomentumScrollEnd?: (event: any) => void;
+  // Slow auto-scroll (default false)
+  autoScroll?: boolean;
 }
 
 function RecipeCarouselSection({
@@ -71,7 +73,40 @@ function RecipeCarouselSection({
   scrollRef,
   onScroll,
   onMomentumScrollEnd,
+  autoScroll = false,
 }: RecipeCarouselSectionProps) {
+  const internalScrollRef = useRef<ScrollView>(null);
+  const activeScrollRef = (scrollRef ?? internalScrollRef) as React.RefObject<ScrollView | null>;
+
+  // Auto-scroll refs
+  const autoScrollIndexRef = useRef(0);
+  const isUserScrollingRef = useRef(false);
+  const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Advance one card every 4s — single scrollTo call, no rapid-fire ticks
+  useEffect(() => {
+    if (!autoScroll || recipes.length === 0) return;
+
+    const CARD_STEP = CARD_WIDTH + CARD_MARGIN;
+    const DWELL_MS = 5000;
+
+    const interval = setInterval(() => {
+      if (isUserScrollingRef.current) return;
+
+      const next = autoScrollIndexRef.current + 1;
+
+      if (next >= recipes.length) {
+        autoScrollIndexRef.current = 0;
+        activeScrollRef.current?.scrollTo({ x: 0, animated: false });
+      } else {
+        autoScrollIndexRef.current = next;
+        activeScrollRef.current?.scrollTo({ x: next * CARD_STEP, animated: true });
+      }
+    }, DWELL_MS);
+
+    return () => clearInterval(interval);
+  }, [autoScroll, recipes.length]);
+
   // Prefetch images for the next 3 recipes when scrolling
   const handleMomentumScrollEnd = useCallback((event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -151,14 +186,44 @@ function RecipeCarouselSection({
 
       {/* Section Content */}
       {!isCollapsed && (
+        <Pressable
+          onHoverIn={() => {
+            isUserScrollingRef.current = true;
+            if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+          }}
+          onHoverOut={() => {
+            resumeTimeoutRef.current = setTimeout(() => {
+              isUserScrollingRef.current = false;
+            }, 1000);
+          }}
+        >
         <ScrollView
-          ref={scrollRef}
+          ref={activeScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingLeft: 16, paddingRight: 48 }}
           decelerationRate="fast"
           snapToInterval={CARD_STEP}
           snapToAlignment="start"
+          onTouchStart={() => {
+            isUserScrollingRef.current = true;
+            if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+          }}
+          onTouchEnd={() => {
+            resumeTimeoutRef.current = setTimeout(() => {
+              isUserScrollingRef.current = false;
+            }, 1500);
+          }}
+          onScrollBeginDrag={() => {
+            isUserScrollingRef.current = true;
+            if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+          }}
+          onScrollEndDrag={(e) => {
+            autoScrollIndexRef.current = Math.round(e.nativeEvent.contentOffset.x / CARD_STEP);
+            resumeTimeoutRef.current = setTimeout(() => {
+              isUserScrollingRef.current = false;
+            }, 2000);
+          }}
           onScroll={onScroll}
           scrollEventThrottle={100}
           onMomentumScrollEnd={handleMomentumScrollEnd}
@@ -246,6 +311,7 @@ function RecipeCarouselSection({
             </View>
           )}
         </ScrollView>
+        </Pressable>
       )}
     </View>
   );

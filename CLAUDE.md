@@ -157,3 +157,21 @@ Check here before planning new features — prior architectural decisions may al
 - Adding a new icon → update `frontend/docs/ICON_SYSTEM.md`
 - New empty state → use the appropriate Sazon expression (`curious` for search, `sleepy` for no notifications, etc.)
 - Follow **Mascot Branding**: `thinking` for loading, `chef-kiss` for success
+
+## PM2 Services
+
+| Port | Name | Type |
+|------|------|------|
+| 3001 | sazon-backend-3001 | Node/Express (ts-node dev) |
+
+Frontend (Expo, port 8000) is **not** under PM2 — run `npm start` in `frontend/` manually for the Metro interactive UI.
+
+**Terminal Commands:**
+```bash
+pm2 start ecosystem.config.cjs   # First time
+pm2 save                         # Persist process list
+pm2 start all / pm2 stop all / pm2 restart all
+pm2 start sazon-backend-3001
+pm2 logs / pm2 status / pm2 monit
+pm2 resurrect                    # Restore saved list
+```
