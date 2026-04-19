@@ -3,9 +3,13 @@
 // Lists recipes sorted by pantry match percentage, with missing-ingredient hints.
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import ScreenGradient from '../components/ui/ScreenGradient';
+import LoadingState from '../components/ui/LoadingState';
+import AnimatedEmptyState from '../components/ui/AnimatedEmptyState';
 import Icon from '../components/ui/Icon';
 import { Icons, IconSizes } from '../constants/Icons';
 import { Colors, DarkColors, Pastel, PastelDark } from '../constants/Colors';
@@ -62,142 +66,170 @@ export default function PantryMatchesScreen() {
 
   const textPrimary = isDark ? DarkColors.text.primary : Colors.text.primary;
   const textSecondary = isDark ? DarkColors.text.secondary : Colors.text.secondary;
-  const surfaceBg = isDark ? DarkColors.background : Colors.background;
   const cardBg = isDark ? DarkColors.card : Colors.card;
 
+  const title = maxMissing != null ? 'Just a Couple Items Away' : 'Cook With What You Have';
+
   return (
-    <View style={{ flex: 1, backgroundColor: surfaceBg }}>
-      <Stack.Screen
-        options={{
-          title: maxMissing != null ? 'Just a couple items away' : 'Cook with what you have',
-          headerStyle: { backgroundColor: surfaceBg },
-          headerTintColor: textPrimary,
-        }}
-      />
-
-      {loading && (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={textSecondary} />
-        </View>
-      )}
-
-      {!loading && error && (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-          <Text style={{ color: textPrimary, fontSize: FontSize.md, textAlign: 'center' }}>
-            Couldn't load matches — try again in a sec.
-          </Text>
-        </View>
-      )}
-
-      {!loading && !error && recipes.length === 0 && (
+    <ScreenGradient>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header */}
         <View
-          style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}
-          testID="pantry-matches-empty"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Spacing.md,
+            paddingVertical: Spacing.sm,
+          }}
         >
-          <Text style={{ fontSize: 48, marginBottom: 12 }}>🧊</Text>
+          <HapticTouchableOpacity
+            onPress={() => router.back()}
+            style={{ padding: 8 }}
+            accessibilityLabel="Go back to Home"
+          >
+            <Icon name={Icons.CHEVRON_BACK} size={IconSizes.MD} color={textPrimary} />
+          </HapticTouchableOpacity>
           <Text
             style={{
+              flex: 1,
+              fontSize: FontSize.xl,
+              fontWeight: FontWeight.extrabold,
               color: textPrimary,
-              fontSize: FontSize.lg,
-              fontWeight: FontWeight.bold,
-              marginBottom: 6,
+              marginLeft: 4,
             }}
+            numberOfLines={1}
           >
-            Nothing quite matches yet
-          </Text>
-          <Text style={{ color: textSecondary, fontSize: FontSize.sm, textAlign: 'center' }}>
-            Add a few more items to your pantry and we'll find recipes that fit.
+            {title}
           </Text>
         </View>
-      )}
 
-      {!loading && !error && recipes.length > 0 && (
-        <FlatList
-          data={recipes}
-          keyExtractor={(r) => r.id}
-          contentContainerStyle={{ padding: Spacing.md, gap: Spacing.sm }}
-          testID="pantry-matches-list"
-          renderItem={({ item }) => (
-            <HapticTouchableOpacity
-              testID={`pantry-match-item-${item.id}`}
-              accessibilityLabel={`${item.title}, ${item.matchPercentage}% match`}
-              onPress={() => router.push(`/recipe/${item.id}` as any)}
-              style={[
-                {
-                  backgroundColor: cardBg,
-                  borderRadius: BorderRadius.card,
-                  padding: 14,
-                  flexDirection: 'row',
-                  gap: 12,
-                },
-                Shadows.SM,
-              ]}
-            >
-              <View
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: BorderRadius.card,
-                  backgroundColor: isDark ? PastelDark.peach : Pastel.peach,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
+        {loading && (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <LoadingState message="Finding matches..." expression="thinking" />
+          </View>
+        )}
+
+        {!loading && error && (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+            <AnimatedEmptyState
+              useMascot
+              mascotExpression="confused"
+              mascotSize="medium"
+              title="Something Went Wrong"
+              description="Couldn't load matches — try again in a sec."
+              actionLabel="Try Again"
+              onAction={fetchMatches}
+            />
+          </View>
+        )}
+
+        {!loading && !error && recipes.length === 0 && (
+          <View
+            style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}
+            testID="pantry-matches-empty"
+          >
+            <AnimatedEmptyState
+              useMascot
+              mascotExpression="curious"
+              mascotSize="medium"
+              title="Nothing Quite Matches Yet"
+              description="Add a few more items to your pantry and we'll find recipes that fit."
+              actionLabel="Go Back"
+              onAction={() => router.back()}
+            />
+          </View>
+        )}
+
+        {!loading && !error && recipes.length > 0 && (
+          <FlatList
+            data={recipes}
+            keyExtractor={(r) => r.id}
+            contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl, gap: Spacing.sm }}
+            testID="pantry-matches-list"
+            renderItem={({ item }) => (
+              <HapticTouchableOpacity
+                testID={`pantry-match-item-${item.id}`}
+                accessibilityLabel={`${item.title}, ${item.matchPercentage}% match`}
+                onPress={() => router.push(`/modal?id=${item.id}&source=pantry` as any)}
+                style={[
+                  {
+                    backgroundColor: cardBg,
+                    borderRadius: BorderRadius.card,
+                    padding: 14,
+                    flexDirection: 'row',
+                    gap: 12,
+                    alignItems: 'center',
+                  },
+                  Shadows.SM,
+                ]}
               >
-                <Text
+                <View
                   style={{
-                    fontSize: FontSize.md,
-                    fontWeight: FontWeight.extrabold,
-                    color: textPrimary,
+                    width: 52,
+                    height: 52,
+                    borderRadius: BorderRadius.card,
+                    backgroundColor: isDark ? PastelDark.peach : Pastel.peach,
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }}
                 >
-                  {item.matchPercentage}%
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: FontSize.md,
-                    fontWeight: FontWeight.extrabold,
-                    color: textPrimary,
-                  }}
-                  numberOfLines={1}
-                >
-                  {item.title}
-                </Text>
-                <Text
-                  style={{ fontSize: FontSize.xs, color: textSecondary, marginTop: 2 }}
-                  numberOfLines={1}
-                >
-                  {item.cuisine} · {item.cookTime}m · {item.calories} cal
-                </Text>
-                {item.missingIngredients.length > 0 ? (
-                  <Text
-                    style={{ fontSize: FontSize.xs, color: textSecondary, marginTop: 4 }}
-                    numberOfLines={1}
-                  >
-                    Need: {item.missingIngredients.slice(0, 2).join(', ')}
-                    {item.missingIngredients.length > 2
-                      ? ` +${item.missingIngredients.length - 2}`
-                      : ''}
-                  </Text>
-                ) : (
                   <Text
                     style={{
-                      fontSize: FontSize.xs,
-                      color: isDark ? DarkColors.success : Colors.success,
-                      marginTop: 4,
-                      fontWeight: FontWeight.bold,
+                      fontSize: FontSize.md,
+                      fontWeight: FontWeight.extrabold,
+                      color: textPrimary,
                     }}
                   >
-                    You have everything
+                    {item.matchPercentage}%
                   </Text>
-                )}
-              </View>
-              <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.SM} color={textSecondary} />
-            </HapticTouchableOpacity>
-          )}
-        />
-      )}
-    </View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: FontSize.md,
+                      fontWeight: FontWeight.extrabold,
+                      color: textPrimary,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={{ fontSize: FontSize.xs, color: textSecondary, marginTop: 2 }}
+                    numberOfLines={1}
+                  >
+                    {item.cuisine} · {item.cookTime}m · {item.calories} cal
+                  </Text>
+                  {item.missingIngredients.length > 0 ? (
+                    <Text
+                      style={{ fontSize: FontSize.xs, color: textSecondary, marginTop: 4 }}
+                      numberOfLines={1}
+                    >
+                      Need: {item.missingIngredients.slice(0, 2).join(', ')}
+                      {item.missingIngredients.length > 2
+                        ? ` +${item.missingIngredients.length - 2}`
+                        : ''}
+                    </Text>
+                  ) : (
+                    <Text
+                      style={{
+                        fontSize: FontSize.xs,
+                        color: isDark ? DarkColors.success : Colors.success,
+                        marginTop: 4,
+                        fontWeight: FontWeight.bold,
+                      }}
+                    >
+                      You Have Everything
+                    </Text>
+                  )}
+                </View>
+                <Icon name={Icons.CHEVRON_FORWARD} size={IconSizes.SM} color={textSecondary} />
+              </HapticTouchableOpacity>
+            )}
+          />
+        )}
+      </SafeAreaView>
+    </ScreenGradient>
   );
 }

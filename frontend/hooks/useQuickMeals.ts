@@ -29,6 +29,11 @@ interface UseQuickMealsReturn {
   // Actions
   fetch: (refresh?: boolean) => Promise<void>;
   setCurrentIndex: React.Dispatch<React.SetStateAction<number>>;
+  // Auto-scroll interaction handlers
+  onTouchStart: () => void;
+  onTouchEnd: () => void;
+  onScrollBeginDrag: () => void;
+  onScrollEndDrag: (event: any) => void;
 }
 
 export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsReturn {
@@ -42,6 +47,11 @@ export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsRetur
   // Refs for tracking current recipes and scroll position
   const recipesRef = useRef<SuggestedRecipe[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Auto-scroll refs
+  const autoScrollIndexRef = useRef(0);
+  const isUserScrollingRef = useRef(false);
+  const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -121,6 +131,7 @@ export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsRetur
 
       // Reset scroll position
       setCurrentIndex(0);
+      autoScrollIndexRef.current = 0;
       // Scroll to first card after a brief delay to ensure state is updated
       setTimeout(() => {
         scrollViewRef.current?.scrollTo({ x: 0, animated: true });
@@ -138,6 +149,51 @@ export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsRetur
     }
   }, [filters.cuisines, filters.dietaryRestrictions, filters.mealPrepMode, enabled]);
 
+  // Advance one card every 4s — single scrollTo call, no rapid-fire ticks
+  useEffect(() => {
+    const CARD_STEP = 292; // 280 card + 12 gap
+    const DWELL_MS = 5000;
+
+    const interval = setInterval(() => {
+      if (isUserScrollingRef.current || recipesRef.current.length === 0) return;
+
+      const totalCards = recipesRef.current.length;
+      const next = autoScrollIndexRef.current + 1;
+
+      if (next >= totalCards) {
+        autoScrollIndexRef.current = 0;
+        scrollViewRef.current?.scrollTo({ x: 0, animated: false });
+      } else {
+        autoScrollIndexRef.current = next;
+        scrollViewRef.current?.scrollTo({ x: next * CARD_STEP, animated: true });
+      }
+    }, DWELL_MS);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const pauseAutoScroll = useCallback(() => {
+    isUserScrollingRef.current = true;
+    if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+  }, []);
+
+  const scheduleResume = useCallback((delay = 2000) => {
+    resumeTimeoutRef.current = setTimeout(() => {
+      isUserScrollingRef.current = false;
+    }, delay);
+  }, []);
+
+  // Pause immediately on any touch so button taps aren't swallowed by the scroll loop
+  const onTouchStart = useCallback(() => { pauseAutoScroll(); }, [pauseAutoScroll]);
+  const onTouchEnd = useCallback(() => { scheduleResume(1500); }, [scheduleResume]);
+
+  const onScrollBeginDrag = useCallback(() => { pauseAutoScroll(); }, [pauseAutoScroll]);
+  const onScrollEndDrag = useCallback((event: any) => {
+    const x = event.nativeEvent.contentOffset.x;
+    autoScrollIndexRef.current = Math.round(x / 292);
+    scheduleResume(2000);
+  }, [scheduleResume]);
+
   return {
     // State
     recipes,
@@ -148,6 +204,11 @@ export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsRetur
     // Actions
     fetch,
     setCurrentIndex,
+    // Auto-scroll interaction handlers
+    onTouchStart,
+    onTouchEnd,
+    onScrollBeginDrag,
+    onScrollEndDrag,
   };
 }
 

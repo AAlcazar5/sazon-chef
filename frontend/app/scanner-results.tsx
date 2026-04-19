@@ -1,13 +1,28 @@
 // frontend/app/scanner-results.tsx
+// Results screen for food recognition — 10M enhanced with macros + Log This Meal
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
-// Results screen for food recognition
 
-import { View, Text, ScrollView, Image } from 'react-native';
+import { View, Text, ScrollView, Image, Alert } from 'react-native';
+import { useState, useCallback } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, DarkColors } from '../constants/Colors';
+import * as Haptics from 'expo-haptics';
+import { MACRO_COLORS } from '../constants/Colors';
+import { Shadows } from '../constants/Shadows';
+import { BorderRadius } from '../constants/Spacing';
+import { foodApi } from '../lib/api';
+
+type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+function getDefaultMealSlot(): MealSlot {
+  const h = new Date().getHours();
+  if (h < 11) return 'breakfast';
+  if (h < 15) return 'lunch';
+  if (h < 21) return 'dinner';
+  return 'snack';
+}
 
 export default function ScannerResultsScreen() {
   const { result, imageUri } = useLocalSearchParams<{
@@ -24,12 +39,47 @@ export default function ScannerResultsScreen() {
     console.error('Failed to parse result:', e);
   }
 
+  const [selectedMealSlot, setSelectedMealSlot] = useState<MealSlot>(getDefaultMealSlot());
+  const [loggingMeal, setLoggingMeal] = useState(false);
+
+  const handleLogMeal = useCallback(async () => {
+    if (!parsedResult || loggingMeal) return;
+    setLoggingMeal(true);
+
+    try {
+      const name = parsedResult.mealDescription || parsedResult.foods?.map((f: any) => f.name).join(', ') || 'Scanned Meal';
+      const calories = parsedResult.totalEstimatedCalories || 0;
+      const protein = parsedResult.totalEstimatedProtein || 0;
+      const carbs = parsedResult.totalEstimatedCarbs || 0;
+      const fat = parsedResult.totalEstimatedFat || 0;
+
+      const createdItem = await foodApi.createItem({ name, calories, protein, carbs, fat });
+      const foodItem = createdItem.data.foodItem;
+
+      await foodApi.logFood({
+        foodItemId: foodItem.id,
+        mealType: selectedMealSlot,
+        servings: 1,
+      });
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Logged!', `${name} added to ${selectedMealSlot}.`, [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Oops!', 'Couldn\'t log that meal — try again?');
+    } finally {
+      setLoggingMeal(false);
+    }
+  }, [parsedResult, selectedMealSlot, loggingMeal]);
+
   if (!parsedResult) {
     return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center p-6">
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Ionicons name="alert-circle-outline" size={64} color="#9CA3AF" />
-        <Text className="text-xl font-semibold text-gray-900 mt-4 mb-2">No Results</Text>
-        <Text className="text-gray-600 text-center mb-6">
+        <Text style={{ fontSize: 20, fontWeight: '600', color: '#1F2937', marginTop: 16, marginBottom: 8 }}>No Results</Text>
+        <Text style={{ color: '#6B7280', textAlign: 'center', marginBottom: 24 }}>
           Unable to process the food recognition results.
         </Text>
         <GradientButton
@@ -43,52 +93,129 @@ export default function ScannerResultsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       {/* Header */}
-      <View className="bg-white px-4 py-4 flex-row items-center">
-        <HapticTouchableOpacity onPress={() => router.back()} className="mr-4">
+      <View style={{ paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row', alignItems: 'center' }}>
+        <HapticTouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <Ionicons name="arrow-back" size={24} color="#374151" />
         </HapticTouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">Food Recognition</Text>
+        <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937' }}>Food Recognition</Text>
       </View>
 
-      <ScrollView className="flex-1">
-        <View className="p-4">
-          {/* Image Preview */}
+      <ScrollView style={{ flex: 1 }}>
+        <View style={{ padding: 16 }}>
           {imageUri && (
-            <Image source={{ uri: imageUri }} className="w-full h-64 rounded-lg mb-4" resizeMode="cover" />
+            <Image source={{ uri: imageUri }} style={{ width: '100%', height: 200, borderRadius: 16, marginBottom: 16 }} resizeMode="cover" />
           )}
 
-          {/* Summary */}
-          <View className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg mb-4">
-            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+          {/* Summary with full macros */}
+          <View style={[{ padding: 16, borderRadius: BorderRadius.card, backgroundColor: '#FFF5F0', marginBottom: 16 }, Shadows.MD]}>
+            <Text style={{ fontSize: 17, fontWeight: '600', color: '#1F2937', marginBottom: 4 }}>
               {parsedResult.mealDescription || 'Food Items'}
             </Text>
-            <Text className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {parsedResult.totalEstimatedCalories} calories
+            <Text style={{ fontSize: 28, fontWeight: '800', color: MACRO_COLORS.calories.accent, marginBottom: 12 }}>
+              {parsedResult.totalEstimatedCalories} cal
             </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+              {([
+                { label: 'Protein', value: `${parsedResult.totalEstimatedProtein || 0}g`, color: MACRO_COLORS.protein },
+                { label: 'Carbs', value: `${parsedResult.totalEstimatedCarbs || 0}g`, color: MACRO_COLORS.carbs },
+                { label: 'Fat', value: `${parsedResult.totalEstimatedFat || 0}g`, color: MACRO_COLORS.fat },
+              ] as const).map(({ label, value, color }) => (
+                <View key={label} style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: color.accent }}>{value}</Text>
+                  <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{label}</Text>
+                </View>
+              ))}
+            </View>
           </View>
 
-          {/* Food Items */}
+          {/* Food items */}
           {parsedResult.foods && parsedResult.foods.length > 0 && (
-            <View className="mb-4">
-              <Text className="text-lg font-semibold text-gray-900 mb-2">Food Items:</Text>
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 }}>Food Items:</Text>
               {parsedResult.foods.map((food: any, index: number) => (
-                <View key={index} className="bg-surface p-3 rounded-lg mb-2">
-                  <View className="flex-row justify-between items-center">
-                    <Text className="font-semibold text-gray-900">{food.name}</Text>
-                    <Text className="text-red-600 dark:text-red-400 font-bold">{food.estimatedCalories} cal</Text>
+                <View key={index} style={[{ padding: 12, borderRadius: BorderRadius.card, backgroundColor: '#FFF', marginBottom: 8 }, Shadows.SM]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#1F2937' }}>{food.name}</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: MACRO_COLORS.calories.accent }}>{food.estimatedCalories} cal</Text>
                   </View>
                   {food.estimatedPortion && (
-                    <Text className="text-sm text-gray-600 mt-1">Portion: {food.estimatedPortion}</Text>
+                    <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>Portion: {food.estimatedPortion}</Text>
                   )}
+                  <View style={{ flexDirection: 'row', marginTop: 6, gap: 12 }}>
+                    <Text style={{ fontSize: 12, color: MACRO_COLORS.protein.accent }}>P: {food.estimatedProtein || 0}g</Text>
+                    <Text style={{ fontSize: 12, color: MACRO_COLORS.carbs.accent }}>C: {food.estimatedCarbs || 0}g</Text>
+                    <Text style={{ fontSize: 12, color: MACRO_COLORS.fat.accent }}>F: {food.estimatedFat || 0}g</Text>
+                  </View>
                 </View>
               ))}
             </View>
           )}
 
+          {/* Meal slot picker */}
+          <View style={{ marginBottom: 8 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Log to
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => (
+                <HapticTouchableOpacity
+                  key={slot}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedMealSlot(slot);
+                  }}
+                  pressedScale={0.95}
+                  accessibilityLabel={`Log to ${slot}`}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: selectedMealSlot === slot ? MACRO_COLORS.calories.accent : '#F0EDE8',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color: selectedMealSlot === slot ? '#FFFFFF' : '#6B7280',
+                    textTransform: 'capitalize',
+                  }}>
+                    {slot}
+                  </Text>
+                </HapticTouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           {/* Action Buttons */}
-          <View className="mt-4 space-y-2">
+          <View style={{ marginTop: 16, gap: 10 }}>
+            <HapticTouchableOpacity
+              onPress={handleLogMeal}
+              disabled={loggingMeal}
+              pressedScale={0.97}
+              accessibilityLabel="Log this meal"
+              style={[
+                {
+                  paddingVertical: 16,
+                  borderRadius: BorderRadius.xl,
+                  backgroundColor: MACRO_COLORS.calories.accent,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: loggingMeal ? 0.6 : 1,
+                  gap: 8,
+                },
+                Shadows.MD,
+              ]}
+            >
+              <Ionicons name="checkmark-circle" size={22} color="white" />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+                {loggingMeal ? 'Logging...' : 'Log This Meal'}
+              </Text>
+            </HapticTouchableOpacity>
+
             <GradientButton
               label="Done"
               onPress={() => router.back()}
@@ -101,4 +228,3 @@ export default function ScannerResultsScreen() {
     </SafeAreaView>
   );
 }
-

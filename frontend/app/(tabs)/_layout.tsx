@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform } from 'react-native';
+import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
@@ -262,6 +262,18 @@ export default function TabLayout() {
           }
         } catch (error: any) {
           console.error('Food recognition error:', error);
+          const code = error?.response?.data?.code;
+          const msg = code === 'not_food'
+            ? "Can't tell what food that is — try the full scanner for a better shot!"
+            : code === 'rate_limit'
+            ? "Too many scans right now. Give it a sec!"
+            : code === 'auth_error' || code === 'no_provider'
+            ? "Food recognition isn't available right now."
+            : "Couldn't analyze that photo. Try the full scanner instead!";
+          Alert.alert('Hmm...', msg, [
+            { text: 'Open Scanner', onPress: () => router.push('/scanner' as any) },
+            { text: 'OK', style: 'cancel' },
+          ]);
         }
       }
     } catch (error: any) {

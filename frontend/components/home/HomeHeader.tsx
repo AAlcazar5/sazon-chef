@@ -25,6 +25,8 @@ interface HomeHeaderProps {
   activeFilterCount?: number;
   /** Called when Surprise Me is pressed */
   onSurpriseMe?: () => void;
+  /** 10M: Called when the camera shortcut is pressed */
+  onCameraPress?: () => void;
 }
 
 export default function HomeHeader({
@@ -32,6 +34,7 @@ export default function HomeHeader({
   onFilterPress,
   activeFilterCount = 0,
   onSurpriseMe,
+  onCameraPress,
 }: HomeHeaderProps) {
   // Badge animation — bounces when count changes
   const badgeScale = useSharedValue(1);
@@ -118,6 +121,14 @@ export default function HomeHeader({
 }
 
 const styles = StyleSheet.create({
+  cameraBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   filterWrapper: {
     position: 'relative',
   },
