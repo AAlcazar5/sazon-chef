@@ -18,6 +18,7 @@
 | **Group 8** | Revenue Optimization | ✅ 0h |
 | **Group 9** | Final App Polish | 62h |
 | **Group 10** | User Empowerment — "Healthy Food That Doesn't Suck" | 66h |
+| **Group 10V** | V2 Editorial Design Revamp | ~48h |
 | **Group 11** | Recipe Database & Recommendation Engine (CRITICAL) | 45h |
 | **Group 12** | App Store Launch | 20h |
 | **Group 13** | User Acquisition & Growth Hacking | 10h |
@@ -2032,10 +2033,10 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 *Forward momentum, never a dead end. When a user finishes reading a recipe, show them where to go next — related recipes by cuisine, macros, or meal type.*
 
-* [ ] **Related recipes carousel** — Recipe detail (`modal.tsx`): add a "You might also like" horizontal carousel at the bottom of the scroll content, showing 4–6 related recipes (same cuisine, similar macros, or same meal type)
-* [ ] **Backend: `GET /api/recipes/:id/related`** — return recipes with matching cuisine/tags, excluding the current recipe. Use cuisine adjacency to broaden results (if viewing a Thai recipe, also surface Lao and Burmese)
-* [ ] **Tapping a related recipe** navigates to its detail (push onto stack, not replace)
-* [ ] **Test:** Related recipes section renders with at least 1 recipe; tapping navigates to new detail screen; section hidden gracefully if no related recipes found; doesn't duplicate the current recipe
+* [x] **Related recipes carousel** — Recipe detail (`modal.tsx`): add a "You might also like" horizontal carousel at the bottom of the scroll content, showing 4–6 related recipes (same cuisine, similar macros, or same meal type)
+* [x] **Backend: `GET /api/recipes/:id/related`** — return recipes with matching cuisine/tags, excluding the current recipe. Use cuisine adjacency to broaden results (if viewing a Thai recipe, also surface Lao and Burmese)
+* [x] **Tapping a related recipe** navigates to its detail (push onto stack, not replace)
+* [x] **Test:** Related recipes section renders with at least 1 recipe; tapping navigates to new detail screen; section hidden gracefully if no related recipes found; doesn't duplicate the current recipe
 
 ---
 
@@ -2062,143 +2063,171 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 #### **10P: Tests (combined)**
 
 **`frontend/__tests__/components/cookbook/RecipeCreation.test.tsx`**
-- [ ] FAB renders on cookbook screen and opens recipe form on tap
-- [ ] AI-assisted creation returns structured recipe from free-text
-- [ ] Saving a created recipe adds it to cookbook and current collection
-- [ ] Edit button shows for `isUserCreated` recipes, "Save My Version" for system recipes
-- [ ] Forking a system recipe creates a new user-owned copy
+- [x] FAB renders on cookbook screen and opens recipe form on tap
+- [x] AI-assisted creation returns structured recipe from free-text
+- [x] Saving a created recipe adds it to cookbook and current collection
+- [x] Edit button shows for `isUserCreated` recipes, "Save My Version" for system recipes
+- [x] Forking a system recipe creates a new user-owned copy
 
 **`frontend/__tests__/components/cookbook/CollectionBrowsing.test.tsx`**
-- [ ] Collections view renders as 2-column grid with cover images
-- [ ] Pinned collections appear before unpinned
-- [ ] Collection search matches collection names and contained recipe titles
-- [ ] Section grouping collapses/expands correctly
-- [ ] Infinite scroll triggers next page load at threshold
-- [ ] Collection stats bar shows correct aggregated values
+- [x] Collections view renders as 2-column grid with cover images
+- [x] Pinned collections appear before unpinned
+- [x] Collection search matches collection names and contained recipe titles
+- [x] Section grouping collapses/expands correctly
+- [x] Infinite scroll triggers next page load at threshold
+- [x] Collection stats bar shows correct aggregated values
 
 **`backend/tests/modules/smartCollections.test.ts`**
-- [ ] Smart collection "High Protein" returns only recipes with protein ≥ 30g
-- [ ] Smart collection "Quick & Easy" returns only recipes with cookTime ≤ 15 and difficulty "easy"
-- [ ] Smart collection "Recently Cooked" returns only recipes with lastCooked within 30 days
-- [ ] Smart collection "Uncooked" returns only recipes with cookCount 0 and savedDate > 7 days
-- [ ] Smart collection counts update after saving a new matching recipe
-- [ ] Suggested collections endpoint returns relevant matches for a given recipe
+- [x] Smart collection "High Protein" returns only recipes with protein ≥ 30g
+- [x] Smart collection "Quick & Easy" returns only recipes with cookTime ≤ 15 and difficulty "easy"
+- [x] Smart collection "Recently Cooked" returns only recipes with lastCooked within 30 days
+- [x] Smart collection "Uncooked" returns only recipes with cookCount 0 and savedDate > 7 days
+- [x] Smart collection counts update after saving a new matching recipe
+- [x] Suggested collections endpoint returns relevant matches for a given recipe
 
 **`backend/tests/modules/recipeCreation.test.ts`**
-- [ ] `POST /api/recipes/generate-from-description` returns valid recipe from "oat protein pancakes with chia seeds"
-- [ ] `POST /api/recipes/:id/fork` creates user-owned copy with `isUserCreated: true`
-- [ ] Forked recipe preserves original ingredients, instructions, and macros
-- [ ] Forked recipe has a new ID distinct from original
+- [x] `POST /api/recipes/generate-from-description` returns valid recipe from "oat protein pancakes with chia seeds"
+- [x] `POST /api/recipes/:id/fork` creates user-owned copy with `isUserCreated: true`
+- [x] Forked recipe preserves original ingredients, instructions, and macros
+- [x] Forked recipe has a new ID distinct from original
 
 **`frontend/__tests__/components/meal-plan/MealRequestModal.test.tsx`**
-- [ ] Modal opens from empty meal slot "Find Me a Meal" button
-- [ ] Cuisine family chip expands to show specific subcuisines
-- [ ] Multi-select cuisines works (Latin American + Mediterranean)
-- [ ] Smart preset "High Protein" sets protein ≥ 35g and leaves other fields as "any"
-- [ ] Calorie range slider constrains min ≤ max
-- [ ] Pre-populates remaining calories when opened from a day with existing meals
-- [ ] Request history shows last 5 searches and re-runs on tap
+- [x] Modal opens from empty meal slot "Find Me a Meal" button
+- [x] Cuisine family chip expands to show specific subcuisines ✅ implemented in MealRequestModal
+- [x] Multi-select cuisines works (Latin American + Mediterranean) ✅ implemented in MealRequestModal
+- [x] Smart preset "High Protein" sets protein ≥ 35g and leaves other fields as "any"
+- [x] Calorie range slider constrains min ≤ max
+- [x] Pre-populates remaining calories when opened from a day with existing meals
+- [x] Request history shows last 5 searches and re-runs on tap
 
 **`frontend/__tests__/components/meal-plan/MealRequestResults.test.tsx`**
-- [ ] Results render with correct macro constraint badges (green for met, gray for "any")
-- [ ] "Add to Plan" adds recipe to the correct meal slot
-- [ ] "Save to Cookbook" saves without adding to plan
-- [ ] "Generate more" re-runs with same constraints
-- [ ] Single-option request auto-adds to slot
+- [x] Results render with correct macro constraint badges (green for met, gray for "any")
+- [x] "Add to Plan" adds recipe to the correct meal slot
+- [x] "Save to Cookbook" saves without adding to plan ✅ implemented in MealRequestResults
+- [x] "Generate more" re-runs with same constraints
+- ~~Single-option request auto-adds to slot~~ removed — auto-adding without confirmation is bad UX
 
 **`backend/tests/modules/mealPlanFindRecipes.test.ts`**
-- [ ] `POST /api/meal-plan/find-recipes` with `{ calories: { max: 400 }, protein: { min: 30 } }` returns only matching recipes
-- [ ] `cuisineFamilies: ["Latin American"]` expands to all Latin American subcuisines
-- [ ] Request for 3 options with only 1 DB match returns 1 DB result + 2 AI-generated
-- [ ] Fat max constraint `{ fat: { max: 8 } }` excludes recipes with fat > 8g
-- [ ] Fiber min constraint `{ fiber: { min: 5 } }` excludes recipes with fiber < 5g
-- [ ] Empty cuisine filter returns recipes from any cuisine
-- [ ] Dietary restrictions from user profile are applied automatically
-- [ ] Response includes `matchBreakdown` with boolean for each constraint
-- [ ] `matchScore` is higher for recipes matching all constraints vs partial matches
+- [x] `POST /api/meal-plan/find-recipes` with `{ calories: { max: 400 }, protein: { min: 30 } }` returns only matching recipes
+- [x] `cuisineFamilies: ["Latin American"]` expands to all Latin American subcuisines
+- [x] Request for 3 options with only 1 DB match returns 1 DB result + 2 AI-generated
+- [x] Fat max constraint `{ fat: { max: 8 } }` excludes recipes with fat > 8g
+- [x] Fiber min constraint `{ fiber: { min: 5 } }` excludes recipes with fiber < 5g
+- [x] Empty cuisine filter returns recipes from any cuisine
+- [x] Dietary restrictions from user profile are applied automatically
+- [x] Response includes `matchBreakdown` with boolean for each constraint
+- [x] `matchScore` is higher for recipes matching all constraints vs partial matches
 
 **`backend/tests/modules/cravingSearch.test.ts`**
-- [ ] "something cheesy" returns recipes containing cheese ingredients
-- [ ] "spicy noodles" returns noodle recipes from spicy cuisines
-- [ ] Craving search respects user's dietary restrictions (vegan → no dairy for "cheesy")
-- [ ] Empty craving text returns 400 error
+- [x] "something cheesy" returns recipes containing cheese ingredients
+- [x] "spicy noodles" returns noodle recipes from spicy cuisines
+- [x] Craving search respects user's dietary restrictions (vegan → no dairy for "cheesy")
+- [x] Empty craving text returns 400 error
 
 **`backend/tests/modules/ingredientSwaps.test.ts`**
-- [ ] "chicken breast" returns ≥3 alternatives with macro deltas
-- [ ] Swaps include both healthier and more flavorful options
-- [ ] Vegan user doesn't see meat-based swaps
-- [ ] Swap for "white rice" includes cauliflower rice with correct calorie reduction
+- [x] "chicken breast" returns ≥3 alternatives with macro deltas
+- [x] Swaps include both healthier and more flavorful options
+- [x] Vegan user doesn't see meat-based swaps
+- [x] Swap for "white rice" includes cauliflower rice with correct calorie reduction
 
 **`backend/tests/modules/flavorBoost.test.ts`**
-- [ ] Flavor boost for a bland chicken recipe returns ≥3 suggestions
-- [ ] Each suggestion adds ≤50 calories
-- [ ] Suggestions include specific quantities ("1 tbsp gochujang")
+- [x] Flavor boost for a bland chicken recipe returns ≥3 suggestions
+- [x] Each suggestion adds ≤50 calories
+- [x] Suggestions include specific quantities ("1 tbsp gochujang")
 
 **`backend/tests/modules/pantryMatch.test.ts`**
-- [ ] User with [chicken, rice, soy sauce, garlic] matches stir-fry recipes at ≥70%
-- [ ] "Just need 1-2 items" filter returns only recipes missing ≤2 ingredients
-- [ ] Leftover transformer with [rice, chicken] returns ≥3 different recipe ideas
+- [x] User with [chicken, rice, soy sauce, garlic] matches stir-fry recipes at ≥70%
+- [x] "Just need 1-2 items" filter returns only recipes missing ≤2 ingredients
+- [x] Leftover transformer with [rice, chicken] returns ≥3 different recipe ideas
 
 **`backend/tests/modules/weeklyBudget.test.ts`**
-- [ ] Monday 300 cal under → Tuesday target increases by ~150 cal
-- [ ] Weekly budget bar shows correct remaining across days
-- [ ] "Go for it" option adjusts remaining meals to compensate for craving's macros
-- [ ] "Healthier version" of pizza returns recipe with ≤50% of original calories
-- [ ] "Healthier version" includes side-by-side macro comparison (original vs healthified)
-- [ ] "Similar but lighter" returns ≥3 recipes within daily remaining calorie budget
-- [ ] Healthified craving recipe can be saved to cookbook via standard save endpoint
+- [x] Monday 300 cal under → Tuesday target increases by ~150 cal
+- [x] Weekly budget bar shows correct remaining across days
+- [x] "Go for it" option adjusts remaining meals to compensate for craving's macros ✅ cravingBudgetService
+- [x] "Healthier version" of pizza returns recipe with ≤50% of original calories ✅ cravingBudgetService
+- [x] "Healthier version" includes side-by-side macro comparison (original vs healthified) ✅ cravingBudgetService
+- [x] "Similar but lighter" returns ≥3 recipes within daily remaining calorie budget ✅ cravingBudgetService
+- [x] Healthified craving recipe can be saved to cookbook via standard save endpoint ✅ uses existing POST /api/recipes/save
 
-**`backend/tests/modules/varietyScoring.test.ts`**
-- [ ] Meal plan with same protein 5 days scores variety < 40
-- [ ] Meal plan with 5 different proteins and 4 cuisines scores variety > 70
-- [ ] "Boring week" regeneration only replaces repetitive meals
+**`backend/tests/modules/varietyScoring.test.ts`** _(actual file: `varietyScore.test.ts`)_
+- [x] Meal plan with same protein 5 days scores variety < 40
+- [x] Meal plan with 5 different proteins and 4 cuisines scores variety > 70
+- [x] "Boring week" regeneration only replaces repetitive meals
 
-**`frontend/__tests__/components/ServingScaler.test.tsx`**
-- [ ] 2× pill doubles all macros and ingredient quantities
-- [ ] "Hit my macros" with 450 cal target on a 350 cal/serving recipe returns ~1.3 servings
-- [ ] Custom serving input accepts decimal values (1.5 servings)
+**`frontend/__tests__/components/ServingScaler.test.tsx`** _(actual file: `__tests__/hooks/useServingScaler.test.ts`)_
+- [x] 2× pill doubles all macros and ingredient quantities
+- [x] "Hit my macros" with 450 cal target on a 350 cal/serving recipe returns ~1.3 servings
+- [x] Custom serving input accepts decimal values (1.5 servings)
 
 **`backend/tests/modules/brandedFood.test.ts`**
-- [ ] Search for "Chipotle burrito bowl" returns results with calories/protein/carbs/fat
-- [ ] Search checks local FoodItem cache before calling external APIs
-- [ ] First external lookup caches result to FoodItem table
-- [ ] Duplicate external lookup uses cached FoodItem (no second API call)
-- [ ] Recent foods endpoint returns user's last 10 logged items in chronological order
-- [ ] Frequent foods endpoint returns top 10 by usage count
-- [ ] Logging a branded food creates Meal with correct macros and foodItemId
-- [ ] Serving size multiplier (2×) doubles all macro values
-- [ ] User-submitted food item saved with source "user" and appears in future searches
-- [ ] Search with empty query returns 400 error
+- [x] Search for "Chipotle burrito bowl" returns results with calories/protein/carbs/fat
+- [x] Search checks local FoodItem cache before calling external APIs
+- [x] First external lookup caches result to FoodItem table
+- [x] Duplicate external lookup uses cached FoodItem (no second API call)
+- [x] Recent foods endpoint returns user's last 10 logged items in chronological order
+- [x] Frequent foods endpoint returns top 10 by usage count
+- [x] Logging a branded food creates Meal with correct macros and foodItemId
+- [x] Serving size multiplier (2×) doubles all macro values
+- [x] User-submitted food item saved with source "user" and appears in future searches
+- [x] Search with empty query returns 400 error
 
 **`backend/tests/modules/snapToLog.test.ts`**
-- [ ] Enhanced food recognition returns protein, carbs, fat, fiber (not just calories)
-- [ ] "Log This Meal" creates Meal with customName, full macros, and source "photo_scan"
-- [ ] Photo-scanned food items cached to FoodItem with source "photo_scan"
-- [ ] Cached photo-scan items appear in branded food search results
-- [ ] Multi-food recognition returns individual macro breakdowns per item
-- [ ] Removing a food item from multi-food result excludes it from total macro sum
+- [x] Enhanced food recognition returns protein, carbs, fat, fiber (not just calories)
+- [x] "Log This Meal" creates Meal with customName, full macros, and source "photo_scan"
+- [x] Photo-scanned food items cached to FoodItem with source "photo_scan"
+- [x] Cached photo-scan items appear in branded food search results ✅ verified — searchFood queries FoodItem by name without source filter
+- [x] Multi-food recognition returns individual macro breakdowns per item
+- [x] Removing a food item from multi-food result excludes it from total macro sum
 
-**`frontend/__tests__/components/SnapToLogSheet.test.tsx`**
-- [ ] Scan results display full macros (calories, protein, carbs, fat) per food item
-- [ ] Portion stepper at 2× doubles all displayed macros
-- [ ] Removing a detected food item updates total meal macros
-- [ ] "Add an item" opens branded food text search
-- [ ] Meal slot picker defaults to today's next empty slot
-- [ ] Confirm logs meal and navigates back to meal plan
-- [ ] Camera shortcut on meal plan "+" opens camera directly (no Quick Actions detour)
+**`frontend/__tests__/app/scanner-snapToLog.test.tsx`** _(actual: tests live in scanner-snapToLog.test.tsx since snap-to-log is built into scanner.tsx)_
+- [x] Scan results display full macros (calories, protein, carbs, fat) per food item ✅
+- [x] Portion stepper at 2× doubles all displayed macros ✅
+- [x] Removing a detected food item updates total meal macros ✅
+- [x] "Add an item" opens branded food text search ✅
+- [x] Meal slot picker defaults to today's next empty slot ✅
+- [x] Confirm logs meal and navigates back to meal plan ✅
+- [x] Camera shortcut on meal plan "+" opens camera directly ✅
 
-**`frontend/__tests__/components/LogFoodSheet.test.tsx`**
-- [ ] Search input triggers search after 300ms debounce
-- [ ] Recent foods section renders on initial open
-- [ ] Tapping a search result shows serving size confirmation
-- [ ] Logging a food calls POST /api/food/log with correct payload
-- [ ] One-tap re-log from recents skips search step
+**`frontend/__tests__/components/LogFoodSheet.test.tsx`** _(actual: `__tests__/components/meal-plan/LogFoodSheet.test.tsx`)_
+- [x] Search input triggers search after 300ms debounce
+- [x] Recent foods section renders on initial open
+- [x] Tapping a search result shows serving size confirmation
+- [x] Logging a food calls POST /api/food/log with correct payload
+- [x] One-tap re-log from recents skips search step
 
-**`backend/tests/modules/relatedRecipes.test.ts`**
-- [ ] Related recipes for a Thai recipe include other Thai + adjacent cuisine (Lao, Burmese) recipes
-- [ ] Current recipe is excluded from related results
-- [ ] Returns empty array gracefully when no related recipes found
-- [ ] Results limited to 6 recipes max
+**`backend/tests/modules/relatedRecipes.test.ts`** _(actual: `src/modules/recipe/__tests__/relatedRecipes.test.ts`)_
+- [x] Related recipes for a Thai recipe include other Thai + adjacent cuisine (Lao, Burmese) recipes
+- [x] Current recipe is excluded from related results
+- [x] Returns empty array gracefully when no related recipes found
+- [x] Results limited to 6 recipes max
+
+##### 10P Implementation — COMPLETE ✅
+
+**MealRequestModal — Cuisine UI** ✅
+- [x] Cuisine family chips in MealRequestModal (Latin American, Asian, European, etc.)
+- [x] Tapping a family chip expands inline to show specific subcuisines
+- [x] Multi-select: user can pick multiple families/subcuisines; payload sent as `cuisineFamilies[]`
+
+**MealRequestResults — Save to Cookbook** ✅
+- [x] "Save to Cookbook" button on each result card (beside "Add to Plan")
+- [x] Calls `recipeApi.saveRecipe()` without adding to meal slot
+
+~~Single-option auto-add~~ — removed; auto-adding without user confirmation is bad UX.
+
+**Craving + Weekly Budget Integration** ✅
+- [x] `cravingBudgetService.ts` — takes a craving + remaining daily budget, returns 3 paths
+- [x] "Go for it" path: recalculates remaining macros after absorbing the craving
+- [x] "Healthier version" path: AI generates recipe with ≤50% original calories + side-by-side comparison
+- [x] "Similar but lighter" path: queries DB for recipes matching craving keywords within budget
+- [x] Healthified recipe saves to cookbook via standard `POST /api/recipes/save`
+- [x] API endpoint: `POST /api/recipes/craving-budget`
+
+**SnapToLogSheet** ✅ _(built into scanner.tsx — not a separate component)_
+- [x] Camera result → macro review → log flow in scanner.tsx
+- [x] All 7 test cases passing in `scanner-snapToLog.test.tsx`
+
+**Cross-service integration** ✅
+- [x] Photo-scanned FoodItems appear in branded food text search (verified + tested)
 
 ---
 
@@ -2481,6 +2510,304 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 - [ ] `frontend/__tests__/hooks/useKitchenIQProgress.test.ts` — progressive unlock logic
 - [ ] `frontend/__tests__/components/home/KitchenIQPromoCard.test.tsx` — home feed promotion
 - [ ] `backend/tests/modules/kitchenIQProgress.test.ts` — backend unlock computation
+
+---
+
+### **Group 10V: V2 Editorial Design Revamp** 🎨✨
+
+> **Why.** The app works and has strong feature coverage, but the visual language is still functional-utilitarian. The v2 design handoff (`design_handoff_sazon_chef/`) introduces an **editorial aesthetic** — serif display type (Fraunces), circular plate-on-pastel photography, layered depth with overlapping elements, pastel widget cards, and black pill CTAs. This is the "App Store editorial" pass that makes Sazon look like a premium product, not a dev project.
+>
+> **Design DNA (5 pillars):**
+> 1. **Editorial serif display** — screen titles use Fraunces at 38–46px with italic accent words; body/UI stays Plus Jakarta Sans
+> 2. **Circular plate photography** — food photos masked to circles, offset to overflow cards, deep tinted shadows
+> 3. **Pastel widget cards** — cream scaffold, cards use the pastel palette (peach, sage, lavender, sky), tinted title colors
+> 4. **Layered depth** — stat strips overlap heroes (`marginTop: -28`), photos overflow card bounds, decorative soft circles
+> 5. **Black pill CTAs** — primary actions are solid black pills (`#111827`, height 52, `borderRadius: 9999`); orange gradient reserved for Save chip + Surprise FAB only
+>
+> **Reference files:** `design_handoff_sazon_chef/screens/`, `design_handoff_sazon_chef/primitives/`, `design_handoff_sazon_chef/colors_and_type.css`, `REDESIGN_PHILOSOPHY.md`
+
+---
+
+#### **10V-A: Typography Foundation — Fraunces + Plus Jakarta Sans** 🔤
+
+> Load editorial fonts and create the dual-font type system. This is the foundation — every subsequent section depends on it.
+
+- [ ] **Install `@expo-google-fonts/fraunces` + `@expo-google-fonts/plus-jakarta-sans`** via `npx expo install`
+  - Load weights: Fraunces 300/400/500/600/700/800 (regular + italic); Plus Jakarta Sans 400/500/600/700/800
+  - **Test:** `frontend/__tests__/foundations/typography.test.ts` — font families load without error; all weight variants resolve; fallback to system font when loading
+- [ ] **Update `frontend/constants/Typography.ts`** — add editorial presets alongside existing ones
+  - `display` — Fraunces 46px / weight 400 / letterSpacing -1.5 / lineHeight 0.98
+  - `displayAccent` — Fraunces 46px / weight 700 / italic
+  - `sectionTitle` — Fraunces 26px / weight 400 / letterSpacing -0.8
+  - `sectionAccent` — Fraunces 26px / weight 600 / italic
+  - `heroTitle` — Fraunces 22px / weight 400 + italic 600 accent
+  - `statNumber` — Fraunces 22px / weight 600 / letterSpacing -0.5
+  - `recipeDetailTitle` — Fraunces 38px / weight 400 / letterSpacing -1.2
+  - `eyebrow` — Plus Jakarta Sans 10–11px / weight 800 / letterSpacing 1.0–1.5 / uppercase
+  - `body` — Plus Jakarta Sans 13–14px / weight 500–600
+  - Keep all existing presets (h1–h4, body, label, caption, stat) for backwards compat
+  - **Test:** `frontend/__tests__/foundations/typography.test.ts` — each preset has correct fontFamily, fontSize, fontWeight, letterSpacing; display uses Fraunces; body uses Plus Jakarta Sans
+- [ ] **Create `useEditorialText` hook** — returns styled Text components (`DisplayText`, `SectionText`, `EyebrowText`) that apply the correct font family + weight
+  - **Test:** `frontend/__tests__/hooks/useEditorialText.test.ts` — DisplayText renders with Fraunces family; SectionText handles italic accent word via children; EyebrowText is uppercase
+
+#### **10V-B: Design Token Updates** 🎨
+
+> Extend existing token files with v2 values. Additive — nothing removed.
+
+- [ ] **Update `Colors.ts`** — add editorial-specific tokens
+  - `fg.muted_cream: '#C9BFB5'` — inactive category rail labels on cream bg
+  - Pastel title colors: `pastelTitle.peach: '#8a4a00'`, `pastelTitle.sage: '#2E5931'`, `pastelTitle.lavender: '#6a2677'`, `pastelTitle.sky: '#0f4a7a'`, `pastelTitle.golden: '#8a6200'`, `pastelTitle.blush: '#9a1f5b'`
+  - `blackCTA: '#111827'` — primary CTA background (v2 editorial)
+  - **Test:** `frontend/__tests__/foundations/colors.test.ts` — all new tokens exist; pastelTitle colors have sufficient contrast against their pastel bg (WCAG AA)
+- [ ] **Update `Shadows.ts`** — add editorial shadow presets
+  - `platePhoto` — `{ shadowOffset: {x:0,y:14}, shadowRadius:32, shadowColor:'rgba(30,60,110,0.28)' }` with secondary layer
+  - `cardRaised` — `{ shadowOffset: {x:0,y:10}, shadowRadius:28, shadowColor:'rgba(0,0,0,0.08)' }`
+  - `fab` — `{ shadowOffset: {x:0,y:10}, shadowRadius:24, shadowColor:'rgba(232,77,61,0.45)' }`
+  - `blackCTA` — `{ shadowOffset: {x:0,y:8}, shadowRadius:20, shadowColor:'rgba(17,24,39,0.3)' }`
+  - **Test:** `frontend/__tests__/foundations/shadows.test.ts` — all presets have valid shadowOffset/shadowRadius/shadowColor values; Android elevation integers are correct
+- [ ] **Update `Spacing.ts`** — bump screen horizontal padding
+  - `screenPadding: 20` (v1 was 16; v2 editorial uses 20 for breathing room)
+  - Add `BorderRadius.hero: 28`, `BorderRadius.heroCurve: 36`
+  - **Test:** same file — `screenPadding` is 20; `BorderRadius.hero` is 28; `BorderRadius.heroCurve` is 36
+
+#### **10V-C: Editorial Primitives** 🧱
+
+> New reusable components from the design handoff. Build these before touching screens.
+
+- [ ] **`EditorialCard` component** (`frontend/components/ui/EditorialCard.tsx`)
+  - Pastel background card with 104px centered circular food photo, serif title with tinted color, meta strip (time · cal · match%), heart save button
+  - Props: `recipe`, `bg` (pastel hex), `titleColor`, `saved`, `onToggleSave`, `onPress`
+  - `borderRadius: 22`, `boxShadow: card`, no borders
+  - **Test:** `frontend/__tests__/components/ui/EditorialCard.test.tsx` — renders circular photo with `borderRadius: 9999`; title uses Fraunces font; meta strip shows time/cal/match; heart toggles saved state; press handler fires; a11y label present
+- [ ] **`PlateHeroCard` component** (`frontend/components/ui/PlateHeroCard.tsx`)
+  - Pastel gradient background (default sky `#E3F2FD → #DCE8F3`), 200px circular food photo offset `right: -36px` with deep shadow, save chip (gradient orange), editorial title block (serif + eyebrow + meta), `overflow: 'visible'` on container
+  - Props: `recipe`, `gradientColors`, `onPress`, `saved`, `onToggleSave`
+  - **Test:** `frontend/__tests__/components/ui/PlateHeroCard.test.tsx` — photo renders at 200px circle; photo overflows card boundary; gradient background renders; save chip uses gradient not flat color; title uses serif font; press navigates
+- [ ] **`VerticalCategoryRail` component** (`frontend/components/ui/VerticalCategoryRail.tsx`)
+  - Vertical text labels (`transform: rotate(-90deg)`), uppercase, letter-spaced; active = black `#111827` with orange dot prefix, inactive = warm gray `#C9BFB5`
+  - Props: `categories: string[]`, `active: string`, `onSelect: (cat: string) => void`
+  - **Test:** `frontend/__tests__/components/ui/VerticalCategoryRail.test.tsx` — renders all categories vertically; active category shows orange dot indicator; inactive categories use muted color; tap fires onSelect; a11y roles correct
+- [ ] **`StatStrip` component** (`frontend/components/ui/StatStrip.tsx`)
+  - White card with 4 stats in a row (serif Fraunces numbers, uppercase JKS labels), vertical dividers (`#F0EAE2`), overlapping hero via `marginTop: -28`, raised shadow
+  - Props: `stats: { value: string, label: string }[]`
+  - **Test:** `frontend/__tests__/components/ui/StatStrip.test.tsx` — renders 4 stat columns; numbers use Fraunces; labels are uppercase; card has negative margin; dividers render between stats
+- [ ] **`BlackPillCTA` component** (`frontend/components/ui/BlackPillCTA.tsx`)
+  - Solid `#111827` background, height 52, `borderRadius: 9999`, white text (Plus Jakarta Sans 14px/800), deep shadow, spring press scale 0.96, optional left icon
+  - Props: `label`, `icon?`, `onPress`, `disabled?`
+  - Replaces gradient CTA on recipe detail and other primary actions per v2 design
+  - **Test:** `frontend/__tests__/components/ui/BlackPillCTA.test.tsx` — renders with black background; text is white; press triggers spring animation; disabled state reduces opacity; icon renders when provided
+- [ ] **`StickyBottomBar` component** (`frontend/components/ui/StickyBottomBar.tsx`)
+  - Absolute positioned at bottom, gradient fade overlay (`transparent → #FAF7F4`), flex row for action buttons
+  - Props: `children` (buttons), `fadeColor?` (defaults to surface cream)
+  - **Test:** `frontend/__tests__/components/ui/StickyBottomBar.test.tsx` — positions absolute at bottom; gradient fade renders; children render inside; safe area bottom padding applied
+- [ ] **`IngredientRow` component** (`frontend/components/ui/IngredientRow.tsx`)
+  - 42px tinted rounded square icon (ingredient image/emoji), name (14px/600), bold quantity (14px/800), tap to toggle checked state (opacity 0.45 + line-through + grayscale icon)
+  - Props: `ingredient: { name, qty, icon }`, `checked`, `onToggle`
+  - Divider line `#F0EAE2` between rows (last row no divider)
+  - **Test:** `frontend/__tests__/components/ui/IngredientRow.test.tsx` — renders icon + name + qty; checked state dims opacity and adds line-through; icon grayscales when checked; tap fires onToggle
+- [ ] **`ServingStepper` component** (`frontend/components/ui/ServingStepper.tsx`)
+  - White card with border `#F0EAE2`, serving count in orange (13px/700), circular − / + buttons, min 1 / no max
+  - Props: `servings`, `onChangeServings`
+  - **Test:** `frontend/__tests__/components/ui/ServingStepper.test.tsx` — shows serving count; minus at 1 is disabled or stays at 1; plus increments; display updates correctly
+- [ ] **`UnitSegmentedControl` component** (`frontend/components/ui/UnitSegmentedControl.tsx`)
+  - Pill-shaped container on `#F5F0EB`, two options (Metric / US), active = black pill background + white text, inactive = transparent + gray text
+  - Props: `value: 'Metric' | 'US'`, `onChange`
+  - **Test:** `frontend/__tests__/components/ui/UnitSegmentedControl.test.tsx` — active option has black bg; inactive has transparent bg; tap switches; spring animation on toggle
+
+#### **10V-D: Home Screen — Editorial Revamp** 🏠
+
+> Rebuild the home screen to match the v2 editorial design. Reference: `design_handoff_sazon_chef/screens/Home.jsx` + `preview_v2_home.png`
+
+- [ ] **Top bar redesign** — Mascot (36px) + "GOOD EVENING / Hi, [Name]" eyebrow stack + search + notifications `IconButton`s (white bg, circular)
+  - Time-aware greeting: morning/afternoon/evening
+  - **Test:** `frontend/__tests__/app/home.editorial.test.tsx` — greeting reflects time of day; mascot renders at correct size; search and notification buttons render; user name displays
+- [ ] **Editorial display headline** — Fraunces 46px, "Tonight's *picks*." with italic accent on "picks" + orange period
+  - Subtitle: 13px muted copy ("Crafted around what's in your pantry and today's macro budget.")
+  - **Test:** same file — headline renders with serif font; "picks" word is italic; orange period character renders; subtitle has max-width constraint
+- [ ] **Hero row: plate-on-pastel + vertical category rail** — `VerticalCategoryRail` on left (78px wide), `PlateHeroCard` on right with sky gradient
+  - Category rail filters the hero recipe by meal type
+  - **Test:** same file — category rail renders vertically; tapping a category updates the hero recipe; hero card photo overflows with visible overflow; plate shadow renders
+- [ ] **Macro widget row** — 3 pastel `WidgetCard`s in asymmetric grid (1.2fr / 1fr / 1fr): Today's kcal (peach), Protein (sage), Streak (lavender)
+  - Each card: decorative accent circle (top-right, 35% opacity), icon in white circle, eyebrow label, Fraunces stat number, optional trend line
+  - **Test:** same file — 3 widget cards render; each has correct pastel background; stat numbers use serif font; decorative circles render
+- [ ] **Quick picks section** — editorial H2 ("Quick *picks*") + "SEE ALL →" orange uppercase link, 2×2 `EditorialCard` grid
+  - Each card uses rotating pastel backgrounds (peach, sage, lavender, sky)
+  - **Test:** same file — section title uses serif with italic accent; 4 cards render in 2×2 grid; each card has different pastel bg; "See all" link is orange uppercase
+- [ ] **Surprise FAB** — 58px gradient-brand circle (bottom-right), sparkles icon, deep orange shadow
+  - **Test:** same file — FAB renders at bottom-right; tap opens random recipe; gradient background applies; shadow renders
+
+#### **10V-E: Recipe Detail — Editorial Revamp** 📋
+
+> Rebuild recipe detail to match v2. Reference: `design_handoff_sazon_chef/screens/RecipeDetail.jsx`
+
+- [ ] **Peach hero block** — `LinearGradient` 160deg `#FFF3E0 → #FFE5C8`, `borderBottomLeftRadius: 36` / `borderBottomRightRadius: 36`, soft decorative circles (rgba amber/orange at low opacity)
+  - Back / share / save `IconButton`s with frosted white bg (`rgba(255,255,255,0.8)`)
+  - **Test:** `frontend/__tests__/app/recipeDetail.editorial.test.tsx` — hero block renders with gradient; bottom corners are rounded at 36px; back button navigates; share and save buttons render
+- [ ] **Editorial title block** — eyebrow ("Asian · 92% match" with orange dot prefix), Fraunces 38px title with italic accent word, subtitle ("with jasmine rice & scallions")
+  - **Test:** same file — eyebrow shows cuisine + match%; title uses serif at 38px; italic accent renders correctly
+- [ ] **Circular plate photo** — 240px, offset `right: -50`, deep amber shadow, white border (6px), positioned absolute overlapping from hero
+  - Uses `expo-image` with blur-up placeholder
+  - **Test:** same file — photo renders at 240px circle; photo overflows to the right; plate shadow has amber tint
+- [ ] **Stat strip overlay** — `StatStrip` with 4 stats (kcal, protein, min, serve), overlaps hero with `marginTop: -28`, white bg, raised shadow
+  - **Test:** same file — stat strip overlaps hero; 4 stats render with correct values; serif numbers; uppercase labels
+- [ ] **Chef's note** — editorial pull-quote in Fraunces italic 17px, "CHEF'S NOTE" eyebrow
+  - **Test:** same file — chef's note renders with italic serif; eyebrow is uppercase
+- [ ] **Ingredients section** — section title (Fraunces 26px) + `UnitSegmentedControl` (Metric/US), `ServingStepper`, `IngredientRow` list with iconographic images
+  - Ingredient icons: 42px tinted rounded squares with food icons (emoji first pass, illustrated later)
+  - **Test:** same file — section title is serif; unit toggle switches display; serving stepper scales quantities; ingredient rows show icons + names + quantities; tap toggles checked
+- [ ] **Sticky black CTA bar** — `StickyBottomBar` with calendar `IconButton` + `BlackPillCTA` "▶ Start cooking"
+  - Gradient fade from transparent to `#FAF7F4`
+  - **Test:** same file — CTA bar sticks at bottom; black pill renders with white text; calendar button renders; fade gradient visible above bar
+
+#### **10V-F: Meal Plan — Editorial Refresh** 📅
+
+> Apply v2 DNA to meal plan screen. Reference: `design_handoff_sazon_chef/screens/MealPlan.jsx`
+
+- [ ] **Screen header** — "This week" title (serif or bold 30px) + day/date subtitle
+  - **Test:** `frontend/__tests__/app/mealPlan.editorial.test.tsx` — title renders; date subtitle reflects current day
+- [ ] **Week strip** — day pills with gradient active state (orange→red gradient, shadow), inactive = white + subtle border, date number below day letter
+  - **Test:** same file — 7 day pills render; active day has gradient bg + shadow; inactive has white bg; tapping changes active day
+- [ ] **Macro summary card** — white card (radius 20), `CalorieRing` (SVG, peach ring) + 4 `MacroBar`s (protein=sage, carbs=golden, fat=lavender, fiber=green) with progress bars
+  - **Test:** same file — calorie ring renders with correct consumed/goal; 4 macro bars render with correct colors; progress widths reflect values
+- [ ] **Meal slot rows** — white cards (radius 18), meal type icon in pastel peach circle (40px), slot label (eyebrow), recipe title (bold 14px), macro meta strip; empty slot shows "Tap to add a recipe" in muted text
+  - **Test:** same file — 4 meal slots render (Breakfast/Lunch/Dinner/Snack); slots with recipes show title + macros; empty slots show placeholder text; tap on recipe navigates to detail
+
+#### **10V-G: Cookbook — Editorial Refresh** 📚
+
+> Apply v2 DNA to cookbook screen. Reference: `design_handoff_sazon_chef/screens/Cookbook.jsx`
+
+- [ ] **Screen header** — "Cookbook" title (bold 30px) + "[N] saved recipes" subtitle + grid/list toggle (pill segmented control, white active bg with shadow)
+  - **Test:** `frontend/__tests__/app/cookbook.editorial.test.tsx` — title renders; recipe count is correct; toggle switches between grid and list views
+- [ ] **Collection chips** — scrollable row, black pill active state + white inactive with border, font 12px/700
+  - **Test:** same file — collection chips render; active chip has black bg + white text; inactive has white bg + border; tap changes active collection
+- [ ] **Grid mode** — 2-column grid using `RecipeCard` variant="grid" (white card, radius 18, match-color top bar, photo + title + meta)
+  - **Test:** same file — grid renders 2 columns; cards have match-color indicator bar; heart toggles save; tap navigates
+- [ ] **List mode** — single column using `RecipeCard` variant="list" (row card, match-color left bar, thumbnail + title + meta + tags)
+  - **Test:** same file — list renders single column; cards show thumbnail + title + match%; difficulty badge renders
+- [ ] **Empty state** — Sazon mascot (medium) + "Nothing saved yet" + help text
+  - **Test:** same file — empty state shows mascot; title and description render; appears when no saved recipes
+
+#### **10V-H: Shopping List — Editorial Refresh** 🛒
+
+> Apply v2 DNA to shopping list. Reference: `design_handoff_sazon_chef/screens/Shopping.jsx`
+
+- [ ] **Screen header** — "Shopping list" title + "[N] items left · [M] already in pantry" subtitle
+  - **Test:** `frontend/__tests__/app/shopping.editorial.test.tsx` — title renders; items-left count is correct; pantry count shows
+- [ ] **Progress strip** — white card with gradient cart icon (44px circle, orange→red), "Progress" label + fraction + gradient progress bar
+  - **Test:** same file — progress bar width reflects checked/total ratio; gradient fills from orange to red; count shows done/total
+- [ ] **Category sections** — category header (26px tinted icon square + uppercase bold name + item count), white card group (radius 18) with item rows
+  - Icons: produce=leaf/sage, protein=flame/red, pantry=tray/peach, dairy=water/sky
+  - **Test:** same file — categories render with correct icon colors; items grouped by category; correct item counts per section
+- [ ] **Item rows** — custom checkbox (22px circle, orange when checked + checkmark, gray border when unchecked), label + "In pantry" badge (green, uppercase, checkmark-circle icon), quantity
+  - Checked state: label dimmed + strikethrough
+  - **Test:** same file — unchecked items show gray circle; checked shows orange fill + checkmark; text gets strikethrough; "In pantry" badge shows for pantry items
+- [ ] **Dividers** — `#F5F0EB` between items within a category section (not after last item)
+  - **Test:** same file — dividers render between items but not after the last item in each category
+
+#### **10V-I: Onboarding — Pastel Gradient Flow** 🌈
+
+> Apply v2 DNA to onboarding. Reference: `design_handoff_sazon_chef/screens/Onboarding.jsx`
+
+- [ ] **3-step flow with pastel gradients** — step 0: peach gradient (`#FFE0B2 → #FAF7F4`), step 1: sage gradient (`#C8E6C9 → #FAF7F4`), step 2: lavender gradient (`#E1BEE7 → #FAF7F4`)
+  - **Test:** `frontend/__tests__/app/onboarding.editorial.test.tsx` — each step has correct gradient colors; gradient fills 55% of screen height
+- [ ] **Progress dots** — animated width (active = 24px orange, inactive = 8px muted), spring transition on step change
+  - **Test:** same file — correct number of dots; active dot is wider + orange; dots update on step change
+- [ ] **Mascot hero** — large on welcome (192px), medium on subsequent steps (96px), drop shadow
+  - **Test:** same file — mascot renders at large size on step 0; smaller on steps 1–2; shadow applies
+- [ ] **Step content** — orange eyebrow ("Welcome" / "Step 1 of 3" / "Step 2 of 3"), bold title (34px step 0, 30px others), muted description, `whiteSpace: 'pre-line'` for line breaks
+  - **Test:** same file — eyebrow text updates per step; title size is 34 on welcome; description renders
+- [ ] **Option chips** — step 1: 3-column grid of emoji + label chips (dietary restrictions), multi-select; step 2: 2-column grid (goals), single-select
+  - Selected state: subtle orange gradient bg + orange border; unselected: frosted white + light border
+  - **Test:** same file — step 1 allows multi-select (2+ selections); step 2 is single-select (new choice deselects previous); selected chip has orange border
+- [ ] **CTAs** — `BrandButton` fullWidth for primary ("Get started" / "Continue" / "Finish setup"); ghost "Back" on steps 1-2; "I'll set up later" skip on step 0
+  - **Test:** same file — primary CTA advances to next step; back goes to previous step; skip on step 0 completes onboarding; "Finish setup" on last step triggers completion
+
+#### **10V-J: Shared Primitives — FrostedHeader + TabBar + RecipeCard** 🧩
+
+> Upgrade shared chrome components to match v2 DNA.
+
+- [ ] **`FrostedHeader` upgrade** — sticky top, `rgba(255,255,255,0.82)` + `blur(16px) saturate(180%)` via `expo-blur`, mascot (36px xsmall) + "Sazon Chef" brand text (22px/800), action `IconButton` on `#F5F0EB`
+  - Uses `BlurView` on iOS, semi-transparent solid on Android (existing pattern)
+  - **Test:** `frontend/__tests__/components/ui/FrostedHeader.test.tsx` — renders mascot + brand text; action button renders; sticky positioning applies; a11y label present
+- [ ] **`ScreenHeader` upgrade** — title (30px/800) + optional subtitle (14px muted) + optional right element (e.g., view toggle), padding `14px 16px 8px`
+  - **Test:** `frontend/__tests__/components/ui/ScreenHeader.test.tsx` — title renders at 30px bold; subtitle renders when provided; right element slot works
+- [ ] **`TabBar` upgrade** — floating pill bar (`left: 12, right: 12, bottom: 22`), frosted glass bg, `borderRadius: 28`, 5 tabs (home/cookbook/mealplan/shopping/profile)
+  - Active tab: filled icon + orange color + 800 weight label; inactive: outline icon + gray `#9CA3AF` + 600 weight
+  - **Test:** `frontend/__tests__/components/ui/TabBar.test.tsx` — 5 tabs render; active tab has orange color + filled icon; inactive has gray + outline icon; frosted bg renders; floating positioning correct
+- [ ] **`RecipeCard` variants** — update existing component with v2 visual treatment
+  - `featured`: match-color top bar (green ≥80%, orange ≥60%, red <60%), full-bleed image with gradient overlay, match% badge, heart button, title on image, meta strip with difficulty + time + cal + protein
+  - `grid`: match-color top bar, 108px photo, title (13px/800) + meta (10px), heart button
+  - `list`: match-color left bar (4px), 96px thumbnail, title + meta + tags + difficulty badge, heart button
+  - **Test:** `frontend/__tests__/components/ui/RecipeCard.test.tsx` — featured variant has gradient image overlay; grid variant has correct photo height; list variant shows left color bar; match color is green/orange/red per threshold; heart toggles saved state
+
+#### **10V-K: Macro Widgets — CalorieRing + MacroBar** 📊
+
+> SVG-based nutrition visualization components.
+
+- [ ] **`CalorieRing` component** (`frontend/components/ui/CalorieRing.tsx`)
+  - SVG circle ring (peach `#FFB74D` on `#FFF3E0` track), consumed/goal center display (bold number + "of [goal]" label), rotated -90deg for top start
+  - Props: `consumed`, `goal`, `size` (default 140)
+  - Uses `react-native-svg` (already installed or install)
+  - **Test:** `frontend/__tests__/components/ui/CalorieRing.test.tsx` — ring renders at correct size; stroke dashoffset reflects consumed/goal ratio; center shows consumed number; "of [goal]" label renders; ring is capped at 100%
+- [ ] **`MacroBar` component** (`frontend/components/ui/MacroBar.tsx`)
+  - Horizontal progress bar: label (10px uppercase, 62px width), bar (cream track `#F5F0EB`, colored fill), value/goal text (11px/700)
+  - Props: `label`, `value`, `goal`, `unit` (default 'g'), `color`
+  - Color presets: protein=`#81C784`, carbs=`#FFD54F`, fat=`#CE93D8`, fiber=`#059669`
+  - **Test:** `frontend/__tests__/components/ui/MacroBar.test.tsx` — bar width reflects value/goal %; label is uppercase; value/goal text shows units; bar is capped at 100%
+
+---
+
+#### **10V-L: Implementation Order**
+
+| Phase | Focus | Est. Hours | Dependencies |
+|-------|-------|-----------|--------------|
+| **Phase 1** | 10V-A: Typography foundation (fonts + presets) | 4h | None — start here |
+| **Phase 2** | 10V-B: Token updates (colors, shadows, spacing) | 2h | Phase 1 |
+| **Phase 3** | 10V-C: Editorial primitives (8 new components) | 10h | Phase 2 |
+| **Phase 4** | 10V-K: Macro widgets (CalorieRing + MacroBar) | 3h | Phase 2 |
+| **Phase 5** | 10V-J: Shared chrome (FrostedHeader, TabBar, RecipeCard, ScreenHeader) | 5h | Phase 3 |
+| **Phase 6** | 10V-D: Home screen editorial revamp | 8h | Phase 3, 4, 5 |
+| **Phase 7** | 10V-E: Recipe detail editorial revamp | 6h | Phase 3, 4, 5 |
+| **Phase 8** | 10V-F + 10V-G: Meal plan + cookbook refresh | 4h | Phase 4, 5 |
+| **Phase 9** | 10V-H: Shopping list refresh | 3h | Phase 5 |
+| **Phase 10** | 10V-I: Onboarding pastel flow | 3h | Phase 1, 2 |
+| **TOTAL** | | **~48h** | |
+
+---
+
+#### 10V Tests (consolidated)
+
+**Foundation tests**
+- [ ] `frontend/__tests__/foundations/typography.test.ts` — font loading, editorial presets, dual-font system
+- [ ] `frontend/__tests__/foundations/colors.test.ts` — pastel title contrast, new token existence
+- [ ] `frontend/__tests__/foundations/shadows.test.ts` — editorial shadow presets valid
+
+**Primitive component tests**
+- [ ] `frontend/__tests__/components/ui/EditorialCard.test.tsx` — circular photo, serif title, pastel bg, save toggle
+- [ ] `frontend/__tests__/components/ui/PlateHeroCard.test.tsx` — plate overflow, gradient bg, deep shadow
+- [ ] `frontend/__tests__/components/ui/VerticalCategoryRail.test.tsx` — vertical text, active indicator, selection
+- [ ] `frontend/__tests__/components/ui/StatStrip.test.tsx` — 4-stat layout, serif numbers, negative margin overlap
+- [ ] `frontend/__tests__/components/ui/BlackPillCTA.test.tsx` — black bg, white text, spring press, disabled state
+- [ ] `frontend/__tests__/components/ui/StickyBottomBar.test.tsx` — absolute position, fade gradient, safe area
+- [ ] `frontend/__tests__/components/ui/IngredientRow.test.tsx` — icon + name + qty, checked state, toggle
+- [ ] `frontend/__tests__/components/ui/ServingStepper.test.tsx` — increment/decrement, min 1 guard
+- [ ] `frontend/__tests__/components/ui/UnitSegmentedControl.test.tsx` — black pill active, toggle behavior
+- [ ] `frontend/__tests__/components/ui/CalorieRing.test.tsx` — SVG ring, consumed/goal ratio, center label
+- [ ] `frontend/__tests__/components/ui/MacroBar.test.tsx` — progress width, label, value/goal, color
+
+**Screen-level tests**
+- [ ] `frontend/__tests__/app/home.editorial.test.tsx` — greeting, editorial headline, hero plate card, category rail, widget row, picks grid, FAB
+- [ ] `frontend/__tests__/app/recipeDetail.editorial.test.tsx` — peach hero, serif title, plate photo, stat strip, ingredients, sticky CTA
+- [ ] `frontend/__tests__/app/mealPlan.editorial.test.tsx` — week strip, macro summary, calorie ring, meal slots
+- [ ] `frontend/__tests__/app/cookbook.editorial.test.tsx` — header, collection chips, grid/list views, empty state
+- [ ] `frontend/__tests__/app/shopping.editorial.test.tsx` — progress strip, category sections, item checkboxes, pantry badges
+- [ ] `frontend/__tests__/app/onboarding.editorial.test.tsx` — 3 pastel gradients, progress dots, option chips, multi/single select
+
+**Shared chrome tests**
+- [ ] `frontend/__tests__/components/ui/FrostedHeader.test.tsx` — mascot, brand text, frosted blur, action button
+- [ ] `frontend/__tests__/components/ui/ScreenHeader.test.tsx` — title size, subtitle, right slot
+- [ ] `frontend/__tests__/components/ui/TabBar.test.tsx` — 5 tabs, orange active, floating pill, frosted bg
+- [ ] `frontend/__tests__/components/ui/RecipeCard.test.tsx` — featured/grid/list variants, match color, save toggle
 
 ---
 

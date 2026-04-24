@@ -174,6 +174,36 @@ describe('pantryMatch controller', () => {
     expect(payload.recipes[1].id).toBe('r-75');
   });
 
+  it('user with [chicken, rice, soy sauce, garlic] matches stir-fry recipes at >=70%', async () => {
+    (mockPrisma.pantryItem.findMany as jest.Mock).mockResolvedValue([
+      { name: 'chicken' },
+      { name: 'rice' },
+      { name: 'soy sauce' },
+      { name: 'garlic' },
+    ]);
+    (mockPrisma.recipe.findMany as jest.Mock).mockResolvedValue([
+      makeRecipe({
+        id: 'r-stirfry',
+        title: 'Chicken Stir-Fry',
+        ingredients: [
+          { text: 'chicken breast' },
+          { text: 'white rice' },
+          { text: 'soy sauce' },
+          { text: 'garlic' },
+          { text: 'bell pepper' },
+        ],
+      }),
+    ]);
+
+    const { res, json } = makeRes();
+    await recipeController.pantryMatch(makeReq() as Request, res as Response);
+
+    const payload = json.mock.calls[0][0];
+    expect(payload.recipes).toHaveLength(1);
+    expect(payload.recipes[0].matchPercentage).toBeGreaterThanOrEqual(70);
+    expect(payload.recipes[0].title).toContain('Stir-Fry');
+  });
+
   it('returns 500 on prisma error', async () => {
     (mockPrisma.pantryItem.findMany as jest.Mock).mockRejectedValue(new Error('db down'));
     const { res, status, json } = makeRes();
@@ -251,6 +281,41 @@ describe('leftoverIdeas controller', () => {
     const where = (mockPrisma.recipe.findMany as jest.Mock).mock.calls[0][0].where;
     expect(where.cuisine).toEqual({ not: 'Thai' });
     expect(where.id).toEqual({ not: 'r-source' });
+  });
+
+  it('leftover transformer with [rice, chicken] returns >=3 different recipe ideas', async () => {
+    const recipes = [
+      makeRecipe({
+        id: 'r1',
+        title: 'Fried Rice',
+        cuisine: 'Chinese',
+        ingredients: [{ text: 'cooked rice' }, { text: 'chicken' }, { text: 'egg' }],
+      }),
+      makeRecipe({
+        id: 'r2',
+        title: 'Chicken Rice Bowl',
+        cuisine: 'Japanese',
+        ingredients: [{ text: 'rice' }, { text: 'chicken breast' }, { text: 'teriyaki sauce' }],
+      }),
+      makeRecipe({
+        id: 'r3',
+        title: 'Chicken Burrito Bowl',
+        cuisine: 'Mexican',
+        ingredients: [{ text: 'rice' }, { text: 'chicken' }, { text: 'black beans' }],
+      }),
+    ];
+    (mockPrisma.recipe.findMany as jest.Mock).mockResolvedValue(recipes);
+
+    const { res, json } = makeRes();
+    await recipeController.leftoverIdeas(
+      makeReq({ body: { ingredients: ['rice', 'chicken'] } }) as Request,
+      res as Response,
+    );
+
+    const payload = json.mock.calls[0][0];
+    expect(payload.recipes.length).toBeGreaterThanOrEqual(3);
+    const ids = payload.recipes.map((r: any) => r.id);
+    expect(new Set(ids).size).toBe(ids.length); // all distinct
   });
 
   it('respects limit param (clamped 1-20)', async () => {

@@ -346,38 +346,29 @@ export default function RecipeModal() {
       .catch(() => {});
   }, [id, source]);
 
-  // Load similar recipes when recipe is loaded
+  // Load related recipes (cuisine adjacency) when recipe is loaded
   useEffect(() => {
-    const loadSimilarRecipes = async () => {
+    const loadRelatedRecipes = async () => {
       if (!recipe?.id) return;
-      
+
       try {
         setLoadingSimilar(true);
-        
-        // Check if meal prep mode is enabled
-        const MEAL_PREP_STORAGE_KEY = '@sazon_meal_prep_mode';
-        const savedMealPrepMode = await AsyncStorage.getItem(MEAL_PREP_STORAGE_KEY);
-        const mealPrepMode = savedMealPrepMode === 'true';
-        
-        console.log(`🍱 Loading similar recipes (mealPrepMode: ${mealPrepMode})`);
-        
-        const response = await recipeApi.getSimilarRecipes(recipe.id, 5, mealPrepMode);
+        const response = await recipeApi.getRelatedRecipes(recipe.id, 6);
         setSimilarRecipes(response.data);
       } catch (error: any) {
-        // Similar recipes are optional, don't show errors
-        // Only log if it's not a quota/rate limit error
-        const isQuotaError = error?.code === 'insufficient_quota' || 
-          error?.message?.includes('quota') || 
+        // Related recipes are optional — don't surface errors
+        const isQuotaError = error?.code === 'insufficient_quota' ||
+          error?.message?.includes('quota') ||
           error?.message?.includes('Too many requests');
         if (!isQuotaError) {
-          console.log('Similar recipes not available:', error);
+          console.log('Related recipes not available:', error);
         }
       } finally {
         setLoadingSimilar(false);
       }
     };
 
-    loadSimilarRecipes();
+    loadRelatedRecipes();
   }, [recipe?.id]);
 
   // Load recipe savings when recipe is loaded
@@ -1761,73 +1752,89 @@ export default function RecipeModal() {
             </HapticTouchableOpacity>
           )}
 
-          {/* You Might Like Section */}
+          {/* You Might Also Like — related recipes via cuisine adjacency */}
           {similarRecipes.length > 0 && (
             <View className="mb-6">
               <View className="flex-row items-center mb-4">
-                <View className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
-                  <Text className="text-lg">💡</Text>
+                <View
+                  className="w-8 h-8 rounded-full items-center justify-center mr-3"
+                  style={{ backgroundColor: isDark ? 'rgba(167,139,250,0.2)' : '#F3E8FF' }}
+                >
+                  <Ionicons name="sparkles" size={16} color={isDark ? '#C4B5FD' : '#7C3AED'} />
                 </View>
-                <Text className="text-lg font-semibold text-gray-900 dark:text-white">
-                  You might also like
+                <Text className="text-lg font-bold text-gray-900 dark:text-white">
+                  You Might Also Like
                 </Text>
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }}>
                 {similarRecipes.map((similarRecipe) => (
-                  <View key={similarRecipe.id} className="mr-4" style={{ width: 280, height: 260 }}>
-                      <HapticTouchableOpacity
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          router.push(`/modal?id=${similarRecipe.id}`);
+                  <HapticTouchableOpacity
+                    key={similarRecipe.id}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push(`/modal?id=${similarRecipe.id}` as any);
+                    }}
+                    pressedScale={0.97}
+                    style={[
+                      {
+                        width: 200,
+                        marginRight: 14,
+                        borderRadius: 20,
+                        overflow: 'hidden',
+                        backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                      },
+                      Shadows.MD,
+                    ]}
+                  >
+                    {similarRecipe.imageUrl ? (
+                      <Image
+                        source={{ uri: optimizedImageUrl(similarRecipe.imageUrl) }}
+                        style={{ width: '100%', height: 130, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View
+                        style={{
+                          width: '100%',
+                          height: 130,
+                          borderTopLeftRadius: 20,
+                          borderTopRightRadius: 20,
+                          backgroundColor: isDark ? '#374151' : '#F3F4F6',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
-                        className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border-2 border-orange-500 dark:border-orange-600 h-full"
                       >
-                      {similarRecipe.imageUrl && (
-                        <Image
-                          source={{ uri: optimizedImageUrl(similarRecipe.imageUrl) }}
-                          className="w-full h-32"
-                          resizeMode="cover"
-                        />
-                      )}
-                      <View className="p-3 flex-1">
-                        <Text className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1" numberOfLines={2}>
-                          {similarRecipe.title}
-                        </Text>
-                        <Text className="text-sm text-gray-600 dark:text-gray-300 mb-2" numberOfLines={2}>
-                          {similarRecipe.description}
-                        </Text>
-                        <View className="flex-row items-center justify-between mt-auto">
-                          <View className="flex-row items-center">
-                            <Ionicons 
-                              name="time-outline" 
-                              size={14} 
-                              color={isDark ? "#9CA3AF" : "#6B7280"} 
-                            />
-                            <Text className="text-xs text-gray-600 dark:text-gray-400 ml-1">
-                              {similarRecipe.cookTime} min
-                            </Text>
-                          </View>
-                          <View className="flex-row items-center">
-                            <Ionicons 
-                              name="restaurant-outline" 
-                              size={14} 
-                              color={isDark ? "#9CA3AF" : "#6B7280"} 
-                            />
-                            <Text className="text-xs text-gray-600 dark:text-gray-400 ml-1">
-                              {similarRecipe.cuisine}
-                            </Text>
-                          </View>
-                        </View>
+                        <Ionicons name="restaurant" size={32} color={isDark ? '#6B7280' : '#D1D5DB'} />
                       </View>
-                      </HapticTouchableOpacity>
-                  </View>
+                    )}
+                    <View style={{ padding: 12, flex: 1 }}>
+                      <Text
+                        className="font-semibold text-gray-900 dark:text-gray-100"
+                        style={{ fontSize: 14, marginBottom: 4 }}
+                        numberOfLines={2}
+                      >
+                        {similarRecipe.title}
+                      </Text>
+                      <View className="flex-row items-center" style={{ marginTop: 'auto' }}>
+                        <Ionicons name="time-outline" size={13} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                        <Text className="text-xs text-gray-500 dark:text-gray-400" style={{ marginLeft: 3 }}>
+                          {similarRecipe.cookTime}m
+                        </Text>
+                        <View style={{ width: 4 }} />
+                        <Ionicons name="restaurant-outline" size={13} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                        <Text className="text-xs text-gray-500 dark:text-gray-400" style={{ marginLeft: 3 }} numberOfLines={1}>
+                          {similarRecipe.cuisine}
+                        </Text>
+                      </View>
+                    </View>
+                  </HapticTouchableOpacity>
                 ))}
               </ScrollView>
             </View>
           )}
           {loadingSimilar && (
-            <View className="mb-6">
-              <Text className="text-sm text-gray-500 dark:text-gray-400">Loading similar recipes...</Text>
+            <View className="mb-6" style={{ alignItems: 'center', paddingVertical: 12 }}>
+              <Text className="text-sm text-gray-400 dark:text-gray-500">Finding related recipes…</Text>
             </View>
           )}
         </View>

@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 import { aiRecipeService } from '../../services/aiRecipeService';
+import { CUISINE_ADJACENCY } from '../../utils/recipeSimilarity';
 
 interface MacroRange {
   min?: number;
@@ -128,6 +129,20 @@ export const findRecipes = async (req: Request, res: Response) => {
       ?? (user as any)?.dietaryRestrictions
       ?? [];
 
+    // Expand cuisine families into specific cuisines
+    const expandedCuisines = [...(body.cuisines ?? [])];
+    if (body.cuisineFamilies && body.cuisineFamilies.length > 0) {
+      for (const family of body.cuisineFamilies) {
+        const subcuisines = CUISINE_ADJACENCY[family];
+        if (subcuisines) {
+          expandedCuisines.push(family, ...subcuisines);
+        } else {
+          expandedCuisines.push(family);
+        }
+      }
+    }
+    const uniqueCuisines = [...new Set(expandedCuisines)];
+
     // Step 1: DB-first search — fetch candidates with loose pre-filter then apply strict filter
     const candidates = await prisma.recipe.findMany({
       where: {
@@ -142,21 +157,24 @@ export const findRecipes = async (req: Request, res: Response) => {
           ? { difficulty: body.difficulty }
           : {}),
         ...(body.maxCookTime ? { cookTime: { lte: body.maxCookTime } } : {}),
-        ...(body.cuisines && body.cuisines.length > 0
-          ? { cuisine: { in: body.cuisines } }
+        ...(uniqueCuisines.length > 0
+          ? { cuisine: { in: uniqueCuisines } }
           : {}),
       },
       take: 200, // generous pre-fetch, we filter in-memory for precision
     });
 
-    // Apply strict macro filters in-memory
-    const matched = candidates.filter(r => recipePassesFilters(r, body));
+    // Apply strict macro filters in-memory (use expanded cuisines for matching)
+    const bodyWithExpandedCuisines = uniqueCuisines.length > 0
+      ? { ...body, cuisines: uniqueCuisines }
+      : body;
+    const matched = candidates.filter(r => recipePassesFilters(r, bodyWithExpandedCuisines));
     const totalMatches = matched.length;
 
     // Score and sort
     const scored = matched
       .map(r => {
-        const matchBreakdown = computeMatchBreakdown(r, body);
+        const matchBreakdown = computeMatchBreakdown(r, bodyWithExpandedCuisines);
         return { recipe: r as any, matchScore: computeMatchScore(matchBreakdown), matchBreakdown };
       })
       .sort((a, b) => b.matchScore - a.matchScore)

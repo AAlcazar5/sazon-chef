@@ -1,11 +1,12 @@
 // frontend/components/meal-plan/MealRequestResults.tsx
 // Results view for "Find Me a Meal" — swipeable cards with macro match pills (10C)
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Colors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
+import { recipeApi } from '../../lib/api';
 
 interface MatchBreakdown {
   caloriesInRange: boolean;
@@ -65,9 +66,22 @@ function MacroPill({ label, met, isDark }: { label: string; met: boolean; isDark
 
 function RecipeCard({ option, onAddToPlan, isDark }: { option: RecipeOption; onAddToPlan: (r: any) => void; isDark: boolean }) {
   const { recipe, matchScore, matchBreakdown } = option;
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const bgCard = isDark ? '#1C1C1E' : '#FFFFFF';
   const textPrimary = isDark ? '#F9FAFB' : '#111827';
   const textSecondary = isDark ? '#9CA3AF' : '#6B7280';
+
+  const handleSaveToCookbook = async () => {
+    if (saved || saving) return;
+    setSaving(true);
+    try {
+      await recipeApi.saveRecipe(recipe.id);
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <View
@@ -130,19 +144,41 @@ function RecipeCard({ option, onAddToPlan, isDark }: { option: RecipeOption; onA
         ) : null}
       </View>
 
-      {/* Add to Plan button */}
-      <HapticTouchableOpacity
-        onPress={() => onAddToPlan(recipe)}
-        style={{
-          backgroundColor: Colors.accent.primary,
-          borderRadius: 100,
-          paddingVertical: 12,
-          alignItems: 'center',
-        }}
-        accessibilityLabel={`Add ${recipe.title} to plan`}
-      >
-        <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF' }}>Add to Plan</Text>
-      </HapticTouchableOpacity>
+      {/* Action buttons */}
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <HapticTouchableOpacity
+          onPress={() => onAddToPlan(recipe)}
+          style={{
+            flex: 1,
+            backgroundColor: Colors.accent.primary,
+            borderRadius: 100,
+            paddingVertical: 12,
+            alignItems: 'center',
+          }}
+          accessibilityLabel={`Add ${recipe.title} to plan`}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF' }}>Add to Plan</Text>
+        </HapticTouchableOpacity>
+        <HapticTouchableOpacity
+          onPress={handleSaveToCookbook}
+          disabled={saved || saving}
+          style={{
+            flex: 1,
+            backgroundColor: saved
+              ? isDark ? '#166534' : '#DCFCE7'
+              : isDark ? '#2C2C2E' : '#F3F4F6',
+            borderRadius: 100,
+            paddingVertical: 12,
+            alignItems: 'center',
+            opacity: saving ? 0.7 : 1,
+          }}
+          accessibilityLabel={`Save ${recipe.title} to cookbook`}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '700', color: saved ? (isDark ? '#86EFAC' : '#16A34A') : textSecondary }}>
+            {saved ? 'Saved' : 'Save to Cookbook'}
+          </Text>
+        </HapticTouchableOpacity>
+      </View>
     </View>
   );
 }

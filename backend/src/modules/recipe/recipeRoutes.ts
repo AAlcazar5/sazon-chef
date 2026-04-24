@@ -67,6 +67,9 @@ router.post('/craving-search/event', recipeController.logCravingSearchEvent);
 // 10G-C: "I want to eat X tonight" flow — estimate + healthify + lighter suggestions
 router.post('/craving-flow', recipeController.cravingFlow);
 
+// 10P: Craving + Weekly Budget Integration — three paths with remaining macro budget
+router.post('/craving-budget', recipeController.cravingBudget);
+
 // 10H: "What can I make right now?" — pantry-based recipe matching + leftover transformer
 router.get('/pantry-match', recipeController.pantryMatch);
 router.post('/leftover-ideas', recipeController.leftoverIdeas);
@@ -92,6 +95,7 @@ router.post('/:id/save', recipeController.saveRecipe);
 router.delete('/:id/save', recipeController.unsaveRecipe);
 router.post('/:id/like', recipeController.likeRecipe);
 router.post('/:id/dislike', recipeController.dislikeRecipe);
+router.get('/:id/related', recipeController.getRelatedRecipes); // 10N: cuisine adjacency discovery
 router.get('/:id/similar', recipeController.getSimilarRecipes); // Must come before /:id
 router.get('/:id/saved-meta', recipeController.getSavedMeta);
 router.put('/:id/saved-meta', recipeController.updateSavedMeta);

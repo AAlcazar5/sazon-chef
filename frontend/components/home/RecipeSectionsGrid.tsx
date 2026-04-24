@@ -96,7 +96,7 @@ function RecipeSectionsGrid({
   onNextPage,
   darkFeed = false,
 }: RecipeSectionsGridProps) {
-  const filtered = sections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep');
+  const filtered = sections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep' && s.key !== 'macro-optimized');
   if (filtered.length === 0) return null;
 
   return (

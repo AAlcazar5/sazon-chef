@@ -8,6 +8,8 @@ import {
   recipeMatchesSmartCollection,
   recipeMatchesWeather,
   getCurrentMealType,
+  buildUserScopedFilter,
+  suggestCollectionsForRecipe,
   type Recipe,
   type WeatherCondition,
 } from '../../src/services/smartCollectionsService';
@@ -301,6 +303,95 @@ describe('smartCollectionsService', () => {
       conditions.forEach((c) => {
         expect(recipeMatchesWeather(base, c)).toBe(true);
       });
+    });
+  });
+
+  describe('buildUserScopedFilter — recently_cooked', () => {
+    it('returns filter requiring cookingLogs within last 30 days', () => {
+      const now = new Date('2026-04-19T12:00:00Z');
+      const filter = buildUserScopedFilter('recently_cooked', 'user-1', now) as any;
+      expect(filter).not.toBeNull();
+      expect(filter.cookingLogs.some.userId).toBe('user-1');
+      expect(filter.cookingLogs.some.cookedAt.gte).toEqual(new Date('2026-03-20T12:00:00Z'));
+    });
+  });
+
+  describe('buildUserScopedFilter — uncooked', () => {
+    it('returns filter requiring savedRecipe > 7 days ago and no cookingLogs', () => {
+      const now = new Date('2026-04-19T12:00:00Z');
+      const filter = buildUserScopedFilter('uncooked', 'user-1', now) as any;
+      expect(filter).not.toBeNull();
+      expect(filter.savedRecipes.some.userId).toBe('user-1');
+      expect(filter.savedRecipes.some.savedDate.lte).toEqual(new Date('2026-04-12T12:00:00Z'));
+      expect(filter.cookingLogs.none.userId).toBe('user-1');
+    });
+  });
+
+  describe('buildUserScopedFilter — unknown', () => {
+    it('returns null for attribute-based collections', () => {
+      expect(buildUserScopedFilter('high_protein', 'user-1')).toBeNull();
+    });
+  });
+
+  describe('smart collection counts update', () => {
+    it('recipeMatchesSmartCollection reflects new recipe matching criteria', () => {
+      const base: Recipe = {
+        title: 'Plain Chicken',
+        description: 'Simple',
+        cookTime: 30,
+        difficulty: 'medium',
+        calories: 500,
+        protein: 20,
+        carbs: 50,
+        fat: 15,
+      };
+      // Before: doesn't match high_protein
+      expect(recipeMatchesSmartCollection(base, 'high_protein')).toBe(false);
+
+      // After: new recipe with protein >= 30 matches
+      const updated = { ...base, protein: 35 };
+      expect(recipeMatchesSmartCollection(updated, 'high_protein')).toBe(true);
+    });
+  });
+
+  describe('suggestCollectionsForRecipe', () => {
+    it('returns relevant matches for a given recipe', () => {
+      const recipe: Recipe = {
+        title: 'One-Pot High Protein Bowl',
+        description: 'Easy skillet meal',
+        cookTime: 10,
+        difficulty: 'easy',
+        calories: 350,
+        protein: 42,
+        carbs: 30,
+        fat: 8,
+        fiber: 10,
+        estimatedCostPerServing: 2.5,
+      };
+
+      const suggestions = suggestCollectionsForRecipe(recipe);
+      expect(suggestions).toContain('quick_easy');
+      expect(suggestions).toContain('high_protein');
+      expect(suggestions).toContain('under_400_cal');
+      expect(suggestions).toContain('one_pot');
+      expect(suggestions).toContain('high_fiber');
+      expect(suggestions).toContain('budget_friendly');
+    });
+
+    it('returns empty array for recipe matching no collections', () => {
+      const recipe: Recipe = {
+        title: 'Complex Stew',
+        description: 'Slow-cooked',
+        cookTime: 120,
+        difficulty: 'hard',
+        calories: 800,
+        protein: 15,
+        carbs: 80,
+        fat: 35,
+        fiber: 2,
+        estimatedCostPerServing: 12,
+      };
+      expect(suggestCollectionsForRecipe(recipe)).toEqual([]);
     });
   });
 });

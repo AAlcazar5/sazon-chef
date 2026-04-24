@@ -36,6 +36,81 @@ interface SimilarityScore {
 }
 
 /**
+ * Cuisine adjacency map — cuisines that share ingredients, techniques, or flavour profiles.
+ * Used by the "related recipes" endpoint so that viewing a Thai recipe also surfaces
+ * Lao, Vietnamese, and Burmese dishes.
+ */
+export const CUISINE_ADJACENCY: Record<string, string[]> = {
+  'Thai': ['Lao', 'Vietnamese', 'Burmese', 'Cambodian', 'Malaysian'],
+  'Lao': ['Thai', 'Vietnamese', 'Cambodian'],
+  'Vietnamese': ['Thai', 'Lao', 'Cambodian', 'Chinese'],
+  'Burmese': ['Thai', 'Indian', 'Lao'],
+  'Cambodian': ['Thai', 'Lao', 'Vietnamese'],
+  'Malaysian': ['Thai', 'Indonesian', 'Singaporean', 'Chinese'],
+  'Indonesian': ['Malaysian', 'Singaporean', 'Thai'],
+  'Singaporean': ['Malaysian', 'Indonesian', 'Chinese'],
+  'Chinese': ['Japanese', 'Korean', 'Vietnamese', 'Taiwanese'],
+  'Japanese': ['Chinese', 'Korean'],
+  'Korean': ['Japanese', 'Chinese'],
+  'Taiwanese': ['Chinese', 'Japanese'],
+  'Indian': ['Sri Lankan', 'Pakistani', 'Burmese', 'Nepalese'],
+  'Sri Lankan': ['Indian', 'Pakistani'],
+  'Pakistani': ['Indian', 'Sri Lankan', 'Afghan'],
+  'Nepalese': ['Indian', 'Tibetan'],
+  'Mexican': ['Tex-Mex', 'Southwestern', 'Central American', 'Latin American'],
+  'Tex-Mex': ['Mexican', 'Southwestern'],
+  'Southwestern': ['Mexican', 'Tex-Mex'],
+  'Central American': ['Mexican', 'South American', 'Caribbean', 'Latin American'],
+  'South American': ['Central American', 'Brazilian', 'Peruvian', 'Argentine', 'Latin American'],
+  'Latin American': ['Mexican', 'Central American', 'South American', 'Caribbean'],
+  'Brazilian': ['South American', 'Portuguese'],
+  'Peruvian': ['South American', 'Japanese'],
+  'Argentine': ['South American', 'Italian', 'Spanish'],
+  'Caribbean': ['Central American', 'South American', 'Latin American'],
+  'Italian': ['Mediterranean', 'French', 'Spanish', 'Greek'],
+  'French': ['Italian', 'Mediterranean', 'Spanish'],
+  'Spanish': ['Italian', 'Mediterranean', 'French', 'Portuguese', 'Latin American'],
+  'Portuguese': ['Spanish', 'Brazilian'],
+  'Greek': ['Italian', 'Mediterranean', 'Turkish', 'Middle Eastern'],
+  'Mediterranean': ['Italian', 'Greek', 'Spanish', 'French', 'Middle Eastern'],
+  'Turkish': ['Greek', 'Middle Eastern', 'Lebanese'],
+  'Middle Eastern': ['Mediterranean', 'Turkish', 'Lebanese', 'Persian', 'North African'],
+  'Lebanese': ['Turkish', 'Middle Eastern', 'Syrian'],
+  'Syrian': ['Lebanese', 'Middle Eastern', 'Turkish'],
+  'Persian': ['Middle Eastern', 'Indian'],
+  'North African': ['Middle Eastern', 'Mediterranean', 'Moroccan', 'Ethiopian'],
+  'Moroccan': ['North African', 'Mediterranean', 'Middle Eastern'],
+  'Ethiopian': ['North African', 'Eritrean', 'East African'],
+  'Eritrean': ['Ethiopian', 'East African'],
+  'East African': ['Ethiopian', 'Eritrean'],
+  'West African': ['North African'],
+  'American': ['Southern', 'Southwestern', 'Tex-Mex'],
+  'Southern': ['American', 'Cajun', 'Soul Food'],
+  'Cajun': ['Southern', 'Creole', 'French'],
+  'Creole': ['Cajun', 'Southern', 'French', 'Caribbean'],
+  'Soul Food': ['Southern', 'American'],
+  'Filipino': ['Malaysian', 'Chinese', 'Spanish'],
+  'Asian': ['Chinese', 'Japanese', 'Korean', 'Thai', 'Vietnamese', 'Indian'],
+};
+
+/**
+ * Calculate cuisine similarity using the adjacency map.
+ * Returns 1.0 for exact match, 0.6 for adjacent cuisine, 0 for unrelated.
+ */
+export function calculateCuisineAdjacency(cuisine1: string, cuisine2: string): number {
+  const c1 = cuisine1.toLowerCase();
+  const c2 = cuisine2.toLowerCase();
+  if (c1 === c2) return 1.0;
+
+  // Build a lowercase lookup since map keys are title-cased
+  for (const [key, values] of Object.entries(CUISINE_ADJACENCY)) {
+    if (key.toLowerCase() === c1 && values.some(v => v.toLowerCase() === c2)) return 0.6;
+    if (key.toLowerCase() === c2 && values.some(v => v.toLowerCase() === c1)) return 0.6;
+  }
+  return 0;
+}
+
+/**
  * Calculate ingredient overlap between two recipes
  */
 function calculateIngredientOverlap(
@@ -243,6 +318,65 @@ export function findSimilarRecipes(
   }
 
   // Sort by score (highest first) and return top results
+  return similarities
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+/**
+ * Find related recipes using cuisine adjacency for broader discovery.
+ * Unlike findSimilarRecipes (which does exact cuisine matching), this function
+ * gives partial credit to adjacent cuisines (Thai viewing → Lao gets 0.6 cuisine score).
+ */
+export function findRelatedRecipes(
+  targetRecipe: RecipeForSimilarity,
+  candidateRecipes: RecipeForSimilarity[],
+  options: {
+    limit?: number;
+    minScore?: number;
+  } = {}
+): SimilarityScore[] {
+  const { limit = 6, minScore = 0.15 } = options;
+
+  const similarities: SimilarityScore[] = [];
+
+  for (const candidate of candidateRecipes) {
+    if (candidate.id === targetRecipe.id) continue;
+
+    const cuisineScore = calculateCuisineAdjacency(targetRecipe.cuisine, candidate.cuisine);
+
+    const ingredientScore = calculateIngredientOverlap(
+      targetRecipe.ingredients || [],
+      candidate.ingredients || []
+    );
+
+    const nutritionScore = calculateNutritionalSimilarity(targetRecipe, candidate);
+    const cookTimeScore = calculateCookTimeSimilarity(targetRecipe.cookTime, candidate.cookTime);
+    const semanticScore = calculateSemanticSimilarity(targetRecipe, candidate);
+
+    // Weights favour cuisine + ingredients for discovery
+    const totalScore =
+      cuisineScore * 0.30 +
+      ingredientScore * 0.25 +
+      nutritionScore * 0.20 +
+      cookTimeScore * 0.10 +
+      semanticScore * 0.15;
+
+    if (totalScore >= minScore) {
+      similarities.push({
+        recipeId: candidate.id,
+        score: totalScore,
+        factors: {
+          cuisine: cuisineScore,
+          ingredients: ingredientScore,
+          nutrition: nutritionScore,
+          cookTime: cookTimeScore,
+          semantic: semanticScore,
+        },
+      });
+    }
+  }
+
   return similarities
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);

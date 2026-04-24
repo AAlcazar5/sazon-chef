@@ -954,6 +954,32 @@ export default function HomeScreen() {
               );
             })()}
 
+            {/* Macro Optimized Section */}
+            {(() => {
+              const macroSection = recipeSections.find(s => s.key === 'macro-optimized');
+              if (!macroSection && !loading) return null;
+
+              return (
+                <RecipeCarouselSection
+                  title={macroSection?.title || 'Macro Optimized'}
+                  emoji={macroSection?.emoji || '💪'}
+                  recipes={macroSection?.recipes || []}
+                  isLoading={loading}
+                  isCollapsed={collapsedSections['macro-optimized']}
+                  onToggleCollapse={() => toggleSection('macro-optimized')}
+                  isDark={isDark}
+                  userFeedback={userFeedback}
+                  feedbackLoading={feedbackLoading}
+                  onRecipePress={handleRecipePress}
+                  onRecipeLongPress={handleLongPress}
+                  onLike={handleLike}
+                  onDislike={handleShowDislikeSheet}
+                  onSave={handleSave}
+                  autoScroll
+                />
+              );
+            })()}
+
           </>
         )}
 

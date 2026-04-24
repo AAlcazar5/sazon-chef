@@ -414,10 +414,16 @@ export const recipeApi = {
 
   getSimilarRecipes: (id: string, limit?: number, mealPrepMode?: boolean) => {
     return apiClient.get(`/recipes/${id}/similar`, {
-      params: { 
+      params: {
         limit: limit || 5,
         mealPrepMode: mealPrepMode !== undefined ? mealPrepMode : undefined,
       },
+    });
+  },
+
+  getRelatedRecipes: (id: string, limit?: number) => {
+    return apiClient.get(`/recipes/${id}/related`, {
+      params: { limit: limit || 6 },
     });
   },
 
@@ -1307,6 +1313,41 @@ export const searchApi = {
         fat?: number;
       }>;
     }>('/recipes/craving-flow', { craving });
+  },
+  // 10P: Craving + Weekly Budget Integration
+  cravingBudget: (params: {
+    craving: string;
+    remainingCalories: number;
+    remainingProtein?: number;
+    remainingCarbs?: number;
+    remainingFat?: number;
+  }) => {
+    return apiClient.post<{
+      goForIt: {
+        originalCraving: { calories: number; protein: number; carbs: number; fat: number };
+        remainingAfter: { calories: number; protein: number; carbs: number; fat: number };
+        overBudget: boolean;
+        overBy: { calories: number; protein: number; carbs: number; fat: number };
+      };
+      healthierVersion: {
+        recipe: {
+          title: string; description: string; cuisine: string; cookTime: number;
+          servings: number; calories: number; protein: number; carbs: number; fat: number;
+          ingredients: Array<{ text: string; order: number }>;
+          instructions: Array<{ text: string; step: number }>;
+        };
+        comparison: {
+          original: { calories: number; protein: number; carbs: number; fat: number };
+          healthified: { calories: number; protein: number; carbs: number; fat: number };
+          caloriesSaved: number; percentReduction: number; proteinDifference: number;
+        };
+        honestyNote: string;
+      };
+      similarButLighter: Array<{
+        id: string; title: string; calories: number; protein: number;
+        carbs: number; fat: number; cuisine?: string; cookTime?: number; matchScore: number;
+      }>;
+    }>('/recipes/craving-budget', params);
   },
 };
 
