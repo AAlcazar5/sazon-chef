@@ -42,9 +42,9 @@ export const Spacing = {
  * Use these for consistent spacing in common UI patterns
  */
 export const ComponentSpacing = {
-  /** Screen/page level spacing */
+  /** Screen/page level spacing (v2: 20px horizontal for editorial breathing room) */
   screen: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: 20,
     paddingVertical: Spacing.lg,
     paddingTop: Spacing.xl,
     paddingBottom: Spacing['2xl'],
@@ -163,8 +163,12 @@ export const BorderRadius = {
   xl: 20,
   /** 24px - Double extra large rounding */
   '2xl': 24,
-  /** 28px - Bottom sheets top corners */
+  /** 28px - Bottom sheets top corners / hero sections */
   sheet: 28,
+  /** 28px - Hero section bottom corners (v2 editorial) */
+  hero: 28,
+  /** 36px - Hero curve for deep-rounded sections (v2 editorial) */
+  heroCurve: 36,
   /** 9999px - Full/pill rounding (CTAs, chips, tags) */
   full: 9999,
 } as const;

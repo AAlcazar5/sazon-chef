@@ -2,6 +2,27 @@
 // Consistent typography scale for all text elements
 
 import { TextStyle, Platform } from 'react-native';
+import {
+  Fraunces_300Light,
+  Fraunces_400Regular,
+  Fraunces_500Medium,
+  Fraunces_600SemiBold,
+  Fraunces_700Bold,
+  Fraunces_800ExtraBold,
+  Fraunces_300Light_Italic,
+  Fraunces_400Regular_Italic,
+  Fraunces_500Medium_Italic,
+  Fraunces_600SemiBold_Italic,
+  Fraunces_700Bold_Italic,
+  Fraunces_800ExtraBold_Italic,
+} from '@expo-google-fonts/fraunces';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 
 /**
  * Font family definitions
@@ -269,7 +290,131 @@ export const Typography = {
   } as TextStyle,
 } as const;
 
+/**
+ * Editorial font family definitions (v2 design system)
+ * Fraunces = display/serif, Plus Jakarta Sans = body/UI
+ */
+export const EditorialFontFamily = {
+  display: {
+    light: 'Fraunces_300Light',
+    regular: 'Fraunces_400Regular',
+    medium: 'Fraunces_500Medium',
+    semibold: 'Fraunces_600SemiBold',
+    bold: 'Fraunces_700Bold',
+    extrabold: 'Fraunces_800ExtraBold',
+  },
+  displayItalic: {
+    light: 'Fraunces_300Light_Italic',
+    regular: 'Fraunces_400Regular_Italic',
+    medium: 'Fraunces_500Medium_Italic',
+    semibold: 'Fraunces_600SemiBold_Italic',
+    bold: 'Fraunces_700Bold_Italic',
+    extrabold: 'Fraunces_800ExtraBold_Italic',
+  },
+  body: {
+    regular: 'PlusJakartaSans_400Regular',
+    medium: 'PlusJakartaSans_500Medium',
+    semibold: 'PlusJakartaSans_600SemiBold',
+    bold: 'PlusJakartaSans_700Bold',
+    extrabold: 'PlusJakartaSans_800ExtraBold',
+  },
+} as const;
+
+/**
+ * Editorial typography presets (v2 design system)
+ */
+export const EditorialTypography = {
+  display: {
+    fontFamily: EditorialFontFamily.display.regular,
+    fontSize: 46,
+    letterSpacing: -1.5,
+    lineHeight: 46 * 0.98,
+  } as TextStyle,
+
+  displayAccent: {
+    fontFamily: EditorialFontFamily.displayItalic.bold,
+    fontSize: 46,
+    letterSpacing: -1.5,
+    lineHeight: 46 * 0.98,
+  } as TextStyle,
+
+  sectionTitle: {
+    fontFamily: EditorialFontFamily.display.regular,
+    fontSize: 26,
+    letterSpacing: -0.8,
+    lineHeight: 26 * 1.15,
+  } as TextStyle,
+
+  sectionAccent: {
+    fontFamily: EditorialFontFamily.displayItalic.semibold,
+    fontSize: 26,
+    letterSpacing: -0.8,
+    lineHeight: 26 * 1.15,
+  } as TextStyle,
+
+  heroTitle: {
+    fontFamily: EditorialFontFamily.display.regular,
+    fontSize: 22,
+    letterSpacing: -0.5,
+    lineHeight: 22 * 1.2,
+  } as TextStyle,
+
+  statNumber: {
+    fontFamily: EditorialFontFamily.display.semibold,
+    fontSize: 22,
+    letterSpacing: -0.5,
+    lineHeight: 22 * 1.1,
+  } as TextStyle,
+
+  recipeDetailTitle: {
+    fontFamily: EditorialFontFamily.display.regular,
+    fontSize: 38,
+    letterSpacing: -1.2,
+    lineHeight: 38 * 1.05,
+  } as TextStyle,
+
+  eyebrow: {
+    fontFamily: EditorialFontFamily.body.extrabold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    lineHeight: 11 * 1.4,
+    textTransform: 'uppercase' as const,
+  } as TextStyle,
+
+  body: {
+    fontFamily: EditorialFontFamily.body.medium,
+    fontSize: 14,
+    letterSpacing: 0,
+    lineHeight: 14 * 1.5,
+  } as TextStyle,
+} as const;
+
+/**
+ * Font asset map for expo-font loading.
+ * Pass this to `useFonts()` or `Font.loadAsync()` in _layout.tsx.
+ */
+export const EDITORIAL_FONTS: Record<string, number> = {
+  Fraunces_300Light,
+  Fraunces_400Regular,
+  Fraunces_500Medium,
+  Fraunces_600SemiBold,
+  Fraunces_700Bold,
+  Fraunces_800ExtraBold,
+  Fraunces_300Light_Italic,
+  Fraunces_400Regular_Italic,
+  Fraunces_500Medium_Italic,
+  Fraunces_600SemiBold_Italic,
+  Fraunces_700Bold_Italic,
+  Fraunces_800ExtraBold_Italic,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+};
+
 // Type exports
 export type FontSizeKey = keyof typeof FontSize;
 export type FontWeightKey = keyof typeof FontWeight;
 export type TypographyKey = keyof typeof Typography;
+export type EditorialTypographyKey = keyof typeof EditorialTypography;
