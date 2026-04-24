@@ -392,6 +392,23 @@ export const DifficultyColors = {
   hard: { bg: '#FEE2E2', text: '#991B1B', darkBg: 'rgba(239,68,68,0.2)', darkText: '#F87171' },
 } as const;
 
+// ─── Editorial Tokens (10V-B) ────────────────────────────────────────────────
+// v2 design system additions — used by editorial components
+export const EditorialColors = {
+  fg: {
+    muted_cream: '#C9BFB5', // inactive category rail labels on cream bg
+  },
+  pastelTitle: {
+    peach: '#8a4a00',
+    sage: '#2E5931',
+    lavender: '#6a2677',
+    sky: '#0f4a7a',
+    golden: '#8a6200',
+    blush: '#9a1f5b',
+  },
+  blackCTA: '#111827', // primary CTA background (v2 editorial)
+} as const;
+
 // Helper functions
 export const getScoreColor = (score: number): keyof typeof Colors.score => {
   if (score >= 80) return 'high';

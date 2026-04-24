@@ -2532,10 +2532,10 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 > Load editorial fonts and create the dual-font type system. This is the foundation — every subsequent section depends on it.
 
-- [ ] **Install `@expo-google-fonts/fraunces` + `@expo-google-fonts/plus-jakarta-sans`** via `npx expo install`
+- [x] **Install `@expo-google-fonts/fraunces` + `@expo-google-fonts/plus-jakarta-sans`** via `npx expo install`
   - Load weights: Fraunces 300/400/500/600/700/800 (regular + italic); Plus Jakarta Sans 400/500/600/700/800
   - **Test:** `frontend/__tests__/foundations/typography.test.ts` — font families load without error; all weight variants resolve; fallback to system font when loading
-- [ ] **Update `frontend/constants/Typography.ts`** — add editorial presets alongside existing ones
+- [x] **Update `frontend/constants/Typography.ts`** — add editorial presets alongside existing ones
   - `display` — Fraunces 46px / weight 400 / letterSpacing -1.5 / lineHeight 0.98
   - `displayAccent` — Fraunces 46px / weight 700 / italic
   - `sectionTitle` — Fraunces 26px / weight 400 / letterSpacing -0.8
@@ -2547,69 +2547,69 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
   - `body` — Plus Jakarta Sans 13–14px / weight 500–600
   - Keep all existing presets (h1–h4, body, label, caption, stat) for backwards compat
   - **Test:** `frontend/__tests__/foundations/typography.test.ts` — each preset has correct fontFamily, fontSize, fontWeight, letterSpacing; display uses Fraunces; body uses Plus Jakarta Sans
-- [ ] **Create `useEditorialText` hook** — returns styled Text components (`DisplayText`, `SectionText`, `EyebrowText`) that apply the correct font family + weight
-  - **Test:** `frontend/__tests__/hooks/useEditorialText.test.ts` — DisplayText renders with Fraunces family; SectionText handles italic accent word via children; EyebrowText is uppercase
+- [x] **Create `useEditorialText` hook** — returns styled Text components (`DisplayText`, `SectionText`, `EyebrowText`) that apply the correct font family + weight
+  - **Test:** `frontend/__tests__/hooks/useEditorialText.test.tsx` — DisplayText renders with Fraunces family; SectionText handles italic accent word via children; EyebrowText is uppercase
 
 #### **10V-B: Design Token Updates** 🎨
 
 > Extend existing token files with v2 values. Additive — nothing removed.
 
-- [ ] **Update `Colors.ts`** — add editorial-specific tokens
+- [x] **Update `Colors.ts`** — add editorial-specific tokens
   - `fg.muted_cream: '#C9BFB5'` — inactive category rail labels on cream bg
   - Pastel title colors: `pastelTitle.peach: '#8a4a00'`, `pastelTitle.sage: '#2E5931'`, `pastelTitle.lavender: '#6a2677'`, `pastelTitle.sky: '#0f4a7a'`, `pastelTitle.golden: '#8a6200'`, `pastelTitle.blush: '#9a1f5b'`
   - `blackCTA: '#111827'` — primary CTA background (v2 editorial)
   - **Test:** `frontend/__tests__/foundations/colors.test.ts` — all new tokens exist; pastelTitle colors have sufficient contrast against their pastel bg (WCAG AA)
-- [ ] **Update `Shadows.ts`** — add editorial shadow presets
+- [x] **Update `Shadows.ts`** — add editorial shadow presets
   - `platePhoto` — `{ shadowOffset: {x:0,y:14}, shadowRadius:32, shadowColor:'rgba(30,60,110,0.28)' }` with secondary layer
   - `cardRaised` — `{ shadowOffset: {x:0,y:10}, shadowRadius:28, shadowColor:'rgba(0,0,0,0.08)' }`
   - `fab` — `{ shadowOffset: {x:0,y:10}, shadowRadius:24, shadowColor:'rgba(232,77,61,0.45)' }`
   - `blackCTA` — `{ shadowOffset: {x:0,y:8}, shadowRadius:20, shadowColor:'rgba(17,24,39,0.3)' }`
   - **Test:** `frontend/__tests__/foundations/shadows.test.ts` — all presets have valid shadowOffset/shadowRadius/shadowColor values; Android elevation integers are correct
-- [ ] **Update `Spacing.ts`** — bump screen horizontal padding
+- [x] **Update `Spacing.ts`** — bump screen horizontal padding
   - `screenPadding: 20` (v1 was 16; v2 editorial uses 20 for breathing room)
   - Add `BorderRadius.hero: 28`, `BorderRadius.heroCurve: 36`
-  - **Test:** same file — `screenPadding` is 20; `BorderRadius.hero` is 28; `BorderRadius.heroCurve` is 36
+  - **Test:** `frontend/__tests__/foundations/spacing.test.ts` — `screenPadding` is 20; `BorderRadius.hero` is 28; `BorderRadius.heroCurve` is 36
 
 #### **10V-C: Editorial Primitives** 🧱
 
 > New reusable components from the design handoff. Build these before touching screens.
 
-- [ ] **`EditorialCard` component** (`frontend/components/ui/EditorialCard.tsx`)
+- [x] **`EditorialCard` component** (`frontend/components/ui/EditorialCard.tsx`)
   - Pastel background card with 104px centered circular food photo, serif title with tinted color, meta strip (time · cal · match%), heart save button
   - Props: `recipe`, `bg` (pastel hex), `titleColor`, `saved`, `onToggleSave`, `onPress`
   - `borderRadius: 22`, `boxShadow: card`, no borders
   - **Test:** `frontend/__tests__/components/ui/EditorialCard.test.tsx` — renders circular photo with `borderRadius: 9999`; title uses Fraunces font; meta strip shows time/cal/match; heart toggles saved state; press handler fires; a11y label present
-- [ ] **`PlateHeroCard` component** (`frontend/components/ui/PlateHeroCard.tsx`)
+- [x] **`PlateHeroCard` component** (`frontend/components/ui/PlateHeroCard.tsx`)
   - Pastel gradient background (default sky `#E3F2FD → #DCE8F3`), 200px circular food photo offset `right: -36px` with deep shadow, save chip (gradient orange), editorial title block (serif + eyebrow + meta), `overflow: 'visible'` on container
   - Props: `recipe`, `gradientColors`, `onPress`, `saved`, `onToggleSave`
   - **Test:** `frontend/__tests__/components/ui/PlateHeroCard.test.tsx` — photo renders at 200px circle; photo overflows card boundary; gradient background renders; save chip uses gradient not flat color; title uses serif font; press navigates
-- [ ] **`VerticalCategoryRail` component** (`frontend/components/ui/VerticalCategoryRail.tsx`)
+- [x] **`VerticalCategoryRail` component** (`frontend/components/ui/VerticalCategoryRail.tsx`)
   - Vertical text labels (`transform: rotate(-90deg)`), uppercase, letter-spaced; active = black `#111827` with orange dot prefix, inactive = warm gray `#C9BFB5`
   - Props: `categories: string[]`, `active: string`, `onSelect: (cat: string) => void`
   - **Test:** `frontend/__tests__/components/ui/VerticalCategoryRail.test.tsx` — renders all categories vertically; active category shows orange dot indicator; inactive categories use muted color; tap fires onSelect; a11y roles correct
-- [ ] **`StatStrip` component** (`frontend/components/ui/StatStrip.tsx`)
+- [x] **`StatStrip` component** (`frontend/components/ui/StatStrip.tsx`)
   - White card with 4 stats in a row (serif Fraunces numbers, uppercase JKS labels), vertical dividers (`#F0EAE2`), overlapping hero via `marginTop: -28`, raised shadow
   - Props: `stats: { value: string, label: string }[]`
   - **Test:** `frontend/__tests__/components/ui/StatStrip.test.tsx` — renders 4 stat columns; numbers use Fraunces; labels are uppercase; card has negative margin; dividers render between stats
-- [ ] **`BlackPillCTA` component** (`frontend/components/ui/BlackPillCTA.tsx`)
+- [x] **`BlackPillCTA` component** (`frontend/components/ui/BlackPillCTA.tsx`)
   - Solid `#111827` background, height 52, `borderRadius: 9999`, white text (Plus Jakarta Sans 14px/800), deep shadow, spring press scale 0.96, optional left icon
   - Props: `label`, `icon?`, `onPress`, `disabled?`
   - Replaces gradient CTA on recipe detail and other primary actions per v2 design
   - **Test:** `frontend/__tests__/components/ui/BlackPillCTA.test.tsx` — renders with black background; text is white; press triggers spring animation; disabled state reduces opacity; icon renders when provided
-- [ ] **`StickyBottomBar` component** (`frontend/components/ui/StickyBottomBar.tsx`)
+- [x] **`StickyBottomBar` component** (`frontend/components/ui/StickyBottomBar.tsx`)
   - Absolute positioned at bottom, gradient fade overlay (`transparent → #FAF7F4`), flex row for action buttons
   - Props: `children` (buttons), `fadeColor?` (defaults to surface cream)
   - **Test:** `frontend/__tests__/components/ui/StickyBottomBar.test.tsx` — positions absolute at bottom; gradient fade renders; children render inside; safe area bottom padding applied
-- [ ] **`IngredientRow` component** (`frontend/components/ui/IngredientRow.tsx`)
+- [x] **`IngredientRow` component** (`frontend/components/ui/IngredientRow.tsx`)
   - 42px tinted rounded square icon (ingredient image/emoji), name (14px/600), bold quantity (14px/800), tap to toggle checked state (opacity 0.45 + line-through + grayscale icon)
   - Props: `ingredient: { name, qty, icon }`, `checked`, `onToggle`
   - Divider line `#F0EAE2` between rows (last row no divider)
   - **Test:** `frontend/__tests__/components/ui/IngredientRow.test.tsx` — renders icon + name + qty; checked state dims opacity and adds line-through; icon grayscales when checked; tap fires onToggle
-- [ ] **`ServingStepper` component** (`frontend/components/ui/ServingStepper.tsx`)
+- [x] **`ServingStepper` component** (`frontend/components/ui/ServingStepper.tsx`)
   - White card with border `#F0EAE2`, serving count in orange (13px/700), circular − / + buttons, min 1 / no max
   - Props: `servings`, `onChangeServings`
   - **Test:** `frontend/__tests__/components/ui/ServingStepper.test.tsx` — shows serving count; minus at 1 is disabled or stays at 1; plus increments; display updates correctly
-- [ ] **`UnitSegmentedControl` component** (`frontend/components/ui/UnitSegmentedControl.tsx`)
+- [x] **`UnitSegmentedControl` component** (`frontend/components/ui/UnitSegmentedControl.tsx`)
   - Pill-shaped container on `#F5F0EB`, two options (Metric / US), active = black pill background + white text, inactive = transparent + gray text
   - Props: `value: 'Metric' | 'US'`, `onChange`
   - **Test:** `frontend/__tests__/components/ui/UnitSegmentedControl.test.tsx` — active option has black bg; inactive has transparent bg; tap switches; spring animation on toggle
@@ -2661,29 +2661,36 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 #### **10V-F: Meal Plan — Editorial Refresh** 📅
 
-> Apply v2 DNA to meal plan screen. Reference: `design_handoff_sazon_chef/screens/MealPlan.jsx`
+> Apply v2 DNA to meal plan screen. Reference: `design_handoff_sazon_chef/screens/MealPlan.jsx` + `design_handoff_sazon_chef/handoff-2/meal_plan.png`
 
-- [ ] **Screen header** — "This week" title (serif or bold 30px) + day/date subtitle
-  - **Test:** `frontend/__tests__/app/mealPlan.editorial.test.tsx` — title renders; date subtitle reflects current day
-- [ ] **Week strip** — day pills with gradient active state (orange→red gradient, shadow), inactive = white + subtle border, date number below day letter
-  - **Test:** same file — 7 day pills render; active day has gradient bg + shadow; inactive has white bg; tapping changes active day
-- [ ] **Macro summary card** — white card (radius 20), `CalorieRing` (SVG, peach ring) + 4 `MacroBar`s (protein=sage, carbs=golden, fat=lavender, fiber=green) with progress bars
-  - **Test:** same file — calorie ring renders with correct consumed/goal; 4 macro bars render with correct colors; progress widths reflect values
-- [ ] **Meal slot rows** — white cards (radius 18), meal type icon in pastel peach circle (40px), slot label (eyebrow), recipe title (bold 14px), macro meta strip; empty slot shows "Tap to add a recipe" in muted text
-  - **Test:** same file — 4 meal slots render (Breakfast/Lunch/Dinner/Snack); slots with recipes show title + macros; empty slots show placeholder text; tap on recipe navigates to detail
+- [ ] **Eyebrow + editorial title** — "APRIL · WEEK 16" eyebrow (uppercase, muted, month + week number auto-derived from current date), "This **week**." display title (serif 30px, "week" in bold italic, orange period)
+  - Subtitle: "Four meals a day, balanced around your macro budget. Swap or auto-plan at any time." (14px muted)
+  - **Test:** `frontend/__tests__/app/mealPlan.editorial.test.tsx` — eyebrow shows current month + week number; title uses serif font; "week" word is italic; subtitle renders
+- [ ] **Week strip** — 7 day columns (3-letter day abbreviation + date number), active day = solid black circle bg (`#111827`) with white text + orange dot underneath, inactive = transparent bg + muted text
+  - **Test:** same file — 7 day pills render; active day has black circle bg + orange dot indicator; inactive has no bg; tapping changes active day
+- [ ] **Macro budget section** — "WEDDAY · MACRO BUDGET" eyebrow (uppercase, auto-updates with selected day) + "79% on track" orange badge (right-aligned, reflects actual macro adherence %)
+  - **Test:** same file — eyebrow reflects selected day name; on-track % badge renders with correct value; badge color is orange
+- [ ] **Macro summary card** — white card (radius 20), `CalorieRing` (SVG, **golden** ring `#FFB74D` on cream track, "1,420 OF 1,800" center) + 4 `MacroBar`s (PROTEIN=sage, CARBS=golden, FAT=lavender, FIBER=green) with progress bars and value/goal text (e.g., "98/120g")
+  - **Test:** same file — calorie ring renders with golden ring color; center shows consumed/goal; 4 macro bars render with correct colors and labels; progress widths reflect values; value/goal text shows units
+- [ ] **"Today's *plan*" section** — serif section title with italic "plan" + "AUTO-PLAN" orange uppercase link (right-aligned, triggers auto-plan flow)
+  - **Test:** same file — section title uses serif with italic accent; "AUTO-PLAN" link renders in orange uppercase; tap triggers auto-plan
+- [ ] **Meal slot cards** — white cards (radius 18), time stamp left-aligned (e.g., "7:30 AM" in muted 11px), italic serif meal type label ("*Breakfast*" / "*Lunch*" / "*Dinner*" / "*Snack*"), recipe title (bold 14px), macro meta strip ("420 · 22g protein · 20 min"), **circular plate photo** right-aligned (offset, same PlateHeroCard pattern); empty slot shows "Tap to add a recipe" in muted text
+  - **Test:** same file — 4 meal slots render; filled slots show time + italic meal label + title + macros + circular photo; empty slots show placeholder text; tap on recipe navigates to detail; tap on empty slot opens recipe picker
 
 #### **10V-G: Cookbook — Editorial Refresh** 📚
 
-> Apply v2 DNA to cookbook screen. Reference: `design_handoff_sazon_chef/screens/Cookbook.jsx`
+> Apply v2 DNA to cookbook screen. Reference: `design_handoff_sazon_chef/screens/Cookbook.jsx` + `design_handoff_sazon_chef/handoff-2/cookbook.png`
 
-- [ ] **Screen header** — "Cookbook" title (bold 30px) + "[N] saved recipes" subtitle + grid/list toggle (pill segmented control, white active bg with shadow)
-  - **Test:** `frontend/__tests__/app/cookbook.editorial.test.tsx` — title renders; recipe count is correct; toggle switches between grid and list views
-- [ ] **Collection chips** — scrollable row, black pill active state + white inactive with border, font 12px/700
-  - **Test:** same file — collection chips render; active chip has black bg + white text; inactive has white bg + border; tap changes active collection
-- [ ] **Grid mode** — 2-column grid using `RecipeCard` variant="grid" (white card, radius 18, match-color top bar, photo + title + meta)
-  - **Test:** same file — grid renders 2 columns; cards have match-color indicator bar; heart toggles save; tap navigates
-- [ ] **List mode** — single column using `RecipeCard` variant="list" (row card, match-color left bar, thumbnail + title + meta + tags)
-  - **Test:** same file — list renders single column; cards show thumbnail + title + match%; difficulty badge renders
+- [ ] **Eyebrow + editorial title** — "YOUR" eyebrow (uppercase, muted), "Cookbook." display title (serif bold 30px with orange period)
+  - Subtitle: "[N] recipes saved across [M] collections." (14px muted, dynamically computed)
+  - **Test:** `frontend/__tests__/app/cookbook.editorial.test.tsx` — "YOUR" eyebrow renders uppercase; title uses serif font with period; subtitle shows correct recipe count and collection count
+- [ ] **Collection chips with counts** — scrollable horizontal row, each chip shows count + label (e.g., "3 ALL", "4 Weeknight", "6 Meal prep"); active chip = black pill bg (`#111827`) + white text + orange underline bar, inactive = white bg + warm gray border + muted text, font 12px/700
+  - **Test:** same file — collection chips render with counts; active chip has black bg + white text + orange underline; inactive has white bg + border; tap changes active collection; "ALL" chip includes total count
+- [ ] **"MOST COOKED" hero section** — "MOST COOKED" eyebrow (uppercase, muted), `PlateHeroCard` variant with pastel pink bg (`#FCE4EC`), large circular plate photo offset right with deep shadow, "MADE [N] TIMES" orange badge (uppercase, top-left), editorial serif title with italic accent word (e.g., "Honey-garlic shrimp *with jasmine rice*")
+  - Only shows if user has cooked recipes; highlights the recipe with the highest cook count
+  - **Test:** same file — "MOST COOKED" eyebrow renders; hero card shows pastel pink bg; circular photo overflows right; "MADE N TIMES" badge shows correct count; serif title renders with italic accent; section hidden when no cook history
+- [ ] **"Recently saved" section** — serif section title "Recently *saved*" (italic accent) + "SORT" orange uppercase link (right-aligned), horizontal scrolling row of circular pastel recipe cards (cream/sage/peach backgrounds, ~120px circle photos with subtle ring border, recipe name below)
+  - **Test:** same file — section title uses serif with italic accent; "SORT" link renders in orange uppercase; cards scroll horizontally; each card has circular photo on pastel bg; recipe name renders below photo
 - [ ] **Empty state** — Sazon mascot (medium) + "Nothing saved yet" + help text
   - **Test:** same file — empty state shows mascot; title and description render; appears when no saved recipes
 
@@ -2726,15 +2733,15 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 > Upgrade shared chrome components to match v2 DNA.
 
-- [ ] **`FrostedHeader` upgrade** — sticky top, `rgba(255,255,255,0.82)` + `blur(16px) saturate(180%)` via `expo-blur`, mascot (36px xsmall) + "Sazon Chef" brand text (22px/800), action `IconButton` on `#F5F0EB`
+- [x] **`FrostedHeader` upgrade** — sticky top, `rgba(255,255,255,0.82)` + `blur(16px) saturate(180%)` via `expo-blur`, mascot (36px xsmall) + "Sazon Chef" brand text (22px/800), action `IconButton` on `#F5F0EB`
   - Uses `BlurView` on iOS, semi-transparent solid on Android (existing pattern)
   - **Test:** `frontend/__tests__/components/ui/FrostedHeader.test.tsx` — renders mascot + brand text; action button renders; sticky positioning applies; a11y label present
-- [ ] **`ScreenHeader` upgrade** — title (30px/800) + optional subtitle (14px muted) + optional right element (e.g., view toggle), padding `14px 16px 8px`
+- [x] **`ScreenHeader` upgrade** — title (30px/800) + optional subtitle (14px muted) + optional right element (e.g., view toggle), padding `14px 16px 8px`
   - **Test:** `frontend/__tests__/components/ui/ScreenHeader.test.tsx` — title renders at 30px bold; subtitle renders when provided; right element slot works
-- [ ] **`TabBar` upgrade** — floating pill bar (`left: 12, right: 12, bottom: 22`), frosted glass bg, `borderRadius: 28`, 5 tabs (home/cookbook/mealplan/shopping/profile)
+- [x] **`TabBar` upgrade** — floating pill bar (`left: 12, right: 12, bottom: 22`), frosted glass bg, `borderRadius: 28`, 5 tabs (home/cookbook/mealplan/shopping/profile)
   - Active tab: filled icon + orange color + 800 weight label; inactive: outline icon + gray `#9CA3AF` + 600 weight
   - **Test:** `frontend/__tests__/components/ui/TabBar.test.tsx` — 5 tabs render; active tab has orange color + filled icon; inactive has gray + outline icon; frosted bg renders; floating positioning correct
-- [ ] **`RecipeCard` variants** — update existing component with v2 visual treatment
+- [x] **`RecipeCard` variants** — update existing component with v2 visual treatment
   - `featured`: match-color top bar (green ≥80%, orange ≥60%, red <60%), full-bleed image with gradient overlay, match% badge, heart button, title on image, meta strip with difficulty + time + cal + protein
   - `grid`: match-color top bar, 108px photo, title (13px/800) + meta (10px), heart button
   - `list`: match-color left bar (4px), 96px thumbnail, title + meta + tags + difficulty badge, heart button
@@ -2744,12 +2751,12 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 
 > SVG-based nutrition visualization components.
 
-- [ ] **`CalorieRing` component** (`frontend/components/ui/CalorieRing.tsx`)
+- [x] **`CalorieRing` component** (`frontend/components/ui/CalorieRing.tsx`)
   - SVG circle ring (peach `#FFB74D` on `#FFF3E0` track), consumed/goal center display (bold number + "of [goal]" label), rotated -90deg for top start
   - Props: `consumed`, `goal`, `size` (default 140)
   - Uses `react-native-svg` (already installed or install)
   - **Test:** `frontend/__tests__/components/ui/CalorieRing.test.tsx` — ring renders at correct size; stroke dashoffset reflects consumed/goal ratio; center shows consumed number; "of [goal]" label renders; ring is capped at 100%
-- [ ] **`MacroBar` component** (`frontend/components/ui/MacroBar.tsx`)
+- [x] **`MacroBar` component** (`frontend/components/ui/MacroBar.tsx`)
   - Horizontal progress bar: label (10px uppercase, 62px width), bar (cream track `#F5F0EB`, colored fill), value/goal text (11px/700)
   - Props: `label`, `value`, `goal`, `unit` (default 'g'), `color`
   - Color presets: protein=`#81C784`, carbs=`#FFD54F`, fat=`#CE93D8`, fiber=`#059669`
@@ -2768,46 +2775,46 @@ All Group 8 work is frontend-only (cancellation flow) + Stripe dashboard config 
 | **Phase 5** | 10V-J: Shared chrome (FrostedHeader, TabBar, RecipeCard, ScreenHeader) | 5h | Phase 3 |
 | **Phase 6** | 10V-D: Home screen editorial revamp | 8h | Phase 3, 4, 5 |
 | **Phase 7** | 10V-E: Recipe detail editorial revamp | 6h | Phase 3, 4, 5 |
-| **Phase 8** | 10V-F + 10V-G: Meal plan + cookbook refresh | 4h | Phase 4, 5 |
+| **Phase 8** | 10V-F + 10V-G: Meal plan + cookbook refresh | 8h | Phase 4, 5 |
 | **Phase 9** | 10V-H: Shopping list refresh | 3h | Phase 5 |
 | **Phase 10** | 10V-I: Onboarding pastel flow | 3h | Phase 1, 2 |
-| **TOTAL** | | **~48h** | |
+| **TOTAL** | | **~52h** | |
 
 ---
 
 #### 10V Tests (consolidated)
 
 **Foundation tests**
-- [ ] `frontend/__tests__/foundations/typography.test.ts` — font loading, editorial presets, dual-font system
-- [ ] `frontend/__tests__/foundations/colors.test.ts` — pastel title contrast, new token existence
-- [ ] `frontend/__tests__/foundations/shadows.test.ts` — editorial shadow presets valid
+- [x] `frontend/__tests__/foundations/typography.test.ts` — font loading, editorial presets, dual-font system
+- [x] `frontend/__tests__/foundations/colors.test.ts` — pastel title contrast, new token existence
+- [x] `frontend/__tests__/foundations/shadows.test.ts` — editorial shadow presets valid
 
 **Primitive component tests**
-- [ ] `frontend/__tests__/components/ui/EditorialCard.test.tsx` — circular photo, serif title, pastel bg, save toggle
-- [ ] `frontend/__tests__/components/ui/PlateHeroCard.test.tsx` — plate overflow, gradient bg, deep shadow
-- [ ] `frontend/__tests__/components/ui/VerticalCategoryRail.test.tsx` — vertical text, active indicator, selection
-- [ ] `frontend/__tests__/components/ui/StatStrip.test.tsx` — 4-stat layout, serif numbers, negative margin overlap
-- [ ] `frontend/__tests__/components/ui/BlackPillCTA.test.tsx` — black bg, white text, spring press, disabled state
-- [ ] `frontend/__tests__/components/ui/StickyBottomBar.test.tsx` — absolute position, fade gradient, safe area
-- [ ] `frontend/__tests__/components/ui/IngredientRow.test.tsx` — icon + name + qty, checked state, toggle
-- [ ] `frontend/__tests__/components/ui/ServingStepper.test.tsx` — increment/decrement, min 1 guard
-- [ ] `frontend/__tests__/components/ui/UnitSegmentedControl.test.tsx` — black pill active, toggle behavior
-- [ ] `frontend/__tests__/components/ui/CalorieRing.test.tsx` — SVG ring, consumed/goal ratio, center label
-- [ ] `frontend/__tests__/components/ui/MacroBar.test.tsx` — progress width, label, value/goal, color
+- [x] `frontend/__tests__/components/ui/EditorialCard.test.tsx` — circular photo, serif title, pastel bg, save toggle
+- [x] `frontend/__tests__/components/ui/PlateHeroCard.test.tsx` — plate overflow, gradient bg, deep shadow
+- [x] `frontend/__tests__/components/ui/VerticalCategoryRail.test.tsx` — vertical text, active indicator, selection
+- [x] `frontend/__tests__/components/ui/StatStrip.test.tsx` — 4-stat layout, serif numbers, negative margin overlap
+- [x] `frontend/__tests__/components/ui/BlackPillCTA.test.tsx` — black bg, white text, spring press, disabled state
+- [x] `frontend/__tests__/components/ui/StickyBottomBar.test.tsx` — absolute position, fade gradient, safe area
+- [x] `frontend/__tests__/components/ui/IngredientRow.test.tsx` — icon + name + qty, checked state, toggle
+- [x] `frontend/__tests__/components/ui/ServingStepper.test.tsx` — increment/decrement, min 1 guard
+- [x] `frontend/__tests__/components/ui/UnitSegmentedControl.test.tsx` — black pill active, toggle behavior
+- [x] `frontend/__tests__/components/ui/CalorieRing.test.tsx` — SVG ring, consumed/goal ratio, center label
+- [x] `frontend/__tests__/components/ui/MacroBar.test.tsx` — progress width, label, value/goal, color
 
 **Screen-level tests**
 - [ ] `frontend/__tests__/app/home.editorial.test.tsx` — greeting, editorial headline, hero plate card, category rail, widget row, picks grid, FAB
 - [ ] `frontend/__tests__/app/recipeDetail.editorial.test.tsx` — peach hero, serif title, plate photo, stat strip, ingredients, sticky CTA
-- [ ] `frontend/__tests__/app/mealPlan.editorial.test.tsx` — week strip, macro summary, calorie ring, meal slots
-- [ ] `frontend/__tests__/app/cookbook.editorial.test.tsx` — header, collection chips, grid/list views, empty state
+- [ ] `frontend/__tests__/app/mealPlan.editorial.test.tsx` — eyebrow + week number, editorial title with italic "week", week strip (black active + orange dot), macro budget eyebrow + on-track badge, golden calorie ring, macro bars, "Today's plan" section + AUTO-PLAN link, meal slot cards with time + italic meal label + circular photo
+- [ ] `frontend/__tests__/app/cookbook.editorial.test.tsx` — "YOUR" eyebrow, serif title with period, recipe + collection count subtitle, collection chips with counts + orange underline, "MOST COOKED" hero section with cook count badge + plate photo, "Recently saved" horizontal scroll with circular pastel cards + SORT link, empty state
 - [ ] `frontend/__tests__/app/shopping.editorial.test.tsx` — progress strip, category sections, item checkboxes, pantry badges
 - [ ] `frontend/__tests__/app/onboarding.editorial.test.tsx` — 3 pastel gradients, progress dots, option chips, multi/single select
 
 **Shared chrome tests**
-- [ ] `frontend/__tests__/components/ui/FrostedHeader.test.tsx` — mascot, brand text, frosted blur, action button
-- [ ] `frontend/__tests__/components/ui/ScreenHeader.test.tsx` — title size, subtitle, right slot
-- [ ] `frontend/__tests__/components/ui/TabBar.test.tsx` — 5 tabs, orange active, floating pill, frosted bg
-- [ ] `frontend/__tests__/components/ui/RecipeCard.test.tsx` — featured/grid/list variants, match color, save toggle
+- [x] `frontend/__tests__/components/ui/FrostedHeader.test.tsx` — mascot, brand text, frosted blur, action button
+- [x] `frontend/__tests__/components/ui/ScreenHeader.test.tsx` — title size, subtitle, right slot
+- [x] `frontend/__tests__/components/ui/TabBar.test.tsx` — 5 tabs, orange active, floating pill, frosted bg
+- [x] `frontend/__tests__/components/ui/RecipeCard.test.tsx` — featured/grid/list variants, match color, save toggle
 
 ---
 
