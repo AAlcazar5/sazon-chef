@@ -105,6 +105,18 @@ export const SMART_COLLECTION_DEFINITIONS: readonly SmartCollectionDefinition[] 
     icon: '⏰',
     description: 'Perfect for this time of day',
   },
+  {
+    id: 'recently_cooked',
+    name: 'Recently Cooked',
+    icon: '🕐',
+    description: 'Cooked in the last 30 days',
+  },
+  {
+    id: 'uncooked',
+    name: 'Uncooked',
+    icon: '📚',
+    description: 'Saved but never cooked',
+  },
 ] as const;
 
 const ONE_POT_KEYWORDS = ['one-pot', 'one pot', 'sheet pan', 'sheet-pan', 'skillet'];
@@ -186,7 +198,65 @@ export function recipeMatchesSmartCollection(recipe: Recipe, id: string, now: Da
       const mt = recipe.mealType?.toLowerCase();
       return mt === getCurrentMealType(now);
     }
+    // recently_cooked and uncooked are user-scoped — see buildUserScopedFilter
     default:
       return false;
   }
+}
+
+/**
+ * Returns a Prisma where-clause for user-scoped smart collections that
+ * require join queries (recently_cooked, uncooked). Returns null for
+ * attribute-based collections — use buildRecipeFilter for those.
+ */
+export function buildUserScopedFilter(
+  id: string,
+  userId: string,
+  now: Date = new Date(),
+): Record<string, unknown> | null {
+  switch (id) {
+    case 'recently_cooked': {
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return {
+        cookingLogs: {
+          some: {
+            userId,
+            cookedAt: { gte: thirtyDaysAgo },
+          },
+        },
+      };
+    }
+    case 'uncooked': {
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return {
+        savedRecipes: {
+          some: {
+            userId,
+            savedDate: { lte: sevenDaysAgo },
+          },
+        },
+        cookingLogs: {
+          none: { userId },
+        },
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Given a recipe, returns the IDs of all attribute-based smart collections
+ * it qualifies for. Useful for "Suggested collections" on recipe detail pages.
+ */
+export function suggestCollectionsForRecipe(recipe: Recipe, now: Date = new Date()): string[] {
+  return SMART_COLLECTION_DEFINITIONS
+    .filter((def) => {
+      // Skip user-scoped collections — they require DB context
+      if (def.id === 'recently_cooked' || def.id === 'uncooked') return false;
+      return recipeMatchesSmartCollection(recipe, def.id, now);
+    })
+    .map((def) => def.id);
 }

@@ -83,4 +83,11 @@ describe('getIngredientSwaps', () => {
     const swaps = getIngredientSwaps('2 cups white rice');
     expect(swaps.length).toBeGreaterThanOrEqual(3);
   });
+
+  it('swap for "white rice" includes cauliflower rice with correct calorie reduction', () => {
+    const swaps = getIngredientSwaps('white rice');
+    const cauliRice = swaps.find((s) => s.alternative.toLowerCase().includes('cauliflower'));
+    expect(cauliRice).toBeDefined();
+    expect(cauliRice!.macroDelta.calories).toBeLessThan(0);
+  });
 });

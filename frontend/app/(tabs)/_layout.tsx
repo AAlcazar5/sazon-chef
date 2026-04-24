@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform, Alert } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SearchBar from '../../components/ui/SearchBar';
@@ -301,36 +300,18 @@ export default function TabLayout() {
           backgroundColor: 'transparent',
           shadowOpacity: 0,
         },
-        tabBarBackground: () =>
-          Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={isDark ? 60 : 40}
-              tint={isDark ? 'dark' : 'light'}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: isDark
-                  ? 'rgba(28, 28, 30, 0.75)'
-                  : 'rgba(250, 247, 244, 0.82)',
-              }}
-            />
-          ) : (
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: isDark
-                  ? 'rgba(28, 28, 30, 0.92)'
-                  : 'rgba(250, 247, 244, 0.95)',
-              }}
-            />
-          ),
+        tabBarBackground: () => (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: isDark ? '#1C1C1E' : '#FAF7F4',
+            }}
+          />
+        ),
         tabBarSafeAreaInsets: { bottom: 0 },
         tabBarLabelStyle: {
           fontSize: FontSize.sm,
@@ -404,36 +385,16 @@ export default function TabLayout() {
           overflow: 'hidden',
         }}
       >
-        {/* Frosted background for search overlay */}
-        {Platform.OS === 'ios' ? (
-          <BlurView
-            intensity={isDark ? 60 : 40}
-            tint={isDark ? 'dark' : 'light'}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: isDark
-                ? 'rgba(28, 28, 30, 0.75)'
-                : 'rgba(250, 247, 244, 0.82)',
-            }}
-          />
-        ) : (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: isDark
-                ? 'rgba(28, 28, 30, 0.92)'
-                : 'rgba(250, 247, 244, 0.95)',
-            }}
-          />
-        )}
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: isDark ? '#1C1C1E' : '#FAF7F4',
+          }}
+        />
         <View className="flex-row items-center" style={{ gap: Gap.md }}>
           {/* Search Bar */}
           <View className="flex-1" style={{ position: 'relative' }}>

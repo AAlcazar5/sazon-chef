@@ -3918,6 +3918,90 @@ export const recipeController = {
     }
   },
 
+  // GET /api/recipes/:id/related — "You might also like" with cuisine adjacency
+  async getRelatedRecipes(req: Request, res: Response) {
+    try {
+      const recipeId = req.params.id;
+      const userId = getUserId(req);
+      const limit = parseInt(req.query.limit as string) || 6;
+
+      const targetRecipe = await prisma.recipe.findUnique({
+        where: { id: recipeId },
+        include: { ingredients: { orderBy: { order: 'asc' } } },
+      });
+
+      if (!targetRecipe) {
+        return res.status(404).json({ error: 'Recipe not found' });
+      }
+
+      // Build candidate pool: same cuisine OR adjacent cuisines
+      const { CUISINE_ADJACENCY, findRelatedRecipes } = require('../../utils/recipeSimilarity');
+      const adjacentCuisines: string[] = CUISINE_ADJACENCY[targetRecipe.cuisine] || [];
+      const cuisinePool = [targetRecipe.cuisine, ...adjacentCuisines];
+
+      // Also include same mealType recipes for variety
+      const candidateRecipes = await prisma.recipe.findMany({
+        where: {
+          id: { not: recipeId },
+          isUserCreated: false,
+          OR: [
+            { cuisine: { in: cuisinePool } },
+            ...(targetRecipe.mealType ? [{ mealType: targetRecipe.mealType }] : []),
+          ],
+        },
+        take: 200,
+        include: { ingredients: { orderBy: { order: 'asc' } } },
+      });
+
+      const toSimilarityShape = (r: any) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        cuisine: r.cuisine,
+        cookTime: r.cookTime,
+        calories: r.calories,
+        protein: r.protein,
+        carbs: r.carbs,
+        fat: r.fat,
+        servings: r.servings,
+        ingredients: r.ingredients,
+      });
+
+      const related = findRelatedRecipes(
+        toSimilarityShape(targetRecipe),
+        candidateRecipes.map(toSimilarityShape),
+        { limit, minScore: 0.15 }
+      );
+
+      const relatedIds = related.map((r: { recipeId: string }) => r.recipeId);
+      const relatedFull = await prisma.recipe.findMany({
+        where: { id: { in: relatedIds } },
+        include: {
+          ingredients: { orderBy: { order: 'asc' } },
+          instructions: { orderBy: { step: 'asc' } },
+        },
+      });
+
+      // Attach similarity scores and sort
+      const sorted = relatedFull
+        .map(recipe => {
+          const sim = related.find((s: { recipeId: string }) => s.recipeId === recipe.id);
+          return {
+            ...recipe,
+            similarityScore: sim?.score || 0,
+            similarityFactors: sim?.factors,
+          };
+        })
+        .sort((a, b) => b.similarityScore - a.similarityScore);
+
+      const recipesWithVariedImages = varyImageUrlsForPage(sorted, 0);
+      res.json(recipesWithVariedImages);
+    } catch (error: any) {
+      console.error('❌ Error in getRelatedRecipes:', error);
+      res.status(500).json({ error: 'Failed to fetch related recipes' });
+    }
+  },
+
   // Get similar recipes ("You might like")
   async getSimilarRecipes(req: Request, res: Response) {
     try {
@@ -5350,6 +5434,55 @@ export const recipeController = {
     } catch (error) {
       console.error('❌ [cravingFlow] Error:', error);
       return res.status(500).json({ error: 'Failed to run craving flow' });
+    }
+  },
+
+  /**
+   * 10P: Craving + Weekly Budget Integration
+   * POST /api/recipes/craving-budget
+   * Body: { craving: string, remainingCalories: number, remainingProtein?: number,
+   *         remainingCarbs?: number, remainingFat?: number }
+   *
+   * Returns three paths: goForIt, healthierVersion, similarButLighter
+   */
+  async cravingBudget(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { craving, remainingCalories, remainingProtein, remainingCarbs, remainingFat } = req.body;
+
+      if (!craving || typeof craving !== 'string' || !craving.trim()) {
+        return res.status(400).json({ error: 'craving text is required' });
+      }
+      if (remainingCalories == null || typeof remainingCalories !== 'number') {
+        return res.status(400).json({ error: 'remainingCalories is required' });
+      }
+
+      const { cravingBudgetService } = await import('../../services/cravingBudgetService');
+
+      // Fetch dietary restrictions for the user
+      const userPreferences = await prisma.userPreferences.findFirst({
+        where: { userId },
+        include: { dietaryRestrictions: true },
+      });
+
+      const strictRestrictions = (userPreferences?.dietaryRestrictions || [])
+        .filter((d: any) => d.severity === 'strict')
+        .map((d: any) => (d.name as string).toLowerCase());
+
+      const result = await cravingBudgetService.analyzeCraving({
+        craving: craving.trim(),
+        remainingCalories,
+        remainingProtein,
+        remainingCarbs,
+        remainingFat,
+        userId,
+        dietaryRestrictions: strictRestrictions,
+      });
+
+      return res.json(result);
+    } catch (error) {
+      console.error('❌ [cravingBudget] Error:', error);
+      return res.status(500).json({ error: 'Failed to analyze craving budget' });
     }
   },
 

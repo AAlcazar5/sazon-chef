@@ -12,6 +12,7 @@ jest.mock('../../lib/api', () => ({
     getRecipe: jest.fn(),
     recordView: jest.fn(() => Promise.resolve()),
     getSimilarRecipes: jest.fn(() => Promise.resolve({ data: [] })),
+    getRelatedRecipes: jest.fn(() => Promise.resolve({ data: [] })),
     getSavedMeta: jest.fn(() => Promise.resolve({ data: { notes: null, rating: null } })),
     updateSavedMeta: jest.fn(() => Promise.resolve({ data: { notes: null, rating: null } })),
     deleteRecipe: jest.fn(),
@@ -26,6 +27,9 @@ jest.mock('../../lib/api', () => ({
   shoppingAppApi: {
     getIntegrations: jest.fn(() => Promise.resolve({ data: [] })),
     addIngredients: jest.fn(),
+  },
+  userApi: {
+    getMacroGoals: jest.fn(() => Promise.resolve({ data: null })),
   },
   api: { get: jest.fn() },
 }));
@@ -357,6 +361,77 @@ describe('RecipeModal', () => {
       await waitFor(() => {
         expect(getByLabelText('Edit notes')).toBeTruthy();
       });
+    });
+  });
+
+  // ── 10N: Related Recipes ("You Might Also Like") ──────────────────────────
+
+  describe('Related recipes section', () => {
+    const relatedRecipes = [
+      {
+        id: 'related-1',
+        title: 'Teriyaki Chicken',
+        description: 'Japanese grilled chicken',
+        cookTime: 30,
+        cuisine: 'Japanese',
+        calories: 420,
+        protein: 38,
+        carbs: 12,
+        fat: 22,
+        imageUrl: 'https://example.com/teriyaki.jpg',
+        ingredients: [],
+        instructions: [],
+      },
+      {
+        id: 'related-2',
+        title: 'Lemon Herb Tilapia',
+        description: 'Light fish with herbs',
+        cookTime: 20,
+        cuisine: 'Mediterranean',
+        calories: 320,
+        protein: 35,
+        carbs: 5,
+        fat: 18,
+        imageUrl: null,
+        ingredients: [],
+        instructions: [],
+      },
+    ];
+
+    it('renders related recipes when returned from API', async () => {
+      const { recipeApi } = require('../../lib/api');
+      recipeApi.getRelatedRecipes.mockResolvedValue({ data: relatedRecipes });
+
+      const { getAllByText, getByText } = render(<RecipeModal />);
+      await waitFor(() => getAllByText('Grilled Salmon'));
+
+      await waitFor(() => getByText('You Might Also Like'));
+      expect(getByText('Teriyaki Chicken')).toBeTruthy();
+      expect(getByText('Lemon Herb Tilapia')).toBeTruthy();
+    });
+
+    it('hides section gracefully when no related recipes found', async () => {
+      const { recipeApi } = require('../../lib/api');
+      recipeApi.getRelatedRecipes.mockResolvedValue({ data: [] });
+
+      const { getAllByText, queryByText } = render(<RecipeModal />);
+      await waitFor(() => getAllByText('Grilled Salmon'));
+
+      // Give time for effect to resolve
+      await waitFor(() => expect(recipeApi.getRelatedRecipes).toHaveBeenCalled());
+      expect(queryByText('You Might Also Like')).toBeNull();
+    });
+
+    it('tapping a related recipe navigates (push) to new detail screen', async () => {
+      const { recipeApi } = require('../../lib/api');
+      recipeApi.getRelatedRecipes.mockResolvedValue({ data: relatedRecipes });
+
+      const { getAllByText, getByText } = render(<RecipeModal />);
+      await waitFor(() => getAllByText('Grilled Salmon'));
+      await waitFor(() => getByText('Teriyaki Chicken'));
+
+      fireEvent.press(getByText('Teriyaki Chicken'));
+      expect(mockRouter.push).toHaveBeenCalledWith('/modal?id=related-1');
     });
   });
 });

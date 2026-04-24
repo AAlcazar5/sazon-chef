@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 // frontend/components/cookbook/SimilarRecipesCarousel.tsx
 // Horizontal carousel showing similar recipe recommendations
 
@@ -70,6 +70,32 @@ function SimilarRecipesCarousel({
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  const scrollRef = useRef<ScrollView>(null);
+  const autoScrollIndexRef = useRef(0);
+  const isUserScrollingRef = useRef(false);
+  const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (isCollapsed || recipes.length === 0) return;
+
+    const DWELL_MS = 5000;
+
+    const interval = setInterval(() => {
+      if (isUserScrollingRef.current) return;
+
+      const next = autoScrollIndexRef.current + 1;
+      if (next >= recipes.length) {
+        autoScrollIndexRef.current = 0;
+        scrollRef.current?.scrollTo({ x: 0, animated: false });
+      } else {
+        autoScrollIndexRef.current = next;
+        scrollRef.current?.scrollTo({ x: next * SNAP_INTERVAL, animated: true });
+      }
+    }, DWELL_MS);
+
+    return () => clearInterval(interval);
+  }, [isCollapsed, recipes.length]);
+
   if (recipes.length === 0) {
     return null;
   }
@@ -108,6 +134,7 @@ function SimilarRecipesCarousel({
 
       {!isCollapsed && (
         <ScrollView
+          ref={scrollRef}
           horizontal
           scrollEventThrottle={16}
           showsHorizontalScrollIndicator={false}
@@ -116,6 +143,17 @@ function SimilarRecipesCarousel({
           snapToInterval={SNAP_INTERVAL}
           snapToAlignment="start"
           disableIntervalMomentum
+          onTouchStart={() => { isUserScrollingRef.current = true; }}
+          onTouchEnd={() => {
+            if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+            resumeTimeoutRef.current = setTimeout(() => { isUserScrollingRef.current = false; }, 3000);
+          }}
+          onScrollBeginDrag={() => { isUserScrollingRef.current = true; }}
+          onScrollEndDrag={(e) => {
+            autoScrollIndexRef.current = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
+            if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+            resumeTimeoutRef.current = setTimeout(() => { isUserScrollingRef.current = false; }, 3000);
+          }}
         >
           {recipes.map((recipe, index) => {
             const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };

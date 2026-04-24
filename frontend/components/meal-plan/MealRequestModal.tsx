@@ -54,7 +54,18 @@ interface FindRecipesParams {
   maxCookTime?: number;
   difficulty?: string;
   cuisines?: string[];
+  cuisineFamilies?: string[];
 }
+
+export const CUISINE_FAMILIES: Record<string, string[]> = {
+  'Latin American': ['Mexican', 'Brazilian', 'Peruvian', 'Argentine', 'Caribbean', 'Central American', 'South American'],
+  'Asian': ['Chinese', 'Japanese', 'Korean', 'Thai', 'Vietnamese', 'Indian', 'Malaysian', 'Indonesian', 'Filipino'],
+  'European': ['Italian', 'French', 'Spanish', 'Greek', 'Portuguese'],
+  'Mediterranean': ['Italian', 'Greek', 'Turkish', 'Lebanese', 'Moroccan'],
+  'Middle Eastern': ['Lebanese', 'Turkish', 'Persian', 'Syrian'],
+  'African': ['Ethiopian', 'Moroccan', 'North African', 'West African', 'East African'],
+  'American': ['Southern', 'Southwestern', 'Tex-Mex', 'Cajun', 'Soul Food'],
+};
 
 interface MealRequestModalProps {
   visible: boolean;
@@ -136,6 +147,24 @@ export default function MealRequestModal({
   // Step 4: filters
   const [mealType, setMealType] = useState<string>(targetMealType ?? 'any');
 
+  // Cuisine families
+  const [selectedFamilies, setSelectedFamilies] = useState<string[]>([]);
+  const [expandedFamily, setExpandedFamily] = useState<string | null>(null);
+  const [selectedSubcuisines, setSelectedSubcuisines] = useState<string[]>([]);
+
+  const toggleFamily = useCallback((family: string) => {
+    setSelectedFamilies(prev =>
+      prev.includes(family) ? prev.filter(f => f !== family) : [...prev, family]
+    );
+    setExpandedFamily(prev => prev === family ? null : family);
+  }, []);
+
+  const toggleSubcuisine = useCallback((sub: string) => {
+    setSelectedSubcuisines(prev =>
+      prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]
+    );
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [history, setHistory] = useState<FindRecipesParams[]>([]);
@@ -177,6 +206,9 @@ export default function MealRequestModal({
     setFatMax(undefined);
     setCarbsMin(undefined);
     setFiberMin(undefined);
+    setSelectedFamilies([]);
+    setExpandedFamily(null);
+    setSelectedSubcuisines([]);
   }, []);
 
   const buildParams = useCallback((): FindRecipesParams => {
@@ -189,8 +221,10 @@ export default function MealRequestModal({
     if (carbsMin !== undefined) params.carbs = { min: carbsMin };
     if (fiberMin !== undefined) params.fiber = { min: fiberMin };
     if (mealType && mealType !== 'any') params.mealType = mealType;
+    if (selectedFamilies.length > 0) params.cuisineFamilies = selectedFamilies;
+    if (selectedSubcuisines.length > 0) params.cuisines = selectedSubcuisines;
     return params;
-  }, [count, caloriesMin, caloriesMax, proteinMin, fatMax, carbsMin, fiberMin, mealType]);
+  }, [count, caloriesMin, caloriesMax, proteinMin, fatMax, carbsMin, fiberMin, mealType, selectedFamilies, selectedSubcuisines]);
 
   const handleFind = useCallback(async (params?: FindRecipesParams) => {
     const searchParams = params ?? buildParams();
@@ -383,7 +417,7 @@ export default function MealRequestModal({
                 </View>
 
                 {/* Step 4: Meal Type */}
-                <View style={{ marginBottom: 24 }}>
+                <View style={{ marginBottom: 20 }}>
                   <SectionHeader title="Meal Type" isDark={isDark} />
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                     {MEAL_TYPES.map(mt => (
@@ -396,6 +430,40 @@ export default function MealRequestModal({
                       />
                     ))}
                   </View>
+                </View>
+
+                {/* Step 5: Cuisine Families */}
+                <View style={{ marginBottom: 24 }}>
+                  <SectionHeader title="Cuisine" isDark={isDark} />
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                    {Object.keys(CUISINE_FAMILIES).map(family => (
+                      <PillButton
+                        key={family}
+                        label={family}
+                        selected={selectedFamilies.includes(family)}
+                        onPress={() => toggleFamily(family)}
+                        isDark={isDark}
+                      />
+                    ))}
+                  </View>
+                  {expandedFamily && CUISINE_FAMILIES[expandedFamily] && (
+                    <View style={{ marginTop: 8, paddingLeft: 8 }} accessibilityLabel={`${expandedFamily} subcuisines`}>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: textSecondary, marginBottom: 6 }}>
+                        {expandedFamily} cuisines:
+                      </Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                        {CUISINE_FAMILIES[expandedFamily].map(sub => (
+                          <PillButton
+                            key={sub}
+                            label={sub}
+                            selected={selectedSubcuisines.includes(sub)}
+                            onPress={() => toggleSubcuisine(sub)}
+                            isDark={isDark}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 {/* Find button */}

@@ -33,6 +33,7 @@ import { prisma } from '../../src/lib/prisma';
 import {
   logFood,
   createUserFoodItem,
+  searchFood,
 } from '../../src/modules/food/foodController';
 
 function makeReq(
@@ -276,5 +277,59 @@ describe('10M: Multi-food remove/adjust updates total macros', () => {
     expect(totalProtein).toBe(44);
     expect(totalCarbs).toBe(8);
     expect(totalFat).toBe(13);
+  });
+});
+
+describe('10P: Cross-service — photo_scan FoodItems in branded food search', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('photo_scan FoodItems appear in food search results', async () => {
+    const { searchFood } = await import('../../src/modules/food/foodController');
+
+    const photoScanItems = [
+      {
+        id: 'fi-ps-1',
+        name: 'Grilled Chicken Breast',
+        brand: null,
+        category: null,
+        servingSize: '1 breast (~170g)',
+        calories: 280,
+        protein: 42,
+        carbs: 0,
+        fat: 12,
+        fiber: 0,
+        source: 'photo_scan',
+        externalId: null,
+        imageUrl: null,
+      },
+      {
+        id: 'fi-nx-1',
+        name: 'Chicken McNuggets',
+        brand: 'McDonald\'s',
+        category: 'restaurant',
+        servingSize: '6 piece',
+        calories: 250,
+        protein: 15,
+        carbs: 15,
+        fat: 15,
+        fiber: 0,
+        source: 'nutritionix',
+        externalId: 'nix-123',
+        imageUrl: null,
+      },
+    ];
+
+    // searchFood queries prisma.foodItem.findMany with name: { contains: query }
+    // It does NOT filter by source — so photo_scan items are returned.
+    (prisma.foodItem.findMany as jest.Mock).mockResolvedValue(photoScanItems);
+
+    const req = makeReq({ q: 'chicken' });
+    const res = makeRes();
+    await searchFood(req as any, res as any);
+
+    expect(res._body.results).toHaveLength(2);
+    expect(res._body.results[0].source).toBe('photo_scan');
+    expect(res._body.results[1].source).toBe('nutritionix');
+    expect(res._body.source).toBe('cache');
   });
 });

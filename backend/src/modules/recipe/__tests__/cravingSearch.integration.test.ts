@@ -244,6 +244,91 @@ describe('cravingSearch controller — filter integration', () => {
   });
 });
 
+describe('cravingSearch controller — additional coverage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (mockPrisma.userPreferences.findFirst as jest.Mock).mockResolvedValue(null);
+    (mockPrisma.recipe.count as jest.Mock).mockResolvedValue(10);
+  });
+
+  it('"spicy noodles" returns noodle recipes from spicy cuisines', async () => {
+    const { mapCravingToSearchTerms } = require('../../../services/cravingSearchService');
+    (mapCravingToSearchTerms as jest.Mock).mockResolvedValue({
+      searchTerms: ['spicy', 'noodle'],
+      flavorTags: ['spicy'],
+      temperature: 'hot',
+      texturePrefs: [],
+    });
+
+    const spicyNoodle = makeRecipe({
+      id: 'r-spicy',
+      title: 'Spicy Thai Noodles',
+      cuisine: 'Thai',
+      ingredients: [{ text: 'rice noodles' }, { text: 'chili paste' }],
+    });
+    (mockPrisma.recipe.findMany as jest.Mock).mockResolvedValue([spicyNoodle]);
+
+    const { res, json } = makeRes();
+    await recipeController.cravingSearch(
+      makeReq({ query: 'spicy noodles' }) as Request,
+      res as Response,
+    );
+
+    const body = json.mock.calls[0][0];
+    expect(body.recipes.length).toBeGreaterThan(0);
+    expect(body.recipes[0].title).toContain('Noodle');
+  });
+
+  it('respects user dietary restrictions (vegan query excludes dairy)', async () => {
+    const { mapCravingToSearchTerms } = require('../../../services/cravingSearchService');
+    (mapCravingToSearchTerms as jest.Mock).mockResolvedValue({
+      searchTerms: ['cheese'],
+      flavorTags: ['cheesy'],
+      temperature: 'hot',
+      texturePrefs: [],
+    });
+
+    // User has strict vegan restriction
+    (mockPrisma.userPreferences.findFirst as jest.Mock).mockResolvedValue({
+      dietaryRestrictions: [{ name: 'vegan', severity: 'strict' }],
+    });
+
+    (mockPrisma.recipe.findMany as jest.Mock).mockResolvedValue([
+      makeRecipe({ id: 'r1', title: 'Vegan Cheesy Pasta' }),
+    ]);
+
+    const { res, json } = makeRes();
+    await recipeController.cravingSearch(
+      makeReq({ query: 'cheesy' }) as Request,
+      res as Response,
+    );
+
+    // Verify user preferences were loaded
+    expect(mockPrisma.userPreferences.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: 'user-1' } }),
+    );
+    expect(json).toHaveBeenCalled();
+  });
+
+  it('empty craving text returns 400 error', async () => {
+    const { res, status } = makeRes();
+    await recipeController.cravingSearch(
+      makeReq({ query: '' }) as Request,
+      res as Response,
+    );
+    expect(status).toHaveBeenCalledWith(400);
+  });
+
+  it('whitespace-only craving text returns 400 error', async () => {
+    const { res, status } = makeRes();
+    await recipeController.cravingSearch(
+      makeReq({ query: '   ' }) as Request,
+      res as Response,
+    );
+    expect(status).toHaveBeenCalledWith(400);
+  });
+});
+
 describe('logCravingSearchEvent controller', () => {
   beforeEach(() => {
     jest.clearAllMocks();

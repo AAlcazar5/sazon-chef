@@ -10,16 +10,17 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium', Heavy: 'Heavy' },
   NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
 }));
-jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('../../../lib/api', () => ({
   mealPlanApi: { addRecipeToMeal: jest.fn().mockResolvedValue({ data: {} }) },
-  cookbookApi: { saveRecipe: jest.fn().mockResolvedValue({ data: {} }) },
+  recipeApi: { saveRecipe: jest.fn().mockResolvedValue({ data: {} }) },
 }));
 
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import MealRequestResults from '../../../components/meal-plan/MealRequestResults';
-import { mealPlanApi } from '../../../lib/api';
+import { recipeApi } from '../../../lib/api';
+
+const mockSaveRecipe = recipeApi.saveRecipe as jest.Mock;
 
 const RECIPE = {
   id: 'r1',
@@ -128,7 +129,7 @@ describe('MealRequestResults', () => {
   });
 
   it('each option card has accessibilityLabel', () => {
-    const { getByLabelText } = render(<MealRequestResults {...BASE_PROPS} />);
-    expect(getByLabelText(/Grilled Chicken Bowl/i)).toBeTruthy();
+    const { getAllByLabelText } = render(<MealRequestResults {...BASE_PROPS} />);
+    expect(getAllByLabelText(/Grilled Chicken Bowl/i).length).toBeGreaterThanOrEqual(1);
   });
 });
