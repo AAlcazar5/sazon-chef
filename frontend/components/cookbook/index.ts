@@ -26,6 +26,12 @@ export { default as SmartCollectionCard } from './SmartCollectionCard';
 export { default as CollectionStatsBar } from './CollectionStatsBar';
 export { default as CollectionSuggestionBanner } from './CollectionSuggestionBanner';
 
+// Editorial v2 components
+export { EditorialCookbookHeader } from './EditorialCookbookHeader';
+export { CollectionChips } from './CollectionChips';
+export { MostCookedHero } from './MostCookedHero';
+export { RecentlySavedSection } from './RecentlySavedSection';
+
 // Re-export types
 export type {
   CookbookFilters,

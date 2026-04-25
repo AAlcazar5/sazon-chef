@@ -10,3 +10,9 @@ export { default as ShoppingListProgress } from './ShoppingListProgress';
 export { default as BuyAgainSection } from './BuyAgainSection';
 export { default as PantrySection } from './PantrySection';
 export { default as OfflineBanner } from './OfflineBanner';
+
+// Editorial v2 components
+export { ShoppingHeader } from './ShoppingHeader';
+export { ProgressStrip } from './ProgressStrip';
+export { CategorySection } from './CategorySection';
+export { ShoppingItemRow } from './ShoppingItemRow';
