@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, Alert, Animated, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
-import ScreenGradient from '../../components/ui/ScreenGradient';
+// ScreenGradient removed — editorial v2 uses flat #FAF7F4 bg
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -20,7 +20,7 @@ import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet } from '../../components/home';
+import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet, EditorialHomeLayout } from '../../components/home';
 import type { DislikeReason } from '../../components/home';
 import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
@@ -30,7 +30,7 @@ import NoResultsState from '../../components/home/NoResultsState';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
-import PantryMatchCard from '../../components/home/PantryMatchCard';
+// PantryMatchCard removed — editorial v2 absorbs pantry info into subtitle
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
 import { SurpriseMeModal, type SurpriseFilters } from '../../components/home';
 import { Accelerometer } from 'expo-sensors';
@@ -821,24 +821,25 @@ export default function HomeScreen() {
     );
   }
 
-  return (
-    <ScreenGradient variant={firstRunTint > 0 ? 'onboarding' : 'default'}>
-    <View style={{ flex: 1 }}>
-      {/* Header */}
-      <HomeHeader
-        onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
-        onFilterPress={handleFilterPress}
-        activeFilterCount={activeFilters.length + (mealPrepMode ? 1 : 0) + (isCravingSearch ? 1 : 0)}
-        onSurpriseMe={handleRandomRecipe}
-        onCameraPress={() => router.push('/scanner' as any)}
-      />
+  // Derive saved recipe IDs from collection hook for editorial components
+  const savedRecipeIds = useMemo(() => {
+    const ids = new Set<string>();
+    // Build from suggestedRecipes that have been saved (liked feedback)
+    Object.entries(userFeedback).forEach(([id, fb]) => {
+      if (fb.liked) ids.add(id);
+    });
+    return ids;
+  }, [userFeedback]);
 
+  return (
+    <View style={{ flex: 1, backgroundColor: '#FAF7F4' }}>
+    <View style={{ flex: 1 }}>
       {/* Main content area */}
       <ScrollView
         ref={mainScrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 200 }}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <SazonRefreshControl
             refreshing={refreshing}
@@ -854,39 +855,24 @@ export default function HomeScreen() {
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
 
-        {/* Parallax Hero — Recipe of the Day (or top craving result when craving search is active) */}
-        {recipeOfTheDay && !searchQuery && !mealPrepMode ? (
-          <ParallaxHeroSection
-            recipe={recipeOfTheDay}
-            scrollY={scrollY}
-            feedback={userFeedback[recipeOfTheDay.id] || { liked: false, disliked: false }}
-            isFeedbackLoading={feedbackLoading === recipeOfTheDay.id}
-            isDark={isDark}
-            onPress={handleRecipePress}
-            onLongPress={handleLongPress}
-            onLike={handleLike}
-            onDislike={handleDislike}
-            onSave={handleSave}
-            badgeLabel={isCravingSearch ? 'TOP CRAVING MATCH' : 'RECIPE OF THE DAY'}
-            badgeEmoji={isCravingSearch ? '🍕' : '🌟'}
-          />
-        ) : (
-          /* Spacer when hero is not shown */
-          <View style={{ height: Spacing.xl }} />
-        )}
-
-        {/* 10H: Pantry-based recipe matching */}
-        <PantryMatchCard
-          onPress={(filter) => {
-            const path =
-              filter.maxMissing != null
-                ? `/pantry-matches?maxMissing=${filter.maxMissing}`
-                : '/pantry-matches';
-            router.push(path as any);
-          }}
+        {/* Editorial v2 layout */}
+        <EditorialHomeLayout
+          userName={user?.name || user?.email?.split('@')[0]}
+          heroRecipe={recipeOfTheDay}
+          quickPickRecipes={suggestedRecipes.slice(0, 4)}
+          savedIds={savedRecipeIds}
+          calories={{ consumed: 1420, goal: 1800 }}
+          protein={{ consumed: 98, goal: 120 }}
+          streak={5}
+          onSearchPress={handleFilterPress}
+          onNotificationsPress={() => {}}
+          onRecipePress={handleRecipePress}
+          onToggleSave={handleSave}
+          onSeeAllPicks={() => {}}
+          onSurprisePress={() => setShowSurpriseModal(true)}
         />
 
-        {/* Contextual Recipe Sections */}
+        {/* Contextual Recipe Sections (below editorial fold) */}
         <RecipeSectionsGrid
           sections={recipeSections}
           collapsedSections={collapsedSections}
@@ -1160,6 +1146,6 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
       />
 
     </View>
-    </ScreenGradient>
+    </View>
   );
 }

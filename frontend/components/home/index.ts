@@ -21,3 +21,10 @@ export type { DislikeReason } from './DislikeReasonSheet';
 export { default as NoResultsState } from './NoResultsState';
 export { default as SeasonalPicksSection } from './SeasonalPicksSection';
 export { default as IngredientSpotlightCard } from './IngredientSpotlightCard';
+
+// Editorial v2 components
+export { EditorialGreeting } from './EditorialGreeting';
+export { EditorialMacroWidgets } from './EditorialMacroWidgets';
+export { EditorialQuickPicks } from './EditorialQuickPicks';
+export { SurpriseFAB } from './SurpriseFAB';
+export { EditorialHomeLayout } from './EditorialHomeLayout';
