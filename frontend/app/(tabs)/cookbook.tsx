@@ -977,9 +977,15 @@ export default function CookbookScreen() {
       }));
 
       await recipeApi.likeRecipe(recipeId);
+      try {
+        await recipeApi.saveRecipe(recipeId);
+      } catch (saveError: any) {
+        // 409 means it's already in the cookbook — desired end state.
+        if (saveError?.response?.status !== 409) throw saveError;
+      }
 
       HapticPatterns.success();
-      showToast('We\'ll show you more recipes like this', 'success');
+      showToast('Saved to your cookbook', 'success');
     } catch (error: any) {
       console.error('Error liking recipe:', error);
       HapticPatterns.error();
@@ -994,7 +1000,7 @@ export default function CookbookScreen() {
     } finally {
       setFeedbackLoading(null);
     }
-  }, []);
+  }, [showToast]);
 
   const handleDislike = useCallback(async (recipeId: string) => {
     try {
@@ -1007,6 +1013,11 @@ export default function CookbookScreen() {
       }));
 
       await recipeApi.dislikeRecipe(recipeId);
+      try {
+        await recipeApi.unsaveRecipe(recipeId);
+      } catch (unsaveError) {
+        console.warn('Unsave on dislike failed (non-fatal)', unsaveError);
+      }
 
       HapticPatterns.success();
       showToast('We\'ll show fewer recipes like this', 'info');
@@ -1024,7 +1035,7 @@ export default function CookbookScreen() {
     } finally {
       setFeedbackLoading(null);
     }
-  }, []);
+  }, [showToast]);
 
   // Cookbook Quick Wins handlers (offline-first via cache hook)
   const handleUpdateNotes = useCallback(async (recipeId: string, notes: string | null) => {
