@@ -1065,6 +1065,11 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
   const handleRouletteLike = async (recipeId: string) => {
     try {
       await recipeApi.likeRecipe(recipeId);
+      try {
+        await recipeApi.saveRecipe(recipeId);
+      } catch (saveError: any) {
+        if (saveError?.response?.status !== 409) throw saveError;
+      }
       HapticPatterns.success();
     } catch (error) {
       console.error('Error liking recipe:', error);
@@ -1075,6 +1080,11 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
   const handleRoulettePass = async (recipeId: string) => {
     try {
       await recipeApi.dislikeRecipe(recipeId);
+      try {
+        await recipeApi.unsaveRecipe(recipeId);
+      } catch (unsaveError) {
+        console.warn('Unsave on dislike failed (non-fatal)', unsaveError);
+      }
       HapticPatterns.success();
     } catch (error) {
       console.error('Error disliking recipe:', error);

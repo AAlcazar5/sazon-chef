@@ -39,7 +39,15 @@ export function useRecipeFeedback(options: UseRecipeFeedbackOptions): UseRecipeF
       // Update UI immediately (optimistic update)
       updateRecipeFeedback(recipeId, { liked: true, disliked: false });
 
+      // Record the recommendation signal AND save to cookbook so liked
+      // recipes show up under the user's saved recipes.
       await recipeApi.likeRecipe(recipeId);
+      try {
+        await recipeApi.saveRecipe(recipeId);
+      } catch (saveError: any) {
+        // 409 means it's already in the cookbook — that's the desired end state.
+        if (saveError?.response?.status !== 409) throw saveError;
+      }
 
       // Track like action
       if (userId) {
@@ -56,7 +64,7 @@ export function useRecipeFeedback(options: UseRecipeFeedbackOptions): UseRecipeF
       }
 
       HapticPatterns.success();
-      Alert.alert('Liked!', "We'll show you more recipes like this");
+      Alert.alert('Saved to your cookbook', "We'll show you more recipes like this");
     } catch (error: any) {
       console.error('📱 Like error', error);
       HapticPatterns.error();
@@ -79,6 +87,15 @@ export function useRecipeFeedback(options: UseRecipeFeedbackOptions): UseRecipeF
       updateRecipeFeedback(recipeId, { liked: false, disliked: true });
 
       await recipeApi.dislikeRecipe(recipeId, reason);
+
+      // If the user previously liked it, the recipe is in their cookbook —
+      // disliking should pull it back out. Backend uses deleteMany so this
+      // is idempotent; swallow non-fatal errors so we don't revert the UI.
+      try {
+        await recipeApi.unsaveRecipe(recipeId);
+      } catch (unsaveError) {
+        console.warn('📱 Unsave on dislike failed (non-fatal)', unsaveError);
+      }
 
       // Track dislike action
       if (userId) {
