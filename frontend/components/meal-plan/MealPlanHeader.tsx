@@ -1,20 +1,14 @@
-// frontend/components/meal-plan/MealPlanHeader.tsx
-// Header bar for the meal plan screen
-
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import FrostedHeader from '../ui/FrostedHeader';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 
 interface MealPlanHeaderProps {
-  /** Formatted date range string */
   dateRange: string;
-  /** Whether the selected date is today */
   isSelectedDateToday: boolean;
-  /** Whether dark mode is active */
   isDark: boolean;
-  /** Jump to today callback */
   onJumpToToday: () => void;
 }
 
@@ -25,29 +19,82 @@ export default function MealPlanHeader({
   onJumpToToday,
 }: MealPlanHeaderProps) {
   return (
-    <FrostedHeader paddingBottom={12} withTopInset>
-      <View className="flex-row items-center justify-between" style={{ height: 28 }}>
-        <View className="flex-row items-center flex-1">
-          <Text className="text-2xl mr-2" style={{ lineHeight: 28 }}>🍽️</Text>
-          <Text className="text-2xl font-black text-gray-900 dark:text-gray-100" accessibilityRole="header" style={{ lineHeight: 28 }}>Meal Plan</Text>
-        </View>
-        <View className="flex-row items-center" style={{ height: 28 }}>
-          <Text className="text-base font-semibold text-gray-700 dark:text-gray-200 mr-2" numberOfLines={1} style={{ lineHeight: 20 }}>
-            {dateRange}
+    <FrostedHeader paddingBottom={16} withTopInset>
+      <View style={styles.headerRow}>
+        {/* Editorial title */}
+        <View style={styles.titleBlock}>
+          <Text style={styles.title} accessibilityRole="header">
+            Meal <Text style={styles.titleAccent}>Plan</Text>
           </Text>
-          {!isSelectedDateToday && (
-            <HapticTouchableOpacity
-              onPress={onJumpToToday}
-              className="px-3 py-1.5 rounded-lg"
-              style={{ backgroundColor: isDark ? `${Colors.primary}33` : Colors.primaryLight, height: 28, justifyContent: 'center' }}
-            >
-              <Text className="text-sm font-semibold" style={{ color: isDark ? DarkColors.primary : Colors.primary, lineHeight: 16 }}>
-                Today
-              </Text>
-            </HapticTouchableOpacity>
-          )}
+          <Text style={styles.dateRange}>{dateRange}</Text>
         </View>
+
+        {/* Jump to today */}
+        {!isSelectedDateToday && (
+          <HapticTouchableOpacity
+            onPress={onJumpToToday}
+            style={[
+              styles.todayButton,
+              { backgroundColor: isDark ? `${Colors.primary}33` : Colors.primaryLight },
+            ]}
+            accessibilityLabel="Jump to today"
+            accessibilityRole="button"
+          >
+            <Text style={[styles.todayLabel, { color: isDark ? DarkColors.primary : Colors.primary }]}>
+              Today
+            </Text>
+          </HapticTouchableOpacity>
+        )}
       </View>
     </FrostedHeader>
   );
 }
+
+const TITLE_SIZE = 48;
+
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  titleBlock: {
+    flex: 1,
+  },
+  title: {
+    fontFamily: EditorialFontFamily.display.bold,
+    fontSize: TITLE_SIZE,
+    lineHeight: TITLE_SIZE * 1.04,
+    letterSpacing: -1.6,
+    color: '#111827',
+  },
+  titleAccent: {
+    fontFamily: EditorialFontFamily.displayItalic.bold,
+    fontStyle: 'italic',
+    fontSize: TITLE_SIZE,
+    letterSpacing: -1.6,
+    color: '#111827',
+  },
+  orangePeriod: {
+    fontFamily: EditorialFontFamily.display.bold,
+    fontSize: TITLE_SIZE,
+    color: '#fa7e12',
+  },
+  dateRange: {
+    ...EditorialTypography.eyebrow,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  todayButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  todayLabel: {
+    fontFamily: EditorialFontFamily.body.semibold,
+    fontSize: 13,
+  },
+});

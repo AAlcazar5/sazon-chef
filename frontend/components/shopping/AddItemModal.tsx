@@ -261,7 +261,7 @@ export default function AddItemModal({
               {state.quickSuggestions.length > 0 && (
                 <View style={{ marginBottom: 16 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E5E7EB' : Colors.text.primary }}>
+                    <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#E5E7EB' : Colors.text.primary }}>
                       {state.purchaseHistory.length > 0 ? 'Your most added' : 'Popular items'}
                     </Text>
                     <View style={{
@@ -271,7 +271,7 @@ export default function AddItemModal({
                       paddingVertical: 2,
                       marginLeft: 8,
                     }}>
-                      <Text style={{ fontSize: 10, fontWeight: '600', color: isDark ? Accent.peach : Colors.primary }}>
+                      <Text style={{ fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? Accent.peach : Colors.primary }}>
                         tap to add
                       </Text>
                     </View>
@@ -304,7 +304,7 @@ export default function AddItemModal({
                             {getItemEmoji(suggestion)}
                           </Text>
                           <Text
-                            style={{ fontSize: 13, fontWeight: '600', color: textColor }}
+                            style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: textColor }}
                             numberOfLines={1}
                           >
                             {suggestion}
@@ -358,7 +358,7 @@ export default function AddItemModal({
                   alignSelf: 'flex-start',
                 }}>
                   <Icon name={Icons.INFO} size={14} color={isDark ? Accent.sky : '#1565C0'} accessibilityLabel="Info" style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? Accent.sky : '#1565C0' }}>
+                  <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? Accent.sky : '#1565C0' }}>
                     {parsedItems.length} items detected — tap Add to add all
                   </Text>
                 </View>
@@ -393,7 +393,7 @@ export default function AddItemModal({
                       marginLeft: 4,
                       marginBottom: 8,
                     }}>
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? Accent.sage : '#2E7D32' }}>
+                      <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? Accent.sage : '#2E7D32' }}>
                         usually {usuallyBuyHint}
                       </Text>
                     </View>
@@ -406,7 +406,7 @@ export default function AddItemModal({
               {/* Quantity Suggestions */}
               {state.quantitySuggestions.length > 0 && (
                 <View style={{ marginBottom: 16 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 8 }}>
                     Suggested from meal plan:
                   </Text>
                   <View className="flex-row flex-wrap" style={{ gap: 8 }}>
@@ -425,7 +425,7 @@ export default function AddItemModal({
                         }, Shadows.SM]}
                       >
                         <Text
-                          style={{ fontSize: 13, fontWeight: '600', color: isDark ? Accent.peach : Colors.primary }}
+                          style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? Accent.peach : Colors.primary }}
                         >
                           {suggestion}
                         </Text>
@@ -497,7 +497,7 @@ export default function AddItemModal({
                       style={{ marginRight: 8 }}
                     />
                     <Text
-                      style={{ fontWeight: '700', fontSize: 14, color: isDark ? Accent.sky : '#1565C0' }}
+                      style={{ fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: isDark ? Accent.sky : '#1565C0' }}
                     >
                       Reorder Last Week
                     </Text>
@@ -507,7 +507,7 @@ export default function AddItemModal({
                   {favorites.length > 0 && (
                     <View style={{ marginBottom: 16 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E5E7EB' : Colors.text.primary }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#E5E7EB' : Colors.text.primary }}>
                           Favorites
                         </Text>
                         <Text style={{ fontSize: 16, marginLeft: 4 }}>⭐</Text>
@@ -535,7 +535,7 @@ export default function AddItemModal({
                               style={{ marginRight: 5 }}
                             />
                             <Text
-                              style={{ fontSize: 13, fontWeight: '600', color: isDark ? Accent.golden : '#92400E' }}
+                              style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? Accent.golden : '#92400E' }}
                               numberOfLines={1}
                             >
                               {formatItemName(item.itemName)}
@@ -555,7 +555,7 @@ export default function AddItemModal({
                   {frequent.length > 0 && (
                     <View style={{ marginBottom: 16 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E5E7EB' : Colors.text.primary }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#E5E7EB' : Colors.text.primary }}>
                           Frequently Bought
                         </Text>
                         <Text style={{ fontSize: 16, marginLeft: 4 }}>🔄</Text>
@@ -576,7 +576,7 @@ export default function AddItemModal({
                             }, Shadows.SM]}
                           >
                             <Text
-                              style={{ fontSize: 13, fontWeight: '600', color: isDark ? Accent.lavender : '#6A1B9A' }}
+                              style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? Accent.lavender : '#6A1B9A' }}
                               numberOfLines={1}
                             >
                               {formatItemName(item.itemName)}
@@ -594,7 +594,7 @@ export default function AddItemModal({
                                 paddingVertical: 1,
                                 marginLeft: 4,
                               }}>
-                                <Text style={{ fontSize: 10, fontWeight: '700', color: isDark ? Accent.lavender : '#6A1B9A' }}>
+                                <Text style={{ fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? Accent.lavender : '#6A1B9A' }}>
                                   x{item.purchaseCount}
                                 </Text>
                               </View>
@@ -636,7 +636,7 @@ export default function AddItemModal({
               ) : (
                 <View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E5E7EB' : Colors.text.primary }}>
+                    <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#E5E7EB' : Colors.text.primary }}>
                       My Pantry
                     </Text>
                     <View style={{
@@ -646,7 +646,7 @@ export default function AddItemModal({
                       paddingVertical: 2,
                       marginLeft: 8,
                     }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: isDark ? Accent.sage : '#2E7D32' }}>
+                      <Text style={{ fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? Accent.sage : '#2E7D32' }}>
                         {state.pantryItems.length} items
                       </Text>
                     </View>
@@ -666,7 +666,7 @@ export default function AddItemModal({
                         }, Shadows.SM]}
                       >
                         <Text
-                          style={{ fontSize: 13, fontWeight: '600', color: isDark ? Accent.sage : '#2E7D32' }}
+                          style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? Accent.sage : '#2E7D32' }}
                           numberOfLines={1}
                         >
                           {formatItemName(item.name)}
@@ -709,7 +709,7 @@ export default function AddItemModal({
                 <Text
                   style={{
                     color: isDark ? Accent.peach : '#C46200',
-                    fontWeight: '700',
+                    fontFamily: 'PlusJakartaSans_700Bold',
                     fontSize: 15,
                   }}
                 >
@@ -767,7 +767,7 @@ export default function AddItemModal({
                     marginLeft: 4,
                   }}
                 >
-                  <Text style={{ fontSize: 12, color: isDark ? Accent.sage : '#2E7D32', fontWeight: '600' }}>
+                  <Text style={{ fontSize: 12, color: isDark ? Accent.sage : '#2E7D32', fontFamily: 'PlusJakartaSans_600SemiBold' }}>
                     Was ${editItemLastPrice.toFixed(2)} last time
                   </Text>
                 </View>
@@ -826,7 +826,7 @@ export default function AddItemModal({
                   ) : (
                     <Icon name={Icons.CAMERA_OUTLINE} size={IconSizes.MD} color={isDark ? Accent.sky : '#1565C0'} accessibilityLabel="Add photo" />
                   )}
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? Accent.sky : '#1565C0' }}>
+                  <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? Accent.sky : '#1565C0' }}>
                     {state.editingPhotoUrl ? 'Change Photo' : 'Add Photo'}
                   </Text>
                 </HapticTouchableOpacity>

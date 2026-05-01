@@ -105,7 +105,7 @@ export default function QuickFilterChips({
               <Text
                 style={{
                   fontSize: 13,
-                  fontWeight: '600',
+                  fontFamily: 'PlusJakartaSans_600SemiBold',
                   color: isActive ? activeTextColor : (isDark ? '#D1D5DB' : '#374151'),
                 }}
               >

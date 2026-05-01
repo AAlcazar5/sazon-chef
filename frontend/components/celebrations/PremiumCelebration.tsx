@@ -104,6 +104,6 @@ const styles = StyleSheet.create({
   benefitText: {
     color: '#E5E7EB',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });

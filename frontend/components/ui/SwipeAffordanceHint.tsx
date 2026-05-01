@@ -115,6 +115,6 @@ const styles = StyleSheet.create({
   tooltipText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
 });

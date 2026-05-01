@@ -114,11 +114,11 @@ const styles = StyleSheet.create({
   },
   dismissText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   heading: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     marginBottom: 4,
     marginRight: 24,
   },
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   chipText: {
     color: '#FFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });
 

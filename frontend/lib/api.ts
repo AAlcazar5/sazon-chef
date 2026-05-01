@@ -175,13 +175,18 @@ api.interceptors.response.use(
         /insufficient_quota/i.test(String(rawMessage || '')) ||
         /API quota exceeded/i.test(String(rawMessage || ''));
 
+      // AI generation failures bubble up as 500/GENERATION_ERROR — they're handled by
+      // the calling screen with a user-friendly retry dialog, so suppress the raw log.
+      const isAIGenerationError = (raw?.code === 'GENERATION_ERROR') ||
+        /failed to generate (recipe|daily meal plan)/i.test(String(rawMessage || ''));
+
       // Don't log expected user errors (bad credentials, validation, auth, not found)
       const isExpectedUserError = statusCode === 400 || statusCode === 401 || statusCode === 403 || statusCode === 404;
 
       // Network errors (no response received) are handled gracefully below — no need to log
       const isNetworkError = !error.response && !!error.request;
 
-      if (!isAlreadySaved && !isExpected404 && !isQuotaError && !isExpectedUserError && !isNetworkError) {
+      if (!isAlreadySaved && !isExpected404 && !isQuotaError && !isExpectedUserError && !isNetworkError && !isAIGenerationError) {
         console.error('❌ Response Error:', raw || error.message);
       } else if (isAlreadySaved) {
         console.log('ℹ️  Response Conflict (already saved)');

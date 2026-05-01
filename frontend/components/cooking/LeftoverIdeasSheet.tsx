@@ -108,7 +108,7 @@ function LeftoverIdeasSheet({
             <Text
               style={{
                 fontSize: FontSize.xl,
-                fontWeight: FontWeight.extrabold,
+                fontFamily: 'PlusJakartaSans_800ExtraBold',
                 color: DarkColors.text.primary,
               }}
             >
@@ -161,7 +161,7 @@ function LeftoverIdeasSheet({
                     <Text
                       style={{
                         fontSize: FontSize.md,
-                        fontWeight: FontWeight.extrabold,
+                        fontFamily: 'PlusJakartaSans_800ExtraBold',
                         color: DarkColors.text.primary,
                       }}
                       numberOfLines={1}

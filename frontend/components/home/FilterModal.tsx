@@ -166,7 +166,7 @@ export default function FilterModal({
                 <Text
                   style={{
                     fontSize: 14,
-                    fontWeight: '500',
+                    fontFamily: 'PlusJakartaSans_500Medium',
                     color: activeCravingQuery === chip.label
                       ? '#FFF'
                       : (isDark ? '#D1D5DB' : '#374151'),

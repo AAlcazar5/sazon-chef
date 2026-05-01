@@ -53,13 +53,13 @@ function CollectionChip({ label, count, isSelected, isDark, onPress }: Collectio
             end={{ x: 1, y: 0 }}
             style={{ paddingVertical: 7, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' }}
           >
-            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{label}</Text>
+            <Text style={{ color: '#fff', fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold' }}>{label}</Text>
             {count !== undefined && (
               <View style={{
                 marginLeft: 6, backgroundColor: 'rgba(255,255,255,0.3)',
                 borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1,
               }}>
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{count}</Text>
+                <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{count}</Text>
               </View>
             )}
           </LinearGradient>
@@ -70,14 +70,14 @@ function CollectionChip({ label, count, isSelected, isDark, onPress }: Collectio
             backgroundColor: isDark ? '#374151' : '#F3F4F6',
             borderRadius: 20,
           }}>
-            <Text style={{ color: isDark ? '#D1D5DB' : '#374151', fontSize: 13, fontWeight: '600' }}>{label}</Text>
+            <Text style={{ color: isDark ? '#D1D5DB' : '#374151', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{label}</Text>
             {count !== undefined && (
               <View style={{
                 marginLeft: 6,
                 backgroundColor: isDark ? '#4B5563' : '#E5E7EB',
                 borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1,
               }}>
-                <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11, fontWeight: '700' }}>{count}</Text>
+                <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold' }}>{count}</Text>
               </View>
             )}
           </View>

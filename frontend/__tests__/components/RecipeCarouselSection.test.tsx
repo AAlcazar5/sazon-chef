@@ -43,6 +43,17 @@ jest.mock('../../components/recipe/RecipeCard', () => ({
   },
 }));
 
+jest.mock('../../components/home/EditorialRecipeCard', () => ({
+  EditorialRecipeCard: function MockEditorialRecipeCard({ recipe }: any) {
+    const { Text, View } = require('react-native');
+    return (
+      <View testID={`recipe-card-${recipe.id}`}>
+        <Text testID={`recipe-title-${recipe.id}`}>{recipe.title}</Text>
+      </View>
+    );
+  },
+}));
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const makeRecipe = (id: string): SuggestedRecipe => ({

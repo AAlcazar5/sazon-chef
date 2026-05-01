@@ -315,7 +315,7 @@ export default function TabLayout() {
         tabBarSafeAreaInsets: { bottom: 0 },
         tabBarLabelStyle: {
           fontSize: FontSize.sm,
-          fontWeight: FontWeight.medium,
+          fontFamily: 'PlusJakartaSans_500Medium',
         },
       }}>
       <Tabs.Screen

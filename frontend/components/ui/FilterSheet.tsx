@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   guidanceTitle: {
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginBottom: 4,
     fontSize: 14,
   },
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   resetText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   applyButtonWrapper: {
     flex: 1,

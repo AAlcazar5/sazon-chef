@@ -58,7 +58,7 @@ function ActionBadge({ emoji, label, onPress, disabled, destructive, isDark }: A
         <Text
           style={{
             fontSize: 13,
-            fontWeight: '600',
+            fontFamily: 'PlusJakartaSans_600SemiBold',
             marginLeft: 6,
             color: destructive
               ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed)

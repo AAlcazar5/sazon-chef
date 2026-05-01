@@ -134,10 +134,10 @@ function FeaturedRecipeCarousel({
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text className="text-gray-900 dark:text-gray-100">
-            <Text style={{ fontWeight: '800', fontSize: 20 }}>
+            <Text style={{ fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 20 }}>
               {mealPrepMode ? '🍱 Meal Prep' : "Today's"}
             </Text>
-            <Text style={{ fontWeight: '400', fontSize: 20 }}>
+            <Text style={{ fontFamily: 'PlusJakartaSans_400Regular', fontSize: 20 }}>
               {mealPrepMode ? ' Recipes' : ' Recommendation'}
             </Text>
           </Text>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   pillLabel: {
     color: '#FFF',
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: 15,
     letterSpacing: 0.2,
   },

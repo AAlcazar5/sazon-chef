@@ -64,7 +64,7 @@ function MacroPill({ label, value, isDark }: { label: string; value: number; isD
       marginRight: 4,
       marginBottom: 4,
     }}>
-      <Text style={{ fontSize: 11, fontWeight: '600', color }}>{text}</Text>
+      <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color }}>{text}</Text>
     </View>
   );
 }
@@ -96,7 +96,7 @@ function ManualEntry({ isDark, onConfirm }: { isDark: boolean; onConfirm: (value
     <View style={{ marginTop: 8, marginBottom: 4 }}>
       <Text style={{
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: 'PlusJakartaSans_600SemiBold',
         color: isDark ? '#9CA3AF' : '#6B7280',
         textTransform: 'uppercase',
         letterSpacing: 0.5,
@@ -142,7 +142,7 @@ function ManualEntry({ isDark, onConfirm }: { isDark: boolean; onConfirm: (value
         >
           <Text style={{
             fontSize: 14,
-            fontWeight: '700',
+            fontFamily: 'PlusJakartaSans_700Bold',
             color: value.trim()
               ? '#FFFFFF'
               : (isDark ? '#6B7280' : '#9CA3AF'),
@@ -236,7 +236,7 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
             <Text style={{ fontSize: 24, marginBottom: 8 }}>🤔</Text>
             <Text style={{
               fontSize: 15,
-              fontWeight: '600',
+              fontFamily: 'PlusJakartaSans_600SemiBold',
               color: isDark ? DarkColors.text.primary : Colors.text.primary,
               marginBottom: 4,
             }}>
@@ -273,7 +273,7 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
                 {/* Name */}
                 <Text style={{
                   fontSize: 16,
-                  fontWeight: '700',
+                  fontFamily: 'PlusJakartaSans_700Bold',
                   color: isDark ? DarkColors.text.primary : Colors.text.primary,
                   marginBottom: 4,
                 }}>
@@ -305,7 +305,7 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
                     fontSize: 11,
                     color: isDark ? '#60A5FA' : '#3B82F6',
                     marginTop: 6,
-                    fontWeight: '500',
+                    fontFamily: 'PlusJakartaSans_500Medium',
                   }}>
                     {swap.ratioNote}
                   </Text>
@@ -344,7 +344,7 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
             <View style={{ flex: 1 }}>
               <Text style={{
                 fontSize: 15,
-                fontWeight: '600',
+                fontFamily: 'PlusJakartaSans_600SemiBold',
                 color: isDark ? '#FFB74D' : '#EA580C',
               }}>
                 I don't have this

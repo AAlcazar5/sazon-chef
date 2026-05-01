@@ -74,7 +74,7 @@ function DailyMacroTrend({
     <View style={{ marginTop: 16 }}>
       <Text style={{
         fontSize: FontSize.sm,
-        fontWeight: FontWeight.semibold,
+        fontFamily: 'PlusJakartaSans_600SemiBold',
         color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
         marginBottom: 8,
       }}>
@@ -137,7 +137,7 @@ function DailyMacroTrend({
                 width: barWidth + barGap,
                 textAlign: 'center',
                 fontSize: 9,
-                fontWeight: '600',
+                fontFamily: 'PlusJakartaSans_600SemiBold',
                 color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary,
               }}
             >
@@ -177,7 +177,7 @@ export default function WeeklyNutritionSummary({
 
   return (
     <View className="px-4 mb-4">
-      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 12 }}>
+      <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 12 }}>
         Weekly Nutrition Summary
       </Text>
       <View style={[{
@@ -215,7 +215,7 @@ export default function WeeklyNutritionSummary({
 
         {/* Macro Breakdown — pastel bars */}
         <View className="mb-2">
-          <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: isDark ? DarkColors.text.secondary : Colors.text.secondary, marginBottom: 10 }}>
+          <Text style={{ fontSize: FontSize.sm, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? DarkColors.text.secondary : Colors.text.secondary, marginBottom: 10 }}>
             Macro Breakdown
           </Text>
           <View className="flex-row justify-between space-x-2">
@@ -240,7 +240,7 @@ export default function WeeklyNutritionSummary({
                       borderRadius: 6,
                     }} />
                   </View>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: cfg.accent }}>
+                  <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: cfg.accent }}>
                     {total.toFixed(0)}g
                   </Text>
                   <Text className="text-xs text-gray-500 dark:text-gray-400">{cfg.label}</Text>

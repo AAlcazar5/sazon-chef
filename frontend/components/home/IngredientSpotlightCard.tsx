@@ -72,7 +72,7 @@ export default function IngredientSpotlightCard({ onSearch }: IngredientSpotligh
                   paddingVertical: 3,
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#6EE7B7' : '#065F46' }}>
+                <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#6EE7B7' : '#065F46' }}>
                   High fiber
                 </Text>
               </View>
@@ -86,7 +86,7 @@ export default function IngredientSpotlightCard({ onSearch }: IngredientSpotligh
                   paddingVertical: 3,
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#93C5FD' : '#1E40AF' }}>
+                <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#93C5FD' : '#1E40AF' }}>
                   Rich in Omega-3s
                 </Text>
               </View>

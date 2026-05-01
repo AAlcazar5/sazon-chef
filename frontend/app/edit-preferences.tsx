@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useColorScheme } from 'nativewind';
 import { userApi } from '../lib/api';
+import { DEFAULT_MEAL_HOURS, formatHour12, getMealHours, setMealHours, type MealHours } from '../lib/mealHourPrefs';
 import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
 import { Colors, DarkColors } from '../constants/Colors';
 import { getCategoryColor } from '../constants/CategoryColors';
@@ -80,7 +81,7 @@ function CuisineChip({
         }}
       >
         <Text style={{ fontSize: 15 }}>{item.emoji}</Text>
-        <Text style={{ fontSize: 13, fontWeight: '500', color: isSelected ? (isDark ? catColor.textDark : catColor.text) : (isDark ? '#D1D5DB' : '#374151') }}>
+        <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: isSelected ? (isDark ? catColor.textDark : catColor.text) : (isDark ? '#D1D5DB' : '#374151') }}>
           {item.label}
         </Text>
         {isSelected && <Ionicons name="checkmark" size={13} color={isDark ? catColor.textDark : catColor.text} />}
@@ -104,6 +105,7 @@ export default function EditPreferencesScreen() {
   const [preferredSuperfoods, setPreferredSuperfoods] = useState<string[]>([]);
   const [cookTimePreference, setCookTimePreference] = useState('30');
   const [spiceLevel, setSpiceLevel] = useState('medium');
+  const [mealHours, setMealHoursLocal] = useState<MealHours>(DEFAULT_MEAL_HOURS);
 
   useEffect(() => {
     loadPreferences();
@@ -139,6 +141,9 @@ export default function EditPreferencesScreen() {
       );
       setCookTimePreference(prefs.cookTimePreference?.toString() || '30');
       setSpiceLevel(prefs.spiceLevel || 'medium');
+
+      const storedMealHours = await getMealHours();
+      setMealHoursLocal(storedMealHours);
     } catch (error: any) {
       HapticPatterns.error();
       Alert.alert('Oops!', error.message || 'Couldn\'t load your preferences — try again?');
@@ -214,6 +219,7 @@ export default function EditPreferencesScreen() {
         cookTimePreference: cookTime,
         spiceLevel,
       });
+      await setMealHours(mealHours);
       HapticPatterns.success();
       Alert.alert('Success', 'Preferences updated successfully!');
       router.back();
@@ -252,9 +258,9 @@ export default function EditPreferencesScreen() {
           <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
             <Ionicons name="arrow-back" size={24} color={label} />
           </HapticTouchableOpacity>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: label }}>Culinary Preferences</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: label }}>Culinary Preferences</Text>
           <HapticTouchableOpacity onPress={handleSave} disabled={loading} style={{ padding: 4 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: loading ? sub : primaryColor }}>
+            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_600SemiBold', color: loading ? sub : primaryColor }}>
               {loading ? 'Saving…' : 'Save'}
             </Text>
           </HapticTouchableOpacity>
@@ -268,7 +274,7 @@ export default function EditPreferencesScreen() {
         >
           {/* ── Cuisine Preferences ─────────────────────────────────────────── */}
           <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Favorite Cuisines</Text>
+            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: label, marginBottom: 4 }}>Favorite Cuisines</Text>
             <Text style={{ fontSize: 13, color: sub, marginBottom: 14 }}>Recipes from these cuisines will be ranked higher for you</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {CUISINE_OPTIONS.map(cuisine => (
@@ -285,7 +291,7 @@ export default function EditPreferencesScreen() {
 
           {/* ── Dietary Restrictions ────────────────────────────────────────── */}
           <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Dietary Restrictions</Text>
+            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: label, marginBottom: 4 }}>Dietary Restrictions</Text>
             <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Select any that apply, then tap the badge to set how strict it is</Text>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -348,7 +354,7 @@ export default function EditPreferencesScreen() {
                       {showDivider && (
                         <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginTop: 4, gap: 8 }}>
                           <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#4B5563' : '#D1D5DB' }} />
-                          <Text style={{ fontSize: 10, color: sub, fontWeight: '500' }}>Nice to have</Text>
+                          <Text style={{ fontSize: 10, color: sub, fontFamily: 'PlusJakartaSans_500Medium' }}>Nice to have</Text>
                           <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#4B5563' : '#D1D5DB' }} />
                         </View>
                       )}
@@ -380,7 +386,7 @@ export default function EditPreferencesScreen() {
                             style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: chipPaddingV, borderLeftWidth: 1, borderLeftColor: chipBorderColor, gap: 3 }}
                           >
                             <Text style={{ fontSize: 11 }}>{isAllergic ? '🚫' : '⚠️'}</Text>
-                            <Text style={{ fontSize: 10, fontWeight: '600', color: chipTextColor }}>
+                            <Text style={{ fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', color: chipTextColor }}>
                               {isAllergic ? "Allergic" : "Avoid"}
                             </Text>
                           </HapticTouchableOpacity>
@@ -401,7 +407,7 @@ export default function EditPreferencesScreen() {
 
           {/* ── Banned Ingredients ──────────────────────────────────────────── */}
           <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Banned Ingredients</Text>
+            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: label, marginBottom: 4 }}>Banned Ingredients</Text>
             <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Recipes containing these will never be recommended</Text>
 
             <View style={{ flexDirection: 'row', marginBottom: 12, gap: 8 }}>
@@ -441,7 +447,7 @@ export default function EditPreferencesScreen() {
 
           {/* ── Preferred Superfoods ─────────────────────────────────────────── */}
           <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 4 }}>Preferred Superfoods</Text>
+            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: label, marginBottom: 4 }}>Preferred Superfoods</Text>
             <Text style={{ fontSize: 13, color: sub, marginBottom: 12 }}>Recipes with these get a boost in your recommendations</Text>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -454,7 +460,7 @@ export default function EditPreferencesScreen() {
                     style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 100, marginRight: 8, marginBottom: 8, gap: 4, backgroundColor: isSelected ? (isDark ? '#166534' : '#16A34A') : (isDark ? '#374151' : '#E5E7EB') }}
                   >
                     {superfood.emoji && <Text style={{ fontSize: 14 }}>{superfood.emoji}</Text>}
-                    <Text style={{ fontSize: 12, fontWeight: '500', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>
+                    <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>
                       {superfood.name}
                     </Text>
                   </HapticTouchableOpacity>
@@ -465,11 +471,11 @@ export default function EditPreferencesScreen() {
 
           {/* ── Other Preferences ───────────────────────────────────────────── */}
           <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: label, marginBottom: 14 }}>Other Preferences</Text>
+            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: label, marginBottom: 14 }}>Other Preferences</Text>
 
             {/* Cook Time */}
             <View style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: label, marginBottom: 6 }}>Max Cook Time (minutes)</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: label, marginBottom: 6 }}>Max Cook Time (minutes)</Text>
               <TextInput
                 value={cookTimePreference}
                 onChangeText={setCookTimePreference}
@@ -481,9 +487,44 @@ export default function EditPreferencesScreen() {
               <Text style={{ fontSize: 11, color: sub, marginTop: 4 }}>Recipes longer than this won't be recommended</Text>
             </View>
 
+            {/* Auto-Plan Meal Times */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: label, marginBottom: 4 }}>
+                Auto-Plan Meal Times
+              </Text>
+              <Text style={{ fontSize: 11, color: sub, marginBottom: 10 }}>
+                When auto-planned meals appear in the timeline (24-hour, 0–23).
+              </Text>
+              {(['breakfast', 'lunch', 'snack', 'dinner'] as const).map((key) => {
+                const value = mealHours[key];
+                return (
+                  <View key={key} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={{ flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: label, textTransform: 'capitalize' }}>
+                      {key}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: sub, marginRight: 8 }}>
+                      {formatHour12(value)}
+                    </Text>
+                    <TextInput
+                      value={String(value)}
+                      onChangeText={(t) => {
+                        const n = parseInt(t.replace(/[^0-9]/g, ''), 10);
+                        const clamped = Number.isFinite(n) ? Math.min(23, Math.max(0, n)) : DEFAULT_MEAL_HOURS[key];
+                        setMealHoursLocal((prev) => ({ ...prev, [key]: clamped }));
+                      }}
+                      keyboardType="numeric"
+                      maxLength={2}
+                      style={{ width: 56, backgroundColor: inputBg, borderRadius: 9, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, color: label, textAlign: 'center', ...Shadows.SM }}
+                      placeholderTextColor={sub}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+
             {/* Spice Level */}
             <View>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: label, marginBottom: 8 }}>Spice Preference</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: label, marginBottom: 8 }}>Spice Preference</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {SPICE_LEVELS.map((level) => {
                   const isSelected = spiceLevel === level;
@@ -493,7 +534,7 @@ export default function EditPreferencesScreen() {
                       onPress={() => setSpiceLevel(level)}
                       style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: isSelected ? primaryColor : (isDark ? '#374151' : '#E5E7EB') }}
                     >
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>
+                      <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>
                         {level === 'mild' ? '🌶 Mild' : level === 'medium' ? '🌶🌶 Medium' : '🌶🌶🌶 Spicy'}
                       </Text>
                     </HapticTouchableOpacity>

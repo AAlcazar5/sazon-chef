@@ -80,6 +80,6 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });

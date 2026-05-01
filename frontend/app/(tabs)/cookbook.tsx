@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, Alert, TextInput, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import LoadingState from '../../components/ui/LoadingState';
@@ -47,6 +48,8 @@ import {
   SmartCollectionCard,
   CollectionStatsBar,
   CollectionSuggestionBanner,
+  MostCookedHero,
+  RecentlySavedSection,
   type CookbookFilters,
   type CollectionSortMode,
 } from '../../components/cookbook';
@@ -533,6 +536,39 @@ export default function CookbookScreen() {
     () => filteredAndSortedRecipes.slice(0, visibleCount),
     [filteredAndSortedRecipes, visibleCount],
   );
+
+  // Editorial header derivations — most-cooked + recently-saved
+  const mostCookedRecipe = useMemo(() => {
+    if (!allRecipes || allRecipes.length === 0) return null;
+    let best: SavedRecipe | null = null;
+    for (const r of allRecipes) {
+      const count = r.cookCount ?? 0;
+      if (count > 0 && (!best || count > (best.cookCount ?? 0))) best = r;
+    }
+    return best;
+  }, [allRecipes]);
+
+  const recentlySavedRecipes = useMemo(() => {
+    if (!allRecipes || allRecipes.length === 0) return [];
+    return [...allRecipes]
+      .sort((a, b) => {
+        const ad = a.savedDate ? new Date(a.savedDate).getTime() : 0;
+        const bd = b.savedDate ? new Date(b.savedDate).getTime() : 0;
+        return bd - ad;
+      })
+      .slice(0, 8)
+      .map((r) => ({ id: r.id, title: r.title, imageUrl: r.imageUrl }));
+  }, [allRecipes]);
+
+  const mostCookedAccent = useMemo(() => {
+    const title = mostCookedRecipe?.title ?? '';
+    if (!title) return '';
+    // Prefer phrase after a connector word ("with", "in", "and")
+    const m = title.match(/\s(with|in|and|over|on)\s.+$/i);
+    if (m) return m[0].trim();
+    const parts = title.split(/\s+/);
+    return parts.length > 1 ? parts.slice(-1).join(' ') : title;
+  }, [mostCookedRecipe]);
 
   // Keep `savedRecipes` in sync with visible slice (used by rendering + stats widgets)
   useEffect(() => {
@@ -1061,7 +1097,7 @@ export default function CookbookScreen() {
   if (cacheLoading && savedRecipes.length === 0 && allRecipes.length === 0) {
     return (
       <ScreenGradient><View style={{ flex: 1 }}>
-        <CookbookHeader onFilterPress={() => {}} />
+        <CookbookHeader />
         <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           <Text className="text-gray-500 dark:text-gray-200">Loading saved recipes...</Text>
         </View>
@@ -1074,7 +1110,7 @@ export default function CookbookScreen() {
   if (isOffline && allRecipes.length === 0 && !cacheLoading) {
     return (
       <ScreenGradient><View style={{ flex: 1 }}>
-        <CookbookHeader onFilterPress={() => {}} />
+        <CookbookHeader />
         <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           <Text className="text-gray-500 dark:text-gray-200">No cached recipes available</Text>
         </View>
@@ -1094,12 +1130,7 @@ export default function CookbookScreen() {
   return (
     <ScreenGradient>
     <View style={{ flex: 1 }}>
-      {/* Header: title + import icon + animated Filters button */}
-      <CookbookHeader
-        onFilterPress={() => setShowFilterModal(true)}
-        activeFilterCount={cookbookActiveFilterCount}
-        onImportPress={() => setShowImportModal(true)}
-      />
+      <CookbookHeader />
 
       {/* Offline / sync status banner */}
       <OfflineBanner
@@ -1286,7 +1317,7 @@ export default function CookbookScreen() {
             if (filtered.length === 0 && !showWeather) return null;
             return (
               <>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, marginBottom: 10, textTransform: 'uppercase' }}>
+                <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, marginBottom: 10, textTransform: 'uppercase' }}>
                   Smart Collections
                 </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
@@ -1391,7 +1422,7 @@ export default function CookbookScreen() {
                     </View>
                   )}
                   <View style={{ padding: 12 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }} numberOfLines={2}>
+                    <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#F9FAFB' : '#111827' }} numberOfLines={2}>
                       {col.name}
                     </Text>
                     <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 4 }}>
@@ -1418,7 +1449,7 @@ export default function CookbookScreen() {
                         style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}
                       >
                         <Text style={{ fontSize: 13, marginRight: 6 }}>{section.emoji}</Text>
-                        <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                        <Text style={{ flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, textTransform: 'uppercase' }}>
                           {section.label}
                         </Text>
                         <Text style={{ fontSize: 12, color: isDark ? '#6B7280' : '#9CA3AF', marginRight: 4 }}>
@@ -1528,6 +1559,25 @@ export default function CookbookScreen() {
             }
             showsVerticalScrollIndicator={true}
           >
+          {/* Most-cooked editorial hero */}
+          {!selectedListId && mostCookedRecipe && mostCookedAccent && (
+            <MostCookedHero
+              title={mostCookedRecipe.title}
+              accentWord={mostCookedAccent}
+              imageUrl={mostCookedRecipe.imageUrl}
+              cookCount={mostCookedRecipe.cookCount ?? 0}
+            />
+          )}
+
+          {/* Recently saved editorial rail */}
+          {!selectedListId && recentlySavedRecipes.length > 0 && (
+            <RecentlySavedSection
+              recipes={recentlySavedRecipes}
+              onSort={() => setShowSortPicker(true)}
+              onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
+            />
+          )}
+
           {/* Stats bar — shown when a collection filter is active */}
           {selectedListId && viewMode === 'saved' && filteredAndSortedRecipes.length > 0 && (
             <CollectionStatsBar recipes={filteredAndSortedRecipes} />
@@ -1556,7 +1606,7 @@ export default function CookbookScreen() {
                 </HapticTouchableOpacity>
                 <Text
                   numberOfLines={1}
-                  style={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginHorizontal: 8 }}
+                  style={{ flex: 1, textAlign: 'center', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#F9FAFB' : '#111827', marginHorizontal: 8 }}
                   accessibilityRole="header"
                 >
                   {sortedCollectionsForNav[currentCollectionNavIndex]?.name ?? ''}
@@ -1576,12 +1626,10 @@ export default function CookbookScreen() {
               </View>
             )}
 
-            {/* Recipe count + grid/list toggle */}
+            {/* Recipe count + action buttons + grid/list toggle */}
             {filteredAndSortedRecipes.length > 0 && (
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {filteredAndSortedRecipes.length} recipe{filteredAndSortedRecipes.length !== 1 ? 's' : ''}{serverHasMore ? ` (${serverTotal} total)` : ''}
-                </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                {/* Left: grid/list toggle */}
                 <View
                   className="flex-row items-center rounded-lg p-1"
                   style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }}
@@ -1591,11 +1639,7 @@ export default function CookbookScreen() {
                       key={mode}
                       onPress={() => handleToggleDisplayMode(mode)}
                       className="px-2.5 py-1 rounded"
-                      style={
-                        displayMode === mode
-                          ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary }
-                          : undefined
-                      }
+                      style={displayMode === mode ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
                     >
                       <Ionicons
                         name={mode as any}
@@ -1604,6 +1648,45 @@ export default function CookbookScreen() {
                       />
                     </HapticTouchableOpacity>
                   ))}
+                </View>
+
+                {/* Right: Import + Filters */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <HapticTouchableOpacity
+                    onPress={() => { setShowImportModal(true); HapticPatterns.buttonPress(); }}
+                    accessibilityLabel="Import recipe from URL"
+                    accessibilityRole="button"
+                    style={{ borderRadius: 100, overflow: 'hidden' }}
+                  >
+                    <LinearGradient
+                      colors={['#64B5F6', '#42A5F5']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100, gap: 5 }}
+                    >
+                      <Ionicons name="link" size={14} color="#FFF" />
+                      <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#FFF' }}>Import</Text>
+                    </LinearGradient>
+                  </HapticTouchableOpacity>
+
+                  <HapticTouchableOpacity
+                    onPress={() => { setShowFilterModal(true); HapticPatterns.buttonPress(); }}
+                    accessibilityLabel={`Filters, ${cookbookActiveFilterCount} active`}
+                    accessibilityRole="button"
+                    style={{ borderRadius: 100, overflow: 'hidden' }}
+                  >
+                    <LinearGradient
+                      colors={['#FF8B41', '#E84D3D']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100, gap: 5 }}
+                    >
+                      <Ionicons name="options" size={14} color="#FFF" />
+                      <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#FFF' }}>
+                        Filters{cookbookActiveFilterCount > 0 ? ` (${cookbookActiveFilterCount})` : ''}
+                      </Text>
+                    </LinearGradient>
+                  </HapticTouchableOpacity>
                 </View>
               </View>
             )}
@@ -1676,8 +1759,6 @@ export default function CookbookScreen() {
             viewMode={viewMode}
           />
 
-          {/* Spacer to clear the absolutely-positioned tab bar + search bar */}
-          <View style={{ height: 60 + 72 + insets.bottom + 140 }} />
         </ScrollView>
       ) : null}
 

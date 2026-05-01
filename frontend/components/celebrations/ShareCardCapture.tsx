@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   infoBar: {
     flex: 1,
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     lineHeight: 28,
     marginBottom: 8,
   },
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   macroText: {
     color: '#E5E7EB',
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   watermark: {
     flexDirection: 'row',
@@ -191,6 +191,6 @@ const styles = StyleSheet.create({
   watermarkText: {
     color: '#9CA3AF',
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });

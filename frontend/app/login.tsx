@@ -209,7 +209,7 @@ export default function LoginScreen() {
               >
                 <Text style={{
                   fontSize: FontSize['3xl'],
-                  fontWeight: FontWeight.extrabold,
+                  fontFamily: 'PlusJakartaSans_800ExtraBold',
                   color: isDark ? DarkColors.text.primary : Colors.primary,
                   textAlign: 'center',
                   marginBottom: 4,
@@ -313,7 +313,7 @@ export default function LoginScreen() {
                     <Text style={{
                       color: isDark ? '#F87171' : Colors.primary,
                       fontSize: FontSize.sm,
-                      fontWeight: FontWeight.semibold,
+                      fontFamily: 'PlusJakartaSans_600SemiBold',
                     }}>
                       Forgot Password?
                     </Text>
@@ -366,7 +366,7 @@ export default function LoginScreen() {
                     <Text style={{
                       marginLeft: 10,
                       fontSize: FontSize.md,
-                      fontWeight: FontWeight.semibold,
+                      fontFamily: 'PlusJakartaSans_600SemiBold',
                       color: isDark ? DarkColors.text.primary : Colors.text.primary,
                     }}>
                       Continue with Google
@@ -393,7 +393,7 @@ export default function LoginScreen() {
                     <Text style={{
                       marginLeft: 10,
                       fontSize: FontSize.md,
-                      fontWeight: FontWeight.semibold,
+                      fontFamily: 'PlusJakartaSans_600SemiBold',
                       color: isDark ? DarkColors.text.primary : Colors.text.primary,
                     }}>
                       Continue with Apple
@@ -419,7 +419,7 @@ export default function LoginScreen() {
                     <Text style={{
                       color: isDark ? '#F87171' : Colors.primary,
                       fontSize: FontSize.sm,
-                      fontWeight: FontWeight.semibold,
+                      fontFamily: 'PlusJakartaSans_600SemiBold',
                     }}>
                       Sign Up
                     </Text>

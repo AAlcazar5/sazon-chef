@@ -165,7 +165,7 @@ export default function CollectionEditModal({
                           backgroundColor: category === null ? (isDark ? `${DarkColors.primary}22` : `${Colors.primary}15`) : 'transparent',
                         }}
                       >
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: category === null ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280') }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: category === null ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280') }}>
                           None
                         </Text>
                       </HapticTouchableOpacity>
@@ -183,7 +183,7 @@ export default function CollectionEditModal({
                           }}
                         >
                           <Text style={{ fontSize: 13 }}>{opt.emoji}</Text>
-                          <Text style={{ fontSize: 13, fontWeight: '600', color: category === opt.value ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280') }}>
+                          <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: category === opt.value ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280') }}>
                             {opt.label}
                           </Text>
                         </HapticTouchableOpacity>

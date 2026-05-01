@@ -79,12 +79,14 @@ export default function ShoppingListHeader({
       label: 'Edit List Name',
       icon: 'create-outline',
       onPress: onEditName,
+      tint: 'sky',
     });
 
     overflowItems.push({
       label: 'Create New List',
       icon: 'add-circle-outline',
       onPress: onCreateList,
+      tint: 'sage',
     });
 
     if (state.shoppingLists.length > 1) {
@@ -92,6 +94,7 @@ export default function ShoppingListHeader({
         label: 'Merge Lists',
         icon: 'git-merge-outline',
         onPress: () => dispatch({ type: 'UPDATE', payload: { showMergeModal: true } }),
+        tint: 'lavender',
       });
     }
 
@@ -101,6 +104,7 @@ export default function ShoppingListHeader({
           label: state.hidePurchased ? 'Show Purchased Items ✓' : 'Hide Purchased Items',
           icon: state.hidePurchased ? 'eye-outline' : 'eye-off-outline',
           onPress: onToggleHidePurchased,
+          tint: 'golden',
         });
       }
 
@@ -109,6 +113,7 @@ export default function ShoppingListHeader({
           label: state.groupByRecipe ? 'Group by Recipe ✓' : 'Group by Recipe',
           icon: 'restaurant-outline',
           onPress: onToggleGroupByRecipe,
+          tint: 'peach',
         });
       }
 
@@ -116,6 +121,7 @@ export default function ShoppingListHeader({
         label: state.inStoreMode ? 'In-Store Mode ✓' : 'In-Store Mode',
         icon: 'storefront-outline',
         onPress: onToggleInStoreMode,
+        tint: 'blush',
       });
 
       if (state.showUndoButton) {
@@ -123,12 +129,14 @@ export default function ShoppingListHeader({
           label: 'Undo Mark All Complete',
           icon: 'arrow-undo-outline',
           onPress: onUndoMarkAllComplete,
+          tint: 'sky',
         });
       } else if (!allPurchased) {
         overflowItems.push({
           label: 'Mark All Complete',
           icon: 'checkmark-done-outline',
           onPress: onMarkAllComplete,
+          tint: 'sage',
         });
       }
     }
@@ -144,15 +152,8 @@ export default function ShoppingListHeader({
 
   return (
     <>
-      {/* Page Title + List Selector */}
-      <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }, Shadows.SM]}>
-        <View className="flex-row items-center justify-between" style={{ height: 28, marginBottom: 12 }}>
-          <View className="flex-row items-center flex-1">
-            <Text className="text-2xl mr-2" style={{ lineHeight: 28 }}>🛒</Text>
-            <Text className="text-2xl font-extrabold text-gray-900 dark:text-gray-100" accessibilityRole="header" style={{ lineHeight: 28 }}>Shopping</Text>
-          </View>
-        </View>
-
+      {/* List Selector — editorial title lives in screen, not header */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12, backgroundColor: 'transparent' }}>
         <View className="flex-row items-center" style={{ gap: 10 }}>
           {/* List Picker Dropdown */}
           <HapticTouchableOpacity
@@ -180,7 +181,7 @@ export default function ShoppingListHeader({
               }}>
                 <Icon name={Icons.SHOPPING_LIST_OUTLINE} size={IconSizes.SM} color={isDark ? Accent.peach : Colors.primary} accessibilityLabel="Shopping list" />
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#F3F4F6' : Colors.text.primary, flex: 1 }} numberOfLines={1}>
+              <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#F3F4F6' : Colors.text.primary, flex: 1 }} numberOfLines={1}>
                 {state.selectedList?.name || 'Select a list'}
               </Text>
             </View>
@@ -273,7 +274,7 @@ export default function ShoppingListHeader({
                 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontSize: 22, marginRight: 8 }}>📋</Text>
-                    <Text style={{ fontSize: 19, fontWeight: '800', color: isDark ? '#F3F4F6' : Colors.text.primary }}>Pick a list</Text>
+                    <Text style={{ fontSize: 19, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? '#F3F4F6' : Colors.text.primary }}>Pick a list</Text>
                   </View>
                 </View>
 
@@ -336,7 +337,7 @@ export default function ShoppingListHeader({
                             paddingHorizontal: 8,
                             paddingVertical: 2,
                           }}>
-                            <Text style={{ fontSize: 10, fontWeight: '700', color: isDark ? Accent.peach : Colors.primary }}>
+                            <Text style={{ fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? Accent.peach : Colors.primary }}>
                               Active
                             </Text>
                           </View>
@@ -405,7 +406,7 @@ export default function ShoppingListHeader({
               borderTopRightRadius: BorderRadius['2xl'],
             }} />
 
-            <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#F3F4F6' : Colors.text.primary, marginBottom: 4, marginTop: 4 }}>
+            <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? '#F3F4F6' : Colors.text.primary, marginBottom: 4, marginTop: 4 }}>
               New list
             </Text>
             <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 16 }}>
@@ -489,7 +490,7 @@ export default function ShoppingListHeader({
               borderTopRightRadius: BorderRadius['2xl'],
             }} />
 
-            <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#F3F4F6' : Colors.text.primary, marginBottom: 16, marginTop: 4 }}>
+            <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? '#F3F4F6' : Colors.text.primary, marginBottom: 16, marginTop: 4 }}>
               Rename list
             </Text>
 

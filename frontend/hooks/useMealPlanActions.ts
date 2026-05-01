@@ -1294,27 +1294,150 @@ export function useMealPlanActions({
       const hasLunch = hourlyMeals[mealTypeToHour.lunch]?.length > 0;
       const hasDinner = hourlyMeals[mealTypeToHour.dinner]?.length > 0;
       const hasSnack = hourlyMeals[mealTypeToHour.snack]?.length > 0;
+      const hasDessert = mealTypeToHour.dessert != null
+        ? hourlyMeals[mealTypeToHour.dessert]?.length > 0
+        : false;
 
-      const mealsToGenerate: string[] = [];
-      if (!hasBreakfast) mealsToGenerate.push('breakfast');
-      if (!hasLunch) mealsToGenerate.push('lunch');
-      if (!hasDinner) mealsToGenerate.push('dinner');
-      if (!hasSnack) mealsToGenerate.push('snack');
+      const missing: string[] = [];
+      if (!hasBreakfast) missing.push('breakfast');
+      if (!hasLunch) missing.push('lunch');
+      if (!hasDinner) missing.push('dinner');
+      if (!hasSnack) missing.push('snack');
+      if (mealTypeToHour.dessert != null && !hasDessert) missing.push('dessert');
 
-      if (mealsToGenerate.length === 0) {
+      if (missing.length === 0) {
         Alert.alert('All Meals Planned', 'You already have all meals planned for today!');
         setGeneratingPlan(false);
         return;
       }
 
+      // Always lead with a snack (or dessert) so the auto-plan guarantees a
+      // light/fun option, even when the slice below trims long lists.
+      const lightOption = missing.find((m) => m === 'snack' || m === 'dessert');
+      const remainder = missing.filter((m) => m !== lightOption);
+      const mealsToGenerate = lightOption ? [lightOption, ...remainder] : remainder;
+
       // Automatically determine how many meals to generate based on remaining calories
       // Average meal is about 400-600 calories, so estimate needed meals
       const avgCaloriesPerMeal = 500;
       const estimatedMealsNeeded = Math.max(1, Math.round(remainingMacros.calories / avgCaloriesPerMeal));
-      const mealCount = Math.min(estimatedMealsNeeded, mealsToGenerate.length);
+      // Always plan at least the light option + 1 more if available
+      const minCount = lightOption ? Math.min(2, mealsToGenerate.length) : 1;
+      const mealCount = Math.max(minCount, Math.min(estimatedMealsNeeded, mealsToGenerate.length));
 
-      // Limit to estimated meal count
+      // Limit to estimated meal count (snack/dessert is always first → never trimmed)
       const meals = mealsToGenerate.slice(0, mealCount).join(',');
+
+      const runGeneration = async () => {
+        setGeneratingPlan(true);
+        try {
+          const params: any = {
+            meals,
+            mealCount: mealCount,
+            useRemainingMacros: true,
+            remainingMacros: remainingMacros,
+            maxTotalPrepTime: maxTotalPrepTime,
+            maxWeeklyBudget: maxWeeklyBudget ? maxWeeklyBudget / 7 : undefined,
+          };
+
+          const response = await aiRecipeApi.generateDailyPlan(params);
+          const mealPlan = response.data.mealPlan;
+
+          // Add meals to appropriate hours (same logic as full day)
+          const newHourlyMeals = { ...hourlyMeals };
+          let totalAdded = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+
+          Object.entries(mealPlan).forEach(([mealType, recipe]: [string, any]) => {
+            if (recipe && mealTypeToHour[mealType]) {
+              const hour = mealTypeToHour[mealType];
+              newHourlyMeals[hour] = [
+                ...(newHourlyMeals[hour] || []),
+                {
+                  id: recipe.id,
+                  name: recipe.title,
+                  description: recipe.description,
+                  calories: recipe.calories,
+                  protein: recipe.protein,
+                  carbs: recipe.carbs,
+                  fat: recipe.fat,
+                  fiber: recipe.fiber,
+                  cookTime: recipe.cookTime,
+                  difficulty: recipe.difficulty,
+                  imageUrl: recipe.imageUrl,
+                },
+              ];
+              totalAdded.calories += recipe.calories;
+              totalAdded.protein += recipe.protein;
+              totalAdded.carbs += recipe.carbs;
+              totalAdded.fat += recipe.fat;
+              totalAdded.fiber += recipe.fiber || 0;
+            }
+          });
+
+          setHourlyMeals(newHourlyMeals);
+          setDailyMacros(prev => ({
+            calories: prev.calories + totalAdded.calories,
+            protein: prev.protein + totalAdded.protein,
+            carbs: prev.carbs + totalAdded.carbs,
+            fat: prev.fat + totalAdded.fat,
+            fiber: prev.fiber + totalAdded.fiber,
+          }));
+
+          const generatedCount = Object.keys(mealPlan).length;
+          setSuccessMessage({
+            title: generatedCount > 0 ? 'Meals Generated!' : "Couldn't finish your plan",
+            message: generatedCount > 0
+              ? `Sazon plated ${generatedCount} meal${generatedCount === 1 ? '' : 's'} for your day.`
+              : "Sazon couldn't generate any meals this time. Want to try again?",
+          });
+          if (generatedCount > 0) {
+            HapticPatterns.success();
+            setShowSuccessModal(true);
+          } else {
+            HapticPatterns.error();
+            Alert.alert("Couldn't finish your plan", 'Want to try again?', [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Try again', onPress: () => { void runGeneration(); } },
+            ]);
+          }
+        } catch (error: any) {
+          HapticPatterns.error();
+
+          const errorMessage = String(error?.message || error?.details || '');
+          const errorCode = String(error?.code || '');
+
+          const isQuotaError =
+            errorCode === 'insufficient_quota' ||
+            errorCode === 'HTTP_429' ||
+            /quota|429/i.test(errorMessage);
+          const isOverloadedError =
+            errorCode === 'HTTP_529' ||
+            /529|overloaded/i.test(errorMessage);
+          const isNetworkError =
+            errorCode === 'NETWORK_ERROR' ||
+            /network|offline|timeout|fetch/i.test(errorMessage);
+
+          let title = "Couldn't finish your plan";
+          let body = 'Sazon hit a snag generating your meals. Want to try again?';
+          if (isOverloadedError) {
+            title = 'Kitchen is busy';
+            body = 'Our AI is overloaded right now. Give it a moment and try again.';
+          } else if (isQuotaError) {
+            title = 'Daily limit reached';
+            body = "You've hit today's AI quota. Try again later or browse your cookbook.";
+          } else if (isNetworkError) {
+            title = "Can't reach the kitchen";
+            body = 'Check your connection and try again.';
+          }
+
+          Alert.alert(title, body, [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Try again', onPress: () => { void runGeneration(); } },
+          ]);
+        } finally {
+          setGeneratingPlan(false);
+        }
+      };
 
       Alert.alert(
         'Create Remaining Meals',
@@ -1322,109 +1445,19 @@ export function useMealPlanActions({
         `Remaining: ${remainingMacros.calories} cal | ${remainingMacros.protein}g protein`,
         [
           { text: 'Cancel', style: 'cancel', onPress: () => setGeneratingPlan(false) },
-          {
-            text: 'Create',
-            onPress: async () => {
-              try {
-                const params: any = {
-                  meals,
-                  mealCount: mealCount,
-                  useRemainingMacros: true, // IMPORTANT: Use remaining macros, not full daily
-                  remainingMacros: remainingMacros, // Pass the calculated remaining macros
-                  maxTotalPrepTime: maxTotalPrepTime,
-                  maxWeeklyBudget: maxWeeklyBudget ? maxWeeklyBudget / 7 : undefined, // Convert weekly to daily for remaining meals
-                };
-
-                const response = await aiRecipeApi.generateDailyPlan(params);
-                const mealPlan = response.data.mealPlan;
-
-                // Add meals to appropriate hours (same logic as full day)
-                const newHourlyMeals = { ...hourlyMeals };
-                let totalAdded = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
-
-                Object.entries(mealPlan).forEach(([mealType, recipe]: [string, any]) => {
-                  if (recipe && mealTypeToHour[mealType]) {
-                    const hour = mealTypeToHour[mealType];
-                    newHourlyMeals[hour] = [
-                      ...(newHourlyMeals[hour] || []),
-                      {
-                        id: recipe.id,
-                        name: recipe.title,
-                        description: recipe.description,
-                        calories: recipe.calories,
-                        protein: recipe.protein,
-                        carbs: recipe.carbs,
-                        fat: recipe.fat,
-                        fiber: recipe.fiber,
-                        cookTime: recipe.cookTime,
-                        difficulty: recipe.difficulty,
-                        imageUrl: recipe.imageUrl,
-                      },
-                    ];
-                    totalAdded.calories += recipe.calories;
-                    totalAdded.protein += recipe.protein;
-                    totalAdded.carbs += recipe.carbs;
-                    totalAdded.fat += recipe.fat;
-                    totalAdded.fiber += recipe.fiber || 0;
-                  }
-                });
-
-                setHourlyMeals(newHourlyMeals);
-
-                // Update daily macros
-                setDailyMacros(prev => ({
-                  calories: prev.calories + totalAdded.calories,
-                  protein: prev.protein + totalAdded.protein,
-                  carbs: prev.carbs + totalAdded.carbs,
-                  fat: prev.fat + totalAdded.fat,
-                  fiber: prev.fiber + totalAdded.fiber,
-                }));
-
-                setSuccessMessage({
-                  title: 'Meals Generated!',
-                  message: `Successfully generated ${Object.keys(mealPlan).length} meal(s) for your plan!`,
-                });
-                setShowSuccessModal(true);
-              } catch (error: any) {
-                console.error('❌ Error generating remaining meals:', error);
-                HapticPatterns.error();
-
-                // Check for various error types
-                const errorMessage = error.message || error.details || '';
-                const errorCode = error.code || '';
-
-                const isQuotaError = errorCode === 'insufficient_quota' ||
-                                    errorCode === 'HTTP_429' ||
-                                    errorMessage?.includes('quota') ||
-                                    errorMessage?.includes('429');
-
-                const isOverloadedError = errorCode === 'HTTP_529' ||
-                                          errorMessage?.includes('529') ||
-                                          errorMessage?.includes('overloaded') ||
-                                          errorMessage?.includes('Overloaded');
-
-                let message = 'Failed to generate meals. Please try again.';
-                let title = 'Generation Failed';
-
-                if (isOverloadedError) {
-                  title = 'Service Temporarily Unavailable';
-                  message = 'The AI service is currently overloaded. Please try again in a few moments.';
-                } else if (isQuotaError) {
-                  title = 'Quota Exceeded';
-                  message = 'AI generation quota exceeded. Please try again later or browse existing recipes from the cookbook.';
-                }
-
-                Alert.alert(title, message);
-              } finally {
-                setGeneratingPlan(false);
-              }
-            },
-          },
+          { text: 'Create', onPress: () => { void runGeneration(); } },
         ]
       );
     } catch (error) {
       setGeneratingPlan(false);
-      Alert.alert('Error', 'Failed to prepare meal generation');
+      Alert.alert(
+        "Couldn't get ready",
+        "Sazon couldn't prepare auto-plan. Want to try again?",
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Try again', onPress: () => { void handleGenerateRemainingMeals(); } },
+        ]
+      );
     }
   };
 

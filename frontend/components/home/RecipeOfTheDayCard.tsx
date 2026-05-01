@@ -111,13 +111,13 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   bannerSubtitle: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
     color: 'rgba(255,255,255,0.8)',
     marginTop: 1,
   },
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   bannerBadgeText: {
     color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },

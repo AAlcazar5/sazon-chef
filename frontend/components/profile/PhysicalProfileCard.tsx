@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   statGrid: {
     gap: 8,
@@ -257,13 +257,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     width: 64,
   },
   statValue: {
     flex: 1,
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     textAlign: 'right',
     textTransform: 'capitalize',
   },
@@ -280,12 +280,12 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     marginBottom: 2,
   },
   metricValue: {
     fontSize: FontSize['2xl'],
-    fontWeight: FontWeight.extrabold,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   metricUnit: {
     fontSize: FontSize.xs,
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginBottom: 2,
   },
   emptyDesc: {

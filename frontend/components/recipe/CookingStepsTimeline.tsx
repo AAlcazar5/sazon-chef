@@ -160,12 +160,12 @@ const styles = StyleSheet.create({
   stepNumber: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   checkmark: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   stepText: {
     fontSize: 15,

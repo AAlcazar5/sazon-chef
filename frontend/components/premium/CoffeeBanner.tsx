@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   closeText: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   mascotContainer: {
     alignItems: 'center',
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#FFFFFF',
     marginBottom: 6,
   },

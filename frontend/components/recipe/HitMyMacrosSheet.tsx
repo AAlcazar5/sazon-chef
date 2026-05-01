@@ -93,7 +93,7 @@ export default function HitMyMacrosSheet({
         }}>
           <Text style={{
             fontSize: 20,
-            fontWeight: '800',
+            fontFamily: 'PlusJakartaSans_800ExtraBold',
             color: textPrimary,
             marginBottom: 4,
           }}>
@@ -108,7 +108,7 @@ export default function HitMyMacrosSheet({
           </Text>
 
           {/* Calorie input */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: textSecondary, marginBottom: 6 }}>
+          <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: textSecondary, marginBottom: 6 }}>
             Remaining Calories
           </Text>
           <TextInput
@@ -124,14 +124,14 @@ export default function HitMyMacrosSheet({
               paddingHorizontal: 16,
               paddingVertical: 12,
               fontSize: 16,
-              fontWeight: '600',
+              fontFamily: 'PlusJakartaSans_600SemiBold',
               color: textPrimary,
               marginBottom: 16,
             }}
           />
 
           {/* Protein input */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: textSecondary, marginBottom: 6 }}>
+          <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: textSecondary, marginBottom: 6 }}>
             Remaining Protein (g)
           </Text>
           <TextInput
@@ -147,7 +147,7 @@ export default function HitMyMacrosSheet({
               paddingHorizontal: 16,
               paddingVertical: 12,
               fontSize: 16,
-              fontWeight: '600',
+              fontFamily: 'PlusJakartaSans_600SemiBold',
               color: textPrimary,
               marginBottom: 20,
             }}
@@ -163,7 +163,7 @@ export default function HitMyMacrosSheet({
             }}>
               <Text style={{
                 fontSize: 15,
-                fontWeight: '700',
+                fontFamily: 'PlusJakartaSans_700Bold',
                 color: isDark ? Accent.sage : '#2E7D32',
                 textAlign: 'center',
               }}>
@@ -187,7 +187,7 @@ export default function HitMyMacrosSheet({
                 alignItems: 'center',
               }}
             >
-              <Text style={{ fontSize: 15, fontWeight: '700', color: textSecondary }}>Cancel</Text>
+              <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: textSecondary }}>Cancel</Text>
             </HapticTouchableOpacity>
 
             <HapticTouchableOpacity
@@ -208,7 +208,7 @@ export default function HitMyMacrosSheet({
             >
               <Text style={{
                 fontSize: 15,
-                fontWeight: '700',
+                fontFamily: 'PlusJakartaSans_700Bold',
                 color: hasTarget ? '#FFFFFF' : textSecondary,
               }}>
                 Apply

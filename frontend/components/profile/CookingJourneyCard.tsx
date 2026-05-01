@@ -48,7 +48,7 @@ function StatTile({ value, label, isDark, tint, testID }: StatTileProps) {
       <Text
         style={{
           fontSize: 24,
-          fontWeight: '700',
+          fontFamily: 'PlusJakartaSans_700Bold',
           color: isDark ? DarkColors.text.primary : Colors.text.primary,
         }}
       >
@@ -120,7 +120,7 @@ export default function CookingJourneyCard({ testID }: CookingJourneyCardProps) 
           style={{
             flex: 1,
             fontSize: 18,
-            fontWeight: '600',
+            fontFamily: 'PlusJakartaSans_600SemiBold',
             color: isDark ? DarkColors.text.primary : Colors.text.primary,
           }}
           accessibilityRole="header"
@@ -163,7 +163,7 @@ export default function CookingJourneyCard({ testID }: CookingJourneyCardProps) 
               <Text
                 style={{
                   fontSize: 14,
-                  fontWeight: '600',
+                  fontFamily: 'PlusJakartaSans_600SemiBold',
                   color: isDark ? DarkColors.text.primary : Colors.text.primary,
                 }}
               >

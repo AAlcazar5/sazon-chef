@@ -115,11 +115,11 @@ export default function MacroPillsRow({
         }}
         accessibilityLabel={`${value}${pill.unit} ${pill.label}`}
       >
-        <Text style={{ fontSize: 13, fontWeight: '700', color: textColor }}>
+        <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: textColor }}>
           {value}
           {pill.unit}
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: '600', color: textColor, marginLeft: 3, opacity: 0.85 }}>
+        <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: textColor, marginLeft: 3, opacity: 0.85 }}>
           {pill.label}
         </Text>
       </View>

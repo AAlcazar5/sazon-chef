@@ -214,7 +214,7 @@ export default function LogFoodSheet({
       )}
       <View style={{ flex: 1 }}>
         <Text
-          style={{ fontSize: 15, fontWeight: '600', color: textPrimary }}
+          style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold', color: textPrimary }}
           numberOfLines={1}
         >
           {food.name}
@@ -226,7 +226,7 @@ export default function LogFoodSheet({
         )}
       </View>
       <View style={{ alignItems: 'flex-end' }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: MACRO_COLORS.calories.accent }}>
+        <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: MACRO_COLORS.calories.accent }}>
           {food.calories}
         </Text>
         <Text style={{ fontSize: 11, color: textSecondary }}>cal</Text>
@@ -304,7 +304,7 @@ export default function LogFoodSheet({
                   <Text
                     style={{
                       fontSize: 14,
-                      fontWeight: '700',
+                      fontFamily: 'PlusJakartaSans_700Bold',
                       color: textSecondary,
                       marginHorizontal: 16,
                       marginBottom: 8,
@@ -322,7 +322,7 @@ export default function LogFoodSheet({
                   <Text
                     style={{
                       fontSize: 14,
-                      fontWeight: '700',
+                      fontFamily: 'PlusJakartaSans_700Bold',
                       color: textSecondary,
                       marginHorizontal: 16,
                       marginBottom: 8,
@@ -356,7 +356,7 @@ export default function LogFoodSheet({
           borderTopColor: isDark ? '#333' : '#E5E0DA',
         }}
       >
-        <Text style={{ fontSize: 14, color: MACRO_COLORS.calories.accent, fontWeight: '600' }}>
+        <Text style={{ fontSize: 14, color: MACRO_COLORS.calories.accent, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
           Can't find it? Add your own
         </Text>
       </HapticTouchableOpacity>
@@ -395,7 +395,7 @@ export default function LogFoodSheet({
             Shadows.MD,
           ]}
         >
-          <Text style={{ fontSize: 18, fontWeight: '700', color: textPrimary, marginBottom: 4 }}>
+          <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: textPrimary, marginBottom: 4 }}>
             {selectedFood.name}
           </Text>
           {selectedFood.brand && (
@@ -434,13 +434,13 @@ export default function LogFoodSheet({
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ fontSize: 20, fontWeight: '700', color: textPrimary }}>−</Text>
+              <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_700Bold', color: textPrimary }}>−</Text>
             </HapticTouchableOpacity>
 
             <Text
               style={{
                 fontSize: 20,
-                fontWeight: '700',
+                fontFamily: 'PlusJakartaSans_700Bold',
                 color: textPrimary,
                 marginHorizontal: 24,
               }}
@@ -462,7 +462,7 @@ export default function LogFoodSheet({
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ fontSize: 20, fontWeight: '700', color: textPrimary }}>+</Text>
+              <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_700Bold', color: textPrimary }}>+</Text>
             </HapticTouchableOpacity>
           </View>
 
@@ -475,7 +475,7 @@ export default function LogFoodSheet({
               { label: 'Fat', value: scaledMacro(selectedFood.fat), color: MACRO_COLORS.fat },
             ] as const).map(({ label, value, color }) => (
               <View key={label} style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: color.accent }}>
+                <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', color: color.accent }}>
                   {value}
                 </Text>
                 <Text style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>
@@ -504,7 +504,7 @@ export default function LogFoodSheet({
             Shadows.MD,
           ]}
         >
-          <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+          <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#FFFFFF' }}>
             {logging ? 'Logging...' : `Log ${mealType}`}
           </Text>
         </HapticTouchableOpacity>
@@ -526,7 +526,7 @@ export default function LogFoodSheet({
         </Text>
       </HapticTouchableOpacity>
 
-      <Text style={{ fontSize: 18, fontWeight: '700', color: textPrimary, marginBottom: 16 }}>
+      <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: textPrimary, marginBottom: 16 }}>
         Add your own food
       </Text>
 
@@ -573,7 +573,7 @@ export default function LogFoodSheet({
           Shadows.MD,
         ]}
       >
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+        <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#FFFFFF' }}>
           {logging ? 'Saving...' : 'Save & Log'}
         </Text>
       </HapticTouchableOpacity>
@@ -634,7 +634,7 @@ export default function LogFoodSheet({
             <Text
               style={{
                 fontSize: 18,
-                fontWeight: '800',
+                fontFamily: 'PlusJakartaSans_800ExtraBold',
                 color: textPrimary,
                 marginHorizontal: 16,
                 marginBottom: 14,

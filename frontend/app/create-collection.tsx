@@ -142,7 +142,7 @@ export default function CreateCollectionScreen() {
 
         {/* Sheet header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: labelColor }}>Create Collection</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: labelColor }}>Create Collection</Text>
           <HapticTouchableOpacity onPress={handleClose} disabled={loading} style={{ padding: 4 }}>
             <Ionicons name="close" size={22} color={subColor} />
           </HapticTouchableOpacity>
@@ -157,7 +157,7 @@ export default function CreateCollectionScreen() {
           >
             {/* Collection Name */}
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: labelColor, marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: labelColor, marginBottom: 8 }}>
                 Collection Name <Text style={{ color: '#DC2626' }}>*</Text>
               </Text>
               <ShakeAnimation shake={shakeName}>
@@ -187,8 +187,8 @@ export default function CreateCollectionScreen() {
 
             {/* Cover Image */}
             <View style={{ marginBottom: 24 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: labelColor, marginBottom: 8 }}>
-                Cover Image <Text style={{ color: subColor, fontWeight: '400' }}>(Optional)</Text>
+              <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: labelColor, marginBottom: 8 }}>
+                Cover Image <Text style={{ color: subColor, fontFamily: 'PlusJakartaSans_400Regular' }}>(Optional)</Text>
               </Text>
 
               {coverImageUrl ? (
@@ -233,7 +233,7 @@ export default function CreateCollectionScreen() {
             <View style={{ marginTop: 20, padding: 16, backgroundColor: isDark ? 'rgba(59,130,246,0.12)' : '#EFF6FF', borderRadius: 10, borderWidth: 1, borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#BFDBFE', flexDirection: 'row' }}>
               <Ionicons name="information-circle-outline" size={18} color="#3B82F6" style={{ marginRight: 8, marginTop: 1 }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, color: isDark ? '#93C5FD' : '#1D4ED8', fontWeight: '600', marginBottom: 3 }}>What are collections?</Text>
+                <Text style={{ fontSize: 13, color: isDark ? '#93C5FD' : '#1D4ED8', fontFamily: 'PlusJakartaSans_600SemiBold', marginBottom: 3 }}>What are collections?</Text>
                 <Text style={{ fontSize: 12, color: isDark ? '#93C5FD' : '#3B82F6', lineHeight: 18 }}>
                   Collections help you organize saved recipes into custom groups like "Family Favorites" or "Meal Prep Ideas".
                 </Text>

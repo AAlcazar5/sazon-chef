@@ -20,6 +20,7 @@ export { default as ViewModePickerModal } from './ViewModePickerModal';
 
 // Phase 5: Header + Quick Actions
 export { default as MealPlanHeader } from './MealPlanHeader';
+export { EditorialMealPlanIntro } from './EditorialMealPlanIntro';
 export { default as QuickActionsBar } from './QuickActionsBar';
 
 // Phase 6: Scroll Content Sections

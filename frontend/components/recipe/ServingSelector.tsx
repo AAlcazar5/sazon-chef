@@ -77,13 +77,13 @@ export default function ServingSelector({
             opacity: servings <= MIN ? 0.4 : 1,
           }}
         >
-          <Text style={{ fontSize: 22, fontWeight: '700', color: stepperAccent, lineHeight: 24 }}>−</Text>
+          <Text style={{ fontSize: 22, fontFamily: 'PlusJakartaSans_700Bold', color: stepperAccent, lineHeight: 24 }}>−</Text>
         </HapticTouchableOpacity>
 
         <View style={{ alignItems: 'center', marginHorizontal: 20, minWidth: 80 }}>
           <Text style={{
             fontSize: 28,
-            fontWeight: '800',
+            fontFamily: 'PlusJakartaSans_800ExtraBold',
             color: textPrimary,
             lineHeight: 34,
           }}
@@ -93,7 +93,7 @@ export default function ServingSelector({
           </Text>
           <Text style={{
             fontSize: 13,
-            fontWeight: '600',
+            fontFamily: 'PlusJakartaSans_600SemiBold',
             color: textSecondary,
             marginTop: -2,
           }}>
@@ -115,7 +115,7 @@ export default function ServingSelector({
             backgroundColor: stepperBg,
           }}
         >
-          <Text style={{ fontSize: 22, fontWeight: '700', color: stepperAccent, lineHeight: 24 }}>+</Text>
+          <Text style={{ fontSize: 22, fontFamily: 'PlusJakartaSans_700Bold', color: stepperAccent, lineHeight: 24 }}>+</Text>
         </HapticTouchableOpacity>
       </View>
 
@@ -187,7 +187,7 @@ export default function ServingSelector({
         <Text style={{ fontSize: 13, marginRight: 5 }}>🎯</Text>
         <Text style={{
           fontSize: 13,
-          fontWeight: '700',
+          fontFamily: 'PlusJakartaSans_700Bold',
           color: isDark ? Accent.sage : '#2E7D32',
         }}>
           Hit My Macros

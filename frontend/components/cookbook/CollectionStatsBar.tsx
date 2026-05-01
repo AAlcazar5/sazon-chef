@@ -91,11 +91,11 @@ const styles = StyleSheet.create({
   },
   pillValue: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   pillLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
 });
 

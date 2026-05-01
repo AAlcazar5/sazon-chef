@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { View, Text, ScrollView, Alert } from 'react-native';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import { EditorialSectionHeader } from '../../components/home/EditorialSectionHeader';
+import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
+import { useToast } from '../../contexts/ToastContext';
 import SuccessModal from '../../components/ui/SuccessModal';
 import Toast from '../../components/ui/Toast';
 import { CelebrationOverlay } from '../../components/celebrations';
@@ -11,6 +14,7 @@ import FrostedHeader from '../../components/ui/FrostedHeader';
 import { router, useLocalSearchParams } from 'expo-router';
 import { recipeApi } from '../../lib/api';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { EditorialFontFamily } from '../../constants/Typography';
 import { Spacing, ComponentSpacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
 import { useMealPlanData } from '../../hooks/useMealPlanData';
@@ -34,6 +38,7 @@ import {
   ShoppingListNameModal,
   ViewModePickerModal,
   MealPlanHeader,
+  EditorialMealPlanIntro,
   QuickActionsBar,
   WeeklyNutritionSummary,
   WeeklyCalendar,
@@ -54,7 +59,6 @@ import {
   GoalModeSelector,
   MealRequestModal,
   LogFoodSheet,
-  WeeklyBudgetBar,
   CravingFlowModal,
   BoringWeekNudge,
 } from '../../components/meal-plan';
@@ -67,6 +71,7 @@ export default function MealPlanScreen() {
   const { recipeId, recipeTitle, scaledServings } = useLocalSearchParams();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const isMountedRef = useRef(false);
+  const { showToast } = useToast();
 
   // Recurring meal state
   const [recurringModalVisible, setRecurringModalVisible] = useState(false);
@@ -538,9 +543,11 @@ export default function MealPlanScreen() {
       <ScreenGradient><View style={{ flex: 1 }}>
         {loading ? (
           <>
-            <FrostedHeader paddingBottom={12} withTopInset>
-              <View className="flex-row items-center justify-center" style={{ height: 28 }}>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Meal Plan</Text>
+            <FrostedHeader paddingBottom={16} withTopInset>
+              <View style={{ paddingHorizontal: 20 }}>
+                <Text style={{ fontFamily: EditorialFontFamily.display.bold, fontSize: 48, lineHeight: 50, letterSpacing: -1.6, color: isDark ? '#F3F4F6' : '#111827' }} accessibilityRole="header">
+                  Meal <Text style={{ fontFamily: EditorialFontFamily.displayItalic.bold, fontStyle: 'italic', fontSize: 48, letterSpacing: -1.6, color: isDark ? '#F3F4F6' : '#111827' }}>Plan</Text>
+                </Text>
               </View>
             </FrostedHeader>
             <ScrollView className="flex-1" contentContainerStyle={{ padding: Spacing.lg }} nestedScrollEnabled={true}>
@@ -630,20 +637,10 @@ export default function MealPlanScreen() {
             />
           }
         >
-          <WeeklyBudgetBar budget={weeklyBudget} />
+          {/* Editorial intro: MONTH · WEEK # / "This week." / subtitle */}
+          <EditorialMealPlanIntro weekStart={weekDates[0]} selectedDate={selectedDate} />
 
-          {varietyResult?.varietyScore.isBoringWeek && !varietyDismissed && varietyResult.nudgeMessage ? (
-            <BoringWeekNudge
-              message={varietyResult.nudgeMessage}
-              varietyScore={varietyResult.varietyScore.score}
-              isDark={isDark}
-              onMixItUp={handleMixItUp}
-              onDismiss={() => setVarietyDismissed(true)}
-            />
-          ) : null}
-
-          <WeeklyNutritionSummary weeklyNutrition={weeklyNutrition} weeklyPlan={weeklyPlan} weekDates={weekDates} isDark={isDark} />
-
+          {/* Weekly Meal Plan calendar — directly under the intro */}
           <WeeklyCalendar
             weekDates={weekDates}
             selectedDate={selectedDate}
@@ -658,17 +655,7 @@ export default function MealPlanScreen() {
             onRegenerateDay={handleRegenerateDay}
           />
 
-          <ThawingReminders thawingReminders={thawingReminders} isDark={isDark} />
-
-          <MealPrepSessions
-            selectedDate={selectedDate}
-            weeklyPlan={weeklyPlan}
-            formattedDate={formattedSelectedDate}
-            isDark={isDark}
-          />
-
-          <TotalPrepTimeCard totalPrepTime={totalPrepTime} isDark={isDark} />
-
+          {/* Weekly Macro Budget */}
           <DailyMacrosSummary
             dailyMacros={dailyMacros}
             targetMacros={targetMacros}
@@ -680,6 +667,74 @@ export default function MealPlanScreen() {
             weeklyPlan={weeklyPlan}
             weekDates={weekDates}
             rollover={dailyRolloverForSelected}
+          />
+
+          {/* Supporting cards — kept after the macro budget */}
+          {varietyResult?.varietyScore.isBoringWeek && !varietyDismissed && varietyResult.nudgeMessage ? (
+            <BoringWeekNudge
+              message={varietyResult.nudgeMessage}
+              varietyScore={varietyResult.varietyScore.score}
+              isDark={isDark}
+              onMixItUp={handleMixItUp}
+              onDismiss={() => setVarietyDismissed(true)}
+            />
+          ) : null}
+
+          <WeeklyNutritionSummary weeklyNutrition={weeklyNutrition} weeklyPlan={weeklyPlan} weekDates={weekDates} isDark={isDark} />
+
+          <ThawingReminders thawingReminders={thawingReminders} isDark={isDark} />
+
+          <MealPrepSessions
+            selectedDate={selectedDate}
+            weeklyPlan={weeklyPlan}
+            formattedDate={formattedSelectedDate}
+            isDark={isDark}
+          />
+
+          <TotalPrepTimeCard totalPrepTime={totalPrepTime} isDark={isDark} />
+
+          {/* Editorial section header for the timeline */}
+          <EditorialSectionHeader
+            title="Today's plan"
+            isDark={isDark}
+            collapsible={false}
+            rightSlot={
+              <HapticTouchableOpacity
+                onPress={() => {
+                  if (generatingPlan) return;
+                  showToast('Cooking up your plan…', 'info', 2500);
+                  handleGenerateRemainingMeals();
+                }}
+                disabled={generatingPlan}
+                accessibilityLabel={generatingPlan ? 'Auto-planning in progress' : 'Auto-plan remaining meals'}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 18 }}
+              >
+                {generatingPlan ? (
+                  <>
+                    <AnimatedActivityIndicator size={14} color="#fa7e12" />
+                    <Text style={{
+                      fontFamily: 'PlusJakartaSans_800ExtraBold',
+                      fontSize: 11,
+                      letterSpacing: 0.8,
+                      color: '#fa7e12',
+                      textTransform: 'uppercase',
+                    }}>
+                      PLANNING…
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={{
+                    fontFamily: 'PlusJakartaSans_800ExtraBold',
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                    color: '#fa7e12',
+                    textTransform: 'uppercase',
+                  }}>
+                    AUTO-PLAN
+                  </Text>
+                )}
+              </HapticTouchableOpacity>
+            }
           />
 
           <ViewModeSelector viewMode={viewMode} onOpenPicker={handleOpenViewModePicker} />
@@ -741,25 +796,31 @@ export default function MealPlanScreen() {
           )}
 
           {/* Cost Analysis */}
-          <View className="px-4 mb-4">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-                {"💰 Weekly Cost Analysis"}
-              </Text>
-              {costAnalysis && costAnalysis.budgetExceeded ? (
+          <EditorialSectionHeader
+            title="Weekly cost"
+            emoji="💰"
+            isDark={isDark}
+            collapsible={false}
+            rightSlot={
+              costAnalysis && costAnalysis.budgetExceeded ? (
                 <HapticTouchableOpacity
                   onPress={handleOptimizeCost}
+                  accessibilityLabel="Optimize meal plan to fit budget"
                   style={{
-                    paddingHorizontal: 16,
+                    paddingHorizontal: 14,
                     paddingVertical: 8,
-                    borderRadius: 100,
-                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                    borderRadius: 999,
+                    backgroundColor: '#111827',
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{"Optimize"}</Text>
+                  <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 12, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                    Optimize
+                  </Text>
                 </HapticTouchableOpacity>
-              ) : null}
-            </View>
+              ) : null
+            }
+          />
+          <View className="px-4 mb-4">
             <CostAnalysisSection
               costAnalysis={costAnalysis}
               loadingCostAnalysis={loadingCostAnalysis}
@@ -1012,7 +1073,7 @@ export default function MealPlanScreen() {
         title={successMessage.title}
         subtitle={successMessage.message}
         expression="excited"
-        autoDismiss={3000}
+        autoDismiss={5000}
         onDismiss={() => setShowSuccessModal(false)}
         primaryCTA={{
           label: 'View My Plan',

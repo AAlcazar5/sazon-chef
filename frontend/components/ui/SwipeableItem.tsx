@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: 'white',
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginTop: Spacing.xs,
   },
 });

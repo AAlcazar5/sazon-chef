@@ -141,11 +141,11 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   emptyText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
     marginTop: 4,
   },
 });

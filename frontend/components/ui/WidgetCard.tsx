@@ -144,16 +144,16 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: FontSize['3xl'],
-    fontWeight: FontWeight.extrabold,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   statUnit: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     opacity: 0.5,
   },
   label: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     flex: 1,
   },
   bottomRow: {
@@ -169,10 +169,10 @@ const styles = StyleSheet.create({
   },
   trendArrow: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   trendValue: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });

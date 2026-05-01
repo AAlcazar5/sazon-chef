@@ -16,3 +16,6 @@ export { ShoppingHeader } from './ShoppingHeader';
 export { ProgressStrip } from './ProgressStrip';
 export { CategorySection } from './CategorySection';
 export { ShoppingItemRow } from './ShoppingItemRow';
+export { EditorialShoppingIntro } from './EditorialShoppingIntro';
+export { EditorialShoppingProgress } from './EditorialShoppingProgress';
+export { EditorialAisleHeader } from './EditorialAisleHeader';

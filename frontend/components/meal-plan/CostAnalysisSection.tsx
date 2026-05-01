@@ -6,8 +6,13 @@ import { View, Text } from 'react-native';
 import SkeletonLoader from '../ui/SkeletonLoader';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
+
+const CARD_BG_LIGHT = Pastel.golden;
+const CARD_BG_DARK = PastelDark.golden;
+const INNER_BG_LIGHT = '#FFFFFF';
+const INNER_BG_DARK = 'rgba(17,24,39,0.55)';
 
 interface CostAnalysisSectionProps {
   costAnalysis: any;
@@ -29,7 +34,7 @@ function CostAnalysisSection({
   // No cost analysis data - show empty or loading state
   if (!costAnalysis || typeof costAnalysis !== 'object' || Array.isArray(costAnalysis)) {
     return (
-      <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
+      <View style={[{ backgroundColor: isDark ? CARD_BG_DARK : CARD_BG_LIGHT, borderRadius: 22, padding: 20 }, Shadows.SM]}>
         {loadingCostAnalysis ? (
           <View style={{ gap: 12 }}>
             <SkeletonLoader width="60%" height={16} borderRadius={4} isDark={isDark} />
@@ -47,16 +52,16 @@ function CostAnalysisSection({
 
   // Has cost analysis data - show full analysis
   return (
-    <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
+    <View style={[{ backgroundColor: isDark ? CARD_BG_DARK : CARD_BG_LIGHT, borderRadius: 22, padding: 20 }, Shadows.SM]}>
       <View className="flex-row justify-between items-center mb-3">
         <View>
-          <Text className="text-sm text-gray-500 dark:text-gray-200">{"Total Weekly Cost"}</Text>
+          <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.6, color: isDark ? '#D1D5DB' : '#374151', textTransform: 'uppercase', marginBottom: 4 }}>{"Total Weekly Cost"}</Text>
           <Text className="text-2xl font-bold" style={{ color: costAnalysis.budgetExceeded ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) : (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen) }}>
             {`$${costAnalysis.totalCost ? costAnalysis.totalCost.toFixed(2) : '0.00'}`}
           </Text>
         </View>
         <View className="items-end">
-          <Text className="text-sm text-gray-500 dark:text-gray-200">{"Per Day"}</Text>
+          <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.6, color: isDark ? '#D1D5DB' : '#374151', textTransform: 'uppercase', marginBottom: 4 }}>{"Per Day"}</Text>
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {`$${costAnalysis.costPerDay ? costAnalysis.costPerDay.toFixed(2) : '0.00'}`}
           </Text>
@@ -129,13 +134,13 @@ function CostAnalysisSection({
 
       <View style={{ marginTop: 16, paddingTop: 16 }}>
         <View className="flex-row justify-between">
-          <Text className="text-sm text-gray-500 dark:text-gray-200">{"Cost per meal"}</Text>
+          <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#D1D5DB' : '#374151' }}>{"Cost per meal"}</Text>
           <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             {`$${costAnalysis.costPerMeal ? costAnalysis.costPerMeal.toFixed(2) : '0.00'}`}
           </Text>
         </View>
         <View className="flex-row justify-between mt-1">
-          <Text className="text-sm text-gray-500 dark:text-gray-200">{"Meals planned"}</Text>
+          <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#D1D5DB' : '#374151' }}>{"Meals planned"}</Text>
           <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             {`${costAnalysis.mealsCount || 0} meals`}
           </Text>

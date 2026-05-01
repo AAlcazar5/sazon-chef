@@ -51,7 +51,7 @@ function HighlightedText({
       numberOfLines={1}
     >
       {before}
-      <Text style={{ fontWeight: '700', color: isDark ? DarkColors.primary : Colors.primary }}>
+      <Text style={{ fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? DarkColors.primary : Colors.primary }}>
         {match}
       </Text>
       {after}

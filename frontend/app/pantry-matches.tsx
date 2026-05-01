@@ -94,7 +94,7 @@ export default function PantryMatchesScreen() {
             style={{
               flex: 1,
               fontSize: FontSize.xl,
-              fontWeight: FontWeight.extrabold,
+              fontFamily: 'PlusJakartaSans_800ExtraBold',
               color: textPrimary,
               marginLeft: 4,
             }}
@@ -177,7 +177,7 @@ export default function PantryMatchesScreen() {
                   <Text
                     style={{
                       fontSize: FontSize.md,
-                      fontWeight: FontWeight.extrabold,
+                      fontFamily: 'PlusJakartaSans_800ExtraBold',
                       color: textPrimary,
                     }}
                   >
@@ -188,7 +188,7 @@ export default function PantryMatchesScreen() {
                   <Text
                     style={{
                       fontSize: FontSize.md,
-                      fontWeight: FontWeight.extrabold,
+                      fontFamily: 'PlusJakartaSans_800ExtraBold',
                       color: textPrimary,
                     }}
                     numberOfLines={1}
@@ -217,7 +217,7 @@ export default function PantryMatchesScreen() {
                         fontSize: FontSize.xs,
                         color: isDark ? DarkColors.success : Colors.success,
                         marginTop: 4,
-                        fontWeight: FontWeight.bold,
+                        fontFamily: 'PlusJakartaSans_700Bold',
                       }}
                     >
                       You Have Everything

@@ -101,11 +101,11 @@ export default function MacroSlider({
   return (
     <View style={{ marginBottom: 20 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-        <Text style={{ fontSize: 13, fontWeight: '600', color: textPrimary }}>{label}</Text>
+        <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: textPrimary }}>{label}</Text>
         <Text
           style={{
             fontSize: 13,
-            fontWeight: '700',
+            fontFamily: 'PlusJakartaSans_700Bold',
             color: value === undefined ? textSecondary : Colors.accent.primary,
           }}
         >

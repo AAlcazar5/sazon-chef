@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FontSize.xl,
-    fontWeight: FontWeight.bold,
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   section: {
     borderRadius: 20,
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginBottom: 10,
   },
   sectionHeaderRow: {
@@ -564,11 +564,11 @@ const styles = StyleSheet.create({
   },
   unitToggleText: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   optionalBadge: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     marginBottom: 10,
   },
   textInput: {
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: FontSize.md,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   splitRow: {
     flexDirection: 'row',
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   subLabel: {
     fontSize: FontSize.xs,
     marginBottom: 4,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   conversionHint: {
     fontSize: FontSize.xs,
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   },
   chipLabel: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   activityOption: {
     flexDirection: 'row',
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
   },
   activityLabel: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   activityDesc: {
     fontSize: FontSize.xs,
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
   },
   goalLabel: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   metricsCard: {
     borderRadius: 20,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
   },
   metricsTitle: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
+    fontFamily: 'PlusJakartaSans_700Bold',
     marginBottom: 10,
   },
   metricsRow: {
@@ -677,12 +677,12 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     marginBottom: 2,
   },
   metricValue: {
     fontSize: FontSize['3xl'],
-    fontWeight: FontWeight.extrabold,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   metricUnit: {
     fontSize: FontSize.xs,

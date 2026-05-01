@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   score: {
     fontSize: FontSize.sm,
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   dismissText: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   cta: {
     paddingHorizontal: Spacing.lg,
@@ -117,6 +117,6 @@ const styles = StyleSheet.create({
   ctaText: {
     color: Colors.text.inverse,
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });

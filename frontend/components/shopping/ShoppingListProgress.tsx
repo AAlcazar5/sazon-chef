@@ -73,14 +73,14 @@ export default function ShoppingListProgress({
         >
           <Text style={{
             fontSize: FontSize.lg,
-            fontWeight: FontWeight.extrabold,
+            fontFamily: 'PlusJakartaSans_800ExtraBold',
             color: isDark ? DarkColors.text.primary : Colors.text.primary,
           }}>
             {remaining}
           </Text>
           <Text style={{
             fontSize: 8,
-            fontWeight: FontWeight.medium,
+            fontFamily: 'PlusJakartaSans_500Medium',
             color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary,
             marginTop: -1,
           }}>
@@ -91,7 +91,7 @@ export default function ShoppingListProgress({
         <View style={{ flex: 1 }}>
           <Text style={{
             fontSize: FontSize.base,
-            fontWeight: FontWeight.semibold,
+            fontFamily: 'PlusJakartaSans_600SemiBold',
             color: isDark ? DarkColors.text.primary : Colors.text.primary,
             marginBottom: 2,
           }}>

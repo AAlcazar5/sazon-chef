@@ -669,13 +669,13 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: FontSize.hero,
-    fontWeight: FontWeight.extrabold,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     textAlign: 'center',
     marginBottom: 8,
   },
   stepTitle: {
     fontSize: FontSize['2xl'],
-    fontWeight: FontWeight.bold,
+    fontFamily: 'PlusJakartaSans_700Bold',
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
   },
   previewTitle: {
     fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginBottom: 2,
   },
   previewDesc: {
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
   },
   chipName: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   chipDesc: {
     fontSize: FontSize.sm,
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
   },
   moreLabel: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     marginLeft: 8,
   },
   // Goal cards
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   },
   goalLabel: {
     fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
+    fontFamily: 'PlusJakartaSans_700Bold',
     marginBottom: 2,
   },
   goalDesc: {
@@ -803,7 +803,7 @@ const styles = StyleSheet.create({
   },
   skipLabel: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   dotsRow: {
     flexDirection: 'row',

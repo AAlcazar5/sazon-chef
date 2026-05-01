@@ -605,13 +605,13 @@ export default function ScannerScreen() {
                             {Platform.OS === 'ios' ? (
                               <BlurView intensity={25} tint="dark" style={{ borderRadius: 100, overflow: 'hidden' }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6 }}>
-                                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>{food.name}</Text>
+                                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{food.name}</Text>
                                   <Text style={{ color: '#4ADE80', fontSize: 13, marginLeft: 4 }}>✓</Text>
                                 </View>
                               </BlurView>
                             ) : (
                               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 100 }}>
-                                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>{food.name}</Text>
+                                <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{food.name}</Text>
                                 <Text style={{ color: '#4ADE80', fontSize: 13, marginLeft: 4 }}>✓</Text>
                               </View>
                             )}
@@ -637,10 +637,10 @@ export default function ScannerScreen() {
                       transition={{ type: 'spring', delay: 160, damping: 18, stiffness: 200 }}
                     >
                       <View style={[{ padding: 16, borderRadius: BorderRadius.card, backgroundColor: '#FFF5F0', marginBottom: 16 }, Shadows.MD]}>
-                        <Text style={{ fontSize: 17, fontWeight: '600', color: '#1F2937', marginBottom: 4 }}>
+                        <Text style={{ fontSize: 17, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#1F2937', marginBottom: 4 }}>
                           {result.mealDescription}
                         </Text>
-                        <Text style={{ fontSize: 28, fontWeight: '800', color: MACRO_COLORS.calories.accent, marginBottom: 12 }}>
+                        <Text style={{ fontSize: 28, fontFamily: 'PlusJakartaSans_800ExtraBold', color: MACRO_COLORS.calories.accent, marginBottom: 12 }}>
                           {totals.calories} cal
                         </Text>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
@@ -650,7 +650,7 @@ export default function ScannerScreen() {
                             { label: 'Fat', value: `${totals.fat}g`, color: MACRO_COLORS.fat },
                           ] as const).map(({ label, value, color }) => (
                             <View key={label} style={{ alignItems: 'center' }}>
-                              <Text style={{ fontSize: 18, fontWeight: '700', color: color.accent }}>{value}</Text>
+                              <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: color.accent }}>{value}</Text>
                               <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{label}</Text>
                             </View>
                           ))}
@@ -659,7 +659,7 @@ export default function ScannerScreen() {
                     </MotiView>
 
                     {/* Per-food cards with serving steppers */}
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#1F2937', marginBottom: 8 }}>
                       Food Items ({visibleFoods.length})
                     </Text>
                     {result.foods.map((food, index) => {
@@ -676,7 +676,7 @@ export default function ScannerScreen() {
                             {/* Name + remove */}
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                               <View style={{ flex: 1, marginRight: 8 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '600', color: '#1F2937' }}>{food.name}</Text>
+                                <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#1F2937' }}>{food.name}</Text>
                                 {food.estimatedPortion && (
                                   <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>
                                     {food.estimatedPortion}{food.portionGrams ? ` (${food.portionGrams}g)` : ''}
@@ -701,7 +701,7 @@ export default function ScannerScreen() {
                                 { label: 'F', value: Math.round(food.estimatedFat * s * 10) / 10, color: MACRO_COLORS.fat },
                               ] as const).map(({ label, value, color }) => (
                                 <View key={label} style={{ alignItems: 'center' }}>
-                                  <Text style={{ fontSize: 15, fontWeight: '700', color: color.accent }}>{value}</Text>
+                                  <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: color.accent }}>{value}</Text>
                                   <Text style={{ fontSize: 11, color: '#9CA3AF' }}>{label}</Text>
                                 </View>
                               ))}
@@ -726,7 +726,7 @@ export default function ScannerScreen() {
                                     marginHorizontal: 2,
                                   }}
                                 >
-                                  <Text style={{ fontSize: 14, fontWeight: '600', color: s === val ? '#FFFFFF' : '#6B7280' }}>
+                                  <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: s === val ? '#FFFFFF' : '#6B7280' }}>
                                     {val === 0.5 ? '½' : `${val}`}×
                                   </Text>
                                 </HapticTouchableOpacity>
@@ -745,14 +745,14 @@ export default function ScannerScreen() {
                       accessibilityLabel="Add a food item"
                     >
                       <Ionicons name="add-circle-outline" size={20} color={MACRO_COLORS.calories.accent} />
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: MACRO_COLORS.calories.accent, marginLeft: 6 }}>
+                      <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: MACRO_COLORS.calories.accent, marginLeft: 6 }}>
                         Add an item the AI missed
                       </Text>
                     </HapticTouchableOpacity>
 
                     {/* Meal slot picker */}
                     <View style={{ marginTop: 4, marginBottom: 8 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#6B7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                         Log to
                       </Text>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -775,7 +775,7 @@ export default function ScannerScreen() {
                           >
                             <Text style={{
                               fontSize: 13,
-                              fontWeight: '600',
+                              fontFamily: 'PlusJakartaSans_600SemiBold',
                               color: selectedMealSlot === slot ? '#FFFFFF' : '#6B7280',
                               textTransform: 'capitalize',
                             }}>
@@ -882,7 +882,7 @@ export default function ScannerScreen() {
                     ]}
                   >
                     <Ionicons name="checkmark-circle" size={22} color="white" />
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+                    <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#FFFFFF' }}>
                       {loggingMeal ? 'Logging...' : 'Log This Meal'}
                     </Text>
                   </HapticTouchableOpacity>
@@ -908,7 +908,7 @@ export default function ScannerScreen() {
                   ) : (
                     <Icon name={Icons.CART} size={20} color="white" />
                   )}
-                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 15 }}>
+                  <Text style={{ color: 'white', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 }}>
                     {addingToList ? 'Adding...' : 'Add to Shopping List'}
                   </Text>
                 </HapticTouchableOpacity>
@@ -930,7 +930,7 @@ export default function ScannerScreen() {
                   pressedScale={0.97}
                   style={{ paddingVertical: 13, borderRadius: 12, backgroundColor: '#E5E7EB', alignItems: 'center' }}
                 >
-                  <Text style={{ color: '#374151', fontWeight: '600', fontSize: 15 }}>Done</Text>
+                  <Text style={{ color: '#374151', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 }}>Done</Text>
                 </HapticTouchableOpacity>
               </View>
             </View>
@@ -1022,7 +1022,7 @@ const styles = StyleSheet.create({
   noMatchTitle: {
     color: DarkColors.text.primary,
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     marginTop: 20,
     textAlign: 'center',
   },
@@ -1044,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   noMatchSearchBtnText: {
     color: 'white',
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 15,
   },
   noMatchRetryBtn: {

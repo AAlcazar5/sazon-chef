@@ -1,66 +1,49 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { EditorialGreeting } from './EditorialGreeting';
 import { EditorialMacroWidgets } from './EditorialMacroWidgets';
-import { EditorialQuickPicks } from './EditorialQuickPicks';
-import { SurpriseFAB } from './SurpriseFAB';
 import { VerticalCategoryRail } from '../ui/VerticalCategoryRail';
 import { PlateHeroCard } from '../ui/PlateHeroCard';
 import type { SuggestedRecipe } from '../../types';
 
 const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Dessert'];
 
+function getDefaultCategoryForHour(hour: number): string {
+  if (hour >= 4 && hour < 11) return 'Breakfast';
+  if (hour >= 11 && hour < 15) return 'Lunch';
+  if (hour >= 15 && hour < 17) return 'Snacks';
+  if (hour >= 17 && hour < 21) return 'Dinner';
+  return 'Dessert';
+}
+
 interface EditorialHomeLayoutProps {
-  userName?: string;
   heroRecipe: SuggestedRecipe | null;
-  quickPickRecipes: SuggestedRecipe[];
   savedIds: Set<string>;
   calories: { consumed: number; goal: number };
   protein: { consumed: number; goal: number };
-  streak: number;
-  onSearchPress: () => void;
-  onNotificationsPress: () => void;
+  carbs: { consumed: number; goal: number };
+  fat: { consumed: number; goal: number };
+  fiber: { consumed: number; goal: number };
   onRecipePress: (id: string) => void;
   onToggleSave: (id: string) => void;
-  onSeeAllPicks: () => void;
-  onSurprisePress: () => void;
 }
 
 export function EditorialHomeLayout({
-  userName,
   heroRecipe,
-  quickPickRecipes,
   savedIds,
   calories,
   protein,
-  streak,
-  onSearchPress,
-  onNotificationsPress,
+  carbs,
+  fat,
+  fiber,
   onRecipePress,
   onToggleSave,
-  onSeeAllPicks,
-  onSurprisePress,
 }: EditorialHomeLayoutProps) {
-  const [activeCategory, setActiveCategory] = useState('Dinner');
-
-  const quickPicks = quickPickRecipes.slice(0, 4).map((r) => ({
-    id: r.id,
-    title: r.title,
-    imageUrl: r.imageUrl,
-    cookTime: r.cookTime || 0,
-    calories: r.calories || 0,
-    matchScore: r.score?.matchPercentage || 0,
-  }));
+  const [activeCategory, setActiveCategory] = useState(() =>
+    getDefaultCategoryForHour(new Date().getHours())
+  );
 
   return (
     <>
-      {/* Top bar + editorial headline */}
-      <EditorialGreeting
-        userName={userName}
-        onSearchPress={onSearchPress}
-        onNotificationsPress={onNotificationsPress}
-      />
-
       {/* Hero: plate-on-pastel + vertical category rail */}
       {heroRecipe && (
         <View style={styles.heroRow}>
@@ -92,20 +75,11 @@ export function EditorialHomeLayout({
       <EditorialMacroWidgets
         calories={calories}
         protein={protein}
-        streak={streak}
+        carbs={carbs}
+        fat={fat}
+        fiber={fiber}
       />
 
-      {/* Quick picks grid */}
-      <EditorialQuickPicks
-        recipes={quickPicks}
-        savedIds={savedIds}
-        onRecipePress={onRecipePress}
-        onToggleSave={onToggleSave}
-        onSeeAll={onSeeAllPicks}
-      />
-
-      {/* Surprise FAB — absolute positioned */}
-      <SurpriseFAB onPress={onSurprisePress} />
     </>
   );
 }

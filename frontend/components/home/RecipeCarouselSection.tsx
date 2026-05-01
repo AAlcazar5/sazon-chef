@@ -6,14 +6,23 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import Icon from '../ui/Icon';
-import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { EditorialSectionHeader } from './EditorialSectionHeader';
+import { EditorialRecipeCard } from './EditorialRecipeCard';
+import { Colors, DarkColors, Pastel, EditorialColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import SkeletonLoader from '../ui/SkeletonLoader';
-import { RecipeCard } from '../recipe/RecipeCard';
 import type { SuggestedRecipe } from '../../types';
+
+const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const TITLE_ROTATION = [
+  EditorialColors.pastelTitle.peach,
+  EditorialColors.pastelTitle.sage,
+  EditorialColors.pastelTitle.lavender,
+  EditorialColors.pastelTitle.sky,
+  EditorialColors.pastelTitle.golden,
+  EditorialColors.pastelTitle.blush,
+];
 import type { UserFeedback } from '../../utils/recipeUtils';
 
 const CARD_WIDTH = 280;
@@ -159,30 +168,16 @@ function RecipeCarouselSection({
 
   return (
     <View className="mb-6">
-      {/* Section Header */}
-      <HapticTouchableOpacity
-        onPress={onToggleCollapse}
-        className="flex-row items-center justify-between mb-4 px-4"
-        activeOpacity={0.7}
-      >
-        <View className="flex-row items-center flex-1">
-          <Text className="text-2xl mr-2">{emoji}</Text>
-          <View className="flex-1">
-            <Text className="text-xl font-black text-gray-900 dark:text-gray-100">
-              {title}
-            </Text>
-            <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {subtitle || `${recipes.length} recipe${recipes.length !== 1 ? 's' : ''}`}
-            </Text>
-          </View>
-        </View>
-        <Icon
-          name={isCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
-          size={IconSizes.SM}
-          color={isDark ? '#9CA3AF' : '#6B7280'}
-          accessibilityLabel={isCollapsed ? 'Expand section' : 'Collapse section'}
-        />
-      </HapticTouchableOpacity>
+      {/* Section Header — editorial styling */}
+      <EditorialSectionHeader
+        title={title}
+        emoji={emoji}
+        count={recipes.length}
+        subtitle={subtitle}
+        isDark={isDark}
+        isCollapsed={isCollapsed}
+        onToggle={onToggleCollapse}
+      />
 
       {/* Section Content */}
       {!isCollapsed && (
@@ -228,24 +223,24 @@ function RecipeCarouselSection({
           scrollEventThrottle={100}
           onMomentumScrollEnd={handleMomentumScrollEnd}
         >
-          {recipes.map((recipe) => {
+          {recipes.map((recipe, i) => {
             const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
             const isFeedbackLoading = feedbackLoading === recipe.id;
 
             return (
               <View key={recipe.id} style={{ width: CARD_WIDTH, marginRight: CARD_MARGIN }}>
-                <RecipeCard
+                <EditorialRecipeCard
                   recipe={recipe}
-                  variant="carousel"
+                  bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
+                  titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
+                  feedback={feedback}
+                  isFeedbackLoading={isFeedbackLoading}
                   onPress={onRecipePress}
                   onLongPress={onRecipeLongPress}
                   onLike={onLike}
                   onDislike={onDislike}
                   onSave={onSave}
-                  feedback={feedback}
-                  isFeedbackLoading={isFeedbackLoading}
-                  isDark={isDark}
-                  showDescription={true}
+                  showDescription
                 />
               </View>
             );
@@ -270,7 +265,7 @@ function RecipeCarouselSection({
                 />
                 <Text style={{
                   fontSize: 14,
-                  fontWeight: '600',
+                  fontFamily: 'PlusJakartaSans_600SemiBold',
                   color: isDark ? DarkColors.text.primary : Colors.text.primary,
                   marginBottom: 4,
                   textAlign: 'center',
@@ -302,7 +297,7 @@ function RecipeCarouselSection({
                   {refreshing ? (
                     <AnimatedActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+                    <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
                       Refresh Recipes
                     </Text>
                   )}

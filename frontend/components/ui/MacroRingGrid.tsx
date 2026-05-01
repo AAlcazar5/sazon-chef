@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   macroLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
     marginTop: 4,
   },
 });

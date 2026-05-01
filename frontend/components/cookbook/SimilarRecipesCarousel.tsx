@@ -6,11 +6,21 @@ import { View, Text, ScrollView, Dimensions } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { RecipeCard } from '../recipe/RecipeCard';
-import Icon from '../ui/Icon';
-import { Icons, IconSizes } from '../../constants/Icons';
+import { EditorialRecipeCard } from '../home/EditorialRecipeCard';
+import { EditorialSectionHeader } from '../home/EditorialSectionHeader';
+import { Pastel, EditorialColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
 import type { SavedRecipe } from '../../types';
+
+const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const TITLE_ROTATION = [
+  EditorialColors.pastelTitle.peach,
+  EditorialColors.pastelTitle.sage,
+  EditorialColors.pastelTitle.lavender,
+  EditorialColors.pastelTitle.sky,
+  EditorialColors.pastelTitle.golden,
+  EditorialColors.pastelTitle.blush,
+];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_WIDTH = SCREEN_WIDTH * 0.72; // ~72% of screen so next card peeks
@@ -101,36 +111,18 @@ function SimilarRecipesCarousel({
   }
 
   return (
-    <View className="mt-8 mb-12">
-      <View className="px-4">
-        <HapticTouchableOpacity
-          onPress={() => {
-            onToggleCollapse();
-            HapticPatterns.buttonPress();
-          }}
-          className="mb-3 flex-row items-center justify-between"
-        >
-          <View className="flex-row items-center flex-1">
-            <View className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
-              <Text className="text-lg">💡</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="text-lg font-semibold text-gray-900 dark:text-white">
-                You might also like
-              </Text>
-              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {recipes.length} recipe{recipes.length !== 1 ? 's' : ''}
-              </Text>
-            </View>
-          </View>
-          <Icon
-            name={isCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
-            size={IconSizes.SM}
-            color={isDark ? '#9CA3AF' : '#6B7280'}
-            accessibilityLabel={isCollapsed ? 'Expand section' : 'Collapse section'}
-          />
-        </HapticTouchableOpacity>
-      </View>
+    <View className="mt-8">
+      <EditorialSectionHeader
+        title="You might also like"
+        emoji="💡"
+        count={recipes.length}
+        isDark={isDark}
+        isCollapsed={isCollapsed}
+        onToggle={() => {
+          onToggleCollapse();
+          HapticPatterns.buttonPress();
+        }}
+      />
 
       {!isCollapsed && (
         <ScrollView
@@ -138,7 +130,7 @@ function SimilarRecipesCarousel({
           horizontal
           scrollEventThrottle={16}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 20 }}
+          contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
           decelerationRate={0.92}
           snapToInterval={SNAP_INTERVAL}
           snapToAlignment="start"
@@ -166,19 +158,18 @@ function SimilarRecipesCarousel({
                 entering={FadeInRight.delay(delay).duration(350).springify()}
                 style={{ width: CARD_WIDTH, marginRight: CARD_GAP }}
               >
-                <RecipeCard
+                <EditorialRecipeCard
                   recipe={recipe as any}
-                  variant="carousel"
+                  bg={PASTEL_ROTATION[index % PASTEL_ROTATION.length]}
+                  titleColor={TITLE_ROTATION[index % TITLE_ROTATION.length]}
                   onPress={onRecipePress}
                   onLongPress={() => onRecipeLongPress(recipe)}
                   onLike={onLike}
                   onDislike={onDislike}
-                  onDelete={viewMode === 'saved' ? onDelete : undefined}
-                  onSave={viewMode !== 'saved' ? onSave : undefined}
+                  onSave={viewMode === 'saved' ? onDelete : onSave}
                   feedback={feedback}
                   isFeedbackLoading={isFeedbackLoading}
-                  isDark={isDark}
-                  showDescription={true}
+                  showDescription
                 />
               </Animated.View>
             );

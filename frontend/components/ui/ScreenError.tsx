@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FontSize['2xl'],
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     textAlign: 'center',
     marginBottom: Spacing.md,
   },
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: FontSize.md,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   secondaryButton: {
     paddingVertical: Spacing.md,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: FontSize.md,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   spinningIcon: {
     // Note: Add spinning animation if needed
@@ -345,6 +345,6 @@ const styles = StyleSheet.create({
   },
   inlineRetry: {
     fontSize: FontSize.sm,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });

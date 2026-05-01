@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'PlusJakartaSans_700Bold',
     marginBottom: 12,
   },
   badgesContainer: {
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   cuisineBadge: {
     paddingHorizontal: 12,
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   },
   cuisineText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   macrosContainer: {
     flexDirection: 'row',
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   indicator: {
     position: 'absolute',
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   indicatorText: {
     marginTop: 8,
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'PlusJakartaSans_700Bold',
     color: '#FFFFFF',
   },
   actionButtons: {
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   },
   counterText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginTop: 16,
     marginBottom: 24,
   },
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });
 

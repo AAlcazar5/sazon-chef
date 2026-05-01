@@ -406,11 +406,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: FontSize.sm,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   required: {
     color: Colors.error,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   bottomRow: {
     marginTop: Spacing.xs,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: FontSize.sm,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   hint: {
     fontSize: FontSize.sm,
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: FontSize.sm,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   chipCheckmark: {
     marginLeft: Spacing.xs,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: FontSize.lg,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   modalClose: {
     padding: Spacing.xs,

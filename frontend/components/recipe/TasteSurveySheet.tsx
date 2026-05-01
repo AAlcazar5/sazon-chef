@@ -232,12 +232,12 @@ const styles = StyleSheet.create({
   },
   question: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     marginBottom: 12,
   },
   tagHint: {
     fontSize: 14,
-    fontWeight: '400',
+    fontFamily: 'PlusJakartaSans_400Regular',
   },
   emojiRow: {
     flexDirection: 'row',
@@ -281,6 +281,6 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
 });

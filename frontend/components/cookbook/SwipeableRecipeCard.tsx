@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: 'white',
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginTop: 2,
   },
 });

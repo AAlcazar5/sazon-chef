@@ -7,7 +7,8 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { Spacing } from '../../constants/Spacing';
-import { RecipeCard } from '../recipe/RecipeCard';
+import { EditorialRecipeCard } from '../home/EditorialRecipeCard';
+import { Pastel, EditorialColors } from '../../constants/Colors';
 import AnimatedRecipeCard from '../recipe/AnimatedRecipeCard';
 import StarRating from './StarRating';
 import Icon from '../ui/Icon';
@@ -63,6 +64,16 @@ interface CookbookRecipeListProps {
 }
 
 const DEFAULT_FEEDBACK = { liked: false, disliked: false };
+
+const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const TITLE_ROTATION = [
+  EditorialColors.pastelTitle.peach,
+  EditorialColors.pastelTitle.sage,
+  EditorialColors.pastelTitle.lavender,
+  EditorialColors.pastelTitle.sky,
+  EditorialColors.pastelTitle.golden,
+  EditorialColors.pastelTitle.blush,
+];
 
 function CookbookRecipeList({
   recipes,
@@ -151,9 +162,10 @@ function CookbookRecipeList({
             )}
           </View>
         )}
-        <RecipeCard
+        <EditorialRecipeCard
           recipe={recipe as any}
-          variant="grid"
+          bg={PASTEL_ROTATION[index % PASTEL_ROTATION.length]}
+          titleColor={TITLE_ROTATION[index % TITLE_ROTATION.length]}
           onPress={onRecipePress}
           onLongPress={() => onRecipeLongPress(recipe)}
           onLike={selectionMode ? undefined : onLike}
@@ -161,7 +173,7 @@ function CookbookRecipeList({
           onSave={selectionMode ? undefined : onSave}
           feedback={feedback}
           isFeedbackLoading={isFeedbackLoading}
-          isDark={isDark}
+          showDescription={false}
           footer={selectionMode ? undefined : <RecipeMeta recipe={recipe} />}
         />
       </Animated.View>
@@ -202,10 +214,11 @@ function CookbookRecipeList({
                 )}
               </View>
             )}
-            <View style={{ flex: 1 }}>
-              <RecipeCard
+            <View style={{ flex: 1, marginBottom: Spacing.lg }}>
+              <EditorialRecipeCard
                 recipe={recipe as any}
-                variant="list"
+                bg={PASTEL_ROTATION[index % PASTEL_ROTATION.length]}
+                titleColor={TITLE_ROTATION[index % TITLE_ROTATION.length]}
                 onPress={onRecipePress}
                 onLongPress={() => onRecipeLongPress(recipe)}
                 onLike={selectionMode ? undefined : onLike}
@@ -213,9 +226,7 @@ function CookbookRecipeList({
                 onSave={selectionMode ? undefined : onSave}
                 feedback={feedback}
                 isFeedbackLoading={isFeedbackLoading}
-                isDark={isDark}
                 showDescription={!selectionMode}
-                className="mb-1"
                 footer={selectionMode ? undefined : <RecipeMeta recipe={recipe} />}
               />
             </View>

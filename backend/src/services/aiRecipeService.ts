@@ -972,19 +972,47 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (Â
     // Check if recipe matches dietary restrictions
     if (params.userPreferences?.dietaryRestrictions && params.userPreferences.dietaryRestrictions.length > 0) {
       const restrictions = params.userPreferences.dietaryRestrictions.map(r => r.toLowerCase());
-      const hasMeat = allIngredients.includes('chicken') || allIngredients.includes('beef') || 
-                     allIngredients.includes('pork') || allIngredients.includes('lamb');
-      const hasDairy = allIngredients.includes('milk') || allIngredients.includes('cheese') || 
-                     allIngredients.includes('butter') || allIngredients.includes('cream');
+
+      // Check each ingredient individually so we can exclude plant-based alternatives.
+      const ingredientNames = recipe.ingredients.map(ing => ing.name.toLowerCase());
+
+      // Plant-based modifiers that should NOT count as dairy even when paired with
+      // milk/butter/cream/cheese. Examples: "almond milk", "coconut cream",
+      // "vegan butter", "non-dairy cheese", "oat milk".
+      const PLANT_MODIFIERS = [
+        'almond', 'coconut', 'oat', 'soy', 'rice', 'cashew', 'hemp',
+        'pea', 'macadamia', 'hazelnut', 'walnut', 'flax', 'plant',
+        'non-dairy', 'non dairy', 'dairy-free', 'dairy free', 'vegan',
+        'nut', 'nutritional', // "nutritional yeast" is not dairy
+      ];
+      const isDairyIngredient = (name: string): boolean => {
+        const lower = name.toLowerCase();
+        const hasDairyKeyword = /\b(milk|cheese|butter|cream|yogurt|ghee|whey|casein)\b/.test(lower);
+        if (!hasDairyKeyword) return false;
+        // If a plant modifier appears anywhere in the name, treat as non-dairy.
+        return !PLANT_MODIFIERS.some(mod => lower.includes(mod));
+      };
+      const isMeatIngredient = (name: string): boolean => {
+        return /\b(chicken|beef|pork|lamb|turkey|bacon|ham|sausage|veal|duck)\b/.test(name);
+      };
+      const isEggIngredient = (name: string): boolean => {
+        // Don't catch "eggplant".
+        return /\begg(s|whites?|yolks?)?\b/.test(name) && !/eggplant/.test(name);
+      };
+
+      const hasMeat = ingredientNames.some(isMeatIngredient);
+      const hasDairy = ingredientNames.some(isDairyIngredient);
+      const hasEgg = ingredientNames.some(isEggIngredient);
 
       if (restrictions.includes('vegetarian') && hasMeat) {
         errors.push('Recipe contains meat but user requires vegetarian');
       }
-      if (restrictions.includes('vegan') && (hasMeat || hasDairy || allIngredients.includes('egg'))) {
+      if (restrictions.includes('vegan') && (hasMeat || hasDairy || hasEgg)) {
         errors.push('Recipe contains animal products but user requires vegan');
       }
       if (restrictions.includes('dairy-free') && hasDairy) {
-        errors.push('Recipe contains dairy but user requires dairy-free');
+        const offending = ingredientNames.filter(isDairyIngredient).join(', ');
+        errors.push(`Recipe contains dairy (${offending}) but user requires dairy-free`);
       }
     }
 
