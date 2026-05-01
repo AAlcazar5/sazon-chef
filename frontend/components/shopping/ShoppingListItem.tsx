@@ -5,7 +5,7 @@
 
 import { View, Text, Animated } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
@@ -15,6 +15,7 @@ import { Shadows } from '../../constants/Shadows';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
 import { getIngredientEmoji } from '../../constants/IngredientEmoji';
+import RecipeAttributionSheet from './RecipeAttributionSheet';
 
 interface ShoppingListItemProps {
   item: ShoppingListItemType;
@@ -49,6 +50,14 @@ export default function ShoppingListItem({
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+
+  const [showAttributionSheet, setShowAttributionSheet] = useState(false);
+
+  // Parse sourceRecipeIds from JSON string
+  const sourceRecipeIds: string[] = (() => {
+    if (!item.sourceRecipeIds) return [];
+    try { return JSON.parse(item.sourceRecipeIds); } catch { return []; }
+  })();
 
   const checkboxSize = inStoreMode ? 36 : 26;
   const checkmarkSize = inStoreMode ? 24 : 16;
@@ -117,8 +126,8 @@ export default function ShoppingListItem({
           paddingVertical: inStoreMode ? 14 : 12,
           paddingHorizontal: inStoreMode ? 16 : 14,
           backgroundColor: item.purchased
-            ? (isDark ? '#1A1A1C' : '#F9F9FB')
-            : (isDark ? '#1C1C1E' : '#FFFFFF'),
+            ? (isDark ? DarkColors.surfaceTint : '#F9F9FB')
+            : (isDark ? DarkColors.card : '#FFFFFF'),
         },
         !item.purchased && Shadows.SM,
         selectionMode && isSelected ? {
@@ -202,6 +211,20 @@ export default function ShoppingListItem({
           >
 {getIngredientEmoji(item.name)} {item.name}
           </Text>
+          {/* Recipe source pill — shown when this item came from 1+ recipes */}
+          {sourceRecipeIds.length > 0 && !item.purchased && (
+            <HapticTouchableOpacity
+              onPress={() => setShowAttributionSheet(true)}
+              accessibilityLabel="View source recipes"
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}
+            >
+              <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280' }}>
+                {sourceRecipeIds.length >= 2 ? `📖 ×${sourceRecipeIds.length}` : '📖'}
+              </Text>
+            </HapticTouchableOpacity>
+          )}
+
           {/* Recipe origin tag — hidden when already grouped by recipe */}
           {!groupByRecipe && item.recipe?.title && !item.purchased && (
             <HapticTouchableOpacity
@@ -280,6 +303,13 @@ export default function ShoppingListItem({
           </Text>
         </View>
       )}
+
+      {/* Recipe attribution sheet */}
+      <RecipeAttributionSheet
+        visible={showAttributionSheet}
+        recipes={sourceRecipeIds.map(id => ({ id, title: id, imageUrl: null }))}
+        onClose={() => setShowAttributionSheet(false)}
+      />
     </Animated.View>
   );
 }

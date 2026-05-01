@@ -20,6 +20,14 @@ jest.mock('../../components/shopping', () => ({
   AddItemModal: () => null,
   MergeListsModal: () => null,
   OfflineBanner: () => null,
+  EditorialShoppingIntro: () => null,
+  EditorialShoppingProgress: () => null,
+  EditorialAisleHeader: () => null,
+}));
+
+jest.mock('../../components/shopping/BuildFromRecipesSheet', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 jest.mock('../../components/ui/ContinuityCTA', () => ({

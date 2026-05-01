@@ -19,3 +19,6 @@ export { ShoppingItemRow } from './ShoppingItemRow';
 export { EditorialShoppingIntro } from './EditorialShoppingIntro';
 export { EditorialShoppingProgress } from './EditorialShoppingProgress';
 export { EditorialAisleHeader } from './EditorialAisleHeader';
+
+// Group 10Q — Shopping List Intelligence
+export { default as BuildFromRecipesSheet } from './BuildFromRecipesSheet';

@@ -12,6 +12,9 @@ import { Icons } from '../../constants/Icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import SmartBadges from './SmartBadges';
 import { recipeCardAccessibility, iconButtonAccessibility } from '../../utils/accessibility';
+import ActionSheet, { ActionSheetItem } from '../ui/ActionSheet';
+import { shoppingListApi } from '../../lib/api';
+import { useToast } from '../../contexts/ToastContext';
 
 interface RecipeCardProps {
   recipe: SuggestedRecipe;
@@ -79,7 +82,33 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
   const [imageError, setImageError] = React.useState(false);
   const [imageLoading, setImageLoading] = React.useState(true);
   const [saveHighlighted, setSaveHighlighted] = React.useState(false);
+  const [showQuickActions, setShowQuickActions] = React.useState(false);
   const saveScale = React.useRef(new Animated.Value(1)).current;
+
+  const { showToast } = useToast();
+
+  const handleAddToShoppingList = React.useCallback(async () => {
+    try {
+      await shoppingListApi.generateFromRecipes([recipe.id]);
+      showToast('Added to shopping list', 'success', 3000);
+    } catch {
+      showToast('Could not add to shopping list', 'error', 3000);
+    }
+  }, [recipe.id, showToast]);
+
+  const quickActionItems: ActionSheetItem[] = [
+    {
+      label: 'Add to shopping list',
+      icon: 'cart-outline',
+      tint: 'sage',
+      onPress: handleAddToShoppingList,
+    },
+  ];
+
+  const handleLongPress = React.useCallback(() => {
+    onLongPress?.(recipe);
+    setShowQuickActions(true);
+  }, [onLongPress, recipe]);
 
   // Reset image error when recipe changes
   React.useEffect(() => {
@@ -171,10 +200,12 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
   // Render based on variant
   if (variant === 'featured') {
   return (
+    <>
       <HapticTouchableOpacity
         onPress={handlePress}
-        onLongPress={() => onLongPress?.(recipe)}
+        onLongPress={handleLongPress}
         delayLongPress={500}
+        testID="recipe-card-featured"
         className={`${darkFeed ? 'bg-[#1C1C1E]' : 'bg-white dark:bg-[#1C1C1E]'} rounded-xl overflow-hidden mb-4 ${className}`}
         style={{
           ...getShadowStyle(),
@@ -494,6 +525,13 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
           </View>
         </View>
       </HapticTouchableOpacity>
+      <ActionSheet
+        visible={showQuickActions}
+        onClose={() => setShowQuickActions(false)}
+        items={quickActionItems}
+        title={recipe.title}
+      />
+    </>
     );
   }
 
@@ -504,6 +542,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
   const matchPct = recipe.score?.matchPercentage;
 
   return (
+    <>
     <View
       className={`rounded-xl overflow-hidden ${className}`}
       style={{
@@ -514,8 +553,9 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
     >
       <HapticTouchableOpacity
         onPress={handlePress}
-        onLongPress={() => onLongPress?.(recipe)}
+        onLongPress={handleLongPress}
         delayLongPress={500}
+        testID="recipe-card-list"
         activeOpacity={0.9}
         style={{ flex: 1 }}
         {...recipeCardAccessibility(recipe.title, {
@@ -802,6 +842,13 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
         </View>
       </HapticTouchableOpacity>
     </View>
+    <ActionSheet
+      visible={showQuickActions}
+      onClose={() => setShowQuickActions(false)}
+      items={quickActionItems}
+      title={recipe.title}
+    />
+    </>
   );
 };
 

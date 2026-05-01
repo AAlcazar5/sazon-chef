@@ -9,6 +9,15 @@ jest.mock('../../contexts/ThemeContext', () => ({
   useTheme: () => ({ isDark: false, theme: 'light' }),
 }));
 
+jest.mock('../../lib/api', () => ({
+  recipeApi: { likeRecipe: jest.fn(), dislikeRecipe: jest.fn(), saveRecipe: jest.fn(), unsaveRecipe: jest.fn() },
+  shoppingListApi: { generateFromRecipes: jest.fn().mockResolvedValue({ data: {} }) },
+}));
+
+jest.mock('../../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: jest.fn() }),
+}));
+
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),

@@ -17,6 +17,13 @@ jest.mock('../../../lib/api', () => ({
     saveRecipe: jest.fn(),
     unsaveRecipe: jest.fn(),
   },
+  shoppingListApi: {
+    generateFromRecipes: jest.fn().mockResolvedValue({ data: {} }),
+  },
+}));
+
+jest.mock('../../../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: jest.fn() }),
 }));
 
 jest.mock('expo-haptics', () => ({

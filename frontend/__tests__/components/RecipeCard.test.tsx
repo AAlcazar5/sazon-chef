@@ -15,7 +15,15 @@ jest.mock('../../lib/api', () => ({
     dislikeRecipe: jest.fn(),
     saveRecipe: jest.fn(),
     unsaveRecipe: jest.fn()
-  }
+  },
+  shoppingListApi: {
+    generateFromRecipes: jest.fn().mockResolvedValue({ data: {} }),
+  },
+}));
+
+// Mock ToastContext (required by RecipeCard long-press handler)
+jest.mock('../../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: jest.fn() }),
 }));
 
 // Mock Haptics (include ImpactFeedbackStyle + NotificationFeedbackType for module-level access)

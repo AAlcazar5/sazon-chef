@@ -55,6 +55,7 @@ import {
   EditorialShoppingProgress,
   EditorialAisleHeader,
 } from '../../components/shopping';
+import BuildFromRecipesSheet from '../../components/shopping/BuildFromRecipesSheet';
 
 // CONFETTI constant kept for backward compat reference (celebration now uses CelebrationOverlay)
 
@@ -113,6 +114,9 @@ export default function ShoppingListScreen() {
 
   // Weekly grocery budget — unified source of truth
   const { weeklyGrocery: weeklyBudget } = useBudget();
+
+  // Build-from-Recipes sheet
+  const [showBuildFromRecipes, setShowBuildFromRecipes] = useState(false);
 
   // All-done celebration
   const [showCelebration, setShowCelebration] = useState(false);
@@ -232,7 +236,7 @@ export default function ShoppingListScreen() {
           )}
 
           {/* Pantry deep-link (10G-Pre continuity) */}
-          <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+          <View style={{ paddingHorizontal: 16, marginBottom: 6 }}>
             <ContinuityCTA
               label={`${pantrySet.size} items in your pantry`}
               icon="archive"
@@ -240,6 +244,18 @@ export default function ShoppingListScreen() {
               tint="sage"
               accessibilityLabel="Open pantry"
               testID="pantry-chip"
+            />
+          </View>
+
+          {/* Build from Recipes chip (10Q) */}
+          <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+            <ContinuityCTA
+              label="Build from Recipes"
+              icon="book-outline"
+              onPress={() => setShowBuildFromRecipes(true)}
+              tint="golden"
+              accessibilityLabel="Build shopping list from saved recipes"
+              testID="build-from-recipes-chip"
             />
           </View>
 
@@ -292,6 +308,16 @@ export default function ShoppingListScreen() {
                 />
                 <View style={{ marginTop: 32, width: '100%', paddingHorizontal: 16, gap: 12 }}>
                   <BrandButton
+                    label={state.generatingFromMealPlan ? 'Generating...' : 'Shop for this week'}
+                    onPress={handleGenerateFromMealPlan}
+                    loading={state.generatingFromMealPlan}
+                    disabled={state.generatingFromMealPlan}
+                    variant="sage"
+                    icon="cart-outline"
+                    hapticStyle="medium"
+                    accessibilityLabel="Shop for this week"
+                  />
+                  <BrandButton
                     label={state.generatingFromMealPlan ? 'Generating...' : 'Generate from Meal Plan'}
                     onPress={handleGenerateFromMealPlan}
                     loading={state.generatingFromMealPlan}
@@ -299,6 +325,15 @@ export default function ShoppingListScreen() {
                     variant="brand"
                     icon="calendar-outline"
                     hapticStyle="medium"
+                  />
+
+                  <BrandButton
+                    label="Build from Recipes"
+                    onPress={() => setShowBuildFromRecipes(true)}
+                    variant="golden"
+                    icon="book-outline"
+                    hapticStyle="light"
+                    accessibilityLabel="Build shopping list from saved recipes"
                   />
 
                   <HapticTouchableOpacity
@@ -495,7 +530,7 @@ export default function ShoppingListScreen() {
                 alignItems: 'center',
                 borderRadius: 20,
                 overflow: 'hidden',
-                backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
               }, Shadows.LG]}
             >
               <HapticTouchableOpacity
@@ -547,6 +582,15 @@ export default function ShoppingListScreen() {
           />
         </View>
       )}
+
+      <BuildFromRecipesSheet
+        visible={showBuildFromRecipes}
+        onClose={() => setShowBuildFromRecipes(false)}
+        onListCreated={(listId) => {
+          setShowBuildFromRecipes(false);
+          if (listId) router.push(`/shopping-list?listId=${listId}` as any);
+        }}
+      />
 
       <MergeListsModal
         state={state}
