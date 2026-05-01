@@ -1,6 +1,24 @@
 // AI Provider Interface for Multi-Provider Support
 import type { GeneratedRecipe } from '../aiRecipeService';
 
+export type AITaskType =
+  | 'recipe_generation'        // → Sonnet (complex, structured JSON, nutrition math)
+  | 'safety_check'             // → Haiku (simple binary classification)
+  | 'craving_keyword_mapping'  // → Haiku (already used)
+  | 'ingredient_substitution'  // → Haiku (lookup-style)
+  | 'nutrition_label_parse'    // → Haiku (structured extraction)
+  | 'photo_meal_recognition'   // → Sonnet (vision + reasoning)
+  | 'utterance_composition'    // → Sonnet (Group 10X voice tone)
+  | 'craving_natural_language' // → Sonnet (complex NL understanding)
+  | 'healthify_craving'        // → Sonnet (subjective swap reasoning)
+  | 'simple_chat';             // → Haiku
+
+export interface ModelRoute {
+  model: string;      // e.g., 'claude-haiku-4-5-20251001' or 'claude-sonnet-4-6'
+  provider: 'claude'; // PII never leaves Anthropic — only Claude routes are supported
+  reasoning: string;  // human-readable why
+}
+
 export interface RecipeGenerationRequest {
   prompt: string;
   systemPrompt: string;

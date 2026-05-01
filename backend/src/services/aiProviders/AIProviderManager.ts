@@ -1,8 +1,65 @@
 // AI Provider Manager - Handles automatic fallback between providers
 import { AIProvider, RecipeGenerationRequest, AIProviderError } from './AIProvider';
+import type { AITaskType, ModelRoute } from './AIProvider';
 import { ClaudeProvider } from './ClaudeProvider';
 import { GeminiProvider } from './GeminiProvider';
 import type { GeneratedRecipe } from '../aiRecipeService';
+
+const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+const SONNET_MODEL = 'claude-sonnet-4-6';
+
+const MODEL_ROUTES: Record<AITaskType, ModelRoute> = {
+  recipe_generation: {
+    model: SONNET_MODEL,
+    provider: 'claude',
+    reasoning: 'Requires structured JSON output with accurate nutrition math — Sonnet quality needed',
+  },
+  safety_check: {
+    model: HAIKU_MODEL,
+    provider: 'claude',
+    reasoning: 'Simple binary classification; Haiku is sufficient and ~3x cheaper',
+  },
+  craving_keyword_mapping: {
+    model: HAIKU_MODEL,
+    provider: 'claude',
+    reasoning: 'Keyword extraction is a lookup-style task; Haiku handles it well',
+  },
+  ingredient_substitution: {
+    model: HAIKU_MODEL,
+    provider: 'claude',
+    reasoning: 'Lookup-style substitution with limited reasoning depth needed',
+  },
+  nutrition_label_parse: {
+    model: HAIKU_MODEL,
+    provider: 'claude',
+    reasoning: 'Structured field extraction from a known schema; Haiku is sufficient',
+  },
+  photo_meal_recognition: {
+    model: SONNET_MODEL,
+    provider: 'claude',
+    reasoning: 'Requires vision + multi-step reasoning to identify meals accurately',
+  },
+  utterance_composition: {
+    model: SONNET_MODEL,
+    provider: 'claude',
+    reasoning: 'Group 10X voice tone requires nuanced language generation',
+  },
+  craving_natural_language: {
+    model: SONNET_MODEL,
+    provider: 'claude',
+    reasoning: 'Complex NL understanding of free-form craving descriptions',
+  },
+  healthify_craving: {
+    model: SONNET_MODEL,
+    provider: 'claude',
+    reasoning: 'Subjective swap reasoning across health and taste dimensions',
+  },
+  simple_chat: {
+    model: HAIKU_MODEL,
+    provider: 'claude',
+    reasoning: 'General-purpose chat with no complex reasoning requirement',
+  },
+};
 
 export class AIProviderManager {
   private providers: AIProvider[] = [];
@@ -158,6 +215,16 @@ export class AIProviderManager {
    */
   getLastUsedProvider(): string | null {
     return this.lastUsedProvider;
+  }
+
+  /**
+   * Return the optimal (model, provider, reasoning) for a given task type.
+   *
+   * PII guard: all routes return provider 'claude' — user PII (weight, age,
+   * health conditions) never leaves Anthropic infrastructure.
+   */
+  routeToModel(taskType: AITaskType): ModelRoute {
+    return MODEL_ROUTES[taskType];
   }
 
   /**
