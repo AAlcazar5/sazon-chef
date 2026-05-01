@@ -4,6 +4,7 @@
     "lib": ["ES2020", "DOM", "es2020.promise", "es2020.string"],
     "module": "commonjs",
     "moduleResolution": "node",
+    "ignoreDeprecations": "5.0",
     "resolveJsonModule": true,
     "allowJs": true,
     "outDir": "./dist",
