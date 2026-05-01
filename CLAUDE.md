@@ -158,6 +158,51 @@ Check here before planning new features — prior architectural decisions may al
 - New empty state → use the appropriate Sazon expression (`curious` for search, `sleepy` for no notifications, etc.)
 - Follow **Mascot Branding**: `thinking` for loading, `chef-kiss` for success
 
+## Session Startup
+
+Run these before touching any code:
+1. `pm2 status` — confirm `sazon-backend-3001` is online
+2. Skim `ROADMAP_3.0.md` current group — confirm active task and any blockers
+3. `cd backend && npm test -- --passWithNoTests 2>&1 | tail -5` — confirm coverage baseline ≥85% before starting
+
+## Definition of Done
+
+A feature is done when ALL of the following are true:
+- [ ] Tests written first (RED → GREEN); test file exists
+- [ ] `cd backend && npm test` passes, coverage ≥85%
+- [ ] `typescript-reviewer` + `code-reviewer` agents run and issues addressed
+- [ ] ROADMAP_3.0.md `[ ]` items checked `[x]` immediately
+- [ ] No banned patterns introduced (see Banned Patterns above)
+- [ ] Both iOS and Android considered for any UI change
+
+## Parallel Execution Patterns
+
+With Pro 5x quota, always parallelize independent workstreams instead of going sequential. Common patterns for Sazon:
+
+**Full-stack feature (backend + frontend + tests):**
+```
+Agent 1 → backend service + routes + unit tests
+Agent 2 → frontend screen + components + RTL tests
+Agent 3 → integration tests + E2E critical path
+```
+Use `/devfleet` or `/orchestrate` to launch these together.
+
+**Code quality sweep (after a multi-file change):**
+```
+Agent 1 → typescript-reviewer (type safety)
+Agent 2 → code-reviewer (patterns, banned list)
+Agent 3 → security-reviewer (if auth/API/payments touched)
+```
+
+**Group 10X Build-a-Plate phases (Phase 1 + 2 are P0 blockers):**
+```
+Agent 1 → MealComponent + ComposedPlate Prisma models + seed data
+Agent 2 → /api/meal-components + /api/composed-plates endpoints
+Agent 3 → /build-a-plate screen + slot picker UI
+Agent 4 → permutations endpoint + "what if?" swap chips
+```
+See `plans/build-a-plate.md` for the full spec.
+
 ## PM2 Services
 
 | Port | Name | Type |
