@@ -472,7 +472,7 @@ describe('AIRecipeService - Recipe Validation and Safety Checks', () => {
       
       expect(() => {
         (aiService as any).performSafetyChecks(recipe, params);
-      }).toThrow('contains dairy but user requires dairy-free');
+      }).toThrow(/contains dairy.*but user requires dairy-free/);
     });
 
     test('should warn when calories are significantly off target', () => {
