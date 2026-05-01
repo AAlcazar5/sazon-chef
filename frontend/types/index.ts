@@ -382,6 +382,8 @@ export interface ShoppingListItem {
   photoUrl?: string;
   recipeId?: string;
   recipe?: Recipe;
+  // Group 10Q: JSON-stringified array of recipe IDs that contributed this ingredient
+  sourceRecipeIds?: string;
   createdAt: string;
   updatedAt: string;
 }
