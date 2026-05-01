@@ -31,7 +31,9 @@ export class ClaudeProvider extends AIProvider {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: request.maxTokens || 4000,
         temperature: claudeTemperature,
-        system: request.systemPrompt,
+        system: [
+          { type: 'text', text: request.systemPrompt, cache_control: { type: 'ephemeral' } },
+        ],
         messages: [
           {
             role: 'user',

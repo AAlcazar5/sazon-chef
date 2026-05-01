@@ -1,6 +1,14 @@
 // backend/src/services/__tests__/cravingSearchService.test.ts
 import { scoreCravingMatch, mapCravingToSearchTerms } from '../cravingSearchService';
 
+// Mock for fast-path / Claude-call tests
+const mockMessagesCreate = jest.fn();
+jest.mock('@anthropic-ai/sdk', () => {
+  return jest.fn().mockImplementation(() => ({
+    messages: { create: mockMessagesCreate },
+  }));
+});
+
 describe('scoreCravingMatch', () => {
   const makeRecipe = (overrides: Partial<{
     title: string;
@@ -199,5 +207,77 @@ describe('mapCravingToSearchTerms — fallback (no API key)', () => {
     expect(Array.isArray(result.flavorTags)).toBe(true);
     expect(Array.isArray(result.texturePrefs)).toBe(true);
     expect(['hot', 'cold', 'any']).toContain(result.temperature);
+  });
+});
+
+describe('mapCravingToSearchTerms — fast-path (known keyword bypasses Claude)', () => {
+  const AnthropicConstructor = require('@anthropic-ai/sdk') as jest.Mock;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.ANTHROPIC_API_KEY = 'test-key-set';
+  });
+
+  afterEach(() => {
+    delete process.env.ANTHROPIC_API_KEY;
+  });
+
+  // Test A: known keyword + API key set → Claude is NEVER called
+  it('Test A: "something spicy" with API key set does NOT call Claude', async () => {
+    const result = await mapCravingToSearchTerms('something spicy');
+
+    expect(AnthropicConstructor).not.toHaveBeenCalled();
+    expect(mockMessagesCreate).not.toHaveBeenCalled();
+    expect(result.searchTerms.length).toBeGreaterThan(0);
+    expect(result.searchTerms.some(t => t.toLowerCase().includes('spic') || t === 'hot' || t === 'pepper')).toBe(true);
+  });
+
+  // Test B: multiple keywords in craving → merged mapping from all matched entries
+  it('Test B: "i want cheesy comfort food" merges searchTerms from both cheesy and comfort entries', async () => {
+    const result = await mapCravingToSearchTerms('i want cheesy comfort food');
+
+    // cheesy terms: cheese, mac, quesadilla, grilled, fondue
+    const cheesyTerms = ['cheese', 'mac', 'quesadilla', 'grilled', 'fondue'];
+    // comfort terms: soup, stew, casserole, pasta, chicken
+    const comfortTerms = ['soup', 'stew', 'casserole', 'pasta', 'chicken'];
+
+    const hasCheesy = cheesyTerms.some(t => result.searchTerms.includes(t));
+    const hasComfort = comfortTerms.some(t => result.searchTerms.includes(t));
+
+    expect(hasCheesy).toBe(true);
+    expect(hasComfort).toBe(true);
+    // Claude should not have been called (known keywords)
+    expect(mockMessagesCreate).not.toHaveBeenCalled();
+  });
+
+  // Test C: no keyword match + API key set → Claude IS called
+  it('Test C: unknown craving with API key set DOES call Claude', async () => {
+    mockMessagesCreate.mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify({
+        searchTerms: ['exotic', 'novel', 'cuisine'],
+        flavorTags: ['unique'],
+        temperature: 'any',
+        texturePrefs: [],
+      }) }],
+    });
+
+    const result = await mapCravingToSearchTerms('some exotic novel cuisine I have never heard of');
+
+    expect(AnthropicConstructor).toHaveBeenCalled();
+    expect(mockMessagesCreate).toHaveBeenCalledTimes(1);
+    expect(result.searchTerms).toContain('exotic');
+  });
+
+  // Test D: no keyword match + no API key → word-split fallback (no Claude)
+  it('Test D: unknown craving with no API key returns word-split fallback without calling Claude', async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+
+    const result = await mapCravingToSearchTerms('some exotic novel cuisine');
+
+    expect(AnthropicConstructor).not.toHaveBeenCalled();
+    expect(mockMessagesCreate).not.toHaveBeenCalled();
+    expect(result.searchTerms.length).toBeGreaterThan(0);
+    // Word-split: words longer than 3 chars: 'some'(4)→included, 'exotic'→included, 'novel'→included, 'cuisine'→included
+    expect(result.searchTerms.some(t => t === 'exotic' || t === 'novel' || t === 'cuisine')).toBe(true);
   });
 });

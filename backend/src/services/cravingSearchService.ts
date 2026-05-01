@@ -52,7 +52,16 @@ function buildFallbackMapping(craving: string): CravingMapping {
   return { searchTerms: [...new Set(terms)], flavorTags: [...new Set(tags)], temperature, texturePrefs: [] };
 }
 
+function hasKnownKeyword(craving: string): boolean {
+  const lower = craving.toLowerCase();
+  return Object.keys(FALLBACK_CRAVING_MAP).some(keyword => lower.includes(keyword));
+}
+
 export async function mapCravingToSearchTerms(craving: string): Promise<CravingMapping> {
+  if (hasKnownKeyword(craving)) {
+    return buildFallbackMapping(craving);
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return buildFallbackMapping(craving);
