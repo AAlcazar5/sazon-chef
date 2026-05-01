@@ -395,3 +395,120 @@ function decimalToFraction(decimal: number): string {
   return decimal.toFixed(2);
 }
 
+// ---------------------------------------------------------------------------
+// Smart aggregation with canonical unit merging and display rounding
+// ---------------------------------------------------------------------------
+
+import { normalizeToCanonical, canonicalToUnit, unitDimension } from './unitConversion';
+
+export interface SmartAggregateResult {
+  name: string;
+  totalAmount: number;
+  totalUnit: string;
+  displayAmount: number;
+  displayQuantity: string;
+  /** Multiple lines when dimensions are incompatible (e.g. cup + g) */
+  lines: Array<{ amount: number; displayAmount: number; unit: string; displayQuantity: string }>;
+}
+
+/**
+ * Round display amount based on unit conventions:
+ *  ml / g      → nearest 5
+ *  tbsp / tsp  → nearest 0.25
+ *  cup         → nearest 0.125
+ *  count/piece → integer
+ *  other       → nearest 0.25
+ */
+function roundForDisplay(amount: number, unit: string): number {
+  const u = unit.toLowerCase().trim();
+  if (u === 'ml' || u === 'g') {
+    return Math.round(amount / 5) * 5;
+  }
+  if (u === 'tbsp' || u === 'tsp') {
+    return Math.round(amount / 0.25) * 0.25;
+  }
+  if (u === 'cup') {
+    return Math.round(amount / 0.125) * 0.125;
+  }
+  if (u === 'count' || u === 'piece' || u === 'pieces' || u === 'item' || u === 'each') {
+    return Math.round(amount);
+  }
+  return Math.round(amount / 0.25) * 0.25;
+}
+
+function buildDisplayQuantity(displayAmount: number, unit: string): string {
+  const numStr = displayAmount % 1 === 0 ? displayAmount.toFixed(0) : displayAmount.toString();
+  return `${numStr} ${unit}`;
+}
+
+/**
+ * Aggregate quantities using canonical unit merging.
+ *
+ * Groups by dimension (volume/weight/count/unknown).
+ * Items in the same dimension are merged via the canonical unit (ml/g/count),
+ * then converted back to the most-common input unit for display.
+ * Items across incompatible dimensions are kept as separate lines.
+ */
+export function aggregateQuantitiesSmart(
+  name: string,
+  quantities: ParsedQuantity[]
+): SmartAggregateResult {
+  if (quantities.length === 0) {
+    return {
+      name,
+      totalAmount: 0,
+      totalUnit: 'piece',
+      displayAmount: 0,
+      displayQuantity: '0 piece',
+      lines: [],
+    };
+  }
+
+  // Group by dimension
+  const byDimension = new Map<string, ParsedQuantity[]>();
+  for (const qty of quantities) {
+    const dim = unitDimension(qty.unit);
+    if (!byDimension.has(dim)) byDimension.set(dim, []);
+    byDimension.get(dim)!.push(qty);
+  }
+
+  const lines: SmartAggregateResult['lines'] = [];
+
+  for (const [, group] of byDimension) {
+    // Canonical-unit sum
+    let canonicalSum = 0;
+    for (const qty of group) {
+      const { amount: canonAmt } = normalizeToCanonical(qty.amount, qty.unit);
+      canonicalSum += canonAmt;
+    }
+
+    // Most-common input unit for display
+    const unitFreq = new Map<string, number>();
+    for (const qty of group) {
+      unitFreq.set(qty.unit, (unitFreq.get(qty.unit) ?? 0) + 1);
+    }
+    const displayUnit = Array.from(unitFreq.entries()).sort((a, b) => b[1] - a[1])[0][0];
+
+    const rawAmount = canonicalToUnit(canonicalSum, displayUnit);
+    const displayAmount = roundForDisplay(rawAmount, displayUnit);
+
+    lines.push({
+      amount: rawAmount,
+      displayAmount,
+      unit: displayUnit,
+      displayQuantity: buildDisplayQuantity(displayAmount, displayUnit),
+    });
+  }
+
+  // Primary line (first/only)
+  const primary = lines[0];
+
+  return {
+    name,
+    totalAmount: primary.amount,
+    totalUnit: primary.unit,
+    displayAmount: primary.displayAmount,
+    displayQuantity: primary.displayQuantity,
+    lines,
+  };
+}

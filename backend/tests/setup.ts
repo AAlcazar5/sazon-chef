@@ -155,6 +155,39 @@ const createPrismaMock = () => ({
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
+    shoppingList: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    shoppingListItem: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      createMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    shoppingListShare: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    missingIngredient: {
+      create: jest.fn(),
+      createMany: jest.fn(),
+      findMany: jest.fn(),
+      deleteMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
   }
 });
 
@@ -216,6 +249,9 @@ jest.mock('@modules/shoppingList/shoppingListRoutes', () => ({
   __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/shoppingList/shoppingAppRoutes', () => ({
+  __esModule: true, default: mockRouter
+}));
+jest.mock('@modules/shoppingListShare/shoppingListShareRoutes', () => ({
   __esModule: true, default: mockRouter
 }));
 jest.mock('@modules/costTracking/costTrackingRoutes', () => ({
