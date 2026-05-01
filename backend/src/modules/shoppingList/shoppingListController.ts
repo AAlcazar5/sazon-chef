@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 import { notificationTriggerService } from '../../services/notificationTriggerService';
+import { categorizeItem } from '../../utils/aisleCategorizer';
 
 /**
  * Auto-stock pantry when a shopping item is marked purchased.
@@ -566,7 +567,7 @@ export const shoppingListController = {
   async generateFromRecipes(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      const { recipeIds, shoppingListId, name } = req.body;
+      const { recipeIds, shoppingListId, name, subtractPantry } = req.body;
 
       if (!recipeIds || !Array.isArray(recipeIds) || recipeIds.length === 0) {
         return res.status(400).json({ error: 'Recipe IDs are required' });
@@ -587,8 +588,11 @@ export const shoppingListController = {
       // Aggregate ingredients using smart quantity parser
       const { parseIngredientQuantity, aggregateQuantities } = await import('../../utils/ingredientQuantityParser');
       const { calculatePurchaseQuantity } = await import('../../utils/packageSizeCalculator');
-      
+      const { normalizeIngredientName } = await import('../../utils/ingredientNormalizer');
+
       const ingredientQuantities = new Map<string, Array<{ amount: number; unit: string; originalText: string }>>();
+      // Group 10Q: track which recipe IDs contributed each ingredient
+      const ingredientSourceRecipes = new Map<string, Set<string>>();
 
         recipes.forEach((recipe) => {
           recipe.ingredients.forEach((ing) => {
@@ -598,11 +602,10 @@ export const shoppingListController = {
               // The parsed.originalText contains the full match, so we need to extract the ingredient name
               const text = ing.text.trim();
               let ingredientName: string = '';
-              
+
               // Build a pattern to match the quantity and unit we parsed
-              const quantityStr = parsed.amount.toString();
               const unitStr = parsed.unit;
-              
+
               // Try to match and remove the quantity + unit from the beginning
               // Handle various formats: "2 cups", "1/2 cup", "2.5 cups", etc.
               const patterns = [
@@ -611,7 +614,7 @@ export const shoppingListController = {
                 // Pattern without explicit unit (for "2 chicken breasts" where unit is "piece")
                 /^[\d\s\/\.]+\s+(.+)$/i,
               ];
-              
+
               let matched = false;
               for (const pattern of patterns) {
                 const match = text.match(pattern);
@@ -621,7 +624,7 @@ export const shoppingListController = {
                   break;
                 }
               }
-              
+
               if (!matched) {
                 // Fallback: remove quantity and common unit words
                 ingredientName = text
@@ -630,19 +633,61 @@ export const shoppingListController = {
                   .toLowerCase()
                   .trim() || text.toLowerCase().trim();
               }
-              
+
               // Clean up: remove trailing commas, periods, etc.
               if (ingredientName) {
                 ingredientName = ingredientName.replace(/[,\\.]+$/, '').trim();
               }
-              
+
               if (!ingredientQuantities.has(ingredientName)) {
                 ingredientQuantities.set(ingredientName, []);
               }
               ingredientQuantities.get(ingredientName)!.push(parsed);
+
+              // Group 10Q: track source recipe
+              if (!ingredientSourceRecipes.has(ingredientName)) {
+                ingredientSourceRecipes.set(ingredientName, new Set());
+              }
+              ingredientSourceRecipes.get(ingredientName)!.add(recipe.id);
             }
           });
         });
+
+      // --- Duplicate list detection (Jaccard >= 0.8 over recipeIds within 7d) ---
+      if (!shoppingListId) {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const recentLists = await prisma.shoppingList.findMany({
+          where: { userId, createdAt: { gte: sevenDaysAgo } },
+          select: { id: true, name: true, sourceRecipeIds: true },
+        });
+
+        const incomingSet = new Set<string>(recipeIds);
+        let bestSimilarity = 0;
+        let bestList: { id: string; name: string } | null = null;
+
+        for (const existing of recentLists) {
+          if (!existing.sourceRecipeIds) continue;
+          let existingIds: string[] = [];
+          try { existingIds = JSON.parse(existing.sourceRecipeIds as string); } catch { continue; }
+          const existingSet = new Set<string>(existingIds);
+          const intersectionSize = [...incomingSet].filter(id => existingSet.has(id)).length;
+          const unionSize = new Set([...incomingSet, ...existingSet]).size;
+          const similarity = unionSize === 0 ? 0 : intersectionSize / unionSize;
+          if (similarity > bestSimilarity) {
+            bestSimilarity = similarity;
+            bestList = { id: existing.id, name: existing.name };
+          }
+        }
+
+        if (bestSimilarity >= 0.8 && bestList) {
+          return res.json({
+            duplicateOf: bestList.id,
+            similarity: bestSimilarity,
+            existingListName: bestList.name,
+          });
+        }
+      }
 
       // Get or create shopping list
       let shoppingList;
@@ -661,20 +706,32 @@ export const shoppingListController = {
           data: {
             userId,
             name: listName,
+            sourceRecipeIds: JSON.stringify(recipeIds),
           },
         });
       }
 
-      // Exclude pantry items (staples user always has on hand)
+      // Exclude pantry items
       const pantryItems = await prisma.pantryItem.findMany({
         where: { userId },
         select: { name: true },
       });
-      const pantrySet = new Set(pantryItems.map(p => p.name.toLowerCase().trim()));
 
-      for (const ingredientName of ingredientQuantities.keys()) {
-        if (pantrySet.has(ingredientName.toLowerCase().trim())) {
-          ingredientQuantities.delete(ingredientName);
+      if (subtractPantry === true) {
+        // Smart subtraction: normalize both sides and match on full name equality only
+        const pantryNormalized = new Set(pantryItems.map(p => normalizeIngredientName(p.name)));
+        for (const ingredientName of ingredientQuantities.keys()) {
+          if (pantryNormalized.has(normalizeIngredientName(ingredientName))) {
+            ingredientQuantities.delete(ingredientName);
+          }
+        }
+      } else {
+        // Existing behavior: simple lowercase match (backward compat)
+        const pantrySet = new Set(pantryItems.map(p => p.name.toLowerCase().trim()));
+        for (const ingredientName of ingredientQuantities.keys()) {
+          if (pantrySet.has(ingredientName.toLowerCase().trim())) {
+            ingredientQuantities.delete(ingredientName);
+          }
         }
       }
 
@@ -684,6 +741,7 @@ export const shoppingListController = {
         name: string;
         quantity: string;
         category?: string;
+        sourceRecipeIds?: string;
       }> = [];
 
       for (const [ingredientName, quantities] of ingredientQuantities.entries()) {
@@ -696,11 +754,19 @@ export const shoppingListController = {
         // Format quantity display
         const displayQuantity = purchaseInfo.displayText;
 
+        // Group 10Q: attach category and source recipe IDs
+        const category = categorizeItem(ingredientName) ?? undefined;
+        const sourceIds = ingredientSourceRecipes.get(ingredientName);
+        const sourceRecipeIds = sourceIds && sourceIds.size > 0
+          ? JSON.stringify([...sourceIds])
+          : undefined;
+
         itemsToCreate.push({
           shoppingListId: shoppingList.id,
           name: ingredientName.charAt(0).toUpperCase() + ingredientName.slice(1),
           quantity: displayQuantity,
-          category: undefined,
+          category,
+          sourceRecipeIds,
         });
       }
 
@@ -784,10 +850,12 @@ export const shoppingListController = {
         const { calculatePurchaseQuantity } = await import('../../utils/packageSizeCalculator');
         
         const ingredientQuantities = new Map<string, Array<{ amount: number; unit: string; originalText: string }>>();
+        // Group 10Q: track which recipes contributed each ingredient
+        const ingredientSourceRecipesMP = new Map<string, Set<string>>();
 
         recipes.forEach((recipe) => {
           const scaleFactor = recipeScaleFactors.get(recipe.id) || 1;
-          
+
           recipe.ingredients.forEach((ing) => {
             const parsed = parseIngredientQuantity(ing.text);
             if (parsed) {
@@ -797,15 +865,21 @@ export const shoppingListController = {
                 ...parsed,
                 amount: scaledAmount,
               };
-              
+
               // Extract ingredient name (remove quantity from text)
               const nameMatch = ing.text.replace(/^[\d\s\/\.]+/, '').trim();
               const ingredientName = nameMatch.toLowerCase().trim();
-              
+
               if (!ingredientQuantities.has(ingredientName)) {
                 ingredientQuantities.set(ingredientName, []);
               }
               ingredientQuantities.get(ingredientName)!.push(scaledParsed);
+
+              // Group 10Q: track source recipe
+              if (!ingredientSourceRecipesMP.has(ingredientName)) {
+                ingredientSourceRecipesMP.set(ingredientName, new Set());
+              }
+              ingredientSourceRecipesMP.get(ingredientName)!.add(recipe.id);
             }
           });
         });
@@ -850,6 +924,7 @@ export const shoppingListController = {
           name: string;
           quantity: string;
           category?: string;
+          sourceRecipeIds?: string;
         }> = [];
 
         for (const [ingredientName, quantities] of ingredientQuantities.entries()) {
@@ -862,11 +937,17 @@ export const shoppingListController = {
           // Format quantity display
           const displayQuantity = purchaseInfo.displayText;
 
+          const sourceIds = ingredientSourceRecipesMP.get(ingredientName);
+          const sourceRecipeIds = sourceIds && sourceIds.size > 0
+            ? JSON.stringify([...sourceIds])
+            : undefined;
+
           itemsToCreate.push({
             shoppingListId: shoppingList.id,
             name: ingredientName.charAt(0).toUpperCase() + ingredientName.slice(1),
             quantity: displayQuantity,
-            category: undefined,
+            category: categorizeItem(ingredientName) ?? undefined,
+            sourceRecipeIds,
           });
         }
 
@@ -1042,13 +1123,14 @@ export const shoppingListController = {
       const { calculatePurchaseQuantity } = await import('../../utils/packageSizeCalculator');
       
       const ingredientQuantities = new Map<string, Array<{ amount: number; unit: string; originalText: string }>>();
+      const ingredientSourceRecipesMealPlan = new Map<string, Set<string>>();
 
       mealPlan.meals.forEach((meal) => {
         if (!meal.recipe) return;
 
         const recipe = meal.recipe;
         const scaleFactor = recipeScaleFactors.get(recipe.id) || 1;
-        
+
         recipe.ingredients.forEach((ing) => {
           const parsed = parseIngredientQuantity(ing.text);
           if (parsed) {
@@ -1058,7 +1140,7 @@ export const shoppingListController = {
               ...parsed,
               amount: scaledAmount,
             };
-            
+
             // Extract ingredient name (remove quantity and unit from text)
             // Pattern: "2 cups flour" -> extract "flour"
             const text = ing.text.trim();
@@ -1066,27 +1148,32 @@ export const shoppingListController = {
             const quantityUnitPattern = /^[\d\s\/\.]+\s+(cup|cups|lb|lbs|oz|tbsp|tsp|piece|pieces|clove|cloves|bunch|bunches|fl\s*oz|pint|pints|quart|quarts|gallon|gallons|ml|l|liter|liters|g|gram|grams|kg|kilogram|kilograms)\s+/i;
             const match = text.match(quantityUnitPattern);
             let ingredientName: string = '';
-            
+
             if (match) {
               // Extract everything after the quantity and unit
               ingredientName = text.substring(match[0].length).toLowerCase().trim();
             } else {
               // Fallback: try simpler pattern
               const simpleMatch = text.match(/^[\d\s\/\.]+\s+\w+\s+(.+)$/i);
-              ingredientName = simpleMatch 
+              ingredientName = simpleMatch
                 ? simpleMatch[1].toLowerCase().trim()
                 : text.replace(/^[\d\s\/\.]+\s+\w+\s*/, '').toLowerCase().trim() || text.toLowerCase().trim();
             }
-            
+
             // Clean up: remove trailing commas, periods, etc.
             if (ingredientName) {
               ingredientName = ingredientName.replace(/[,\\.]+$/, '').trim();
             }
-            
+
             if (!ingredientQuantities.has(ingredientName)) {
               ingredientQuantities.set(ingredientName, []);
             }
             ingredientQuantities.get(ingredientName)!.push(scaledParsed);
+
+            if (!ingredientSourceRecipesMealPlan.has(ingredientName)) {
+              ingredientSourceRecipesMealPlan.set(ingredientName, new Set());
+            }
+            ingredientSourceRecipesMealPlan.get(ingredientName)!.add(recipe.id);
           }
         });
       });
@@ -1103,7 +1190,7 @@ export const shoppingListController = {
         }
       } else {
         // Use provided name, meal plan name, or default to date
-        const listName = name || (mealPlan.name 
+        const listName = name || (mealPlan.name
           ? mealPlan.name
           : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
 
@@ -1134,6 +1221,7 @@ export const shoppingListController = {
         name: string;
         quantity: string;
         category?: string;
+        sourceRecipeIds?: string;
       }> = [];
 
       for (const [ingredientName, quantities] of ingredientQuantities.entries()) {
@@ -1146,11 +1234,17 @@ export const shoppingListController = {
         // Format quantity display
         const displayQuantity = purchaseInfo.displayText;
 
+        const sourceIdsMPlan = ingredientSourceRecipesMealPlan.get(ingredientName);
+        const sourceRecipeIds = sourceIdsMPlan && sourceIdsMPlan.size > 0
+          ? JSON.stringify([...sourceIdsMPlan])
+          : undefined;
+
         itemsToCreate.push({
           shoppingListId: shoppingList.id,
           name: ingredientName.charAt(0).toUpperCase() + ingredientName.slice(1),
           quantity: displayQuantity,
-          category: undefined,
+          category: categorizeItem(ingredientName) ?? undefined,
+          sourceRecipeIds,
         });
       }
 
@@ -1319,6 +1413,169 @@ export const shoppingListController = {
     } catch (error: any) {
       console.error('Error toggling purchase history favorite:', error);
       res.status(500).json({ error: 'Failed to toggle favorite' });
+    }
+  },
+
+  /**
+   * Budget preview for a set of recipes
+   * POST /api/shopping-lists/budget-preview
+   * Body: { recipeIds: string[], servingsMultiplier?: Record<recipeId, number> }
+   * Returns: { items: [{ name, quantity, unit, estimatedCents, hasUserHistory }], totalCents }
+   */
+  async getBudgetPreview(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { recipeIds, servingsMultiplier } = req.body;
+
+      if (!recipeIds || !Array.isArray(recipeIds) || recipeIds.length === 0) {
+        return res.status(400).json({ error: 'Recipe IDs are required' });
+      }
+
+      const DEFAULT_AISLE_PRICE_CENTS: Record<string, number> = {
+        Produce: 250,
+        Meat: 800,
+        Dairy: 400,
+        Pantry: 350,
+        Frozen: 500,
+        Other: 300,
+      };
+
+      // Determine aisle from category string
+      function categoryToAisle(category: string | null | undefined): string {
+        if (!category) return 'Other';
+        const lower = (category || '').toLowerCase();
+        if (lower.includes('produce') || lower.includes('vegetable') || lower.includes('fruit')) return 'Produce';
+        if (lower.includes('meat') || lower.includes('poultry') || lower.includes('seafood') || lower.includes('fish')) return 'Meat';
+        if (lower.includes('dairy') || lower.includes('cheese') || lower.includes('milk') || lower.includes('egg')) return 'Dairy';
+        if (lower.includes('frozen')) return 'Frozen';
+        if (lower.includes('pantry') || lower.includes('baking') || lower.includes('grain') || lower.includes('spice') || lower.includes('condiment')) return 'Pantry';
+        return 'Other';
+      }
+
+      // Infer ingredient aisle from name
+      function ingredientNameToAisle(name: string): string {
+        const lower = name.toLowerCase();
+        if (/flour|sugar|salt|pepper|spice|oil|vinegar|sauce|paste|broth|stock|can|canned|bread|rice|pasta|cereal|grain|bean|lentil|nut|seed/.test(lower)) return 'Pantry';
+        if (/milk|cream|butter|cheese|yogurt|egg/.test(lower)) return 'Dairy';
+        if (/chicken|beef|pork|turkey|fish|shrimp|salmon|tuna|meat|steak|ground/.test(lower)) return 'Meat';
+        if (/frozen|ice/.test(lower)) return 'Frozen';
+        if (/apple|banana|berry|tomato|onion|garlic|potato|carrot|spinach|kale|lettuce|pepper|vegetable|fruit|herb|parsley|cilantro|basil|lemon|lime|orange/.test(lower)) return 'Produce';
+        return 'Other';
+      }
+
+      const { parseIngredientQuantity } = await import('../../utils/ingredientQuantityParser');
+      const { normalizeIngredientName } = await import('../../utils/ingredientNormalizer');
+
+      // Get recipes with ingredients
+      const recipes = await prisma.recipe.findMany({
+        where: { id: { in: recipeIds } },
+        include: { ingredients: true },
+      });
+
+      // Aggregate ingredients (with optional servingsMultiplier)
+      const ingredientMap = new Map<string, { amount: number; unit: string; rawName: string }>();
+
+      // Broad unit words to strip when extracting ingredient name
+      const UNIT_WORDS = 'cups?|tablespoons?|tbsps?|teaspoons?|tsps?|pounds?|lbs?|ounces?|oz|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|fl\\.?\\s*oz|pints?|quarts?|gallons?|pieces?|items?|each|whole|heads?|bunches?|cloves?';
+
+      for (const recipe of recipes) {
+        const multiplier = servingsMultiplier?.[recipe.id] ?? 1;
+        for (const ing of recipe.ingredients) {
+          const parsed = parseIngredientQuantity(ing.text);
+          if (!parsed) continue;
+
+          const text = ing.text.trim();
+          let ingredientName = '';
+
+          // Try to strip leading quantity + any known unit word
+          const unitMatch = text.match(new RegExp(`^[\\d\\s\\/\\.]+\\s+(?:${UNIT_WORDS})\\s+(.+)$`, 'i'));
+          if (unitMatch?.[1]) {
+            ingredientName = unitMatch[1].toLowerCase().trim();
+          } else {
+            // Strip just leading numbers (count-only items like "2 eggs")
+            const countMatch = text.match(/^[\d\s\/\.]+\s+(.+)$/i);
+            if (countMatch?.[1]) {
+              ingredientName = countMatch[1].toLowerCase().trim();
+            } else {
+              ingredientName = text.toLowerCase().trim();
+            }
+          }
+          ingredientName = ingredientName.replace(/[,\.]+$/, '').trim();
+
+          const existing = ingredientMap.get(ingredientName);
+          const scaledAmount = parsed.amount * multiplier;
+          if (existing && existing.unit === parsed.unit) {
+            ingredientMap.set(ingredientName, { amount: existing.amount + scaledAmount, unit: parsed.unit, rawName: ingredientName });
+          } else {
+            ingredientMap.set(ingredientName, { amount: scaledAmount, unit: parsed.unit, rawName: ingredientName });
+          }
+        }
+      }
+
+      // Query user purchase history (90 days)
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const purchaseHistory = await prisma.purchaseHistory.findMany({
+        where: { userId, lastPurchasedAt: { gte: ninetyDaysAgo } },
+      });
+
+      // Build per-item price map: normalizedName → priceCents[]
+      const userPriceMap = new Map<string, number[]>();
+      const aisleHistoryMap = new Map<string, number[]>(); // aisle → priceCents[]
+
+      for (const ph of purchaseHistory) {
+        if (ph.lastPrice == null) continue;
+        const priceCents = Math.round(ph.lastPrice * 100);
+        const normName = normalizeIngredientName(ph.itemName);
+        if (!userPriceMap.has(normName)) userPriceMap.set(normName, []);
+        userPriceMap.get(normName)!.push(priceCents);
+
+        const aisle = categoryToAisle(ph.category);
+        if (!aisleHistoryMap.has(aisle)) aisleHistoryMap.set(aisle, []);
+        aisleHistoryMap.get(aisle)!.push(priceCents);
+      }
+
+      function median(values: number[]): number {
+        if (values.length === 0) return 0;
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 === 0
+          ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+          : sorted[mid];
+      }
+
+      // Build result items
+      const items: Array<{ name: string; quantity: number; unit: string; estimatedCents: number; hasUserHistory: boolean }> = [];
+
+      for (const [ingredientName, { amount, unit }] of ingredientMap) {
+        const normName = normalizeIngredientName(ingredientName);
+        const userPrices = userPriceMap.get(normName);
+        let estimatedCents: number;
+        let hasUserHistory: boolean;
+
+        if (userPrices && userPrices.length > 0) {
+          estimatedCents = median(userPrices);
+          hasUserHistory = true;
+        } else {
+          const aisle = ingredientNameToAisle(ingredientName);
+          const aisleHistory = aisleHistoryMap.get(aisle);
+          if (aisleHistory && aisleHistory.length > 0) {
+            estimatedCents = median(aisleHistory);
+          } else {
+            estimatedCents = DEFAULT_AISLE_PRICE_CENTS[aisle] ?? DEFAULT_AISLE_PRICE_CENTS.Other;
+          }
+          hasUserHistory = false;
+        }
+
+        items.push({ name: ingredientName, quantity: amount, unit, estimatedCents, hasUserHistory });
+      }
+
+      const totalCents = items.reduce((sum, i) => sum + i.estimatedCents, 0);
+
+      res.json({ items, totalCents });
+    } catch (error: any) {
+      console.error('Error generating budget preview:', error);
+      res.status(500).json({ error: 'Failed to generate budget preview' });
     }
   },
 };

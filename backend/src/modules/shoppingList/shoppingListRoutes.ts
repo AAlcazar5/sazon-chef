@@ -8,6 +8,9 @@ const router = Router();
 // Generate shopping list from recipes (must come before /:id routes)
 router.post('/generate-from-recipes', shoppingListController.generateFromRecipes);
 
+// Budget preview (must come before /:id routes)
+router.post('/budget-preview', shoppingListController.getBudgetPreview);
+
 // Generate shopping list from meal plan (must come before /:id routes)
 router.post('/generate-from-meal-plan', shoppingListController.generateFromMealPlan);
 

@@ -713,13 +713,14 @@ model ScoringWeights {
 }
 
 model ShoppingList {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String   @default("My Shopping List")
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String   @default("My Shopping List")
+  isActive        Boolean  @default(true)
+  sourceRecipeIds String?  // JSON array of recipe IDs used to generate this list
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   items ShoppingListItem[]
 
@@ -728,24 +729,56 @@ model ShoppingList {
 }
 
 model ShoppingListItem {
-  id             String       @id @default(cuid())
-  shoppingListId String
-  shoppingList   ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
-  name           String
-  quantity       String
-  category       String?
-  purchased      Boolean      @default(false)
-  notes          String?
-  price          Float?
-  photoUrl       String?
-  recipeId       String?
-  recipe         Recipe?      @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id              String       @id @default(cuid())
+  shoppingListId  String
+  shoppingList    ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  name            String
+  quantity        String
+  category        String?
+  purchased       Boolean      @default(false)
+  notes           String?
+  price           Float?
+  photoUrl        String?
+  recipeId        String?
+  recipe          Recipe?      @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  // Group 10Q: source recipe IDs (JSON array) — tracks which recipes contributed this ingredient
+  sourceRecipeIds String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   @@index([shoppingListId])
   @@index([shoppingListId, purchased])
   @@map("shopping_list_items")
+}
+
+// Group 10Q: tracks ingredients deleted from a recipe-sourced list ("Missing for <recipe>" banner)
+model MissingIngredient {
+  id             String   @id @default(cuid())
+  userId         String
+  recipeId       String
+  ingredientName String
+  deletedAt      DateTime @default(now())
+  dismissed      Boolean  @default(false)
+
+  @@index([userId, recipeId])
+  @@index([userId, dismissed])
+  @@map("missing_ingredients")
+}
+
+// Group 10Q: share a shopping list via a deep-link token
+model ShoppingListShare {
+  id        String   @id @default(cuid())
+  listId    String
+  token     String   @unique
+  createdBy String
+  expiresAt DateTime
+  usedBy    String   @default("[]") // JSON array of user IDs
+  maxUses   Int      @default(10)
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([listId])
+  @@map("shopping_list_shares")
 }
 
 model PurchaseHistory {
