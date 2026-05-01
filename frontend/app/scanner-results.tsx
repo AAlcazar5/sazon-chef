@@ -78,7 +78,7 @@ export default function ScannerResultsScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Ionicons name="alert-circle-outline" size={64} color="#9CA3AF" />
-        <Text style={{ fontSize: 20, fontWeight: '600', color: '#1F2937', marginTop: 16, marginBottom: 8 }}>No Results</Text>
+        <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#1F2937', marginTop: 16, marginBottom: 8 }}>No Results</Text>
         <Text style={{ color: '#6B7280', textAlign: 'center', marginBottom: 24 }}>
           Unable to process the food recognition results.
         </Text>
@@ -99,7 +99,7 @@ export default function ScannerResultsScreen() {
         <HapticTouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <Ionicons name="arrow-back" size={24} color="#374151" />
         </HapticTouchableOpacity>
-        <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937' }}>Food Recognition</Text>
+        <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_700Bold', color: '#1F2937' }}>Food Recognition</Text>
       </View>
 
       <ScrollView style={{ flex: 1 }}>
@@ -110,10 +110,10 @@ export default function ScannerResultsScreen() {
 
           {/* Summary with full macros */}
           <View style={[{ padding: 16, borderRadius: BorderRadius.card, backgroundColor: '#FFF5F0', marginBottom: 16 }, Shadows.MD]}>
-            <Text style={{ fontSize: 17, fontWeight: '600', color: '#1F2937', marginBottom: 4 }}>
+            <Text style={{ fontSize: 17, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#1F2937', marginBottom: 4 }}>
               {parsedResult.mealDescription || 'Food Items'}
             </Text>
-            <Text style={{ fontSize: 28, fontWeight: '800', color: MACRO_COLORS.calories.accent, marginBottom: 12 }}>
+            <Text style={{ fontSize: 28, fontFamily: 'PlusJakartaSans_800ExtraBold', color: MACRO_COLORS.calories.accent, marginBottom: 12 }}>
               {parsedResult.totalEstimatedCalories} cal
             </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
@@ -123,7 +123,7 @@ export default function ScannerResultsScreen() {
                 { label: 'Fat', value: `${parsedResult.totalEstimatedFat || 0}g`, color: MACRO_COLORS.fat },
               ] as const).map(({ label, value, color }) => (
                 <View key={label} style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: color.accent }}>{value}</Text>
+                  <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: color.accent }}>{value}</Text>
                   <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{label}</Text>
                 </View>
               ))}
@@ -133,12 +133,12 @@ export default function ScannerResultsScreen() {
           {/* Food items */}
           {parsedResult.foods && parsedResult.foods.length > 0 && (
             <View style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 8 }}>Food Items:</Text>
+              <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#1F2937', marginBottom: 8 }}>Food Items:</Text>
               {parsedResult.foods.map((food: any, index: number) => (
                 <View key={index} style={[{ padding: 12, borderRadius: BorderRadius.card, backgroundColor: '#FFF', marginBottom: 8 }, Shadows.SM]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#1F2937' }}>{food.name}</Text>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: MACRO_COLORS.calories.accent }}>{food.estimatedCalories} cal</Text>
+                    <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#1F2937' }}>{food.name}</Text>
+                    <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: MACRO_COLORS.calories.accent }}>{food.estimatedCalories} cal</Text>
                   </View>
                   {food.estimatedPortion && (
                     <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>Portion: {food.estimatedPortion}</Text>
@@ -155,7 +155,7 @@ export default function ScannerResultsScreen() {
 
           {/* Meal slot picker */}
           <View style={{ marginBottom: 8 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#6B7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Log to
             </Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -178,7 +178,7 @@ export default function ScannerResultsScreen() {
                 >
                   <Text style={{
                     fontSize: 13,
-                    fontWeight: '600',
+                    fontFamily: 'PlusJakartaSans_600SemiBold',
                     color: selectedMealSlot === slot ? '#FFFFFF' : '#6B7280',
                     textTransform: 'capitalize',
                   }}>
@@ -211,7 +211,7 @@ export default function ScannerResultsScreen() {
               ]}
             >
               <Ionicons name="checkmark-circle" size={22} color="white" />
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+              <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#FFFFFF' }}>
                 {loggingMeal ? 'Logging...' : 'Log This Meal'}
               </Text>
             </HapticTouchableOpacity>

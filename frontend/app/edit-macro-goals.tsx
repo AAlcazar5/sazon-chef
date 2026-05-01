@@ -285,9 +285,9 @@ export default function EditMacroGoalsScreen() {
           <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
             <Ionicons name="arrow-back" size={24} color={label} />
           </HapticTouchableOpacity>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: label }}>Macro Goals</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: label }}>Macro Goals</Text>
           <HapticTouchableOpacity onPress={handleSave} disabled={saving} style={{ padding: 4 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: saving ? sub : primaryColor }}>
+            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_600SemiBold', color: saving ? sub : primaryColor }}>
               {saving ? 'Saving…' : 'Save'}
             </Text>
           </HapticTouchableOpacity>
@@ -300,7 +300,7 @@ export default function EditMacroGoalsScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Section heading */}
-          <Text style={{ fontSize: 13, fontWeight: '600', color: sub, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>
+          <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: sub, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>
             How do you want to eat?
           </Text>
 
@@ -346,7 +346,7 @@ export default function EditMacroGoalsScreen() {
                   <View style={{ flexDirection: index === 4 ? 'row' : 'column', alignItems: index === 4 ? 'center' : 'flex-start' }}>
                     <Text style={{ fontSize: index === 4 ? 22 : 26, marginBottom: index === 4 ? 0 : 6, marginRight: index === 4 ? 10 : 0 }}>{goal.emoji}</Text>
                     <View style={{ flex: index === 4 ? 1 : 0 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: isSelected ? accent : label }}>{goal.label}</Text>
+                      <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: isSelected ? accent : label }}>{goal.label}</Text>
                       <Text style={{ fontSize: 12, color: sub, marginTop: 2, lineHeight: 16 }} numberOfLines={2}>{goal.description}</Text>
                     </View>
                     {isSelected && (
@@ -365,23 +365,23 @@ export default function EditMacroGoalsScreen() {
             {/* Numbers */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: label }}>{activeMacros.calories}</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: label }}>{activeMacros.calories}</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>calories</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#3B82F6' }}>{activeMacros.protein}g</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#3B82F6' }}>{activeMacros.protein}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>protein</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#F97316' }}>{activeMacros.carbs}g</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#F97316' }}>{activeMacros.carbs}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>carbs</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#EAB308' }}>{activeMacros.fat}g</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#EAB308' }}>{activeMacros.fat}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>fat</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#059669' }}>{activeMacros.fiber}g</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#059669' }}>{activeMacros.fiber}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>fiber</Text>
               </View>
             </View>
@@ -418,7 +418,7 @@ export default function EditMacroGoalsScreen() {
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 4 }}
           >
             <Ionicons name={showCustomize ? 'chevron-up' : 'settings-outline'} size={16} color={sub} style={{ marginRight: 6 }} />
-            <Text style={{ fontSize: 13, color: sub, fontWeight: '500' }}>
+            <Text style={{ fontSize: 13, color: sub, fontFamily: 'PlusJakartaSans_500Medium' }}>
               {showCustomize ? 'Hide custom values' : 'Customize'}
             </Text>
           </HapticTouchableOpacity>
@@ -438,7 +438,7 @@ export default function EditMacroGoalsScreen() {
                 { label: 'Fiber (g)', value: fiber, onChange: setFiber, placeholder: '28', hint: 'Recommended: ~14g per 1,000 calories' },
               ]).map(({ label: fieldLabel, value, onChange, placeholder, hint }) => (
                 <View key={fieldLabel} style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: label, marginBottom: 6 }}>{fieldLabel}</Text>
+                  <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: label, marginBottom: 6 }}>{fieldLabel}</Text>
                   <TextInput
                     value={value}
                     onChangeText={onChange}

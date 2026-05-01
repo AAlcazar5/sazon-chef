@@ -108,13 +108,13 @@ function ActivityCalendar({ cookingDates, isDark }: { cookingDates: string[]; is
           value={streak}
           style={{
             fontSize: FontSize['2xl'],
-            fontWeight: FontWeight.extrabold,
+            fontFamily: 'PlusJakartaSans_800ExtraBold',
             color: isDark ? DarkColors.text.primary : Colors.text.primary,
           }}
         />
         <Text style={{
           fontSize: FontSize.base,
-          fontWeight: FontWeight.medium,
+          fontFamily: 'PlusJakartaSans_500Medium',
           color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
           marginLeft: 6,
         }}>
@@ -241,7 +241,7 @@ function WeeklyComparison({ cookingDates, isDark }: { cookingDates: string[]; is
     <View style={[styles.comparisonContainer, { marginTop: Spacing.md }]} testID="weekly-comparison">
       <Text style={{
         fontSize: FontSize.base,
-        fontWeight: FontWeight.bold,
+        fontFamily: 'PlusJakartaSans_700Bold',
         color: textPrimary,
         marginBottom: Spacing.sm,
       }}>
@@ -258,17 +258,17 @@ function WeeklyComparison({ cookingDates, isDark }: { cookingDates: string[]; is
             ]}
           >
             <Text style={{ fontSize: 18, marginBottom: 4 }}>{card.icon}</Text>
-            <Text style={{ fontSize: FontSize['2xl'], fontWeight: FontWeight.extrabold, color: textPrimary }}>
+            <Text style={{ fontSize: FontSize['2xl'], fontFamily: 'PlusJakartaSans_800ExtraBold', color: textPrimary }}>
               {card.value}
             </Text>
-            <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: textSecondary, marginTop: 2 }}>
+            <Text style={{ fontSize: FontSize.sm, fontFamily: 'PlusJakartaSans_500Medium', color: textSecondary, marginTop: 2 }}>
               {card.label}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}>
               {card.trend && (
                 <Text style={{
                   fontSize: FontSize.xs,
-                  fontWeight: FontWeight.bold,
+                  fontFamily: 'PlusJakartaSans_700Bold',
                   color: card.trend.direction === 'up' ? Accent.sage : Accent.blush,
                 }}>
                   {card.trend.direction === 'up' ? '↑' : '↓'}{card.trend.value}
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   weekRow: {
     flexDirection: 'row',

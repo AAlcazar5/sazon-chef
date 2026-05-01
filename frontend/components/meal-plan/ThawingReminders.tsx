@@ -21,7 +21,7 @@ export default function ThawingReminders({
 
   return (
     <View className="px-4 mb-4">
-      <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 12 }}>
+      <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 12 }}>
         ❄️ Thawing Reminders
       </Text>
       {thawingReminders.slice(0, 3).map((reminder: any, index: number) => {

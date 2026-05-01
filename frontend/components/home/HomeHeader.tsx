@@ -1,8 +1,7 @@
-// frontend/components/home/HomeHeader.tsx
-// Header — logo + brand name + animated filters button (using BrandButton)
-
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,40 +9,34 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import BrandButton from '../ui/BrandButton';
 import FrostedHeader from '../ui/FrostedHeader';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { LogoMascot } from '../mascot';
+import { EditorialFontFamily } from '../../constants/Typography';
+import { HapticPatterns } from '../../constants/Haptics';
 
 interface HomeHeaderProps {
-  /** Called when the mascot logo is pressed — scrolls to top */
-  onMascotPress: () => void;
-  /** Called when the filters button is pressed */
-  onFilterPress?: () => void;
-  /** Number of active filters (for badge) */
-  activeFilterCount?: number;
-  /** Called when Surprise Me is pressed */
+  onMascotPress?: () => void;
   onSurpriseMe?: () => void;
-  /** 10M: Called when the camera shortcut is pressed */
-  onCameraPress?: () => void;
+  onFilterPress?: () => void;
+  activeFilterCount?: number;
 }
+
+const SPRING = { damping: 8, stiffness: 300 };
 
 export default function HomeHeader({
   onMascotPress,
+  onSurpriseMe,
   onFilterPress,
   activeFilterCount = 0,
-  onSurpriseMe,
-  onCameraPress,
 }: HomeHeaderProps) {
-  // Badge animation — bounces when count changes
   const badgeScale = useSharedValue(1);
   const badgeRotation = useSharedValue(0);
 
   useEffect(() => {
     badgeScale.value = withSequence(
       withSpring(1.3, { damping: 6, stiffness: 400 }),
-      withSpring(1, { damping: 8, stiffness: 300 }),
+      withSpring(1, SPRING),
     );
     badgeRotation.value = withSequence(
       withTiming(-8, { duration: 80 }),
@@ -54,64 +47,64 @@ export default function HomeHeader({
   }, [activeFilterCount]);
 
   const badgeAnimStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: badgeScale.value },
-      { rotate: `${badgeRotation.value}deg` },
-    ],
+    transform: [{ scale: badgeScale.value }, { rotate: `${badgeRotation.value}deg` }],
   }));
 
   return (
-    <FrostedHeader paddingBottom={12} withTopInset>
-      <View className="flex-row items-center justify-between" style={{ height: 36 }}>
-        <View className="flex-row items-center">
-          <HapticTouchableOpacity onPress={onMascotPress}>
-            <LogoMascot size="xsmall" />
-          </HapticTouchableOpacity>
-          <Text
-            className="text-2xl font-black text-gray-900 dark:text-gray-100 ml-0.5"
-            style={{ lineHeight: 36 }}
-            accessibilityRole="header"
-          >
-            Sazon Chef
+    <FrostedHeader paddingBottom={14} withTopInset>
+      <View style={styles.row}>
+        {/* Left: logo + title */}
+        <HapticTouchableOpacity onPress={onMascotPress} activeOpacity={0.8} style={styles.titleRow}>
+          <LogoMascot size="xsmall" />
+          <Text style={styles.title} accessibilityRole="header">
+            Sazon <Text style={styles.titleAccent}>Chef</Text>
           </Text>
-        </View>
+        </HapticTouchableOpacity>
 
-        <View className="flex-row items-center" style={{ gap: 8 }}>
+        {/* Right: buttons */}
+        <View style={styles.actions}>
           {onSurpriseMe && (
-            <BrandButton
-              label="Surprise"
-              emoji="🎰"
-              onPress={onSurpriseMe}
-              variant="ghost"
-              size="compact"
-              hapticStyle="medium"
+            <HapticTouchableOpacity
+              onPress={() => { onSurpriseMe(); HapticPatterns.buttonPress(); }}
               accessibilityLabel="Surprise Me"
-            />
+              accessibilityRole="button"
+              style={{ borderRadius: 100, overflow: 'hidden' }}
+            >
+              <LinearGradient
+                colors={['#A78BFA', '#7C3AED']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.pill}
+              >
+                <Text style={styles.pillEmoji}>🎰</Text>
+                <Text style={styles.pillLabel}>Surprise Me</Text>
+              </LinearGradient>
+            </HapticTouchableOpacity>
           )}
 
           {onFilterPress && (
-            <View style={styles.filterWrapper}>
-              <BrandButton
-                label="Filters"
-                icon="options"
-                onPress={onFilterPress}
-                variant="brand"
-                size="compact"
-                hapticStyle="medium"
+            <View style={{ position: 'relative' }}>
+              <HapticTouchableOpacity
+                onPress={() => { onFilterPress(); HapticPatterns.buttonPress(); }}
                 accessibilityLabel={`Filters, ${activeFilterCount} active`}
-              />
-
-              {/* Animated badge — always visible */}
-              <Animated.View style={[styles.badge, badgeAnimStyle]} pointerEvents="none">
+                accessibilityRole="button"
+                style={{ borderRadius: 100, overflow: 'hidden' }}
+              >
                 <LinearGradient
-                  colors={['#FFFFFF', '#F3F4F6']}
-                  style={styles.badgeGradient}
+                  colors={['#FF8B41', '#E84D3D']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.pill}
                 >
-                  <Text style={styles.badgeText}>
-                    {activeFilterCount}
+                  <Ionicons name="options" size={14} color="#FFF" />
+                  <Text style={styles.pillLabel}>
+                    Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
                   </Text>
                 </LinearGradient>
-              </Animated.View>
+              </HapticTouchableOpacity>
+              {activeFilterCount > 0 && (
+                <Animated.View style={[styles.badge, badgeAnimStyle]} />
+              )}
             </View>
           )}
         </View>
@@ -120,41 +113,62 @@ export default function HomeHeader({
   );
 }
 
+const TITLE_SIZE = 26;
+
 const styles = StyleSheet.create({
-  cameraBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
-  filterWrapper: {
-    position: 'relative',
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  title: {
+    fontFamily: EditorialFontFamily.display.bold,
+    fontSize: TITLE_SIZE,
+    lineHeight: TITLE_SIZE * 1.1,
+    letterSpacing: -0.8,
+    color: '#111827',
+  },
+  titleAccent: {
+    fontFamily: EditorialFontFamily.displayItalic.bold,
+    fontStyle: 'italic',
+    fontSize: TITLE_SIZE,
+    letterSpacing: -0.8,
+    color: '#111827',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 100,
+    gap: 6,
+  },
+  pillEmoji: {
+    fontSize: 14,
+  },
+  pillLabel: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: '#FFF',
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    overflow: 'hidden',
-    shadowColor: '#E84D3D',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  badgeGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 5,
-  },
-  badgeText: {
-    color: '#E84D3D',
-    fontSize: 10,
-    fontWeight: '800',
+    top: -3,
+    right: -3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#111827',
   },
 });

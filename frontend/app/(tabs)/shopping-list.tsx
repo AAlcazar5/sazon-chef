@@ -6,7 +6,6 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import ScreenGradient from '../../components/ui/ScreenGradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
@@ -49,10 +48,12 @@ import {
   ShoppingListHeader,
   ShoppingListItem,
   ShoppingListCategory,
-  ShoppingListProgress,
   AddItemModal,
   MergeListsModal,
   OfflineBanner,
+  EditorialShoppingIntro,
+  EditorialShoppingProgress,
+  EditorialAisleHeader,
 } from '../../components/shopping';
 
 // CONFETTI constant kept for backward compat reference (celebration now uses CelebrationOverlay)
@@ -183,15 +184,19 @@ export default function ShoppingListScreen() {
 
   if (state.loading) {
     return (
-      <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <ScreenGradient><View style={{ flex: 1 }}>
         <LoadingState config={ShoppingListLoadingStates.lists} fullScreen />
-      </SafeAreaView></ScreenGradient>
+      </View></ScreenGradient>
     );
   }
 
   return (
     <View style={{ flex: 1 }}>
-    <ScreenGradient><SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <ScreenGradient><View style={{ flex: 1 }}>
+      <EditorialShoppingIntro
+        itemsLeft={(state.selectedList?.items || []).filter(i => !i.purchased && !pantrySet.has(i.name.toLowerCase().trim())).length}
+        itemsInPantry={(state.selectedList?.items || []).filter(i => pantrySet.has(i.name.toLowerCase().trim())).length}
+      />
       <ShoppingListHeader
         state={state}
         dispatch={dispatch}
@@ -238,13 +243,18 @@ export default function ShoppingListScreen() {
             />
           </View>
 
-          {/* Progress Ring + Cost Card (9L) */}
-          <ShoppingListProgress
-            progressStats={progressStats}
-            estimatedCost={estimatedCost}
-            spentSoFar={currentItems.filter(i => i.purchased && i.price != null && i.price > 0).reduce((s, i) => s + (i.price ?? 0), 0)}
-            currentItems={currentItems}
-          />
+          {/* Editorial Progress Card (peach) */}
+          {currentItems.length > 0 && (
+            <EditorialShoppingProgress
+              purchased={progressStats.purchased}
+              total={progressStats.total}
+            />
+          )}
+
+          {/* By aisle header — only when grouped by aisle */}
+          {currentItems.length > 0 && itemsByAisle && (
+            <EditorialAisleHeader />
+          )}
 
           {/* Items List — in-store aisle view uses SectionList for native sticky headers */}
           {visibleItems.length === 0 && currentItems.length > 0 ? (
@@ -268,7 +278,7 @@ export default function ShoppingListScreen() {
                     }, Shadows.SM]}
                   >
                     <Icon name={Icons.EYE_OUTLINE} size={IconSizes.MD} color="white" accessibilityLabel="Show purchased items" style={{ marginRight: 8 }} />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 16 }}>Show Purchased Items</Text>
+                    <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16 }}>Show Purchased Items</Text>
                   </HapticTouchableOpacity>
                 </View>
               </View>
@@ -304,7 +314,7 @@ export default function ShoppingListScreen() {
                     }}
                   >
                     <Icon name={Icons.ADD} size={IconSizes.MD} color={isDark ? '#E5E7EB' : '#374151'} accessibilityLabel="Add item" style={{ marginRight: 8 }} />
-                    <Text style={{ fontWeight: '600', fontSize: 16, color: isDark ? '#E5E7EB' : '#374151' }}>
+                    <Text style={{ fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 16, color: isDark ? '#E5E7EB' : '#374151' }}>
                       Add Item Manually
                     </Text>
                   </HapticTouchableOpacity>
@@ -344,7 +354,7 @@ export default function ShoppingListScreen() {
                       </Text>
                       <Text style={{
                         fontSize: 14,
-                        fontWeight: '800',
+                        fontFamily: 'PlusJakartaSans_800ExtraBold',
                         color: isDark ? '#E5E7EB' : '#111827',
                       }}>
                         {section.title}
@@ -358,7 +368,7 @@ export default function ShoppingListScreen() {
                       }}>
                         <Text style={{
                           fontSize: 11,
-                          fontWeight: '600',
+                          fontFamily: 'PlusJakartaSans_600SemiBold',
                           color: isDark ? '#9CA3AF' : '#6B7280',
                         }}>
                           {allDone ? '✓ Done' : `${section.remaining} left`}
@@ -464,10 +474,10 @@ export default function ShoppingListScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={{ fontSize: 16, marginRight: 8 }}>🛒</Text>
-                <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 16 }}>${estimatedCost.toFixed(2)}</Text>
+                <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 16 }}>${estimatedCost.toFixed(2)}</Text>
                 <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginLeft: 4 }}>remaining</Text>
               </View>
-              <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+              <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
                 {progressStats.purchased}/{progressStats.total} done
               </Text>
             </View>
@@ -492,7 +502,7 @@ export default function ShoppingListScreen() {
                 onPress={() => dispatch({ type: 'EXIT_SELECTION_MODE' })}
                 style={{ flex: 1, paddingVertical: 14, alignItems: 'center', backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
               >
-                <Text style={{ fontWeight: '600', fontSize: 14, color: isDark ? '#E5E7EB' : '#374151' }}>Cancel</Text>
+                <Text style={{ fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14, color: isDark ? '#E5E7EB' : '#374151' }}>Cancel</Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={handleMarkSelectedComplete}
@@ -505,7 +515,7 @@ export default function ShoppingListScreen() {
                   opacity: state.selectedItems.length === 0 || state.bulkUpdating ? 0.5 : 1,
                 }}
               >
-                <Text style={{ fontWeight: '600', fontSize: 14, color: '#FFFFFF' }}>
+                <Text style={{ fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14, color: '#FFFFFF' }}>
                   {state.bulkUpdating ? '...' : `Done (${state.selectedItems.length})`}
                 </Text>
               </HapticTouchableOpacity>
@@ -559,7 +569,7 @@ export default function ShoppingListScreen() {
         onSetupDefaultPantry={handleSetupDefaultPantry}
         onQuickAddSuggestion={handleQuickAddSuggestion}
       />
-    </SafeAreaView></ScreenGradient>
+    </View></ScreenGradient>
 
     {/* All-done celebration overlay — full-screen */}
     <CelebrationOverlay

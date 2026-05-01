@@ -89,7 +89,7 @@ function RecipeGroupHeader({
         style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
       >
         <View className="flex-1">
-          <Text style={{ fontSize: 16, fontWeight: '600', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+          <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
             {recipe.title}
             {allPurchased ? ' ✓' : ''}
           </Text>
@@ -164,7 +164,7 @@ export default function ShoppingListCategory({
       {/* Items without recipe */}
       {itemsByRecipe.noRecipe.length > 0 && (
         <View className="mb-6">
-          <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#D1D5DB' : '#374151', marginBottom: 12 }}>Other Items</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#D1D5DB' : '#374151', marginBottom: 12 }}>Other Items</Text>
           {itemsByRecipe.noRecipe.map((item, itemIndex) => (
             <Reanimated.View
               key={item.id}

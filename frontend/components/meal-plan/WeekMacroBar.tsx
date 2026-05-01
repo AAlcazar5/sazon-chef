@@ -133,7 +133,7 @@ export default function WeekMacroBar({
               <Text
                 style={{
                   fontSize: 11,
-                  fontWeight: '700',
+                  fontFamily: 'PlusJakartaSans_700Bold',
                   color: isDark ? '#E5E7EB' : '#1F2937',
                   marginTop: 1,
                 }}

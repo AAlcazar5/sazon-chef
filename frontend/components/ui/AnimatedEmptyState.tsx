@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FontSize.xl,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     textAlign: 'center',
     marginTop: ComponentSpacing.emptyState.titleGap,
   },
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: FontSize.md,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });
 

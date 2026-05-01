@@ -2,7 +2,7 @@
 // Draggable meal card with swipe actions and completion tracking
 
 import React, { useEffect } from 'react';
-import { View, Text, Image, Switch } from 'react-native';
+import { View, Text, Image, Switch, Alert } from 'react-native';
 import { optimizedImageUrl } from '../../utils/imageUtils';
 import { useColorScheme } from 'nativewind';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -20,6 +20,9 @@ import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Shadows } from '../../constants/Shadows';
 import { Colors, DarkColors, Pastel, PastelDark, Accent } from '../../constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
+import { recipeApi } from '../../lib/api';
+import { HapticPatterns } from '../../constants/Haptics';
 import SurpriseBadge from './SurpriseBadge';
 
 const MEAL_TYPE_PILL: Record<string, { label: string; tint: string; tintDark: string; accent: string }> = {
@@ -29,6 +32,41 @@ const MEAL_TYPE_PILL: Record<string, { label: string; tint: string; tintDark: st
   snack:     { label: 'Snack', tint: Pastel.sky, tintDark: PastelDark.sky, accent: Accent.sky },
   dessert:   { label: 'Dessert', tint: Pastel.blush, tintDark: PastelDark.blush, accent: Accent.blush },
 };
+
+// Richer pastel rotation — used to give each meal card a distinct surface
+// regardless of meal type so the timeline reads as a varied palette.
+const PASTEL_ROTATION_LIGHT = [
+  '#FFE9A8', // butter
+  '#C9E8CC', // sage
+  '#FFD9B3', // peach
+  '#BCDFFB', // sky
+  '#F8C8D8', // blush
+  '#E0D4F7', // lavender
+  '#FFD3B6', // apricot
+  '#C7F0E0', // mint
+  '#FCE8C7', // honey
+  '#E2C8F2', // orchid
+];
+const PASTEL_ROTATION_DARK = [
+  'rgba(255,213,79,0.20)',
+  'rgba(129,199,132,0.20)',
+  'rgba(255,183,77,0.20)',
+  'rgba(100,181,246,0.20)',
+  'rgba(240,98,146,0.20)',
+  'rgba(206,147,216,0.20)',
+  'rgba(255,160,80,0.20)',
+  'rgba(72,201,170,0.20)',
+  'rgba(255,200,100,0.20)',
+  'rgba(180,140,220,0.20)',
+];
+
+function hashToIndex(input: string, max: number): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) - hash + input.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % max;
+}
 
 interface DraggableMealCardProps {
   meal: any;
@@ -338,16 +376,14 @@ function DraggableMealCard({
         style={[
           {
             marginBottom: 12,
-            borderRadius: 8,
+            borderRadius: 22,
             padding: 16,
             borderWidth: isDragOver ? 2 : 0,
-            backgroundColor: isSnack
-              ? isDark
-                ? `${Colors.secondaryRedLight}33`
-                : Colors.secondaryRedLight
-              : isDark
-              ? `${Colors.primaryLight}33`
-              : Colors.primaryLight,
+            backgroundColor: (() => {
+              const seed = String(meal.id ?? `${hour}-${mealIndex}-${meal.name ?? ''}`);
+              const idx = hashToIndex(seed, PASTEL_ROTATION_LIGHT.length);
+              return isDark ? PASTEL_ROTATION_DARK[idx] : PASTEL_ROTATION_LIGHT[idx];
+            })(),
             borderColor: isDragOver
               ? isSnack
                 ? isDark
@@ -356,18 +392,9 @@ function DraggableMealCard({
                 : isDark
                 ? DarkColors.primary
                 : Colors.primary
-              : isCompleted
-              ? isDark
-                ? DarkColors.tertiaryGreen
-                : Colors.tertiaryGreen
-              : isSnack
-              ? isDark
-                ? DarkColors.secondaryRedDark
-                : Colors.secondaryRedDark
-              : isDark
-              ? DarkColors.primaryDark
-              : Colors.primaryDark,
+              : 'transparent',
             overflow: 'hidden',
+            ...Shadows.SM,
           },
           animatedStyle,
           isCompleted ? celebrationAnimatedStyle : undefined,
@@ -410,7 +437,7 @@ function DraggableMealCard({
             }}>
               <Text style={{
                 fontSize: 10,
-                fontWeight: '700',
+                fontFamily: 'PlusJakartaSans_700Bold',
                 color: MEAL_TYPE_PILL[meal.mealType].accent,
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
@@ -424,7 +451,7 @@ function DraggableMealCard({
           <View className="flex-row items-center justify-between mb-3">
             <View className="flex-1">
               <View className="flex-row items-center">
-                <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{meal.name}</Text>
+                <Text style={{ fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#F9FAFB' : '#0F172A' }}>{meal.name}</Text>
                 {cookedRecipeIds && (
                   <View style={{ marginLeft: 6 }}>
                     <SurpriseBadge recipeId={meal.id} cookedRecipeIds={cookedRecipeIds} isDark={isDark} />
@@ -452,16 +479,15 @@ function DraggableMealCard({
                 </Reanimated.View>
               </View>
               <View className="flex-row items-center space-x-3">
-                <Text className="text-sm text-gray-600 dark:text-gray-100">{meal.calories} calories</Text>
                 {meal.cookTime && (
                   <View className="flex-row items-center">
                     <Icon
                       name={Icons.TIME_OUTLINE}
                       size={IconSizes.XS}
-                      color={isDark ? '#9CA3AF' : '#6B7280'}
+                      color={isDark ? '#D1D5DB' : '#374151'}
                       accessibilityLabel="Prep time"
                     />
-                    <Text className="text-sm text-gray-600 dark:text-gray-100 ml-1">
+                    <Text style={{ marginLeft: 4, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#D1D5DB' : '#374151' }}>
                       {meal.cookTime < 60
                         ? `${meal.cookTime} min`
                         : `${Math.floor(meal.cookTime / 60)}h ${meal.cookTime % 60 > 0 ? `${meal.cookTime % 60}min` : ''}`.trim()}
@@ -483,42 +509,50 @@ function DraggableMealCard({
             </View>
           </View>
 
-          {/* Macro Breakdown */}
-          <View className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-3">
-            <Text className="text-xs font-medium text-gray-700 dark:text-gray-100 mb-2">Nutritional Info</Text>
-            <View className="flex-row justify-between">
-              <View className="items-center">
-                <Text className="text-lg font-bold text-blue-600 dark:text-blue-400">{meal.protein}g</Text>
-                <Text className="text-xs text-gray-500 dark:text-gray-200">Protein</Text>
-              </View>
-              <View className="items-center">
-                <Text
-                  className="text-lg font-bold"
-                  style={{ color: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen }}
-                >
-                  {meal.carbs}g
+          {/* Macro Breakdown — calories + protein/carbs/fat/fiber */}
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            backgroundColor: isDark ? 'rgba(17,24,39,0.55)' : '#FFFFFF',
+            borderRadius: 14,
+            paddingVertical: 12,
+            paddingHorizontal: 8,
+            marginBottom: 12,
+            ...Shadows.SM,
+          }}>
+            {[
+              { label: 'CAL',  value: `${meal.calories ?? 0}`,        color: isDark ? '#F9FAFB' : '#0F172A' },
+              { label: 'PRO',  value: `${meal.protein ?? 0}g`,        color: '#1D4ED8' },
+              { label: 'CARB', value: `${meal.carbs ?? 0}g`,          color: '#047857' },
+              { label: 'FAT',  value: `${meal.fat ?? 0}g`,            color: '#6D28D9' },
+              { label: 'FIB',  value: `${meal.fiber ?? 0}g`,          color: '#0F766E' },
+            ].map((m) => (
+              <View key={m.label} style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_800ExtraBold', color: m.color }}>
+                  {m.value}
                 </Text>
-                <Text className="text-xs text-gray-500 dark:text-gray-200">Carbs</Text>
+                <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#D1D5DB' : '#374151', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 3 }}>
+                  {m.label}
+                </Text>
               </View>
-              <View className="items-center">
-                <Text className="text-lg font-bold text-purple-600 dark:text-purple-400">{meal.fat}g</Text>
-                <Text className="text-xs text-gray-500 dark:text-gray-200">Fat</Text>
-              </View>
-            </View>
+            ))}
           </View>
+
+          {/* Feedback row — bookmark · dislike · like */}
+          <FeedbackRow recipeId={meal.id} isDark={isDark} />
 
           {/* Additional Info */}
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center space-x-4">
               {meal.difficulty && (
                 <View className="flex-row items-center">
-                  <Icon name={Icons.STAR_OUTLINE} size={12} color="#6B7280" accessibilityLabel="Difficulty" />
-                  <Text className="text-xs text-gray-600 dark:text-gray-100 ml-1 capitalize">{meal.difficulty}</Text>
+                  <Icon name={Icons.STAR_OUTLINE} size={12} color={isDark ? '#E5E7EB' : '#1F2937'} accessibilityLabel="Difficulty" />
+                  <Text style={{ marginLeft: 4, fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#E5E7EB' : '#1F2937', textTransform: 'capitalize' }}>{meal.difficulty}</Text>
                 </View>
               )}
               {meal.cuisine && (
                 <View className="flex-row items-center">
-                  <Text className="text-xs text-gray-600 dark:text-gray-100 capitalize">{meal.cuisine}</Text>
+                  <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#E5E7EB' : '#1F2937', textTransform: 'capitalize' }}>{meal.cuisine}</Text>
                 </View>
               )}
             </View>
@@ -563,10 +597,37 @@ function DraggableMealCard({
                   )}
                 </>
               )}
-              <Text className="text-xs font-medium mr-1" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>
+              <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? '#F9FAFB' : '#0F172A', marginRight: 12 }}>
                 View Recipe
               </Text>
-              <Text className="text-xs text-gray-400 dark:text-gray-200">• Long press to remove • Drag to move</Text>
+              <HapticTouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    'Remove this meal?',
+                    `Take "${meal.name}" off your plan?`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Remove', style: 'destructive', onPress: () => onLongPress() },
+                    ]
+                  );
+                }}
+                accessibilityLabel="Remove meal"
+                hitSlop={8}
+                style={{ marginRight: 10, padding: 2 }}
+              >
+                <Icon
+                  name={Icons.DELETE_OUTLINE}
+                  size={16}
+                  color={isDark ? '#F87171' : '#B91C1C'}
+                  accessibilityLabel="Remove meal"
+                />
+              </HapticTouchableOpacity>
+              <Icon
+                name={Icons.MENU}
+                size={14}
+                color={isDark ? '#D1D5DB' : '#374151'}
+                accessibilityLabel="Drag to move"
+              />
             </View>
           </View>
 
@@ -680,5 +741,120 @@ function DraggableMealCard({
   );
 }
 
+
+function FeedbackRow({ recipeId, isDark }: { recipeId: string; isDark: boolean }) {
+  const [saved, setSaved] = React.useState(false);
+  const [liked, setLiked] = React.useState(false);
+  const [disliked, setDisliked] = React.useState(false);
+  const [busy, setBusy] = React.useState<'save' | 'like' | 'dislike' | null>(null);
+
+  if (!recipeId) return null;
+
+  const handleSave = async () => {
+    if (busy) return;
+    setBusy('save');
+    HapticPatterns.buttonPress();
+    try {
+      if (saved) {
+        await recipeApi.unsaveRecipe(recipeId);
+        setSaved(false);
+      } else {
+        await recipeApi.saveRecipe(recipeId);
+        setSaved(true);
+      }
+    } catch {
+      // silent — user-facing toast handled by callers if needed
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleLike = async () => {
+    if (busy) return;
+    setBusy('like');
+    HapticPatterns.like();
+    try {
+      await recipeApi.likeRecipe(recipeId);
+      setLiked((v) => !v);
+      if (disliked) setDisliked(false);
+    } catch {
+      // silent
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDislike = async () => {
+    if (busy) return;
+    setBusy('dislike');
+    HapticPatterns.dislike();
+    try {
+      await recipeApi.dislikeRecipe(recipeId);
+      setDisliked((v) => !v);
+      if (liked) setLiked(false);
+    } catch {
+      // silent
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const button = (active: boolean) => ({
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: active
+      ? (isDark ? 'rgba(255,255,255,0.18)' : '#FFFFFF')
+      : (isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.7)'),
+  });
+
+  return (
+    <View style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    }}>
+      <HapticTouchableOpacity
+        onPress={handleSave}
+        accessibilityLabel={saved ? 'Remove from cookbook' : 'Save to cookbook'}
+        style={button(saved)}
+      >
+        <Ionicons
+          name={saved ? 'bookmark' : 'bookmark-outline'}
+          size={16}
+          color={saved ? '#fa7e12' : (isDark ? '#E5E7EB' : '#374151')}
+        />
+      </HapticTouchableOpacity>
+
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <HapticTouchableOpacity
+          onPress={handleDislike}
+          accessibilityLabel={disliked ? 'Remove dislike' : 'Not for me'}
+          style={button(disliked)}
+        >
+          <Ionicons
+            name={disliked ? 'thumbs-down' : 'thumbs-down-outline'}
+            size={16}
+            color={disliked ? '#EF4444' : (isDark ? '#E5E7EB' : '#374151')}
+          />
+        </HapticTouchableOpacity>
+        <HapticTouchableOpacity
+          onPress={handleLike}
+          accessibilityLabel={liked ? 'Remove like' : 'Love it'}
+          style={button(liked)}
+        >
+          <Ionicons
+            name={liked ? 'thumbs-up' : 'thumbs-up-outline'}
+            size={16}
+            color={liked ? '#16A34A' : (isDark ? '#E5E7EB' : '#374151')}
+          />
+        </HapticTouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
 export default React.memo(DraggableMealCard);

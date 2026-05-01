@@ -7,6 +7,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Text } from 'react-native';
 import * as ExpoSplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
+import { EDITORIAL_FONTS } from '../constants/Typography';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { ToastProvider } from '../contexts/ToastContext';
@@ -25,6 +27,7 @@ import '../global.css';
 function RootLayoutNav() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [fontsLoaded] = useFonts(EDITORIAL_FONTS);
   const router = useRouter();
   const segments = useSegments();
   const { isAuthenticated, isLoading } = useAuth();
@@ -94,8 +97,8 @@ function RootLayoutNav() {
     }
   }, [isOnboardingComplete, segments, isAuthenticated, isLoading]);
 
-  // Show splash screen on first load
-  if (showSplash) {
+  // Hold the splash until editorial fonts are loaded so Fraunces italic actually renders
+  if (showSplash || !fontsLoaded) {
     return (
       <SplashScreen
         onFinish={() => {

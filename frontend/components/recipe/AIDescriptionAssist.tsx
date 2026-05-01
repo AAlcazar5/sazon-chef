@@ -136,7 +136,7 @@ export default function AIDescriptionAssist({
         }}
       >
         <Text style={{ fontSize: 14 }}>✨</Text>
-        <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>
+        <Text style={{ color: '#FFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
           {generating ? 'Generating...' : 'Let Sazon help'}
         </Text>
       </HapticTouchableOpacity>

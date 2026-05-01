@@ -769,6 +769,15 @@ export default function HomeScreen() {
     });
   }, [suggestedRecipes, quickMealsRecipes, mealPrepMode, searchQuery, isCravingSearch]);
 
+  // Derive saved recipe IDs from feedback for editorial components
+  const savedRecipeIds = useMemo(() => {
+    const ids = new Set<string>();
+    Object.entries(userFeedback).forEach(([id, fb]) => {
+      if (fb.liked) ids.add(id);
+    });
+    return ids;
+  }, [userFeedback]);
+
   // Loading state with skeleton loaders
   if ((loading || initialLoading) && suggestedRecipes.length === 0) {
     return <HomeLoadingState viewMode={viewMode} />;
@@ -821,19 +830,15 @@ export default function HomeScreen() {
     );
   }
 
-  // Derive saved recipe IDs from collection hook for editorial components
-  const savedRecipeIds = useMemo(() => {
-    const ids = new Set<string>();
-    // Build from suggestedRecipes that have been saved (liked feedback)
-    Object.entries(userFeedback).forEach(([id, fb]) => {
-      if (fb.liked) ids.add(id);
-    });
-    return ids;
-  }, [userFeedback]);
-
   return (
     <View style={{ flex: 1, backgroundColor: '#FAF7F4' }}>
     <View style={{ flex: 1 }}>
+      <HomeHeader
+        onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
+        onSurpriseMe={() => setShowSurpriseModal(true)}
+        onFilterPress={handleFilterPress}
+        activeFilterCount={activeFilters.length}
+      />
       {/* Main content area */}
       <ScrollView
         ref={mainScrollRef}
@@ -857,19 +862,15 @@ export default function HomeScreen() {
 
         {/* Editorial v2 layout */}
         <EditorialHomeLayout
-          userName={user?.name || user?.email?.split('@')[0]}
           heroRecipe={recipeOfTheDay}
-          quickPickRecipes={suggestedRecipes.slice(0, 4)}
           savedIds={savedRecipeIds}
           calories={{ consumed: 1420, goal: 1800 }}
           protein={{ consumed: 98, goal: 120 }}
-          streak={5}
-          onSearchPress={handleFilterPress}
-          onNotificationsPress={() => {}}
+          carbs={{ consumed: 165, goal: 220 }}
+          fat={{ consumed: 52, goal: 70 }}
+          fiber={{ consumed: 22, goal: 30 }}
           onRecipePress={handleRecipePress}
           onToggleSave={handleSave}
-          onSeeAllPicks={() => {}}
-          onSurprisePress={() => setShowSurpriseModal(true)}
         />
 
         {/* Contextual Recipe Sections (below editorial fold) */}
@@ -927,32 +928,6 @@ export default function HomeScreen() {
                   isLoading={loading}
                   isCollapsed={collapsedSections['meal-prep']}
                   onToggleCollapse={() => toggleSection('meal-prep')}
-                  isDark={isDark}
-                  userFeedback={userFeedback}
-                  feedbackLoading={feedbackLoading}
-                  onRecipePress={handleRecipePress}
-                  onRecipeLongPress={handleLongPress}
-                  onLike={handleLike}
-                  onDislike={handleShowDislikeSheet}
-                  onSave={handleSave}
-                  autoScroll
-                />
-              );
-            })()}
-
-            {/* Macro Optimized Section */}
-            {(() => {
-              const macroSection = recipeSections.find(s => s.key === 'macro-optimized');
-              if (!macroSection && !loading) return null;
-
-              return (
-                <RecipeCarouselSection
-                  title={macroSection?.title || 'Macro Optimized'}
-                  emoji={macroSection?.emoji || '💪'}
-                  recipes={macroSection?.recipes || []}
-                  isLoading={loading}
-                  isCollapsed={collapsedSections['macro-optimized']}
-                  onToggleCollapse={() => toggleSection('macro-optimized')}
                   isDark={isDark}
                   userFeedback={userFeedback}
                   feedbackLoading={feedbackLoading}

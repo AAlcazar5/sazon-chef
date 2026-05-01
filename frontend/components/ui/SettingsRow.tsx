@@ -76,7 +76,7 @@ export default function SettingsRow({
         {icon && <View style={{ marginRight: 12 }}>{icon}</View>}
         <View style={{ flex: 1 }}>
           <Text
-            style={[{ fontSize: 16, fontWeight: '500' }, labelStyle]}
+            style={[{ fontSize: 16, fontFamily: 'PlusJakartaSans_500Medium' }, labelStyle]}
             className="text-gray-900 dark:text-gray-100"
           >
             {label}

@@ -66,7 +66,7 @@ function MacroImpactRow({ label, value, isDark }: { label: string; value: number
       marginRight: 4,
       marginBottom: 4,
     }}>
-      <Text style={{ fontSize: 11, fontWeight: '600', color }}>
+      <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color }}>
         {sign}{value}{unit} {label}
       </Text>
     </View>
@@ -219,7 +219,7 @@ export default function AskSazonSheet({
                 <Text style={{ fontSize: 28, marginBottom: 12 }}>🧑‍🍳</Text>
                 <Text style={{
                   fontSize: 15,
-                  fontWeight: '600',
+                  fontFamily: 'PlusJakartaSans_600SemiBold',
                   color: isDark ? DarkColors.text.primary : Colors.text.primary,
                   marginBottom: 4,
                 }}>
@@ -291,7 +291,7 @@ export default function AskSazonSheet({
                 <View style={{ marginBottom: 16 }}>
                   <Text style={{
                     fontSize: 15,
-                    fontWeight: '700',
+                    fontFamily: 'PlusJakartaSans_700Bold',
                     color: isDark ? DarkColors.text.primary : Colors.text.primary,
                     marginBottom: 8,
                   }}>
@@ -316,7 +316,7 @@ export default function AskSazonSheet({
                         <Text style={{ fontSize: 12, marginHorizontal: 6 }}>→</Text>
                         <Text style={{
                           fontSize: 14,
-                          fontWeight: '600',
+                          fontFamily: 'PlusJakartaSans_600SemiBold',
                           color: isDark ? '#86EFAC' : '#16A34A',
                           flex: 1,
                         }} numberOfLines={1}>
@@ -342,7 +342,7 @@ export default function AskSazonSheet({
                 <View style={{ marginBottom: 16 }}>
                   <Text style={{
                     fontSize: 15,
-                    fontWeight: '700',
+                    fontFamily: 'PlusJakartaSans_700Bold',
                     color: isDark ? DarkColors.text.primary : Colors.text.primary,
                     marginBottom: 8,
                   }}>
@@ -357,7 +357,7 @@ export default function AskSazonSheet({
                     }}>
                       <Text style={{
                         fontSize: 12,
-                        fontWeight: '600',
+                        fontFamily: 'PlusJakartaSans_600SemiBold',
                         color: isDark ? '#93C5FD' : '#2563EB',
                         marginBottom: 4,
                       }}>
@@ -391,7 +391,7 @@ export default function AskSazonSheet({
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{
                     fontSize: 13,
-                    fontWeight: '600',
+                    fontFamily: 'PlusJakartaSans_600SemiBold',
                     color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
                     marginBottom: 6,
                   }}>

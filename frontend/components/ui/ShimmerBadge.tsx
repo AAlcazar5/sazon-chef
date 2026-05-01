@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: '#FFF',
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: 12,
     letterSpacing: 0.5,
   },

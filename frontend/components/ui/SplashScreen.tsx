@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: '800',
+    fontFamily: 'Fraunces_800ExtraBold',
     marginTop: 24,
     textAlign: 'center',
   },

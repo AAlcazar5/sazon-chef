@@ -88,7 +88,7 @@ function CompactMealView({
             >
               <View className="flex-row items-center mb-3">
                 <Text style={{ fontSize: 22, marginRight: 8 }}>{mealType.icon}</Text>
-                <Text style={{ fontSize: 18, fontWeight: '800', flex: 1, color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', flex: 1, color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
                   {mealType.label}
                 </Text>
                 <HapticTouchableOpacity
@@ -100,7 +100,7 @@ function CompactMealView({
                     backgroundColor: color,
                   }, Shadows.SM]}
                 >
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>+ Add</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold' }}>+ Add</Text>
                 </HapticTouchableOpacity>
               </View>
               <View style={{ gap: 10 }}>
@@ -147,7 +147,7 @@ function CompactMealView({
                       )}
                       <View style={{ flex: 1 }}>
                         <View className="flex-row items-center">
-                          <Text style={{ fontSize: 15, fontWeight: '600', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+                          <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
                             {meal.name || meal.title}
                           </Text>
                           {cookedRecipeIds && (

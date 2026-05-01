@@ -736,7 +736,7 @@ export default function RecipeFormScreen() {
             >
               <View className="flex-row items-center mb-2">
                 <Ionicons name="sparkles" size={18} color="white" style={{ marginRight: 6 }} />
-                <Text style={{ color: 'white', fontSize: 13, fontWeight: '600', opacity: 0.9 }}>Quick Start</Text>
+                <Text style={{ color: 'white', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', opacity: 0.9 }}>Quick Start</Text>
               </View>
               <HapticTouchableOpacity
                 onPress={handleGenerateRandomRecipe}
@@ -762,7 +762,7 @@ export default function RecipeFormScreen() {
                 ) : (
                   <>
                     <Ionicons name="flash" size={20} color="white" style={{ marginRight: 8 }} />
-                    <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
+                    <Text style={{ color: 'white', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>
                       {title.trim() ? `Generate "${title.trim()}" Recipe` : 'Generate Random Recipe'}
                     </Text>
                   </>
@@ -981,7 +981,7 @@ export default function RecipeFormScreen() {
               color={Colors.primary}
               style={{ marginRight: 6 }}
             />
-            <Text style={{ color: Colors.primary, fontWeight: '600', fontSize: 14 }}>
+            <Text style={{ color: Colors.primary, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
               {showNutrition ? 'Hide Nutrition & Macros' : 'Nutrition & Macros'}
             </Text>
             {!showNutrition && (
@@ -992,7 +992,7 @@ export default function RecipeFormScreen() {
                 paddingVertical: 2,
                 borderRadius: 4,
               }}>
-                <Text style={{ color: '#92400E', fontSize: 11, fontWeight: '600' }}>Required</Text>
+                <Text style={{ color: '#92400E', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Required</Text>
               </View>
             )}
           </HapticTouchableOpacity>

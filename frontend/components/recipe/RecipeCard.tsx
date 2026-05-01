@@ -260,7 +260,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                   style={{ borderRadius: 100, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center' }}
                 >
                   <Text style={{ fontSize: 11 }}>🔥</Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700', marginLeft: 3 }}>Top Pick</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 3 }}>Top Pick</Text>
                 </LinearGradient>
               </View>
             )}
@@ -285,7 +285,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                   style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, flexDirection: 'row', alignItems: 'center' }}
                 >
                   <Text style={{ fontSize: 11 }}>✨</Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700', marginLeft: 3 }}>Perfect Match</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 3 }}>Perfect Match</Text>
                 </LinearGradient>
               </View>
             )}
@@ -324,7 +324,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
             {recipe.cookTime && (
               <View style={{ position: 'absolute', bottom: 12, left: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 }}>
                 <Text style={{ color: '#FFFFFF', fontSize: 11, marginRight: 4 }}>⏱</Text>
-                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>{recipe.cookTime} min</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{recipe.cookTime} min</Text>
               </View>
             )}
 
@@ -339,7 +339,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                 paddingHorizontal: 10,
                 paddingVertical: 4,
               }}>
-                <Text style={{ color: getDifficultyColor(recipe.difficulty, true).text, fontSize: 12, fontWeight: '600', textTransform: 'capitalize' }}>
+                <Text style={{ color: getDifficultyColor(recipe.difficulty, true).text, fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'capitalize' }}>
                   {recipe.difficulty}
                 </Text>
               </View>
@@ -367,7 +367,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               marginTop: 8,
               fontSize: 12,
               color: isDark ? '#6B7280' : '#9CA3AF',
-              fontWeight: '500',
+              fontFamily: 'PlusJakartaSans_500Medium',
             }}>
               {recipe.cuisine}
             </Text>
@@ -466,7 +466,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                   color={onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF')}
                 />
               </Animated.View>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF') }}>
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: onDelete ? '#EF4444' : (isDark ? DarkColors.primary : '#FFFFFF') }}>
                 {onDelete ? 'Remove' : 'Save'}
               </Text>
             </HapticTouchableOpacity>
@@ -573,7 +573,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
             justifyContent: 'center',
           }}>
             <Icon name={Icons.RESTAURANT} size={40} color={isDark ? '#6B7280' : '#9CA3AF'} accessibilityLabel="Recipe image placeholder" />
-            <Text style={{ marginTop: 8, fontSize: 11, color: isDark ? '#6B7280' : '#9CA3AF', fontWeight: '500' }}>
+            <Text style={{ marginTop: 8, fontSize: 11, color: isDark ? '#6B7280' : '#9CA3AF', fontFamily: 'PlusJakartaSans_500Medium' }}>
               {recipe.cuisine}
             </Text>
           </View>
@@ -592,7 +592,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               backgroundColor: matchPct >= 80 ? Colors.tertiaryGreen : matchPct >= 60 ? Colors.primary : Colors.secondaryRed,
               paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
             }}>
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{matchPct}%</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold' }}>{matchPct}%</Text>
             </View>
           </View>
         )}
@@ -606,7 +606,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               flexDirection: 'row', alignItems: 'center',
             }}>
               <Icon name={Icons.STAR} size={11} color="#FFFFFF" accessibilityLabel="Top match" />
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', marginLeft: 3 }}>Top Match</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 3 }}>Top Match</Text>
             </View>
           </View>
         )}
@@ -621,7 +621,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, flexDirection: 'row', alignItems: 'center' }}
             >
               <Text style={{ fontSize: 10 }}>✨</Text>
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', marginLeft: 2 }}>Perfect Match</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 2 }}>Perfect Match</Text>
             </LinearGradient>
           </View>
         )}
@@ -630,7 +630,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
         {recommendationReason && matchPct === undefined && (
           <View style={{ position: 'absolute', top: 8, right: 8 }}>
             <View style={{ backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>{recommendationReason}</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{recommendationReason}</Text>
             </View>
           </View>
         )}
@@ -658,14 +658,14 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 10, paddingBottom: 10, paddingTop: 6 }}>
           {/* Cuisine label */}
           {!!recipe.cuisine && (
-            <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: '700', letterSpacing: 0.6, marginBottom: 3, textTransform: 'uppercase' }}>
+            <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: 0.6, marginBottom: 3, textTransform: 'uppercase' }}>
               {recipe.cuisine}
             </Text>
           )}
 
           {/* Title */}
           <Text
-            style={{ color: '#ffffff', fontSize: isGrid ? 13 : 15, fontWeight: '900', lineHeight: isGrid ? 17 : 20, marginBottom: 6 }}
+            style={{ color: '#ffffff', fontSize: isGrid ? 13 : 15, fontFamily: 'PlusJakartaSans_800ExtraBold', lineHeight: isGrid ? 17 : 20, marginBottom: 6 }}
             numberOfLines={titleLines}
           >
             {recipe.title}
@@ -680,7 +680,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                 {!!recipe.cookTime && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                     <Icon name={Icons.TIME_OUTLINE} size={11} color="rgba(255,255,255,0.85)" accessibilityLabel="Cook time" />
-                    <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, fontWeight: '600' }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
                       {recipe.cookTime} min
                     </Text>
                   </View>
@@ -694,7 +694,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                       borderRadius: 8,
                     }}
                   >
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>
                       Grade {grade}
                     </Text>
                   </View>
@@ -713,7 +713,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               { value: recipe.fiber, label: `${recipe.fiber}g Fi`, bg: 'rgba(16,185,129,0.50)' },
             ].filter(({ value }) => !!value).map(({ label, bg }) => (
               <View key={label} style={{ backgroundColor: bg, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{label}</Text>
+                <Text style={{ color: '#fff', fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>{label}</Text>
               </View>
             ))}
           </View>
@@ -747,7 +747,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
               <Animated.View style={{ transform: [{ scale: saveScale }] }}>
                 <Icon name={onDelete ? Icons.CLOSE : Icons.SAVE_RECIPE} size={14} color={onDelete ? '#EF4444' : '#FFFFFF'} />
               </Animated.View>
-              <Text style={{ color: onDelete ? '#EF4444' : '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
+              <Text style={{ color: onDelete ? '#EF4444' : '#FFFFFF', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
                 {onDelete ? 'Remove' : 'Save'}
               </Text>
             </HapticTouchableOpacity>

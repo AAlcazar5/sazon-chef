@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   indicatorText: {
     marginTop: Spacing.sm,
     fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   likeIndicator: {
     borderWidth: 4,

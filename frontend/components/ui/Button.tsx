@@ -182,7 +182,7 @@ export default function Button({
                 </View>
               )}
 
-              <GradientText style={{ fontSize: sizeConfig.fontSize, fontWeight: FontWeight.semibold }}>
+              <GradientText style={{ fontSize: sizeConfig.fontSize, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
                 {title}
               </GradientText>
 

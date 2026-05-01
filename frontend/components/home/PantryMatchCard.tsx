@@ -112,7 +112,7 @@ function PantryMatchCard({ onPress }: PantryMatchCardProps) {
           <Text
             style={{
               fontSize: FontSize.md,
-              fontWeight: FontWeight.extrabold,
+              fontFamily: 'PlusJakartaSans_800ExtraBold',
               color: textPrimary,
               marginBottom: 2,
             }}
@@ -153,7 +153,7 @@ function PantryMatchCard({ onPress }: PantryMatchCardProps) {
             backgroundColor: !justOneOrTwo ? (isDark ? '#0008' : '#FFFFFFAA') : 'transparent',
           }}
         >
-          <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: textPrimary }}>
+          <Text style={{ fontSize: FontSize.xs, fontFamily: 'PlusJakartaSans_700Bold', color: textPrimary }}>
             All matches
           </Text>
         </HapticTouchableOpacity>
@@ -170,7 +170,7 @@ function PantryMatchCard({ onPress }: PantryMatchCardProps) {
             backgroundColor: justOneOrTwo ? (isDark ? '#0008' : '#FFFFFFAA') : 'transparent',
           }}
         >
-          <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: textPrimary }}>
+          <Text style={{ fontSize: FontSize.xs, fontFamily: 'PlusJakartaSans_700Bold', color: textPrimary }}>
             Just 1–2 more items
           </Text>
         </HapticTouchableOpacity>

@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   message: {
     color: '#FFFFFF',
     fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     flex: 1,
   },
 });

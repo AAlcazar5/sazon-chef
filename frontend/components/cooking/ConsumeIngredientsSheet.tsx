@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     marginBottom: 4,
   },
   subtitle: {
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   },
   secondaryLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   primaryBtn: {
     flex: 1,
@@ -215,6 +215,6 @@ const styles = StyleSheet.create({
   primaryLabel: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
 });

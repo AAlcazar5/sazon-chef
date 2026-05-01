@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     lineHeight: 14,
   },
 });

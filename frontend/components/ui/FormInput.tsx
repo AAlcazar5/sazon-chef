@@ -291,11 +291,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: FontSize.sm,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   required: {
     color: Colors.error,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   error: {
     fontSize: FontSize.sm,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   hint: {
     fontSize: FontSize.sm,

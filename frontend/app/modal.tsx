@@ -1038,12 +1038,12 @@ export default function RecipeModal() {
             {recipe.cookTime ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 100, paddingHorizontal: 12, paddingVertical: 5 }}>
                 <Text style={{ color: '#FFFFFF', fontSize: 12, marginRight: 4 }}>⏱</Text>
-                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>{recipe.cookTime} min</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{recipe.cookTime} min</Text>
               </View>
             ) : <View />}
             {recipe.difficulty ? (
               <View style={{ backgroundColor: getDifficultyColor(recipe.difficulty, true).bg, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 5 }}>
-                <Text style={{ color: getDifficultyColor(recipe.difficulty, true).text, fontSize: 13, fontWeight: '600', textTransform: 'capitalize' }}>
+                <Text style={{ color: getDifficultyColor(recipe.difficulty, true).text, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'capitalize' }}>
                   {recipe.difficulty}
                 </Text>
               </View>
@@ -1066,7 +1066,7 @@ export default function RecipeModal() {
                 paddingHorizontal: 10, paddingVertical: 3, borderRadius: 100,
                 backgroundColor: isDark ? 'rgba(249,115,22,0.15)' : 'rgba(249,115,22,0.1)',
               }}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? '#FB923C' : '#EA580C' }}>
+                <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#FB923C' : '#EA580C' }}>
                   {recipe.cuisine}
                 </Text>
               </View>
@@ -1081,7 +1081,7 @@ export default function RecipeModal() {
               backgroundColor: isDark ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.08)',
             }}>
               <Text style={{ fontSize: 12, marginRight: 4 }}>✨</Text>
-              <Text style={{ fontSize: 12, color: isDark ? '#C084FC' : '#7C3AED', fontWeight: '500' }}>
+              <Text style={{ fontSize: 12, color: isDark ? '#C084FC' : '#7C3AED', fontFamily: 'PlusJakartaSans_500Medium' }}>
                 {(recipe as any).recommendationReason}
               </Text>
             </View>
@@ -1106,7 +1106,7 @@ export default function RecipeModal() {
               borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12, alignSelf: 'flex-start',
             }}>
               <Text style={{ fontSize: 12, marginRight: 4 }}>⏱</Text>
-              <Text style={{ fontSize: 12, fontWeight: '500', color: isDark ? '#64B5F6' : '#0369A1' }}>{scaler.cookTimeHint}</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: isDark ? '#64B5F6' : '#0369A1' }}>{scaler.cookTimeHint}</Text>
             </View>
           )}
 
@@ -1136,15 +1136,15 @@ export default function RecipeModal() {
             <View className="flex-row justify-between">
             <View className="items-center">
               <Text className="text-gray-500 dark:text-gray-400 text-sm">Time</Text>
-              <CountingNumber value={recipe.cookTime} suffix=" min" delay={0} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
+              <CountingNumber value={recipe.cookTime} suffix=" min" delay={0} style={{ fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#F3F4F6' : '#111827' }} />
             </View>
             <View className="items-center">
               <Text className="text-gray-500 dark:text-gray-400 text-sm">Calories</Text>
-              <CountingNumber value={scaler.scaledMacros.calories} delay={100} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
+              <CountingNumber value={scaler.scaledMacros.calories} delay={100} style={{ fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#F3F4F6' : '#111827' }} />
             </View>
             <View className="items-center">
               <Text className="text-gray-500 dark:text-gray-400 text-sm">Protein</Text>
-              <CountingNumber value={scaler.scaledMacros.protein} suffix="g" delay={200} style={{ fontWeight: '600', color: isDark ? '#F3F4F6' : '#111827' }} />
+              <CountingNumber value={scaler.scaledMacros.protein} suffix="g" delay={200} style={{ fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#F3F4F6' : '#111827' }} />
             </View>
             </View>
           </FrostedCard>
@@ -1153,7 +1153,7 @@ export default function RecipeModal() {
           <View style={{ marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ fontSize: 20, marginRight: 8 }}>🥗</Text>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Nutrition</Text>
+              <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Nutrition</Text>
             </View>
             <FrostedCard style={{ padding: 16 }}>
               <MacroRingGrid
@@ -1601,7 +1601,7 @@ export default function RecipeModal() {
               </Text>
               <Text style={{
                 fontSize: 13,
-                fontWeight: '600',
+                fontFamily: 'PlusJakartaSans_600SemiBold',
                 color: lighterVersionActive
                   ? '#16A34A'
                   : (isDark ? '#D1D5DB' : '#374151'),
@@ -1656,7 +1656,7 @@ export default function RecipeModal() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={{ fontSize: 18, marginRight: 8 }}>🌶️</Text>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#FED7AA' : '#C2410C' }}>
+                <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#FED7AA' : '#C2410C' }}>
                   Make It Exciting
                 </Text>
               </View>
@@ -1698,7 +1698,7 @@ export default function RecipeModal() {
                       <View style={{ flex: 1 }}>
                         <Text style={{
                           fontSize: 14,
-                          fontWeight: '600',
+                          fontFamily: 'PlusJakartaSans_600SemiBold',
                           color: isDark ? '#FED7AA' : '#C2410C',
                         }}>
                           {boost.addition}
@@ -1713,7 +1713,7 @@ export default function RecipeModal() {
                       </View>
                       <Text style={{
                         fontSize: 11,
-                        fontWeight: '600',
+                        fontFamily: 'PlusJakartaSans_600SemiBold',
                         color: isDark ? '#86EFAC' : '#16A34A',
                         marginLeft: 8,
                       }}>
@@ -1934,7 +1934,7 @@ export default function RecipeModal() {
             paddingVertical: 10,
             borderRadius: 100,
           }}>
-            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
+            <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14 }}>
               Saved to cookbook!
             </Text>
           </View>
@@ -1973,7 +1973,7 @@ export default function RecipeModal() {
                 flex: 1,
                 textAlign: 'center',
                 fontSize: 16,
-                fontWeight: '600',
+                fontFamily: 'PlusJakartaSans_600SemiBold',
                 color: isDark ? DarkColors.text.primary : Colors.text.primary,
               }}
             >
@@ -2012,7 +2012,7 @@ export default function RecipeModal() {
                   flex: 1,
                   textAlign: 'center',
                   fontSize: 16,
-                  fontWeight: '600',
+                  fontFamily: 'PlusJakartaSans_600SemiBold',
                   color: isDark ? DarkColors.text.primary : Colors.text.primary,
                 }}
               >
@@ -2262,7 +2262,7 @@ export default function RecipeModal() {
         }}
       >
         <Ionicons name="chevron-up" size={15} color={isDark ? '#FFB74D' : '#EA580C'} />
-        <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#FFB74D' : '#EA580C', marginLeft: 5 }}>
+        <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#FFB74D' : '#EA580C', marginLeft: 5 }}>
           Actions
         </Text>
       </HapticTouchableOpacity>
@@ -2326,7 +2326,7 @@ export default function RecipeModal() {
           </View>
         ) : (
           <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} style={{ paddingVertical: 14 }}>
-            <Text style={{ color: isDark ? DarkColors.primary : Colors.primary, fontWeight: '600', fontSize: 15 }}>+ Create new collection</Text>
+            <Text style={{ color: isDark ? DarkColors.primary : Colors.primary, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 }}>+ Create new collection</Text>
           </HapticTouchableOpacity>
         )}
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>

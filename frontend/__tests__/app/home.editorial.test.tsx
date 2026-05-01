@@ -104,29 +104,35 @@ describe('EditorialMacroWidgets (10V-D: Macro widget row)', () => {
   const props = {
     calories: { consumed: 1420, goal: 1800 },
     protein: { consumed: 98, goal: 120 },
-    streak: 5,
+    carbs: { consumed: 165, goal: 220 },
+    fat: { consumed: 52, goal: 70 },
+    fiber: { consumed: 22, goal: 30 },
   };
 
-  it('renders 3 widget cards', () => {
+  it('renders 5 widget cards', () => {
     const { getByTestId } = render(<EditorialMacroWidgets {...props} />);
     expect(getByTestId('widget-0')).toBeTruthy();
     expect(getByTestId('widget-1')).toBeTruthy();
     expect(getByTestId('widget-2')).toBeTruthy();
+    expect(getByTestId('widget-3')).toBeTruthy();
+    expect(getByTestId('widget-4')).toBeTruthy();
   });
 
   it('shows calorie value', () => {
-    const { getByText } = render(<EditorialMacroWidgets {...props} />);
-    expect(getByText('1420')).toBeTruthy();
+    const { getAllByText } = render(<EditorialMacroWidgets {...props} />);
+    expect(getAllByText('1420').length).toBeGreaterThan(0);
   });
 
   it('shows protein value', () => {
-    const { getByText } = render(<EditorialMacroWidgets {...props} />);
-    expect(getByText('98g')).toBeTruthy();
+    const { getAllByText } = render(<EditorialMacroWidgets {...props} />);
+    expect(getAllByText('98g').length).toBeGreaterThan(0);
   });
 
-  it('shows streak value', () => {
-    const { getByText } = render(<EditorialMacroWidgets {...props} />);
-    expect(getByText('5')).toBeTruthy();
+  it('shows carbs, fat, and fiber values', () => {
+    const { getAllByText } = render(<EditorialMacroWidgets {...props} />);
+    expect(getAllByText('165g').length).toBeGreaterThan(0);
+    expect(getAllByText('52g').length).toBeGreaterThan(0);
+    expect(getAllByText('22g').length).toBeGreaterThan(0);
   });
 });
 

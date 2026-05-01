@@ -8,13 +8,22 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import AnimatedRecipeCard from '../recipe/AnimatedRecipeCard';
 import CardStack from '../ui/CardStack';
-import Icon from '../ui/Icon';
-import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
+import { EditorialSectionHeader } from './EditorialSectionHeader';
+import { EditorialRecipeCard } from './EditorialRecipeCard';
+import { Colors, DarkColors, Pastel, EditorialColors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
-import { RecipeCard } from '../recipe/RecipeCard';
 import PaginationControls from './PaginationControls';
+
+const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const TITLE_ROTATION = [
+  EditorialColors.pastelTitle.peach,
+  EditorialColors.pastelTitle.sage,
+  EditorialColors.pastelTitle.lavender,
+  EditorialColors.pastelTitle.sky,
+  EditorialColors.pastelTitle.golden,
+  EditorialColors.pastelTitle.blush,
+];
 import type { SuggestedRecipe } from '../../types';
 import type { RecipeSection, UserFeedback } from '../../utils/recipeUtils';
 import type { PaginationInfo } from '../../hooks/useRecipePagination';
@@ -60,6 +69,8 @@ interface RecipeSectionsGridProps {
   onNextPage: () => void;
   /** Force dark card backgrounds in light mode */
   darkFeed?: boolean;
+  /** Buttons to render in the Quick Meals section header right slot */
+  quickMealsHeaderRight?: React.ReactNode;
 }
 
 function RecipeSectionsGrid({
@@ -95,6 +106,7 @@ function RecipeSectionsGrid({
   onPrevPage,
   onNextPage,
   darkFeed = false,
+  quickMealsHeaderRight,
 }: RecipeSectionsGridProps) {
   const filtered = sections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep' && s.key !== 'macro-optimized');
   if (filtered.length === 0) return null;
@@ -110,58 +122,46 @@ function RecipeSectionsGrid({
 
         return (
           <View key={section.key} className="mb-6">
-            {/* Section Header */}
-            <HapticTouchableOpacity
-              onPress={() => onToggleSection(section.key)}
-              className="flex-row items-center justify-between mb-4"
-              activeOpacity={0.7}
-            >
-              <View className="flex-row items-center flex-1">
-                <Text className="text-2xl mr-2">{section.emoji}</Text>
-                <View className="flex-1">
-                  <Text className="text-xl font-black text-gray-900 dark:text-gray-100">
-                    {section.title}
-                  </Text>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5" style={{ opacity: 0.5 }}>
-                    {section.recipes.length} recipe{section.recipes.length !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-              </View>
-              {isRecipesForYou && (
-                <View
-                  className="flex-row items-center rounded-lg p-1 mr-2"
-                  style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }}
-                >
-                  {(['list', 'grid'] as const).map((mode) => (
-                    <HapticTouchableOpacity
-                      key={mode}
-                      onPress={(e) => {
-                        e.stopPropagation?.();
-                        onToggleViewMode(mode);
-                      }}
-                      className="px-2.5 py-1 rounded"
-                      style={
-                        viewMode === mode
-                          ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary }
-                          : undefined
-                      }
-                    >
-                      <Ionicons
-                        name={mode as any}
-                        size={16}
-                        color={viewMode === mode ? '#FFF' : (isDark ? '#9CA3AF' : '#6B7280')}
-                      />
-                    </HapticTouchableOpacity>
-                  ))}
-                </View>
-              )}
-              <Icon
-                name={isCollapsed ? Icons.CHEVRON_DOWN : Icons.CHEVRON_UP}
-                size={IconSizes.SM}
-                color={isDark ? '#9CA3AF' : '#6B7280'}
-                accessibilityLabel={isCollapsed ? 'Expand section' : 'Collapse section'}
-              />
-            </HapticTouchableOpacity>
+            {/* Section Header — editorial styling */}
+            <EditorialSectionHeader
+              title={section.title}
+              emoji={section.emoji}
+              count={section.recipes.length}
+              isDark={isDark}
+              isCollapsed={isCollapsed}
+              onToggle={() => onToggleSection(section.key)}
+              rightSlot={
+                isQuickMeals && quickMealsHeaderRight ? quickMealsHeaderRight :
+                isRecipesForYou ? (
+                  <View
+                    className="flex-row items-center rounded-lg p-1"
+                    style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }}
+                  >
+                    {(['list', 'grid'] as const).map((mode) => (
+                      <HapticTouchableOpacity
+                        key={mode}
+                        onPress={(e) => {
+                          e.stopPropagation?.();
+                          onToggleViewMode(mode);
+                        }}
+                        className="px-2.5 py-1 rounded"
+                        style={
+                          viewMode === mode
+                            ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary }
+                            : undefined
+                        }
+                      >
+                        <Ionicons
+                          name={mode as any}
+                          size={16}
+                          color={viewMode === mode ? '#FFF' : (isDark ? '#9CA3AF' : '#6B7280')}
+                        />
+                      </HapticTouchableOpacity>
+                    ))}
+                  </View>
+                ) : null
+              }
+            />
 
             {/* Section Content */}
             {!isCollapsed && section.recipes.length === 0 && (
@@ -205,23 +205,22 @@ function RecipeSectionsGrid({
                       onQuickMealsIndexChange(Math.round(scrollPosition / (280 + 12)));
                     }}
                   >
-                    {section.recipes.map((recipe) => {
+                    {section.recipes.map((recipe, i) => {
                       const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
                       return (
                         <View key={recipe.id} style={{ width: 280, marginRight: 12 }}>
-                          <RecipeCard
+                          <EditorialRecipeCard
                             recipe={recipe}
-                            variant="carousel"
+                            bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
+                            titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
+                            feedback={feedback}
+                            isFeedbackLoading={feedbackLoading === recipe.id}
                             onPress={onRecipePress}
                             onLongPress={onRecipeLongPress}
                             onLike={onLike}
                             onDislike={onDislike}
                             onSave={onSave}
-                            feedback={feedback}
-                            isFeedbackLoading={feedbackLoading === recipe.id}
-                            isDark={isDark}
-                            showDescription={true}
-                            darkFeed={darkFeed}
+                            showDescription
                           />
                         </View>
                       );
@@ -241,7 +240,7 @@ function RecipeSectionsGrid({
                           <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
                           <Text style={{
                             fontSize: 14,
-                            fontWeight: '600',
+                            fontFamily: 'PlusJakartaSans_600SemiBold',
                             color: isDark ? DarkColors.text.primary : Colors.text.primary,
                             marginBottom: 4,
                             textAlign: 'center',
@@ -273,7 +272,7 @@ function RecipeSectionsGrid({
                             {refreshingQuickMeals ? (
                               <AnimatedActivityIndicator size="small" color="#FFFFFF" />
                             ) : (
-                              <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+                              <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
                                 Refresh Recipes
                               </Text>
                             )}
@@ -287,22 +286,22 @@ function RecipeSectionsGrid({
                 ) : viewMode === 'grid' ? (
                   /* Grid view — 2-column layout */
                   <View className="flex-row flex-wrap" style={{ marginHorizontal: -Spacing.sm }}>
-                    {section.recipes.map((recipe) => {
+                    {section.recipes.map((recipe, i) => {
                       const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
                       return (
                         <View key={recipe.id} style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.lg }}>
-                          <RecipeCard
+                          <EditorialRecipeCard
                             recipe={recipe}
-                            variant="grid"
+                            bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
+                            titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
+                            feedback={feedback}
+                            isFeedbackLoading={feedbackLoading === recipe.id}
                             onPress={onRecipePress}
                             onLongPress={onRecipeLongPress}
                             onLike={onLike}
                             onDislike={onDislike}
                             onSave={onSave}
-                            feedback={feedback}
-                            isFeedbackLoading={feedbackLoading === recipe.id}
-                            isDark={isDark}
-                            darkFeed={darkFeed}
+                            showDescription={false}
                           />
                         </View>
                       );
@@ -314,7 +313,7 @@ function RecipeSectionsGrid({
                   section.recipes.map((recipe, index) => {
                     const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
                     return (
-                      <View key={recipe.id}>
+                      <View key={recipe.id} style={{ marginBottom: Spacing.lg }}>
                         <CardStack
                           onSwipeRight={() => onLike(recipe.id)}
                           onSwipeLeft={() => onDislike(recipe.id)}
@@ -327,20 +326,18 @@ function RecipeSectionsGrid({
                             animatedIds={animatedRecipeIds}
                             onAnimated={onAnimatedRecipeId}
                           >
-                            <RecipeCard
+                            <EditorialRecipeCard
                               recipe={recipe}
-                              variant="list"
+                              bg={PASTEL_ROTATION[index % PASTEL_ROTATION.length]}
+                              titleColor={TITLE_ROTATION[index % TITLE_ROTATION.length]}
+                              feedback={feedback}
+                              isFeedbackLoading={feedbackLoading === recipe.id}
                               onPress={onRecipePress}
                               onLongPress={onRecipeLongPress}
                               onLike={onLike}
                               onDislike={onDislike}
                               onSave={onSave}
-                              feedback={feedback}
-                              isFeedbackLoading={feedbackLoading === recipe.id}
-                              showDescription={true}
-                              isDark={isDark}
-                              className="mb-4"
-                              darkFeed={darkFeed}
+                              showDescription
                             />
                           </AnimatedRecipeCard>
                         </CardStack>

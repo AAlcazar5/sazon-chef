@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   statusText: {
     color: 'white',
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginBottom: 12,
   },
   transcriptContainer: {
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   chipText: {
     color: 'white',
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   cancelButton: {
     flexDirection: 'row',
@@ -266,6 +266,6 @@ const styles = StyleSheet.create({
   cancelText: {
     color: '#D1D5DB',
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
 });

@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     color: Colors.text.primary,
   },
   itemsList: {
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   itemQty: {
     fontSize: 14,
     color: Colors.text.secondary,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   queryContainer: {
     backgroundColor: Colors.surface,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   queryText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: '#1F2937',
   },
   mealInfo: {
@@ -188,13 +188,13 @@ const styles = StyleSheet.create({
   },
   mealName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: '#1F2937',
   },
   mealCalories: {
     fontSize: 16,
     color: Colors.secondaryRed,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   mealType: {
     fontSize: 14,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: Colors.secondary,
   },
   confirmBtn: {
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: 'white',
   },
 });

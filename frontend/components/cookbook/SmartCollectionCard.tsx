@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFF',
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     letterSpacing: 0.4,
   },
   icon: {
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     marginBottom: 4,
     lineHeight: 20,
   },
@@ -154,11 +154,11 @@ const styles = StyleSheet.create({
   },
   count: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   countLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
 });
 

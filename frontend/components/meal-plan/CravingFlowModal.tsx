@@ -145,7 +145,7 @@ function CravingFlowModal({
 
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Text style={{ fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, color: textPrimary }}>
+            <Text style={{ fontSize: FontSize.xl, fontFamily: 'PlusJakartaSans_800ExtraBold', color: textPrimary }}>
               I have a craving
             </Text>
             <HapticTouchableOpacity onPress={handleClose} accessibilityLabel="Close craving flow">
@@ -187,7 +187,7 @@ function CravingFlowModal({
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: FontWeight.extrabold, fontSize: FontSize.md }}>
+                  <Text style={{ color: '#fff', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: FontSize.md }}>
                     Show me the options
                   </Text>
                 </HapticTouchableOpacity>
@@ -216,7 +216,7 @@ function CravingFlowModal({
                     paddingHorizontal: 28,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: FontWeight.bold }}>Try again</Text>
+                  <Text style={{ color: '#fff', fontFamily: 'PlusJakartaSans_700Bold' }}>Try again</Text>
                 </HapticTouchableOpacity>
               </View>
             )}
@@ -236,7 +236,7 @@ function CravingFlowModal({
                   <Text style={{ fontSize: FontSize.xs, color: textSecondary, marginBottom: 4 }}>
                     A typical {state.original.name.toLowerCase()} is about
                   </Text>
-                  <Text style={{ fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, color: textPrimary }}>
+                  <Text style={{ fontSize: FontSize.lg, fontFamily: 'PlusJakartaSans_800ExtraBold', color: textPrimary }}>
                     {state.original.calories} cal · {state.original.protein}g protein
                   </Text>
                   <Text style={{ fontSize: FontSize.xs, color: textSecondary, marginTop: 4 }}>
@@ -332,7 +332,7 @@ function OptionCard({ testID, tint, emoji, title, subtitle, onPress, isDark }: O
       <View style={{ flex: 1 }}>
         <Text style={{
           fontSize: FontSize.md,
-          fontWeight: FontWeight.extrabold,
+          fontFamily: 'PlusJakartaSans_800ExtraBold',
           color: isDark ? DarkColors.text.primary : Colors.text.primary,
           marginBottom: 2,
         }}>

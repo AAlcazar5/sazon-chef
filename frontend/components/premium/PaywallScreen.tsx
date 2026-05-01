@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 30,
-    fontWeight: FontWeight.extrabold,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#FFFFFF',
     textAlign: 'center',
     marginTop: 16,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   trialText: {
     color: '#fff',
-    fontWeight: FontWeight.bold,
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: FontSize.sm,
   },
   activeBadge: {
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   activeBadgeText: {
     color: '#34D399',
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     textAlign: 'center',
     fontSize: FontSize.sm,
   },
@@ -391,12 +391,12 @@ const styles = StyleSheet.create({
   featureLabel: {
     flex: 1,
     fontSize: FontSize.md,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
     color: 'rgba(255,255,255,0.85)',
   },
   featureCheck: {
     color: '#34D399',
-    fontWeight: FontWeight.extrabold,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: FontSize.md,
   },
   pricingToggle: {
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
   pricingLabel: {
-    fontWeight: FontWeight.bold,
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: FontSize.sm,
   },
   pricingAmount: {
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   discountText: {
     color: '#fff',
     fontSize: 10,
-    fontWeight: FontWeight.extrabold,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   ctaContainer: {
     marginHorizontal: 24,

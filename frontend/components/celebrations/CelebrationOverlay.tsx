@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontSize: 28,
-    fontWeight: '900',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     marginTop: 20,
     textAlign: 'center',
   },
@@ -359,13 +359,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 22,
-    fontWeight: '900',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   statLabel: {
     color: '#9CA3AF',
     fontSize: 11,
     marginTop: 4,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
   primaryCTAText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 17,
     textAlign: 'center',
   },
@@ -392,6 +392,6 @@ const styles = StyleSheet.create({
   secondaryCTAText: {
     color: '#9CA3AF',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });

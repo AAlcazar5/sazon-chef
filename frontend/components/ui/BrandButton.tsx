@@ -181,7 +181,7 @@ export default function BrandButton({
 
   const labelStyle: TextStyle = {
     color: config.textColor,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: sizeConfig.fontSize,
     letterSpacing: 0.2,
   };

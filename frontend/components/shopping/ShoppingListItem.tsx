@@ -268,14 +268,14 @@ export default function ShoppingListItem({
           onPress={() => onCantFind?.(item.id)}
           style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, marginLeft: 8, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
         >
-          <Text style={{ fontSize: 12, fontWeight: '500', color: isDark ? '#9CA3AF' : '#6B7280' }}>
+          <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: isDark ? '#9CA3AF' : '#6B7280' }}>
             Skip
           </Text>
         </HapticTouchableOpacity>
       )}
       {inStoreMode && isCantFind && (
         <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, marginLeft: 8, backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#FEF2F2' }}>
-          <Text style={{ fontSize: 12, fontWeight: '500', color: isDark ? DarkColors.warning : Colors.warning }}>
+          <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: isDark ? DarkColors.warning : Colors.warning }}>
             Skipped
           </Text>
         </View>

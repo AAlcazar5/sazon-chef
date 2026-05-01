@@ -6,6 +6,7 @@ import { ScrollView } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { Colors, DarkColors } from '../constants/Colors';
 import { HapticPatterns } from '../constants/Haptics';
+import { DEFAULT_MEAL_HOURS, getMealHours, type MealHours } from '../lib/mealHourPrefs';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -156,10 +157,10 @@ function generateHours(): HourData[] {
 const HOURS = generateHours();
 
 const MEAL_TYPE_TO_HOUR: Record<string, number> = {
-  breakfast: 7,
-  lunch: 12,
-  dinner: 18,
-  snack: 15,
+  breakfast: DEFAULT_MEAL_HOURS.breakfast,
+  lunch: DEFAULT_MEAL_HOURS.lunch,
+  dinner: DEFAULT_MEAL_HOURS.dinner,
+  snack: DEFAULT_MEAL_HOURS.snack,
 };
 
 // ─── Hook ───────────────────────────────────────────────────────────────
@@ -193,6 +194,23 @@ export function useMealPlanUI({
 
   // Macros section collapse state
   const [macrosExpanded, setMacrosExpanded] = useState(true);
+
+  // User-configurable meal hours (loaded from AsyncStorage)
+  const [mealHours, setMealHoursState] = useState<MealHours>(DEFAULT_MEAL_HOURS);
+  useEffect(() => {
+    let cancelled = false;
+    getMealHours().then((h) => {
+      if (!cancelled) setMealHoursState(h);
+    });
+    return () => { cancelled = true; };
+  }, []);
+  const userMealTypeToHour: Record<string, number> = {
+    breakfast: mealHours.breakfast,
+    lunch: mealHours.lunch,
+    dinner: mealHours.dinner,
+    snack: mealHours.snack,
+    ...(mealHours.dessert != null ? { dessert: mealHours.dessert } : {}),
+  };
 
   // ScrollView ref and scroll position tracking
   const scrollViewRef = useRef<ScrollView>(null);
@@ -368,7 +386,7 @@ export function useMealPlanUI({
     setShowAddRecipeModal,
 
     hours: HOURS,
-    mealTypeToHour: MEAL_TYPE_TO_HOUR,
+    mealTypeToHour: userMealTypeToHour,
 
     formatDate,
     formatDateRange,

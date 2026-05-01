@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     right: -8,
   },
   text: {
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     textAlign: 'center',
   },
 });

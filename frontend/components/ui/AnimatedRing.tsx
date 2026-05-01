@@ -139,11 +139,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   sublabel: {
     fontSize: 10,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
     marginTop: 1,
   },
 });

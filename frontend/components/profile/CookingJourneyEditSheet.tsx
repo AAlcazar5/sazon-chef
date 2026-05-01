@@ -102,7 +102,7 @@ export default function CookingJourneyEditSheet({
         <Text
           style={{
             fontSize: 13,
-            fontWeight: '600',
+            fontFamily: 'PlusJakartaSans_600SemiBold',
             color: textPrimary,
             marginBottom: Spacing.sm,
           }}
@@ -151,7 +151,7 @@ export default function CookingJourneyEditSheet({
         <Text
           style={{
             fontSize: 13,
-            fontWeight: '600',
+            fontFamily: 'PlusJakartaSans_600SemiBold',
             color: textPrimary,
             marginBottom: Spacing.sm,
           }}
@@ -180,7 +180,7 @@ export default function CookingJourneyEditSheet({
                       : 'rgba(0,0,0,0.03)',
                 }}
               >
-                <Text style={{ fontSize: 14, fontWeight: '600', color: textPrimary }}>
+                <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: textPrimary }}>
                   {selected ? '● ' : '○ '}
                   {option.label}
                 </Text>
@@ -205,7 +205,7 @@ export default function CookingJourneyEditSheet({
             opacity: saving ? 0.6 : 1,
           }}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>
             {saving ? 'Saving…' : 'Save'}
           </Text>
         </HapticTouchableOpacity>

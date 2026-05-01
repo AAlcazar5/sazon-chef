@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     marginTop: Spacing.lg,
     textAlign: 'center',
   },

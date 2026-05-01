@@ -11,6 +11,7 @@ import AnimatedStatCounter from '../ui/AnimatedStatCounter';
 import ShimmerBadge from '../ui/ShimmerBadge';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { UserProfile } from '../../types';
 
@@ -85,107 +86,202 @@ export default function ProfileHeader({
 
   return (
     <>
-      <FrostedHeader paddingBottom={24} withTopInset>
-        <View className="items-center">
-          <HapticTouchableOpacity
-            onPress={onChangeProfilePicture}
-            disabled={uploadingPicture}
-            className="relative mb-3"
-            activeOpacity={0.8}
+      <FrostedHeader paddingBottom={20} withTopInset>
+        <View style={{ paddingHorizontal: 20 }}>
+          {/* Editorial title */}
+          <Text
+            style={{
+              fontFamily: EditorialFontFamily.display.bold,
+              fontSize: 48,
+              lineHeight: 50,
+              letterSpacing: -1.6,
+              color: isDark ? '#F3F4F6' : '#111827',
+              marginBottom: 16,
+            }}
+            accessibilityRole="header"
           >
-            <View className="w-20 h-20 rounded-full items-center justify-center overflow-hidden" style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}>
-              {profilePicture ? (
-                <Image
-                  source={{ uri: profilePicture }}
-                  style={{ width: 80, height: 80 }}
-                  className="rounded-full"
-                />
+            Your Pro<Text style={{ fontFamily: EditorialFontFamily.displayItalic.bold, fontStyle: 'italic' }}>file</Text>
+          </Text>
+
+          {/* Avatar + name row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <HapticTouchableOpacity
+              onPress={onChangeProfilePicture}
+              disabled={uploadingPicture}
+              activeOpacity={0.8}
+              style={{ position: 'relative' }}
+            >
+              <View
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 36,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                }}
+              >
+                {profilePicture ? (
+                  <Image source={{ uri: profilePicture }} style={{ width: 72, height: 72, borderRadius: 36 }} />
+                ) : (
+                  <Text style={{ color: 'white', fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>
+                    {profile.name.split(' ').map(n => n[0]).join('')}
+                  </Text>
+                )}
+              </View>
+              {uploadingPicture ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    borderRadius: 36,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <AnimatedActivityIndicator size="small" color="white" />
+                </View>
               ) : (
-                <Text className="text-white text-2xl font-bold">
-                  {profile.name.split(' ').map(n => n[0]).join('')}
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 2,
+                    borderColor: isDark ? '#1F2937' : '#FFFFFF',
+                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                  }}
+                >
+                  <Icon name={Icons.EDIT_OUTLINE} size={12} color="white" accessibilityLabel="Edit profile picture" />
+                </View>
+              )}
+            </HapticTouchableOpacity>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Text
+                  style={{
+                    fontSize: 22,
+                    fontFamily: 'PlusJakartaSans_800ExtraBold',
+                    lineHeight: 26,
+                    color: isDark ? '#F3F4F6' : '#111827',
+                    marginRight: 6,
+                  }}
+                  numberOfLines={1}
+                >
+                  {profile.name}
                 </Text>
+                <HapticTouchableOpacity onPress={handleEditName} activeOpacity={0.7} style={{ padding: 4 }}>
+                  <Icon
+                    name={Icons.EDIT_OUTLINE}
+                    size={IconSizes.SM}
+                    color={isDark ? DarkColors.text.secondary : Colors.text.secondary}
+                    accessibilityLabel="Edit name"
+                  />
+                </HapticTouchableOpacity>
+              </View>
+              <Text style={{ color: isDark ? '#D1D5DB' : '#6B7280', fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+                {profile.email}
+              </Text>
+              {isPremium && (
+                <View style={{ marginTop: 6, alignSelf: 'flex-start' }}>
+                  <ShimmerBadge label="✦ Premium" testID="premium-badge" />
+                </View>
               )}
             </View>
-            {uploadingPicture ? (
-              <View className="absolute inset-0 bg-black/50 rounded-full items-center justify-center">
-                <AnimatedActivityIndicator size="small" color="white" />
-              </View>
-            ) : (
-              <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full items-center justify-center border-2 border-white dark:border-gray-800" style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}>
-                <Icon name={Icons.EDIT_OUTLINE} size={12} color="white" accessibilityLabel="Edit profile picture" />
-              </View>
-            )}
-          </HapticTouchableOpacity>
-          <View className="flex-row items-center mb-1">
-            <Text style={{ fontSize: 28, fontWeight: '800', lineHeight: 34 }} className="text-gray-900 dark:text-gray-100 mr-2" accessibilityRole="header">{profile.name}</Text>
-            <HapticTouchableOpacity
-              onPress={handleEditName}
-              className="p-1"
-              activeOpacity={0.7}
-            >
-              <Icon
-                name={Icons.EDIT_OUTLINE}
-                size={IconSizes.SM}
-                color={isDark ? DarkColors.text.secondary : Colors.text.secondary}
-                accessibilityLabel="Edit name"
-              />
-            </HapticTouchableOpacity>
           </View>
-          {isPremium && <ShimmerBadge label="✦ Premium" testID="premium-badge" />}
-          <Text className="text-gray-500 dark:text-gray-200">{profile.email}</Text>
 
           {/* Animated stats strip — parallax: moves at 0.5x scroll speed */}
           {stats && (
             <Animated.View
-              className="flex-row mt-4 gap-6"
-              style={scrollY ? {
-                transform: [{
-                  translateY: scrollY.interpolate({
-                    inputRange: [0, 120],
-                    outputRange: [0, -12],
+              style={[
+                {
+                  flexDirection: 'row',
+                  marginTop: 18,
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
+                  borderRadius: 20,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.6)',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                },
+                scrollY ? {
+                  transform: [{
+                    translateY: scrollY.interpolate({
+                      inputRange: [0, 120],
+                      outputRange: [0, -12],
+                      extrapolate: 'clamp',
+                    }),
+                  }],
+                  opacity: scrollY.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: [1, 0.7],
                     extrapolate: 'clamp',
                   }),
-                }],
-                opacity: scrollY.interpolate({
-                  inputRange: [0, 100],
-                  outputRange: [1, 0.6],
-                  extrapolate: 'clamp',
-                }),
-              } : undefined}
+                } : null,
+              ]}
             >
-              <View className="items-center">
+              <View style={{ alignItems: 'center', flex: 1 }}>
                 <AnimatedStatCounter
                   value={stats.savedRecipes}
                   delay={0}
-                  style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
+                  style={{
+                    fontFamily: EditorialFontFamily.display.bold,
+                    fontSize: 26,
+                    letterSpacing: -0.5,
+                    color: isDark ? DarkColors.primary : Colors.primary,
+                  }}
                   testID="stat-saved-recipes"
                 />
-                <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Saved</Text>
+                <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2, fontFamily: EditorialFontFamily.body.medium }}>
+                  Saved
+                </Text>
               </View>
-              <View style={{ width: 1, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />
-              <View className="items-center">
+              <View style={{ width: 1, height: 28, backgroundColor: isDark ? '#374151' : 'rgba(0,0,0,0.08)' }} />
+              <View style={{ alignItems: 'center', flex: 1 }}>
                 <AnimatedStatCounter
                   value={stats.mealHistory}
                   delay={100}
-                  style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
+                  style={{
+                    fontFamily: EditorialFontFamily.display.bold,
+                    fontSize: 26,
+                    letterSpacing: -0.5,
+                    color: isDark ? DarkColors.primary : Colors.primary,
+                  }}
                   testID="stat-meals-cooked"
                 />
-                <View className="flex-row items-center mt-0.5">
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">Cooked</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                  <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', fontFamily: EditorialFontFamily.body.medium }}>
+                    Cooked
+                  </Text>
                   {stats.mealHistory > 0 && (
-                    <Animated.Text style={{ opacity: flameOpacity, fontSize: 10, marginLeft: 2 }}>🔥</Animated.Text>
+                    <Animated.Text style={{ opacity: flameOpacity, fontSize: 11, marginLeft: 3 }}>🔥</Animated.Text>
                   )}
                 </View>
               </View>
-              <View style={{ width: 1, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />
-              <View className="items-center">
+              <View style={{ width: 1, height: 28, backgroundColor: isDark ? '#374151' : 'rgba(0,0,0,0.08)' }} />
+              <View style={{ alignItems: 'center', flex: 1 }}>
                 <AnimatedStatCounter
                   value={stats.mealPlans}
                   delay={200}
-                  style={{ fontSize: 22, fontWeight: '900', color: isDark ? DarkColors.primary : Colors.primary }}
+                  style={{
+                    fontFamily: EditorialFontFamily.display.bold,
+                    fontSize: 26,
+                    letterSpacing: -0.5,
+                    color: isDark ? DarkColors.primary : Colors.primary,
+                  }}
                   testID="stat-meal-plans"
                 />
-                <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Meal Plans</Text>
+                <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2, fontFamily: EditorialFontFamily.body.medium }}>
+                  Meal Plans
+                </Text>
               </View>
             </Animated.View>
           )}

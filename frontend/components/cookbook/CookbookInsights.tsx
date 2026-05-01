@@ -198,7 +198,7 @@ export default function CookbookInsights({
                 value={insights.bestMatch}
                 duration={600}
                 suffix="%"
-                style={{ fontSize: 24, fontWeight: '700', color: isDark ? DarkColors.primary : Colors.primary }}
+                style={{ fontSize: 24, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? DarkColors.primary : Colors.primary }}
               />
               <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Highest match across this collection
@@ -212,7 +212,7 @@ export default function CookbookInsights({
                 suffix="%"
                 style={{
                   fontSize: 24,
-                  fontWeight: '700',
+                  fontFamily: 'PlusJakartaSans_700Bold',
                   color:
                     insights.abPct >= 70
                       ? (isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen)

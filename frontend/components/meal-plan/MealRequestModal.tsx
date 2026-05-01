@@ -103,7 +103,7 @@ function PillButton({
         marginBottom: 8,
       }}
     >
-      <Text style={{ fontSize: 13, fontWeight: '600', color: selected ? '#FFFFFF' : isDark ? '#E5E7EB' : '#374151' }}>
+      <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: selected ? '#FFFFFF' : isDark ? '#E5E7EB' : '#374151' }}>
         {label}
       </Text>
     </HapticTouchableOpacity>
@@ -112,7 +112,7 @@ function PillButton({
 
 function SectionHeader({ title, isDark }: { title: string; isDark: boolean }) {
   return (
-    <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 12 }}>
+    <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 12 }}>
       {title}
     </Text>
   );
@@ -277,7 +277,7 @@ export default function MealRequestModal({
 
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: textPrimary }}>
+            <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_700Bold', color: textPrimary }}>
               {results ? 'Results' : 'Find Me a Meal'}
             </Text>
             <HapticTouchableOpacity onPress={results ? () => setResults(null) : handleClose} accessibilityLabel="Close">
@@ -308,7 +308,7 @@ export default function MealRequestModal({
                 {/* Remaining macros context banner */}
                 {(remainingCalories !== undefined || remainingProtein !== undefined) && (
                   <View style={{ backgroundColor: isDark ? '#1C2C1C' : '#F0FDF4', borderRadius: 12, padding: 12, marginBottom: 16 }}>
-                    <Text style={{ fontSize: 13, color: isDark ? '#86EFAC' : '#16A34A', fontWeight: '500' }}>
+                    <Text style={{ fontSize: 13, color: isDark ? '#86EFAC' : '#16A34A', fontFamily: 'PlusJakartaSans_500Medium' }}>
                       {remainingCalories !== undefined && remainingProtein !== undefined
                         ? `You have ~${remainingCalories} calories and ${remainingProtein}g protein remaining today`
                         : remainingCalories !== undefined
@@ -448,7 +448,7 @@ export default function MealRequestModal({
                   </View>
                   {expandedFamily && CUISINE_FAMILIES[expandedFamily] && (
                     <View style={{ marginTop: 8, paddingLeft: 8 }} accessibilityLabel={`${expandedFamily} subcuisines`}>
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: textSecondary, marginBottom: 6 }}>
+                      <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: textSecondary, marginBottom: 6 }}>
                         {expandedFamily} cuisines:
                       </Text>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -482,7 +482,7 @@ export default function MealRequestModal({
                   {loading ? (
                     <ActivityIndicator color="#FFF" />
                   ) : (
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+                    <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#FFFFFF' }}>
                       Find {count === 1 ? 'a Meal' : `${count} Meals`}
                     </Text>
                   )}

@@ -5,7 +5,6 @@ import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -63,34 +62,41 @@ function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, o
         style={[{
           borderRadius: 14,
           overflow: 'hidden',
+          borderWidth: isSelected ? 2 : 0,
+          borderColor: isSelected ? '#111827' : 'transparent',
         }, Shadows.SM]}
       >
         {isSelected ? (
-          <LinearGradient
-            colors={['#fa7e12', '#f59e0b']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center' }}
-          >
-            <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)', marginBottom: 2 }}>
+          <View style={{
+            paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center',
+            backgroundColor: isDark ? 'rgba(250,126,18,0.18)' : Pastel.peach,
+          }}>
+            <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>
               {date.toLocaleDateString('en-US', { weekday: 'short' })}
             </Text>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>
+            <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? '#F9FAFB' : '#111827' }}>
               {date.getDate()}
             </Text>
+            {isToday && (
+              <View style={{
+                width: 5, height: 5, borderRadius: 3,
+                backgroundColor: '#fa7e12',
+                marginTop: 4,
+              }} />
+            )}
             {mealsCount > 0 && (
               <View style={{
                 marginTop: 4, minWidth: 22, height: 22, borderRadius: 11,
-                backgroundColor: 'rgba(255,255,255,0.9)',
+                backgroundColor: '#111827',
                 alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
               }}>
-                <Text style={{ color: Colors.primaryDark, fontSize: 11, fontWeight: '800' }}>{mealsCount}</Text>
+                <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{mealsCount}</Text>
               </View>
             )}
             {hasMealPrep && (
-              <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.9)', marginTop: 2, fontWeight: '700' }}>🍱 Prep</Text>
+              <Text style={{ fontSize: 9, color: '#fa7e12', marginTop: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>🍱 Prep</Text>
             )}
-          </LinearGradient>
+          </View>
         ) : (
           <View style={{
             paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center',
@@ -98,11 +104,11 @@ function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, o
               ? DAY_TINTS[date.getDay() === 0 ? 6 : date.getDay() - 1].dark
               : DAY_TINTS[date.getDay() === 0 ? 6 : date.getDay() - 1].light,
           }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 2 }}>
+            <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 2 }}>
               {date.toLocaleDateString('en-US', { weekday: 'short' })}
             </Text>
             <Text style={{
-              fontSize: 18, fontWeight: '800',
+              fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold',
               color: isToday ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRed) : (isDark ? DarkColors.text.primary : Colors.text.primary),
             }}>
               {date.getDate()}
@@ -124,11 +130,11 @@ function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, o
                 backgroundColor: isDark ? DarkColors.primary : Colors.primary,
                 alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
               }}>
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{mealsCount}</Text>
+                <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold' }}>{mealsCount}</Text>
               </View>
             )}
             {hasMealPrep && (
-              <Text style={{ fontSize: 9, color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed, marginTop: 2, fontWeight: '700' }}>🍱 Prep</Text>
+              <Text style={{ fontSize: 9, color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed, marginTop: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>🍱 Prep</Text>
             )}
           </View>
         )}
@@ -198,7 +204,12 @@ function WeeklyCalendar({
   return (
     <View className="px-4 mb-4">
       <View className="flex-row items-center justify-between mb-3">
-        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Weekly Meal Plan</Text>
+        <Text
+          numberOfLines={1}
+          style={{ flex: 1, marginRight: 8, fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}
+        >
+          Weekly Meal Plan
+        </Text>
         <View className="flex-row items-center space-x-2">
           <HapticTouchableOpacity
             onPress={onPreviousWeek}

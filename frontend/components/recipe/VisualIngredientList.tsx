@@ -198,7 +198,7 @@ export default function VisualIngredientList({
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <Text style={{
           fontSize: 20,
-          fontWeight: '700',
+          fontFamily: 'PlusJakartaSans_700Bold',
           color: isDark ? DarkColors.text.primary : Colors.text.primary,
         }}>
           Ingredients
@@ -219,7 +219,7 @@ export default function VisualIngredientList({
           >
             <Text style={{
               fontSize: 13,
-              fontWeight: '700',
+              fontFamily: 'PlusJakartaSans_700Bold',
               color: isDark ? '#FFB74D' : '#EA580C',
             }}>
               for {servings === Math.floor(servings) ? servings : servings.toFixed(1)} serving{servings !== 1 ? 's' : ''}
@@ -248,11 +248,11 @@ export default function VisualIngredientList({
               }}
               accessibilityLabel="Decrease servings"
             >
-              <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#FFB74D' : '#EA580C', lineHeight: 20 }}>−</Text>
+              <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#FFB74D' : '#EA580C', lineHeight: 20 }}>−</Text>
             </HapticTouchableOpacity>
             <Text style={{
               fontSize: 13,
-              fontWeight: '700',
+              fontFamily: 'PlusJakartaSans_700Bold',
               color: isDark ? '#FFB74D' : '#EA580C',
               marginHorizontal: 8,
               minWidth: 56,
@@ -273,7 +273,7 @@ export default function VisualIngredientList({
               }}
               accessibilityLabel="Increase servings"
             >
-              <Text style={{ fontSize: 18, fontWeight: '700', color: isDark ? '#FFB74D' : '#EA580C', lineHeight: 20 }}>+</Text>
+              <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#FFB74D' : '#EA580C', lineHeight: 20 }}>+</Text>
             </HapticTouchableOpacity>
           </View>
         )}
@@ -299,7 +299,7 @@ export default function VisualIngredientList({
             >
               <Text style={{
                 fontSize: 12,
-                fontWeight: '700',
+                fontFamily: 'PlusJakartaSans_700Bold',
                 letterSpacing: 0.3,
                 color: active
                   ? (isDark ? '#FFB74D' : '#EA580C')
@@ -342,7 +342,7 @@ export default function VisualIngredientList({
           {section.header && (
             <Text style={{
               fontSize: 17,
-              fontWeight: '600',
+              fontFamily: 'PlusJakartaSans_600SemiBold',
               color: isDark ? DarkColors.text.primary : Colors.text.primary,
               marginTop: sIdx > 0 ? 16 : 0,
               marginBottom: 8,
@@ -409,7 +409,7 @@ export default function VisualIngredientList({
                   {scaledAmount && !isSwapped ? (
                     <Text style={{
                       fontSize: 15,
-                      fontWeight: '600',
+                      fontFamily: 'PlusJakartaSans_600SemiBold',
                       color: isDark ? DarkColors.text.primary : Colors.text.primary,
                       marginLeft: 12,
                       textAlign: 'right',

@@ -124,14 +124,23 @@ const styles = StyleSheet.create({
   },
   displayText: {
     ...EditorialTypography.display,
+    fontSize: 48,
+    lineHeight: 50,
+    letterSpacing: -1.6,
     color: '#111827',
   },
   displayAccent: {
     ...EditorialTypography.displayAccent,
+    fontSize: 48,
+    lineHeight: 50,
+    letterSpacing: -1.6,
     color: '#111827',
   },
   orangePeriod: {
     ...EditorialTypography.display,
+    fontSize: 48,
+    lineHeight: 50,
+    letterSpacing: -1.6,
     color: '#fa7e12',
   },
   subtitle: {

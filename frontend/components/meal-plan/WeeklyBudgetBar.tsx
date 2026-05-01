@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -123,17 +123,17 @@ const styles = StyleSheet.create({
   },
   rolloverText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
     color: '#FFFFFF',
   },
   remaining: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     marginTop: 4,
   },
   remainingSub: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   barTrack: {
     height: 8,
@@ -153,10 +153,10 @@ const styles = StyleSheet.create({
   },
   proteinLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   proteinValue: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
 });

@@ -252,7 +252,7 @@ export default function CreateShoppingListScreen() {
 
         {/* Sheet header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: labelColor }}>Create Shopping List</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: labelColor }}>Create Shopping List</Text>
           <HapticTouchableOpacity onPress={handleClose} style={{ padding: 4 }}>
             <Icon name={Icons.CLOSE} size={IconSizes.MD} color={subColor} accessibilityLabel="Close" />
           </HapticTouchableOpacity>
@@ -286,7 +286,7 @@ export default function CreateShoppingListScreen() {
 
             {/* Add Item Card */}
             <View style={{ backgroundColor: cardBg, borderRadius: 12, borderWidth: 1, borderColor, padding: 14, marginBottom: 12 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: labelColor, marginBottom: 10 }}>Add Items</Text>
+              <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: labelColor, marginBottom: 10 }}>Add Items</Text>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <TextInput
@@ -342,7 +342,7 @@ export default function CreateShoppingListScreen() {
             {items.length > 0 && (
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: labelColor }}>Items ({items.length})</Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: labelColor }}>Items ({items.length})</Text>
                   <HapticTouchableOpacity
                     onPress={() => {
                       Alert.alert(
@@ -356,14 +356,14 @@ export default function CreateShoppingListScreen() {
                     }}
                     style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100, backgroundColor: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)' }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? '#F87171' : '#DC2626' }}>Clear All</Text>
+                    <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? '#F87171' : '#DC2626' }}>Clear All</Text>
                   </HapticTouchableOpacity>
                 </View>
 
                 {Object.entries(groupedItems).map(([category, categoryItems]) => (
                   <View key={category} style={{ backgroundColor: cardBg, borderRadius: 12, borderWidth: 1, borderColor, marginBottom: 10, overflow: 'hidden' }}>
                     <View style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : Colors.surface, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: subColor }}>{category}</Text>
+                      <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: subColor }}>{category}</Text>
                     </View>
 
                     {categoryItems.map((item, index) => (
@@ -434,7 +434,7 @@ export default function CreateShoppingListScreen() {
               ) : (
                 <>
                   <Icon name={Icons.CHECKMARK} size={IconSizes.MD} color="white" accessibilityLabel="Create" style={{ marginRight: 8 }} />
-                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 17 }}>
+                  <Text style={{ color: 'white', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 17 }}>
                     {items.length > 0 ? `Create List (${items.length} items)` : 'Create Empty List'}
                   </Text>
                 </>

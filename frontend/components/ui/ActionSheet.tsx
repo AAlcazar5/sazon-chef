@@ -7,12 +7,14 @@ import { useEffect, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
-import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
+import { Colors, DarkColors, DarkElevation, Pastel, PastelDark, Accent } from '../../constants/Colors';
 import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
-import { FontSize, FontWeight } from '../../constants/Typography';
+import { FontSize, FontWeight, EditorialFontFamily } from '../../constants/Typography';
 import { Duration, Spring } from '../../constants/Animations';
 import { HapticPatterns } from '../../constants/Haptics';
 import { buttonAccessibility } from '../../utils/accessibility';
+
+export type ActionSheetTint = 'sage' | 'peach' | 'lavender' | 'sky' | 'blush' | 'golden' | 'orange';
 
 export interface ActionSheetItem {
   label: string;
@@ -21,6 +23,20 @@ export interface ActionSheetItem {
   color?: string;
   destructive?: boolean;
   subtitle?: string;
+  /** Pastel tint applied to the icon chip. If absent, falls back to a rotation by index. */
+  tint?: ActionSheetTint;
+}
+
+const TINT_ROTATION: ActionSheetTint[] = ['sage', 'peach', 'lavender', 'sky', 'blush', 'golden'];
+
+function tintColors(tint: ActionSheetTint, isDark: boolean): { bg: string; fg: string } {
+  const lightBg = (Pastel as Record<string, string>)[tint];
+  const darkBg = (PastelDark as Record<string, string>)[tint];
+  const accent = (Accent as Record<string, string>)[tint];
+  return {
+    bg: isDark ? darkBg : lightBg,
+    fg: accent,
+  };
 }
 
 interface ActionSheetProps {
@@ -124,11 +140,12 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                 <View style={[styles.handle, { backgroundColor: isDark ? DarkColors.border.medium : Colors.border.light }]} />
               </View>
 
-              {/* Title */}
+              {/* Title — editorial serif */}
               {title && (
                 <View style={[styles.titleContainer, { borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light }]}>
                   <Text style={[styles.title, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
                     {title}
+                    <Text style={styles.titleAccent}>.</Text>
                   </Text>
                 </View>
               )}
@@ -140,7 +157,15 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                 showsVerticalScrollIndicator={false}
                 bounces={false}
               >
-                {items.map((item, index) => (
+                {items.map((item, index) => {
+                  const resolvedTint: ActionSheetTint = item.tint ?? TINT_ROTATION[index % TINT_ROTATION.length];
+                  const { bg: tintBg, fg: tintFg } = tintColors(resolvedTint, isDark);
+                  const iconBg = item.destructive
+                    ? (isDark ? 'rgba(220, 38, 38, 0.2)' : 'rgba(254, 202, 202, 1)')
+                    : tintBg;
+                  const iconFg = item.destructive ? Colors.secondaryRed : tintFg;
+
+                  return (
                   <HapticTouchableOpacity
                     key={index}
                     onPress={() => handleItemPress(item)}
@@ -158,21 +183,8 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                     })}
                     accessibilityRole="menuitem"
                   >
-                    <View
-                      style={[
-                        styles.iconContainer,
-                        {
-                          backgroundColor: item.destructive
-                            ? (isDark ? 'rgba(220, 38, 38, 0.2)' : 'rgba(254, 202, 202, 1)')
-                            : (isDark ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 237, 213, 1)'),
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={item.icon as any}
-                        size={22}
-                        color={item.destructive ? Colors.secondaryRed : Colors.primary}
-                      />
+                    <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+                      <Ionicons name={item.icon as any} size={22} color={iconFg} />
                     </View>
                     <Text
                       style={[
@@ -196,7 +208,7 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                       }}>
                         <Text style={{
                           fontSize: FontSize.xs,
-                          fontWeight: FontWeight.semibold as any,
+                          fontFamily: 'PlusJakartaSans_600SemiBold' as any,
                           color: Colors.primary,
                         }}>
                           {item.subtitle}
@@ -209,7 +221,8 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                       color={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
                     />
                   </HapticTouchableOpacity>
-                ))}
+                  );
+                })}
               </ScrollView>
 
               {/* Cancel Button */}
@@ -262,8 +275,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   title: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
+    fontFamily: EditorialFontFamily.display.bold,
+    fontSize: 26,
+    letterSpacing: -0.6,
+    lineHeight: 30,
+  },
+  titleAccent: {
+    fontFamily: EditorialFontFamily.display.bold,
+    fontSize: 26,
+    color: '#fa7e12',
   },
   scrollContainer: {
     flexShrink: 1,
@@ -291,7 +311,7 @@ const styles = StyleSheet.create({
   itemLabel: {
     flex: 1,
     fontSize: FontSize.md,
-    fontWeight: FontWeight.medium,
+    fontFamily: 'PlusJakartaSans_500Medium',
   },
   cancelButton: {
     marginHorizontal: Spacing.lg,
@@ -303,7 +323,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.semibold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });
 

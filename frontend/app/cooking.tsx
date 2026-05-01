@@ -488,7 +488,7 @@ export default function CookingScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>📸</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
                 {userPhotoUri ? 'Retake' : 'Add Photo'}
               </Text>
             </HapticTouchableOpacity>
@@ -518,7 +518,7 @@ export default function CookingScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>📤</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>Share</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Share</Text>
             </HapticTouchableOpacity>
           </View>
 
@@ -544,7 +544,7 @@ export default function CookingScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>⭐</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>Rate This Meal</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Rate This Meal</Text>
             </HapticTouchableOpacity>
           </View>
         )}
@@ -889,7 +889,7 @@ export default function CookingScreen() {
                 >
                   <View style={{ alignItems: 'center' }}>
                     <Ionicons name="play-back" size={16} color="#60A5FA" />
-                    <Text style={{ color: '#60A5FA', fontSize: 8, fontWeight: '800', marginTop: -1 }}>5s</Text>
+                    <Text style={{ color: '#60A5FA', fontSize: 8, fontFamily: 'PlusJakartaSans_800ExtraBold', marginTop: -1 }}>5s</Text>
                   </View>
                 </HapticTouchableOpacity>
 
@@ -920,10 +920,10 @@ export default function CookingScreen() {
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <Text style={{ color: '#60A5FA', fontSize: 11, fontWeight: '600', flex: 1 }}>
+                <Text style={{ color: '#60A5FA', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', flex: 1 }}>
                   Speed
                 </Text>
-                <Text style={{ color: '#60A5FA', fontSize: 11, fontWeight: '700' }}>
+                <Text style={{ color: '#60A5FA', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold' }}>
                   {voiceRate <= 0.6 ? 'Slow' : voiceRate >= 1.3 ? 'Fast' : 'Normal'}
                   {' '}({voiceRate.toFixed(1)}×)
                 </Text>
@@ -960,7 +960,7 @@ export default function CookingScreen() {
                         }}
                       >
                         <Text style={{
-                          fontSize: 9, fontWeight: '700',
+                          fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold',
                           color: Math.abs(voiceRate - rate) < 0.05 ? '#fff' : '#60A5FA',
                         }}>
                           {rate}×

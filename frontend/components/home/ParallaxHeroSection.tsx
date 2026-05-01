@@ -156,7 +156,7 @@ function ParallaxHeroSection({
               style={{
                 color: '#FFFFFF',
                 fontSize: 11,
-                fontWeight: '700',
+                fontFamily: 'PlusJakartaSans_700Bold',
                 marginLeft: 4,
                 letterSpacing: 0.5,
               }}
@@ -181,7 +181,7 @@ function ParallaxHeroSection({
                 borderRadius: 999,
               }}
             >
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
+              <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold' }}>
                 {Math.round(matchPct)}%
               </Text>
             </View>
@@ -201,7 +201,7 @@ function ParallaxHeroSection({
         >
           {/* Cuisine label */}
           {!!recipe.cuisine && (
-            <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: '700', letterSpacing: 0.6, marginBottom: 3, textTransform: 'uppercase' }}>
+            <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: 0.6, marginBottom: 3, textTransform: 'uppercase' }}>
               {recipe.cuisine}
             </Text>
           )}
@@ -212,7 +212,7 @@ function ParallaxHeroSection({
             style={{
               color: '#FFFFFF',
               fontSize: 22,
-              fontWeight: '800',
+              fontFamily: 'PlusJakartaSans_800ExtraBold',
               lineHeight: 28,
               marginBottom: 6,
               textShadowColor: 'rgba(0,0,0,0.5)',
@@ -229,7 +229,7 @@ function ParallaxHeroSection({
               {!!recipe.cookTime && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                   <Ionicons name="time-outline" size={11} color="rgba(255,255,255,0.85)" />
-                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, fontWeight: '600' }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
                     {recipe.cookTime} min
                   </Text>
                 </View>
@@ -243,7 +243,7 @@ function ParallaxHeroSection({
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>
                     Grade {grade}
                   </Text>
                 </View>
@@ -261,7 +261,7 @@ function ParallaxHeroSection({
               { value: recipe.fiber, label: `${recipe.fiber}g Fi`, bg: 'rgba(16,185,129,0.50)' },
             ].filter(({ value }) => !!value).map(({ label, bg }) => (
               <View key={label} style={{ flex: 1, marginHorizontal: 2, backgroundColor: bg, paddingVertical: 3, borderRadius: 999, alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{label}</Text>
+                <Text style={{ color: '#fff', fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>{label}</Text>
               </View>
             ))}
           </View>
@@ -281,7 +281,7 @@ function ParallaxHeroSection({
               }}
             >
               <Ionicons name="bookmark-outline" size={14} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Save</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Save</Text>
             </HapticTouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

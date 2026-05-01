@@ -12,8 +12,7 @@ export function EditorialCookbookHeader({ recipeCount, collectionCount }: Editor
     <View style={styles.container}>
       <Text style={styles.eyebrow}>YOUR</Text>
       <Text style={styles.title}>
-        Cookbook
-        <Text style={styles.orangePeriod}>.</Text>
+        Cook<Text style={styles.titleAccent}>book</Text>
       </Text>
       <Text style={styles.subtitle}>
         {recipeCount} recipes saved across {collectionCount} collections.
@@ -22,32 +21,41 @@ export function EditorialCookbookHeader({ recipeCount, collectionCount }: Editor
   );
 }
 
+const TITLE_SIZE = 48;
+
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 12,
     marginBottom: 20,
   },
   eyebrow: {
     ...EditorialTypography.eyebrow,
     color: '#9CA3AF',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   title: {
     fontFamily: EditorialFontFamily.display.bold,
-    fontSize: 30,
-    letterSpacing: -0.5,
+    fontSize: TITLE_SIZE,
+    lineHeight: TITLE_SIZE * 1.04,
+    letterSpacing: -1.6,
+    color: '#111827',
+  },
+  titleAccent: {
+    fontFamily: EditorialFontFamily.displayItalic.bold,
+    fontSize: TITLE_SIZE,
+    letterSpacing: -1.6,
     color: '#111827',
   },
   orangePeriod: {
     fontFamily: EditorialFontFamily.display.bold,
-    fontSize: 30,
+    fontSize: TITLE_SIZE,
     color: '#fa7e12',
   },
   subtitle: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 6,
+    color: '#6B7280',
+    marginTop: 10,
   },
 });

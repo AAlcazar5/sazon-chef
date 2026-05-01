@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: FontSize.sm,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
     color: Colors.error,
     flexShrink: 1,
   },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   fieldMessage: {
     fontSize: FontSize.xs,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_500Medium',
     color: Colors.error,
     flexShrink: 1,
   },
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: FontSize.sm,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: Colors.error,
     marginLeft: Spacing.sm,
   },

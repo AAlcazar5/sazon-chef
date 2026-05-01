@@ -12,11 +12,8 @@ interface MostCookedHeroProps {
 
 export function MostCookedHero({ title, accentWord, imageUrl, cookCount }: MostCookedHeroProps) {
   const parts = title.split(accentWord);
-  const plateShadow = Platform.select({
-    ios: EditorialShadows.platePhoto.ios,
-    android: EditorialShadows.platePhoto.android,
-    default: {},
-  });
+  const plateShadow =
+    Platform.OS === 'ios' ? EditorialShadows.platePhoto.ios : EditorialShadows.platePhoto.android;
 
   return (
     <View style={styles.container} testID="most-cooked-hero">

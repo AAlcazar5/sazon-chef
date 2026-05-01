@@ -81,7 +81,7 @@ function FilterChip({
             <Text
               style={{
                 fontSize: 11,
-                fontWeight: '600',
+                fontFamily: 'PlusJakartaSans_600SemiBold',
                 color: active ? activeTextColor : (isDark ? '#9CA3AF' : '#6B7280'),
                 textAlign: 'center',
               }}
@@ -205,7 +205,7 @@ function QuickFiltersBar({
               <Text
                 style={{
                   fontSize: 11,
-                  fontWeight: '600',
+                  fontFamily: 'PlusJakartaSans_600SemiBold',
                   color: selectedMood ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#9CA3AF' : '#6B7280'),
                   textAlign: 'center',
                 }}

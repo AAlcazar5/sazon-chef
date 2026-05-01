@@ -126,7 +126,7 @@ function MacroSparkline({
       <View style={{ flexDirection: 'row', width, paddingHorizontal: padding, justifyContent: 'space-between' }}>
         {values.map((v, i) => (
           <View key={i} style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 9, fontWeight: '600', color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>
+            <Text style={{ fontSize: 9, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>
               {DAY_LABELS[i] || ''}
             </Text>
             <Text style={{ fontSize: 8, color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>
@@ -199,7 +199,7 @@ function DailyMacrosSummary({
         }}
         className="flex-row items-center justify-between mb-3"
       >
-        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+        <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
           Daily Macros - {formattedDate}
         </Text>
         <Icon
@@ -239,7 +239,7 @@ function DailyMacrosSummary({
           />
           <Text style={{
             fontSize: 12,
-            fontWeight: '700',
+            fontFamily: 'PlusJakartaSans_700Bold',
             color: isDark ? DarkColors.text.primary : Colors.text.primary,
           }}>
             {rollover.delta > 0 ? '+' : '−'}{Math.abs(rollover.delta)} cal {rollover.delta > 0 ? 'from yesterday' : 'to make up'}
@@ -249,45 +249,61 @@ function DailyMacrosSummary({
 
       {macrosExpanded ? (
         <View>
-          {/* Calorie progress ring */}
-          <View style={{ alignItems: 'center', marginBottom: 16 }}>
-            <ProgressRing
-              progress={calProgress}
-              size={120}
-              strokeWidth={10}
-              color={[Accent.peach, '#FB923C']}
-              testID="calorie-progress-ring"
-            >
-              <AnimatedLogoMascot expression={mascotExpression} size="tiny" animationType="idle" />
-            </ProgressRing>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 8, gap: 4 }}>
-              <CountingNumber
-                value={dailyMacros.calories}
-                delay={0}
-                style={{ fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, color: isDark ? DarkColors.text.primary : Colors.text.primary }}
-              />
-              <Text style={{ fontSize: FontSize.sm, color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                / {targetMacros.calories} kcal
+          {/* Ring on left, macro progress bars on right */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 16 }}>
+            <View style={{ alignItems: 'center' }}>
+              <ProgressRing
+                progress={calProgress}
+                size={120}
+                strokeWidth={10}
+                color={[Accent.peach, '#FB923C']}
+                testID="calorie-progress-ring"
+              >
+                <AnimatedLogoMascot expression={mascotExpression} size="tiny" animationType="idle" />
+              </ProgressRing>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 8, gap: 4 }}>
+                <CountingNumber
+                  value={dailyMacros.calories}
+                  delay={0}
+                  style={{ fontSize: FontSize.xl, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}
+                />
+                <Text style={{ fontSize: FontSize.sm, color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                  / {targetMacros.calories}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? DarkColors.text.secondary : Colors.text.secondary, letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 2 }}>
+                kcal
               </Text>
             </View>
-          </View>
 
-          {/* 2×2 macro widget grid */}
-          <WidgetGrid testID="macro-widget-grid">
-            {MACRO_WIDGET_CONFIG.map((cfg) => (
-              <WidgetCard
-                key={cfg.key}
-                tint={cfg.tint}
-                tintDark={cfg.tintDark}
-                icon={cfg.icon}
-                statValue={dailyMacros[cfg.key] ?? 0}
-                statUnit={cfg.unit}
-                label={cfg.label}
-                onPress={weeklyMacroData ? () => handleMacroCardPress(cfg.key) : undefined}
-                testID={`widget-${cfg.key}`}
-              />
-            ))}
-          </WidgetGrid>
+            <View style={{ flex: 1, gap: 10 }}>
+              {MACRO_WIDGET_CONFIG.filter(cfg => cfg.key !== 'calories').map((cfg) => {
+                const value = dailyMacros[cfg.key] ?? 0;
+                const target = targetMacros[cfg.key] ?? 0;
+                const pct = target > 0 ? Math.min(1, value / target) : 0;
+                return (
+                  <HapticTouchableOpacity
+                    key={cfg.key}
+                    onPress={weeklyMacroData ? () => handleMacroCardPress(cfg.key) : undefined}
+                    testID={`macro-bar-${cfg.key}`}
+                    accessibilityLabel={`${cfg.label} ${value} of ${target}${cfg.unit}`}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                      <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.6, textTransform: 'uppercase', color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+                        {cfg.label}
+                      </Text>
+                      <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
+                        {value}<Text style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>/{target}{cfg.unit}</Text>
+                      </Text>
+                    </View>
+                    <View style={{ height: 6, borderRadius: 3, backgroundColor: isDark ? cfg.tintDark : cfg.tint, overflow: 'hidden' }}>
+                      <View style={{ width: `${pct * 100}%`, height: '100%', backgroundColor: cfg.accent, borderRadius: 3 }} />
+                    </View>
+                  </HapticTouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
 
           {/* Sparkline disclosure */}
           {expandedMacro && weeklyMacroData && (
@@ -299,7 +315,7 @@ function DailyMacrosSummary({
             }, Shadows.SM]} testID="sparkline-container">
               <Text style={{
                 fontSize: FontSize.sm,
-                fontWeight: FontWeight.semibold,
+                fontFamily: 'PlusJakartaSans_600SemiBold',
                 color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
                 marginBottom: 4,
               }}>
@@ -342,7 +358,7 @@ function DailyMacrosSummary({
                     delay={0}
                     style={{
                       fontSize: 15,
-                      fontWeight: '700',
+                      fontFamily: 'PlusJakartaSans_700Bold',
                       color: isDark ? DarkColors.text.primary : Colors.text.primary,
                     }}
                   />
@@ -365,7 +381,7 @@ function DailyMacrosSummary({
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={{ fontSize: 14 }}>🌿</Text>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
+              <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
                 Fiber
               </Text>
             </View>
@@ -374,7 +390,7 @@ function DailyMacrosSummary({
                 value={dailyMacros.fiber ?? 0}
                 suffix="g"
                 delay={0}
-                style={{ fontSize: 15, fontWeight: '700', color: isDark ? DarkColors.text.primary : Colors.text.primary }}
+                style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}
               />
               <Text style={{ fontSize: 10, color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }}>
                 / {targetMacros.fiber ?? 25}g

@@ -1,15 +1,15 @@
 import React from 'react';
 // frontend/components/home/PaginationControls.tsx
-// Pagination controls for recipe lists
+// Editorial-styled pagination controls for recipe lists
 
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import Icon from '../ui/Icon';
-import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
-import { FontSize } from '../../constants/Typography';
+import { Ionicons } from '@expo/vector-icons';
+import { Pastel, EditorialColors } from '../../constants/Colors';
+import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
+import { EditorialShadows } from '../../constants/Shadows';
 
 interface PaginationInfo {
   totalPages: number;
@@ -19,25 +19,15 @@ interface PaginationInfo {
 }
 
 interface PaginationControlsProps {
-  /** Current page (0-indexed) */
   currentPage: number;
-  /** Total number of items */
   totalItems: number;
-  /** Number of items currently shown */
   itemsShown: number;
-  /** Pagination info object */
   paginationInfo: PaginationInfo;
-  /** Whether pagination is loading */
   isLoading: boolean;
-  /** Called when previous page is pressed */
   onPrevPage: () => void;
-  /** Called when next page is pressed */
   onNextPage: () => void;
 }
 
-/**
- * Pagination controls component with Previous/Next buttons and page indicator
- */
 function PaginationControls({
   currentPage,
   totalItems,
@@ -56,137 +46,130 @@ function PaginationControls({
 
   const startItem = currentPage * itemsShown + 1;
   const endItem = Math.min(currentPage * itemsShown + itemsShown, totalItems);
+  const shadow = Platform.OS === 'ios' ? EditorialShadows.cardRaised.ios : EditorialShadows.cardRaised.android;
+
+  const prevDisabled = paginationInfo.isFirstPage || isLoading;
+  const nextDisabled = paginationInfo.isLastPage || isLoading;
 
   return (
-    <View className="mt-6">
-      {/* Recipe count summary */}
-      <Text className="text-center text-sm text-gray-500 dark:text-gray-400 mb-3">
-        Showing {startItem}-{endItem} of {totalItems} recipes
+    <View style={styles.wrapper}>
+      <Text style={styles.eyebrow}>
+        {startItem}–{endItem} OF {totalItems} RECIPES
       </Text>
 
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex-row items-center justify-between">
-        {/* Previous Button */}
+      <View style={[styles.card, { backgroundColor: isDark ? '#1F2937' : Pastel.peach }, shadow]}>
         <HapticTouchableOpacity
           onPress={onPrevPage}
-          disabled={paginationInfo.isFirstPage || isLoading}
+          disabled={prevDisabled}
           hapticStyle="light"
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            borderRadius: 8,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: paginationInfo.isFirstPage || isLoading ? 0.5 : 1,
-            backgroundColor:
-              paginationInfo.isFirstPage || isLoading
-                ? isDark
-                  ? '#374151'
-                  : '#F3F4F6'
-                : isDark
-                ? DarkColors.primary
-                : Colors.primary,
-            minWidth: 100,
-          }}
+          style={[styles.pill, prevDisabled && styles.pillDisabled]}
+          accessibilityLabel="Previous page"
         >
-          <Icon
-            name={Icons.CHEVRON_BACK}
-            size={IconSizes.SM}
-            color={
-              paginationInfo.isFirstPage || isLoading
-                ? isDark
-                  ? '#6B7280'
-                  : '#9CA3AF'
-                : '#FFFFFF'
-            }
-            accessibilityLabel="Previous page"
+          <Ionicons
+            name="chevron-back"
+            size={16}
+            color={prevDisabled ? '#9CA3AF' : '#FFFFFF'}
           />
-          <Text
-            style={{
-              fontSize: FontSize.base,
-              fontWeight: '600',
-              marginLeft: 4,
-              color:
-                paginationInfo.isFirstPage || isLoading
-                  ? isDark
-                    ? '#6B7280'
-                    : '#9CA3AF'
-                  : '#FFFFFF',
-            }}
-          >
-            Previous
+          <Text style={[styles.pillText, prevDisabled && styles.pillTextDisabled]}>
+            Prev
           </Text>
         </HapticTouchableOpacity>
 
-        {/* Page Indicator */}
-        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <View style={styles.center}>
           {isLoading ? (
-            <AnimatedActivityIndicator
-              size="small"
-              color={isDark ? DarkColors.primary : Colors.primary}
-            />
+            <AnimatedActivityIndicator size="small" color={EditorialColors.blackCTA} />
           ) : (
-            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Page {currentPage + 1} of {paginationInfo.totalPages}
+            <Text style={[styles.pageText, isDark && styles.pageTextDark]}>
+              Page {currentPage + 1}
+              <Text style={styles.pageTextAccent}> of {paginationInfo.totalPages}</Text>
             </Text>
           )}
         </View>
 
-        {/* Next Button */}
         <HapticTouchableOpacity
           onPress={onNextPage}
-          disabled={paginationInfo.isLastPage || isLoading}
+          disabled={nextDisabled}
           hapticStyle="light"
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            borderRadius: 8,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: paginationInfo.isLastPage || isLoading ? 0.5 : 1,
-            backgroundColor:
-              paginationInfo.isLastPage || isLoading
-                ? isDark
-                  ? '#374151'
-                  : '#F3F4F6'
-                : isDark
-                ? DarkColors.primary
-                : Colors.primary,
-            minWidth: 100,
-          }}
+          style={[styles.pill, nextDisabled && styles.pillDisabled]}
+          accessibilityLabel="Next page"
         >
-          <Text
-            style={{
-              fontSize: FontSize.base,
-              fontWeight: '600',
-              marginRight: 4,
-              color:
-                paginationInfo.isLastPage || isLoading
-                  ? isDark
-                    ? '#6B7280'
-                    : '#9CA3AF'
-                  : '#FFFFFF',
-            }}
-          >
+          <Text style={[styles.pillText, nextDisabled && styles.pillTextDisabled]}>
             Next
           </Text>
-          <Icon
-            name={Icons.CHEVRON_FORWARD}
-            size={IconSizes.SM}
-            color={
-              paginationInfo.isLastPage || isLoading
-                ? isDark
-                  ? '#6B7280'
-                  : '#9CA3AF'
-                : '#FFFFFF'
-            }
-            accessibilityLabel="Next page"
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={nextDisabled ? '#9CA3AF' : '#FFFFFF'}
           />
         </HapticTouchableOpacity>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  eyebrow: {
+    fontFamily: EditorialFontFamily.body.extrabold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    color: '#fa7e12',
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  card: {
+    borderRadius: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: EditorialColors.blackCTA,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minWidth: 88,
+    justifyContent: 'center',
+  },
+  pillDisabled: {
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  pillText: {
+    fontFamily: EditorialFontFamily.body.extrabold,
+    fontSize: 12,
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
+  },
+  pillTextDisabled: {
+    color: '#9CA3AF',
+  },
+  center: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  pageText: {
+    ...EditorialTypography.sectionTitle,
+    fontSize: 16,
+    color: '#111827',
+  },
+  pageTextDark: {
+    color: '#F9FAFB',
+  },
+  pageTextAccent: {
+    ...EditorialTypography.sectionAccent,
+    fontSize: 16,
+    color: '#111827',
+  },
+});
 
 export default React.memo(PaginationControls);

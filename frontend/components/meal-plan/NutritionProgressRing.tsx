@@ -89,7 +89,7 @@ export default function NutritionProgressRing({
           testID="progress-percent"
           style={{
             fontSize: Math.round(size * 0.2),
-            fontWeight: '700',
+            fontFamily: 'PlusJakartaSans_700Bold',
             color: isDark ? DarkColors.text.primary : Colors.text.primary,
           }}
         >

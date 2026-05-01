@@ -156,7 +156,7 @@ export default function SuccessState({
             <Text 
               style={{ 
                 fontSize: 16, 
-                fontWeight: '600', 
+                fontFamily: 'PlusJakartaSans_600SemiBold', 
                 textAlign: 'center',
                 color: '#FFFFFF',
               }}

@@ -91,7 +91,7 @@ function GoalModeButton({ mode, isSelected, isDark, onSelect }: {
         <Text
           style={{
             fontSize: 14,
-            fontWeight: '700',
+            fontFamily: 'PlusJakartaSans_700Bold',
             marginTop: 4,
             color: isSelected ? mode.activeColor : (isDark ? '#D1D5DB' : '#374151'),
           }}

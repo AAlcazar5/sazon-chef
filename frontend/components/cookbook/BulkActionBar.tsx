@@ -57,7 +57,7 @@ export default function BulkActionBar({
         <Text
           style={{
             fontSize: 14,
-            fontWeight: '700',
+            fontFamily: 'PlusJakartaSans_700Bold',
             color: isDark ? DarkColors.text.primary : Colors.text.primary,
           }}
         >
@@ -90,7 +90,7 @@ export default function BulkActionBar({
           <Text
             style={{
               fontSize: 10,
-              fontWeight: '600',
+              fontFamily: 'PlusJakartaSans_600SemiBold',
               marginTop: 2,
               color: action.label === 'Remove'
                 ? (isDark ? '#FCA5A5' : '#DC2626')
@@ -113,7 +113,7 @@ export default function BulkActionBar({
           size={IconSizes.MD}
           color={isDark ? '#9CA3AF' : '#6B7280'}
         />
-        <Text style={{ fontSize: 10, fontWeight: '600', marginTop: 2, color: isDark ? '#9CA3AF' : '#6B7280' }}>
+        <Text style={{ fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', marginTop: 2, color: isDark ? '#9CA3AF' : '#6B7280' }}>
           Cancel
         </Text>
       </HapticTouchableOpacity>
