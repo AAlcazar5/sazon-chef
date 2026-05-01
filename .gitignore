@@ -299,3 +299,4 @@ plans/
 # Security documentation
 Security.md
 verify-security.sh
+ops-playbook.md

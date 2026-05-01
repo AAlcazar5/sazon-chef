@@ -107,6 +107,9 @@ The active roadmap lives in the project root. Check it before starting any new f
 
 ### Plans (`plans/`)
 Check here before planning new features — prior architectural decisions may already be documented.
+- [build-a-plate.md](plans/build-a-plate.md) — Group 10X P0 spec (phases 1+2)
+- [5xUpgradeRoadmap.md](plans/5xUpgradeRoadmap.md) — local-only Pro 5x improvement queue
+- [tonight-tasks.md](plans/tonight-tasks.md) — overnight agent task queue (refill nightly)
 
 ## Key Context
 
