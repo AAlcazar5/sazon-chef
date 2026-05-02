@@ -4,3 +4,5 @@
 export { default as PlatePreview } from './PlatePreview';
 export { default as SlotRow } from './SlotRow';
 export { default as SlotPicker } from './SlotPicker';
+export { default as SwapStrip } from './SwapStrip';
+export { default as PermutationCarousel } from './PermutationCarousel';

@@ -1,16 +1,18 @@
 // frontend/app/build-a-plate.tsx
-// Group 10X Phase 1 — Build-a-Plate composer (P0 launch blocker).
+// Group 10X Phase 1+2 — Build-a-Plate composer (P0 launch blocker).
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import BrandButton from '../components/ui/BrandButton';
 import ScreenGradient from '../components/ui/ScreenGradient';
 import { StickyBottomBar } from '../components/ui/StickyBottomBar';
-import { SlotRow, SlotPicker, PlatePreview } from '../components/build-a-plate';
+import { SlotRow, SlotPicker, PlatePreview, PermutationCarousel, SwapStrip } from '../components/build-a-plate';
+import useDailyPlateSeed from '../hooks/useDailyPlateSeed';
 import useBuildAPlate, { SLOT_ORDER, REQUIRED_SLOTS } from '../hooks/useBuildAPlate';
 import {
   mealComponentApi,
@@ -18,10 +20,13 @@ import {
   shoppingListApi,
   type MealComponent,
   type MealComponentSlot,
+  type PermutationCandidate,
 } from '../lib/api';
 import { Pastel, Accent } from '../constants/Colors';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticPatterns } from '../constants/Haptics';
+
+const BEGINNER_TUTORIAL_KEY = 'beginner_tutorial_seen';
 
 const SLOT_META: Record<MealComponentSlot, { label: string; emoji: string }> = {
   protein: { label: 'Protein', emoji: '🥩' },
@@ -33,12 +38,14 @@ const SLOT_META: Record<MealComponentSlot, { label: string; emoji: string }> = {
 
 export default function BuildAPlateScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ pantryOnly?: string; plateId?: string }>();
+  const params = useLocalSearchParams<{ pantryOnly?: string; plateId?: string; seed?: string; preset?: string }>();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
   const initialPantryOnly = params.pantryOnly === 'true';
   const plateId = typeof params.plateId === 'string' ? params.plateId : undefined;
+  const isBeginnerSeed = params.seed === 'beginner';
+  const presetId = typeof params.preset === 'string' ? params.preset : undefined;
 
   const composer = useBuildAPlate({ pantryOnly: initialPantryOnly });
   const [showGarnish, setShowGarnish] = useState<boolean>(false);
@@ -46,6 +53,9 @@ export default function BuildAPlateScreen() {
   const [poolBySlot, setPoolBySlot] = useState<Partial<Record<MealComponentSlot, MealComponent[]>>>({});
   const [loadingSlot, setLoadingSlot] = useState<MealComponentSlot | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
+  const [showBeginnerTutorial, setShowBeginnerTutorial] = useState<boolean>(false);
+  const beginnerInitialized = useRef(false);
+  const presetInitialized = useRef(false);
 
   const loadSlot = useCallback(async (slot: MealComponentSlot) => {
     if (poolBySlot[slot]) return poolBySlot[slot]!;
@@ -68,7 +78,77 @@ export default function BuildAPlateScreen() {
     void loadSlot('base');
     void loadSlot('vegetable');
     void loadSlot('sauce');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isBeginnerSeed || beginnerInitialized.current) return;
+    beginnerInitialized.current = true;
+
+    async function seedBeginner() {
+      try {
+        const res = await mealComponentApi.permutations({
+          lockedSlots: [],
+          slotsToFill: ['protein', 'base', 'vegetable', 'sauce'],
+          maxResults: 1,
+          prioritizePantry: true,
+        });
+        const perm = res.data?.permutations?.[0];
+        if (perm) {
+          composer.applySeed(perm);
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[build-a-plate] beginner seed fetch failed:', err);
+      }
+
+      const seen = await AsyncStorage.getItem(BEGINNER_TUTORIAL_KEY);
+      if (!seen) {
+        setShowBeginnerTutorial(true);
+      }
+    }
+
+    void seedBeginner();
+  }, [isBeginnerSeed]);
+
+  useEffect(() => {
+    if (!presetId || presetInitialized.current) return;
+    presetInitialized.current = true;
+
+    async function applyPreset() {
+      try {
+        const raw = await AsyncStorage.getItem(`tonights_plate_preset:${presetId}`);
+        if (!raw) return;
+        const perm: PermutationCandidate = JSON.parse(raw);
+        composer.applySeed(perm);
+        await AsyncStorage.removeItem(`tonights_plate_preset:${presetId}`).catch(() => undefined);
+      } catch {
+        // Non-blocking — composer opens normally without a seed
+      }
+    }
+
+    void applyPreset();
+  }, [presetId]);
+
+  const dailyPlateSeed = useDailyPlateSeed();
+  const dailySeedInitialized = useRef(false);
+  useEffect(() => {
+    if (dailySeedInitialized.current) return;
+    if (isBeginnerSeed || presetId || plateId) return;
+    if (composer.selectedSlotsCount > 0) return;
+    if (!dailyPlateSeed.seed) return;
+    dailySeedInitialized.current = true;
+    composer.applySeed(dailyPlateSeed.seed);
+  }, [dailyPlateSeed.seed, isBeginnerSeed, presetId, plateId, composer.selectedSlotsCount, composer]);
+
+  const handleDismissBeginnerTutorial = useCallback(async () => {
+    setShowBeginnerTutorial(false);
+    await AsyncStorage.setItem(BEGINNER_TUTORIAL_KEY, 'true');
+  }, []);
+
+  const handleApplyPermutation = useCallback((permutation: PermutationCandidate) => {
+    composer.applyPermutation(permutation);
+    HapticPatterns.success();
+  }, [composer]);
 
   const handleOpenPicker = useCallback(async (slot: MealComponentSlot) => {
     await loadSlot(slot);
@@ -244,19 +324,38 @@ export default function BuildAPlateScreen() {
             </Text>
           </HapticTouchableOpacity>
 
-          {visibleSlots.map((slot) => (
-            <SlotRow
-              key={slot}
-              slot={slot}
-              label={SLOT_META[slot].label}
-              emoji={SLOT_META[slot].emoji}
-              selected={composer.selections[slot]}
-              locked={composer.locks[slot]}
-              onPress={() => handleOpenPicker(slot)}
-              onLongPress={() => handleLongPress(slot)}
-              testID={`slot-row-${slot}`}
-            />
-          ))}
+          {visibleSlots.map((slot) => {
+            const selected = composer.selections[slot];
+            const pool = poolBySlot[slot] ?? [];
+            const alternatives = selected
+              ? pool.filter((c) => c.id !== selected.id)
+              : [];
+            return (
+              <View key={slot}>
+                <SlotRow
+                  slot={slot}
+                  label={SLOT_META[slot].label}
+                  emoji={SLOT_META[slot].emoji}
+                  selected={selected}
+                  locked={composer.locks[slot]}
+                  onPress={() => handleOpenPicker(slot)}
+                  onLongPress={() => handleLongPress(slot)}
+                  testID={`slot-row-${slot}`}
+                />
+                {selected && alternatives.length > 0 && (
+                  <SwapStrip
+                    alternatives={alternatives}
+                    current={selected}
+                    onSwap={(componentId) => {
+                      const next = pool.find((c) => c.id === componentId);
+                      if (next) composer.setSlot(slot, next);
+                    }}
+                    testID={`swap-strip-${slot}`}
+                  />
+                )}
+              </View>
+            );
+          })}
 
           {!showGarnish && !composer.selections.garnish && (
             <HapticTouchableOpacity
@@ -276,6 +375,21 @@ export default function BuildAPlateScreen() {
             slotsFilled={slotsFilled}
             testID="plate-preview"
           />
+
+          {composer.selectedSlotsCount > 0 && (
+            <PermutationCarousel
+              lockedSlots={Object.entries(composer.locks)
+                .filter(([, locked]) => locked)
+                .map(([slot]) => ({
+                  slot: slot as MealComponentSlot,
+                  componentId: composer.selections[slot as MealComponentSlot]?.id ?? '',
+                }))
+                .filter((ls) => ls.componentId !== '')}
+              slotsToFill={REQUIRED_SLOTS.filter((s) => !composer.locks[s])}
+              onApply={handleApplyPermutation}
+              testID="permutation-carousel"
+            />
+          )}
 
           <View style={{ height: 180 }} />
         </ScrollView>
@@ -327,6 +441,26 @@ export default function BuildAPlateScreen() {
         onClose={() => setPickerSlot(null)}
         testID="slot-picker"
       />
+
+      {showBeginnerTutorial && (
+        <HapticTouchableOpacity
+          onPress={handleDismissBeginnerTutorial}
+          hapticStyle="light"
+          style={styles.tutorialOverlay}
+          testID="beginner-tutorial-overlay"
+          accessibilityLabel="Beginner tutorial. Tap to dismiss."
+        >
+          <View style={styles.tutorialCard}>
+            <Text style={styles.tutorialEmoji}>👨‍🍳</Text>
+            <Text style={styles.tutorialTitle}>You're in the kitchen.</Text>
+            <Text style={styles.tutorialBody}>
+              Long-press a slot to lock it.{'\n'}
+              Roll the dice to randomize the rest.
+            </Text>
+            <Text style={styles.tutorialDismiss}>Tap anywhere to dismiss</Text>
+          </View>
+        </HapticTouchableOpacity>
+      )}
     </ScreenGradient>
   );
 }
@@ -397,5 +531,42 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 13,
     color: '#6B7280',
+  },
+  tutorialOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 200,
+  },
+  tutorialCard: {
+    backgroundColor: '#FAF7F4',
+    borderRadius: 24,
+    padding: 28,
+    marginHorizontal: 32,
+    alignItems: 'center',
+    gap: 10,
+  },
+  tutorialEmoji: {
+    fontSize: 44,
+  },
+  tutorialTitle: {
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontSize: 20,
+    color: '#1F2937',
+    textAlign: 'center',
+  },
+  tutorialBody: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 15,
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  tutorialDismiss: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 4,
   },
 });

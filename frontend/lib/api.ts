@@ -1819,9 +1819,32 @@ export interface ComposedPlateResponse {
   recipeId?: string;
 }
 
+export interface PermutationCandidate {
+  id: string;
+  components: {
+    slot: MealComponentSlot;
+    component: MealComponent;
+    portionMultiplier: number;
+  }[];
+  coherenceScore: number;
+  pantryCoveragePercent: number;
+  macroFitScore: number | null;
+}
+
+export interface PermutationsBody {
+  lockedSlots: { slot: MealComponentSlot; componentId: string }[];
+  slotsToFill: MealComponentSlot[];
+  maxResults: number;
+  prioritizePantry: boolean;
+}
+
 export const mealComponentApi = {
   list: (params?: { slot?: MealComponentSlot; dietary?: string; cuisine?: string; q?: string }) =>
     apiClient.get<{ components: MealComponent[] }>('/meal-components', { params }),
+  permutations: (body: PermutationsBody) =>
+    apiClient.post<{ permutations: PermutationCandidate[] }>('/meal-components/permutations', body),
+  plateFromPantry: () =>
+    apiClient.get<{ plate: PermutationCandidate | null }>('/meal-components/plate-from-pantry'),
 };
 
 export interface ComposedPlateSaveResponse {

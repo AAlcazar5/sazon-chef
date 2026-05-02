@@ -1,10 +1,16 @@
 // backend/src/modules/mealComponent/mealComponentController.ts
-// Group 10X Phase 1 — Build-a-Plate API surface.
+// Group 10X Phase 1+2 — Build-a-Plate API surface.
 
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { getUserId, isAuthenticated } from '../../utils/authHelper';
-import { listComponents, saveComposedPlate, COMPONENT_SLOTS } from '../../services/mealComponentService';
+import {
+  listComponents,
+  saveComposedPlate,
+  generatePermutations,
+  getPlateFromPantry,
+  COMPONENT_SLOTS,
+} from '../../services/mealComponentService';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
 
@@ -27,12 +33,67 @@ const createPlateSchema = z.object({
   saveAsRecipe: z.boolean().optional().default(false),
 });
 
+const lockedSlotSchema = z.object({
+  slot: slotEnum,
+  componentId: z.string().min(1).max(128),
+});
+
+const permutationsBodySchema = z.object({
+  lockedSlots: z.array(lockedSlotSchema).max(5),
+  slotsToFill: z.array(slotEnum).min(1).max(5),
+  maxResults: z.number().int().min(1).max(20),
+  prioritizePantry: z.boolean(),
+});
+
 const formatZodIssues = (error: z.ZodError): string =>
   Array.isArray((error as any).issues)
     ? (error as any).issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join('; ')
     : error.message;
 
 export const mealComponentController = {
+  async permutations(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const parsed = permutationsBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+
+    try {
+      const userId = getUserId(req);
+      const permutationsList = await generatePermutations({ userId, ...parsed.data });
+      return res.json({ permutations: permutationsList });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (message.startsWith('Locked component not found')) {
+        return res.status(400).json({ error: message });
+      }
+      console.error('Error generating permutations:', error);
+      return res.status(500).json({ error: 'Failed to generate permutations' });
+    }
+  },
+
+  async plateFromPantry(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+      const userId = getUserId(req);
+      const plate = await getPlateFromPantry({ userId });
+      return res.json({ plate });
+    } catch (error) {
+      console.error('Error fetching plate from pantry:', error);
+      return res.status(500).json({ error: 'Failed to fetch plate from pantry' });
+    }
+  },
+
+
   async list(req: Request, res: Response) {
     if (!isAuthenticated(req)) {
       return res.status(401).json({ error: 'Authentication required' });

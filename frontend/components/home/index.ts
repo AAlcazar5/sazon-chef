@@ -28,3 +28,4 @@ export { EditorialMacroWidgets } from './EditorialMacroWidgets';
 export { EditorialQuickPicks } from './EditorialQuickPicks';
 export { SurpriseFAB } from './SurpriseFAB';
 export { EditorialHomeLayout } from './EditorialHomeLayout';
+export { default as PantryPlateHeroCard } from './PantryPlateHeroCard';
