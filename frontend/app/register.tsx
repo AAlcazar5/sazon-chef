@@ -222,7 +222,7 @@ export default function RegisterScreen() {
                     alignItems: 'center',
                     ...(Shadows.SM as any),
                   }}>
-                    <Sazon variant="green" motion="wobble" fx={['question']} size={24} />
+                    <Sazon variant="purple" motion="wobble" fx={['question']} size={24} />
                     <Text style={{
                       flex: 1,
                       marginLeft: 10,

@@ -124,7 +124,7 @@ export default function ScreenError({
         {/* Icon or Mascot */}
         <View style={styles.iconContainer}>
           {showMascot ? (
-            <Sazon variant="green" motion="peek" fx={[]} size={192} />
+            <Sazon variant="purple" motion="peek" fx={[]} size={192} />
           ) : (
             <View style={[styles.iconCircle, { backgroundColor: `${colors.error}15` }]}>
               <Ionicons name={config.icon} size={48} color={colors.error} />
