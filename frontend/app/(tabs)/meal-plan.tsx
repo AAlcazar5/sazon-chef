@@ -801,24 +801,6 @@ export default function MealPlanScreen() {
             emoji="💰"
             isDark={isDark}
             collapsible={false}
-            rightSlot={
-              costAnalysis && costAnalysis.budgetExceeded ? (
-                <HapticTouchableOpacity
-                  onPress={handleOptimizeCost}
-                  accessibilityLabel="Optimize meal plan to fit budget"
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 999,
-                    backgroundColor: '#111827',
-                  }}
-                >
-                  <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 12, letterSpacing: 0.4, textTransform: 'uppercase' }}>
-                    Optimize
-                  </Text>
-                </HapticTouchableOpacity>
-              ) : null
-            }
           />
           <View className="px-4 mb-4">
             <CostAnalysisSection

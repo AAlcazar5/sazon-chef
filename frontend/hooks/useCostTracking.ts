@@ -54,11 +54,9 @@ export function useCostTracking({
       const prefsResponse = await userApi.getPreferences();
       const preferences = prefsResponse.data;
 
-      const maxDailyBudget = preferences?.maxDailyFoodBudget
-        ? preferences.maxDailyFoodBudget / 7 // Convert weekly to daily
+      const maxWeeklyBudget = preferences?.maxDailyFoodBudget
+        ? preferences.maxDailyFoodBudget * 7
         : undefined;
-      const maxWeeklyBudget = preferences?.maxDailyFoodBudget;
-      const maxMealCost = preferences?.maxMealCost;
 
       // Calculate cost from current recipes in view
       const recipeIds: string[] = [];
@@ -88,7 +86,7 @@ export function useCostTracking({
           const mealsCount = recipeIds.length;
 
           // Calculate per-meal costs and breakdown by meal type
-          const mealCosts: Array<{ name: string; cost: number; mealType: string; hour: number }> = [];
+          const mealCosts: Array<{ name: string; cost: number; mealType: string; hour: number; costSource?: 'priced' | 'category' | 'unknown' | 'user' | 'api' }> = [];
           const costByMealType: Record<string, number> = {
             breakfast: 0,
             lunch: 0,
@@ -108,6 +106,7 @@ export function useCostTracking({
                 cost: mealCost,
                 mealType: mealTypeKey,
                 hour: parseInt(hourStr),
+                costSource: meal.costSource,
               });
 
               if (costByMealType[mealTypeKey] !== undefined) {
@@ -134,6 +133,7 @@ export function useCostTracking({
               : undefined,
             mealCosts,
             costByMealType,
+            disclaimer: 'Sazon estimates · prices vary by store',
           });
 
           // Load savings suggestions for shopping list
