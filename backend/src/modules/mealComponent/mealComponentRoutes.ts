@@ -13,4 +13,5 @@ mealComponentRoutes.post('/:id/swap-away', mealComponentController.swapAway);
 
 export const composedPlateRoutes = Router();
 composedPlateRoutes.post('/', mealComponentController.createPlate);
+composedPlateRoutes.post('/auto-fit', mealComponentController.autoFit);
 composedPlateRoutes.post('/:id/timeline', mealComponentController.plateTimeline);

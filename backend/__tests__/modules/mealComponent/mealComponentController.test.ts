@@ -1,5 +1,5 @@
 // backend/__tests__/modules/mealComponent/mealComponentController.test.ts
-// Group 10X Phase 1+2 — Build-a-Plate controller tests.
+// Group 10X Phase 1+2+5 — Build-a-Plate controller tests.
 
 import { Request, Response } from 'express';
 
@@ -8,6 +8,7 @@ const mockSaveComposedPlate = jest.fn();
 const mockGeneratePermutations = jest.fn();
 const mockGetPlateFromPantry = jest.fn();
 const mockSolveCookTimeline = jest.fn();
+const mockFitPlateToMacros = jest.fn();
 
 jest.mock('../../../src/services/mealComponentService', () => ({
   listComponents: (...args: unknown[]) => mockListComponents(...args),
@@ -15,6 +16,10 @@ jest.mock('../../../src/services/mealComponentService', () => ({
   generatePermutations: (...args: unknown[]) => mockGeneratePermutations(...args),
   getPlateFromPantry: (...args: unknown[]) => mockGetPlateFromPantry(...args),
   COMPONENT_SLOTS: ['protein', 'base', 'vegetable', 'sauce', 'garnish'],
+}));
+
+jest.mock('../../../src/services/macroAutoFitService', () => ({
+  fitPlateToMacros: (...args: unknown[]) => mockFitPlateToMacros(...args),
 }));
 
 jest.mock('../../../src/services/cookTimelineService', () => ({
@@ -61,6 +66,11 @@ beforeEach(() => {
   mockGetPlateFromPantry.mockResolvedValue(null);
   mockPrismaComposedPlate.findFirst.mockResolvedValue(null);
   mockPrismaComponent.findMany.mockResolvedValue([]);
+  mockFitPlateToMacros.mockResolvedValue({
+    achievable: true,
+    plate: [{ slot: 'base', componentId: 'rice-1', portionMultiplier: 1 }],
+    totals: { calories: 200, protein: 4, carbs: 42, fat: 2 },
+  });
 });
 
 describe('GET /api/meal-components', () => {
@@ -428,5 +438,95 @@ describe('POST /api/composed-plates/:id/timeline', () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: 'Failed to compute cook timeline' });
+  });
+});
+
+describe('POST /api/composed-plates/auto-fit', () => {
+  const validBody = {
+    target: { calories: 500, protein: 35 },
+    lockedSlots: [{ slot: 'protein', componentId: 'salmon-1', portionMultiplier: 1 }],
+    slotsToFill: ['base', 'sauce'],
+  };
+
+  it('returns 401 when not authenticated', async () => {
+    mockIsAuthenticated.mockReturnValueOnce(false);
+    const req = { body: validBody } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.autoFit(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(mockFitPlateToMacros).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 on malformed body (missing target)', async () => {
+    const req = {
+      body: { lockedSlots: [], slotsToFill: ['base'] },
+    } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.autoFit(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockFitPlateToMacros).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when target.calories is negative', async () => {
+    const req = {
+      body: { ...validBody, target: { calories: -100, protein: 35 } },
+    } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.autoFit(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('200 happy path returns { result } envelope', async () => {
+    const fitResult = {
+      achievable: true,
+      plate: [
+        { slot: 'protein', componentId: 'salmon-1', portionMultiplier: 1 },
+        { slot: 'base', componentId: 'rice-1', portionMultiplier: 1 },
+      ],
+      totals: { calories: 480, protein: 33, carbs: 42, fat: 12 },
+    };
+    mockFitPlateToMacros.mockResolvedValueOnce(fitResult);
+    const req = { body: validBody } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.autoFit(req, res);
+
+    expect(mockFitPlateToMacros).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        target: { calories: 500, protein: 35 },
+        lockedSlots: [{ slot: 'protein', componentId: 'salmon-1', portionMultiplier: 1 }],
+        slotsToFill: ['base', 'sauce'],
+      })
+    );
+    expect(res.json).toHaveBeenCalledWith({ result: fitResult });
+  });
+
+  it('returns 400 when service throws "not found or not owned" (IDOR guard)', async () => {
+    mockFitPlateToMacros.mockRejectedValueOnce(
+      new Error('Locked component not found or not owned by user: ghost-id')
+    );
+    const req = { body: validBody } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.autoFit(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('returns 500 when service throws unexpectedly', async () => {
+    mockFitPlateToMacros.mockRejectedValueOnce(new Error('db boom'));
+    const req = { body: validBody } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.autoFit(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
   });
 });
