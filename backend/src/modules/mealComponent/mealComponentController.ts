@@ -1,5 +1,5 @@
 // backend/src/modules/mealComponent/mealComponentController.ts
-// Group 10X Phase 1+2 — Build-a-Plate API surface.
+// Group 10X Phase 1+2+5 — Build-a-Plate API surface.
 
 import { Request, Response } from 'express';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import {
 } from '../../services/mealComponentService';
 import { solveCookTimeline, ComponentTask } from '../../services/cookTimelineService';
 import { getTopComponentsForSlot, recordAffinityEvent } from '../../services/slotAffinityService';
+import { fitPlateToMacros } from '../../services/macroAutoFitService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -47,6 +48,21 @@ const permutationsBodySchema = z.object({
   slotsToFill: z.array(slotEnum).min(1).max(5),
   maxResults: z.number().int().min(1).max(20),
   prioritizePantry: z.boolean(),
+});
+
+const lockedSlotWithMultiplierSchema = z.object({
+  slot: slotEnum,
+  componentId: z.string().min(1).max(128),
+  portionMultiplier: z.number().positive().max(10),
+});
+
+const autoFitBodySchema = z.object({
+  target: z.object({
+    calories: z.number().positive(),
+    protein: z.number().nonnegative(),
+  }),
+  lockedSlots: z.array(lockedSlotWithMultiplierSchema).max(5),
+  slotsToFill: z.array(slotEnum).max(5),
 });
 
 const formatZodIssues = (error: z.ZodError): string =>
@@ -260,6 +276,38 @@ export const mealComponentController = {
     } catch (error) {
       console.error('Error recording swap_away:', error);
       return res.status(500).json({ error: 'Failed to record swap event' });
+    }
+  },
+
+  async autoFit(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const parsed = autoFitBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+
+    try {
+      const userId = getUserId(req);
+      const result = await fitPlateToMacros({
+        userId,
+        target: parsed.data.target,
+        lockedSlots: parsed.data.lockedSlots,
+        slotsToFill: parsed.data.slotsToFill,
+      });
+      return res.json({ result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/not found or not owned/i.test(message)) {
+        return res.status(400).json({ error: message });
+      }
+      console.error('Error running macro auto-fit:', error);
+      return res.status(500).json({ error: 'Failed to compute macro auto-fit' });
     }
   },
 };
