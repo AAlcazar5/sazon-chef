@@ -195,6 +195,12 @@ const createPrismaMock = () => ({
       create: jest.fn(),
       upsert: jest.fn(),
     },
+    mealComponentVariant: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      upsert: jest.fn(),
+    },
     composedPlate: {
       create: jest.fn(),
       update: jest.fn(),

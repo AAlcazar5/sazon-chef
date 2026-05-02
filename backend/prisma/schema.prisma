@@ -1055,9 +1055,33 @@ model MealComponent {
   // Phase 6: leftover inventory back-reference
   leftovers               LeftoverInventory[]
 
+  // 10X-Deferred: variant chip row (roasted / steamed / raw / pickled, etc.)
+  variants                MealComponentVariant[]
+
   @@index([slot])
   @@index([userId])
   @@map("meal_components")
+}
+
+// Group 10X-Deferred: variants of an existing MealComponent
+// (e.g. carrots → roasted_carrots, steamed_carrots, raw_carrot_ribbons, pickled_carrots).
+model MealComponentVariant {
+  id                     String        @id @default(cuid())
+  componentId            String
+  component              MealComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  variantKey             String        // "roasted" | "steamed" | "raw" | "pickled" ...
+  displayName            String        // "Roasted Carrots"
+  cookTimeMinutes        Int
+  caloriePerPortionDelta Int           // relative to base; can be negative
+  equipmentNeeded        String?       // "oven" | "stovetop" | "none" ...
+  flavorProfile          String?       // "sweet,charred"
+  compatibilityScores    String?       // JSON: { proteinId|sauceId: 0.0-1.0 }
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  @@unique([componentId, variantKey])
+  @@index([componentId])
+  @@map("meal_component_variants")
 }
 
 // Group 10X Phase 4: per-user per-component slot affinity scores
