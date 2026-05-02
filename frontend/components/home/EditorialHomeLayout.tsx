@@ -17,6 +17,7 @@ function getDefaultCategoryForHour(hour: number): string {
 
 interface EditorialHomeLayoutProps {
   heroRecipe: SuggestedRecipe | null;
+  recipePool?: SuggestedRecipe[];
   savedIds: Set<string>;
   calories: { consumed: number; goal: number };
   protein: { consumed: number; goal: number };
@@ -29,6 +30,7 @@ interface EditorialHomeLayoutProps {
 
 export function EditorialHomeLayout({
   heroRecipe,
+  recipePool,
   savedIds,
   calories,
   protein,
@@ -42,10 +44,19 @@ export function EditorialHomeLayout({
     getDefaultCategoryForHour(new Date().getHours())
   );
 
+  const displayedHero = React.useMemo(() => {
+    if (!recipePool || recipePool.length === 0) return heroRecipe;
+    const wanted = activeCategory.toLowerCase();
+    const match = recipePool.find(
+      (r) => (r.mealType || '').toLowerCase() === wanted.replace(/s$/, '')
+    );
+    return match || heroRecipe;
+  }, [activeCategory, recipePool, heroRecipe]);
+
   return (
     <>
       {/* Hero: plate-on-pastel + vertical category rail */}
-      {heroRecipe && (
+      {displayedHero && (
         <View style={styles.heroRow}>
           <VerticalCategoryRail
             categories={CATEGORIES}
@@ -56,16 +67,16 @@ export function EditorialHomeLayout({
             <PlateHeroCard
               testID="home-hero-card"
               recipe={{
-                id: heroRecipe.id,
-                title: heroRecipe.title,
-                imageUrl: heroRecipe.imageUrl,
-                eyebrow: `Featured · ${heroRecipe.score?.matchPercentage || 0}% match`,
-                cookTime: heroRecipe.cookTime,
-                calories: heroRecipe.calories,
+                id: displayedHero.id,
+                title: displayedHero.title,
+                imageUrl: displayedHero.imageUrl,
+                eyebrow: `Featured · ${displayedHero.score?.matchPercentage || 0}% match`,
+                cookTime: displayedHero.cookTime,
+                calories: displayedHero.calories,
               }}
-              onPress={() => onRecipePress(heroRecipe.id)}
-              saved={savedIds.has(heroRecipe.id)}
-              onToggleSave={() => onToggleSave(heroRecipe.id)}
+              onPress={() => onRecipePress(displayedHero.id)}
+              saved={savedIds.has(displayedHero.id)}
+              onToggleSave={() => onToggleSave(displayedHero.id)}
             />
           </View>
         </View>
