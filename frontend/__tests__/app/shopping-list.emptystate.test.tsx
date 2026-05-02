@@ -130,6 +130,11 @@ jest.mock('../../lib/api', () => ({
   shoppingListApi: {
     generateFromMealPlan: jest.fn(),
     getAll: jest.fn().mockResolvedValue({ data: [] }),
+    getActiveList: jest.fn().mockResolvedValue({ data: { id: 'list-1', items: [], isActive: true } }),
+    getMergeSuggestion: jest.fn().mockResolvedValue({ data: null }),
+    cleanupOrphans: jest.fn().mockResolvedValue({ data: { deletedCount: 0 } }),
+    autoArchiveStale: jest.fn().mockResolvedValue({ data: { archivedIds: [] } }),
+    tierArchived: jest.fn().mockResolvedValue({ data: { tieredCount: 0 } }),
   },
 }));
 
