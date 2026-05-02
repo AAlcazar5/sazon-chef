@@ -66,6 +66,8 @@ model User {
   // Group 10X: Build-a-Plate
   mealComponents          MealComponent[]
   composedPlates          ComposedPlate[]
+  slotAffinities          SlotAffinity[]
+  pairAffinities          PairAffinity[]
 
   // Group 6: Email verification
   emailVerified           Boolean  @default(false)
@@ -1044,9 +1046,45 @@ model MealComponent {
   user                    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt               DateTime @default(now())
 
+  // Phase 4: affinity back-references
+  slotAffinities          SlotAffinity[]
+
   @@index([slot])
   @@index([userId])
   @@map("meal_components")
+}
+
+// Group 10X Phase 4: per-user per-component slot affinity scores
+model SlotAffinity {
+  id          String        @id @default(cuid())
+  userId      String
+  componentId String
+  slot        String
+  score       Float         @default(0)
+  sampleCount Int           @default(0)
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  component   MealComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, componentId])
+  @@index([userId, slot])
+  @@map("slot_affinities")
+}
+
+// Group 10X Phase 4: per-user per-pair component co-occurrence affinity scores
+model PairAffinity {
+  id           String   @id @default(cuid())
+  userId       String
+  componentIdA String
+  componentIdB String
+  score        Float    @default(0)
+  sampleCount  Int      @default(0)
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, componentIdA, componentIdB])
+  @@index([userId])
+  @@map("pair_affinities")
 }
 
 model ComposedPlate {

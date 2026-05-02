@@ -8,6 +8,8 @@ export const mealComponentRoutes = Router();
 mealComponentRoutes.get('/', mealComponentController.list);
 mealComponentRoutes.post('/permutations', mealComponentController.permutations);
 mealComponentRoutes.get('/plate-from-pantry', mealComponentController.plateFromPantry);
+mealComponentRoutes.get('/affinity', mealComponentController.slotAffinity);
+mealComponentRoutes.post('/:id/swap-away', mealComponentController.swapAway);
 
 export const composedPlateRoutes = Router();
 composedPlateRoutes.post('/', mealComponentController.createPlate);

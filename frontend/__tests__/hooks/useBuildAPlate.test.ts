@@ -147,3 +147,35 @@ describe('sortByPantryCoverage', () => {
     expect(sorted.map((c) => c.id)).toEqual(['b', 'c', 'a']);
   });
 });
+
+describe('useBuildAPlate — onSwapAway (Phase 4)', () => {
+  it('does NOT call onSwapAway when setting a slot that had no prior selection', () => {
+    const onSwapAway = jest.fn();
+    const { result } = renderHook(() => useBuildAPlate({ onSwapAway }));
+    const protein = makeComponent({ id: 'salmon', slot: 'protein' });
+    act(() => result.current.setSlot('protein', protein));
+    expect(onSwapAway).not.toHaveBeenCalled();
+  });
+
+  it('calls onSwapAway with the previous component id when replacing an existing selection', () => {
+    const onSwapAway = jest.fn();
+    const salmon = makeComponent({ id: 'salmon', slot: 'protein' });
+    const chicken = makeComponent({ id: 'chicken', slot: 'protein', name: 'Chicken' });
+    const { result } = renderHook(() =>
+      useBuildAPlate({ selections: { protein: salmon }, onSwapAway }),
+    );
+    act(() => result.current.setSlot('protein', chicken));
+    expect(onSwapAway).toHaveBeenCalledTimes(1);
+    expect(onSwapAway).toHaveBeenCalledWith('salmon', 'protein');
+  });
+
+  it('does NOT call onSwapAway when clearing a slot (setting undefined)', () => {
+    const onSwapAway = jest.fn();
+    const salmon = makeComponent({ id: 'salmon', slot: 'protein' });
+    const { result } = renderHook(() =>
+      useBuildAPlate({ selections: { protein: salmon }, onSwapAway }),
+    );
+    act(() => result.current.setSlot('protein', undefined));
+    expect(onSwapAway).not.toHaveBeenCalled();
+  });
+});

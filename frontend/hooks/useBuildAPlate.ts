@@ -1,7 +1,7 @@
 // frontend/hooks/useBuildAPlate.ts
 // Group 10X Phase 1 — composer state: selections per slot, locks, pantry-only mode, derived totals.
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { MealComponent, MealComponentSlot, PermutationCandidate } from '../lib/api';
 
 export type SlotSelections = Partial<Record<MealComponentSlot, MealComponent>>;
@@ -34,6 +34,13 @@ interface BuildAPlateState {
   applyPermutation: (permutation: PermutationCandidate) => void;
   applySeed: (permutation: PermutationCandidate) => void;
   reset: () => void;
+}
+
+interface UseBuildAPlateOptions {
+  selections?: SlotSelections;
+  locks?: SlotLocks;
+  pantryOnly?: boolean;
+  onSwapAway?: (componentId: string, slot: MealComponentSlot) => void;
 }
 
 export function computeTotals(selections: SlotSelections): PlateTotals {
@@ -81,20 +88,22 @@ export function sortByPantryCoverage(items: MealComponent[]): MealComponent[] {
   return [...items].sort((a, b) => b.pantryCoveragePercent - a.pantryCoveragePercent);
 }
 
-export default function useBuildAPlate(initial?: {
-  selections?: SlotSelections;
-  locks?: SlotLocks;
-  pantryOnly?: boolean;
-}): BuildAPlateState {
+export default function useBuildAPlate(initial?: UseBuildAPlateOptions): BuildAPlateState {
   const [selections, setSelections] = useState<SlotSelections>(initial?.selections ?? {});
   const [locks, setLocks] = useState<SlotLocks>(initial?.locks ?? {});
   const [pantryOnly, setPantryOnlyState] = useState<boolean>(initial?.pantryOnly ?? false);
+  const onSwapAwayRef = useRef(initial?.onSwapAway);
+  onSwapAwayRef.current = initial?.onSwapAway;
 
   const setSlot = useCallback((slot: MealComponentSlot, component: MealComponent | undefined) => {
     setSelections((prev) => {
       if (!component) {
         const { [slot]: _, ...rest } = prev;
         return rest;
+      }
+      const prior = prev[slot];
+      if (prior && prior.id !== component.id) {
+        onSwapAwayRef.current?.(prior.id, slot);
       }
       return { ...prev, [slot]: component };
     });

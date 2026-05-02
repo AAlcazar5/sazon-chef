@@ -19,6 +19,7 @@ import {
   recipeMatchesSmartCollection,
   getSmartCollectionById,
 } from '@/services/smartCollectionsService';
+import { recordAffinityEvent } from '@/services/slotAffinityService';
 
 // Note: Request.user type is declared in authMiddleware.ts
 // This ensures consistency across the application
@@ -4241,6 +4242,32 @@ export const recipeController = {
         }
       });
 
+      // Phase 4: fire affinity event for user-composed recipe ratings
+      if (rating !== undefined && rating !== null && (rating >= 4 || rating <= 2)) {
+        const recipe = await prisma.recipe.findUnique({
+          where: { id },
+          select: { source: true },
+        });
+        if (recipe?.source === 'user-composed') {
+          const plate = await prisma.composedPlate.findFirst({
+            where: { recipeId: id, userId },
+            select: { componentIds: true },
+          });
+          if (plate) {
+            try {
+              const entries: Array<{ componentId: string }> = JSON.parse(plate.componentIds);
+              const componentIds = entries.map((e) => e.componentId);
+              const stars = rating as 1 | 2 | 3 | 4 | 5;
+              recordAffinityEvent({ type: 'plate_rated', userId, componentIds, stars }).catch(
+                (err) => console.warn('[affinity] plate_rated event failed (non-fatal):', err)
+              );
+            } catch {
+              // malformed componentIds JSON — skip silently
+            }
+          }
+        }
+      }
+
       console.log('✅ Saved recipe meta updated:', { recipeId: id, notes: !!updated.notes, rating: updated.rating });
       res.json({ message: 'Updated successfully', notes: updated.notes, rating: updated.rating });
     } catch (error: any) {
@@ -4321,7 +4348,30 @@ export const recipeController = {
 
       // Invalidate behavioral cache so consumed recipe data is refreshed
       recommendationCache.invalidateUserCache(userId);
-      console.log('🍳 Cook recorded for recipe:', id);
+
+      // Phase 4: fire affinity event for user-composed recipes
+      const recipe = await prisma.recipe.findUnique({
+        where: { id },
+        select: { source: true },
+      });
+      if (recipe?.source === 'user-composed') {
+        const plate = await prisma.composedPlate.findFirst({
+          where: { recipeId: id, userId },
+          select: { componentIds: true },
+        });
+        if (plate) {
+          try {
+            const entries: Array<{ componentId: string }> = JSON.parse(plate.componentIds);
+            const componentIds = entries.map((e) => e.componentId);
+            recordAffinityEvent({ type: 'plate_cooked', userId, componentIds }).catch(
+              (err) => console.warn('[affinity] plate_cooked event failed (non-fatal):', err)
+            );
+          } catch {
+            // malformed componentIds JSON — skip silently
+          }
+        }
+      }
+
       res.json({ message: 'Cook recorded' });
     } catch (error: any) {
       console.error('❌ Record cook error:', error);

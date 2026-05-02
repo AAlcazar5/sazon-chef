@@ -52,6 +52,8 @@ jest.mock('../../lib/api', () => ({
   mealComponentApi: {
     list: jest.fn(),
     permutations: jest.fn().mockResolvedValue({ data: { permutations: [] } }),
+    affinity: jest.fn().mockResolvedValue({ data: { slot: 'protein', favorites: [] } }),
+    swapAway: jest.fn().mockResolvedValue({ data: { ok: true } }),
   },
   composedPlateApi: { save: jest.fn(), get: jest.fn() },
   shoppingListApi: {
@@ -65,6 +67,7 @@ import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import BuildAPlateScreen from '../../app/build-a-plate';
 import { mealComponentApi, composedPlateApi, shoppingListApi } from '../../lib/api';
+const mockSwapAway = mealComponentApi.swapAway as jest.Mock;
 import { useLocalSearchParams } from 'expo-router';
 
 const SALMON = {
@@ -470,6 +473,40 @@ describe('BuildAPlateScreen — preset=<tonight-id>', () => {
 
     const { getByTestId } = render(<BuildAPlateScreen />);
     await waitFor(() => expect(getByTestId('slot-row-protein')).toBeTruthy(), { timeout: 3000 });
+  });
+});
+
+describe('BuildAPlateScreen — swap-away signal (Phase 4)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    setupApi();
+  });
+
+  it('calls mealComponentApi.swapAway with the previous component id when replacing a selection', async () => {
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('slot-row-protein')).toBeTruthy());
+
+    // First selection (no prior — swap-away should NOT fire)
+    await act(async () => { fireEvent.press(getByTestId('slot-row-protein')); });
+    await waitFor(() => expect(getByTestId('slot-picker-option-salmon')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('slot-picker-option-salmon')); });
+    expect(mockSwapAway).not.toHaveBeenCalled();
+
+    // Second selection replacing salmon with tofu — swap-away MUST fire with 'salmon'
+    await act(async () => { fireEvent.press(getByTestId('slot-row-protein')); });
+    await waitFor(() => expect(getByTestId('slot-picker-option-tofu')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('slot-picker-option-tofu')); });
+    await waitFor(() => expect(mockSwapAway).toHaveBeenCalledWith('salmon'));
+  });
+
+  it('does NOT call mealComponentApi.swapAway on the first slot pick', async () => {
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('slot-row-protein')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('slot-row-protein')); });
+    await waitFor(() => expect(getByTestId('slot-picker-option-salmon')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('slot-picker-option-salmon')); });
+    expect(mockSwapAway).not.toHaveBeenCalled();
   });
 });
 

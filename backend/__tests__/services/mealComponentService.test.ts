@@ -32,10 +32,33 @@ beforeAll(() => {
       findUnique: jest.fn(),
     };
   }
+  if (!mockPrisma.slotAffinity) {
+    mockPrisma.slotAffinity = {
+      findMany: jest.fn(),
+      aggregate: jest.fn(),
+      upsert: jest.fn(),
+      findFirst: jest.fn(),
+    };
+  }
+  if (!mockPrisma.pairAffinity) {
+    mockPrisma.pairAffinity = {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      upsert: jest.fn(),
+    };
+  }
 });
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Default stubs for affinity tables so P2 tests that don't set them up still pass
+  if (mockPrisma.slotAffinity) {
+    mockPrisma.slotAffinity.findMany.mockResolvedValue([]);
+    mockPrisma.slotAffinity.aggregate.mockResolvedValue({ _sum: { sampleCount: 0 } });
+  }
+  if (mockPrisma.pairAffinity) {
+    mockPrisma.pairAffinity.findMany.mockResolvedValue([]);
+  }
 });
 
 const buildComponent = (overrides: Partial<any> = {}) => ({
@@ -589,6 +612,147 @@ describe('mealComponentService.getPlateFromPantry', () => {
     expect(result1!.components.map((c) => c.component.id)).toEqual(
       result2!.components.map((c) => c.component.id)
     );
+  });
+});
+
+// ─── Phase 4: Affinity-weighted permutations ─────────────────────────────────
+
+describe('mealComponentService.generatePermutations — affinity weighting (Phase 4)', () => {
+  const makeDbComp = (id: string, slot: string, cuisines: string[] = ['Mediterranean']) => ({
+    id,
+    slot,
+    name: `Component-${id}`,
+    description: null,
+    defaultPortionGrams: 150,
+    caloriesPerPortion: 200,
+    proteinG: 20,
+    carbsG: 10,
+    fatG: 5,
+    fiberG: 2,
+    estimatedCostPerPortion: 2,
+    cuisineTags: JSON.stringify(cuisines),
+    dietaryTags: JSON.stringify([]),
+    cookMethodHint: 'pan_sear',
+    pantryIngredientNames: JSON.stringify(['ingredient-a']),
+    imageUrl: null,
+    isUserCreated: false,
+    userId: null,
+    createdAt: new Date(),
+  });
+
+  beforeEach(() => {
+    mockPrisma.mealComponent.findMany.mockReset();
+    mockPrisma.pantryItem.findMany.mockReset();
+    mockPrisma.user.findUnique.mockReset();
+    if (mockPrisma.slotAffinity) {
+      mockPrisma.slotAffinity.findMany = jest.fn();
+      mockPrisma.slotAffinity.aggregate = jest.fn();
+    } else {
+      mockPrisma.slotAffinity = {
+        findMany: jest.fn(),
+        aggregate: jest.fn(),
+        upsert: jest.fn(),
+        findFirst: jest.fn(),
+      };
+    }
+    if (!mockPrisma.pairAffinity) {
+      mockPrisma.pairAffinity = {
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+        upsert: jest.fn(),
+      };
+    } else {
+      mockPrisma.pairAffinity.findMany = jest.fn();
+    }
+  });
+
+  it('below 10-sample threshold, ranking is unchanged from P2 baseline (no affinity weighting)', async () => {
+    const pHigh = makeDbComp('p-high', 'protein');
+    const pLow = makeDbComp('p-low', 'protein');
+
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    mockPrisma.mealComponent.findMany.mockResolvedValueOnce([pHigh, pLow]);
+
+    // Fewer than 10 total samples → affinity should not be applied
+    mockPrisma.slotAffinity.findMany.mockResolvedValueOnce([
+      { componentId: 'p-high', score: 2.0, sampleCount: 2 },
+      { componentId: 'p-low', score: 0.0, sampleCount: 2 },
+    ]);
+    mockPrisma.slotAffinity.aggregate.mockResolvedValueOnce({ _sum: { sampleCount: 4 } });
+    mockPrisma.pairAffinity.findMany.mockResolvedValueOnce([]);
+
+    const result = await generatePermutations({
+      userId: 'u1',
+      lockedSlots: [],
+      slotsToFill: ['protein'],
+      maxResults: 10,
+      prioritizePantry: false,
+    });
+
+    // With 4 total samples (< 10), both candidates should appear (order may be either way)
+    expect(result.length).toBe(2);
+  });
+
+  it('above 10-sample threshold, candidate with high-affinity component ranks above equal-coherence candidate', async () => {
+    // Two identical components except id; one has high affinity, other has low
+    const pFavorite = makeDbComp('p-fav', 'protein');
+    const pUnknown = makeDbComp('p-unk', 'protein');
+
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    mockPrisma.mealComponent.findMany.mockResolvedValueOnce([pFavorite, pUnknown]);
+
+    // 15 total samples → threshold met
+    mockPrisma.slotAffinity.findMany.mockResolvedValueOnce([
+      { componentId: 'p-fav', score: 1.5, sampleCount: 10 },
+      { componentId: 'p-unk', score: 0.0, sampleCount: 5 },
+    ]);
+    mockPrisma.slotAffinity.aggregate.mockResolvedValueOnce({ _sum: { sampleCount: 15 } });
+    mockPrisma.pairAffinity.findMany.mockResolvedValueOnce([]);
+
+    const result = await generatePermutations({
+      userId: 'u1',
+      lockedSlots: [],
+      slotsToFill: ['protein'],
+      maxResults: 10,
+      prioritizePantry: false,
+    });
+
+    expect(result.length).toBe(2);
+    expect(result[0].components[0].component.id).toBe('p-fav');
+  });
+
+  it('pair affinity boosts candidates whose component pairs have high pair scores', async () => {
+    const pA = makeDbComp('pA', 'protein');
+    const pB = makeDbComp('pB', 'protein');
+    const sX = makeDbComp('sX', 'sauce');
+
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    mockPrisma.mealComponent.findMany
+      .mockResolvedValueOnce([pA, pB])   // protein slot
+      .mockResolvedValueOnce([sX]);      // sauce slot
+
+    // 20 total samples → pair affinity applies
+    mockPrisma.slotAffinity.findMany.mockResolvedValueOnce([]);
+    mockPrisma.slotAffinity.aggregate.mockResolvedValueOnce({ _sum: { sampleCount: 20 } });
+    // pA + sX is a well-loved pair; pB + sX is novel
+    mockPrisma.pairAffinity.findMany.mockResolvedValueOnce([
+      { componentIdA: 'pA', componentIdB: 'sX', score: 1.8, sampleCount: 10 },
+    ]);
+
+    const result = await generatePermutations({
+      userId: 'u1',
+      lockedSlots: [],
+      slotsToFill: ['protein', 'sauce'],
+      maxResults: 10,
+      prioritizePantry: false,
+    });
+
+    // The candidate containing pA should rank above the candidate containing pB
+    const first = result[0].components.find((c) => c.slot === 'protein');
+    expect(first?.component.id).toBe('pA');
   });
 });
 

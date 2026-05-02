@@ -10,8 +10,10 @@ import {
   generatePermutations,
   getPlateFromPantry,
   COMPONENT_SLOTS,
+  type ComponentSlot,
 } from '../../services/mealComponentService';
 import { solveCookTimeline, ComponentTask } from '../../services/cookTimelineService';
+import { getTopComponentsForSlot, recordAffinityEvent } from '../../services/slotAffinityService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -213,6 +215,51 @@ export const mealComponentController = {
     } catch (error) {
       console.error('Error computing cook timeline:', error);
       return res.status(500).json({ error: 'Failed to compute cook timeline' });
+    }
+  },
+
+  async slotAffinity(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const slot = req.query.slot as string | undefined;
+    if (!slot || !COMPONENT_SLOTS.includes(slot as ComponentSlot)) {
+      return res.status(400).json({
+        error: `slot query param is required and must be one of: ${COMPONENT_SLOTS.join(', ')}`,
+      });
+    }
+
+    const parsedLimit = parseInt(req.query.limit as string, 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(50, parsedLimit)
+      : 20;
+
+    try {
+      const userId = getUserId(req);
+      const favorites = await getTopComponentsForSlot(userId, slot as ComponentSlot, limit);
+      return res.json({ slot, favorites });
+    } catch (error) {
+      console.error('Error fetching slot affinity:', error);
+      return res.status(500).json({ error: 'Failed to fetch slot affinity' });
+    }
+  },
+
+  async swapAway(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const componentId = req.params.id;
+    if (!componentId || componentId.length > 128) {
+      return res.status(400).json({ error: 'Invalid component id' });
+    }
+    try {
+      const userId = getUserId(req);
+      await recordAffinityEvent({ type: 'swap_away', userId, componentId });
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error('Error recording swap_away:', error);
+      return res.status(500).json({ error: 'Failed to record swap event' });
     }
   },
 };
