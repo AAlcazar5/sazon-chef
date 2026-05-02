@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily } from '../../constants/Typography';
+import { DarkColors } from '../../constants/Colors';
 import { UnitSegmentedControl } from '../ui/UnitSegmentedControl';
 import { ServingStepper } from '../ui/ServingStepper';
 import { IngredientRow } from '../ui/IngredientRow';
@@ -40,9 +42,13 @@ export function EditorialIngredients({
     });
   };
 
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const titleColor = isDark ? DarkColors.text.primary : '#111827';
+
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Ingredients</Text>
+      <Text style={[styles.sectionTitle, { color: titleColor }]}>Ingredients</Text>
 
       <View style={styles.controls}>
         <UnitSegmentedControl value={unit} onChange={onChangeUnit} />
@@ -74,7 +80,6 @@ const styles = StyleSheet.create({
     fontFamily: EditorialFontFamily.display.semibold,
     fontSize: 26,
     letterSpacing: -0.5,
-    color: '#111827',
     marginBottom: 16,
   },
   controls: {

@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import LogoMascot from '../components/mascot/LogoMascot';
+import Sazon from '../components/mascot/Sazon';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import FormInput from '../components/ui/FormInput';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
@@ -195,10 +196,7 @@ export default function ForgotPasswordScreen() {
           </HapticTouchableOpacity>
 
           <View className="items-center mb-4">
-            <LogoMascot
-              expression="happy"
-              size="medium"
-            />
+            <Sazon variant="orange" motion="idle" fx={[]} size={96} />
           </View>
 
           <Text className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2 text-center">

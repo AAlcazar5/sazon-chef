@@ -17,6 +17,7 @@ import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import { Colors } from '../../constants/Colors';
 import { LogoMascot } from '../mascot';
+import Sazon from '../mascot/Sazon';
 
 interface VoiceOverlayProps {
   visible: boolean;
@@ -115,7 +116,12 @@ export default function VoiceOverlay({
         <View style={styles.content}>
           {/* Mascot */}
           <View style={styles.mascotContainer}>
-            <LogoMascot expression={isListening ? 'thinking' : 'happy'} size="medium" />
+            <Sazon
+              variant={isListening ? 'green' : 'orange'}
+              motion={isListening ? 'pulse' : 'idle'}
+              fx={isListening ? ['shine'] : []}
+              size={96}
+            />
           </View>
 
           {/* Pulsing rings */}

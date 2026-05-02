@@ -62,7 +62,7 @@ export default function PhysicalProfileCard({ physicalProfile }: PhysicalProfile
       <View style={[
         styles.card,
         {
-          backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+          backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
         },
         Shadows.MD as any,
       ]}>

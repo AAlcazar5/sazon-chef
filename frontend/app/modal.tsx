@@ -10,6 +10,7 @@ import LoadingState from '../components/ui/LoadingState';
 import SkeletonLoader from '../components/ui/SkeletonLoader';
 import BottomSheet from '../components/ui/BottomSheet';
 import LogoMascot from '../components/mascot/LogoMascot';
+import Sazon from '../components/mascot/Sazon';
 import MealPrepScalingModal from '../components/recipe/MealPrepScalingModal';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -950,10 +951,7 @@ export default function RecipeModal() {
           <View className="w-8" />
         </View>
         <View className="flex-1 items-center justify-center p-8">
-          <LogoMascot 
-            expression="supportive" 
-            size="large" 
-          />
+          <Sazon variant="green" motion="peek" fx={[]} size={192} />
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
             Failed to load recipe
           </Text>
@@ -2313,7 +2311,7 @@ export default function RecipeModal() {
                 flex: 1, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#D1D5DB',
                 borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8,
                 color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB',
+                backgroundColor: isDark ? DarkColors.card : '#F9FAFB',
               }}
               placeholderTextColor="#9CA3AF"
             />

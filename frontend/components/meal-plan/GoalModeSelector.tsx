@@ -80,7 +80,7 @@ function GoalModeButton({ mode, isSelected, isDark, onSelect }: {
           paddingHorizontal: 8,
           backgroundColor: isSelected
             ? (isDark ? mode.darkActiveBg : mode.activeBg)
-            : (isDark ? '#1C1C1E' : '#FFFFFF'),
+            : (isDark ? DarkColors.card : '#FFFFFF'),
         }, isSelected ? Shadows.MD : Shadows.SM]}
       >
         <Icon

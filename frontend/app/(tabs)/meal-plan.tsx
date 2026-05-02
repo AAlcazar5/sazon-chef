@@ -545,8 +545,8 @@ export default function MealPlanScreen() {
           <>
             <FrostedHeader paddingBottom={16} withTopInset>
               <View style={{ paddingHorizontal: 20 }}>
-                <Text style={{ fontFamily: EditorialFontFamily.display.bold, fontSize: 48, lineHeight: 50, letterSpacing: -1.6, color: isDark ? '#F3F4F6' : '#111827' }} accessibilityRole="header">
-                  Meal <Text style={{ fontFamily: EditorialFontFamily.displayItalic.bold, fontStyle: 'italic', fontSize: 48, letterSpacing: -1.6, color: isDark ? '#F3F4F6' : '#111827' }}>Plan</Text>
+                <Text style={{ fontFamily: EditorialFontFamily.display.bold, fontSize: 48, lineHeight: 50, letterSpacing: -1.6, color: isDark ? DarkColors.text.primary : '#111827' }} accessibilityRole="header">
+                  Meal <Text style={{ fontFamily: EditorialFontFamily.displayItalic.bold, fontStyle: 'italic', fontSize: 48, letterSpacing: -1.6, color: isDark ? DarkColors.text.primary : '#111827' }}>Plan</Text>
                 </Text>
               </View>
             </FrostedHeader>
@@ -554,7 +554,7 @@ export default function MealPlanScreen() {
               <WeeklyCalendarSkeleton />
               <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
                 <View style={[{
-                  backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                  backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
                   borderRadius: 20,
                   padding: 20,
                 }]}>

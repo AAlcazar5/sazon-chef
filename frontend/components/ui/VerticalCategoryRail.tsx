@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily } from '../../constants/Typography';
-import { EditorialColors } from '../../constants/Colors';
+import { Colors, DarkColors, EditorialColors } from '../../constants/Colors';
 
 interface VerticalCategoryRailProps {
   categories: string[];
@@ -10,6 +11,12 @@ interface VerticalCategoryRailProps {
 }
 
 export function VerticalCategoryRail({ categories, active, onSelect }: VerticalCategoryRailProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const activeLabelColor = isDark ? DarkColors.text.primary : '#111827';
+  const inactiveLabelColor = isDark ? DarkColors.text.tertiary : EditorialColors.fg.muted_cream;
+  const dotColor = isDark ? DarkColors.primary : Colors.primary;
+
   return (
     <View style={styles.container} accessibilityRole="tablist">
       {categories.map((cat) => {
@@ -25,12 +32,12 @@ export function VerticalCategoryRail({ categories, active, onSelect }: VerticalC
           >
             <View style={styles.labelRow}>
               {isActive && (
-                <View testID={`dot-${cat}`} style={styles.dot} />
+                <View testID={`dot-${cat}`} style={[styles.dot, { backgroundColor: dotColor }]} />
               )}
               <Text
                 style={[
                   styles.label,
-                  { color: isActive ? '#111827' : EditorialColors.fg.muted_cream },
+                  { color: isActive ? activeLabelColor : inactiveLabelColor },
                 ]}
               >
                 {cat.toUpperCase()}
@@ -63,7 +70,6 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#fa7e12',
     marginRight: 6,
   },
   label: {

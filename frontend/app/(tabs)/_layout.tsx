@@ -175,6 +175,17 @@ export default function TabLayout() {
       color: 'red',
     },
     {
+      label: 'Import Recipe',
+      icon: 'link-outline',
+      onPress: () => {
+        router.push({
+          pathname: '/(tabs)/cookbook',
+          params: { openImport: 'true' },
+        });
+      },
+      color: 'blue',
+    },
+    {
       label: 'Log a Meal',
       icon: 'nutrition-outline',
       onPress: () => {
@@ -308,7 +319,7 @@ export default function TabLayout() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: isDark ? '#1C1C1E' : '#FAF7F4',
+              backgroundColor: isDark ? DarkColors.card : '#FAF7F4',
             }}
           />
         ),
@@ -392,7 +403,7 @@ export default function TabLayout() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: isDark ? '#1C1C1E' : '#FAF7F4',
+            backgroundColor: isDark ? DarkColors.card : '#FAF7F4',
           }}
         />
         <View className="flex-row items-center" style={{ gap: Gap.md }}>

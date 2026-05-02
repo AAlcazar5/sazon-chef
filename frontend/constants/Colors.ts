@@ -183,15 +183,17 @@ export const Colors: ColorPalette = {
   }
 };
 
-// Dark theme color palette
+// Dark theme color palette — "cookbook by candlelight"
+// Warm cocoa scaffold, jewel-tone plates, ivory ink, brightened coral.
+// Source: claude-design/sazon-chef-darkmode/COLORS.md
 export const DarkColors: ColorPalette = {
-  // Primary colors (same as light theme for brand consistency)
-  primary: '#fa7e12', // New brand orange
-  primaryLight: '#ffb464', // Lighter variant for backgrounds/highlights
-  primaryDark: '#d67a0c', // Darker variant for emphasis
-  
+  // Primary colors — coral brightened for AA contrast on cocoa scaffold
+  primary: '#FF9559', // brightened brand coral (light uses #fa7e12)
+  primaryLight: '#FFB489', // softer coral for tints / hover
+  primaryDark: '#E07A40', // pressed / emphasis
+
   // Secondary colors
-  secondary: '#9CA3AF', // gray-400 (lighter for dark mode)
+  secondary: '#B8A99A', // warm taupe (was gray-400)
   secondaryRed: '#f87171', // Lighter red for dark mode (brighter for visibility)
   secondaryRedLight: '#dc2626', // Darker variant for better text visibility with white text
   secondaryRedDark: '#e42614', // New habanero red - darker variant for borders/accents
@@ -201,33 +203,33 @@ export const DarkColors: ColorPalette = {
   tertiaryGreenDark: '#4a6b45', // Dark variant for borders/accents
   accent: '#A78BFA', // violet-400 (lighter for dark mode)
   accentSecondary: '#f87171', // Lighter red for dark mode - for habanero variants and brand accents
-  
+
   // Semantic colors (brighter for dark mode visibility)
   success: '#34D399', // emerald-400
   warning: '#FBBF24', // amber-400
   error: '#F87171', // red-400
   info: '#60A5FA', // blue-400
-  
-  // Neutral colors (dark mode — iOS elevation stack)
-  background: '#0F0F0F', // near-OLED black (was #111827)
-  surface: '#0F0F0F', // base surface matches background
-  surfaceTint: '#1C1C1E', // subtle elevation tint
-  card: '#1C1C1E', // card surfaces resting on background (dp1)
-  cardRaised: '#2C2C2E', // elevated cards, bottom sheets (dp4)
-  cardOverlay: '#3A3A3C', // top-level overlay surfaces (dp16)
-  
+
+  // Neutral surfaces — warm cocoa scaffold
+  background: '#1A1410', // scaffold (warm cocoa-black)
+  surface: '#1A1410', // base surface matches scaffold
+  surfaceTint: '#352923', // surfaceMuted — chips, dividers, day rail tiles
+  card: '#2A201B', // raised cards, top bar fill (surface)
+  cardRaised: '#352923', // elevated cards, bottom sheets
+  cardOverlay: '#3F3128', // top-level overlay surfaces
+
   text: {
-    primary: '#F9FAFB', // gray-50 (inverse)
-    secondary: '#D1D5DB', // gray-300
-    tertiary: '#9CA3AF', // gray-400
-    inverse: '#111827' // gray-900 (inverse)
+    primary: '#F5EFE6', // ink — warm ivory, never pure white
+    secondary: '#B8A99A', // inkMuted — warm taupe
+    tertiary: '#7A6A5C', // inkSoft — eyebrows / labels
+    inverse: '#1A1410' // text on accent / on ivory surfaces
   },
-  
-  // Border colors (dark mode)
+
+  // Border colors — hairline ivory at low opacity
   border: {
-    light: '#374151', // gray-700
-    medium: '#4B5563', // gray-600
-    dark: '#6B7280' // gray-500
+    light: 'rgba(245,239,230,0.08)', // hairline divider on cocoa
+    medium: 'rgba(245,239,230,0.14)', // chip/card edges
+    dark: 'rgba(245,239,230,0.24)' // emphasized edges
   },
   
   // Macro-specific colors (same as light theme)
@@ -407,6 +409,72 @@ export const EditorialColors = {
     blush: '#9a1f5b',
   },
   blackCTA: '#111827', // primary CTA background (v2 editorial)
+} as const;
+
+// ─── Editorial Dark Mode Tokens — "cookbook by candlelight" ──────────────────
+// Source: claude-design/sazon-chef-darkmode/COLORS.md
+// Hero plates: circular pastel-on-screen anchors, each with bg gradient + ink + accent.
+export const HeroPlatesDark = {
+  // Onboarding step 1, Recipe Detail, Shopping progress
+  orange: {
+    bg: ['#7A3A0F', '#4F2208'] as const,
+    ink: '#FFD4A6',
+    accent: '#FF9559',
+  },
+  // Onboarding step 2
+  green: {
+    bg: ['#1F4022', '#0F2614'] as const,
+    ink: '#A8DDA9',
+    accent: '#83C788',
+  },
+  // Onboarding step 3, Meal Plan today's plan cards
+  lavender: {
+    bg: ['#3a1f4a', '#21102b'] as const,
+    ink: '#D8B4DF',
+    accent: '#C098CB',
+  },
+  // Cookbook "Most cooked" hero
+  pink: {
+    bg: ['#5a1d2c', '#321015'] as const,
+    ink: '#F2B5BD',
+    accent: '#F06292',
+  },
+  // Home "Tonight's picks" featured plate
+  blue: {
+    bg: ['#0f3247', '#0a2030'] as const,
+    ink: '#9EC9DF',
+    accent: '#64B5F6',
+  },
+} as const;
+
+// Pastel tiles (category & sectional surfaces) — flat, muted jewel
+export const PastelsJewelDark = {
+  green:  { bg: '#1F2E22', accent: '#9CCFA0', dot: '#5C9460' },
+  pink:   { bg: '#3a1d2a', accent: '#F2A6B4', dot: '#C8527A' },
+  amber:  { bg: '#3a2614', accent: '#F0B97D', dot: '#C97A3A' },
+  blue:   { bg: '#152a3a', accent: '#A8C8E0', dot: '#5C8FB8' },
+  lilac:  { bg: '#2e1b3a', accent: '#D2B0DD', dot: '#9466A8' },
+} as const;
+
+// Editorial dark — cocoa scaffold + ivory ink scale + soft accent overlay
+export const EditorialDark = {
+  scaffold:     '#1A1410',
+  scaffoldEnd:  '#221915',
+  surface:      '#2A201B',
+  surfaceMuted: '#352923',
+  border:       'rgba(245,239,230,0.08)',
+  ink:          '#F5EFE6',
+  inkMuted:     '#B8A99A',
+  inkSoft:      '#7A6A5C',
+  serifTitle:   '#F5EFE6',
+  serifMuted:   '#E8D9C5',
+  accent:       '#FF9559',
+  accentInk:    '#1A1410', // text on accent
+  accentSoft:   'rgba(255,149,89,0.14)', // tinted accent backgrounds
+  // Shadows — deeper / opaque on cocoa
+  shadowHero:   '0 18px 36px rgba(0,0,0,0.5), 0 6px 14px rgba(0,0,0,0.3)',
+  shadowCard:   '0 8px 24px rgba(0,0,0,0.35)',
+  shadowCTA:    '0 10px 24px rgba(255,149,89,0.35)',
 } as const;
 
 // Helper functions

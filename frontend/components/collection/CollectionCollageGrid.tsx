@@ -38,7 +38,7 @@ export default function CollectionCollageGrid({
   const largeSize = (size * 2) / 3 - gap / 2;
   const smallSize = size / 3 - gap / 2;
 
-  const placeholderBg = isDark ? '#1C1C1E' : '#F5F0EB';
+  const placeholderBg = isDark ? DarkColors.surfaceTint : '#F5F0EB';
   const badgeBg = isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.55)';
 
   if (images.length === 0) {

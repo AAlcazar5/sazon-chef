@@ -50,6 +50,27 @@ jest.mock('../../components/mascot', () => ({
   },
 }));
 
+// Sazon swap — translate motion back to legacy expression so testID assertions hold.
+jest.mock('../../components/mascot/Sazon', () => ({
+  __esModule: true,
+  default: function MockSazon({ motion, variant }: any) {
+    const { View } = require('react-native');
+    const expr =
+      motion === 'celebrate' ? 'celebrating' :
+      motion === 'kiss' ? 'chef-kiss' :
+      motion === 'bounce' ? 'excited' :
+      motion === 'wobble' ? 'thinking' :
+      motion === 'sleep' ? 'sleepy' :
+      motion === 'peek' ? 'supportive' :
+      motion === 'pulse' ? 'focused' :
+      motion === 'jiggle' ? 'surprised' :
+      motion === 'wave' ? 'happy' :
+      motion === 'idle' ? 'happy' :
+      variant || 'mascot';
+    return <View testID={`mascot-${expr}`} />;
+  },
+}));
+
 jest.mock('moti', () => ({
   MotiView: function MockMotiView({ children }: any) {
     const { View } = require('react-native');

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 
 import { EditorialFontFamily } from '../../constants/Typography';
 import { EditorialShadows } from '../../constants/Shadows';
@@ -45,6 +46,12 @@ export function EditorialRecipeCard({
 }: EditorialRecipeCardProps) {
   const shadowStyle =
     Platform.OS === 'ios' ? EditorialShadows.cardRaised.ios : EditorialShadows.cardRaised.android;
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  // Translucent strip + action buttons over jewel-dark cards use ivory-on-cocoa instead of white-on-pastel
+  const macroRowBg = isDark ? 'rgba(245,239,230,0.08)' : 'rgba(255,255,255,0.55)';
+  const actionBtnBg = isDark ? 'rgba(245,239,230,0.10)' : 'rgba(255,255,255,0.7)';
+  const actionBtnActiveBg = isDark ? 'rgba(245,239,230,0.18)' : '#FFFFFF';
 
   const matchScore = recipe.score?.matchPercentage ?? 0;
   const cookTime = recipe.cookTime ?? 0;
@@ -100,7 +107,7 @@ export function EditorialRecipeCard({
       </Text>
 
       {/* Macro strip — calories + protein/carbs/fat/fiber */}
-      <View style={styles.macroRow}>
+      <View style={[styles.macroRow, { backgroundColor: macroRowBg }]}>
         <View style={styles.macroCell}>
           <Text style={styles.macroValue}>{calories}</Text>
           <Text style={styles.macroLabel}>cal</Text>
@@ -141,7 +148,7 @@ export function EditorialRecipeCard({
       <View style={styles.actions}>
         <HapticTouchableOpacity
           onPress={handleSave}
-          style={styles.actionButton}
+          style={[styles.actionButton, { backgroundColor: actionBtnBg }]}
           accessibilityLabel="Save to cookbook"
         >
           <Ionicons name="bookmark-outline" size={16} color="#6B7280" />
@@ -151,7 +158,7 @@ export function EditorialRecipeCard({
           {onDislike && (
             <HapticTouchableOpacity
               onPress={handleDislike}
-              style={[styles.actionButton, feedback.disliked && styles.actionButtonActive]}
+              style={[styles.actionButton, { backgroundColor: feedback.disliked ? actionBtnActiveBg : actionBtnBg }]}
               accessibilityLabel="Not for me"
             >
               <Ionicons
@@ -164,7 +171,7 @@ export function EditorialRecipeCard({
           {onLike && (
             <HapticTouchableOpacity
               onPress={handleLike}
-              style={[styles.actionButton, feedback.liked && styles.actionButtonActive]}
+              style={[styles.actionButton, { backgroundColor: feedback.liked ? actionBtnActiveBg : actionBtnBg }]}
               accessibilityLabel="Love it"
             >
               <Ionicons
@@ -224,7 +231,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignSelf: 'stretch',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.55)',
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 6,
@@ -289,11 +295,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  actionButtonActive: {
-    backgroundColor: '#FFFFFF',
   },
 });

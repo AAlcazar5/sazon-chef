@@ -8,20 +8,21 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark, PastelsJewelDark } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { FontSize } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
 
 // Alternating pastel tints for each day of the week (Mon=0 → Sun=6)
+// Light: pastel rotation. Dark: jewel-tone tiles per COLORS.md → PastelsJewelDark.
 const DAY_TINTS = [
-  { light: Pastel.peach, dark: PastelDark.peach },       // Mon
-  { light: Pastel.sage, dark: PastelDark.sage },          // Tue
-  { light: Pastel.sky, dark: PastelDark.sky },            // Wed
-  { light: Pastel.golden, dark: PastelDark.golden },      // Thu
-  { light: Pastel.lavender, dark: PastelDark.lavender },  // Fri
-  { light: Pastel.blush, dark: PastelDark.blush },        // Sat
-  { light: Pastel.orange, dark: PastelDark.orange },      // Sun
+  { light: Pastel.peach,    dark: PastelsJewelDark.amber.bg }, // Mon
+  { light: Pastel.sage,     dark: PastelsJewelDark.green.bg }, // Tue
+  { light: Pastel.sky,      dark: PastelsJewelDark.blue.bg },  // Wed
+  { light: Pastel.golden,   dark: PastelsJewelDark.amber.bg }, // Thu
+  { light: Pastel.lavender, dark: PastelsJewelDark.lilac.bg }, // Fri
+  { light: Pastel.blush,    dark: PastelsJewelDark.pink.bg },  // Sat
+  { light: Pastel.orange,   dark: PastelsJewelDark.blue.bg },  // Sun
 ];
 
 interface DayPillProps {
@@ -63,38 +64,39 @@ function DayPill({ date, isDark, isSelected, isToday, mealsCount, hasMealPrep, o
           borderRadius: 14,
           overflow: 'hidden',
           borderWidth: isSelected ? 2 : 0,
-          borderColor: isSelected ? '#111827' : 'transparent',
+          borderColor: isSelected ? (isDark ? DarkColors.text.primary : '#111827') : 'transparent',
         }, Shadows.SM]}
       >
         {isSelected ? (
           <View style={{
             paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center',
-            backgroundColor: isDark ? 'rgba(250,126,18,0.18)' : Pastel.peach,
+            // Dark active state per COLORS.md: warm surface card with ivory border
+            backgroundColor: isDark ? DarkColors.card : Pastel.peach,
           }}>
-            <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>
+            <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? DarkColors.text.primary : '#111827', marginBottom: 2 }}>
               {date.toLocaleDateString('en-US', { weekday: 'short' })}
             </Text>
-            <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? '#F9FAFB' : '#111827' }}>
+            <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : '#111827' }}>
               {date.getDate()}
             </Text>
             {isToday && (
               <View style={{
                 width: 5, height: 5, borderRadius: 3,
-                backgroundColor: '#fa7e12',
+                backgroundColor: isDark ? DarkColors.primary : Colors.primary,
                 marginTop: 4,
               }} />
             )}
             {mealsCount > 0 && (
               <View style={{
                 marginTop: 4, minWidth: 22, height: 22, borderRadius: 11,
-                backgroundColor: '#111827',
+                backgroundColor: isDark ? DarkColors.primary : '#111827',
                 alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
               }}>
-                <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{mealsCount}</Text>
+                <Text style={{ color: isDark ? DarkColors.text.inverse : '#fff', fontSize: 11, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{mealsCount}</Text>
               </View>
             )}
             {hasMealPrep && (
-              <Text style={{ fontSize: 9, color: '#fa7e12', marginTop: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>🍱 Prep</Text>
+              <Text style={{ fontSize: 9, color: isDark ? DarkColors.primary : Colors.primary, marginTop: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>🍱 Prep</Text>
             )}
           </View>
         ) : (

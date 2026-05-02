@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Pastel } from '../../constants/Colors';
+import { useColorScheme } from 'nativewind';
+import { Pastel, PastelsJewelDark, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 
 interface MacroWidgetData {
@@ -41,6 +42,8 @@ export function EditorialMacroWidgets({
   fat,
   fiber,
 }: EditorialMacroWidgetsProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const widgets: MacroWidgetData[] = [
     {
       label: 'CALORIES',
@@ -48,8 +51,8 @@ export function EditorialMacroWidgets({
       goal: calories.goal,
       unit: '',
       icon: 'flame-outline',
-      bg: Pastel.peach,
-      accentCircleColor: 'rgba(255,183,77,0.35)',
+      bg: isDark ? PastelsJewelDark.amber.bg : Pastel.peach,
+      accentCircleColor: isDark ? PastelsJewelDark.amber.dot : 'rgba(255,183,77,0.35)',
     },
     {
       label: 'PROTEIN',
@@ -57,8 +60,8 @@ export function EditorialMacroWidgets({
       goal: protein.goal,
       unit: 'g',
       icon: 'fitness-outline',
-      bg: Pastel.sage,
-      accentCircleColor: 'rgba(129,199,132,0.35)',
+      bg: isDark ? PastelsJewelDark.green.bg : Pastel.sage,
+      accentCircleColor: isDark ? PastelsJewelDark.green.dot : 'rgba(129,199,132,0.35)',
     },
     {
       label: 'CARBS',
@@ -66,8 +69,8 @@ export function EditorialMacroWidgets({
       goal: carbs.goal,
       unit: 'g',
       icon: 'leaf-outline',
-      bg: Pastel.golden,
-      accentCircleColor: 'rgba(255,213,79,0.35)',
+      bg: isDark ? PastelsJewelDark.amber.bg : Pastel.golden,
+      accentCircleColor: isDark ? PastelsJewelDark.amber.dot : 'rgba(255,213,79,0.35)',
     },
     {
       label: 'FAT',
@@ -75,8 +78,8 @@ export function EditorialMacroWidgets({
       goal: fat.goal,
       unit: 'g',
       icon: 'water-outline',
-      bg: Pastel.blush,
-      accentCircleColor: 'rgba(244,143,177,0.35)',
+      bg: isDark ? PastelsJewelDark.pink.bg : Pastel.blush,
+      accentCircleColor: isDark ? PastelsJewelDark.pink.dot : 'rgba(244,143,177,0.35)',
     },
     {
       label: 'FIBER',
@@ -84,10 +87,16 @@ export function EditorialMacroWidgets({
       goal: fiber.goal,
       unit: 'g',
       icon: 'nutrition-outline',
-      bg: Pastel.lavender,
-      accentCircleColor: 'rgba(206,147,216,0.35)',
+      bg: isDark ? PastelsJewelDark.lilac.bg : Pastel.lavender,
+      accentCircleColor: isDark ? PastelsJewelDark.lilac.dot : 'rgba(206,147,216,0.35)',
     },
   ];
+
+  const labelColor = isDark ? DarkColors.text.secondary : '#6B7280';
+  const valueColor = isDark ? DarkColors.text.primary : '#111827';
+  const goalColor = isDark ? DarkColors.text.secondary : '#6B7280';
+  const iconCircleBg = isDark ? 'rgba(245,239,230,0.10)' : 'rgba(255,255,255,0.8)';
+  const iconColor = isDark ? DarkColors.text.primary : '#111827';
 
   const N = widgets.length;
   const loopWidth = N * STEP;
@@ -178,15 +187,15 @@ export function EditorialMacroWidgets({
           style={[styles.card, { backgroundColor: w.bg }]}
         >
           <View style={[styles.accentCircle, { backgroundColor: w.accentCircleColor }]} />
-          <View style={styles.iconCircle}>
-            <Ionicons name={w.icon} size={16} color="#111827" />
+          <View style={[styles.iconCircle, { backgroundColor: iconCircleBg }]}>
+            <Ionicons name={w.icon} size={16} color={iconColor} />
           </View>
-          <Text style={styles.label}>{w.label}</Text>
-          <Text style={styles.value}>
+          <Text style={[styles.label, { color: labelColor }]}>{w.label}</Text>
+          <Text style={[styles.value, { color: valueColor }]}>
             {w.consumed}
             {w.unit}
           </Text>
-          <Text style={styles.goal}>
+          <Text style={[styles.goal, { color: goalColor }]}>
             of {w.goal}
             {w.unit}
           </Text>
@@ -221,7 +230,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -229,19 +237,16 @@ const styles = StyleSheet.create({
   label: {
     ...EditorialTypography.eyebrow,
     fontSize: 9,
-    color: '#6B7280',
     marginBottom: 4,
   },
   value: {
     fontFamily: EditorialFontFamily.display.semibold,
     fontSize: 22,
     letterSpacing: -0.5,
-    color: '#111827',
   },
   goal: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 11,
-    color: '#6B7280',
     marginTop: 2,
   },
 });

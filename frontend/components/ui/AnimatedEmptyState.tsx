@@ -6,6 +6,7 @@ import Icon from './Icon';
 import { Icons } from '../../constants/Icons';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
+import Sazon, { expressionToSazon, SAZON_SIZE_PX } from '../mascot/Sazon';
 import { Spacing, ComponentSpacing, BorderRadius } from '../../constants/Spacing';
 import { FontSize } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -94,10 +95,17 @@ export default function AnimatedEmptyState({
           transition={{ type: 'timing', duration: 1800, loop: true, repeatReverse: true }}
         >
           {displayUseMascot ? (
-            <LogoMascot
-              expression={displayMascotExpression}
-              size={displayMascotSize}
-            />
+            (() => {
+              const cfg = expressionToSazon(displayMascotExpression);
+              return (
+                <Sazon
+                  variant={cfg.variant}
+                  motion={cfg.motion}
+                  fx={cfg.fx}
+                  size={SAZON_SIZE_PX[displayMascotSize] ?? 96}
+                />
+              );
+            })()
           ) : (
             icon && (
               <Icon

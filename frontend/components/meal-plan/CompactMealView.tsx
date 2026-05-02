@@ -80,7 +80,7 @@ function CompactMealView({
               key={mealType.key}
               entering={FadeInDown.delay(typeIndex * 100).springify().damping(14).stiffness(200)}
               style={[{
-                backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
                 borderRadius: 20,
                 padding: 20,
                 marginBottom: 12,
@@ -169,7 +169,7 @@ function CompactMealView({
         })}
 
         {Object.values(groupedMeals).flat().length === 0 && (
-          <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 24 }, Shadows.MD]}>
+          <View style={[{ backgroundColor: isDark ? DarkColors.card : '#FFFFFF', borderRadius: 20, padding: 24 }, Shadows.MD]}>
             <AnimatedEmptyState
               config={MealPlanEmptyStates.emptyDay}
               title=""

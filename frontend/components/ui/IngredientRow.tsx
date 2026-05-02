@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ViewProps } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { triggerHaptic, ImpactStyle } from '../../constants/Haptics';
+import { DarkColors } from '../../constants/Colors';
 
 interface Ingredient {
   name: string;
@@ -17,8 +19,16 @@ interface IngredientRowProps extends ViewProps {
 }
 
 export function IngredientRow({ ingredient, checked, onToggle, showDivider = true, testID, ...props }: IngredientRowProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const nameColor = isDark ? DarkColors.text.primary : '#111827';
+  const qtyColor = isDark ? DarkColors.text.primary : '#111827';
+  // Tinted icon square: amber dark / peach light
+  const iconBoxBg = isDark ? 'rgba(240,185,125,0.12)' : '#FFF3E0';
+  const dividerBg = isDark ? DarkColors.border.light : '#F0EAE2';
+
   const handlePress = () => {
-    triggerHaptic(ImpactStyle.LIGHT);
+    triggerHaptic('impact', ImpactStyle.light);
     onToggle();
   };
 
@@ -33,18 +43,18 @@ export function IngredientRow({ ingredient, checked, onToggle, showDivider = tru
         accessibilityLabel={`${ingredient.name} ${ingredient.qty}`}
         {...props}
       >
-        <View style={[styles.iconBox, checked && styles.iconBoxChecked]}>
+        <View style={[styles.iconBox, { backgroundColor: iconBoxBg }, checked && styles.iconBoxChecked]}>
           <Text style={styles.iconText}>{ingredient.icon}</Text>
         </View>
         <Text
           testID={testID ? `${testID}-name` : undefined}
-          style={[styles.name, checked && { textDecorationLine: 'line-through' as const }]}
+          style={[styles.name, { color: nameColor }, checked && { textDecorationLine: 'line-through' as const }]}
         >
           {ingredient.name}
         </Text>
-        <Text style={styles.qty}>{ingredient.qty}</Text>
+        <Text style={[styles.qty, { color: qtyColor }]}>{ingredient.qty}</Text>
       </Pressable>
-      {showDivider && <View style={styles.divider} />}
+      {showDivider && <View style={[styles.divider, { backgroundColor: dividerBg }]} />}
     </>
   );
 }
@@ -60,7 +70,6 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 10,
-    backgroundColor: '#FFF3E0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -74,18 +83,15 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: EditorialFontFamily.body.semibold,
     fontSize: 14,
-    color: '#111827',
     flex: 1,
   },
   qty: {
     fontFamily: EditorialFontFamily.body.extrabold,
     fontSize: 14,
-    color: '#111827',
     marginLeft: 8,
   },
   divider: {
     height: 1,
-    backgroundColor: '#F0EAE2',
     marginLeft: 54,
   },
 });

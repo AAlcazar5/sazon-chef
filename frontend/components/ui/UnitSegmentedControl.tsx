@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily } from '../../constants/Typography';
+import { DarkColors } from '../../constants/Colors';
 
 type UnitValue = 'Metric' | 'US';
 
@@ -12,8 +14,16 @@ interface UnitSegmentedControlProps {
 const OPTIONS: UnitValue[] = ['Metric', 'US'];
 
 export function UnitSegmentedControl({ value, onChange }: UnitSegmentedControlProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  // Spec: dark active = ivory pill with cocoa text (inverse of light's black-pill / white-text)
+  const trackBg = isDark ? DarkColors.surfaceTint : '#F5F0EB';
+  const activeBg = isDark ? DarkColors.text.primary : '#111827';
+  const activeText = isDark ? DarkColors.text.inverse : '#FFFFFF';
+  const inactiveText = isDark ? DarkColors.text.tertiary : '#9CA3AF';
+
   return (
-    <View style={styles.container} accessibilityRole="tablist">
+    <View style={[styles.container, { backgroundColor: trackBg }]} accessibilityRole="tablist">
       {OPTIONS.map((option) => {
         const isActive = value === option;
         return (
@@ -23,12 +33,12 @@ export function UnitSegmentedControl({ value, onChange }: UnitSegmentedControlPr
             onPress={() => onChange(option)}
             style={[
               styles.segment,
-              { backgroundColor: isActive ? '#111827' : 'transparent' },
+              { backgroundColor: isActive ? activeBg : 'transparent' },
             ]}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
           >
-            <Text style={[styles.label, { color: isActive ? '#FFFFFF' : '#9CA3AF' }]}>
+            <Text style={[styles.label, { color: isActive ? activeText : inactiveText }]}>
               {option}
             </Text>
           </Pressable>
@@ -41,7 +51,6 @@ export function UnitSegmentedControl({ value, onChange }: UnitSegmentedControlPr
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#F5F0EB',
     borderRadius: 9999,
     padding: 3,
     alignSelf: 'flex-start',

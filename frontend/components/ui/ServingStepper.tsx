@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { triggerHaptic, ImpactStyle } from '../../constants/Haptics';
+import { Colors, DarkColors } from '../../constants/Colors';
 
 interface ServingStepperProps {
   servings: number;
@@ -10,42 +12,52 @@ interface ServingStepperProps {
 }
 
 export function ServingStepper({ servings, onChangeServings }: ServingStepperProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const containerBg = isDark ? DarkColors.card : '#FFFFFF';
+  const containerBorder = isDark ? DarkColors.border.light : '#F0EAE2';
+  const buttonBg = isDark ? DarkColors.surfaceTint : '#F5F0EB';
+  const iconColor = isDark ? DarkColors.text.primary : '#111827';
+  const disabledIconColor = isDark ? DarkColors.text.tertiary : '#D1D5DB';
+  const countColor = isDark ? DarkColors.primary : Colors.primary;
+  const labelColor = isDark ? DarkColors.text.tertiary : '#9CA3AF';
+
   const handleMinus = () => {
     if (servings <= 1) return;
-    triggerHaptic(ImpactStyle.LIGHT);
+    triggerHaptic('impact', ImpactStyle.light);
     onChangeServings(servings - 1);
   };
 
   const handlePlus = () => {
-    triggerHaptic(ImpactStyle.LIGHT);
+    triggerHaptic('impact', ImpactStyle.light);
     onChangeServings(servings + 1);
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: containerBg, borderColor: containerBorder }]}>
       <Pressable
         testID="stepper-minus"
         onPress={handleMinus}
-        style={[styles.button, servings <= 1 && styles.buttonDisabled]}
+        style={[styles.button, { backgroundColor: buttonBg }, servings <= 1 && styles.buttonDisabled]}
         accessibilityLabel="Decrease servings"
         accessibilityRole="button"
       >
-        <Ionicons name="remove" size={18} color={servings <= 1 ? '#D1D5DB' : '#111827'} />
+        <Ionicons name="remove" size={18} color={servings <= 1 ? disabledIconColor : iconColor} />
       </Pressable>
 
       <View style={styles.countContainer}>
-        <Text style={styles.count}>{servings}</Text>
-        <Text style={styles.label}>{servings === 1 ? 'serving' : 'servings'}</Text>
+        <Text style={[styles.count, { color: countColor }]}>{servings}</Text>
+        <Text style={[styles.label, { color: labelColor }]}>{servings === 1 ? 'serving' : 'servings'}</Text>
       </View>
 
       <Pressable
         testID="stepper-plus"
         onPress={handlePlus}
-        style={styles.button}
+        style={[styles.button, { backgroundColor: buttonBg }]}
         accessibilityLabel="Increase servings"
         accessibilityRole="button"
       >
-        <Ionicons name="add" size={18} color="#111827" />
+        <Ionicons name="add" size={18} color={iconColor} />
       </Pressable>
     </View>
   );
@@ -55,10 +67,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F0EAE2',
     paddingVertical: 8,
     paddingHorizontal: 12,
     alignSelf: 'flex-start',
@@ -67,7 +77,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F5F0EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -82,12 +91,10 @@ const styles = StyleSheet.create({
   count: {
     fontFamily: EditorialFontFamily.body.bold,
     fontSize: 13,
-    color: '#fa7e12',
   },
   label: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 10,
-    color: '#9CA3AF',
     marginTop: 1,
   },
 });

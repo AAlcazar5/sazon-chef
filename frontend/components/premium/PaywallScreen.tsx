@@ -24,6 +24,7 @@ import { useSubscription } from '../../hooks/useSubscription';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../ui/GradientButton';
 import { LogoMascot } from '../mascot';
+import Sazon from '../mascot/Sazon';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { PremiumCelebration } from '../celebrations';
 import { paywallBg, premiumCTA } from '../../constants/Gradients';
@@ -108,7 +109,7 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', damping: 14, stiffness: 280, delay: 80 }}
           >
-            <LogoMascot expression="celebrating" size="medium" />
+            <Sazon variant="orange" motion="celebrate" fx={['confetti', 'hearts']} size={96} />
           </MotiView>
 
           <MotiView

@@ -21,6 +21,41 @@ jest.mock('../../components/mascot/LogoMascot', () => {
   };
 });
 
+// Sazon was wired in to replace LogoMascot in AnimatedEmptyState — mirror the mock
+// so existing testID/expression assertions continue to work.
+jest.mock('../../components/mascot/Sazon', () => {
+  const { Text } = require('react-native');
+  // Re-implement expressionToSazon enough for the test mock to pass through expression
+  // back into the rendered Sazon's `motion` prop, so the proxy below maps correctly.
+  const expressionToSazon = (expr: string) => {
+    switch (expr) {
+      case 'sleepy':       return { variant: 'purple', motion: 'sleep', fx: ['zees'] };
+      case 'curious':      return { variant: 'green', motion: 'wobble', fx: ['question'] };
+      case 'thinking':     return { variant: 'green', motion: 'wobble', fx: ['question'] };
+      case 'celebrating':  return { variant: 'orange', motion: 'celebrate', fx: ['confetti', 'hearts'] };
+      case 'chef-kiss':    return { variant: 'orange', motion: 'kiss', fx: ['hearts'] };
+      case 'excited':      return { variant: 'orange', motion: 'bounce', fx: ['sparkles'] };
+      default:             return { variant: 'orange', motion: 'idle', fx: [] };
+    }
+  };
+  const SAZON_SIZE_PX = { tiny: 24, xsmall: 36, small: 48, medium: 96, large: 192, hero: 256 };
+  return {
+    __esModule: true,
+    expressionToSazon,
+    SAZON_SIZE_PX,
+    default: function MockSazon({ motion, variant }: { motion?: string; variant?: string }) {
+      const label =
+        motion === 'kiss' ? 'chef-kiss' :
+        motion === 'wobble' ? 'thinking' :
+        motion === 'bounce' ? 'excited' :
+        motion === 'sleep' ? 'sleepy' :
+        motion === 'celebrate' ? 'celebrating' :
+        (variant || 'mascot');
+      return <Text testID="mascot">{label}</Text>;
+    },
+  };
+});
+
 jest.mock('../../components/ui/Icon', () => {
   const { Text } = require('react-native');
   return function MockIcon({ accessibilityLabel }: { accessibilityLabel?: string }) {

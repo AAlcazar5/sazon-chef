@@ -33,6 +33,29 @@ jest.mock('../../components/mascot/LogoMascot', () => {
   };
 });
 
+// Sazon swap — translate motion back to legacy expression so testID assertions hold.
+jest.mock('../../components/mascot/Sazon', () => ({
+  __esModule: true,
+  default: function MockSazon({ motion, variant }: any) {
+    const expr =
+      motion === 'wave' ? 'happy' :
+      motion === 'bounce' ? 'excited' :
+      motion === 'wobble' ? 'curious' :
+      motion === 'idle' ? 'happy' :
+      motion === 'celebrate' ? 'chef-kiss' :
+      motion === 'kiss' ? 'chef-kiss' :
+      motion === 'sleep' ? 'sleepy' :
+      motion === 'pulse' ? 'focused' :
+      motion === 'peek' ? 'supportive' :
+      motion === 'jiggle' ? 'surprised' :
+      variant || 'mascot';
+    return require('react').createElement(
+      require('react-native').View,
+      { testID: `mascot-${expr}` },
+    );
+  },
+}));
+
 jest.mock('../../components/ui/HapticTouchableOpacity', () => {
   return function MockHTO(props: any) {
     return require('react').createElement(require('react-native').TouchableOpacity, props);

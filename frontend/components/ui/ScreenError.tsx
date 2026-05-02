@@ -12,6 +12,7 @@ import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { alertAccessibility } from '../../utils/accessibility';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import LogoMascot from '../mascot/LogoMascot';
+import Sazon from '../mascot/Sazon';
 import { HapticPatterns } from '../../constants/Haptics';
 
 export type ErrorType = 'network' | 'server' | 'notFound' | 'unauthorized' | 'generic' | 'offline';
@@ -123,7 +124,7 @@ export default function ScreenError({
         {/* Icon or Mascot */}
         <View style={styles.iconContainer}>
           {showMascot ? (
-            <LogoMascot expression="supportive" size="large" />
+            <Sazon variant="green" motion="peek" fx={[]} size={192} />
           ) : (
             <View style={[styles.iconCircle, { backgroundColor: `${colors.error}15` }]}>
               <Ionicons name={config.icon} size={48} color={colors.error} />

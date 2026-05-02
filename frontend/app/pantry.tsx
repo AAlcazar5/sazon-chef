@@ -154,7 +154,6 @@ export default function PantryScreen() {
               <Text style={editorialStyles.eyebrow}>WHAT YOU CAN COOK</Text>
               <Text style={[editorialStyles.title, { color: textPrimary }]}>
                 Right <Text style={editorialStyles.titleAccent}>now</Text>
-                <Text style={editorialStyles.orangePeriod}>.</Text>
               </Text>
               <Text style={[editorialStyles.subtitle, { color: textSecondary }]}>
                 Sorted by how much of your pantry each recipe uses.
@@ -235,11 +234,6 @@ const editorialStyles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: TITLE_SIZE,
     letterSpacing: -1.2,
-  },
-  orangePeriod: {
-    fontFamily: EditorialFontFamily.display.bold,
-    fontSize: TITLE_SIZE,
-    color: '#fa7e12',
   },
   subtitle: {
     fontFamily: EditorialFontFamily.body.medium,

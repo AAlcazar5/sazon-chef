@@ -23,6 +23,7 @@ import { useBiometricLock } from '../hooks/useBiometricLock';
 import { useShoppingListAppOpenCleanup } from '../hooks/useShoppingListAppOpenCleanup';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import LogoMascot from '../components/mascot/LogoMascot';
+import Sazon from '../components/mascot/Sazon';
 import '../global.css';
 
 function RootLayoutNav() {
@@ -125,7 +126,7 @@ function RootLayoutNav() {
   if (isAuthenticated && isLocked && biometricEnabled) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
-        <LogoMascot expression="thinking" size="large" />
+        <Sazon variant="green" motion="wobble" fx={['question']} size={192} />
         <Text className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-6 mb-2">
           Sazon is Locked
         </Text>

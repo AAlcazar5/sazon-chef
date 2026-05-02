@@ -23,7 +23,7 @@ function TotalPrepTimeCard({
 
   return (
     <View className="px-4 mb-4">
-      <View style={[{ backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
+      <View style={[{ backgroundColor: isDark ? DarkColors.card : '#FFFFFF', borderRadius: 20, padding: 20 }, Shadows.MD]}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
             <Icon name={Icons.COOK_TIME} size={IconSizes.MD} color={isDark ? DarkColors.primary : Colors.primary} accessibilityLabel="Total prep time" />

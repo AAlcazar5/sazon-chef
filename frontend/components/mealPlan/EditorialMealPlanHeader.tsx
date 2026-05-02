@@ -16,7 +16,6 @@ export function EditorialMealPlanHeader({ month, weekNumber }: EditorialMealPlan
       <Text style={styles.title}>
         This{' '}
         <Text style={styles.titleAccent}>week</Text>
-        <Text style={styles.orangePeriod}>.</Text>
       </Text>
       <Text style={styles.subtitle}>
         Four meals a day, balanced around your macro budget. Swap or auto-plan at any time.
@@ -47,11 +46,6 @@ const styles = StyleSheet.create({
     fontSize: 30,
     letterSpacing: -0.5,
     color: '#111827',
-  },
-  orangePeriod: {
-    fontFamily: EditorialFontFamily.display.semibold,
-    fontSize: 30,
-    color: '#fa7e12',
   },
   subtitle: {
     fontFamily: EditorialFontFamily.body.medium,

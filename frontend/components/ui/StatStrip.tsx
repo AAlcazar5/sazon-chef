@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewProps, Platform } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { EditorialShadows } from '../../constants/Shadows';
+import { DarkColors } from '../../constants/Colors';
 
 interface StatItem {
   value: string;
@@ -18,15 +20,21 @@ export function StatStrip({ stats, style, ...props }: StatStripProps) {
     android: EditorialShadows.cardRaised.android,
     default: {},
   });
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const containerBg = isDark ? DarkColors.card : '#FFFFFF';
+  const valueColor = isDark ? DarkColors.text.primary : '#111827';
+  const labelColor = isDark ? DarkColors.text.tertiary : '#9CA3AF';
+  const dividerBg = isDark ? DarkColors.border.light : '#F0EAE2';
 
   return (
-    <View style={[styles.container, shadowStyle, { marginTop: -28 }, style]} {...props}>
+    <View style={[styles.container, { backgroundColor: containerBg }, shadowStyle, { marginTop: -28 }, style]} {...props}>
       {stats.map((stat, i) => (
         <React.Fragment key={i}>
-          {i > 0 && <View testID="stat-divider" style={styles.divider} />}
+          {i > 0 && <View testID="stat-divider" style={[styles.divider, { backgroundColor: dividerBg }]} />}
           <View style={styles.statCol}>
-            <Text style={styles.value}>{stat.value}</Text>
-            <Text style={styles.label}>{stat.label.toUpperCase()}</Text>
+            <Text style={[styles.value, { color: valueColor }]}>{stat.value}</Text>
+            <Text style={[styles.label, { color: labelColor }]}>{stat.label.toUpperCase()}</Text>
           </View>
         </React.Fragment>
       ))}
@@ -37,7 +45,6 @@ export function StatStrip({ stats, style, ...props }: StatStripProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 8,
@@ -53,18 +60,15 @@ const styles = StyleSheet.create({
     fontFamily: EditorialFontFamily.display.semibold,
     fontSize: 22,
     letterSpacing: -0.5,
-    color: '#111827',
   },
   label: {
     fontFamily: EditorialFontFamily.body.extrabold,
     fontSize: 10,
     letterSpacing: 1.0,
-    color: '#9CA3AF',
     marginTop: 2,
   },
   divider: {
     width: 1,
     height: 32,
-    backgroundColor: '#F0EAE2',
   },
 });

@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { Colors } from '../../constants/Colors';
+import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { recipeApi } from '../../lib/api';
 
@@ -68,7 +68,7 @@ function RecipeCard({ option, onAddToPlan, isDark }: { option: RecipeOption; onA
   const { recipe, matchScore, matchBreakdown } = option;
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const bgCard = isDark ? '#1C1C1E' : '#FFFFFF';
+  const bgCard = isDark ? DarkColors.card : '#FFFFFF';
   const textPrimary = isDark ? '#F9FAFB' : '#111827';
   const textSecondary = isDark ? '#9CA3AF' : '#6B7280';
 

@@ -60,11 +60,11 @@ describe('EditorialGreeting (10V-D: Top bar + headline)', () => {
     expect(getByText('picks')).toBeTruthy();
   });
 
-  it('renders orange period', () => {
-    const { getByText } = render(
+  it('does not render trailing period after title', () => {
+    const { queryByText } = render(
       <EditorialGreeting onSearchPress={jest.fn()} onNotificationsPress={jest.fn()} />
     );
-    expect(getByText('.')).toBeTruthy();
+    expect(queryByText('.')).toBeNull();
   });
 
   it('renders subtitle text', () => {

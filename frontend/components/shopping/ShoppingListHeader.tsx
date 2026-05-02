@@ -39,6 +39,8 @@ interface ShoppingListHeaderProps {
   editNameOpacity: Animated.Value;
   createListScale: Animated.Value;
   createListOpacity: Animated.Value;
+  /** Opens the archive / list-history picker (opt-in; singleton UX) */
+  onOpenArchive?: () => void;
 }
 
 export default function ShoppingListHeader({
@@ -62,6 +64,7 @@ export default function ShoppingListHeader({
   editNameOpacity,
   createListScale,
   createListOpacity,
+  onOpenArchive,
 }: ShoppingListHeaderProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -212,6 +215,22 @@ export default function ShoppingListHeader({
                 </LinearGradient>
               </HapticTouchableOpacity>
 
+              {/* Archive / list-history button — singleton UX opt-in */}
+              {onOpenArchive && (
+                <HapticTouchableOpacity
+                  testID="header-archive-btn"
+                  onPress={onOpenArchive}
+                  style={[{
+                    padding: 12,
+                    borderRadius: BorderRadius.full,
+                    backgroundColor: isDark ? PastelDark.sky : Pastel.sky,
+                  }, Shadows.SM]}
+                  accessibilityLabel="View archived lists"
+                >
+                  <Icon name={Icons.SHOPPING_LIST_OUTLINE} size={IconSizes.MD} color={isDark ? Accent.sky : '#0369A1'} accessibilityLabel="View archived lists" />
+                </HapticTouchableOpacity>
+              )}
+
               {/* Overflow Menu Button */}
               <HapticTouchableOpacity
                 onPress={() => dispatch({ type: 'UPDATE', payload: { showOverflowMenu: true } })}
@@ -259,7 +278,7 @@ export default function ShoppingListHeader({
             >
               <Animated.View
                 style={[{
-                  backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                  backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
                   borderRadius: BorderRadius['2xl'],
                   width: '100%',
                   maxWidth: 360,
@@ -386,7 +405,7 @@ export default function ShoppingListHeader({
         >
           <Animated.View
             style={[{
-              backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+              backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
               borderRadius: BorderRadius['2xl'],
               padding: 24,
               width: '100%',
@@ -470,7 +489,7 @@ export default function ShoppingListHeader({
         >
           <Animated.View
             style={[{
-              backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+              backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
               borderRadius: BorderRadius['2xl'],
               padding: 24,
               width: '100%',

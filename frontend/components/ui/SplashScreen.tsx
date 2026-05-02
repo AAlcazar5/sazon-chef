@@ -88,9 +88,9 @@ export default function SplashScreen({ onFinish, duration = 2000 }: SplashScreen
     outputRange: [0.85, 1],
   });
 
-  // Brand gradient: warm orange → peach (matching ScreenGradient)
+  // Brand gradient: warm orange → peach (light) / warm cocoa scaffold (dark)
   const gradientColors = isDark
-    ? ['#1A1020', '#0F0F0F'] as const
+    ? ['#221915', '#1A1410'] as const
     : ['#fa7e12', '#FFD4A0', '#FFF3E0'] as const;
 
   return (

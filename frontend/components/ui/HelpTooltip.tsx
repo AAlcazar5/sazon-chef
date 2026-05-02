@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Modal, Pressable, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LogoMascot, { LogoMascotExpression } from '../mascot/LogoMascot';
+import Sazon, { expressionToSazon } from '../mascot/Sazon';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import GradientButton from './GradientButton';
 import Icon from './Icon';
@@ -99,10 +100,10 @@ export default function HelpTooltip({
             >
               {/* Header with Mascot */}
               <View className="flex-row items-center mb-4">
-                <LogoMascot
-                  expression={getMascotExpression()}
-                  size="medium"
-                />
+                {(() => {
+                  const cfg = expressionToSazon(getMascotExpression());
+                  return <Sazon variant={cfg.variant} motion={cfg.motion} fx={cfg.fx} size={96} />;
+                })()}
                 <View className="flex-1 ml-4">
                   <Text className="text-xl font-bold text-gray-900 dark:text-gray-100">
                     {title}

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { AnimatedLogoMascot } from '../mascot';
 import { LogoMascotExpression } from '../mascot/LogoMascot';
+import Sazon from '../mascot/Sazon';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import { Colors, DarkColors, Gradients } from '../../constants/Colors';
 import { useColorScheme } from 'react-native';
@@ -116,10 +117,11 @@ export default function SuccessState({
           transform: [{ scale: scaleAnim }],
         }}
       >
-        <AnimatedLogoMascot
-          expression={expression}
-          size={size}
-          animationType="celebrate"
+        <Sazon
+          variant="orange"
+          motion="celebrate"
+          fx={['confetti', 'hearts']}
+          size={size === 'hero' ? 256 : size === 'large' ? 192 : size === 'medium' ? 96 : 48}
         />
       </Animated.View>
 
