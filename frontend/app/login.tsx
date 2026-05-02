@@ -196,7 +196,7 @@ export default function LoginScreen() {
                   ...(Shadows.SM as any),
                 }}>
                   <Sazon
-                    variant={errors.form ? 'purple' : 'orange'}
+                    variant={errors.form ? 'red' : 'orange'}
                     motion={errors.form ? 'wobble' : 'idle'}
                     fx={errors.form ? ['question'] : []}
                     size={96}
@@ -245,7 +245,7 @@ export default function LoginScreen() {
                     alignItems: 'center',
                     ...(Shadows.SM as any),
                   }}>
-                    <Sazon variant="purple" motion="wobble" fx={['question']} size={24} />
+                    <Sazon variant="orange" motion="wobble" fx={['question']} size={24} />
                     <Text style={{
                       flex: 1,
                       marginLeft: 10,

@@ -951,7 +951,7 @@ export default function RecipeModal() {
           <View className="w-8" />
         </View>
         <View className="flex-1 items-center justify-center p-8">
-          <Sazon variant="purple" motion="peek" fx={[]} size={192} />
+          <Sazon variant="orange" motion="peek" fx={[]} size={192} />
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
             Failed to load recipe
           </Text>
