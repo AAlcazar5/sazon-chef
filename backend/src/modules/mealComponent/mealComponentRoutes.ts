@@ -11,3 +11,4 @@ mealComponentRoutes.get('/plate-from-pantry', mealComponentController.plateFromP
 
 export const composedPlateRoutes = Router();
 composedPlateRoutes.post('/', mealComponentController.createPlate);
+composedPlateRoutes.post('/:id/timeline', mealComponentController.plateTimeline);

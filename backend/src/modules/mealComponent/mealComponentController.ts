@@ -11,6 +11,8 @@ import {
   getPlateFromPantry,
   COMPONENT_SLOTS,
 } from '../../services/mealComponentService';
+import { solveCookTimeline, ComponentTask } from '../../services/cookTimelineService';
+import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
 
@@ -146,6 +148,71 @@ export const mealComponentController = {
       }
       console.error('Error creating composed plate:', error);
       return res.status(500).json({ error: 'Failed to save composed plate' });
+    }
+  },
+
+  async plateTimeline(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const plateId = req.params.id;
+    const userId = getUserId(req);
+
+    try {
+      const plate = await prisma.composedPlate.findFirst({
+        where: { id: plateId, userId },
+      });
+
+      if (!plate) {
+        return res.status(404).json({ error: 'Plate not found' });
+      }
+
+      let componentEntries: Array<{ slot: string; componentId: string; portionMultiplier: number }> = [];
+      try {
+        componentEntries = JSON.parse(plate.componentIds);
+      } catch {
+        return res.status(500).json({ error: 'Failed to compute cook timeline' });
+      }
+
+      const componentIds = componentEntries.map((e) => e.componentId);
+      const rows = await prisma.mealComponent.findMany({
+        where: {
+          id: { in: componentIds },
+          OR: [{ userId: null }, { userId }],
+        },
+      });
+
+      const byId = new Map(rows.map((r) => [r.id, r] as const));
+
+      const safeJsonArray = (raw: string): string[] => {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed.map(String) : [];
+        } catch {
+          return [];
+        }
+      };
+
+      const tasks: ComponentTask[] = componentEntries
+        .filter((e) => byId.has(e.componentId))
+        .map((e) => {
+          const row = byId.get(e.componentId)!;
+          return {
+            componentId: row.id,
+            name: row.name,
+            slot: e.slot as ComponentTask['slot'],
+            cookTimeMinutes: row.cookTimeMinutes ?? 0,
+            cookMethodHint: row.cookMethodHint,
+            equipmentNeeded: safeJsonArray(row.equipmentNeeded ?? '[]'),
+          };
+        });
+
+      const timeline = solveCookTimeline(tasks);
+      return res.json({ timeline });
+    } catch (error) {
+      console.error('Error computing cook timeline:', error);
+      return res.status(500).json({ error: 'Failed to compute cook timeline' });
     }
   },
 };

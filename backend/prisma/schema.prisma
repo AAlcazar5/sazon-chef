@@ -1035,6 +1035,8 @@ model MealComponent {
   cuisineTags             String   // JSON array, e.g. '["Mediterranean","Asian"]'
   dietaryTags             String   // JSON array, e.g. '["vegan","gluten_free"]'
   cookMethodHint          String   // roast | pan_sear | simmer | raw | mix
+  cookTimeMinutes         Int      @default(0)
+  equipmentNeeded         String   @default("[]") // JSON array: ["oven","stovetop_burner","none","mixing_bowl"]
   pantryIngredientNames   String   // JSON array used to compute pantry coverage
   imageUrl                String?
   isUserCreated           Boolean  @default(false)

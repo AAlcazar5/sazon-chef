@@ -7,12 +7,18 @@ const mockListComponents = jest.fn();
 const mockSaveComposedPlate = jest.fn();
 const mockGeneratePermutations = jest.fn();
 const mockGetPlateFromPantry = jest.fn();
+const mockSolveCookTimeline = jest.fn();
 
 jest.mock('../../../src/services/mealComponentService', () => ({
   listComponents: (...args: unknown[]) => mockListComponents(...args),
   saveComposedPlate: (...args: unknown[]) => mockSaveComposedPlate(...args),
   generatePermutations: (...args: unknown[]) => mockGeneratePermutations(...args),
   getPlateFromPantry: (...args: unknown[]) => mockGetPlateFromPantry(...args),
+  COMPONENT_SLOTS: ['protein', 'base', 'vegetable', 'sauce', 'garnish'],
+}));
+
+jest.mock('../../../src/services/cookTimelineService', () => ({
+  solveCookTimeline: (...args: unknown[]) => mockSolveCookTimeline(...args),
 }));
 
 const mockGetUserId = jest.fn();
@@ -20,6 +26,15 @@ const mockIsAuthenticated = jest.fn();
 jest.mock('../../../src/utils/authHelper', () => ({
   getUserId: (...args: unknown[]) => mockGetUserId(...args),
   isAuthenticated: (...args: unknown[]) => mockIsAuthenticated(...args),
+}));
+
+const mockPrismaComposedPlate = { findFirst: jest.fn() };
+const mockPrismaComponent = { findMany: jest.fn() };
+jest.mock('../../../src/lib/prisma', () => ({
+  prisma: {
+    composedPlate: mockPrismaComposedPlate,
+    mealComponent: mockPrismaComponent,
+  },
 }));
 
 import { mealComponentController } from '../../../src/modules/mealComponent/mealComponentController';
@@ -37,6 +52,8 @@ beforeEach(() => {
   mockIsAuthenticated.mockReturnValue(true);
   mockGeneratePermutations.mockResolvedValue([]);
   mockGetPlateFromPantry.mockResolvedValue(null);
+  mockPrismaComposedPlate.findFirst.mockResolvedValue(null);
+  mockPrismaComponent.findMany.mockResolvedValue([]);
 });
 
 describe('GET /api/meal-components', () => {
@@ -323,5 +340,86 @@ describe('GET /api/meal-components/plate-from-pantry', () => {
     await mealComponentController.plateFromPantry(req, res);
 
     expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe('POST /api/composed-plates/:id/timeline', () => {
+  const mockTimeline = {
+    totalMinutes: 30,
+    events: [
+      { componentId: 'b_farro', name: 'Farro', action: 'start', atMinuteFromStart: 0, equipmentUsed: ['stovetop_burner'] },
+    ],
+    equipmentConflicts: [],
+  };
+
+  it('returns 401 when not authenticated', async () => {
+    mockIsAuthenticated.mockReturnValueOnce(false);
+    const req = { params: { id: 'plate-1' } } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.plateTimeline(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  it('returns 404 when plate does not exist', async () => {
+    mockPrismaComposedPlate.findFirst.mockResolvedValueOnce(null);
+    const req = { params: { id: 'ghost-plate' } } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.plateTimeline(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Plate not found' });
+  });
+
+  it('returns 404 when plate belongs to a different user (IDOR prevention)', async () => {
+    mockGetUserId.mockReturnValueOnce('attacker-user');
+    mockPrismaComposedPlate.findFirst.mockResolvedValueOnce(null);
+    const req = { params: { id: 'plate-1' } } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.plateTimeline(req, res);
+
+    expect(mockPrismaComposedPlate.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ userId: 'attacker-user' }) })
+    );
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it('200 happy path returns { timeline } envelope', async () => {
+    const componentIds = JSON.stringify([
+      { slot: 'base', componentId: 'b_farro', portionMultiplier: 1 },
+      { slot: 'protein', componentId: 'p_salmon', portionMultiplier: 1 },
+    ]);
+    mockPrismaComposedPlate.findFirst.mockResolvedValueOnce({
+      id: 'plate-1',
+      userId: 'user-1',
+      componentIds,
+    });
+    mockPrismaComponent.findMany.mockResolvedValueOnce([
+      { id: 'b_farro', name: 'Farro', slot: 'base', cookTimeMinutes: 30, cookMethodHint: 'simmer', equipmentNeeded: '["stovetop_burner"]' },
+      { id: 'p_salmon', name: 'Salmon Fillet', slot: 'protein', cookTimeMinutes: 8, cookMethodHint: 'pan_sear', equipmentNeeded: '["stovetop_burner"]' },
+    ]);
+    mockSolveCookTimeline.mockReturnValueOnce(mockTimeline);
+
+    const req = { params: { id: 'plate-1' } } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.plateTimeline(req, res);
+
+    expect(mockSolveCookTimeline).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ timeline: mockTimeline });
+  });
+
+  it('returns 500 when prisma throws', async () => {
+    mockPrismaComposedPlate.findFirst.mockRejectedValueOnce(new Error('db fail'));
+    const req = { params: { id: 'plate-1' } } as unknown as Request;
+    const res = buildRes();
+
+    await mealComponentController.plateTimeline(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Failed to compute cook timeline' });
   });
 });

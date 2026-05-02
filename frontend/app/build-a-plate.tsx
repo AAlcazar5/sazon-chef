@@ -220,8 +220,11 @@ export default function BuildAPlateScreen() {
       const payload = { ...buildPayload(), saveAsRecipe: true };
       const res = await composedPlateApi.save(payload);
       HapticPatterns.success();
+      const savedPlateId = res.data?.plate?.id;
       const recipeId = res.data?.recipe?.id ?? res.data?.plate?.recipeId;
-      if (recipeId) {
+      if (savedPlateId) {
+        router.replace({ pathname: '/cook-timeline', params: { plateId: savedPlateId } } as any);
+      } else if (recipeId) {
         router.replace({ pathname: '/cooking', params: { id: recipeId } } as any);
       }
     } catch {
