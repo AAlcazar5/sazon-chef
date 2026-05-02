@@ -22,6 +22,7 @@ composedPlateRoutes.post('/:id/timeline', mealComponentController.plateTimeline)
 composedPlateRoutes.post('/:id/mark-cooked', mealComponentController.markPlateCooked);
 composedPlateRoutes.post('/:id/share', mealComponentController.sharePlate);
 composedPlateRoutes.post('/:id/save', mealComponentController.savePlate);
+composedPlateRoutes.get('/:id/variations', mealComponentController.plateVariations);
 
 export const sharedPlateRoutes = Router();
 sharedPlateRoutes.get('/:slug', mealComponentController.getSharedPlate);

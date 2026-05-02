@@ -29,6 +29,7 @@ import {
   savePlateForUser,
 } from '../../services/plateShareService';
 import { getUserSkillTier, visibleSlotsForTier } from '../../services/skillTierService';
+import { generatePlateVariations } from '../../services/composedPlateVariationService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -373,6 +374,32 @@ export const mealComponentController = {
     } catch (error) {
       console.error('Error listing leftovers:', error);
       return res.status(500).json({ error: 'Failed to list leftovers' });
+    }
+  },
+
+  async plateVariations(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const plateId = req.params.id;
+    if (!plateId || plateId.length > 128) {
+      return res.status(400).json({ error: 'Invalid plate id' });
+    }
+    const rawCount = req.query.count;
+    const parsedCount = typeof rawCount === 'string' ? Number(rawCount) : 3;
+    const count = Number.isFinite(parsedCount) ? parsedCount : 3;
+
+    try {
+      const userId = getUserId(req);
+      const variations = await generatePlateVariations({ plateId, userId, count });
+      return res.json({ variations });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/forbidden|not found/i.test(message)) {
+        return res.status(404).json({ error: message });
+      }
+      console.error('Error generating plate variations:', error);
+      return res.status(500).json({ error: 'Failed to generate plate variations' });
     }
   },
 

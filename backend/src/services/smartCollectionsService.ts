@@ -117,6 +117,12 @@ export const SMART_COLLECTION_DEFINITIONS: readonly SmartCollectionDefinition[] 
     icon: '📚',
     description: 'Saved but never cooked',
   },
+  {
+    id: 'composed',
+    name: 'My Plates',
+    icon: '🍽️',
+    description: 'Plates you composed in Build-a-Plate',
+  },
 ] as const;
 
 const ONE_POT_KEYWORDS = ['one-pot', 'one pot', 'sheet pan', 'sheet-pan', 'skillet'];
@@ -242,6 +248,14 @@ export function buildUserScopedFilter(
         },
       };
     }
+    case 'composed': {
+      // Composed-plate recipes are tagged with source='user-composed' by
+      // saveComposedPlate (Group 10X). Scope to the calling user's recipes.
+      return {
+        source: 'user-composed',
+        userId,
+      };
+    }
     default:
       return null;
   }
@@ -255,7 +269,9 @@ export function suggestCollectionsForRecipe(recipe: Recipe, now: Date = new Date
   return SMART_COLLECTION_DEFINITIONS
     .filter((def) => {
       // Skip user-scoped collections — they require DB context
-      if (def.id === 'recently_cooked' || def.id === 'uncooked') return false;
+      if (def.id === 'recently_cooked' || def.id === 'uncooked' || def.id === 'composed') {
+        return false;
+      }
       return recipeMatchesSmartCollection(recipe, def.id, now);
     })
     .map((def) => def.id);
