@@ -21,17 +21,26 @@ export default function UnitToggle({ onToggle }: UnitToggleProps) {
   const [system, setSystem] = useState<UnitSystem>('imperial');
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (stored === 'metric' || stored === 'imperial') {
-        setSystem(stored as UnitSystem);
-      }
-    });
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((stored) => {
+        if (stored === 'metric' || stored === 'imperial') {
+          setSystem(stored as UnitSystem);
+        }
+      })
+      .catch(() => {
+        // Ignore — fall through to the default 'imperial'. Keeps the toggle
+        // usable even when AsyncStorage is corrupted or unavailable.
+      });
   }, []);
 
   const toggle = async () => {
     const next: UnitSystem = system === 'imperial' ? 'metric' : 'imperial';
     setSystem(next);
-    await AsyncStorage.setItem(STORAGE_KEY, next);
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Persist failure is non-fatal; the in-memory toggle still flips.
+    }
     onToggle(next);
   };
 

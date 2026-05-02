@@ -71,7 +71,7 @@ export default function InStoreDoneButton({
           <View
             style={[
               styles.sheet,
-              { backgroundColor: isDark ? DarkColors.card : '#FFFFFF' },
+              { backgroundColor: isDark ? DarkColors.card : '#FAF7F4' },
               Shadows.LG,
             ]}
           >
