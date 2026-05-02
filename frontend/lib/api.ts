@@ -1851,6 +1851,53 @@ export interface PermutationsBody {
   prioritizePantry: boolean;
 }
 
+export type SkillTier = 'beginner' | 'cook' | 'chef';
+
+export interface SkillTierResponse {
+  tier: SkillTier;
+  visibleSlots: MealComponentSlot[];
+}
+
+export interface ComponentVariantResponse {
+  id: string;
+  variantKey: string;
+  label: string;
+  compatibilityScore: number;
+  hint?: string;
+  caloriesDeltaPerPortion?: number;
+  cookTimeMinutes?: number;
+}
+
+export interface AutoFitTarget {
+  calories: number;
+  protein: number;
+}
+
+export interface AutoFitLockedSlot {
+  slot: MealComponentSlot;
+  componentId: string;
+  portionMultiplier: number;
+}
+
+export interface AutoFitBody {
+  target: AutoFitTarget;
+  lockedSlots: AutoFitLockedSlot[];
+  slotsToFill: MealComponentSlot[];
+}
+
+export interface AutoFitFilledSlot {
+  slot: MealComponentSlot;
+  component: MealComponent;
+  portionMultiplier: number;
+}
+
+export interface AutoFitResult {
+  achievable: boolean;
+  filled: AutoFitFilledSlot[];
+  totals?: { calories: number; protein: number; carbs: number; fat: number };
+  gap?: { calories: number; protein: number };
+}
+
 export const mealComponentApi = {
   list: (params?: { slot?: MealComponentSlot; dietary?: string; cuisine?: string; q?: string }) =>
     apiClient.get<{ components: MealComponent[] }>('/meal-components', { params }),
@@ -1862,6 +1909,36 @@ export const mealComponentApi = {
     apiClient.get<{ slot: string; favorites: { componentId: string; score: number }[] }>('/meal-components/affinity', { params }),
   swapAway: (componentId: string) =>
     apiClient.post<{ ok: true }>(`/meal-components/${componentId}/swap-away`, {}),
+  skillTier: () =>
+    apiClient.get<SkillTierResponse>('/meal-components/skill-tier'),
+  variants: (componentId: string) =>
+    apiClient.get<{ variants: ComponentVariantResponse[] }>(`/meal-components/${componentId}/variants`),
+};
+
+export interface LeftoverInventoryItem {
+  id: string;
+  componentId: string;
+  slot: MealComponentSlot;
+  name: string;
+  portionsRemaining: number;
+  expiresAt?: string;
+}
+
+export const leftoverInventoryApi = {
+  list: (params?: { slot?: MealComponentSlot }) =>
+    apiClient.get<{ leftovers: LeftoverInventoryItem[] }>('/leftover-inventory', { params }),
+};
+
+export type TrackedNutrient = 'fiberG' | 'omega3G' | 'vitaminDIu' | 'ironMg' | 'magnesiumMg';
+
+export interface NutrientGapResponse {
+  topGap: TrackedNutrient | null;
+  pctRemainingByNutrient: Record<TrackedNutrient, number>;
+}
+
+export const nutrientGapApi = {
+  fetchTopGap: () =>
+    apiClient.get<NutrientGapResponse>('/nutrient-gap/top'),
 };
 
 export interface ComposedPlateSaveResponse {
@@ -1892,6 +1969,9 @@ export const composedPlateApi = {
 
   timeline: (plateId: string) =>
     apiClient.post<{ timeline: ParallelTimeline }>(`/composed-plates/${plateId}/timeline`, {}),
+
+  autoFit: (body: AutoFitBody) =>
+    apiClient.post<{ result: AutoFitResult }>('/composed-plates/auto-fit', body),
 };
 
 export type { ApiResponse, ApiError };

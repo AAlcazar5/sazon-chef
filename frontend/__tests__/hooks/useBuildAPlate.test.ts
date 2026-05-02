@@ -114,6 +114,7 @@ describe('computeTotals', () => {
       carbs: 0,
       fat: 0,
       fiber: 0,
+      cost: 0,
       pantryCoveragePercent: 0,
     });
   });

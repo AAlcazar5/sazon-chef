@@ -54,8 +54,26 @@ jest.mock('../../lib/api', () => ({
     permutations: jest.fn().mockResolvedValue({ data: { permutations: [] } }),
     affinity: jest.fn().mockResolvedValue({ data: { slot: 'protein', favorites: [] } }),
     swapAway: jest.fn().mockResolvedValue({ data: { ok: true } }),
+    skillTier: jest.fn().mockResolvedValue({
+      data: { tier: 'cook', visibleSlots: ['protein', 'base', 'vegetable', 'sauce'] },
+    }),
+    variants: jest.fn().mockResolvedValue({ data: { variants: [] } }),
   },
-  composedPlateApi: { save: jest.fn(), get: jest.fn() },
+  composedPlateApi: {
+    save: jest.fn(),
+    get: jest.fn(),
+    autoFit: jest.fn().mockResolvedValue({
+      data: { result: { achievable: true, filled: [], totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } } },
+    }),
+  },
+  leftoverInventoryApi: {
+    list: jest.fn().mockResolvedValue({ data: { leftovers: [] } }),
+  },
+  nutrientGapApi: {
+    fetchTopGap: jest.fn().mockResolvedValue({
+      data: { topGap: null, pctRemainingByNutrient: {} },
+    }),
+  },
   shoppingListApi: {
     getShoppingLists: jest.fn(),
     createShoppingList: jest.fn(),
@@ -559,5 +577,30 @@ describe('BuildAPlateScreen — Cook Now fork (Phase 3)', () => {
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(
       expect.objectContaining({ pathname: '/cooking', params: { id: 'recipe-abc' } }),
     ));
+  });
+});
+
+describe('BuildAPlateScreen — Phase 5/8/9 enhancements', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    setupApi();
+  });
+
+  it('mounts the macro fit pill in the composer header', async () => {
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('macro-fit-btn')).toBeTruthy());
+  });
+
+  it('mounts the budget toggle pill in the composer header', async () => {
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('budget-toggle')).toBeTruthy());
+  });
+
+  it('renders the substitution banner when ?plateId is present and pantry has missing items', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ plateId: 'plate-shared-1', subsCount: '2' });
+
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('substitution-banner')).toBeTruthy());
   });
 });

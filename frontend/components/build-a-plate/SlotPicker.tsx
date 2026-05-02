@@ -1,5 +1,6 @@
 // frontend/components/build-a-plate/SlotPicker.tsx
-// Group 10X Phase 1 — bottom sheet picker, horizontal scrolling pastel cards sorted by pantry coverage.
+// Group 10X Phase 1+6+9 — bottom sheet picker, horizontal scrolling pastel cards sorted by pantry coverage.
+// Phase 6: leftover strip + variant chips. Phase 9: nutrient badges + rainbow hint (vegetable).
 
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
@@ -7,6 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import BottomSheet from '../ui/BottomSheet';
 import LoadingState from '../ui/LoadingState';
+import LeftoverStrip, { type LeftoverInventoryItem } from './LeftoverStrip';
+import VariantChips, { type ComponentVariant } from './VariantChips';
+import NutrientBadge from './NutrientBadge';
+import RainbowHint from './RainbowHint';
 import { Pastel, Accent } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { BorderRadius } from '../../constants/Spacing';
@@ -15,7 +20,7 @@ import {
   sortByPantryCoverage,
   PANTRY_ONLY_THRESHOLD,
 } from '../../hooks/useBuildAPlate';
-import type { MealComponent, MealComponentSlot } from '../../lib/api';
+import type { MealComponent, MealComponentSlot, TrackedNutrient } from '../../lib/api';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface SlotPickerProps {
@@ -29,6 +34,18 @@ interface SlotPickerProps {
   testID?: string;
   favoriteIds?: Set<string>;
   scoresById?: Map<string, number>;
+  /** Phase 6 — leftovers from last night for this slot */
+  leftovers?: LeftoverInventoryItem[];
+  onSelectLeftover?: (leftover: LeftoverInventoryItem) => void;
+  /** Phase 6 — variant chips for the highlighted component (chef tier) */
+  variants?: ComponentVariant[];
+  onSelectVariant?: (variant: ComponentVariant) => void;
+  /** Phase 9 — top nutrient gap highlights */
+  topNutrientGap?: TrackedNutrient | null;
+  nutrientAmountById?: Map<string, number>;
+  /** Phase 9 — rainbow hint props (vegetable picker only) */
+  greenVegCount?: number;
+  totalPlatesThisWeek?: number;
 }
 
 const SLOT_TINTS: Record<MealComponentSlot, string> = {
@@ -64,6 +81,14 @@ export default function SlotPicker({
   testID,
   favoriteIds = new Set(),
   scoresById = new Map(),
+  leftovers,
+  onSelectLeftover,
+  variants,
+  onSelectVariant,
+  topNutrientGap = null,
+  nutrientAmountById,
+  greenVegCount,
+  totalPlatesThisWeek,
 }: SlotPickerProps) {
   const [activeDietary, setActiveDietary] = useState<string | null>(null);
   const [activeCuisine, setActiveCuisine] = useState<string | null>(null);
@@ -98,6 +123,34 @@ export default function SlotPicker({
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title} snapPoints={['72%']} scrollable>
       <View style={[styles.tintBar, { backgroundColor: tint }]} testID={`${testID}-tint`} />
+
+      {leftovers && leftovers.length > 0 && onSelectLeftover && (
+        <LeftoverStrip
+          leftovers={leftovers}
+          onSelect={onSelectLeftover}
+          testID={`${testID}-leftovers`}
+        />
+      )}
+
+      {slot === 'vegetable' &&
+        typeof greenVegCount === 'number' &&
+        typeof totalPlatesThisWeek === 'number' && (
+          <RainbowHint
+            greenVegCount={greenVegCount}
+            totalPlates={totalPlatesThisWeek}
+            testID={`${testID}-rainbow-hint`}
+          />
+        )}
+
+      {variants && variants.length > 0 && onSelectVariant && (
+        <View style={styles.variantsRow}>
+          <VariantChips
+            variants={variants}
+            onSelect={onSelectVariant}
+            testID={`${testID}-variants`}
+          />
+        </View>
+      )}
 
       {(dietaryChips.length > 0 || cuisineChips.length > 0) && (
         <ScrollView
@@ -161,6 +214,7 @@ export default function SlotPicker({
         >
           {filtered.map((component) => {
             const isFavorite = favoriteIds.has(component.id);
+            const nutrientAmount = nutrientAmountById?.get(component.id) ?? 0;
             return (
               <HapticTouchableOpacity
                 key={component.id}
@@ -181,6 +235,15 @@ export default function SlotPicker({
                     <Text style={[styles.cardName, { color: titleColor }]} numberOfLines={1}>{component.name}</Text>
                     {component.description && (
                       <Text style={[styles.cardDescription, { color: bodyColor }]} numberOfLines={2}>{component.description}</Text>
+                    )}
+                    {topNutrientGap && nutrientAmount > 0 && (
+                      <View style={styles.nutrientBadgeWrap}>
+                        <NutrientBadge
+                          topGap={topNutrientGap}
+                          amountForGap={nutrientAmount}
+                          testID={`${testID}-nutrient-badge-${component.id}`}
+                        />
+                      </View>
                     )}
                     <View style={styles.cardChips}>
                       <Text style={styles.cardChip}>{Math.round(component.caloriesPerPortion)} cal</Text>
@@ -344,5 +407,12 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 10,
     color: '#8a4a00',
+  },
+  variantsRow: {
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  nutrientBadgeWrap: {
+    marginTop: 6,
   },
 });
