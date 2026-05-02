@@ -20,7 +20,7 @@ import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet, EditorialHomeLayout } from '../../components/home';
+import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet, EditorialHomeLayout, StretchHomeCard, PlateOfWeekCard } from '../../components/home';
 import type { DislikeReason } from '../../components/home';
 import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
@@ -872,6 +872,12 @@ export default function HomeScreen() {
           onRecipePress={handleRecipePress}
           onToggleSave={handleSave}
         />
+
+        {/* Group 10X Phase 6 — Stretch last night card */}
+        <StretchHomeCard />
+
+        {/* Group 10X Phase 8 — Plate of the week editorial card */}
+        <PlateOfWeekCard />
 
         {/* Contextual Recipe Sections (below editorial fold) */}
         <RecipeSectionsGrid
