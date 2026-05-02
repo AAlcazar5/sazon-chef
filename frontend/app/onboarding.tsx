@@ -444,7 +444,7 @@ interface EditorialStepProps {
 // 2: Goal → purple, celebrating with hearts
 const STEP_SAZON: readonly { variant: SazonVariant; motion: SazonMotion; fx: SazonFx[] }[] = [
   { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },
-  { variant: 'green', motion: 'wobble', fx: ['question'] },
+  { variant: 'red', motion: 'wobble', fx: ['question'] },
   { variant: 'purple', motion: 'celebrate', fx: ['hearts'] },
 ];
 
