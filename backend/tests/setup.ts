@@ -45,6 +45,7 @@ const createPrismaMock = () => ({
       findMany: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
+      upsert: jest.fn(),
       delete: jest.fn(),
       deleteMany: jest.fn(),
       findFirst: jest.fn()
@@ -188,6 +189,18 @@ const createPrismaMock = () => ({
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    mealComponent: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      upsert: jest.fn(),
+    },
+    composedPlate: {
+      create: jest.fn(),
+      update: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+    },
     // $transaction default: invoke the callback with the same prisma mock,
     // so services that use prisma.$transaction(async (tx) => {...}) work
     // against the unit-test mocks. Tests that need to override per-call can
@@ -280,6 +293,10 @@ jest.mock('@modules/ingredientAvailability/ingredientAvailabilityRoutes', () => 
 }));
 jest.mock('@modules/pantry/pantryRoutes', () => ({
   __esModule: true, default: mockRouter
+}));
+jest.mock('@modules/mealComponent/mealComponentRoutes', () => ({
+  mealComponentRoutes: mockRouter,
+  composedPlateRoutes: mockRouter,
 }));
 jest.mock('@modules/upload/uploadRoute', () => ({
   __esModule: true, default: mockRouter

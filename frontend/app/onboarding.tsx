@@ -25,6 +25,8 @@ import { router, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { userApi } from '../lib/api';
+import { track } from '../lib/analytics';
+import BrandButton from '../components/ui/BrandButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LogoMascot from '../components/mascot/LogoMascot';
 import Sazon, { type SazonVariant, type SazonMotion, type SazonFx } from '../components/mascot/Sazon';
@@ -40,7 +42,7 @@ import { HapticPatterns } from '../constants/Haptics';
 import { useColorScheme } from 'nativewind';
 
 // ─── Step configuration ─────────────────────────────────────────────────
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 type StepTheme = {
   // Background gradient (top → bottom)
@@ -78,6 +80,14 @@ const STEP_THEMES: readonly StepTheme[] = [
     circleBg: '#D9B6E1',
     circleRing: '#EAD7EE',
     circleGradientDark: HeroPlatesDark.lavender.bg,
+  },
+  // 3: Build your first plate — golden (light) / amber (dark)
+  {
+    gradient: ['#FFE08A', '#FFF8E1', '#FFFFFF'],
+    gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
+    circleBg: '#FFD86B',
+    circleRing: '#FFEFC1',
+    circleGradientDark: HeroPlatesDark.orange.bg,
   },
 ];
 
@@ -156,13 +166,18 @@ export default function OnboardingScreen() {
     transform: [{ scale: slideScale.value }],
   }));
 
-  const nextStep = () => {
+  const nextStep = async () => {
+    if (currentStep === 2) {
+      const ok = await persistPreferences();
+      if (!ok) return;
+      animateToStep(3);
+      setCurrentStep(3);
+      return;
+    }
     if (currentStep < TOTAL_STEPS - 1) {
       const next = currentStep + 1;
       animateToStep(next);
       setCurrentStep(next);
-    } else {
-      saveOnboarding();
     }
   };
 
@@ -183,7 +198,7 @@ export default function OnboardingScreen() {
     }));
   };
 
-  const saveOnboarding = async () => {
+  const persistPreferences = async (): Promise<boolean> => {
     try {
       setSaving(true);
       const prefsPayload: Record<string, any> = {
@@ -196,15 +211,24 @@ export default function OnboardingScreen() {
       await userApi.updatePreferences(prefsPayload);
       if (data.fitnessGoal) await AsyncStorage.setItem('onboarding_goal', data.fitnessGoal);
       await AsyncStorage.setItem('onboarding_complete', 'true');
-
       HapticPatterns.success();
-      setShowSuccessModal(true);
+      return true;
     } catch {
       HapticPatterns.error();
       Alert.alert('Oops!', "Couldn't save your preferences — give it another shot?");
+      return false;
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleBuildFirstPlate = () => {
+    router.push('/build-a-plate?seed=beginner' as any);
+  };
+
+  const handleSkipFirstPlate = () => {
+    track('skipped_first_plate');
+    router.replace('/(tabs)');
   };
 
   const skipOnboarding = () => {
@@ -259,7 +283,7 @@ export default function OnboardingScreen() {
             stepIndex={1}
             theme={STEP_THEMES[1]}
             isDark={isDark}
-            eyebrow="Step 1 of 3"
+            eyebrow="Step 1 of 4"
             mascotExpression="thinking"
             titleLead="Any foods "
             titleAccent="to avoid"
@@ -284,7 +308,7 @@ export default function OnboardingScreen() {
             stepIndex={2}
             theme={STEP_THEMES[2]}
             isDark={isDark}
-            eyebrow="Step 2 of 3"
+            eyebrow="Step 2 of 4"
             mascotExpression="chef-kiss"
             titleLead="What's your "
             titleAccent="goal"
@@ -302,6 +326,20 @@ export default function OnboardingScreen() {
               onSelect={(id) => setData(prev => ({ ...prev, fitnessGoal: id }))}
             />
           </EditorialStep>
+        );
+      case 3:
+        return (
+          <EditorialStep
+            stepIndex={3}
+            theme={STEP_THEMES[3]}
+            isDark={isDark}
+            eyebrow="One more thing"
+            mascotExpression="excited"
+            titleLead="Build your first "
+            titleAccent="plate"
+            terminator="."
+            subtitle="Mix a protein, a base, vegetables, and a sauce — Sazon does the rest. One tap and you've got dinner."
+          />
         );
       default:
         return null;
@@ -368,40 +406,64 @@ export default function OnboardingScreen() {
 
         {/* Dark editorial CTA pill + ghost back on steps 1-2 */}
         <View style={styles.ctaWrap}>
-          <HapticTouchableOpacity
-            onPress={nextStep}
-            disabled={saving}
-            accessibilityLabel={ctaLabel}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: saving }}
-            testID="onboarding-cta"
-            style={[
-              styles.ctaPill,
-              {
-                backgroundColor: isDark ? DarkColors.primary : EditorialColors.blackCTA,
-                opacity: saving ? 0.7 : 1,
-                ...(isDark
-                  ? {
-                      shadowColor: DarkColors.primary,
-                      shadowOpacity: 0.35,
-                      shadowRadius: 24,
-                      shadowOffset: { width: 0, height: 10 },
-                      elevation: 8,
-                    }
-                  : null),
-              },
-            ]}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color={isDark ? DarkColors.text.inverse : '#FFFFFF'} />
-            ) : (
-              <Text style={[styles.ctaLabel, { color: isDark ? DarkColors.text.inverse : '#FFFFFF' }]}>
-                {ctaLabel}
-              </Text>
-            )}
-          </HapticTouchableOpacity>
+          {currentStep === 3 ? (
+            <>
+              <BrandButton
+                label="Build my first plate"
+                variant="sage"
+                icon="restaurant-outline"
+                onPress={handleBuildFirstPlate}
+                testID="onboarding-build-plate-cta"
+                accessibilityLabel="Build my first plate"
+              />
+              <HapticTouchableOpacity
+                onPress={handleSkipFirstPlate}
+                accessibilityLabel="Skip for now"
+                accessibilityRole="button"
+                testID="onboarding-skip-plate"
+                style={styles.ghostBack}
+              >
+                <Text style={[styles.ghostBackLabel, { color: isDark ? DarkColors.text.tertiary : '#6B7280' }]}>
+                  Skip for now
+                </Text>
+              </HapticTouchableOpacity>
+            </>
+          ) : (
+            <HapticTouchableOpacity
+              onPress={nextStep}
+              disabled={saving}
+              accessibilityLabel={ctaLabel}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: saving }}
+              testID="onboarding-cta"
+              style={[
+                styles.ctaPill,
+                {
+                  backgroundColor: isDark ? DarkColors.primary : EditorialColors.blackCTA,
+                  opacity: saving ? 0.7 : 1,
+                  ...(isDark
+                    ? {
+                        shadowColor: DarkColors.primary,
+                        shadowOpacity: 0.35,
+                        shadowRadius: 24,
+                        shadowOffset: { width: 0, height: 10 },
+                        elevation: 8,
+                      }
+                    : null),
+                },
+              ]}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={isDark ? DarkColors.text.inverse : '#FFFFFF'} />
+              ) : (
+                <Text style={[styles.ctaLabel, { color: isDark ? DarkColors.text.inverse : '#FFFFFF' }]}>
+                  {ctaLabel}
+                </Text>
+              )}
+            </HapticTouchableOpacity>
+          )}
 
-          {currentStep > 0 && (
+          {currentStep > 0 && currentStep !== 3 && (
             <HapticTouchableOpacity
               onPress={prevStep}
               disabled={saving}
@@ -461,6 +523,7 @@ const STEP_SAZON: readonly { variant: SazonVariant; motion: SazonMotion; fx: Saz
   { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },
   { variant: 'red', motion: 'wobble', fx: ['question'] },
   { variant: 'orange', motion: 'celebrate', fx: ['hearts'] },
+  { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },
 ];
 
 function EditorialStep({
