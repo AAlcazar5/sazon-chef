@@ -250,30 +250,105 @@ describe('AIRecipeService - Prompt Engineering', () => {
   describe('getFitnessGoalContext', () => {
     test('should return weight loss context', () => {
       const context = (aiService as any).getFitnessGoalContext('lose_weight');
-      
+
       expect(context).toContain('satiety');
       expect(context).toContain('protein');
     });
 
     test('should return muscle gain context', () => {
       const context = (aiService as any).getFitnessGoalContext('gain_muscle');
-      
+
       expect(context).toContain('muscle');
       expect(context).toContain('protein');
     });
 
     test('should return maintenance context', () => {
       const context = (aiService as any).getFitnessGoalContext('maintain');
-      
+
       expect(context).toContain('balanced');
       expect(context).toContain('sustainable');
     });
 
     test('should return default context for unknown goal', () => {
       const context = (aiService as any).getFitnessGoalContext('unknown');
-      
+
       expect(context).toContain('balanced');
       expect(context).toContain('sustainable');
+    });
+  });
+
+  describe('Group 11 health-tier addendum integration', () => {
+    test('appends naturally_healthy addendum for Okinawan cuisine override', () => {
+      const params = {
+        userId: 'test-user',
+        cuisineOverride: 'Okinawan',
+      };
+
+      const prompt = (aiService as any).buildRecipePrompt(params);
+
+      expect(prompt).toContain('naturally healthy');
+    });
+
+    test('appends easily_adapted addendum for Soul Food cuisine override', () => {
+      const params = {
+        userId: 'test-user',
+        cuisineOverride: 'Soul Food',
+      };
+
+      const prompt = (aiService as any).buildRecipePrompt(params);
+
+      expect(prompt.toLowerCase()).toContain('lighter version');
+    });
+
+    test('appends hidden_superfoods addendum for Nigerian cuisine override', () => {
+      const params = {
+        userId: 'test-user',
+        cuisineOverride: 'Nigerian',
+      };
+
+      const prompt = (aiService as any).buildRecipePrompt(params);
+
+      expect(prompt.toLowerCase()).toContain('superfood');
+    });
+
+    test('does not append a tier addendum for an unknown cuisine', () => {
+      const params = {
+        userId: 'test-user',
+        cuisineOverride: 'Atlantean',
+      };
+
+      const prompt = (aiService as any).buildRecipePrompt(params);
+
+      expect(prompt).not.toContain('naturally healthy');
+      expect(prompt).not.toContain('lighter version');
+      expect(prompt).not.toContain('superfood');
+    });
+  });
+
+  describe('Group 11 cuisine adjacency hints', () => {
+    test('appends top adjacency hints for Thai cuisine override', () => {
+      const params = {
+        userId: 'test-user',
+        cuisineOverride: 'Thai',
+      };
+
+      const prompt = (aiService as any).buildRecipePrompt(params);
+
+      expect(prompt.toLowerCase()).toMatch(/influences? from/);
+      expect(prompt).toContain('Lao');
+      // Thai's next-highest adjacencies are Vietnamese (0.7) and Cambodian (0.7)
+      expect(prompt).toContain('Vietnamese');
+    });
+
+    test('omits adjacency line when the cuisine has no adjacency entries', () => {
+      const params = {
+        userId: 'test-user',
+        cuisineOverride: 'Atlantean',
+      };
+
+      const prompt = (aiService as any).buildRecipePrompt(params);
+
+      expect(prompt.toLowerCase()).not.toContain('influences from');
     });
   });
 });

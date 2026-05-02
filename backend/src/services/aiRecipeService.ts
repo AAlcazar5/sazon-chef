@@ -2,6 +2,8 @@
 import { prisma } from '@lib/prisma';
 import { imageService } from './imageService';
 import { AIProviderManager } from './aiProviders/AIProviderManager';
+import { getHealthPromptAddendum } from '../utils/cuisineHealthTier';
+import { getAdjacentCuisines } from '../utils/cuisineAdjacency';
 
 interface RecipeGenerationParams {
   userId: string | null;
@@ -569,6 +571,25 @@ Return JSON only.`;
       parts.push(
         `Choose from these cuisines: ${params.userPreferences.likedCuisines.join(', ')}.`
       );
+    }
+
+    // Group 11 Phase 3 — health-tier addendum (cuisine-specific generation strategy)
+    if (params.cuisineOverride) {
+      const healthAddendum = getHealthPromptAddendum(params.cuisineOverride);
+      if (healthAddendum) {
+        parts.push(healthAddendum);
+      }
+    }
+
+    // Group 11 Phase 1 — cuisine adjacency hints (top-3 related cuisines by weight)
+    if (params.cuisineOverride) {
+      const adjacent = getAdjacentCuisines(params.cuisineOverride)
+        .sort((a, b) => b.weight - a.weight)
+        .slice(0, 3)
+        .map((edge) => edge.cuisine);
+      if (adjacent.length > 0) {
+        parts.push(`Also consider influences from ${adjacent.join(', ')}.`);
+      }
     }
 
     // Macro goals (CRITICAL for macro-friendly app)
