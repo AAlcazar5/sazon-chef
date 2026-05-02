@@ -713,18 +713,25 @@ model ScoringWeights {
 }
 
 model ShoppingList {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name            String   @default("My Shopping List")
-  isActive        Boolean  @default(true)
-  sourceRecipeIds String?  // JSON array of recipe IDs used to generate this list
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String    @default("My Shopping List")
+  isActive        Boolean   @default(true)
+  sourceRecipeIds String?   // JSON array of recipe IDs used to generate this list
+  // Group 10Q-ListMgmt: lifecycle fields
+  archivedAt      DateTime?
+  tier            String    @default("active") // "active" | "archived" | "older"
+  summaryStats    String?   // JSON string, populated when tier flips to "older"
+  // Group 10Q-ListMgmt: auto-name provenance — cleared when user manually renames
+  autoNamedFrom   String?   // JSON: { source: "recipes"|"mealPlan"|"items", payload: any }
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   items ShoppingListItem[]
 
   @@index([userId, isActive])
+  @@index([userId, tier])
   @@map("shopping_lists")
 }
 
@@ -779,6 +786,20 @@ model ShoppingListShare {
   @@index([token])
   @@index([listId])
   @@map("shopping_list_shares")
+}
+
+// Group 10Q-ListMgmt: records when a user dismisses a merge suggestion pair
+// Prevents the same pair from being re-suggested.
+model MergeDismissal {
+  id           String   @id @default(cuid())
+  userId       String
+  sourceListId String
+  targetListId String
+  dismissedAt  DateTime @default(now())
+
+  @@unique([userId, sourceListId, targetListId])
+  @@index([userId, targetListId])
+  @@map("merge_dismissals")
 }
 
 model PurchaseHistory {

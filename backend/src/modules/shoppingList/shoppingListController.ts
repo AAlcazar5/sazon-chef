@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 import { notificationTriggerService } from '../../services/notificationTriggerService';
 import { categorizeItem } from '../../utils/aisleCategorizer';
+import { setActiveList } from '../../services/shoppingListLifecycleService';
 
 /**
  * Auto-stock pantry when a shopping item is marked purchased.
@@ -1417,6 +1418,26 @@ export const shoppingListController = {
   },
 
   /**
+   * Restore an archived shopping list, making it the active list.
+   * POST /api/shopping-lists/:id/restore
+   */
+  async restoreList(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const result = await setActiveList(userId, id);
+      res.json(result);
+    } catch (error: any) {
+      if (error.message && error.message.toLowerCase().includes('not found')) {
+        return res.status(404).json({ error: 'Shopping list not found' });
+      }
+      console.error('[SHOPPING_LIST] Error restoring list:', error);
+      res.status(500).json({ error: 'Unable to restore shopping list' });
+    }
+  },
+
+  /**
    * Budget preview for a set of recipes
    * POST /api/shopping-lists/budget-preview
    * Body: { recipeIds: string[], servingsMultiplier?: Record<recipeId, number> }
@@ -1576,6 +1597,310 @@ export const shoppingListController = {
     } catch (error: any) {
       console.error('Error generating budget preview:', error);
       res.status(500).json({ error: 'Failed to generate budget preview' });
+    }
+  },
+
+  // ─── Group 10Q-ListMgmt ──────────────────────────────────────────────────
+
+  /**
+   * POST /api/shopping-lists/:id/done
+   * "I'm done shopping" explicit action.
+   * Archives the current list, rolls un-purchased items into a new list named
+   * "Unfinished from <MMM d>", sets the new list as active, returns counts.
+   * If all items are purchased, no new list is created.
+   */
+  async markListDone(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const list = await prisma.shoppingList.findFirst({
+        where: { id, userId },
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: 'Shopping list not found' });
+      }
+
+      const items = await prisma.shoppingListItem.findMany({
+        where: { shoppingListId: id },
+      });
+
+      // Archive the current list via lifecycle service
+      const { archiveList, setActiveList } = await import('../../services/shoppingListLifecycleService');
+      await archiveList(userId, id);
+
+      const unpurchasedItems = items.filter((i) => !i.purchased);
+
+      if (unpurchasedItems.length === 0) {
+        return res.json({
+          archivedListId: id,
+          rolledOverItemCount: 0,
+        });
+      }
+
+      // Format archive date as "MMM d" (e.g., "Apr 30")
+      const archiveDate = new Date();
+      const dateLabel = archiveDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const newListName = `Unfinished from ${dateLabel}`;
+
+      // Create new list with rolled-over items
+      const newList = await prisma.shoppingList.create({
+        data: {
+          userId,
+          name: newListName,
+          isActive: false,
+          tier: 'archived',
+          items: {
+            create: unpurchasedItems.map((item) => ({
+              name: item.name,
+              quantity: item.quantity,
+              category: item.category ?? null,
+              notes: item.notes ?? null,
+              price: item.price ?? null,
+              purchased: false,
+            })),
+          },
+        },
+      });
+
+      // Set new list as active
+      await setActiveList(userId, newList.id);
+
+      return res.json({
+        archivedListId: id,
+        newActiveListId: newList.id,
+        rolledOverItemCount: unpurchasedItems.length,
+      });
+    } catch (error: any) {
+      console.error('[SHOPPING_LIST] POST /:id/done - ERROR:', error.message);
+      res.status(500).json({ error: 'Unable to complete shopping session' });
+    }
+  },
+
+  /**
+   * POST /api/shopping-lists/:id/clear
+   * "Start fresh" — deletes all items from the list, list itself remains.
+   */
+  async clearItems(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const list = await prisma.shoppingList.findFirst({
+        where: { id, userId },
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: 'Shopping list not found' });
+      }
+
+      const result = await prisma.shoppingListItem.deleteMany({
+        where: { shoppingListId: id },
+      });
+
+      return res.json({ success: true, deletedCount: result.count });
+    } catch (error: any) {
+      console.error('[SHOPPING_LIST] POST /:id/clear - ERROR:', error.message);
+      res.status(500).json({ error: 'Unable to clear shopping list' });
+    }
+  },
+
+  /**
+   * POST /api/shopping-lists/:id/bulk-add
+   * Adds multiple items to a list (used by undo restore after Start Fresh).
+   */
+  async bulkAddItems(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const { items } = req.body;
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Items array is required' });
+      }
+
+      const list = await prisma.shoppingList.findFirst({
+        where: { id, userId },
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: 'Shopping list not found' });
+      }
+
+      await prisma.shoppingListItem.createMany({
+        data: items.map((item: any) => ({
+          shoppingListId: id,
+          name: item.name,
+          quantity: item.quantity || '1',
+          category: item.category ?? null,
+          notes: item.notes ?? null,
+          price: item.price ?? null,
+          purchased: false,
+        })),
+      });
+
+      return res.json({ success: true, addedCount: items.length });
+    } catch (error: any) {
+      console.error('[SHOPPING_LIST] POST /:id/bulk-add - ERROR:', error.message);
+      res.status(500).json({ error: 'Unable to add items' });
+    }
+  },
+
+  /**
+   * GET /api/shopping-lists/active/merge-suggestion
+   * Returns the top merge suggestion (≥70% Jaccard overlap with a list archived in last 48h)
+   * that hasn't been dismissed by the user. Returns null if no suggestion found.
+   */
+  async getMergeSuggestion(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+
+      const activeList = await prisma.shoppingList.findFirst({
+        where: { userId, isActive: true },
+      });
+
+      if (!activeList) {
+        return res.json(null);
+      }
+
+      const activeItems = await prisma.shoppingListItem.findMany({
+        where: { shoppingListId: activeList.id },
+        select: { name: true },
+      });
+
+      if (activeItems.length === 0) {
+        return res.json(null);
+      }
+
+      const activeSet = new Set(activeItems.map((i) => i.name.toLowerCase().trim()));
+
+      // Find lists archived in the last 48 hours
+      const cutoff = new Date();
+      cutoff.setHours(cutoff.getHours() - 48);
+
+      const recentArchived = await prisma.shoppingList.findMany({
+        where: {
+          userId,
+          isActive: false,
+          archivedAt: { gte: cutoff },
+        },
+        orderBy: { archivedAt: 'desc' },
+      });
+
+      if (recentArchived.length === 0) {
+        return res.json(null);
+      }
+
+      // Find best overlap candidate that hasn't been dismissed
+      for (const candidate of recentArchived) {
+        // Check dismissal
+        const dismissal = await prisma.mergeDismissal.findFirst({
+          where: {
+            userId,
+            sourceListId: candidate.id,
+            targetListId: activeList.id,
+          },
+        });
+
+        if (dismissal) continue;
+
+        const candidateItems = await prisma.shoppingListItem.findMany({
+          where: { shoppingListId: candidate.id },
+          select: { name: true },
+        });
+
+        const candidateSet = new Set(candidateItems.map((i) => i.name.toLowerCase().trim()));
+
+        // Jaccard similarity: |A ∩ B| / |A ∪ B|
+        let intersectionCount = 0;
+        for (const name of activeSet) {
+          if (candidateSet.has(name)) intersectionCount++;
+        }
+        const unionCount = activeSet.size + candidateSet.size - intersectionCount;
+        const overlap = unionCount === 0 ? 0 : intersectionCount / unionCount;
+
+        if (overlap >= 0.7) {
+          return res.json({
+            suggestionId: candidate.id,
+            name: candidate.name,
+            overlap,
+          });
+        }
+      }
+
+      return res.json(null);
+    } catch (error: any) {
+      console.error('[SHOPPING_LIST] GET /active/merge-suggestion - ERROR:', error.message);
+      res.status(500).json({ error: 'Unable to fetch merge suggestion' });
+    }
+  },
+
+  /**
+   * POST /api/shopping-lists/active/dismiss-merge-suggestion
+   * Body: { suggestionId: string }
+   * Records a MergeDismissal so the pair is never re-suggested.
+   */
+  async dismissMergeSuggestion(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { suggestionId } = req.body;
+
+      if (!suggestionId) {
+        return res.status(400).json({ error: 'suggestionId is required' });
+      }
+
+      const activeList = await prisma.shoppingList.findFirst({
+        where: { userId, isActive: true },
+      });
+
+      if (!activeList) {
+        return res.status(404).json({ error: 'No active shopping list found' });
+      }
+
+      try {
+        await prisma.mergeDismissal.create({
+          data: {
+            userId,
+            sourceListId: suggestionId,
+            targetListId: activeList.id,
+          },
+        });
+      } catch (err: any) {
+        // P2002 = unique constraint violation — already dismissed, idempotent
+        if (err?.code !== 'P2002') throw err;
+      }
+
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error('[SHOPPING_LIST] POST /active/dismiss-merge-suggestion - ERROR:', error.message);
+      res.status(500).json({ error: 'Unable to dismiss merge suggestion' });
+    }
+  },
+
+  /**
+   * POST /api/shopping-lists/:id/archive-on-completion
+   * Called by the frontend auto-archive hook after the 10-second grace period.
+   * Delegates to lifecycle service.
+   */
+  async archiveOnCompletion(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const { archiveOnCompletion } = await import('../../services/shoppingListLifecycleService');
+      const result = await archiveOnCompletion(userId, id);
+
+      return res.json(result);
+    } catch (error: any) {
+      if (error.message?.includes('not all items are purchased') || error.message?.includes('unpurchased items')) {
+        return res.status(409).json({ error: 'List has unpurchased items' });
+      }
+      if (error.message?.includes('not found')) {
+        return res.status(404).json({ error: 'Shopping list not found' });
+      }
+      console.error('[SHOPPING_LIST] POST /:id/archive-on-completion - ERROR:', error.message);
+      res.status(500).json({ error: 'Unable to archive shopping list' });
     }
   },
 };
