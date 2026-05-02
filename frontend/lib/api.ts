@@ -1497,6 +1497,59 @@ export const shoppingListApi = {
   togglePurchaseHistoryFavorite: (id: string) => {
     return apiClient.put(`/shopping-lists/purchase-history/${id}/favorite`);
   },
+
+  // 10Q-ListMgmt: lifecycle endpoints
+  getActiveList: (): Promise<{ data: import('../types').ShoppingList }> => {
+    return apiClient.get('/shopping-lists/active');
+  },
+
+  cleanupOrphans: (): Promise<{ data: { deletedCount: number } }> => {
+    return apiClient.post('/shopping-lists/cleanup-orphans');
+  },
+
+  autoArchiveStale: (): Promise<{ data: { archivedIds: string[] } }> => {
+    return apiClient.post('/shopping-lists/auto-archive-stale');
+  },
+
+  tierArchived: (): Promise<{ data: { tieredCount: number } }> => {
+    return apiClient.post('/shopping-lists/tier-archived');
+  },
+
+  archiveList: (id: string): Promise<{ data: import('../types').ShoppingList }> => {
+    return apiClient.post(`/shopping-lists/${id}/archive`);
+  },
+
+  restoreList: (id: string): Promise<{ data: import('../types').ShoppingList }> => {
+    return apiClient.post(`/shopping-lists/${id}/restore`);
+  },
+
+  markListDone: (id: string): Promise<{ data: { archivedListId: string; newActiveListId?: string; rolledOverItemCount: number } }> => {
+    return apiClient.post(`/shopping-lists/${id}/done`);
+  },
+
+  clearItems: (id: string): Promise<{ data: { success: boolean; deletedCount: number } }> => {
+    return apiClient.post(`/shopping-lists/${id}/clear`);
+  },
+
+  bulkAddItems: (id: string, items: Array<{ name: string; quantity?: string; category?: string; notes?: string }>): Promise<{ data: { success: boolean; addedCount: number } }> => {
+    return apiClient.post(`/shopping-lists/${id}/bulk-add`, { items });
+  },
+
+  archiveOnCompletion: (id: string): Promise<{ data: { archivedListId: string; freshListId: string } }> => {
+    return apiClient.post(`/shopping-lists/${id}/archive-on-completion`);
+  },
+
+  getMergeSuggestion: (): Promise<{ data: { suggestionId: string; name: string; overlap: number } | null }> => {
+    return apiClient.get('/shopping-lists/active/merge-suggestion');
+  },
+
+  mergeFrom: (activeListId: string, sourceListId: string): Promise<{ data: { success: boolean } }> => {
+    return apiClient.post(`/shopping-lists/${activeListId}/merge`, { sourceListId });
+  },
+
+  dismissMergeSuggestion: (activeListId: string, suggestionId: string): Promise<{ data: { success: boolean } }> => {
+    return apiClient.post('/shopping-lists/active/dismiss-merge-suggestion', { suggestionId });
+  },
 };
 
 // Shopping App Integration API

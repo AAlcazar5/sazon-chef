@@ -25,6 +25,34 @@ jest.mock('../../components/shopping/BuildFromRecipesSheet', () => ({
   default: () => null,
 }));
 
+jest.mock('../../components/shopping/ArchiveView', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('../../components/shopping/InStoreDoneButton', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('../../components/shopping/StartFreshAction', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('../../components/shopping/MergeSuggestionBanner', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('../../components/ui/BottomSheet', () => ({
+  __esModule: true,
+  default: ({ children, visible }: any) => {
+    const { View } = require('react-native');
+    return visible ? <View>{children}</View> : null;
+  },
+}));
+
 jest.mock('../../components/ui/AnimatedActivityIndicator', () => () => null);
 jest.mock('../../components/ui/AnimatedEmptyState', () => () => null);
 jest.mock('../../components/ui/SwipeableItem', () => {
@@ -74,6 +102,29 @@ jest.mock('../../components/celebrations', () => {
 jest.mock('../../lib/api', () => ({
   userApi: { getPreferences: jest.fn().mockResolvedValue({ data: {} }) },
   mealPlanApi: { getWeeklyPlan: jest.fn().mockResolvedValue({ data: { days: [] } }) },
+  shoppingListApi: {
+    getMergeSuggestion: jest.fn().mockResolvedValue({ data: null }),
+    archiveOnCompletion: jest.fn().mockResolvedValue({ data: {} }),
+    getActiveList: jest.fn().mockResolvedValue({ data: null }),
+    getShoppingLists: jest.fn().mockResolvedValue({ data: [] }),
+  },
+}));
+
+jest.mock('../../hooks/useShoppingList.autoArchive', () => ({
+  useAutoArchiveOnCompletion: ({ items, loading, onCelebrate }: any) => {
+    const { useEffect, useRef } = require('react');
+    const prevAllDone = useRef(false);
+    useEffect(() => {
+      if (loading) return;
+      const allDone = items && items.length > 0 && items.every((i: any) => i.purchased);
+      if (allDone && !prevAllDone.current) {
+        prevAllDone.current = true;
+        onCelebrate?.();
+      } else if (!allDone) {
+        prevAllDone.current = false;
+      }
+    }, [items, loading]);
+  },
 }));
 
 jest.mock('../../components/ui/ContinuityCTA', () => ({
@@ -242,8 +293,14 @@ describe('Shopping List — all-done celebration overlay', () => {
 
   it('shows celebration overlay with CTA', async () => {
     const { useShoppingList } = require('../../hooks/useShoppingList');
+    const purchasedItems = [
+      { id: 'i1', name: 'Milk', purchased: true, category: 'Dairy', quantity: '1', price: 0, createdAt: '', updatedAt: '' },
+      { id: 'i2', name: 'Eggs', purchased: true, category: 'Dairy', quantity: '1', price: 0, createdAt: '', updatedAt: '' },
+    ];
     useShoppingList.mockReturnValue(
       makeHookReturn({}, {
+        currentItems: purchasedItems,
+        visibleItems: purchasedItems,
         progressStats: { total: 2, purchased: 2, progress: 1 },
       })
     );
@@ -295,9 +352,16 @@ describe('Shopping List — all-done celebration overlay', () => {
     const { useShoppingList } = require('../../hooks/useShoppingList');
     const Haptics = require('expo-haptics');
 
+    const purchasedItems = [
+      { id: 'i1', name: 'Milk', purchased: true, category: 'Dairy', quantity: '1', price: 0, createdAt: '', updatedAt: '' },
+      { id: 'i2', name: 'Eggs', purchased: true, category: 'Dairy', quantity: '1', price: 0, createdAt: '', updatedAt: '' },
+    ];
+
     // Initial render: all done → celebration triggered once
     useShoppingList.mockReturnValue(
       makeHookReturn({}, {
+        currentItems: purchasedItems,
+        visibleItems: purchasedItems,
         progressStats: { total: 2, purchased: 2, progress: 1 },
       })
     );
@@ -312,6 +376,8 @@ describe('Shopping List — all-done celebration overlay', () => {
     // Simulate loading toggling to true (allDone still true, prevAllDone.current = true)
     useShoppingList.mockReturnValue(
       makeHookReturn({ loading: true }, {
+        currentItems: purchasedItems,
+        visibleItems: purchasedItems,
         progressStats: { total: 2, purchased: 2, progress: 1 },
       })
     );
@@ -320,6 +386,8 @@ describe('Shopping List — all-done celebration overlay', () => {
     // Loading back to false: effect re-runs, guard prevAllDone.current blocks re-trigger
     useShoppingList.mockReturnValue(
       makeHookReturn({ loading: false }, {
+        currentItems: purchasedItems,
+        visibleItems: purchasedItems,
         progressStats: { total: 2, purchased: 2, progress: 1 },
       })
     );

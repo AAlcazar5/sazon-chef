@@ -20,6 +20,7 @@ import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Duration } from '../constants/Animations';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useBiometricLock } from '../hooks/useBiometricLock';
+import { useShoppingListAppOpenCleanup } from '../hooks/useShoppingListAppOpenCleanup';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import LogoMascot from '../components/mascot/LogoMascot';
 import '../global.css';
@@ -34,6 +35,9 @@ function RootLayoutNav() {
 
   // Register for push notifications when authenticated
   usePushNotifications();
+
+  // App-open shopping list lifecycle cleanup (once per 24h)
+  useShoppingListAppOpenCleanup();
 
   // Biometric lock
   const { isLocked, biometricEnabled, loading: biometricLoading, authenticate } = useBiometricLock();

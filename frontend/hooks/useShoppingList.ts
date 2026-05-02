@@ -1772,3 +1772,52 @@ export function useShoppingList() {
     flushSyncQueue,
   };
 }
+
+// ─── useActiveList ──────────────────────────────────────────────────────────
+// Singleton-UX hook: fetches the active shopping list, auto-creates one if
+// none exists (backend handles creation on GET /shopping-lists/active).
+// Exposes `refetch` so callers can invalidate after archive/restore/done.
+
+import { useState as _useState, useCallback as _useCallback } from 'react';
+
+export interface ActiveListResult {
+  list: ShoppingList | null;
+  isLoading: boolean;
+  refetch: () => void;
+}
+
+// Shared version counter — bumping this triggers all useActiveList consumers
+// to refetch without prop drilling or context.
+let _activeListVersion = 0;
+
+export function bumpActiveListVersion() {
+  _activeListVersion += 1;
+}
+
+export function useActiveList(): ActiveListResult {
+  const [list, setList] = _useState<ShoppingList | null>(null);
+  const [isLoading, setIsLoading] = _useState(true);
+  const [version, setVersion] = _useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    shoppingListApi.getActiveList()
+      .then(res => {
+        if (!cancelled) setList(res.data);
+      })
+      .catch(() => {
+        // Silent — caller renders gracefully with null
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [version]);
+
+  const refetch = _useCallback(() => {
+    setVersion(v => v + 1);
+  }, []);
+
+  return { list, isLoading, refetch };
+}
