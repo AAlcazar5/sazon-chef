@@ -180,8 +180,10 @@ api.interceptors.response.use(
       const isAIGenerationError = (raw?.code === 'GENERATION_ERROR') ||
         /failed to generate (recipe|daily meal plan)/i.test(String(rawMessage || ''));
 
-      // Don't log expected user errors (bad credentials, validation, auth, not found)
-      const isExpectedUserError = statusCode === 400 || statusCode === 401 || statusCode === 403 || statusCode === 404;
+      // Don't log expected user errors (bad credentials, validation, not found).
+      // 401/403 are intentionally NOT silenced — they trigger the auto-logout
+      // path and we always want the offending URL visible in the console.
+      const isExpectedUserError = statusCode === 400 || statusCode === 404;
 
       // Network errors (no response received) are handled gracefully below — no need to log
       const isNetworkError = !error.response && !!error.request;
@@ -251,6 +253,11 @@ api.interceptors.response.use(
         // Automatically logout on authentication errors (but NOT on auth
         // endpoints, NOT on the bootstrap verify call).
         if (logoutCallback && !isAuthEndpoint && !skipAuthAutoLogout) {
+          // Log which URL forced the auto-logout — invaluable for debugging
+          // "session expired despite logging back in" loops.
+          console.warn(
+            `⚠️  Auto-logout triggered by ${statusCode} on ${error.config?.method?.toUpperCase()} ${error.config?.url}`
+          );
           const doLogout = logoutCallback;
           Alert.alert(
             'Session Expired',
