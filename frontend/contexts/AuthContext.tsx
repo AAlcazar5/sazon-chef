@@ -97,13 +97,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           analytics.initialize(userData.id).catch(() => {});
         }
 
-        // Verify token with shorter timeout
+        // Verify token with the server. Only clear auth on a real 401 from
+        // the server — network/timeout errors leave the token intact (we
+        // don't know if it's bad). 10s accommodates dev backend cold-starts
+        // (ts-node first-request compilation can exceed 3s).
         try {
           console.log('[Auth] Verifying token with server...');
           const response = await api.get('/auth/profile', {
             headers: { Authorization: `Bearer ${storedToken}` },
-            timeout: 3000,
-          });
+            timeout: 10000,
+            // Mark this request as auth bootstrap so the response interceptor
+            // skips its auto-logout Alert (we handle the failure inline here).
+            _skipAuthAutoLogout: true,
+          } as any);
           console.log('[Auth] Token verified successfully');
           if (response.data?.user && !didTimeout) {
             const updatedUser = response.data.user;
@@ -111,10 +117,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Don't await storage write - do it in background
             SecureStore.setItemAsync(USER_KEY, JSON.stringify(updatedUser)).catch(() => {});
           }
-        } catch (error) {
-          console.log('[Auth] Token verification failed, clearing auth');
-          if (!didTimeout) {
-            await clearStoredAuth();
+        } catch (error: any) {
+          const status = error?.response?.status;
+          if (status === 401 || status === 403) {
+            console.log('[Auth] Token rejected (401/403), clearing auth');
+            if (!didTimeout) {
+              await clearStoredAuth();
+            }
+          } else {
+            console.log(
+              '[Auth] Token verification skipped (network/timeout, keeping token):',
+              error?.message
+            );
           }
         }
       } else {
