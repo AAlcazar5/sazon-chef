@@ -2,8 +2,17 @@
 
 import { Router } from 'express';
 import { shoppingListController } from './shoppingListController';
+import { shoppingListLifecycleController } from './shoppingListLifecycleController';
 
 const router = Router();
+
+// Group 10Q-ListMgmt: lifecycle management endpoints (must come before /:id routes)
+router.post('/auto-archive-stale', shoppingListLifecycleController.autoArchiveStale);
+router.post('/cleanup-orphans', shoppingListLifecycleController.cleanupOrphans);
+router.post('/tier-archived', shoppingListLifecycleController.tierArchived);
+router.post('/:id/set-active', shoppingListLifecycleController.setActive);
+router.post('/:id/archive', shoppingListLifecycleController.archive);
+router.post('/:id/complete', shoppingListLifecycleController.archiveOnCompletion);
 
 // Generate shopping list from recipes (must come before /:id routes)
 router.post('/generate-from-recipes', shoppingListController.generateFromRecipes);
@@ -25,6 +34,17 @@ router.post('/', shoppingListController.createShoppingList);
 router.get('/:id', shoppingListController.getShoppingList);
 router.put('/:id', shoppingListController.updateShoppingList);
 router.delete('/:id', shoppingListController.deleteShoppingList);
+
+// Restore an archived list as active
+router.post('/:id/restore', shoppingListController.restoreList);
+
+// Group 10Q-ListMgmt: terminal-state actions
+router.post('/active/merge-suggestion/dismiss', shoppingListController.dismissMergeSuggestion);
+router.get('/active/merge-suggestion', shoppingListController.getMergeSuggestion);
+router.post('/:id/done', shoppingListController.markListDone);
+router.post('/:id/clear', shoppingListController.clearItems);
+router.post('/:id/bulk-add', shoppingListController.bulkAddItems);
+router.post('/:id/archive-on-completion', shoppingListController.archiveOnCompletion);
 
 // Shopping list items
 router.post('/:id/items', shoppingListController.addItem);
