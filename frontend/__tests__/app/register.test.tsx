@@ -29,6 +29,22 @@ jest.mock('../../components/mascot/LogoMascot', () => {
   };
 });
 
+jest.mock('../../components/mascot/Sazon', () => ({
+  __esModule: true,
+  default: function MockSazon({ motion }: any) {
+    const expr =
+      motion === 'bounce' ? 'excited' :
+      motion === 'wave' ? 'excited' :
+      motion === 'celebrate' ? 'chef-kiss' :
+      motion === 'wobble' ? 'thinking' :
+      'mascot';
+    return require('react').createElement(
+      require('react-native').View,
+      { testID: `mascot-${expr}` },
+    );
+  },
+}));
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;

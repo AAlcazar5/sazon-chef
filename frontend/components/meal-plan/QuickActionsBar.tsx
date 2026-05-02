@@ -48,7 +48,7 @@ function ActionBadge({ emoji, label, onPress, disabled, destructive, isDark }: A
             paddingHorizontal: 14,
             paddingVertical: 10,
             borderRadius: 100,
-            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+            backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
             opacity: disabled ? 0.5 : 1,
           },
           Shadows.SM,

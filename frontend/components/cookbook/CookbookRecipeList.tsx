@@ -14,6 +14,7 @@ import StarRating from './StarRating';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import LogoMascot from '../mascot/LogoMascot';
+import Sazon from '../mascot/Sazon';
 import AnimatedEmptyState from '../ui/AnimatedEmptyState';
 import { CookbookEmptyStates } from '../../constants/EmptyStates';
 import SwipeableRecipeCard from './SwipeableRecipeCard';
@@ -250,7 +251,7 @@ function CookbookRecipeList({
       pointerEvents="none"
       style={{ position: 'absolute', alignSelf: 'center', top: '40%', zIndex: 99 }}
     >
-      <LogoMascot expression="chef-kiss" size="large" />
+      <Sazon variant="orange" motion="kiss" fx={['hearts']} size={192} />
     </View>
   ) : null;
 

@@ -22,6 +22,7 @@ import GradientButton, { GradientPresets } from '../components/ui/GradientButton
 import FormInput from '../components/ui/FormInput';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import LogoMascot from '../components/mascot/LogoMascot';
+import Sazon from '../components/mascot/Sazon';
 import { Colors, DarkColors, Pastel, PastelDark } from '../constants/Colors';
 import { Shadows } from '../constants/Shadows';
 import { FontSize, FontWeight } from '../constants/Typography';
@@ -169,7 +170,7 @@ export default function RegisterScreen() {
             pointerEvents="none"
             style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', zIndex: 99 }}
           >
-            <LogoMascot expression="excited" size="hero" />
+            <Sazon variant="orange" motion="bounce" fx={['sparkles']} size={256} />
           </MotiView>
         )}
 
@@ -221,7 +222,7 @@ export default function RegisterScreen() {
                     alignItems: 'center',
                     ...(Shadows.SM as any),
                   }}>
-                    <LogoMascot expression="curious" size="tiny" />
+                    <Sazon variant="green" motion="wobble" fx={['question']} size={24} />
                     <Text style={{
                       flex: 1,
                       marginLeft: 10,

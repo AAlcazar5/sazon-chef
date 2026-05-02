@@ -831,11 +831,10 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FAF7F4' }}>
+    <View style={{ flex: 1, backgroundColor: isDark ? DarkColors.background : '#FAF7F4' }}>
     <View style={{ flex: 1 }}>
       <HomeHeader
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
-        onSurpriseMe={() => setShowSurpriseModal(true)}
         onFilterPress={handleFilterPress}
         activeFilterCount={activeFilters.length}
       />
@@ -1056,7 +1055,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
               flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7',
+              backgroundColor: isDark ? DarkColors.background : '#F2F2F7',
             }}
           >
             <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -1081,7 +1080,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
               flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: isDark ? '#0F0F0F' : '#F2F2F7',
+              backgroundColor: isDark ? DarkColors.background : '#F2F2F7',
               padding: 24,
             }}
           >

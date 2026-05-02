@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
+import { Colors, DarkColors } from '../../constants/Colors';
 import { LogoMascot } from '../mascot';
+import Sazon from '../mascot/Sazon';
 
 interface EditorialGreetingProps {
   userName?: string;
@@ -27,48 +30,55 @@ function getHeadlineWord(): string {
 export function EditorialGreeting({ userName, onSearchPress, onNotificationsPress }: EditorialGreetingProps) {
   const greeting = getGreeting();
   const headlineWord = getHeadlineWord();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const titleColor = isDark ? DarkColors.text.primary : '#111827';
+  const periodColor = isDark ? DarkColors.primary : Colors.primary;
+  const eyebrowColor = isDark ? DarkColors.text.tertiary : '#9CA3AF';
+  const subtitleColor = isDark ? DarkColors.text.secondary : '#9CA3AF';
+  const iconBg = isDark ? DarkColors.card : '#FFFFFF';
+  const iconColor = isDark ? DarkColors.text.primary : '#111827';
 
   return (
     <View style={styles.container}>
       {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.greetingRow}>
-          <LogoMascot size={36} />
+          <Sazon variant="orange" motion="idle" size={36} />
           <View style={styles.greetingText}>
-            <Text style={styles.eyebrow}>{greeting}</Text>
-            {userName && <Text style={styles.userName}>Hi, {userName}</Text>}
+            <Text style={[styles.eyebrow, { color: eyebrowColor }]}>{greeting}</Text>
+            {userName && <Text style={[styles.userName, { color: titleColor }]}>Hi, {userName}</Text>}
           </View>
         </View>
         <View style={styles.actions}>
           <Pressable
             testID="search-button"
             onPress={onSearchPress}
-            style={styles.iconButton}
+            style={[styles.iconButton, { backgroundColor: iconBg }]}
             accessibilityLabel="Search"
             accessibilityRole="button"
           >
-            <Ionicons name="search" size={20} color="#111827" />
+            <Ionicons name="search" size={20} color={iconColor} />
           </Pressable>
           <Pressable
             testID="notifications-button"
             onPress={onNotificationsPress}
-            style={styles.iconButton}
+            style={[styles.iconButton, { backgroundColor: iconBg }]}
             accessibilityLabel="Notifications"
             accessibilityRole="button"
           >
-            <Ionicons name="notifications-outline" size={20} color="#111827" />
+            <Ionicons name="notifications-outline" size={20} color={iconColor} />
           </Pressable>
         </View>
       </View>
 
       {/* Editorial headline */}
       <View style={styles.headline}>
-        <Text style={styles.displayText}>
+        <Text style={[styles.displayText, { color: titleColor }]}>
           {headlineWord}{' '}
-          <Text style={styles.displayAccent}>picks</Text>
-          <Text style={styles.orangePeriod}>.</Text>
+          <Text style={[styles.displayAccent, { color: titleColor }]}>picks</Text>
         </Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: subtitleColor }]}>
           Crafted around what's in your pantry and today's macro budget.
         </Text>
       </View>
@@ -100,12 +110,10 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...EditorialTypography.eyebrow,
-    color: '#9CA3AF',
   },
   userName: {
     fontFamily: EditorialFontFamily.body.semibold,
     fontSize: 14,
-    color: '#111827',
   },
   actions: {
     flexDirection: 'row',
@@ -115,7 +123,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -127,26 +134,16 @@ const styles = StyleSheet.create({
     fontSize: 48,
     lineHeight: 50,
     letterSpacing: -1.6,
-    color: '#111827',
   },
   displayAccent: {
     ...EditorialTypography.displayAccent,
     fontSize: 48,
     lineHeight: 50,
     letterSpacing: -1.6,
-    color: '#111827',
-  },
-  orangePeriod: {
-    ...EditorialTypography.display,
-    fontSize: 48,
-    lineHeight: 50,
-    letterSpacing: -1.6,
-    color: '#fa7e12',
   },
   subtitle: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 13,
-    color: '#9CA3AF',
     marginTop: 6,
     maxWidth: 280,
   },

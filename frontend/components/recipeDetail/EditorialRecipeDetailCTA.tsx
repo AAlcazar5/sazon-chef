@@ -16,7 +16,7 @@ export function EditorialRecipeDetailCTA({ onStartCooking, onAddToMealPlan }: Ed
       <Pressable
         testID="meal-plan-button"
         onPress={() => {
-          triggerHaptic(ImpactStyle.LIGHT);
+          triggerHaptic('impact', ImpactStyle.light);
           onAddToMealPlan();
         }}
         style={styles.calendarButton}

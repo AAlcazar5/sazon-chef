@@ -24,8 +24,8 @@ export const premiumCTA: GradientPair = ['#FF8B41', '#F06292'];
 /** Warm cream gradient — all tab screens (light mode) */
 export const screenBgLight: GradientPair = ['#FAF7F4', '#FFF5EE'];
 
-/** Deep navy → black — dark mode screens */
-export const screenBgDark: GradientPair = ['#1A1A2E', '#0F0F0F'];
+/** Warm cocoa scaffold — dark mode screens ("cookbook by candlelight") */
+export const screenBgDark: GradientPair = ['#1A1410', '#221915'];
 
 // ─── Onboarding & Auth ──────────────────────────────────────────────────────────
 

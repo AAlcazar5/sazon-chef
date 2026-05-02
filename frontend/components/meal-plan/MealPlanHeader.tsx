@@ -21,12 +21,23 @@ export default function MealPlanHeader({
   return (
     <FrostedHeader paddingBottom={16} withTopInset>
       <View style={styles.headerRow}>
-        {/* Editorial title */}
+        {/* Editorial title — date range sits inline to the right of "Plan" */}
         <View style={styles.titleBlock}>
-          <Text style={styles.title} accessibilityRole="header">
-            Meal <Text style={styles.titleAccent}>Plan</Text>
+          <Text
+            style={[styles.title, { color: isDark ? DarkColors.text.primary : '#111827' }]}
+            accessibilityRole="header"
+          >
+            Meal{' '}
+            <Text style={[styles.titleAccent, { color: isDark ? DarkColors.text.primary : '#111827' }]}>
+              Plan
+            </Text>
           </Text>
-          <Text style={styles.dateRange}>{dateRange}</Text>
+          <Text
+            style={[styles.dateRange, { color: isDark ? DarkColors.text.tertiary : '#9CA3AF' }]}
+            numberOfLines={1}
+          >
+            {dateRange}
+          </Text>
         </View>
 
         {/* Jump to today */}
@@ -50,7 +61,7 @@ export default function MealPlanHeader({
   );
 }
 
-const TITLE_SIZE = 48;
+const TITLE_SIZE = 40;
 
 const styles = StyleSheet.create({
   headerRow: {
@@ -61,30 +72,26 @@ const styles = StyleSheet.create({
   },
   titleBlock: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   title: {
     fontFamily: EditorialFontFamily.display.bold,
     fontSize: TITLE_SIZE,
     lineHeight: TITLE_SIZE * 1.04,
-    letterSpacing: -1.6,
-    color: '#111827',
+    letterSpacing: -1.4,
+    flexShrink: 0,
   },
   titleAccent: {
     fontFamily: EditorialFontFamily.displayItalic.bold,
     fontStyle: 'italic',
     fontSize: TITLE_SIZE,
-    letterSpacing: -1.6,
-    color: '#111827',
-  },
-  orangePeriod: {
-    fontFamily: EditorialFontFamily.display.bold,
-    fontSize: TITLE_SIZE,
-    color: '#fa7e12',
+    letterSpacing: -1.4,
   },
   dateRange: {
     ...EditorialTypography.eyebrow,
-    color: '#9CA3AF',
-    marginTop: 4,
+    marginLeft: 12,
+    flexShrink: 1,
   },
   todayButton: {
     paddingHorizontal: 14,

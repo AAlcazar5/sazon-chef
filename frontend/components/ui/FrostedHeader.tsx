@@ -7,7 +7,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
-import { Colors } from '../../constants/Colors';
+import { Colors, DarkColors } from '../../constants/Colors';
 
 interface FrostedHeaderProps {
   children: React.ReactNode;
@@ -35,7 +35,7 @@ export default function FrostedHeader({
           paddingHorizontal: 12,
           paddingTop: topPad,
           paddingBottom,
-          backgroundColor: isDark ? '#0F0F0F' : '#FAF7F4',
+          backgroundColor: isDark ? DarkColors.background : '#FAF7F4',
         }}
       >
         {children}

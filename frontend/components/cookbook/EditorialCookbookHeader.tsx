@@ -47,11 +47,6 @@ const styles = StyleSheet.create({
     letterSpacing: -1.6,
     color: '#111827',
   },
-  orangePeriod: {
-    fontFamily: EditorialFontFamily.display.bold,
-    fontSize: TITLE_SIZE,
-    color: '#fa7e12',
-  },
   subtitle: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 14,

@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import LoadingState from '../components/ui/LoadingState';
 import LogoMascot from '../components/mascot/LogoMascot';
+import Sazon from '../components/mascot/Sazon';
 import { Colors, DarkColors, MACRO_COLORS } from '../constants/Colors';
 import { Shadows } from '../constants/Shadows';
 import { BorderRadius } from '../constants/Spacing';
@@ -542,7 +543,7 @@ export default function ScannerScreen() {
       {/* No-match state */}
       {noMatch && !result && (
         <View style={styles.noMatchContainer}>
-          <LogoMascot expression="surprised" size="medium" />
+          <Sazon variant="orange" motion="jiggle" fx={['question']} size={96} />
           <Text style={styles.noMatchTitle}>Couldn't find that one</Text>
           <Text style={styles.noMatchSubtitle}>
             {errorMessage || 'Try searching by name instead?'}

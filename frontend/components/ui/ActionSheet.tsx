@@ -145,7 +145,6 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                 <View style={[styles.titleContainer, { borderBottomColor: isDark ? DarkColors.border.light : Colors.border.light }]}>
                   <Text style={[styles.title, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
                     {title}
-                    <Text style={styles.titleAccent}>.</Text>
                   </Text>
                 </View>
               )}

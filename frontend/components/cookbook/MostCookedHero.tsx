@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, Platform } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { EditorialShadows } from '../../constants/Shadows';
+import { DarkColors, HeroPlatesDark } from '../../constants/Colors';
 
 interface MostCookedHeroProps {
   title: string;
@@ -14,24 +16,33 @@ export function MostCookedHero({ title, accentWord, imageUrl, cookCount }: MostC
   const parts = title.split(accentWord);
   const plateShadow =
     Platform.OS === 'ios' ? EditorialShadows.platePhoto.ios : EditorialShadows.platePhoto.android;
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  // Wine plate per COLORS.md spec — Cookbook "Most cooked" hero
+  const plate = HeroPlatesDark.pink;
+  const eyebrowColor = isDark ? DarkColors.text.tertiary : '#9CA3AF';
+  const cardBg = isDark ? plate.bg[0] : '#FCE4EC';
+  const badgeColor = isDark ? plate.accent : '#fa7e12';
+  const titleColor = isDark ? plate.ink : '#111827';
+  const photoBorderColor = isDark ? plate.bg[0] : '#FFFFFF';
 
   return (
     <View style={styles.container} testID="most-cooked-hero">
-      <Text style={styles.eyebrow}>MOST COOKED</Text>
-      <View style={styles.card}>
+      <Text style={[styles.eyebrow, { color: eyebrowColor }]}>MOST COOKED</Text>
+      <View style={[styles.card, { backgroundColor: cardBg }]}>
         <View style={styles.badgeContainer}>
-          <Text style={styles.badge}>MADE {cookCount} TIMES</Text>
+          <Text style={[styles.badge, { color: badgeColor }]}>MADE {cookCount} TIMES</Text>
         </View>
         <View style={styles.textContent}>
-          <Text style={styles.title}>
+          <Text style={[styles.title, { color: titleColor }]}>
             {parts[0]}
-            <Text style={styles.titleAccent}>{accentWord}</Text>
+            <Text style={[styles.titleAccent, { color: titleColor }]}>{accentWord}</Text>
             {parts[1] || ''}
           </Text>
         </View>
         {imageUrl && (
           <View style={[styles.photoContainer, plateShadow]}>
-            <Image source={{ uri: imageUrl }} style={styles.photo} testID="most-cooked-photo" />
+            <Image source={{ uri: imageUrl }} style={[styles.photo, { borderColor: photoBorderColor }]} testID="most-cooked-photo" />
           </View>
         )}
       </View>
@@ -46,11 +57,9 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...EditorialTypography.eyebrow,
-    color: '#9CA3AF',
     marginBottom: 12,
   },
   card: {
-    backgroundColor: '#FCE4EC',
     borderRadius: 20,
     padding: 20,
     overflow: 'visible',
@@ -64,7 +73,6 @@ const styles = StyleSheet.create({
     fontFamily: EditorialFontFamily.body.extrabold,
     fontSize: 10,
     letterSpacing: 0.8,
-    color: '#fa7e12',
     textTransform: 'uppercase',
   },
   textContent: {
@@ -74,13 +82,11 @@ const styles = StyleSheet.create({
     fontFamily: EditorialFontFamily.display.semibold,
     fontSize: 22,
     letterSpacing: -0.5,
-    color: '#111827',
     lineHeight: 28,
   },
   titleAccent: {
     fontFamily: EditorialFontFamily.displayItalic.semibold,
     fontSize: 22,
-    color: '#111827',
   },
   photoContainer: {
     position: 'absolute',
@@ -92,6 +98,5 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
   },
 });

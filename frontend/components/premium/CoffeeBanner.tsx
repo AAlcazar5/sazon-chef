@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import BrandButton from '../ui/BrandButton';
 import { LogoMascot } from '../mascot';
+import Sazon from '../mascot/Sazon';
 import { useSubscription } from '../../hooks/useSubscription';
 import { Shadows } from '../../constants/Shadows';
 import { Backdrop } from '../../constants/Colors';
@@ -62,7 +63,7 @@ export function CoffeeBanner({ visible, onDismiss }: CoffeeBannerProps) {
 
             {/* Mascot on the right */}
             <View style={styles.mascotContainer}>
-              <LogoMascot expression="chef-kiss" size="small" />
+              <Sazon variant="orange" motion="kiss" fx={['hearts']} size={48} />
             </View>
 
             {/* Content on the left */}

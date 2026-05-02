@@ -20,6 +20,7 @@ import ScreenGradient from '../components/ui/ScreenGradient';
 import FrostedCard from '../components/ui/FrostedCard';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import LogoMascot from '../components/mascot/LogoMascot';
+import Sazon from '../components/mascot/Sazon';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import FormInput from '../components/ui/FormInput';
@@ -170,7 +171,7 @@ export default function LoginScreen() {
             pointerEvents="none"
             style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', zIndex: 99 }}
           >
-            <LogoMascot expression="excited" size="hero" />
+            <Sazon variant="orange" motion="wave" fx={['sparkles']} size={256} />
           </MotiView>
         )}
 
@@ -194,9 +195,11 @@ export default function LoginScreen() {
                   paddingVertical: 20,
                   ...(Shadows.SM as any),
                 }}>
-                  <LogoMascot
-                    expression={errors.form ? 'curious' : 'happy'}
-                    size="medium"
+                  <Sazon
+                    variant={errors.form ? 'green' : 'orange'}
+                    motion={errors.form ? 'wobble' : 'idle'}
+                    fx={errors.form ? ['question'] : []}
+                    size={96}
                   />
                 </View>
               </MotiView>
@@ -242,7 +245,7 @@ export default function LoginScreen() {
                     alignItems: 'center',
                     ...(Shadows.SM as any),
                   }}>
-                    <LogoMascot expression="curious" size="tiny" />
+                    <Sazon variant="green" motion="wobble" fx={['question']} size={24} />
                     <Text style={{
                       flex: 1,
                       marginLeft: 10,

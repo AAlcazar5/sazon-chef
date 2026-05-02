@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { LogoMascot } from '../mascot';
+import Sazon from '../mascot/Sazon';
 import { Pastel, EditorialColors } from '../../constants/Colors';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { EditorialShadows } from '../../constants/Shadows';
@@ -46,7 +47,7 @@ export default function PremiumUpsellCard({ testID }: PremiumUpsellCardProps) {
           </View>
 
           <View style={styles.mascotContainer}>
-            <LogoMascot expression="excited" size="small" />
+            <Sazon variant="orange" motion="bounce" fx={['sparkles']} size={48} />
           </View>
         </View>
       </View>

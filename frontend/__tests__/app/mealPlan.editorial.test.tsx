@@ -51,9 +51,9 @@ describe('EditorialMealPlanHeader (10V-F: Eyebrow + title)', () => {
     expect(getByText(/week/)).toBeTruthy();
   });
 
-  it('renders orange period', () => {
-    const { getByText } = render(<EditorialMealPlanHeader month="April" weekNumber={16} />);
-    expect(getByText('.')).toBeTruthy();
+  it('does not render trailing period after title', () => {
+    const { queryByText } = render(<EditorialMealPlanHeader month="April" weekNumber={16} />);
+    expect(queryByText('.')).toBeNull();
   });
 
   it('renders subtitle text', () => {

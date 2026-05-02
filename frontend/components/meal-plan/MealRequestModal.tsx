@@ -9,7 +9,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import MacroSlider from '../ui/MacroSlider';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors } from '../../constants/Colors';
+import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { useTheme } from '../../contexts/ThemeContext';
 import { mealPlanApi } from '../../lib/api';
@@ -260,7 +260,7 @@ export default function MealRequestModal({
 
   const textPrimary = isDark ? '#F9FAFB' : '#111827';
   const textSecondary = isDark ? '#9CA3AF' : '#6B7280';
-  const bgCard = isDark ? '#1C1C1E' : '#FFFFFF';
+  const bgCard = isDark ? DarkColors.card : '#FFFFFF';
   const bgSheet = isDark ? '#111111' : '#F9F7F4';
 
   if (!visible) return null;

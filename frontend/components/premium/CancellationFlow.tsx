@@ -13,6 +13,7 @@ import {
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { LogoMascot } from '../mascot';
+import Sazon from '../mascot/Sazon';
 import { stripeApi } from '../../lib/api';
 import { Colors } from '../../constants/Colors';
 
@@ -132,7 +133,7 @@ function SurveyStep({
 }) {
   return (
     <>
-      <LogoMascot expression="supportive" size="small" />
+      <Sazon variant="green" motion="peek" fx={[]} size={48} />
       <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-1">
         Before you go...
       </Text>
@@ -187,7 +188,7 @@ function OfferStep({
 }) {
   return (
     <>
-      <LogoMascot expression="thinking" size="small" />
+      <Sazon variant="green" motion="wobble" fx={['question']} size={48} />
 
       {reason === 'too_expensive' && (
         <>
@@ -287,7 +288,7 @@ function ConfirmStep({
 }) {
   return (
     <>
-      <LogoMascot expression="supportive" size="small" />
+      <Sazon variant="green" motion="peek" fx={[]} size={48} />
       <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-2">
         Cancel subscription?
       </Text>

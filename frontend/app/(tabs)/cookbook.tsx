@@ -5,7 +5,7 @@ import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import LoadingState from '../../components/ui/LoadingState';
 import ScreenGradient from '../../components/ui/ScreenGradient';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
@@ -16,6 +16,7 @@ import type { SavedRecipe, Collection } from '../../types';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { ComponentSpacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
+import { EditorialFontFamily } from '../../constants/Typography';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { CookbookEmptyStates } from '../../constants/EmptyStates';
 import { CookbookLoadingStates } from '../../constants/LoadingStates';
@@ -202,6 +203,15 @@ export default function CookbookScreen() {
   // Import from URL state
   const [showImportModal, setShowImportModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+
+  // Open import modal when navigated with ?openImport=true (from quick actions menu)
+  const { openImport } = useLocalSearchParams<{ openImport?: string }>();
+  useEffect(() => {
+    if (openImport === 'true') {
+      setShowImportModal(true);
+      router.setParams({ openImport: '' });
+    }
+  }, [openImport]);
 
   // Infinite scroll state
   const INITIAL_VISIBLE = 20;
@@ -1130,7 +1140,10 @@ export default function CookbookScreen() {
   return (
     <ScreenGradient>
     <View style={{ flex: 1 }}>
-      <CookbookHeader />
+      <CookbookHeader
+        onFilterPress={() => setShowFilterModal(true)}
+        activeFilterCount={cookbookActiveFilterCount}
+      />
 
       {/* Offline / sync status banner */}
       <OfflineBanner
@@ -1626,10 +1639,36 @@ export default function CookbookScreen() {
               </View>
             )}
 
-            {/* Recipe count + action buttons + grid/list toggle */}
+            {/* Section title + Import (left) + grid/list toggle (right) */}
             {filteredAndSortedRecipes.length > 0 && (
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                {/* Left: grid/list toggle */}
+                {/* Left: title */}
+                <Text
+                  style={{
+                    fontFamily: EditorialFontFamily.display.bold,
+                    fontSize: 22,
+                    letterSpacing: -0.6,
+                    color: isDark ? '#F9FAFB' : '#111827',
+                    flexShrink: 1,
+                  }}
+                  accessibilityRole="header"
+                  numberOfLines={1}
+                >
+                  Your{' '}
+                  <Text
+                    style={{
+                      fontFamily: EditorialFontFamily.displayItalic.bold,
+                      fontStyle: 'italic',
+                      fontSize: 22,
+                      letterSpacing: -0.6,
+                      color: isDark ? '#F9FAFB' : '#111827',
+                    }}
+                  >
+                    Recipes
+                  </Text>
+                </Text>
+
+                {/* Right: grid/list toggle */}
                 <View
                   className="flex-row items-center rounded-lg p-1"
                   style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }}
@@ -1648,45 +1687,6 @@ export default function CookbookScreen() {
                       />
                     </HapticTouchableOpacity>
                   ))}
-                </View>
-
-                {/* Right: Import + Filters */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <HapticTouchableOpacity
-                    onPress={() => { setShowImportModal(true); HapticPatterns.buttonPress(); }}
-                    accessibilityLabel="Import recipe from URL"
-                    accessibilityRole="button"
-                    style={{ borderRadius: 100, overflow: 'hidden' }}
-                  >
-                    <LinearGradient
-                      colors={['#64B5F6', '#42A5F5']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100, gap: 5 }}
-                    >
-                      <Ionicons name="link" size={14} color="#FFF" />
-                      <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#FFF' }}>Import</Text>
-                    </LinearGradient>
-                  </HapticTouchableOpacity>
-
-                  <HapticTouchableOpacity
-                    onPress={() => { setShowFilterModal(true); HapticPatterns.buttonPress(); }}
-                    accessibilityLabel={`Filters, ${cookbookActiveFilterCount} active`}
-                    accessibilityRole="button"
-                    style={{ borderRadius: 100, overflow: 'hidden' }}
-                  >
-                    <LinearGradient
-                      colors={['#FF8B41', '#E84D3D']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100, gap: 5 }}
-                    >
-                      <Ionicons name="options" size={14} color="#FFF" />
-                      <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#FFF' }}>
-                        Filters{cookbookActiveFilterCount > 0 ? ` (${cookbookActiveFilterCount})` : ''}
-                      </Text>
-                    </LinearGradient>
-                  </HapticTouchableOpacity>
                 </View>
               </View>
             )}

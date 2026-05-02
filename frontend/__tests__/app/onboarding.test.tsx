@@ -14,25 +14,6 @@ jest.mock('../../components/ui/HapticTouchableOpacity', () => {
   };
 });
 
-jest.mock('../../components/ui/GradientButton', () => {
-  const { TouchableOpacity, Text } = require('react-native');
-  const MockGradientButton = ({ label, onPress, disabled, loading }: any) => (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled || loading}
-      accessibilityState={{ disabled: disabled || loading }}
-      testID="gradient-cta"
-    >
-      <Text>{loading ? 'Setting Up...' : label}</Text>
-    </TouchableOpacity>
-  );
-  return {
-    __esModule: true,
-    default: MockGradientButton,
-    GradientPresets: { brand: ['#fa7e12', '#f59e0b'] },
-  };
-});
-
 jest.mock('../../components/mascot/LogoMascot', () => {
   const { View } = require('react-native');
   return function MockLogoMascot({ expression }: any) {
@@ -40,10 +21,29 @@ jest.mock('../../components/mascot/LogoMascot', () => {
   };
 });
 
-jest.mock('../../components/mascot/AnimatedLottieMascot', () => {
+// Sazon replaced LogoMascot in onboarding's hero — translate variant→legacy expression
+// so existing logo-mascot-{excited|thinking|chef-kiss} testIDs keep working.
+jest.mock('../../components/mascot/Sazon', () => {
   const { View } = require('react-native');
-  return function MockAnimatedLottieMascot({ expression }: any) {
-    return <View testID={`animated-sazon-${expression}`} />;
+  return {
+    __esModule: true,
+    default: function MockSazon({ variant, motion }: any) {
+      const expr =
+        motion === 'bounce' ? 'excited' :
+        motion === 'wobble' ? 'thinking' :
+        motion === 'celebrate' ? 'chef-kiss' :
+        variant || 'mascot';
+      return <View testID={`logo-mascot-${expr}`} />;
+    },
+  };
+});
+
+jest.mock('expo-linear-gradient', () => {
+  const { View } = require('react-native');
+  return {
+    LinearGradient: function MockLG(props: any) {
+      return <View testID="onboarding-gradient" {...props} />;
+    },
   };
 });
 
@@ -83,9 +83,9 @@ jest.mock('react-native-reanimated', () => {
 });
 
 jest.mock('moti', () => ({
-  MotiView: function MockMotiView({ children }: any) {
+  MotiView: function MockMotiView({ children, testID, style }: any) {
     const { View } = require('react-native');
-    return <View>{children}</View>;
+    return <View testID={testID} style={style}>{children}</View>;
   },
 }));
 
@@ -118,23 +118,29 @@ jest.mock('expo-router', () => ({
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe('Onboarding', () => {
+describe('Onboarding (editorial revamp)', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  describe('Step 0 — Welcome (9N: peach gradient, name prompt)', () => {
-    it('renders "What\'s your name?" heading', () => {
+  describe('Step 0 — Welcome (peach editorial)', () => {
+    it('renders "WELCOME" eyebrow', () => {
       const { getByText } = render(<OnboardingScreen />);
-      expect(getByText("What's your name?")).toBeTruthy();
+      expect(getByText('WELCOME')).toBeTruthy();
     });
 
-    it('renders the "Continue" CTA button', () => {
+    it('renders the editorial title parts ("Let\'s find" + "recipes")', () => {
       const { getByText } = render(<OnboardingScreen />);
-      expect(getByText('Continue')).toBeTruthy();
+      expect(getByText(/Let's find/)).toBeTruthy();
+      expect(getByText('recipes')).toBeTruthy();
     });
 
-    it('"Continue" is enabled on the welcome step', () => {
+    it('renders the "Get started" CTA on step 0', () => {
+      const { getByText } = render(<OnboardingScreen />);
+      expect(getByText('Get started')).toBeTruthy();
+    });
+
+    it('CTA is enabled on the welcome step', () => {
       const { getByTestId } = render(<OnboardingScreen />);
-      const btn = getByTestId('gradient-cta');
+      const btn = getByTestId('onboarding-cta');
       expect(btn.props.accessibilityState?.disabled).toBeFalsy();
     });
 
@@ -146,7 +152,7 @@ describe('Onboarding', () => {
     it('renders welcome subtitle', () => {
       const { getByText } = render(<OnboardingScreen />);
       expect(
-        getByText("Let's personalize your experience in just a few quick steps")
+        getByText(/Sazon tailors every recipe to your macros/)
       ).toBeTruthy();
     });
 
@@ -156,43 +162,82 @@ describe('Onboarding', () => {
     });
   });
 
-  describe('Step 1 — Dietary Restrictions (9N: sage gradient)', () => {
-    it('advances to dietary step after pressing Continue on welcome', async () => {
+  describe('Step 1 — Diet (sage editorial)', () => {
+    it('advances to diet step and shows "STEP 1 OF 3" eyebrow', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
-      await act(async () => {
-        fireEvent.press(getByTestId('gradient-cta'));
-      });
-      expect(getByText("Anything you can't eat?")).toBeTruthy();
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByText('STEP 1 OF 3')).toBeTruthy();
     });
 
-    it('renders the thinking mascot on dietary step', async () => {
-      const { getByTestId, getAllByTestId } = render(<OnboardingScreen />);
-      await act(async () => {
-        fireEvent.press(getByTestId('gradient-cta'));
-      });
-      expect(getAllByTestId('animated-sazon-thinking').length).toBeGreaterThan(0);
+    it('renders editorial title ("Any foods" + "to avoid")', async () => {
+      const { getByText, getByTestId } = render(<OnboardingScreen />);
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByText(/Any foods/)).toBeTruthy();
+      expect(getByText('to avoid')).toBeTruthy();
     });
 
-    it('dietary step is optional — "Continue" stays enabled', async () => {
+    it('renders the thinking mascot on diet step', async () => {
       const { getByTestId } = render(<OnboardingScreen />);
-      await act(async () => {
-        fireEvent.press(getByTestId('gradient-cta'));
-      });
-      const btn = getByTestId('gradient-cta');
-      expect(btn.props.accessibilityState?.disabled).toBeFalsy();
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByTestId('logo-mascot-thinking')).toBeTruthy();
+    });
+
+    it('renders the 6 dietary option cards', async () => {
+      const { getByText, getByTestId } = render(<OnboardingScreen />);
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByText('Vegetarian')).toBeTruthy();
+      expect(getByText('Vegan')).toBeTruthy();
+      expect(getByText('Gluten-free')).toBeTruthy();
+      expect(getByText('Dairy-free')).toBeTruthy();
+      expect(getByText('Nut-free')).toBeTruthy();
+      expect(getByText('Keto')).toBeTruthy();
+    });
+
+    it('CTA stays enabled on diet step (optional)', async () => {
+      const { getByTestId } = render(<OnboardingScreen />);
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByTestId('onboarding-cta').props.accessibilityState?.disabled).toBeFalsy();
+    });
+
+    it('CTA shows "Continue" on diet step', async () => {
+      const { getByText, getByTestId } = render(<OnboardingScreen />);
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByText('Continue')).toBeTruthy();
     });
   });
 
-  describe('Step 2 — Goal (9N: lavender gradient, final step)', () => {
-    it('advances to goal step and shows "Finish" label on CTA', async () => {
+  describe('Step 2 — Goal (lavender editorial)', () => {
+    it('advances to goal step and shows "STEP 2 OF 3" eyebrow', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
-      await act(async () => {
-        fireEvent.press(getByTestId('gradient-cta'));
-      });
-      await act(async () => {
-        fireEvent.press(getByTestId('gradient-cta'));
-      });
-      expect(getByText('Finish')).toBeTruthy();
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByText('STEP 2 OF 3')).toBeTruthy();
+    });
+
+    it('CTA shows "Finish setup" label', async () => {
+      const { getByText, getByTestId } = render(<OnboardingScreen />);
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByText('Finish setup')).toBeTruthy();
+    });
+
+    it('renders the 4 goal option cards', async () => {
+      const { getByText, getByTestId } = render(<OnboardingScreen />);
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      expect(getByText('Lose weight')).toBeTruthy();
+      expect(getByText('Maintain')).toBeTruthy();
+      expect(getByText('Build muscle')).toBeTruthy();
+      expect(getByText('Just eat better')).toBeTruthy();
+    });
+  });
+
+  describe('Progress dots', () => {
+    it('renders 3 dots', () => {
+      const { getByTestId } = render(<OnboardingScreen />);
+      expect(getByTestId('onboarding-dot-0')).toBeTruthy();
+      expect(getByTestId('onboarding-dot-1')).toBeTruthy();
+      expect(getByTestId('onboarding-dot-2')).toBeTruthy();
     });
   });
 });

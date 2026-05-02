@@ -149,12 +149,15 @@ describe('Dark mode semantic colors', () => {
     expect(DarkColors.info).toBeDefined();
   });
 
-  it('light and dark mode share same primary brand color', () => {
-    expect(Colors.primary).toBe(DarkColors.primary);
+  it('dark mode primary is a brightened variant of light mode brand', () => {
+    // Per claude-design/sazon-chef-darkmode/COLORS.md:
+    // light uses #fa7e12; dark brightens to #FF9559 for AA contrast on cocoa scaffold.
+    expect(Colors.primary).toBe('#fa7e12');
+    expect(DarkColors.primary).toBe('#FF9559');
   });
 
-  it('DarkColors background is dark/OLED-optimized', () => {
-    // Background should be very dark
+  it('DarkColors background is the warm cocoa scaffold', () => {
+    // "Cookbook by candlelight" — warm cocoa-black, never pure black or cool gray
     expect(DarkColors.background).toMatch(/^#[01]/);
   });
 

@@ -9,11 +9,14 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { useColorScheme } from 'nativewind';
 import FrostedHeader from '../ui/FrostedHeader';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { LogoMascot } from '../mascot';
+import Sazon from '../mascot/Sazon';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { HapticPatterns } from '../../constants/Haptics';
+import { Colors, DarkColors } from '../../constants/Colors';
 
 interface HomeHeaderProps {
   onMascotPress?: () => void;
@@ -30,6 +33,9 @@ export default function HomeHeader({
   onFilterPress,
   activeFilterCount = 0,
 }: HomeHeaderProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const titleColor = isDark ? DarkColors.text.primary : '#111827';
   const badgeScale = useSharedValue(1);
   const badgeRotation = useSharedValue(0);
 
@@ -55,9 +61,9 @@ export default function HomeHeader({
       <View style={styles.row}>
         {/* Left: logo + title */}
         <HapticTouchableOpacity onPress={onMascotPress} activeOpacity={0.8} style={styles.titleRow}>
-          <LogoMascot size="xsmall" />
-          <Text style={styles.title} accessibilityRole="header">
-            Sazon <Text style={styles.titleAccent}>Chef</Text>
+          <Sazon variant="orange" motion="idle" size={36} />
+          <Text style={[styles.title, { color: titleColor }]} accessibilityRole="header">
+            Sazon <Text style={[styles.titleAccent, { color: titleColor }]}>Chef</Text>
           </Text>
         </HapticTouchableOpacity>
 
@@ -113,7 +119,7 @@ export default function HomeHeader({
   );
 }
 
-const TITLE_SIZE = 26;
+const TITLE_SIZE = 36;
 
 const styles = StyleSheet.create({
   row: {
@@ -126,20 +132,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 1,
   },
   title: {
     fontFamily: EditorialFontFamily.display.bold,
     fontSize: TITLE_SIZE,
-    lineHeight: TITLE_SIZE * 1.1,
-    letterSpacing: -0.8,
-    color: '#111827',
+    lineHeight: TITLE_SIZE * 1.04,
+    letterSpacing: -1.6,
   },
   titleAccent: {
     fontFamily: EditorialFontFamily.displayItalic.bold,
     fontStyle: 'italic',
     fontSize: TITLE_SIZE,
-    letterSpacing: -0.8,
-    color: '#111827',
+    letterSpacing: -1.6,
   },
   actions: {
     flexDirection: 'row',

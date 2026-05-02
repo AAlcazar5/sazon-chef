@@ -1,8 +1,8 @@
 // frontend/app/onboarding.tsx
-// 9N: 3-screen onboarding with pastel gradient backgrounds, mascot per step,
-// spring transitions, and hero typography.
+// Editorial 3-step onboarding — pastel hero circle, italic-accent title, dark CTA pill
+// Step 0: Welcome (peach)  Step 1: Diet (sage)  Step 2: Goal (lavender)
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   BackHandler,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -17,71 +18,83 @@ import Animated, {
   withSpring,
   withTiming,
   runOnJS,
-  interpolateColor,
 } from 'react-native-reanimated';
 import { MotiView } from 'moti';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { userApi } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AnimatedLottieMascot from '../components/mascot/AnimatedLottieMascot';
 import LogoMascot from '../components/mascot/LogoMascot';
-import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import Sazon, { type SazonVariant, type SazonMotion, type SazonFx } from '../components/mascot/Sazon';
 import SuccessModal from '../components/ui/SuccessModal';
-import ScreenGradient from '../components/ui/ScreenGradient';
-import { Colors, DarkColors, Pastel, PastelDark } from '../constants/Colors';
-import { FontSize, FontWeight } from '../constants/Typography';
-import { Shadows } from '../constants/Shadows';
+import {
+  Colors,
+  DarkColors,
+  EditorialColors,
+  HeroPlatesDark,
+} from '../constants/Colors';
+import { EditorialFontFamily } from '../constants/Typography';
 import { HapticPatterns } from '../constants/Haptics';
-import { onboarding1, onboarding2, onboarding3 } from '../constants/Gradients';
 import { useColorScheme } from 'nativewind';
-import type { LogoMascotExpression } from '../components/mascot/LogoMascot';
 
-// ── 3-screen onboarding flow ──
-// Step 0: Welcome (peach gradient + excited mascot)
-// Step 1: Dietary Restrictions (sage gradient + thinking mascot)
-// Step 2: Goal (lavender gradient + chef-kiss mascot)
-
+// ─── Step configuration ─────────────────────────────────────────────────
 const TOTAL_STEPS = 3;
 
-const STEP_GRADIENTS: readonly (readonly [string, string])[] = [
-  onboarding1, // peach → cream
-  onboarding2, // sage → cream
-  onboarding3, // lavender → cream
+type StepTheme = {
+  // Background gradient (top → bottom)
+  gradient: readonly [string, string, string];
+  gradientDark: readonly [string, string, string];
+  // Pastel circle bg + soft ring around it (light)
+  circleBg: string;
+  circleRing: string;
+  // Dark mode: jewel-tone hero plate gradient (terracotta / forest / plum)
+  // Source: COLORS.md → HeroPlatesDark
+  circleGradientDark: readonly [string, string];
+};
+
+const STEP_THEMES: readonly StepTheme[] = [
+  // 0: Welcome — peach (light) / terracotta (dark)
+  {
+    gradient: ['#FFE3CC', '#FFF3E0', '#FFFFFF'],
+    gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
+    circleBg: '#FFD9B8',
+    circleRing: '#FFEAD6',
+    circleGradientDark: HeroPlatesDark.orange.bg,
+  },
+  // 1: Diet — sage (light) / forest (dark)
+  {
+    gradient: ['#C8E6C9', '#E8F5E9', '#FFFFFF'],
+    gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
+    circleBg: '#B7DFB9',
+    circleRing: '#D8EDD9',
+    circleGradientDark: HeroPlatesDark.green.bg,
+  },
+  // 2: Goal — lavender (light) / plum (dark)
+  {
+    gradient: ['#E1BEE7', '#F3E5F5', '#FFFFFF'],
+    gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
+    circleBg: '#D9B6E1',
+    circleRing: '#EAD7EE',
+    circleGradientDark: HeroPlatesDark.lavender.bg,
+  },
 ];
 
-const STEP_DARK_GRADIENTS: readonly (readonly [string, string])[] = [
-  ['rgba(255,183,77,0.08)', '#0D0D0D'],
-  ['rgba(129,199,132,0.08)', '#0D0D0D'],
-  ['rgba(206,147,216,0.08)', '#0D0D0D'],
+const DIETARY_OPTIONS = [
+  { id: 'vegetarian', name: 'Vegetarian' },
+  { id: 'vegan', name: 'Vegan' },
+  { id: 'gluten-free', name: 'Gluten-free' },
+  { id: 'dairy-free', name: 'Dairy-free' },
+  { id: 'nut-free', name: 'Nut-free' },
+  { id: 'keto', name: 'Keto' },
 ];
 
-const STEP_MASCOTS: readonly LogoMascotExpression[] = [
-  'excited',    // Welcome
-  'thinking',   // Dietary restrictions
-  'chef-kiss',  // Goal
-];
-
-const DIETARY_RESTRICTIONS = [
-  { name: 'Vegetarian', icon: '🥕', description: 'No meat or fish', tint: Pastel.sage, tintDark: PastelDark.sage },
-  { name: 'Vegan', icon: '🌱', description: 'No animal products', tint: Pastel.sage, tintDark: PastelDark.sage },
-  { name: 'Gluten-Free', icon: '🌾', description: 'No wheat, barley, rye', tint: Pastel.golden, tintDark: PastelDark.golden },
-  { name: 'Dairy-Free', icon: '🥛', description: 'No milk products', tint: Pastel.sky, tintDark: PastelDark.sky },
-  { name: 'Nut-Free', icon: '🥜', description: 'No tree nuts or peanuts', tint: Pastel.red, tintDark: PastelDark.red },
-  { name: 'Kosher', icon: '✡️', description: 'Jewish dietary laws', tint: Pastel.lavender, tintDark: PastelDark.lavender },
-  { name: 'Halal', icon: '☪️', description: 'Islamic dietary laws', tint: Pastel.peach, tintDark: PastelDark.peach },
-  { name: 'Pescatarian', icon: '🐟', description: 'No meat, but fish allowed', tint: Pastel.sky, tintDark: PastelDark.sky },
-  { name: 'Keto', icon: '🥑', description: 'Low carb, high fat', tint: Pastel.sage, tintDark: PastelDark.sage },
-  { name: 'Paleo', icon: '🦴', description: 'Whole foods, no processed', tint: Pastel.peach, tintDark: PastelDark.peach },
-];
-
-const TOP_DIETARY_RESTRICTIONS = DIETARY_RESTRICTIONS.slice(0, 5);
-
-const GOAL_CARDS = [
-  { value: 'maintain', label: 'Eat Healthy', icon: '⚖️', description: 'Balanced meals that fuel your day', tint: Pastel.sage, tintDark: PastelDark.sage },
-  { value: 'lose_weight', label: 'Save Time', icon: '⏱️', description: 'Quick, nutritious meals in 30 min or less', tint: Pastel.sky, tintDark: PastelDark.sky },
-  { value: 'gain_muscle', label: 'Explore Cuisines', icon: '🌍', description: 'Discover flavors from around the world', tint: Pastel.peach, tintDark: PastelDark.peach },
+const GOAL_OPTIONS = [
+  { id: 'lose_weight', label: 'Lose weight' },
+  { id: 'maintain', label: 'Maintain' },
+  { id: 'gain_muscle', label: 'Build muscle' },
+  { id: 'just_eat_better', label: 'Just eat better' },
 ];
 
 interface OnboardingData {
@@ -97,14 +110,12 @@ export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showMoreDietary, setShowMoreDietary] = useState(false);
-
   const [data, setData] = useState<OnboardingData>({
     dietaryRestrictions: [],
     fitnessGoal: '',
   });
 
-  // Android hardware back button -> go to previous step (not previous screen)
+  // Hardware/gesture back → previous step instead of leaving the flow
   useEffect(() => {
     const onHardwareBack = () => {
       if (currentStep <= 0) return false;
@@ -115,7 +126,6 @@ export default function OnboardingScreen() {
     return () => sub.remove();
   }, [currentStep]);
 
-  // iOS swipe-back gesture -> go to previous step (not previous screen)
   useEffect(() => {
     const unsubscribe = (navigation as any).addListener('beforeRemove', (e: any) => {
       if (currentStep <= 0) return;
@@ -125,27 +135,16 @@ export default function OnboardingScreen() {
     return unsubscribe;
   }, [navigation, currentStep]);
 
-  const toggleDietaryRestriction = (name: string) => {
-    setData(prev => ({
-      ...prev,
-      dietaryRestrictions: prev.dietaryRestrictions.includes(name)
-        ? prev.dietaryRestrictions.filter(v => v !== name)
-        : [...prev.dietaryRestrictions, name],
-    }));
-  };
-
-  // ── Screen transition: spring scale 0.95→1.0 + opacity ──
+  // ─── Step transition (spring scale + fade) ─────────────────────────────
   const slideScale = useSharedValue(1);
   const slideOpacity = useSharedValue(1);
   const [visibleStep, setVisibleStep] = useState(currentStep);
 
-  const animateToStep = (nextStepIndex: number) => {
-    // Exit: scale down + fade out
-    slideScale.value = withTiming(0.95, { duration: 120 });
+  const animateToStep = (nextIdx: number) => {
+    slideScale.value = withTiming(0.96, { duration: 120 });
     slideOpacity.value = withTiming(0, { duration: 120 }, () => {
-      runOnJS(setVisibleStep)(nextStepIndex);
-      // Enter: spring scale up + fade in
-      slideScale.value = 0.95;
+      runOnJS(setVisibleStep)(nextIdx);
+      slideScale.value = 0.96;
       slideOpacity.value = 0;
       slideScale.value = withSpring(1, { damping: 18, stiffness: 280 });
       slideOpacity.value = withTiming(1, { duration: 200 });
@@ -175,30 +174,32 @@ export default function OnboardingScreen() {
     }
   };
 
+  const toggleDietary = (id: string) => {
+    setData(prev => ({
+      ...prev,
+      dietaryRestrictions: prev.dietaryRestrictions.includes(id)
+        ? prev.dietaryRestrictions.filter(v => v !== id)
+        : [...prev.dietaryRestrictions, id],
+    }));
+  };
+
   const saveOnboarding = async () => {
     try {
       setSaving(true);
-
       const prefsPayload: Record<string, any> = {
         dietaryRestrictions: data.dietaryRestrictions,
         cookTimePreference: 30,
         spiceLevel: 'medium',
       };
-      if (data.fitnessGoal) {
-        prefsPayload.fitnessGoal = data.fitnessGoal;
-      }
+      if (data.fitnessGoal) prefsPayload.fitnessGoal = data.fitnessGoal;
 
       await userApi.updatePreferences(prefsPayload);
-
-      if (data.fitnessGoal) {
-        await AsyncStorage.setItem('onboarding_goal', data.fitnessGoal);
-      }
-
+      if (data.fitnessGoal) await AsyncStorage.setItem('onboarding_goal', data.fitnessGoal);
       await AsyncStorage.setItem('onboarding_complete', 'true');
 
       HapticPatterns.success();
       setShowSuccessModal(true);
-    } catch (error) {
+    } catch {
       HapticPatterns.error();
       Alert.alert('Oops!', "Couldn't save your preferences — give it another shot?");
     } finally {
@@ -206,7 +207,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const skipOnboarding = async () => {
+  const skipOnboarding = () => {
     Alert.alert(
       'Skip Onboarding?',
       'You can always set up your preferences later from the Profile screen.',
@@ -215,609 +216,599 @@ export default function OnboardingScreen() {
         {
           text: 'Skip',
           onPress: async () => {
-            try {
-              await AsyncStorage.setItem('onboarding_complete', 'true');
-              router.replace('/(tabs)');
-            } catch {
-              router.replace('/(tabs)');
-            }
-          }
+            try { await AsyncStorage.setItem('onboarding_complete', 'true'); } catch {}
+            router.replace('/(tabs)');
+          },
         },
       ]
     );
   };
 
-  // ── Render step dispatcher ──
+  // ─── CTA label per step ─────────────────────────────────────────────────
+  const ctaLabel = useMemo(() => {
+    if (saving) return 'Setting up...';
+    if (currentStep === 0) return 'Get started';
+    if (currentStep === TOTAL_STEPS - 1) return 'Finish setup';
+    return 'Continue';
+  }, [currentStep, saving]);
+
+  const theme = STEP_THEMES[currentStep];
+  const gradient = isDark ? theme.gradientDark : theme.gradient;
+
+  // ─── Render ─────────────────────────────────────────────────────────────
   const renderStep = () => {
     switch (visibleStep) {
-      case 0: return renderWelcome();
-      case 1: return renderDietary();
-      case 2: return renderGoal();
-      default: return null;
+      case 0:
+        return (
+          <EditorialStep
+            stepIndex={0}
+            theme={STEP_THEMES[0]}
+            isDark={isDark}
+            eyebrow="Welcome"
+            mascotExpression="excited"
+            titleLead="Let's find "
+            titleAccent="recipes"
+            titleTail=" you'll love"
+            terminator="."
+            subtitle="Sazon tailors every recipe to your macros, your pantry, and how much time you have tonight."
+          />
+        );
+      case 1:
+        return (
+          <EditorialStep
+            stepIndex={1}
+            theme={STEP_THEMES[1]}
+            isDark={isDark}
+            eyebrow="Step 1 of 3"
+            mascotExpression="thinking"
+            titleLead="Any foods "
+            titleAccent="to avoid"
+            terminator="?"
+            subtitle="Pick anything you skip. You can change these anytime in your profile."
+          >
+            <OptionGrid
+              columns={3}
+              isDark={isDark}
+              options={DIETARY_OPTIONS.map(o => ({
+                id: o.id,
+                label: o.name,
+                selected: data.dietaryRestrictions.includes(o.id),
+              }))}
+              onSelect={toggleDietary}
+            />
+          </EditorialStep>
+        );
+      case 2:
+        return (
+          <EditorialStep
+            stepIndex={2}
+            theme={STEP_THEMES[2]}
+            isDark={isDark}
+            eyebrow="Step 2 of 3"
+            mascotExpression="chef-kiss"
+            titleLead="What's your "
+            titleAccent="goal"
+            terminator="?"
+            subtitle="We'll tune portions and macro targets to match."
+          >
+            <OptionGrid
+              columns={2}
+              isDark={isDark}
+              options={GOAL_OPTIONS.map(o => ({
+                id: o.id,
+                label: o.label,
+                selected: data.fitnessGoal === o.id,
+              }))}
+              onSelect={(id) => setData(prev => ({ ...prev, fitnessGoal: id }))}
+            />
+          </EditorialStep>
+        );
+      default:
+        return null;
     }
   };
 
-  // ════════════════════════════════════════
-  // Screen 1: Welcome — peach gradient
-  // ════════════════════════════════════════
-  const renderWelcome = () => (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <MotiView
-        from={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', damping: 16, stiffness: 200 }}
-      >
-        <View style={styles.mascotContainer}>
-          <LogoMascot expression="excited" size="large" />
-        </View>
-      </MotiView>
-
-      <MotiView
-        from={{ opacity: 0, translateY: 24 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 100 }}
-      >
-        <Text
-          style={[
-            styles.heroTitle,
-            { color: isDark ? DarkColors.text.primary : Colors.text.primary },
-          ]}
-          accessibilityRole="header"
-        >
-          What's your name?
-        </Text>
-      </MotiView>
-
-      <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 150 }}
-      >
-        <Text style={[styles.subtitle, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
-          Let's personalize your experience in just a few quick steps
-        </Text>
-      </MotiView>
-
-      <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 200 }}
-      >
-        <View style={[
-          styles.previewCard,
-          {
-            backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.8)',
-            ...(Shadows.MD as any),
-          },
-        ]}>
-          <View style={styles.previewRow}>
-            <View style={[styles.previewIconBg, { backgroundColor: isDark ? PastelDark.sage : Pastel.sage }]}>
-              <Text style={styles.previewEmoji}>🥗</Text>
-            </View>
-            <View style={styles.previewText}>
-              <Text style={[styles.previewTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
-                Set Your Restrictions
-              </Text>
-              <Text style={[styles.previewDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
-                Tell us about dietary needs
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.previewRow}>
-            <View style={[styles.previewIconBg, { backgroundColor: isDark ? PastelDark.peach : Pastel.peach }]}>
-              <Text style={styles.previewEmoji}>🎯</Text>
-            </View>
-            <View style={styles.previewText}>
-              <Text style={[styles.previewTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
-                Pick Your Goal
-              </Text>
-              <Text style={[styles.previewDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
-                What are you cooking for?
-              </Text>
-            </View>
-          </View>
-        </View>
-      </MotiView>
-
-      <MotiView
-        from={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ type: 'timing', duration: 400, delay: 300 }}
-      >
-        <Text style={[styles.hint, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>
-          Takes less than a minute. You can skip and set this up later.
-        </Text>
-      </MotiView>
-    </ScrollView>
-  );
-
-  // ════════════════════════════════════════
-  // Screen 2: Dietary Restrictions — sage gradient
-  // ════════════════════════════════════════
-  const renderDietary = () => {
-    const restrictionsToShow = showMoreDietary ? DIETARY_RESTRICTIONS : TOP_DIETARY_RESTRICTIONS;
-
-    return (
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <MotiView
-          from={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', damping: 16, stiffness: 200 }}
-        >
-          <View style={styles.mascotContainer}>
-            <AnimatedLottieMascot expression="thinking" size="small" />
-          </View>
-        </MotiView>
-
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 50 }}
-        >
-          <Text
-            style={[
-              styles.stepTitle,
-              { color: isDark ? DarkColors.text.primary : Colors.text.primary },
-            ]}
-            accessibilityRole="header"
-          >
-            Anything you can't eat?
-          </Text>
-          <Text style={[styles.stepSubtitle, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
-            Optional — skip if none apply
-          </Text>
-        </MotiView>
-
-        {restrictionsToShow.map((restriction, index) => {
-          const isSelected = data.dietaryRestrictions.includes(restriction.name);
-          return (
-            <MotiView
-              key={restriction.name}
-              from={{ opacity: 0, translateY: 16 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 100 + index * 50 }}
-            >
-              <HapticTouchableOpacity
-                onPress={() => toggleDietaryRestriction(restriction.name)}
-                style={[
-                  styles.chipCard,
-                  {
-                    backgroundColor: isSelected
-                      ? (isDark ? restriction.tintDark : restriction.tint)
-                      : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.8)'),
-                    ...(Shadows.SM as any),
-                  },
-                ]}
-                activeOpacity={0.7}
-                accessibilityLabel={`${restriction.name}: ${restriction.description}`}
-                accessibilityState={{ selected: isSelected }}
-              >
-                <Text style={styles.chipEmoji}>{restriction.icon}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[
-                    styles.chipName,
-                    { color: isDark ? DarkColors.text.primary : Colors.text.primary },
-                  ]}>
-                    {restriction.name}
-                  </Text>
-                  <Text style={[styles.chipDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
-                    {restriction.description}
-                  </Text>
-                </View>
-                {isSelected && (
-                  <View style={[styles.checkBadge, { backgroundColor: Colors.primary }]}>
-                    <Ionicons name="checkmark" size={14} color="white" />
-                  </View>
-                )}
-              </HapticTouchableOpacity>
-            </MotiView>
-          );
-        })}
-
-        {!showMoreDietary && (
-          <MotiView
-            from={{ opacity: 0, translateY: 12 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 350 }}
-          >
-            <HapticTouchableOpacity
-              onPress={() => setShowMoreDietary(true)}
-              style={[
-                styles.moreButton,
-                { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.6)' },
-              ]}
-              activeOpacity={0.7}
-              accessibilityLabel="Show more dietary options"
-            >
-              <Ionicons name="chevron-down" size={18} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
-              <Text style={[styles.moreLabel, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
-                More options
-              </Text>
-            </HapticTouchableOpacity>
-          </MotiView>
-        )}
-      </ScrollView>
-    );
-  };
-
-  // ════════════════════════════════════════
-  // Screen 3: Goal — lavender gradient
-  // ════════════════════════════════════════
-  const renderGoal = () => (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <MotiView
-        from={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', damping: 16, stiffness: 200 }}
-      >
-        <View style={styles.mascotContainer}>
-          <AnimatedLottieMascot expression="chef-kiss" size="small" />
-        </View>
-      </MotiView>
-
-      <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 50 }}
-      >
-        <Text
-          style={[
-            styles.stepTitle,
-            { color: isDark ? DarkColors.text.primary : Colors.text.primary },
-          ]}
-          accessibilityRole="header"
-        >
-          What's your goal?
-        </Text>
-        <Text style={[styles.stepSubtitle, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
-          We'll tailor recipes to match
-        </Text>
-      </MotiView>
-
-      {GOAL_CARDS.map((goal, index) => {
-        const isSelected = data.fitnessGoal === goal.value;
-        return (
-          <MotiView
-            key={goal.value}
-            from={{ opacity: 0, translateY: 16 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 100 + index * 60 }}
-          >
-            <HapticTouchableOpacity
-              onPress={() => setData({ ...data, fitnessGoal: goal.value })}
-              style={[
-                styles.goalCard,
-                {
-                  backgroundColor: isSelected
-                    ? (isDark ? goal.tintDark : goal.tint)
-                    : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.8)'),
-                  ...(Shadows.MD as any),
-                },
-              ]}
-              activeOpacity={0.7}
-              accessibilityLabel={`${goal.label}: ${goal.description}`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              <Text style={styles.goalEmoji}>{goal.icon}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[
-                  styles.goalLabel,
-                  { color: isDark ? DarkColors.text.primary : Colors.text.primary },
-                ]}>
-                  {goal.label}
-                </Text>
-                <Text style={[styles.goalDesc, { color: isDark ? DarkColors.text.secondary : Colors.text.secondary }]}>
-                  {goal.description}
-                </Text>
-              </View>
-              {isSelected && (
-                <View style={[styles.checkBadge, { backgroundColor: Colors.primary }]}>
-                  <Ionicons name="checkmark" size={14} color="white" />
-                </View>
-              )}
-            </HapticTouchableOpacity>
-          </MotiView>
-        );
-      })}
-
-      <MotiView
-        from={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ type: 'timing', duration: 400, delay: 280 }}
-      >
-        <Text style={[styles.hint, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>
-          You can refine this and add more details from your Profile anytime
-        </Text>
-      </MotiView>
-    </ScrollView>
-  );
-
-  // ── Gradient for current step ──
-  const currentGradient = isDark
-    ? STEP_DARK_GRADIENTS[currentStep]
-    : STEP_GRADIENTS[currentStep];
+  const accentColor = isDark ? DarkColors.primary : Colors.primary;
 
   return (
-    <ScreenGradient gradient={currentGradient}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={{ flex: 1 }}>
-          {/* Header */}
-          <View style={[
-            styles.header,
-            {
-              backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.6)',
-            },
-          ]}>
-            <View style={styles.headerRow}>
-              {currentStep > 0 ? (
-                <HapticTouchableOpacity
-                  onPress={prevStep}
-                  style={{ padding: 4 }}
-                  accessibilityLabel="Go back"
-                >
-                  <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.secondary : Colors.text.secondary} />
-                </HapticTouchableOpacity>
-              ) : (
-                <View style={{ width: 32 }} />
-              )}
+    <View style={{ flex: 1, backgroundColor: isDark ? DarkColors.background : '#FFFFFF' }}>
+      <LinearGradient
+        colors={gradient as unknown as [string, string, string]}
+        locations={[0, 0.45, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
 
-              <AnimatedLottieMascot
-                expression={STEP_MASCOTS[currentStep]}
-                size="tiny"
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        {/* Top chrome: dots (left) + skip (right) */}
+        <View style={styles.topChrome}>
+          <View style={styles.dotsRow} accessibilityRole="progressbar" accessibilityLabel={`Step ${currentStep + 1} of ${TOTAL_STEPS}`}>
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <MotiView
+                key={i}
+                animate={{
+                  width: i === currentStep ? 22 : 6,
+                  opacity: i === currentStep ? 1 : 0.4,
+                }}
+                transition={{ type: 'spring', damping: 16, stiffness: 280 }}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: i === currentStep ? accentColor : (isDark ? DarkColors.surfaceTint : '#E5DFD7'),
+                  },
+                ]}
+                testID={`onboarding-dot-${i}`}
               />
-
-              <HapticTouchableOpacity
-                onPress={skipOnboarding}
-                style={{ padding: 4 }}
-                accessibilityLabel="Skip onboarding"
-              >
-                <Text style={[styles.skipLabel, { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary }]}>
-                  Skip
-                </Text>
-              </HapticTouchableOpacity>
-            </View>
-
-            {/* Orange active dot progress indicator */}
-            <View style={styles.dotsRow}>
-              {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-                <MotiView
-                  key={i}
-                  animate={{
-                    width: i === currentStep ? 20 : 6,
-                    opacity: i === currentStep ? 1 : i < currentStep ? 0.6 : 0.25,
-                  }}
-                  transition={{ type: 'spring', damping: 15, stiffness: 300 }}
-                  style={[
-                    styles.dot,
-                    {
-                      backgroundColor: i <= currentStep
-                        ? '#FF8B41' // orange active
-                        : (isDark ? '#4B5563' : '#D1D5DB'),
-                    },
-                  ]}
-                />
-              ))}
-            </View>
+            ))}
           </View>
 
-          {/* Content — spring scale transition */}
-          <Animated.View style={[{ flex: 1 }, slideStyle]}>
-            {renderStep()}
-          </Animated.View>
-
-          {/* Bottom Bar */}
-          <View style={[
-            styles.bottomBar,
-            {
-              backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.6)',
-            },
-          ]}>
-            <GradientButton
-              label={saving ? 'Setting Up...' : currentStep === TOTAL_STEPS - 1 ? 'Finish' : 'Continue'}
-              onPress={nextStep}
-              disabled={saving}
-              loading={saving}
-              colors={GradientPresets.brand}
-              icon={currentStep === TOTAL_STEPS - 1 ? 'checkmark-circle-outline' : 'arrow-forward'}
-            />
-          </View>
+          <HapticTouchableOpacity
+            onPress={skipOnboarding}
+            style={styles.skipBtn}
+            accessibilityLabel="Skip onboarding"
+            accessibilityRole="button"
+          >
+            <Text style={[styles.skipText, { color: isDark ? DarkColors.text.tertiary : '#6B7280' }]}>
+              Skip
+            </Text>
+          </HapticTouchableOpacity>
         </View>
 
-        {/* Success Modal */}
-        <SuccessModal
-          visible={showSuccessModal}
-          title="Welcome to Sazon Chef!"
-          message="Your preferences have been saved. We'll use this information to give you personalized recipe recommendations."
-          expression="excited"
-          actionLabel="Get Started"
-          onAction={() => {
-            setShowSuccessModal(false);
-            router.replace('/(tabs)');
-          }}
-          onDismiss={() => {
-            setShowSuccessModal(false);
-            router.replace('/(tabs)');
-          }}
-        />
+        {/* Step content */}
+        <Animated.View style={[{ flex: 1 }, slideStyle]}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {renderStep()}
+          </ScrollView>
+        </Animated.View>
+
+        {/* Dark editorial CTA pill */}
+        <View style={styles.ctaWrap}>
+          <HapticTouchableOpacity
+            onPress={nextStep}
+            disabled={saving}
+            accessibilityLabel={ctaLabel}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving }}
+            testID="onboarding-cta"
+            style={[
+              styles.ctaPill,
+              {
+                backgroundColor: isDark ? DarkColors.primary : EditorialColors.blackCTA,
+                opacity: saving ? 0.7 : 1,
+                ...(isDark
+                  ? {
+                      shadowColor: DarkColors.primary,
+                      shadowOpacity: 0.35,
+                      shadowRadius: 24,
+                      shadowOffset: { width: 0, height: 10 },
+                      elevation: 8,
+                    }
+                  : null),
+              },
+            ]}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color={isDark ? DarkColors.text.inverse : '#FFFFFF'} />
+            ) : (
+              <Text style={[styles.ctaLabel, { color: isDark ? DarkColors.text.inverse : '#FFFFFF' }]}>
+                {ctaLabel}
+              </Text>
+            )}
+          </HapticTouchableOpacity>
+        </View>
       </SafeAreaView>
-    </ScreenGradient>
+
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Welcome to Sazon Chef!"
+        message="Your preferences have been saved. We'll use this information to give you personalized recipe recommendations."
+        expression="excited"
+        actionLabel="Get Started"
+        onAction={() => {
+          setShowSuccessModal(false);
+          router.replace('/(tabs)');
+        }}
+        onDismiss={() => {
+          setShowSuccessModal(false);
+          router.replace('/(tabs)');
+        }}
+      />
+    </View>
   );
 }
 
+// ─── EditorialStep — shared frame: circle hero + title + subtitle + children ──
+
+interface EditorialStepProps {
+  stepIndex: number;
+  theme: StepTheme;
+  isDark: boolean;
+  eyebrow: string;
+  mascotExpression: 'excited' | 'thinking' | 'chef-kiss';
+  titleLead: string;
+  titleAccent: string;
+  titleTail?: string;
+  terminator: string; // "." or "?"
+  subtitle: string;
+  children?: React.ReactNode;
+}
+
+// Sazon mascot config per onboarding step — keyed by stepIndex
+// 0: Welcome → orange, bouncy + sparkles
+// 1: Diet → green, curious wobble + question marks
+// 2: Goal → purple, celebrating with hearts
+const STEP_SAZON: readonly { variant: SazonVariant; motion: SazonMotion; fx: SazonFx[] }[] = [
+  { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },
+  { variant: 'green', motion: 'wobble', fx: ['question'] },
+  { variant: 'purple', motion: 'celebrate', fx: ['hearts'] },
+];
+
+function EditorialStep({
+  stepIndex,
+  theme,
+  isDark,
+  eyebrow,
+  mascotExpression,
+  titleLead,
+  titleAccent,
+  titleTail,
+  terminator,
+  subtitle,
+  children,
+}: EditorialStepProps) {
+  const titleColor = isDark ? DarkColors.text.primary : '#1A1A1A';
+  const subtitleColor = isDark ? DarkColors.text.secondary : '#6B7280';
+  const eyebrowColor = isDark ? DarkColors.text.tertiary : '#A8A29A';
+
+  return (
+    <View
+      style={styles.stepFrame}
+      testID={`onboarding-step-${stepIndex}`}
+    >
+      {/* Eyebrow */}
+      <MotiView
+        from={{ opacity: 0, translateY: 6 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 320 }}
+      >
+        <Text style={[styles.eyebrow, { color: eyebrowColor }]} accessibilityLabel={eyebrow}>
+          {eyebrow.toUpperCase()}
+        </Text>
+      </MotiView>
+
+      {/* Pastel hero circle (light) / Jewel gradient plate (dark) */}
+      <MotiView
+        from={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'spring', damping: 14, stiffness: 200 }}
+      >
+        <View style={styles.circleOuter}>
+          <View
+            style={[
+              styles.circleRing,
+              { backgroundColor: isDark ? 'transparent' : theme.circleRing },
+            ]}
+          >
+            {isDark ? (
+              <LinearGradient
+                colors={theme.circleGradientDark as unknown as [string, string]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={[
+                  styles.circleInner,
+                  styles.circleInnerDarkShadow,
+                ]}
+              >
+                <Sazon
+                  variant={STEP_SAZON[stepIndex].variant}
+                  motion={STEP_SAZON[stepIndex].motion}
+                  fx={STEP_SAZON[stepIndex].fx}
+                  size={140}
+                />
+              </LinearGradient>
+            ) : (
+              <View
+                style={[
+                  styles.circleInner,
+                  { backgroundColor: theme.circleBg },
+                ]}
+              >
+                <Sazon
+                  variant={STEP_SAZON[stepIndex].variant}
+                  motion={STEP_SAZON[stepIndex].motion}
+                  fx={STEP_SAZON[stepIndex].fx}
+                  size={140}
+                />
+              </View>
+            )}
+          </View>
+        </View>
+      </MotiView>
+
+      {/* Title with italic accent + accent-colored terminator */}
+      <MotiView
+        from={{ opacity: 0, translateY: 12 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'spring', damping: 18, stiffness: 220, delay: 80 }}
+      >
+        <Text
+          style={[styles.title, { color: titleColor }]}
+          accessibilityRole="header"
+          accessibilityLabel={`${titleLead}${titleAccent}${titleTail ?? ''}${terminator}`}
+        >
+          {titleLead}
+          <Text style={[styles.titleAccent, { color: titleColor }]}>
+            {titleAccent}
+          </Text>
+          {titleTail ?? ''}
+          {terminator !== '.' && (
+            <Text style={[styles.titleTerminator, { color: isDark ? DarkColors.primary : Colors.primary }]}>{terminator}</Text>
+          )}
+        </Text>
+      </MotiView>
+
+      {/* Subtitle */}
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'spring', damping: 18, stiffness: 220, delay: 140 }}
+      >
+        <Text style={[styles.subtitle, { color: subtitleColor }]}>
+          {subtitle}
+        </Text>
+      </MotiView>
+
+      {/* Optional content (option grid) */}
+      {children && (
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'spring', damping: 18, stiffness: 220, delay: 200 }}
+          style={{ width: '100%' }}
+        >
+          {children}
+        </MotiView>
+      )}
+    </View>
+  );
+}
+
+// ─── OptionGrid — selectable card grid with icon dot + label ────────────
+
+interface OptionGridItem {
+  id: string;
+  label: string;
+  selected: boolean;
+}
+
+function OptionGrid({
+  options,
+  columns,
+  isDark,
+  onSelect,
+}: {
+  options: OptionGridItem[];
+  columns: 2 | 3;
+  isDark: boolean;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <View style={styles.gridWrap}>
+      {options.map((opt) => (
+        <OptionCard
+          key={opt.id}
+          label={opt.label}
+          selected={opt.selected}
+          isDark={isDark}
+          columns={columns}
+          onPress={() => onSelect(opt.id)}
+        />
+      ))}
+    </View>
+  );
+}
+
+function OptionCard({
+  label,
+  selected,
+  isDark,
+  columns,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  isDark: boolean;
+  columns: 2 | 3;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const handlePressIn = () => { scale.value = withSpring(0.96, { damping: 14, stiffness: 320 }); };
+  const handlePressOut = () => { scale.value = withSpring(1, { damping: 14, stiffness: 320 }); };
+
+  const widthPct = columns === 3 ? '31.5%' : '47.5%';
+  // Dark-mode selected: accentSoft tint per COLORS.md (rgba(255,149,89,0.14))
+  const bg = selected
+    ? (isDark ? 'rgba(255,149,89,0.14)' : 'rgba(250,126,18,0.08)')
+    : (isDark ? DarkColors.card : '#FFFFFF');
+  const border = selected
+    ? (isDark ? DarkColors.primary : Colors.primary)
+    : (isDark ? DarkColors.border.light : '#EAE3DA');
+  const labelColor = isDark ? DarkColors.text.primary : '#1A1A1A';
+  const dotBg = isDark ? DarkColors.surfaceTint : '#E9E4DD';
+
+  return (
+    <Animated.View style={[{ width: widthPct as any }, animStyle]}>
+      <HapticTouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: selected }}
+        accessibilityLabel={label}
+        style={[
+          styles.optionCard,
+          {
+            backgroundColor: bg,
+            borderColor: border,
+            borderWidth: selected ? 1.5 : 1,
+          },
+        ]}
+        testID={`option-${label}`}
+      >
+        <View style={[styles.optionDot, { backgroundColor: dotBg }]} />
+        <Text style={[styles.optionLabel, { color: labelColor }]} numberOfLines={1}>
+          {label}
+        </Text>
+      </HapticTouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// ─── Styles ─────────────────────────────────────────────────────────────
+
+const TITLE_SIZE = 38;
+
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-    paddingBottom: 40,
-  },
-  mascotContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  heroTitle: {
-    fontSize: FontSize.hero,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  stepTitle: {
-    fontSize: FontSize['2xl'],
-    fontFamily: 'PlusJakartaSans_700Bold',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: FontSize.lg,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 26,
-  },
-  stepSubtitle: {
-    fontSize: FontSize.md,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  hint: {
-    fontSize: FontSize.sm,
-    textAlign: 'center',
-    paddingHorizontal: 16,
-    marginTop: 20,
-  },
-  // Preview card (welcome screen)
-  previewCard: {
-    borderRadius: 20,
-    padding: 20,
-    gap: 16,
-  },
-  previewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  previewIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  previewEmoji: {
-    fontSize: 24,
-  },
-  previewText: {
-    flex: 1,
-  },
-  previewTitle: {
-    fontSize: FontSize.lg,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    marginBottom: 2,
-  },
-  previewDesc: {
-    fontSize: FontSize.sm,
-  },
-  // Dietary chips
-  chipCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 10,
-  },
-  chipEmoji: {
-    fontSize: 28,
-    marginRight: 12,
-  },
-  chipName: {
-    fontSize: FontSize.md,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-  },
-  chipDesc: {
-    fontSize: FontSize.sm,
-    marginTop: 2,
-  },
-  checkBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 10,
-  },
-  moreLabel: {
-    fontSize: FontSize.md,
-    fontFamily: 'PlusJakartaSans_500Medium',
-    marginLeft: 8,
-  },
-  // Goal cards
-  goalCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  goalEmoji: {
-    fontSize: 36,
-    marginRight: 16,
-  },
-  goalLabel: {
-    fontSize: FontSize.lg,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    marginBottom: 2,
-  },
-  goalDesc: {
-    fontSize: FontSize.sm,
-    lineHeight: 18,
-  },
-  // Header
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  headerRow: {
+  topChrome: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  skipLabel: {
-    fontSize: FontSize.md,
-    fontFamily: 'PlusJakartaSans_500Medium',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   dotsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   dot: {
     height: 6,
     borderRadius: 3,
   },
-  // Bottom bar
-  bottomBar: {
+  skipBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  skipText: {
+    fontFamily: EditorialFontFamily.body.semibold,
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  scrollContent: {
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingBottom: 32,
+  },
+  stepFrame: {
+    alignItems: 'center',
+    paddingTop: 12,
+  },
+  eyebrow: {
+    fontFamily: EditorialFontFamily.body.extrabold,
+    fontSize: 11,
+    letterSpacing: 1.6,
+    marginBottom: 14,
+  },
+  circleOuter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  circleRing: {
+    width: 218,
+    height: 218,
+    borderRadius: 109,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circleInner: {
+    width: 188,
+    height: 188,
+    borderRadius: 94,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  circleInnerDarkShadow: {
+    shadowColor: '#000000',
+    shadowOpacity: 0.5,
+    shadowRadius: 36,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 16,
+  },
+  title: {
+    fontFamily: EditorialFontFamily.display.bold,
+    fontSize: TITLE_SIZE,
+    lineHeight: TITLE_SIZE * 1.06,
+    letterSpacing: -1.2,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  titleAccent: {
+    fontFamily: EditorialFontFamily.displayItalic.bold,
+    fontStyle: 'italic',
+    fontSize: TITLE_SIZE,
+    letterSpacing: -1.2,
+  },
+  titleTerminator: {
+    fontFamily: EditorialFontFamily.display.bold,
+    fontSize: TITLE_SIZE,
+  },
+  subtitle: {
+    fontFamily: EditorialFontFamily.body.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    marginBottom: 22,
+  },
+  gridWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 12,
+    marginTop: 4,
+  },
+  optionCard: {
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 96,
+    gap: 10,
+  },
+  optionDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  optionLabel: {
+    fontFamily: EditorialFontFamily.body.semibold,
+    fontSize: 13,
+    letterSpacing: 0.1,
+  },
+  ctaWrap: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  ctaPill: {
+    paddingVertical: 18,
+    borderRadius: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaLabel: {
+    fontFamily: EditorialFontFamily.body.semibold,
+    fontSize: 16,
+    letterSpacing: 0.2,
   },
 });
