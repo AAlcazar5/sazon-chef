@@ -1,5 +1,5 @@
 // backend/__tests__/modules/mealComponent/mealComponentController.test.ts
-// Group 10X Phase 1+2+5 — Build-a-Plate controller tests.
+// Group 10X Phase 1+2+5+6 — Build-a-Plate controller tests.
 
 import { Request, Response } from 'express';
 
@@ -9,6 +9,9 @@ const mockGeneratePermutations = jest.fn();
 const mockGetPlateFromPantry = jest.fn();
 const mockSolveCookTimeline = jest.fn();
 const mockFitPlateToMacros = jest.fn();
+const mockGetActiveLeftovers = jest.fn();
+const mockAddLeftoversFromPlate = jest.fn();
+const mockConsumeLeftoversForPlate = jest.fn();
 
 jest.mock('../../../src/services/mealComponentService', () => ({
   listComponents: (...args: unknown[]) => mockListComponents(...args),
@@ -20,6 +23,12 @@ jest.mock('../../../src/services/mealComponentService', () => ({
 
 jest.mock('../../../src/services/macroAutoFitService', () => ({
   fitPlateToMacros: (...args: unknown[]) => mockFitPlateToMacros(...args),
+}));
+
+jest.mock('../../../src/services/leftoverInventoryService', () => ({
+  getActiveLeftovers: (...args: unknown[]) => mockGetActiveLeftovers(...args),
+  addLeftoversFromPlate: (...args: unknown[]) => mockAddLeftoversFromPlate(...args),
+  consumeLeftoversForPlate: (...args: unknown[]) => mockConsumeLeftoversForPlate(...args),
 }));
 
 jest.mock('../../../src/services/cookTimelineService', () => ({
@@ -40,7 +49,7 @@ jest.mock('../../../src/utils/authHelper', () => ({
   isAuthenticated: (...args: unknown[]) => mockIsAuthenticated(...args),
 }));
 
-const mockPrismaComposedPlate = { findFirst: jest.fn() };
+const mockPrismaComposedPlate = { findFirst: jest.fn(), findUnique: jest.fn() };
 const mockPrismaComponent = { findMany: jest.fn() };
 jest.mock('../../../src/lib/prisma', () => ({
   prisma: {
@@ -65,7 +74,11 @@ beforeEach(() => {
   mockGeneratePermutations.mockResolvedValue([]);
   mockGetPlateFromPantry.mockResolvedValue(null);
   mockPrismaComposedPlate.findFirst.mockResolvedValue(null);
+  mockPrismaComposedPlate.findUnique.mockResolvedValue(null);
   mockPrismaComponent.findMany.mockResolvedValue([]);
+  mockGetActiveLeftovers.mockResolvedValue([]);
+  mockAddLeftoversFromPlate.mockResolvedValue(undefined);
+  mockConsumeLeftoversForPlate.mockResolvedValue(undefined);
   mockFitPlateToMacros.mockResolvedValue({
     achievable: true,
     plate: [{ slot: 'base', componentId: 'rice-1', portionMultiplier: 1 }],
@@ -527,6 +540,106 @@ describe('POST /api/composed-plates/auto-fit', () => {
 
     await mealComponentController.autoFit(req, res);
 
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe('GET /api/leftover-inventory (Phase 6)', () => {
+  it('returns 401 when not authenticated', async () => {
+    mockIsAuthenticated.mockReturnValueOnce(false);
+    const req = {} as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listLeftovers(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(mockGetActiveLeftovers).not.toHaveBeenCalled();
+  });
+
+  it('returns leftovers from the service in { leftovers } envelope', async () => {
+    const rows = [{ id: 'lo-1', componentId: 'salmon-1', portionsRemaining: 1 }];
+    mockGetActiveLeftovers.mockResolvedValueOnce(rows);
+    const req = {} as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listLeftovers(req, res);
+    expect(mockGetActiveLeftovers).toHaveBeenCalledWith('user-1');
+    expect(res.json).toHaveBeenCalledWith({ leftovers: rows });
+  });
+
+  it('returns 500 when service throws', async () => {
+    mockGetActiveLeftovers.mockRejectedValueOnce(new Error('db boom'));
+    const req = {} as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listLeftovers(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe('POST /api/composed-plates/:id/mark-cooked (Phase 6)', () => {
+  const validBody = {
+    leftovers: [{ componentId: 'salmon-1', slot: 'protein', portionsRemaining: 0.5 }],
+    consumePlateComponents: [{ componentId: 'rice-1', portionMultiplier: 1 }],
+  };
+
+  it('returns 401 when not authenticated', async () => {
+    mockIsAuthenticated.mockReturnValueOnce(false);
+    const req = { params: { id: 'plate-1' }, body: validBody } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.markPlateCooked(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  it('returns 404 when plate does not exist', async () => {
+    mockPrismaComposedPlate.findUnique.mockResolvedValueOnce(null);
+    const req = { params: { id: 'ghost-plate' }, body: validBody } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.markPlateCooked(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockAddLeftoversFromPlate).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when plate belongs to a different user (IDOR)', async () => {
+    mockPrismaComposedPlate.findUnique.mockResolvedValueOnce({ id: 'plate-1', userId: 'somebody-else' });
+    const req = { params: { id: 'plate-1' }, body: validBody } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.markPlateCooked(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockAddLeftoversFromPlate).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 on malformed body (negative portions)', async () => {
+    mockPrismaComposedPlate.findUnique.mockResolvedValueOnce({ id: 'plate-1', userId: 'user-1' });
+    const req = {
+      params: { id: 'plate-1' },
+      body: { leftovers: [{ componentId: 'salmon-1', slot: 'protein', portionsRemaining: -1 }] },
+    } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.markPlateCooked(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('happy path: consumes leftovers then adds new leftovers, returns ok', async () => {
+    mockPrismaComposedPlate.findUnique.mockResolvedValueOnce({ id: 'plate-1', userId: 'user-1' });
+    const req = { params: { id: 'plate-1' }, body: validBody } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.markPlateCooked(req, res);
+
+    expect(mockConsumeLeftoversForPlate).toHaveBeenCalledWith({
+      userId: 'user-1',
+      plateComponents: [{ componentId: 'rice-1', portionMultiplier: 1 }],
+    });
+    expect(mockAddLeftoversFromPlate).toHaveBeenCalledWith({
+      userId: 'user-1',
+      sourcePlateId: 'plate-1',
+      leftovers: [{ componentId: 'salmon-1', slot: 'protein', portionsRemaining: 0.5 }],
+    });
+    expect(res.json).toHaveBeenCalledWith({ ok: true });
+  });
+
+  it('returns 500 when service throws unexpectedly', async () => {
+    mockPrismaComposedPlate.findUnique.mockResolvedValueOnce({ id: 'plate-1', userId: 'user-1' });
+    mockAddLeftoversFromPlate.mockRejectedValueOnce(new Error('db boom'));
+    const req = { params: { id: 'plate-1' }, body: validBody } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.markPlateCooked(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
   });
 });
