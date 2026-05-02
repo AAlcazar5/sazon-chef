@@ -22,3 +22,13 @@ export { EditorialAisleHeader } from './EditorialAisleHeader';
 
 // Group 10Q — Shopping List Intelligence
 export { default as BuildFromRecipesSheet } from './BuildFromRecipesSheet';
+
+// Group 10Q-ListMgmt — Archive View
+export { default as ArchiveView } from './ArchiveView';
+export type { ArchivedList } from './ArchiveView';
+
+// Group 10Q-ListMgmt — Terminal-state UX
+export { default as InStoreDoneButton } from './InStoreDoneButton';
+export { default as StartFreshAction } from './StartFreshAction';
+export { default as MergeSuggestionBanner } from './MergeSuggestionBanner';
+export type { MergeSuggestion } from './MergeSuggestionBanner';

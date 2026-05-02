@@ -22,7 +22,7 @@ import { Shadows } from '../../constants/Shadows';
 import { ComponentSpacing } from '../../constants/Spacing';
 import { ShoppingListEmptyStates } from '../../constants/EmptyStates';
 import { ShoppingListLoadingStates } from '../../constants/LoadingStates';
-import { useShoppingList, categorizeItem, AISLE_ORDER, DEFAULT_AISLE_ORDER, AISLE_EMOJI } from '../../hooks/useShoppingList';
+import { useShoppingList, useActiveList, categorizeItem, AISLE_ORDER, DEFAULT_AISLE_ORDER, AISLE_EMOJI } from '../../hooks/useShoppingList';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
 import { mealPlanApi } from '../../lib/api';
@@ -56,6 +56,13 @@ import {
   EditorialAisleHeader,
 } from '../../components/shopping';
 import BuildFromRecipesSheet from '../../components/shopping/BuildFromRecipesSheet';
+import ArchiveView, { ArchivedList } from '../../components/shopping/ArchiveView';
+import BottomSheet from '../../components/ui/BottomSheet';
+import { shoppingListApi } from '../../lib/api';
+import { useAutoArchiveOnCompletion } from '../../hooks/useShoppingList.autoArchive';
+import InStoreDoneButton from '../../components/shopping/InStoreDoneButton';
+import StartFreshAction from '../../components/shopping/StartFreshAction';
+import MergeSuggestionBanner, { MergeSuggestion } from '../../components/shopping/MergeSuggestionBanner';
 
 // CONFETTI constant kept for backward compat reference (celebration now uses CelebrationOverlay)
 
@@ -63,6 +70,24 @@ export default function ShoppingListScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { activateInStore } = useLocalSearchParams<{ activateInStore?: string }>();
+
+  // Singleton UX: always open to the active list, no list-picker on mount
+  const { list: activeList, isLoading: activeListLoading, refetch: refetchActiveList } = useActiveList();
+
+  // Archive picker sheet (opt-in via header button)
+  const [showArchivePicker, setShowArchivePicker] = useState(false);
+  const [archivedLists, setArchivedLists] = useState<ArchivedList[]>([]);
+
+  const fetchArchivedLists = async () => {
+    try {
+      const response = await shoppingListApi.getShoppingLists();
+      const all = (response.data as any[]) ?? [];
+      const archived = all.filter((l: any) => !l.isActive || l.tier === 'archived' || l.tier === 'older');
+      setArchivedLists(archived as ArchivedList[]);
+    } catch {
+      // Non-blocking — empty archive is acceptable
+    }
+  };
 
   const {
     state,
@@ -118,19 +143,30 @@ export default function ShoppingListScreen() {
   // Build-from-Recipes sheet
   const [showBuildFromRecipes, setShowBuildFromRecipes] = useState(false);
 
-  // All-done celebration
+  // All-done celebration state
   const [showCelebration, setShowCelebration] = useState(false);
   const [tonightsMeal, setTonightsMeal] = useState<string | null>(null);
   const prevAllDone = useRef(false);
 
+  // Merge suggestion banner state
+  const [mergeSuggestion, setMergeSuggestion] = useState<MergeSuggestion | null>(null);
+
+  // Fetch merge suggestion when active list loads
   useEffect(() => {
-    const allDone = progressStats.total > 0 && progressStats.purchased === progressStats.total;
-    if (allDone && !prevAllDone.current && !state.loading) {
-      prevAllDone.current = true;
+    if (!state.selectedList || state.loading) return;
+    shoppingListApi.getMergeSuggestion()
+      .then((res: any) => setMergeSuggestion(res?.data ?? null))
+      .catch(() => {});
+  }, [state.selectedList?.id]);
+
+  // Auto-archive on completion hook (fires celebration + archives after 10s grace)
+  useAutoArchiveOnCompletion({
+    listId: state.selectedList?.id ?? null,
+    items: currentItems,
+    loading: state.loading,
+    onCelebrate: () => {
       setShowCelebration(true);
       HapticChoreography.shoppingCelebration();
-
-      // Fetch tonight's meal (non-blocking)
       mealPlanApi.getWeeklyPlan().then((res: any) => {
         const days = res?.data?.days || res?.data?.data?.days || [];
         if (Array.isArray(days)) {
@@ -141,10 +177,11 @@ export default function ShoppingListScreen() {
           if (next?.recipe?.title) setTonightsMeal(next.recipe.title);
         }
       }).catch(() => {});
-    } else if (!allDone) {
-      prevAllDone.current = false;
-    }
-  }, [progressStats.purchased, progressStats.total, state.loading]);
+    },
+    onRefresh: handleRefresh,
+  });
+
+  // (Celebration + archive are now handled by useAutoArchiveOnCompletion above)
 
   // Auto-activate in-store mode when navigated from Shopping Mode FAB action
   useEffect(() => {
@@ -222,6 +259,10 @@ export default function ShoppingListScreen() {
         editNameOpacity={editNameOpacity}
         createListScale={createListScale}
         createListOpacity={createListOpacity}
+        onOpenArchive={() => {
+          setShowArchivePicker(true);
+          fetchArchivedLists();
+        }}
       />
 
       {state.selectedList && (
@@ -258,6 +299,27 @@ export default function ShoppingListScreen() {
               testID="build-from-recipes-chip"
             />
           </View>
+
+          {/* Merge Suggestion Banner (10Q-ListMgmt) */}
+          {state.selectedList && mergeSuggestion && (
+            <MergeSuggestionBanner
+              activeListId={state.selectedList.id}
+              suggestion={mergeSuggestion}
+              onMerged={handleRefresh}
+              onDismissed={() => setMergeSuggestion(null)}
+            />
+          )}
+
+          {/* Start Fresh action (10Q-ListMgmt) — shown when list has items */}
+          {state.selectedList && currentItems.length > 0 && (
+            <View style={{ paddingHorizontal: 16, marginBottom: 8, alignItems: 'flex-end' }}>
+              <StartFreshAction
+                listId={state.selectedList.id}
+                items={currentItems}
+                onItemsCleared={handleRefresh}
+              />
+            </View>
+          )}
 
           {/* Editorial Progress Card (peach) */}
           {currentItems.length > 0 && (
@@ -490,6 +552,17 @@ export default function ShoppingListScreen() {
             </ScrollView>
           )}
 
+          {/* "I'm done shopping" button — shown in in-store mode (10Q-ListMgmt) */}
+          {state.inStoreMode && state.selectedList && currentItems.length > 0 && !state.selectionMode && (
+            <View style={{ position: 'absolute', left: 16, right: 16, bottom: 88 }}>
+              <InStoreDoneButton
+                listId={state.selectedList.id}
+                inStoreMode={state.inStoreMode}
+                onListDone={handleRefresh}
+              />
+            </View>
+          )}
+
           {/* Floating In-Store Mode Bar */}
           {state.inStoreMode && currentItems.length > 0 && !state.selectionMode && (
             <View
@@ -582,6 +655,32 @@ export default function ShoppingListScreen() {
           />
         </View>
       )}
+
+      {/* Archive view bottom sheet */}
+      <BottomSheet
+        visible={showArchivePicker}
+        onClose={() => setShowArchivePicker(false)}
+        snapPoints={['70%', '90%']}
+      >
+        <View style={{ flex: 1, paddingTop: 8 }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: '700',
+            paddingHorizontal: 16,
+            paddingBottom: 8,
+            color: isDark ? '#F0EDE8' : '#111827',
+          }}>
+            Past Lists
+          </Text>
+          <ArchiveView
+            lists={archivedLists}
+            onRestore={(_listId) => {
+              setShowArchivePicker(false);
+              refetchActiveList();
+            }}
+          />
+        </View>
+      </BottomSheet>
 
       <BuildFromRecipesSheet
         visible={showBuildFromRecipes}

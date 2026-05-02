@@ -30,6 +30,19 @@ jest.mock('../../components/shopping/BuildFromRecipesSheet', () => ({
   default: () => null,
 }));
 
+jest.mock('../../components/shopping/ArchiveView', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('../../components/ui/BottomSheet', () => ({
+  __esModule: true,
+  default: ({ children, visible }: any) => {
+    const { View } = require('react-native');
+    return visible ? <View>{children}</View> : null;
+  },
+}));
+
 jest.mock('../../components/ui/ContinuityCTA', () => ({
   __esModule: true,
   default: () => null,
