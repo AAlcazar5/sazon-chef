@@ -17,6 +17,9 @@ router.post('/:id/complete', shoppingListLifecycleController.archiveOnCompletion
 // Generate shopping list from recipes (must come before /:id routes)
 router.post('/generate-from-recipes', shoppingListController.generateFromRecipes);
 
+// Voice-add: utterance → fuzzy recipe match or literal item add
+router.post('/voice-add', shoppingListController.voiceAdd);
+
 // Budget preview (must come before /:id routes)
 router.post('/budget-preview', shoppingListController.getBudgetPreview);
 

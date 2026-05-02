@@ -1478,8 +1478,22 @@ export const shoppingListApi = {
     return apiClient.upload<{ url: string }>('/upload/item-photo', formData);
   },
 
-  generateFromRecipes: (recipeIds: string[], name?: string) => {
-    return apiClient.post('/shopping-lists/generate-from-recipes', { recipeIds, name });
+  generateFromRecipes: (
+    recipeIdsOrOptions:
+      | string[]
+      | {
+          recipeIds: string[];
+          name?: string;
+          subtractPantry?: boolean;
+          servingsByRecipe?: Record<string, number>;
+          allowDuplicate?: boolean;
+        },
+    name?: string,
+  ) => {
+    const body = Array.isArray(recipeIdsOrOptions)
+      ? { recipeIds: recipeIdsOrOptions, name }
+      : recipeIdsOrOptions;
+    return apiClient.post('/shopping-lists/generate-from-recipes', body);
   },
 
   generateFromMealPlan: (data: { startDate?: string; endDate?: string; recipeIds?: string[]; name?: string }) => {

@@ -288,12 +288,13 @@ export default function BuildFromRecipesSheet({ visible, onClose, onListCreated 
     if (selectedIds.length === 0) return;
     setGenerating(true);
     try {
-      const res: any = await (shoppingListApi as any).generateFromRecipes({
+      const res = await shoppingListApi.generateFromRecipes({
         recipeIds: selectedIds,
         subtractPantry,
         servingsByRecipe,
       });
-      const data = res?.data ?? res;
+      const data = (res as { data?: { duplicateOf?: string; similarity?: number; id?: string; listId?: string } })?.data
+        ?? (res as { duplicateOf?: string; similarity?: number; id?: string; listId?: string });
 
       if (data?.duplicateOf) {
         setDuplicateState({ duplicateOf: data.duplicateOf, similarity: data.similarity ?? 1 });

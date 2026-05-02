@@ -6,7 +6,8 @@ import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 import { notificationTriggerService } from '../../services/notificationTriggerService';
 import { categorizeItem } from '../../utils/aisleCategorizer';
-import { setActiveList } from '../../services/shoppingListLifecycleService';
+import { setActiveList, getActiveList } from '../../services/shoppingListLifecycleService';
+import { resolveVoiceUtterance } from '../../services/voiceRecipeResolver';
 
 /**
  * Auto-stock pantry when a shopping item is marked purchased.
@@ -336,6 +337,51 @@ export const shoppingListController = {
     } catch (error: any) {
       console.error('Error adding item to shopping list:', error);
       res.status(500).json({ error: 'Failed to add item to shopping list' });
+    }
+  },
+
+  /**
+   * Voice-add: route a transcribed utterance through the recipe-fuzzy-match resolver.
+   * High-confidence recipe match → generate-from-recipes flow. Otherwise add as a literal item.
+   * POST /api/shopping-lists/voice-add
+   */
+  async voiceAdd(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { utterance } = req.body;
+
+      if (!utterance || typeof utterance !== 'string' || !utterance.trim()) {
+        return res.status(400).json({ error: 'Utterance is required' });
+      }
+
+      const resolved = await resolveVoiceUtterance(userId, utterance);
+
+      if (resolved.matchType === 'recipe' && resolved.recipeId) {
+        // Forward to generate-from-recipes by populating req.body and re-invoking
+        req.body = { recipeIds: [resolved.recipeId] };
+        return shoppingListController.generateFromRecipes(req, res);
+      }
+
+      // Literal: add as a single item to the user's active list
+      const activeList = await getActiveList(userId);
+      const item = await prisma.shoppingListItem.create({
+        data: {
+          shoppingListId: activeList.id,
+          name: resolved.name,
+          quantity: '1',
+          category: categorizeItem(resolved.name),
+        },
+      });
+
+      return res.status(201).json({
+        matchType: resolved.matchType,
+        confidence: resolved.confidence,
+        listId: activeList.id,
+        itemId: item.id,
+      });
+    } catch (error: any) {
+      console.error('Error in voice-add:', error);
+      res.status(500).json({ error: 'Failed to process voice add' });
     }
   },
 
