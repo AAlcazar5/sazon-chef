@@ -20,6 +20,8 @@ import {
   consumeLeftoversForPlate,
   getActiveLeftovers,
 } from '../../services/leftoverInventoryService';
+import { composePlateFromUtterance } from '../../services/utteranceComposerService';
+import { buildFamilyMeal, type FamilyPlateInput } from '../../services/familyMealService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -83,6 +85,28 @@ const markCookedBodySchema = z.object({
     .max(10)
     .optional()
     .default([]),
+});
+
+const utteranceBodySchema = z.object({
+  utterance: z.string().min(1).max(500),
+});
+
+const familyPlateComponentSchema = z.object({
+  componentId: z.string().min(1).max(128),
+  portionMultiplier: z.number().positive().max(10),
+  slot: slotEnum,
+});
+
+const familyMealBodySchema = z.object({
+  plates: z
+    .array(
+      z.object({
+        plateId: z.string().min(1).max(64),
+        components: z.array(familyPlateComponentSchema).min(1).max(10),
+      })
+    )
+    .min(1)
+    .max(6),
 });
 
 const formatZodIssues = (error: z.ZodError): string =>
@@ -342,6 +366,55 @@ export const mealComponentController = {
     } catch (error) {
       console.error('Error listing leftovers:', error);
       return res.status(500).json({ error: 'Failed to list leftovers' });
+    }
+  },
+
+  async fromUtterance(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const parsed = utteranceBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+    try {
+      const userId = getUserId(req);
+      const result = await composePlateFromUtterance({ userId, utterance: parsed.data.utterance });
+      return res.json({ result });
+    } catch (error) {
+      console.error('Error composing from utterance:', error);
+      return res.status(500).json({ error: 'Failed to compose from utterance' });
+    }
+  },
+
+  async createFamilyMeal(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const parsed = familyMealBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+    try {
+      const userId = getUserId(req);
+      const familyMeal = buildFamilyMeal({
+        userId,
+        plates: parsed.data.plates as FamilyPlateInput[],
+      });
+      return res.status(201).json({ familyMeal });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/at least one plate|maximum.*plates/i.test(message)) {
+        return res.status(400).json({ error: message });
+      }
+      console.error('Error building family meal:', error);
+      return res.status(500).json({ error: 'Failed to build family meal' });
     }
   },
 
