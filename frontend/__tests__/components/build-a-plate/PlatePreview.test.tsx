@@ -22,6 +22,7 @@ const baseTotals = {
   carbs: 0,
   fat: 0,
   fiber: 0,
+  cost: 0,
   pantryCoveragePercent: 0,
 };
 
@@ -51,7 +52,7 @@ describe('PlatePreview', () => {
 
     rerender(
       <PlatePreview
-        totals={{ calories: 420, protein: 35, carbs: 40, fat: 18, fiber: 6, pantryCoveragePercent: 75 }}
+        totals={{ calories: 420, protein: 35, carbs: 40, fat: 18, fiber: 6, cost: 0, pantryCoveragePercent: 75 }}
         slotsFilled={{ protein: true, base: true }}
         testID="preview"
       />,

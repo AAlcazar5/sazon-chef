@@ -1,5 +1,5 @@
 // frontend/app/build-a-plate.tsx
-// Group 10X Phase 1+2 — Build-a-Plate composer (P0 launch blocker).
+// Group 10X Phase 1+2+5+6+8+9 — Build-a-Plate composer (P0 launch blocker).
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
@@ -11,18 +11,38 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import BrandButton from '../components/ui/BrandButton';
 import ScreenGradient from '../components/ui/ScreenGradient';
 import { StickyBottomBar } from '../components/ui/StickyBottomBar';
-import { SlotRow, SlotPicker, PlatePreview, PermutationCarousel, SwapStrip } from '../components/build-a-plate';
+import {
+  SlotRow,
+  SlotPicker,
+  PlatePreview,
+  PermutationCarousel,
+  SwapStrip,
+  MacroFitButton,
+  PortionStepper,
+  SubstitutionBanner,
+  BudgetToggle,
+  CostPill,
+  TechniqueChallengeBanner,
+  type MacroFitState,
+} from '../components/build-a-plate';
 import useDailyPlateSeed from '../hooks/useDailyPlateSeed';
 import useBuildAPlate, { SLOT_ORDER, REQUIRED_SLOTS } from '../hooks/useBuildAPlate';
 import useFavoriteComponents, { invalidateAffinitySlot } from '../hooks/useFavoriteComponents';
+import useSkillTier from '../hooks/useSkillTier';
 import {
   mealComponentApi,
   composedPlateApi,
   shoppingListApi,
+  leftoverInventoryApi,
+  nutrientGapApi,
   type MealComponent,
   type MealComponentSlot,
   type PermutationCandidate,
+  type LeftoverInventoryItem,
+  type ComponentVariantResponse,
+  type TrackedNutrient,
 } from '../lib/api';
+import type { ComponentVariant } from '../components/build-a-plate';
 import { Pastel, Accent } from '../constants/Colors';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticPatterns } from '../constants/Haptics';
@@ -39,7 +59,13 @@ const SLOT_META: Record<MealComponentSlot, { label: string; emoji: string }> = {
 
 export default function BuildAPlateScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ pantryOnly?: string; plateId?: string; seed?: string; preset?: string }>();
+  const params = useLocalSearchParams<{
+    pantryOnly?: string;
+    plateId?: string;
+    seed?: string;
+    preset?: string;
+    subsCount?: string;
+  }>();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -47,6 +73,14 @@ export default function BuildAPlateScreen() {
   const plateId = typeof params.plateId === 'string' ? params.plateId : undefined;
   const isBeginnerSeed = params.seed === 'beginner';
   const presetId = typeof params.preset === 'string' ? params.preset : undefined;
+  // Substitution count is provided by the deep-link route after the backend
+  // has adapted the plate to the current user's pantry. The composer doesn't
+  // recompute it — it just renders the banner if there's something to show.
+  const subsCount = useMemo(() => {
+    const raw = typeof params.subsCount === 'string' ? Number(params.subsCount) : 0;
+    return Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0;
+  }, [params.subsCount]);
+  const [subsBannerDismissed, setSubsBannerDismissed] = useState(false);
 
   const handleSwapAway = useCallback((componentId: string, slot: MealComponentSlot) => {
     mealComponentApi.swapAway(componentId).catch(() => undefined);
@@ -62,6 +96,13 @@ export default function BuildAPlateScreen() {
   const [showBeginnerTutorial, setShowBeginnerTutorial] = useState<boolean>(false);
   const beginnerInitialized = useRef(false);
   const presetInitialized = useRef(false);
+
+  const skillTier = useSkillTier();
+  const [macroFitState, setMacroFitState] = useState<MacroFitState>('idle');
+  const [budgetMode, setBudgetMode] = useState<boolean>(false);
+  const [leftoversBySlot, setLeftoversBySlot] = useState<Partial<Record<MealComponentSlot, LeftoverInventoryItem[]>>>({});
+  const [variantsByComponent, setVariantsByComponent] = useState<Record<string, ComponentVariant[]>>({});
+  const [topNutrientGap, setTopNutrientGap] = useState<TrackedNutrient | null>(null);
 
   const loadSlot = useCallback(async (slot: MealComponentSlot) => {
     if (poolBySlot[slot]) return poolBySlot[slot]!;
@@ -85,6 +126,51 @@ export default function BuildAPlateScreen() {
     void loadSlot('vegetable');
     void loadSlot('sauce');
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Phase 6: leftovers fetched once on mount per slot — only renders when populated.
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchLeftovers() {
+      try {
+        const slots: MealComponentSlot[] = ['protein', 'base', 'vegetable', 'sauce'];
+        const results = await Promise.allSettled(
+          slots.map((slot) => leftoverInventoryApi.list({ slot })),
+        );
+        if (cancelled) return;
+        const next: Partial<Record<MealComponentSlot, LeftoverInventoryItem[]>> = {};
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled') {
+            next[slots[i]] = r.value.data?.leftovers ?? [];
+          }
+        });
+        setLeftoversBySlot(next);
+      } catch {
+        // Non-blocking — composer works without leftovers.
+      }
+    }
+    void fetchLeftovers();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Phase 9: top nutrient gap fetched once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchGap() {
+      try {
+        const res = await nutrientGapApi.fetchTopGap();
+        if (cancelled) return;
+        setTopNutrientGap(res.data?.topGap ?? null);
+      } catch {
+        // Non-blocking — badges just won't render if no gap.
+      }
+    }
+    void fetchGap();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -159,13 +245,47 @@ export default function BuildAPlateScreen() {
   const handleOpenPicker = useCallback(async (slot: MealComponentSlot) => {
     await loadSlot(slot);
     setPickerSlot(slot);
-  }, [loadSlot]);
+    // Phase 6 — fetch variants for the currently-selected component when the
+    // picker opens (chef tier renders the chip row).
+    const selected = composer.selections[slot];
+    if (selected && skillTier.isVariantChipsVisible && !variantsByComponent[selected.id]) {
+      try {
+        const res = await mealComponentApi.variants(selected.id);
+        const list: ComponentVariantResponse[] = res.data?.variants ?? [];
+        setVariantsByComponent((prev) => ({ ...prev, [selected.id]: list }));
+      } catch {
+        // Non-blocking — chips just won't render.
+      }
+    }
+  }, [loadSlot, composer.selections, skillTier.isVariantChipsVisible, variantsByComponent]);
 
   const handleSelect = useCallback((component: MealComponent) => {
     if (!pickerSlot) return;
     composer.setSlot(pickerSlot, component);
     setPickerSlot(null);
   }, [pickerSlot, composer]);
+
+  const handleLeftoverSelect = useCallback(
+    (item: LeftoverInventoryItem) => {
+      // Auto-lock the slot when picking a leftover so subsequent rolls don't
+      // overwrite it — leftovers are intentional selections.
+      const pool = poolBySlot[item.slot] ?? [];
+      const match = pool.find((c) => c.id === item.componentId);
+      if (match) {
+        composer.setSlot(item.slot, match);
+        if (!composer.locks[item.slot]) composer.toggleLock(item.slot);
+      }
+      setPickerSlot(null);
+    },
+    [poolBySlot, composer],
+  );
+
+  const handleVariantSelect = useCallback((_variant: ComponentVariant) => {
+    // Variants represent a cook-method swap on the same component; macro
+    // recompute is handled by future caloriesDeltaPerPortion wiring (Phase 6
+    // backend is the source of truth). For now this keeps the chip
+    // controlled and the hint banner functional.
+  }, []);
 
   const handleLongPress = useCallback((slot: MealComponentSlot) => {
     HapticPatterns.longPress();
@@ -268,14 +388,85 @@ export default function BuildAPlateScreen() {
     return map;
   }, [composer.selections]);
 
+  // Skill-tier gating: beginner tier collapses the Sauce slot row entirely.
+  const requiredSlotsForTier = useMemo<MealComponentSlot[]>(
+    () => (skillTier.isSauceVisible ? REQUIRED_SLOTS : REQUIRED_SLOTS.filter((s) => s !== 'sauce')),
+    [skillTier.isSauceVisible],
+  );
+
   const visibleSlots = useMemo(
-    () => (showGarnish || composer.selections.garnish ? SLOT_ORDER : REQUIRED_SLOTS),
-    [showGarnish, composer.selections.garnish],
+    () => (showGarnish || composer.selections.garnish ? [...requiredSlotsForTier, 'garnish' as MealComponentSlot] : requiredSlotsForTier),
+    [showGarnish, composer.selections.garnish, requiredSlotsForTier],
   );
 
   const hasMissing = composer.totals.pantryCoveragePercent < 100 && composer.selectedSlotsCount > 0;
-  const pickerComponents = pickerSlot ? poolBySlot[pickerSlot] ?? [] : [];
+  // Budget-mode sort: cheapest-first when toggle is on.
+  const pickerComponents = useMemo(() => {
+    const base = pickerSlot ? poolBySlot[pickerSlot] ?? [] : [];
+    if (!budgetMode || base.length === 0) return base;
+    return [...base].sort((a, b) => {
+      const aCost = a.estimatedCostPerPortion ?? Number.POSITIVE_INFINITY;
+      const bCost = b.estimatedCostPerPortion ?? Number.POSITIVE_INFINITY;
+      return aCost - bCost;
+    });
+  }, [pickerSlot, poolBySlot, budgetMode]);
   const { favoriteIds, scoresById } = useFavoriteComponents(pickerSlot);
+
+  const handleMacroFit = useCallback(async () => {
+    if (composer.selectedSlotsCount === 0) {
+      Alert.alert('Pick a slot first', 'Sazon needs at least one slot to balance the rest.');
+      return;
+    }
+    setMacroFitState('loading');
+    try {
+      const lockedSlots = (Object.entries(composer.selections) as [MealComponentSlot, MealComponent | undefined][])
+        .filter(([slot, component]) => Boolean(component) && composer.locks[slot])
+        .map(([slot, component]) => ({
+          slot,
+          componentId: component!.id,
+          portionMultiplier: composer.multipliers[slot] ?? 1,
+        }));
+      const slotsToFill = requiredSlotsForTier.filter((s) => !composer.locks[s] || !composer.selections[s]);
+      const target = {
+        // Sane defaults — backend re-pulls the user's daily target if not provided.
+        calories: Math.max(300, composer.totals.calories || 600),
+        protein: Math.max(20, composer.totals.protein || 30),
+      };
+      const res = await composedPlateApi.autoFit({ target, lockedSlots, slotsToFill });
+      const result = res.data?.result;
+      if (!result || !result.achievable) {
+        setMacroFitState('impossible');
+        HapticPatterns.error();
+        return;
+      }
+      composer.applyAutoFit(result.filled);
+      HapticPatterns.success();
+      setMacroFitState('fit');
+    } catch {
+      setMacroFitState('impossible');
+      HapticPatterns.error();
+    }
+  }, [composer, requiredSlotsForTier]);
+
+  const handleBudgetToggle = useCallback(() => {
+    setBudgetMode((prev) => !prev);
+  }, []);
+
+  const handleShowOriginal = useCallback(() => {
+    setSubsBannerDismissed(true);
+    Alert.alert(
+      'Original plate',
+      "Here's the original plate your friend shared — swap back any of the substitutions if you'd like.",
+    );
+  }, []);
+
+  // Reset macro-fit pulse when the plate composition changes
+  useEffect(() => {
+    if (macroFitState === 'fit' || macroFitState === 'impossible') {
+      const timer = setTimeout(() => setMacroFitState('idle'), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [macroFitState]);
 
   return (
     <ScreenGradient style={{ ...styles.root, backgroundColor: isDark ? '#0F0F10' : '#FAF7F4' }} testID="build-a-plate-screen">
@@ -304,11 +495,38 @@ export default function BuildAPlateScreen() {
           </HapticTouchableOpacity>
         </View>
 
+        <View style={styles.headerPills} testID="build-a-plate-header-pills">
+          <MacroFitButton
+            state={macroFitState}
+            onPress={handleMacroFit}
+            testID="macro-fit-btn"
+          />
+          <BudgetToggle
+            active={budgetMode}
+            onToggle={handleBudgetToggle}
+            testID="budget-toggle"
+          />
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           testID="build-a-plate-scroll"
         >
+          {plateId && subsCount > 0 && !subsBannerDismissed && (
+            <SubstitutionBanner
+              substitutionsCount={subsCount}
+              onShowOriginal={handleShowOriginal}
+              testID="substitution-banner"
+            />
+          )}
+
+          <TechniqueChallengeBanner
+            title="Caramelize the onions"
+            body="Slow and low — 30 minutes turns onions into jam. A free flavor upgrade for any plate this week."
+            testID="technique-banner"
+          />
+
           <HapticTouchableOpacity
             onPress={composer.togglePantryOnly}
             hapticStyle="light"
@@ -340,6 +558,7 @@ export default function BuildAPlateScreen() {
             const alternatives = selected
               ? pool.filter((c) => c.id !== selected.id)
               : [];
+            const multiplier = composer.multipliers[slot] ?? 1;
             return (
               <View key={slot}>
                 <SlotRow
@@ -352,6 +571,15 @@ export default function BuildAPlateScreen() {
                   onLongPress={() => handleLongPress(slot)}
                   testID={`slot-row-${slot}`}
                 />
+                {selected && (
+                  <View style={styles.portionRow}>
+                    <PortionStepper
+                      value={multiplier}
+                      onChange={(v) => composer.setMultiplier(slot, v)}
+                      testID={`portion-stepper-${slot}`}
+                    />
+                  </View>
+                )}
                 {selected && alternatives.length > 0 && (
                   <SwapStrip
                     alternatives={alternatives}
@@ -385,6 +613,12 @@ export default function BuildAPlateScreen() {
             slotsFilled={slotsFilled}
             testID="plate-preview"
           />
+
+          {composer.selectedSlotsCount > 0 && composer.totals.cost > 0 && (
+            <View style={styles.costRow} testID="plate-cost-row">
+              <CostPill totalCost={composer.totals.cost} testID="cost-pill" />
+            </View>
+          )}
 
           {composer.selectedSlotsCount > 0 && (
             <PermutationCarousel
@@ -452,6 +686,15 @@ export default function BuildAPlateScreen() {
         testID="slot-picker"
         favoriteIds={favoriteIds}
         scoresById={scoresById}
+        leftovers={pickerSlot ? leftoversBySlot[pickerSlot] : undefined}
+        onSelectLeftover={handleLeftoverSelect}
+        variants={
+          pickerSlot && composer.selections[pickerSlot] && skillTier.isVariantChipsVisible
+            ? variantsByComponent[composer.selections[pickerSlot]!.id]
+            : undefined
+        }
+        onSelectVariant={handleVariantSelect}
+        topNutrientGap={topNutrientGap}
       />
 
       {showBeginnerTutorial && (
@@ -510,6 +753,26 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: 22,
+  },
+  headerPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  portionRow: {
+    paddingHorizontal: 4,
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
+  costRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    marginTop: -6,
+    marginBottom: 6,
   },
   scroll: {
     paddingHorizontal: 16,
