@@ -78,7 +78,10 @@ jest.mock('react-native-reanimated', () => {
       if (cb) cb(true);
       return _toValue;
     },
+    withRepeat: (v: any) => v,
+    withSequence: (v: any) => v,
     runOnJS: (fn: any) => fn,
+    useReducedMotion: () => false,
   };
 });
 
@@ -100,6 +103,8 @@ jest.mock('../../lib/api', () => ({
   userApi: {
     getProfile: jest.fn().mockResolvedValue({ data: null }),
     saveOnboardingData: jest.fn().mockResolvedValue({ data: {} }),
+    updatePreferences: jest.fn().mockResolvedValue({ data: {} }),
+    updateProfile: jest.fn().mockResolvedValue({ data: {} }),
   },
   recipeApi: {
     getRecommendations: jest.fn().mockResolvedValue({ data: { recipes: [] } }),
@@ -163,10 +168,10 @@ describe('Onboarding (editorial revamp)', () => {
   });
 
   describe('Step 1 — Diet (sage editorial)', () => {
-    it('advances to diet step and shows "STEP 1 OF 3" eyebrow', async () => {
+    it('advances to diet step and shows "STEP 1 OF 4" eyebrow', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
-      expect(getByText('STEP 1 OF 3')).toBeTruthy();
+      expect(getByText('STEP 1 OF 4')).toBeTruthy();
     });
 
     it('renders editorial title ("Any foods" + "to avoid")', async () => {
@@ -207,18 +212,18 @@ describe('Onboarding (editorial revamp)', () => {
   });
 
   describe('Step 2 — Goal (lavender editorial)', () => {
-    it('advances to goal step and shows "STEP 2 OF 3" eyebrow', async () => {
+    it('advances to goal step and shows "STEP 2 OF 4" eyebrow', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
-      expect(getByText('STEP 2 OF 3')).toBeTruthy();
+      expect(getByText('STEP 2 OF 4')).toBeTruthy();
     });
 
-    it('CTA shows "Finish setup" label', async () => {
+    it('CTA shows "Continue" label (Goal is no longer the last step)', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
-      expect(getByText('Finish setup')).toBeTruthy();
+      expect(getByText('Continue')).toBeTruthy();
     });
 
     it('renders the 4 goal option cards', async () => {
@@ -232,12 +237,66 @@ describe('Onboarding (editorial revamp)', () => {
     });
   });
 
+  describe('Step 3 — Build your first plate (Group 10X Phase 1)', () => {
+    const advanceTo = async (getByTestId: any) => {
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+    };
+
+    it('renders "ONE MORE THING" eyebrow on step 3', async () => {
+      const { getByText, getByTestId } = render(<OnboardingScreen />);
+      await advanceTo(getByTestId);
+      expect(getByText('ONE MORE THING')).toBeTruthy();
+    });
+
+    it('renders editorial title parts ("Build your first" + "plate")', async () => {
+      const { getByText, getByTestId } = render(<OnboardingScreen />);
+      await advanceTo(getByTestId);
+      expect(getByText(/Build your first/)).toBeTruthy();
+      expect(getByText('plate')).toBeTruthy();
+    });
+
+    it('renders the primary "Build my first plate" CTA', async () => {
+      const { getByTestId } = render(<OnboardingScreen />);
+      await advanceTo(getByTestId);
+      expect(getByTestId('onboarding-build-plate-cta')).toBeTruthy();
+    });
+
+    it('renders the secondary "Skip for now" ghost CTA', async () => {
+      const { getByTestId } = render(<OnboardingScreen />);
+      await advanceTo(getByTestId);
+      expect(getByTestId('onboarding-skip-plate')).toBeTruthy();
+    });
+
+    it('tapping primary CTA navigates to /build-a-plate?seed=beginner', async () => {
+      const { router } = require('expo-router');
+      const { getByTestId } = render(<OnboardingScreen />);
+      await advanceTo(getByTestId);
+      fireEvent.press(getByTestId('onboarding-build-plate-cta'));
+      expect(router.push).toHaveBeenCalledWith('/build-a-plate?seed=beginner');
+    });
+
+    it('tapping skip emits skipped_first_plate analytics event and advances to home', async () => {
+      const analytics = require('../../lib/analytics');
+      const trackSpy = jest.spyOn(analytics, 'track');
+      const { router } = require('expo-router');
+      const { getByTestId } = render(<OnboardingScreen />);
+      await advanceTo(getByTestId);
+      await act(async () => { fireEvent.press(getByTestId('onboarding-skip-plate')); });
+      expect(trackSpy).toHaveBeenCalledWith('skipped_first_plate');
+      expect(router.replace).toHaveBeenCalledWith('/(tabs)');
+      trackSpy.mockRestore();
+    });
+  });
+
   describe('Progress dots', () => {
-    it('renders 3 dots', () => {
+    it('renders 4 dots', () => {
       const { getByTestId } = render(<OnboardingScreen />);
       expect(getByTestId('onboarding-dot-0')).toBeTruthy();
       expect(getByTestId('onboarding-dot-1')).toBeTruthy();
       expect(getByTestId('onboarding-dot-2')).toBeTruthy();
+      expect(getByTestId('onboarding-dot-3')).toBeTruthy();
     });
   });
 });

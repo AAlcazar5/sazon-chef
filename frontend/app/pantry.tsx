@@ -11,6 +11,8 @@ import PantrySection from '../components/shopping/PantrySection';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import LoadingState from '../components/ui/LoadingState';
 import { PantryMatchCard } from '../components/pantry/PantryMatchCard';
+import BuildAPlateCTA from '../components/pantry/BuildAPlateCTA';
+import { pantryHasComposablePlate } from '../lib/pantryHasComposablePlate';
 import { Colors, DarkColors } from '../constants/Colors';
 import { FontSize, EditorialFontFamily, EditorialTypography } from '../constants/Typography';
 import { BorderRadius } from '../constants/Spacing';
@@ -150,6 +152,7 @@ export default function PantryScreen() {
               onRemoveItem={handleRemoveItem}
               onSetupDefaults={handleSetupDefaults}
             />
+            {pantryHasComposablePlate(items) && <BuildAPlateCTA isDark={isDark} />}
             <View style={{ paddingHorizontal: 0, marginTop: 8, marginBottom: 14 }}>
               <Text style={editorialStyles.eyebrow}>WHAT YOU CAN COOK</Text>
               <Text style={[editorialStyles.title, { color: textPrimary }]}>

@@ -63,6 +63,10 @@ model User {
   stripeWebhookEvents     StripeWebhookEvent[]
   cravingSearchEvents     CravingSearchEvent[]
 
+  // Group 10X: Build-a-Plate
+  mealComponents          MealComponent[]
+  composedPlates          ComposedPlate[]
+
   // Group 6: Email verification
   emailVerified           Boolean  @default(false)
 
@@ -1013,6 +1017,53 @@ model PushToken {
 
   @@index([userId])
   @@map("push_tokens")
+}
+
+// Group 10X: Build-a-Plate — composable meal components
+model MealComponent {
+  id                      String   @id @default(cuid())
+  slot                    String   // protein | base | vegetable | sauce | garnish
+  name                    String
+  description             String?
+  defaultPortionGrams     Float
+  caloriesPerPortion      Float
+  proteinG                Float
+  carbsG                  Float
+  fatG                    Float
+  fiberG                  Float?
+  estimatedCostPerPortion Float?
+  cuisineTags             String   // JSON array, e.g. '["Mediterranean","Asian"]'
+  dietaryTags             String   // JSON array, e.g. '["vegan","gluten_free"]'
+  cookMethodHint          String   // roast | pan_sear | simmer | raw | mix
+  pantryIngredientNames   String   // JSON array used to compute pantry coverage
+  imageUrl                String?
+  isUserCreated           Boolean  @default(false)
+  userId                  String?
+  user                    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt               DateTime @default(now())
+
+  @@index([slot])
+  @@index([userId])
+  @@map("meal_components")
+}
+
+model ComposedPlate {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String?
+  componentIds          String   // JSON: [{slot, componentId, portionMultiplier}]
+  totalCalories         Float
+  totalProtein          Float
+  totalCarbs            Float
+  totalFat              Float
+  totalCost             Float?
+  pantryCoveragePercent Float
+  recipeId              String?
+  createdAt             DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("composed_plates")
 }
 
 // Branded/restaurant food item cache (Group 10L)

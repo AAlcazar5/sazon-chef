@@ -1777,4 +1777,61 @@ export const foodApi = {
   }) => apiClient.post('/food/items', data),
 };
 
+// ─── Build-a-Plate (Group 10X Phase 1) ───────────────────────────────────────
+
+export type MealComponentSlot = 'protein' | 'base' | 'vegetable' | 'sauce' | 'garnish';
+export type CookMethodHint = 'roast' | 'pan_sear' | 'simmer' | 'raw' | 'mix' | 'grill' | 'bake';
+
+export interface MealComponent {
+  id: string;
+  slot: MealComponentSlot;
+  name: string;
+  description?: string;
+  defaultPortionGrams: number;
+  caloriesPerPortion: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  fiberG?: number;
+  estimatedCostPerPortion?: number;
+  cuisineTags: string[];
+  dietaryTags: string[];
+  cookMethodHint: CookMethodHint;
+  pantryIngredientNames: string[];
+  imageUrl?: string;
+  pantryCoveragePercent: number;
+}
+
+export interface ComposedPlatePayload {
+  components: { slot: string; componentId: string; portionMultiplier: number }[];
+  name?: string;
+  saveAsRecipe: boolean;
+}
+
+export interface ComposedPlateResponse {
+  id: string;
+  name?: string;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  pantryCoveragePercent: number;
+  recipeId?: string;
+}
+
+export const mealComponentApi = {
+  list: (params?: { slot?: MealComponentSlot; dietary?: string; cuisine?: string; q?: string }) =>
+    apiClient.get<{ components: MealComponent[] }>('/meal-components', { params }),
+};
+
+export interface ComposedPlateSaveResponse {
+  plate: ComposedPlateResponse;
+  recipe?: { id: string };
+}
+
+export const composedPlateApi = {
+  save: (payload: ComposedPlatePayload) =>
+    apiClient.post<ComposedPlateSaveResponse>('/composed-plates', payload),
+};
+
 export type { ApiResponse, ApiError };
