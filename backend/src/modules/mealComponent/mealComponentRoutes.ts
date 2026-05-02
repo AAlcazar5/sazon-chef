@@ -16,8 +16,14 @@ composedPlateRoutes.post('/', mealComponentController.createPlate);
 composedPlateRoutes.post('/auto-fit', mealComponentController.autoFit);
 composedPlateRoutes.post('/from-utterance', mealComponentController.fromUtterance);
 composedPlateRoutes.post('/family', mealComponentController.createFamilyMeal);
+composedPlateRoutes.get('/of-the-week', mealComponentController.plateOfTheWeek);
 composedPlateRoutes.post('/:id/timeline', mealComponentController.plateTimeline);
 composedPlateRoutes.post('/:id/mark-cooked', mealComponentController.markPlateCooked);
+composedPlateRoutes.post('/:id/share', mealComponentController.sharePlate);
+composedPlateRoutes.post('/:id/save', mealComponentController.savePlate);
+
+export const sharedPlateRoutes = Router();
+sharedPlateRoutes.get('/:slug', mealComponentController.getSharedPlate);
 
 export const leftoverInventoryRoutes = Router();
 leftoverInventoryRoutes.get('/', mealComponentController.listLeftovers);
