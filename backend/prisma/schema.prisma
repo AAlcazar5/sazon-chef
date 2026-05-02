@@ -68,6 +68,7 @@ model User {
   composedPlates          ComposedPlate[]
   slotAffinities          SlotAffinity[]
   pairAffinities          PairAffinity[]
+  leftoverInventory       LeftoverInventory[]
 
   // Group 6: Email verification
   emailVerified           Boolean  @default(false)
@@ -1049,6 +1050,9 @@ model MealComponent {
   // Phase 4: affinity back-references
   slotAffinities          SlotAffinity[]
 
+  // Phase 6: leftover inventory back-reference
+  leftovers               LeftoverInventory[]
+
   @@index([slot])
   @@index([userId])
   @@map("meal_components")
@@ -1085,6 +1089,24 @@ model PairAffinity {
   @@unique([userId, componentIdA, componentIdB])
   @@index([userId])
   @@map("pair_affinities")
+}
+
+// Group 10X Phase 6: leftover inventory — components remaining after a cook
+model LeftoverInventory {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  componentId       String
+  component         MealComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  slot              String
+  portionsRemaining Float
+  sourcePlateId     String?
+  createdAt         DateTime      @default(now())
+  expiresAt         DateTime
+
+  @@index([userId, expiresAt])
+  @@index([componentId])
+  @@map("leftover_inventory")
 }
 
 model ComposedPlate {

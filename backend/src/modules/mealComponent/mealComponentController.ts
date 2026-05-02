@@ -15,6 +15,11 @@ import {
 import { solveCookTimeline, ComponentTask } from '../../services/cookTimelineService';
 import { getTopComponentsForSlot, recordAffinityEvent } from '../../services/slotAffinityService';
 import { fitPlateToMacros } from '../../services/macroAutoFitService';
+import {
+  addLeftoversFromPlate,
+  consumeLeftoversForPlate,
+  getActiveLeftovers,
+} from '../../services/leftoverInventoryService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -63,6 +68,21 @@ const autoFitBodySchema = z.object({
   }),
   lockedSlots: z.array(lockedSlotWithMultiplierSchema).max(5),
   slotsToFill: z.array(slotEnum).max(5),
+});
+
+const leftoverInputSchema = z.object({
+  componentId: z.string().min(1).max(128),
+  slot: slotEnum,
+  portionsRemaining: z.number().positive().max(20),
+});
+
+const markCookedBodySchema = z.object({
+  leftovers: z.array(leftoverInputSchema).max(10).optional().default([]),
+  consumePlateComponents: z
+    .array(z.object({ componentId: z.string().min(1).max(128), portionMultiplier: z.number().positive().max(10) }))
+    .max(10)
+    .optional()
+    .default([]),
 });
 
 const formatZodIssues = (error: z.ZodError): string =>
@@ -308,6 +328,60 @@ export const mealComponentController = {
       }
       console.error('Error running macro auto-fit:', error);
       return res.status(500).json({ error: 'Failed to compute macro auto-fit' });
+    }
+  },
+
+  async listLeftovers(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+      const userId = getUserId(req);
+      const leftovers = await getActiveLeftovers(userId);
+      return res.json({ leftovers });
+    } catch (error) {
+      console.error('Error listing leftovers:', error);
+      return res.status(500).json({ error: 'Failed to list leftovers' });
+    }
+  },
+
+  async markPlateCooked(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const plateId = req.params.id;
+    if (!plateId || plateId.length > 128) {
+      return res.status(400).json({ error: 'Invalid plate id' });
+    }
+    const parsed = markCookedBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+
+    try {
+      const userId = getUserId(req);
+      const plate = await prisma.composedPlate.findUnique({ where: { id: plateId } });
+      if (!plate || plate.userId !== userId) {
+        return res.status(404).json({ error: 'Plate not found' });
+      }
+
+      await consumeLeftoversForPlate({
+        userId,
+        plateComponents: parsed.data.consumePlateComponents,
+      });
+      await addLeftoversFromPlate({
+        userId,
+        sourcePlateId: plateId,
+        leftovers: parsed.data.leftovers,
+      });
+
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error('Error marking plate cooked:', error);
+      return res.status(500).json({ error: 'Failed to mark plate cooked' });
     }
   },
 };
