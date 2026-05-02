@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 import { calculateRecipeCost, isWithinBudget, calculateCostScore } from '../../utils/costCalculator';
+import { COST_DISCLAIMER } from '../../services/costEstimationService';
 
 export const costTrackingController = {
   /**
@@ -18,7 +19,24 @@ export const costTrackingController = {
 
       const result = await calculateRecipeCost(id, userId);
 
-      res.json(result);
+      // Lazily persist the computed cost back to the row so future reads are O(1).
+      if (result.costSource !== 'user' && result.costSource !== 'api') {
+        await prisma.recipe.update({
+          where: { id },
+          data: {
+            estimatedCost: result.estimatedCost,
+            estimatedCostPerServing: result.estimatedCostPerServing,
+            costSource: result.costSource,
+          },
+        }).catch((err) => {
+          console.warn(`[costTracking] failed to persist computed cost for recipe ${id}:`, err);
+        });
+      }
+
+      res.json({
+        ...result,
+        disclaimer: COST_DISCLAIMER,
+      });
     } catch (error: any) {
       console.error('Error getting recipe cost:', error);
       res.status(500).json({ error: 'Failed to get recipe cost' });

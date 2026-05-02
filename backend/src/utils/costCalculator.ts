@@ -2,17 +2,78 @@
 // Utilities for calculating recipe costs and budget filtering
 
 import { prisma } from '../lib/prisma';
+import {
+  estimateRecipeCost,
+  costForIngredient,
+  FALLBACK_REASONS,
+  type CostSource,
+  type IngredientInput,
+} from '../services/costEstimationService';
 
 export interface CostCalculationResult {
   estimatedCost: number;
   estimatedCostPerServing: number;
-  costSource: 'calculated' | 'user' | 'api' | 'estimated';
+  costSource: 'user' | 'api' | CostSource;
   breakdown?: Array<{
     ingredient: string;
     quantity: string;
     unitCost: number;
     totalCost: number;
   }>;
+  fallbackRatio?: number;
+}
+
+// Parse "2 cups flour" / "1 lb chicken" / "1/2 tsp salt" into a structured input.
+function parseIngredientText(text: string): IngredientInput {
+  const trimmed = text.trim();
+  // Match: <quantity> <unit> <name>
+  const m = trimmed.match(/^([\d./]+(?:\s+\d+\/\d+)?)\s*([a-zA-Z]+\.?)?\s*(.+)$/);
+  if (!m) {
+    return { name: trimmed.toLowerCase(), quantity: 1, unit: 'each', text: trimmed };
+  }
+  const qtyText = m[1].trim();
+  const unitRaw = (m[2] || '').toLowerCase().replace(/\.$/, '');
+  const name = m[3].toLowerCase().trim();
+
+  // Parse "1/2", "2 1/2"
+  let quantity = 1;
+  if (qtyText.includes('/')) {
+    const parts = qtyText.split(/\s+/);
+    quantity = parts.reduce((sum, p) => {
+      if (p.includes('/')) {
+        const [n, d] = p.split('/').map(Number);
+        return sum + (d ? n / d : 0);
+      }
+      return sum + Number(p);
+    }, 0);
+  } else {
+    quantity = parseFloat(qtyText) || 1;
+  }
+
+  const unitMap: Record<string, string> = {
+    cups: 'cup', cup: 'cup', c: 'cup',
+    tbsp: 'tbsp', tablespoon: 'tbsp', tablespoons: 'tbsp', tbs: 'tbsp',
+    tsp: 'tsp', teaspoon: 'tsp', teaspoons: 'tsp',
+    lb: 'lb', lbs: 'lb', pound: 'lb', pounds: 'lb',
+    oz: 'oz', ounce: 'oz', ounces: 'oz',
+    g: 'g', gram: 'g', grams: 'g',
+    kg: 'kg', kilogram: 'kg', kilograms: 'kg',
+    ml: 'ml', l: 'l', liter: 'l', liters: 'l',
+    can: 'can', cans: 'can',
+    package: 'package', packages: 'package', pkg: 'package',
+    container: 'container', containers: 'container',
+    bottle: 'bottle', bottles: 'bottle',
+    clove: 'clove', cloves: 'clove',
+    head: 'head', heads: 'head',
+    bunch: 'bunch', bunches: 'bunch',
+  };
+  const unit = unitMap[unitRaw] || (unitRaw && !name.startsWith(unitRaw) ? unitRaw : 'each');
+
+  // If the "unit" we parsed is actually part of the name (no real unit present), use 'each'
+  const finalUnit = unitMap[unitRaw] ? unit : 'each';
+  const finalName = unitMap[unitRaw] ? name : `${unitRaw ? unitRaw + ' ' : ''}${name}`.trim();
+
+  return { name: finalName, quantity, unit: finalUnit, text: trimmed };
 }
 
 /**
@@ -125,25 +186,36 @@ export async function calculateRecipeCost(
     }
   }
 
-  // If we have calculated costs, use them
+  // If user-priced ingredients covered the recipe, use that
   if (totalCost > 0) {
     return {
       estimatedCost: totalCost,
       estimatedCostPerServing: totalCost / recipe.servings,
-      costSource: 'calculated',
+      costSource: FALLBACK_REASONS.PRICED,
       breakdown,
     };
   }
 
-  // Fallback: estimate based on recipe complexity
-  // Rough estimates: $5-10 per serving for simple, $10-20 for medium, $20+ for complex
-  const baseCostPerServing = recipe.difficulty === 'easy' ? 7 : recipe.difficulty === 'medium' ? 15 : 25;
-  const estimatedCost = baseCostPerServing * recipe.servings;
+  // Per-ingredient estimation via the cost service.
+  // Replaces the legacy flat-$7 fallback with priced/category/unknown sources.
+  const parsed: IngredientInput[] = recipe.ingredients.map((i) => parseIngredientText(i.text));
+  const result = estimateRecipeCost({
+    id: recipe.id,
+    servings: recipe.servings,
+    ingredients: parsed,
+  });
 
   return {
-    estimatedCost,
-    estimatedCostPerServing: baseCostPerServing,
-    costSource: 'estimated',
+    estimatedCost: result.estimatedCost,
+    estimatedCostPerServing: result.estimatedCostPerServing,
+    costSource: result.source,
+    breakdown: result.breakdown.map((b) => ({
+      ingredient: b.name,
+      quantity: `${b.quantity} ${b.unit}`.trim(),
+      unitCost: b.cost,
+      totalCost: b.cost,
+    })),
+    fallbackRatio: result.fallbackRatio,
   };
 }
 

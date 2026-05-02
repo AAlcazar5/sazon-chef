@@ -215,6 +215,9 @@ export function useMealPlanData({
             difficulty: mealData.recipe.difficulty,
             cuisine: mealData.recipe.cuisine,
             imageUrl: mealData.recipe.imageUrl,
+            estimatedCost: mealData.recipe.estimatedCost,
+            estimatedCostPerServing: mealData.recipe.estimatedCostPerServing,
+            costSource: mealData.recipe.costSource,
             isCompleted: mealData.isCompleted || false,
             notes: mealData.notes || '',
           });
