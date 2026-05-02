@@ -1974,4 +1974,31 @@ export const composedPlateApi = {
     apiClient.post<{ result: AutoFitResult }>('/composed-plates/auto-fit', body),
 };
 
+// ─── Shared Plates (Group 10X Phase 8 — deep link routing) ───────────────────
+
+export interface SharedPlatePayload {
+  id: string;
+  slug: string;
+  plate: {
+    id: string;
+    userId?: string;
+    componentIds?: string;
+    [key: string]: unknown;
+  } | null;
+  author?: {
+    id: string;
+    displayName?: string;
+    avatarUrl?: string;
+  };
+}
+
+export interface SharedPlateResponse {
+  share: SharedPlatePayload;
+}
+
+export const sharedPlatesApi = {
+  fetchBySlug: (slug: string) =>
+    apiClient.get<SharedPlateResponse>(`/shared-plates/${encodeURIComponent(slug)}`),
+};
+
 export type { ApiResponse, ApiError };
