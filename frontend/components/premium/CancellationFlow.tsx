@@ -133,7 +133,7 @@ function SurveyStep({
 }) {
   return (
     <>
-      <Sazon variant="purple" motion="peek" fx={[]} size={48} />
+      <Sazon variant="orange" motion="peek" fx={[]} size={48} />
       <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-1">
         Before you go...
       </Text>
@@ -188,7 +188,7 @@ function OfferStep({
 }) {
   return (
     <>
-      <Sazon variant="purple" motion="wobble" fx={['question']} size={48} />
+      <Sazon variant="orange" motion="wobble" fx={['question']} size={48} />
 
       {reason === 'too_expensive' && (
         <>
@@ -288,7 +288,7 @@ function ConfirmStep({
 }) {
   return (
     <>
-      <Sazon variant="purple" motion="peek" fx={[]} size={48} />
+      <Sazon variant="orange" motion="peek" fx={[]} size={48} />
       <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-2">
         Cancel subscription?
       </Text>

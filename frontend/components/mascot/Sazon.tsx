@@ -61,18 +61,20 @@ const SAZON_VARIANTS = {
 // Use this from any site that still passes an "expression" prop and wants Sazon.
 export type SazonConfig = { variant: SazonVariant; motion: SazonMotion; fx: SazonFx[] };
 
-// NOTE: 'green' is intentionally retired from the rotation — the visual didn't
-// read well at small sizes. Curious/thinking/supportive moments map to purple.
+// NOTE: 'green' and 'purple' are intentionally retired from the rotation — the
+// visuals didn't read well. Active palette is orange (default) + red (errors,
+// active alert states only). Both PNGs remain on disk in case the assets get
+// reworked later, but no production code path selects them.
 export function expressionToSazon(expr: string): SazonConfig {
   switch (expr) {
-    case 'sleepy':       return { variant: 'purple', motion: 'sleep', fx: ['zees'] };
-    case 'curious':      return { variant: 'purple', motion: 'wobble', fx: ['question'] };
-    case 'thinking':     return { variant: 'purple', motion: 'wobble', fx: ['question'] };
+    case 'sleepy':       return { variant: 'orange', motion: 'sleep', fx: ['zees'] };
+    case 'curious':      return { variant: 'orange', motion: 'wobble', fx: ['question'] };
+    case 'thinking':     return { variant: 'orange', motion: 'wobble', fx: ['question'] };
     case 'celebrating':  return { variant: 'orange', motion: 'celebrate', fx: ['confetti', 'hearts'] };
     case 'chef-kiss':    return { variant: 'orange', motion: 'kiss', fx: ['hearts'] };
     case 'excited':      return { variant: 'orange', motion: 'bounce', fx: ['sparkles'] };
     case 'proud':        return { variant: 'orange', motion: 'pulse', fx: ['shine'] };
-    case 'supportive':   return { variant: 'purple', motion: 'peek', fx: [] };
+    case 'supportive':   return { variant: 'orange', motion: 'peek', fx: [] };
     case 'surprised':    return { variant: 'orange', motion: 'jiggle', fx: ['question'] };
     case 'winking':      return { variant: 'orange', motion: 'wave', fx: ['hearts'] };
     case 'focused':      return { variant: 'red', motion: 'pulse', fx: ['shine'] };

@@ -26,7 +26,7 @@ export function PremiumGate({ children, featureName, onUpgrade }: PremiumGatePro
 
   return (
     <View className="flex-1 items-center justify-center px-8 py-12">
-      <Sazon variant="purple" motion="peek" fx={[]} size={96} />
+      <Sazon variant="orange" motion="peek" fx={[]} size={96} />
 
       <Text className="text-2xl font-bold text-gray-900 dark:text-white text-center mt-6 mb-2">
         Premium Feature

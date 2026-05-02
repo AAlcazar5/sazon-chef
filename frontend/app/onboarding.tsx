@@ -445,7 +445,7 @@ interface EditorialStepProps {
 const STEP_SAZON: readonly { variant: SazonVariant; motion: SazonMotion; fx: SazonFx[] }[] = [
   { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },
   { variant: 'red', motion: 'wobble', fx: ['question'] },
-  { variant: 'purple', motion: 'celebrate', fx: ['hearts'] },
+  { variant: 'orange', motion: 'celebrate', fx: ['hearts'] },
 ];
 
 function EditorialStep({
