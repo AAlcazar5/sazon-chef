@@ -4,11 +4,12 @@
 import { useState } from 'react';
 import { View, Text, Modal, Dimensions, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useModalAnimation } from '../../hooks/useModalAnimation';
-import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
+import { DarkElevation, Pastel, PastelDark, EditorialColors } from '../../constants/Colors';
 
 export interface SurpriseFilters {
   cuisine?: string;
@@ -81,22 +82,25 @@ export default function SurpriseMeModal({
 
   const chipStyle = (selected: boolean) => ({
     backgroundColor: selected
-      ? (isDark ? DarkColors.primary : Colors.primary)
-      : (isDark ? '#374151' : '#F3F4F6'),
+      ? (isDark ? PastelDark.lavender : Pastel.lavender)
+      : (isDark ? 'rgba(255,255,255,0.06)' : '#F5F0EA'),
   });
 
   const chipTextStyle = (selected: boolean) => ({
-    color: selected ? '#FFFFFF' : (isDark ? '#D1D5DB' : '#4B5563'),
+    color: selected
+      ? (isDark ? '#E9D5F2' : EditorialColors.pastelTitle.lavender)
+      : (isDark ? '#D1D5DB' : '#4B5563'),
   });
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
         <Animated.View
-          className="mx-6 rounded-2xl p-6"
+          className="mx-6 p-6"
           style={[
             {
-              backgroundColor: isDark ? DarkElevation.dp16 : '#FFFFFF',
+              backgroundColor: isDark ? DarkElevation.dp16 : '#FAF7F4',
+              borderRadius: 24,
               width: Dimensions.get('window').width - 48,
             },
             contentStyle,
@@ -185,15 +189,23 @@ export default function SurpriseMeModal({
           {/* Surprise Me Button */}
           <HapticTouchableOpacity
             onPress={handleSurprise}
-            className="py-4 rounded-xl items-center"
-            style={{
-              backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-            }}
+            style={{ borderRadius: 100, overflow: 'hidden' }}
             accessibilityLabel="Surprise me with recipes"
           >
-            <Text className="font-bold text-lg text-white">
-              Surprise Me!
-            </Text>
+            <LinearGradient
+              colors={['#A78BFA', '#7C3AED']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                paddingVertical: 16,
+                alignItems: 'center',
+                borderRadius: 100,
+              }}
+            >
+              <Text className="font-bold text-lg text-white">
+                🎰  Surprise Me!
+              </Text>
+            </LinearGradient>
           </HapticTouchableOpacity>
         </Animated.View>
       </View>
