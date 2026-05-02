@@ -21,6 +21,7 @@ import { GradientPresets } from '../../constants/Gradients';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { QuickMealLogModal } from '../../components/meal-plan';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabBar';
+import { VoiceComposerModal } from '../../components/home';
 
 export default function TabLayout() {
   const { colors, theme } = useTheme();
@@ -35,6 +36,8 @@ export default function TabLayout() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showQuickTimer, setShowQuickTimer] = useState(false);
   const [showQuickMealLog, setShowQuickMealLog] = useState(false);
+  // 10X Phase 7 — long-press home tab opens the voice composer.
+  const [showVoiceComposer, setShowVoiceComposer] = useState(false);
   const [shoppingRemaining, setShoppingRemaining] = useState<number | null>(null);
   const [shoppingBadge, setShoppingBadge] = useState<number | undefined>(undefined);
   const [mealPlanHasUncooked, setMealPlanHasUncooked] = useState(false);
@@ -336,6 +339,25 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="home-outline" color={color} size={size} focused={focused} />
           ),
+          tabBarButton: (btnProps) => {
+            const { onPress, accessibilityState, children, style } = btnProps;
+            const focused = accessibilityState?.selected ?? false;
+            return (
+              <HapticTouchableOpacity
+                onPress={(e: any) => onPress?.(e)}
+                onLongPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setShowVoiceComposer(true);
+                }}
+                accessibilityLabel={focused ? 'Home tab, selected' : 'Home tab'}
+                accessibilityHint="Long press to compose a plate by voice"
+                accessibilityRole="button"
+                style={style as any}
+              >
+                {children}
+              </HapticTouchableOpacity>
+            );
+          },
         }}
       />
       <Tabs.Screen
@@ -597,6 +619,12 @@ export default function TabLayout() {
           onTakePhoto={handleTakePhoto}
         />
       )}
+
+      {/* 10X Phase 7 — Voice Composer (long-press home tab) */}
+      <VoiceComposerModal
+        visible={showVoiceComposer}
+        onClose={() => setShowVoiceComposer(false)}
+      />
     </View>
   );
 }

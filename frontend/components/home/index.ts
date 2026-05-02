@@ -29,3 +29,6 @@ export { EditorialQuickPicks } from './EditorialQuickPicks';
 export { SurpriseFAB } from './SurpriseFAB';
 export { EditorialHomeLayout } from './EditorialHomeLayout';
 export { default as PantryPlateHeroCard } from './PantryPlateHeroCard';
+export { default as StretchHomeCard } from './StretchHomeCard';
+export { default as PlateOfWeekCard } from './PlateOfWeekCard';
+export { default as VoiceComposerModal } from './VoiceComposerModal';

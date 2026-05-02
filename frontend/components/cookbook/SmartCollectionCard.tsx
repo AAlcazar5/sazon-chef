@@ -17,6 +17,8 @@ const COLLECTION_THEMES: Record<string, { bg: string; bgDark: string; accent: st
   one_pot:         { bg: Pastel.golden,   bgDark: PastelDark.golden,   accent: '#FFC107' },
   budget_friendly: { bg: Pastel.lavender, bgDark: PastelDark.lavender, accent: '#AB47BC' },
   high_fiber:      { bg: Pastel.blush,    bgDark: PastelDark.blush,    accent: '#EC407A' },
+  // 10X Phase 1+2 — user-composed plates ("My Plates") get the editorial sage tint.
+  composed:        { bg: Pastel.sage,     bgDark: PastelDark.sage,     accent: Accent.sage },
 };
 
 const FALLBACK_THEME = { bg: Pastel.orange, bgDark: PastelDark.orange, accent: '#FF8B41' };

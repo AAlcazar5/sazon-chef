@@ -1963,6 +1963,36 @@ export interface ParallelTimeline {
   }[];
 }
 
+// ─── Plate-of-the-week & variations & utterance composer (Phase 7+8) ────────
+
+export interface PlateOfTheWeek {
+  id: string;
+  title: string;
+  imageUrl?: string;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  region?: string;
+  saveCount?: number;
+}
+
+export interface PlateVariation {
+  id: string;
+  title: string;
+  swappedSlot: MealComponentSlot;
+  swappedFrom: string;
+  swappedTo: string;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+}
+
+export interface UtteranceComposeResponse {
+  plate: { id: string };
+}
+
 export const composedPlateApi = {
   save: (payload: ComposedPlatePayload) =>
     apiClient.post<ComposedPlateSaveResponse>('/composed-plates', payload),
@@ -1972,6 +2002,15 @@ export const composedPlateApi = {
 
   autoFit: (body: AutoFitBody) =>
     apiClient.post<{ result: AutoFitResult }>('/composed-plates/auto-fit', body),
+
+  fetchOfTheWeek: () =>
+    apiClient.get<{ plate: PlateOfTheWeek | null }>('/composed-plates/of-the-week'),
+
+  fetchVariations: (plateId: string) =>
+    apiClient.get<{ variations: PlateVariation[] }>(`/composed-plates/${plateId}/variations`),
+
+  composeFromUtterance: (utterance: string) =>
+    apiClient.post<UtteranceComposeResponse>('/composed-plates/from-utterance', { utterance }),
 };
 
 // ─── Shared Plates (Group 10X Phase 8 — deep link routing) ───────────────────
