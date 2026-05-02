@@ -366,7 +366,7 @@ export default function OnboardingScreen() {
           </ScrollView>
         </Animated.View>
 
-        {/* Dark editorial CTA pill */}
+        {/* Dark editorial CTA pill + ghost back on steps 1-2 */}
         <View style={styles.ctaWrap}>
           <HapticTouchableOpacity
             onPress={nextStep}
@@ -400,6 +400,21 @@ export default function OnboardingScreen() {
               </Text>
             )}
           </HapticTouchableOpacity>
+
+          {currentStep > 0 && (
+            <HapticTouchableOpacity
+              onPress={prevStep}
+              disabled={saving}
+              accessibilityLabel="Back"
+              accessibilityRole="button"
+              testID="onboarding-back"
+              style={styles.ghostBack}
+            >
+              <Text style={[styles.ghostBackLabel, { color: isDark ? DarkColors.text.tertiary : '#6B7280' }]}>
+                Back
+              </Text>
+            </HapticTouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
 
@@ -809,6 +824,17 @@ const styles = StyleSheet.create({
   ctaLabel: {
     fontFamily: EditorialFontFamily.body.semibold,
     fontSize: 16,
+    letterSpacing: 0.2,
+  },
+  ghostBack: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  ghostBackLabel: {
+    fontFamily: EditorialFontFamily.body.semibold,
+    fontSize: 14,
     letterSpacing: 0.2,
   },
 });

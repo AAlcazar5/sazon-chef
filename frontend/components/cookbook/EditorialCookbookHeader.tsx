@@ -13,6 +13,7 @@ export function EditorialCookbookHeader({ recipeCount, collectionCount }: Editor
       <Text style={styles.eyebrow}>YOUR</Text>
       <Text style={styles.title}>
         Cook<Text style={styles.titleAccent}>book</Text>
+        <Text style={styles.period}>.</Text>
       </Text>
       <Text style={styles.subtitle}>
         {recipeCount} recipes saved across {collectionCount} collections.
@@ -46,6 +47,11 @@ const styles = StyleSheet.create({
     fontSize: TITLE_SIZE,
     letterSpacing: -1.6,
     color: '#111827',
+  },
+  period: {
+    fontFamily: EditorialFontFamily.display.bold,
+    fontSize: TITLE_SIZE,
+    color: '#FB7434',
   },
   subtitle: {
     fontFamily: EditorialFontFamily.body.medium,

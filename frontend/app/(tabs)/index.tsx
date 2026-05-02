@@ -862,6 +862,7 @@ export default function HomeScreen() {
         {/* Editorial v2 layout */}
         <EditorialHomeLayout
           heroRecipe={recipeOfTheDay}
+          recipePool={recipesData ?? undefined}
           savedIds={savedRecipeIds}
           calories={{ consumed: 1420, goal: 1800 }}
           protein={{ consumed: 98, goal: 120 }}
