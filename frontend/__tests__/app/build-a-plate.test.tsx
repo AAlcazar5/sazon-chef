@@ -472,3 +472,55 @@ describe('BuildAPlateScreen — preset=<tonight-id>', () => {
     await waitFor(() => expect(getByTestId('slot-row-protein')).toBeTruthy(), { timeout: 3000 });
   });
 });
+
+describe('BuildAPlateScreen — Cook Now fork (Phase 3)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    setupApi();
+  });
+
+  it('Cook Now routes to /cook-timeline when save returns a plate.id', async () => {
+    mockSave.mockResolvedValue({
+      data: {
+        plate: { id: 'plate-123', totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, pantryCoveragePercent: 0, recipeId: 'recipe-xyz' },
+        recipe: { id: 'recipe-xyz' },
+      },
+    });
+
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('slot-row-protein')).toBeTruthy());
+
+    await act(async () => { fireEvent.press(getByTestId('slot-row-protein')); });
+    await waitFor(() => expect(getByTestId('slot-picker-option-salmon')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('slot-picker-option-salmon')); });
+
+    await act(async () => { fireEvent.press(getByTestId('cook-now-btn')); });
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/cook-timeline', params: { plateId: 'plate-123' } }),
+    ));
+  });
+
+  it('Cook Now falls back to /cooking when save returns no plate.id but has recipeId', async () => {
+    mockSave.mockResolvedValue({
+      data: {
+        plate: { id: undefined, totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, pantryCoveragePercent: 0, recipeId: 'recipe-abc' },
+        recipe: { id: 'recipe-abc' },
+      },
+    });
+
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('slot-row-protein')).toBeTruthy());
+
+    await act(async () => { fireEvent.press(getByTestId('slot-row-protein')); });
+    await waitFor(() => expect(getByTestId('slot-picker-option-salmon')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('slot-picker-option-salmon')); });
+
+    await act(async () => { fireEvent.press(getByTestId('cook-now-btn')); });
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/cooking', params: { id: 'recipe-abc' } }),
+    ));
+  });
+});

@@ -1852,9 +1852,29 @@ export interface ComposedPlateSaveResponse {
   recipe?: { id: string };
 }
 
+export interface TimelineEvent {
+  componentId: string;
+  name: string;
+  action: 'start' | 'finish' | 'plate';
+  atMinuteFromStart: number;
+  equipmentUsed: string[];
+}
+
+export interface ParallelTimeline {
+  totalMinutes: number;
+  events: TimelineEvent[];
+  equipmentConflicts: {
+    equipment: string;
+    overlappingComponentIds: [string, string];
+  }[];
+}
+
 export const composedPlateApi = {
   save: (payload: ComposedPlatePayload) =>
     apiClient.post<ComposedPlateSaveResponse>('/composed-plates', payload),
+
+  timeline: (plateId: string) =>
+    apiClient.post<{ timeline: ParallelTimeline }>(`/composed-plates/${plateId}/timeline`, {}),
 };
 
 export type { ApiResponse, ApiError };
