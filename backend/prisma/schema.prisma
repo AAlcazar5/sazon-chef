@@ -69,6 +69,8 @@ model User {
   slotAffinities          SlotAffinity[]
   pairAffinities          PairAffinity[]
   leftoverInventory       LeftoverInventory[]
+  plateShares             PlateShare[]
+  plateSaves              PlateSave[]
 
   // Group 6: Email verification
   emailVerified           Boolean  @default(false)
@@ -1091,6 +1093,34 @@ model PairAffinity {
   @@map("pair_affinities")
 }
 
+// Group 10X Phase 8: shareable plate links
+model PlateShare {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  plateId     String
+  plate       ComposedPlate @relation(fields: [plateId], references: [id], onDelete: Cascade)
+  createdBy   String
+  user        User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([createdBy])
+  @@map("plate_shares")
+}
+
+// Group 10X Phase 8: per-user save of someone else's shared plate
+model PlateSave {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plateId   String
+  plate     ComposedPlate @relation(fields: [plateId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, plateId])
+  @@index([plateId, createdAt])
+  @@map("plate_saves")
+}
+
 // Group 10X Phase 6: leftover inventory — components remaining after a cook
 model LeftoverInventory {
   id                String        @id @default(cuid())
@@ -1123,6 +1153,10 @@ model ComposedPlate {
   pantryCoveragePercent Float
   recipeId              String?
   createdAt             DateTime @default(now())
+
+  // Phase 8: social
+  shares                PlateShare[]
+  saves                 PlateSave[]
 
   @@index([userId, createdAt])
   @@map("composed_plates")

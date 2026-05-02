@@ -22,6 +22,12 @@ import {
 } from '../../services/leftoverInventoryService';
 import { composePlateFromUtterance } from '../../services/utteranceComposerService';
 import { buildFamilyMeal, type FamilyPlateInput } from '../../services/familyMealService';
+import {
+  createShareLink,
+  getPlateBySlug,
+  getPlateOfTheWeek,
+  savePlateForUser,
+} from '../../services/plateShareService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -366,6 +372,71 @@ export const mealComponentController = {
     } catch (error) {
       console.error('Error listing leftovers:', error);
       return res.status(500).json({ error: 'Failed to list leftovers' });
+    }
+  },
+
+  async sharePlate(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const plateId = req.params.id;
+    if (!plateId || plateId.length > 128) {
+      return res.status(400).json({ error: 'Invalid plate id' });
+    }
+    try {
+      const userId = getUserId(req);
+      const link = await createShareLink({ userId, plateId });
+      return res.status(201).json({ share: link });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/not found|forbidden/i.test(message)) {
+        return res.status(404).json({ error: message });
+      }
+      console.error('Error creating share link:', error);
+      return res.status(500).json({ error: 'Failed to create share link' });
+    }
+  },
+
+  async getSharedPlate(req: Request, res: Response) {
+    const slug = req.params.slug;
+    if (!slug || slug.length > 64) {
+      return res.status(400).json({ error: 'Invalid slug' });
+    }
+    try {
+      const result = await getPlateBySlug(slug);
+      if (!result) return res.status(404).json({ error: 'Plate not found' });
+      return res.json({ share: result });
+    } catch (error) {
+      console.error('Error fetching shared plate:', error);
+      return res.status(500).json({ error: 'Failed to fetch shared plate' });
+    }
+  },
+
+  async plateOfTheWeek(_req: Request, res: Response) {
+    try {
+      const top = await getPlateOfTheWeek();
+      return res.json({ plate: top });
+    } catch (error) {
+      console.error('Error fetching plate-of-the-week:', error);
+      return res.status(500).json({ error: 'Failed to fetch plate-of-the-week' });
+    }
+  },
+
+  async savePlate(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const plateId = req.params.id;
+    if (!plateId || plateId.length > 128) {
+      return res.status(400).json({ error: 'Invalid plate id' });
+    }
+    try {
+      const userId = getUserId(req);
+      await savePlateForUser({ userId, plateId });
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error('Error saving plate:', error);
+      return res.status(500).json({ error: 'Failed to save plate' });
     }
   },
 

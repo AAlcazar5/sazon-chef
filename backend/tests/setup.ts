@@ -211,6 +211,22 @@ const createPrismaMock = () => ({
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
+    plateShare: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      delete: jest.fn(),
+    },
+    plateSave: {
+      create: jest.fn(),
+      upsert: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      groupBy: jest.fn(),
+      count: jest.fn(),
+      delete: jest.fn(),
+    },
     // $transaction default: invoke the callback with the same prisma mock,
     // so services that use prisma.$transaction(async (tx) => {...}) work
     // against the unit-test mocks. Tests that need to override per-call can
