@@ -54,13 +54,21 @@ describe('POST /api/shopping-lists/voice-add', () => {
 
     const generateSpy = jest
       .spyOn(shoppingListController, 'generateFromRecipes')
-      .mockResolvedValue(undefined as any);
+      .mockImplementation(async (innerReq: Request) => {
+        // Capture body at call-time (it should be the forwarded recipeIds shape)
+        capturedBody = (innerReq as any).body;
+        return undefined as any;
+      });
 
+    let capturedBody: unknown = null;
     req = { body: { utterance: 'Thai basil chicken' } };
     await shoppingListController.voiceAdd(req as Request, res as Response);
 
     expect(generateSpy).toHaveBeenCalled();
-    expect((req as any).body).toEqual({ recipeIds: ['recipe-xyz'] });
+    // While generateFromRecipes ran it saw the forwarded body…
+    expect(capturedBody).toEqual({ recipeIds: ['recipe-xyz'] });
+    // …and after the call returns, the original body is restored.
+    expect((req as any).body).toEqual({ utterance: 'Thai basil chicken' });
     generateSpy.mockRestore();
   });
 

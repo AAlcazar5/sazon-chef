@@ -188,13 +188,31 @@ const createPrismaMock = () => ({
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    // $transaction default: invoke the callback with the same prisma mock,
+    // so services that use prisma.$transaction(async (tx) => {...}) work
+    // against the unit-test mocks. Tests that need to override per-call can
+    // re-mock $transaction with mockResolvedValueOnce.
+    $transaction: jest.fn(),
   }
 });
 
-// Mock Prisma for all path alias variations
-jest.mock('../src/lib/prisma', () => createPrismaMock());
-jest.mock('@lib/prisma', () => createPrismaMock());
-jest.mock('@/lib/prisma', () => createPrismaMock());
+// Mock Prisma for all path alias variations.
+// Wire $transaction so that callback-style tx (`prisma.$transaction(async (tx) => ...)`)
+// invokes the callback with the same prisma mock instance — this is the common
+// shape services use after the C3/C4 fixes. Array-style $transaction calls
+// resolve to the array as-is.
+const wireTransaction = (mockModule: { prisma: any }) => {
+  mockModule.prisma.$transaction.mockImplementation((arg: unknown) => {
+    if (typeof arg === 'function') {
+      return (arg as (tx: any) => Promise<any>)(mockModule.prisma);
+    }
+    return Promise.all(arg as Promise<any>[]);
+  });
+  return mockModule;
+};
+jest.mock('../src/lib/prisma', () => wireTransaction(createPrismaMock()));
+jest.mock('@lib/prisma', () => wireTransaction(createPrismaMock()));
+jest.mock('@/lib/prisma', () => wireTransaction(createPrismaMock()));
 
 // Don't mock utils - tests need the real implementations
 

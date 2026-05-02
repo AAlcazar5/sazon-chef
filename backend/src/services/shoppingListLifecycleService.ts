@@ -70,22 +70,22 @@ export async function setActiveList(
 // ---------------------------------------------------------------------------
 
 export async function getActiveList(userId: string): Promise<ShoppingList> {
-  const existing = await prisma.shoppingList.findFirst({
-    where: { userId, isActive: true },
-  });
-
-  if (existing) {
-    return existing;
-  }
-
-  return prisma.shoppingList.create({
-    data: {
-      userId,
-      name: DEFAULT_LIST_NAME,
-      isActive: true,
-      tier: 'active',
-      archivedAt: null,
-    },
+  // Wrap find+create in a transaction so two concurrent callers cannot both
+  // see no active list and each create one (singleton invariant).
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.shoppingList.findFirst({
+      where: { userId, isActive: true },
+    });
+    if (existing) return existing;
+    return tx.shoppingList.create({
+      data: {
+        userId,
+        name: DEFAULT_LIST_NAME,
+        isActive: true,
+        tier: 'active',
+        archivedAt: null,
+      },
+    });
   });
 }
 
@@ -116,7 +116,15 @@ export async function archiveList(userId: string, listId: string): Promise<void>
 // archiveOnCompletion
 // ---------------------------------------------------------------------------
 
-export async function archiveOnCompletion(userId: string, listId: string): Promise<void> {
+export interface ArchiveOnCompletionResult {
+  archivedListId: string;
+  freshListId: string | null;
+}
+
+export async function archiveOnCompletion(
+  userId: string,
+  listId: string,
+): Promise<ArchiveOnCompletionResult> {
   const list = await prisma.shoppingList.findFirst({
     where: { id: listId, userId },
   });
@@ -178,8 +186,9 @@ export async function archiveOnCompletion(userId: string, listId: string): Promi
     where: { userId, isActive: true },
   });
 
+  let freshListId: string | null = null;
   if (!hasOtherActive) {
-    await prisma.shoppingList.create({
+    const fresh = await prisma.shoppingList.create({
       data: {
         userId,
         name: DEFAULT_LIST_NAME,
@@ -188,7 +197,10 @@ export async function archiveOnCompletion(userId: string, listId: string): Promi
         archivedAt: null,
       },
     });
+    freshListId = fresh.id;
   }
+
+  return { archivedListId: listId, freshListId };
 }
 
 // ---------------------------------------------------------------------------

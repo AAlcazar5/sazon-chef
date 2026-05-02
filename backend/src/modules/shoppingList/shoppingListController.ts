@@ -9,6 +9,10 @@ import { categorizeItem } from '../../utils/aisleCategorizer';
 import { setActiveList, getActiveList } from '../../services/shoppingListLifecycleService';
 import { resolveVoiceUtterance } from '../../services/voiceRecipeResolver';
 
+// Cap on how many recipes can be processed in a single generate-from-recipes /
+// budget-preview call. Prevents DoS via massive IN(...) queries + unbounded item creation.
+const MAX_RECIPE_IDS = 50;
+
 /**
  * Auto-stock pantry when a shopping item is marked purchased.
  * Upserts a PantryItem with source='shopping'. Non-blocking.
@@ -357,9 +361,17 @@ export const shoppingListController = {
       const resolved = await resolveVoiceUtterance(userId, utterance);
 
       if (resolved.matchType === 'recipe' && resolved.recipeId) {
-        // Forward to generate-from-recipes by populating req.body and re-invoking
+        // Forward to generate-from-recipes. Stash and restore the original
+        // body so we don't leave a mutated body for downstream middleware
+        // (logging, request tracing).
+        const originalBody = req.body;
         req.body = { recipeIds: [resolved.recipeId] };
-        return shoppingListController.generateFromRecipes(req, res);
+        try {
+          await shoppingListController.generateFromRecipes(req, res);
+        } finally {
+          req.body = originalBody;
+        }
+        return;
       }
 
       // Literal: add as a single item to the user's active list
@@ -614,15 +626,18 @@ export const shoppingListController = {
   async generateFromRecipes(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      const { recipeIds, shoppingListId, name, subtractPantry } = req.body;
+      const { recipeIds, shoppingListId, name, subtractPantry, servingsByRecipe } = req.body;
 
       if (!recipeIds || !Array.isArray(recipeIds) || recipeIds.length === 0) {
         return res.status(400).json({ error: 'Recipe IDs are required' });
       }
+      if (recipeIds.length > MAX_RECIPE_IDS) {
+        return res.status(400).json({ error: `Cannot generate from more than ${MAX_RECIPE_IDS} recipes at once` });
+      }
 
-      // Get recipes with ingredients
+      // Get recipes with ingredients — userId-scoped to prevent cross-user IDOR
       const recipes = await prisma.recipe.findMany({
-        where: { id: { in: recipeIds } },
+        where: { id: { in: recipeIds }, userId },
         include: {
           ingredients: true,
         },
@@ -642,8 +657,10 @@ export const shoppingListController = {
       const ingredientSourceRecipes = new Map<string, Set<string>>();
 
         recipes.forEach((recipe) => {
+          const multiplier = servingsByRecipe?.[recipe.id] ?? 1;
           recipe.ingredients.forEach((ing) => {
-            const parsed = parseIngredientQuantity(ing.text);
+            const rawParsed = parseIngredientQuantity(ing.text);
+            const parsed = rawParsed ? { ...rawParsed, amount: rawParsed.amount * multiplier } : null;
             if (parsed) {
               // Extract ingredient name from the original text
               // The parsed.originalText contains the full match, so we need to extract the ingredient name
@@ -855,8 +872,11 @@ export const shoppingListController = {
 
       // If recipe IDs are provided directly, use them instead of looking for meal plan
       if (recipeIds && Array.isArray(recipeIds) && recipeIds.length > 0) {
+        if (recipeIds.length > MAX_RECIPE_IDS) {
+          return res.status(400).json({ error: `Cannot generate from more than ${MAX_RECIPE_IDS} recipes at once` });
+        }
         const recipes = await prisma.recipe.findMany({
-          where: { id: { in: recipeIds } },
+          where: { id: { in: recipeIds }, userId },
           include: {
             ingredients: true,
           },
@@ -1486,16 +1506,21 @@ export const shoppingListController = {
   /**
    * Budget preview for a set of recipes
    * POST /api/shopping-lists/budget-preview
-   * Body: { recipeIds: string[], servingsMultiplier?: Record<recipeId, number> }
+   * Body: { recipeIds: string[], servingsByRecipe?: Record<recipeId, number> }
+   * (legacy alias `servingsMultiplier` is also accepted)
    * Returns: { items: [{ name, quantity, unit, estimatedCents, hasUserHistory }], totalCents }
    */
   async getBudgetPreview(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      const { recipeIds, servingsMultiplier } = req.body;
+      const { recipeIds, servingsByRecipe, servingsMultiplier: legacyServings } = req.body;
+      const servingsMultiplier = servingsByRecipe ?? legacyServings;
 
       if (!recipeIds || !Array.isArray(recipeIds) || recipeIds.length === 0) {
         return res.status(400).json({ error: 'Recipe IDs are required' });
+      }
+      if (recipeIds.length > MAX_RECIPE_IDS) {
+        return res.status(400).json({ error: `Cannot preview more than ${MAX_RECIPE_IDS} recipes at once` });
       }
 
       const DEFAULT_AISLE_PRICE_CENTS: Record<string, number> = {
@@ -1533,9 +1558,9 @@ export const shoppingListController = {
       const { parseIngredientQuantity } = await import('../../utils/ingredientQuantityParser');
       const { normalizeIngredientName } = await import('../../utils/ingredientNormalizer');
 
-      // Get recipes with ingredients
+      // Get recipes with ingredients — userId-scoped to prevent cross-user IDOR
       const recipes = await prisma.recipe.findMany({
-        where: { id: { in: recipeIds } },
+        where: { id: { in: recipeIds }, userId },
         include: { ingredients: true },
       });
 
@@ -1838,25 +1863,40 @@ export const shoppingListController = {
         return res.json(null);
       }
 
-      // Find best overlap candidate that hasn't been dismissed
-      for (const candidate of recentArchived) {
-        // Check dismissal
-        const dismissal = await prisma.mergeDismissal.findFirst({
+      const candidateIds = recentArchived.map((l) => l.id);
+
+      // Pre-load dismissals + items in 2 queries instead of 2N
+      const [dismissals, allItems] = await Promise.all([
+        prisma.mergeDismissal.findMany({
           where: {
             userId,
-            sourceListId: candidate.id,
+            sourceListId: { in: candidateIds },
             targetListId: activeList.id,
           },
-        });
+          select: { sourceListId: true },
+        }),
+        prisma.shoppingListItem.findMany({
+          where: { shoppingListId: { in: candidateIds } },
+          select: { shoppingListId: true, name: true },
+        }),
+      ]);
 
-        if (dismissal) continue;
+      const dismissedSet = new Set(dismissals.map((d) => d.sourceListId));
+      const itemsByList = new Map<string, Set<string>>();
+      for (const item of allItems) {
+        let set = itemsByList.get(item.shoppingListId);
+        if (!set) {
+          set = new Set();
+          itemsByList.set(item.shoppingListId, set);
+        }
+        set.add(item.name.toLowerCase().trim());
+      }
 
-        const candidateItems = await prisma.shoppingListItem.findMany({
-          where: { shoppingListId: candidate.id },
-          select: { name: true },
-        });
+      // Find best overlap candidate that hasn't been dismissed
+      for (const candidate of recentArchived) {
+        if (dismissedSet.has(candidate.id)) continue;
 
-        const candidateSet = new Set(candidateItems.map((i) => i.name.toLowerCase().trim()));
+        const candidateSet = itemsByList.get(candidate.id) ?? new Set<string>();
 
         // Jaccard similarity: |A ∩ B| / |A ∪ B|
         let intersectionCount = 0;
@@ -1892,8 +1932,18 @@ export const shoppingListController = {
       const userId = getUserId(req);
       const { suggestionId } = req.body;
 
-      if (!suggestionId) {
+      if (!suggestionId || typeof suggestionId !== 'string') {
         return res.status(400).json({ error: 'suggestionId is required' });
+      }
+
+      // Verify the suggestionId is a list owned by this user — prevents
+      // creating MergeDismissal records pointing at arbitrary list IDs.
+      const sourceList = await prisma.shoppingList.findFirst({
+        where: { id: suggestionId, userId },
+        select: { id: true },
+      });
+      if (!sourceList) {
+        return res.status(404).json({ error: 'Suggestion list not found' });
       }
 
       const activeList = await prisma.shoppingList.findFirst({
