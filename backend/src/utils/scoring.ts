@@ -1,5 +1,6 @@
 // src/utils/scoring.ts
 import { detectRecipeSuperfoods, type SuperfoodCategory } from './superfoodDetection';
+import { calculateAdjacencyBoost } from './cuisineAdjacency';
 
 export interface RecipeScore {
   total: number;
@@ -166,11 +167,11 @@ function calculateMacroMatch(recipe: RecipeBasic, macroGoals: MacroGoalsBasic): 
 function calculateTasteMatch(recipe: RecipeBasic, preferences: UserPreferencesBasic): number {
   let score = 0.5;
 
-  // Check if cuisine is in liked cuisines
+  // Cuisine match with adjacency boost (Group 11 Phase 1):
+  // exact match = +0.3; adjacent cuisine = +0.3 * weight * 0.6 (always less than exact).
   const likedCuisineNames = preferences.likedCuisines.map(c => c.name);
-  if (likedCuisineNames.includes(recipe.cuisine)) {
-    score += 0.3;
-  }
+  const cuisineBoost = calculateAdjacencyBoost(likedCuisineNames, recipe.cuisine, 0.3);
+  score += cuisineBoost;
 
   if (preferences.spiceLevel) {
     const spiceScores: Record<string, number> = {
