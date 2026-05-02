@@ -16,6 +16,7 @@ import {
   PANTRY_ONLY_THRESHOLD,
 } from '../../hooks/useBuildAPlate';
 import type { MealComponent, MealComponentSlot } from '../../lib/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface SlotPickerProps {
   visible: boolean;
@@ -26,6 +27,8 @@ interface SlotPickerProps {
   onSelect: (component: MealComponent) => void;
   onClose: () => void;
   testID?: string;
+  favoriteIds?: Set<string>;
+  scoresById?: Map<string, number>;
 }
 
 const SLOT_TINTS: Record<MealComponentSlot, string> = {
@@ -59,17 +62,31 @@ export default function SlotPicker({
   onSelect,
   onClose,
   testID,
+  favoriteIds = new Set(),
+  scoresById = new Map(),
 }: SlotPickerProps) {
   const [activeDietary, setActiveDietary] = useState<string | null>(null);
   const [activeCuisine, setActiveCuisine] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const titleColor = isDark ? '#F9FAFB' : '#1F2937';
+  const bodyColor = isDark ? '#9CA3AF' : '#6B7280';
 
   const filtered = useMemo(() => {
     let list = components;
     if (activeDietary) list = list.filter((c) => c.dietaryTags.includes(activeDietary));
     if (activeCuisine) list = list.filter((c) => c.cuisineTags.includes(activeCuisine));
     list = filterByPantryOnly(list, pantryOnly);
-    return sortByPantryCoverage(list);
-  }, [components, activeDietary, activeCuisine, pantryOnly]);
+    return [...list].sort((a, b) => {
+      const pantryDiff = b.pantryCoveragePercent - a.pantryCoveragePercent;
+      if (pantryDiff !== 0) return pantryDiff;
+      const scoreA = scoresById.get(a.id) ?? 0;
+      const scoreB = scoresById.get(b.id) ?? 0;
+      const scoreDiff = scoreB - scoreA;
+      if (scoreDiff !== 0) return scoreDiff;
+      return a.name.localeCompare(b.name);
+    });
+  }, [components, activeDietary, activeCuisine, pantryOnly, scoresById]);
 
   const dietaryChips = useMemo(() => uniqueTags(components, 'dietaryTags'), [components]);
   const cuisineChips = useMemo(() => uniqueTags(components, 'cuisineTags'), [components]);
@@ -129,8 +146,8 @@ export default function SlotPicker({
       {!loading && missingHint && (
         <View style={styles.missing} testID={`${testID}-missing-hint`}>
           <Ionicons name="basket-outline" size={28} color={Accent.peach} />
-          <Text style={styles.missingTitle}>Pantry coverage too low</Text>
-          <Text style={styles.missingBody}>
+          <Text style={[styles.missingTitle, { color: titleColor }]}>Pantry coverage too low</Text>
+          <Text style={[styles.missingBody, { color: bodyColor }]}>
             Nothing in this slot is fully in your pantry. Turn off "Cook with what I have" to see all options.
           </Text>
         </View>
@@ -142,44 +159,52 @@ export default function SlotPicker({
           contentContainerStyle={styles.list}
           testID={`${testID}-list`}
         >
-          {filtered.map((component) => (
-            <HapticTouchableOpacity
-              key={component.id}
-              onPress={() => onSelect(component)}
-              hapticStyle="medium"
-              pressedScale={0.97}
-              style={[styles.card, { backgroundColor: tint }, Shadows.SM as any]}
-              testID={`${testID}-option-${component.id}`}
-              accessibilityLabel={`Select ${component.name}, ${Math.round(component.caloriesPerPortion)} calories, ${component.pantryCoveragePercent}% pantry coverage`}
-            >
-              <View style={styles.cardRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardName} numberOfLines={1}>{component.name}</Text>
-                  {component.description && (
-                    <Text style={styles.cardDescription} numberOfLines={2}>{component.description}</Text>
-                  )}
-                  <View style={styles.cardChips}>
-                    <Text style={styles.cardChip}>{Math.round(component.caloriesPerPortion)} cal</Text>
-                    <Text style={styles.cardChip}>{Math.round(component.proteinG)}g P</Text>
-                    {component.pantryCoveragePercent >= 100 && (
-                      <Text style={[styles.cardChip, styles.pantryChip]} testID={`${testID}-option-${component.id}-pantry`}>
-                        ✓ In your pantry
-                      </Text>
+          {filtered.map((component) => {
+            const isFavorite = favoriteIds.has(component.id);
+            return (
+              <HapticTouchableOpacity
+                key={component.id}
+                onPress={() => onSelect(component)}
+                hapticStyle="medium"
+                pressedScale={0.97}
+                style={[styles.card, { backgroundColor: isDark ? '#1F1F22' : tint }, Shadows.SM as any]}
+                testID={`${testID}-option-${component.id}`}
+                accessibilityLabel={`Select ${component.name}, ${Math.round(component.caloriesPerPortion)} calories, ${component.pantryCoveragePercent}% pantry coverage${isFavorite ? ', your favorite' : ''}`}
+              >
+                {isFavorite && (
+                  <View style={styles.favoriteChip} testID={`${testID}-favorite-chip-${component.id}`}>
+                    <Text style={styles.favoriteChipText}>❤️ Your favorite</Text>
+                  </View>
+                )}
+                <View style={styles.cardRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.cardName, { color: titleColor }]} numberOfLines={1}>{component.name}</Text>
+                    {component.description && (
+                      <Text style={[styles.cardDescription, { color: bodyColor }]} numberOfLines={2}>{component.description}</Text>
                     )}
-                    {component.pantryCoveragePercent > 0 && component.pantryCoveragePercent < 100 && (
-                      <Text style={[styles.cardChip, styles.partialChip]}>
-                        {component.pantryCoveragePercent}% pantry
-                      </Text>
-                    )}
+                    <View style={styles.cardChips}>
+                      <Text style={styles.cardChip}>{Math.round(component.caloriesPerPortion)} cal</Text>
+                      <Text style={styles.cardChip}>{Math.round(component.proteinG)}g P</Text>
+                      {component.pantryCoveragePercent >= 100 && (
+                        <Text style={[styles.cardChip, styles.pantryChip]} testID={`${testID}-option-${component.id}-pantry`}>
+                          ✓ In your pantry
+                        </Text>
+                      )}
+                      {component.pantryCoveragePercent > 0 && component.pantryCoveragePercent < 100 && (
+                        <Text style={[styles.cardChip, styles.partialChip]}>
+                          {component.pantryCoveragePercent}% pantry
+                        </Text>
+                      )}
+                    </View>
                   </View>
                 </View>
-              </View>
-            </HapticTouchableOpacity>
-          ))}
+              </HapticTouchableOpacity>
+            );
+          })}
 
           {filtered.length === 0 && !loading && (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>Nothing matches those filters yet.</Text>
+              <Text style={[styles.emptyText, { color: bodyColor }]}>Nothing matches those filters yet.</Text>
             </View>
           )}
         </ScrollView>
@@ -306,5 +331,18 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 13,
     color: '#6B7280',
+  },
+  favoriteChip: {
+    alignSelf: 'flex-end',
+    backgroundColor: Pastel.peach,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 6,
+  },
+  favoriteChipText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 10,
+    color: '#8a4a00',
   },
 });

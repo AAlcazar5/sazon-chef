@@ -21,6 +21,13 @@ jest.mock('../../../src/services/cookTimelineService', () => ({
   solveCookTimeline: (...args: unknown[]) => mockSolveCookTimeline(...args),
 }));
 
+jest.mock('../../../src/services/slotAffinityService', () => ({
+  getTopComponentsForSlot: jest.fn().mockResolvedValue([]),
+  recordAffinityEvent: jest.fn().mockResolvedValue(undefined),
+  getSlotAffinity: jest.fn().mockResolvedValue(null),
+  getPairAffinity: jest.fn().mockResolvedValue(null),
+}));
+
 const mockGetUserId = jest.fn();
 const mockIsAuthenticated = jest.fn();
 jest.mock('../../../src/utils/authHelper', () => ({

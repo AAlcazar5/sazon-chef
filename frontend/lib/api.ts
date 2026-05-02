@@ -1845,6 +1845,10 @@ export const mealComponentApi = {
     apiClient.post<{ permutations: PermutationCandidate[] }>('/meal-components/permutations', body),
   plateFromPantry: () =>
     apiClient.get<{ plate: PermutationCandidate | null }>('/meal-components/plate-from-pantry'),
+  affinity: (params: { slot: MealComponentSlot; limit?: number }) =>
+    apiClient.get<{ slot: string; favorites: { componentId: string; score: number }[] }>('/meal-components/affinity', { params }),
+  swapAway: (componentId: string) =>
+    apiClient.post<{ ok: true }>(`/meal-components/${componentId}/swap-away`, {}),
 };
 
 export interface ComposedPlateSaveResponse {

@@ -14,6 +14,7 @@ import { StickyBottomBar } from '../components/ui/StickyBottomBar';
 import { SlotRow, SlotPicker, PlatePreview, PermutationCarousel, SwapStrip } from '../components/build-a-plate';
 import useDailyPlateSeed from '../hooks/useDailyPlateSeed';
 import useBuildAPlate, { SLOT_ORDER, REQUIRED_SLOTS } from '../hooks/useBuildAPlate';
+import useFavoriteComponents, { invalidateAffinitySlot } from '../hooks/useFavoriteComponents';
 import {
   mealComponentApi,
   composedPlateApi,
@@ -47,7 +48,12 @@ export default function BuildAPlateScreen() {
   const isBeginnerSeed = params.seed === 'beginner';
   const presetId = typeof params.preset === 'string' ? params.preset : undefined;
 
-  const composer = useBuildAPlate({ pantryOnly: initialPantryOnly });
+  const handleSwapAway = useCallback((componentId: string, slot: MealComponentSlot) => {
+    mealComponentApi.swapAway(componentId).catch(() => undefined);
+    invalidateAffinitySlot(slot);
+  }, []);
+
+  const composer = useBuildAPlate({ pantryOnly: initialPantryOnly, onSwapAway: handleSwapAway });
   const [showGarnish, setShowGarnish] = useState<boolean>(false);
   const [pickerSlot, setPickerSlot] = useState<MealComponentSlot | null>(null);
   const [poolBySlot, setPoolBySlot] = useState<Partial<Record<MealComponentSlot, MealComponent[]>>>({});
@@ -269,6 +275,7 @@ export default function BuildAPlateScreen() {
 
   const hasMissing = composer.totals.pantryCoveragePercent < 100 && composer.selectedSlotsCount > 0;
   const pickerComponents = pickerSlot ? poolBySlot[pickerSlot] ?? [] : [];
+  const { favoriteIds, scoresById } = useFavoriteComponents(pickerSlot);
 
   return (
     <ScreenGradient style={{ ...styles.root, backgroundColor: isDark ? '#0F0F10' : '#FAF7F4' }} testID="build-a-plate-screen">
@@ -443,6 +450,8 @@ export default function BuildAPlateScreen() {
         onSelect={handleSelect}
         onClose={() => setPickerSlot(null)}
         testID="slot-picker"
+        favoriteIds={favoriteIds}
+        scoresById={scoresById}
       />
 
       {showBeginnerTutorial && (

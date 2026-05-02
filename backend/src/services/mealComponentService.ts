@@ -3,6 +3,7 @@
 
 import { prisma } from '../lib/prisma';
 import { plateCoherenceScore, componentsClash } from './cuisineCoherence';
+import { recordAffinityEvent } from './slotAffinityService';
 
 export type ComponentSlot = 'protein' | 'base' | 'vegetable' | 'sauce' | 'garnish';
 
@@ -194,6 +195,11 @@ export const saveComposedPlate = async (
       pantryCoveragePercent: pantryCoverage,
     },
   });
+
+  const savedComponentIds = params.components.map((c) => c.componentId);
+  recordAffinityEvent({ type: 'plate_saved', userId: params.userId, componentIds: savedComponentIds }).catch(
+    (err) => console.warn('[affinity] plate_saved event failed (non-fatal):', err)
+  );
 
   if (!params.saveAsRecipe) {
     return { plate };
@@ -502,6 +508,79 @@ export const generatePermutations = async (
       _score: score,
     });
   }
+
+  // ── Phase 4: Affinity weighting (slot + pair) ──────────────────────────────
+  const [slotAffinityRows, slotSampleSum] = await Promise.all([
+    (prisma as any).slotAffinity.findMany({
+      where: { userId: params.userId },
+      select: { componentId: true, score: true, sampleCount: true },
+    }) as Promise<Array<{ componentId: string; score: number; sampleCount: number }>>,
+    (prisma as any).slotAffinity.aggregate({
+      where: { userId: params.userId },
+      _sum: { sampleCount: true },
+    }) as Promise<{ _sum: { sampleCount: number | null } }>,
+  ]);
+
+  const totalSamples = slotSampleSum._sum.sampleCount ?? 0;
+  const affinityByComponent = new Map(
+    slotAffinityRows.map((r) => [r.componentId, r.score])
+  );
+
+  if (totalSamples >= 10 && candidates.length > 0) {
+    const slotBonuses = candidates.map((cand) => {
+      const allComps = cand.components.map((c) => c.component);
+      return allComps.reduce((sum, c) => sum + (affinityByComponent.get(c.id) ?? 0), 0);
+    });
+
+    const minBonus = Math.min(...slotBonuses);
+    const maxBonus = Math.max(...slotBonuses);
+    const rangeBonus = maxBonus - minBonus;
+
+    // Fetch all unique pairs across all candidates
+    const uniquePairKeys = new Set<string>();
+    for (const cand of candidates) {
+      const ids = cand.components.map((c) => c.component.id);
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const [a, b] = [ids[i], ids[j]].sort();
+          uniquePairKeys.add(`${a}|${b}`);
+        }
+      }
+    }
+
+    const pairScores = new Map<string, number>();
+    if (uniquePairKeys.size > 0) {
+      const pairRows = await (prisma as any).pairAffinity.findMany({
+        where: { userId: params.userId },
+        select: { componentIdA: true, componentIdB: true, score: true },
+      }) as Array<{ componentIdA: string; componentIdB: string; score: number }>;
+      for (const row of pairRows) {
+        pairScores.set(`${row.componentIdA}|${row.componentIdB}`, row.score);
+      }
+    }
+
+    const pairBonuses = candidates.map((cand) => {
+      const ids = cand.components.map((c) => c.component.id);
+      let total = 0;
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const [a, b] = [ids[i], ids[j]].sort();
+          total += pairScores.get(`${a}|${b}`) ?? 0;
+        }
+      }
+      return total;
+    });
+    const minPair = Math.min(...pairBonuses);
+    const maxPair = Math.max(...pairBonuses);
+    const rangePair = maxPair - minPair;
+
+    candidates.forEach((cand, i) => {
+      const normalizedSlot = rangeBonus > 0 ? (slotBonuses[i] - minBonus) / rangeBonus : 0;
+      const normalizedPair = rangePair > 0 ? (pairBonuses[i] - minPair) / rangePair : 0;
+      cand._score += 0.2 * normalizedSlot + 0.1 * normalizedPair;
+    });
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   return candidates
     .sort((a, b) => b._score - a._score)
