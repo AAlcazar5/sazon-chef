@@ -3,6 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import { EditorialMacroWidgets } from './EditorialMacroWidgets';
 import { VerticalCategoryRail } from '../ui/VerticalCategoryRail';
 import { PlateHeroCard } from '../ui/PlateHeroCard';
+import PantryPlateHeroCard from './PantryPlateHeroCard';
+import { useTonightsPlate } from '../../hooks/useTonightsPlate';
 import type { SuggestedRecipe } from '../../types';
 
 const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Dessert'];
@@ -53,6 +55,8 @@ export function EditorialHomeLayout({
     return match || heroRecipe;
   }, [activeCategory, recipePool, heroRecipe]);
 
+  const { plate: tonightsPlate } = useTonightsPlate();
+
   return (
     <>
       {/* Hero: plate-on-pastel + vertical category rail */}
@@ -80,6 +84,11 @@ export function EditorialHomeLayout({
             />
           </View>
         </View>
+      )}
+
+      {/* Tonight's pantry plate hero card — renders between hero and macro widgets */}
+      {tonightsPlate && (
+        <PantryPlateHeroCard plate={tonightsPlate} />
       )}
 
       {/* Macro widget row */}

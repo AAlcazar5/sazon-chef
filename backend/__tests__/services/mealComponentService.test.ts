@@ -1,10 +1,12 @@
 // backend/__tests__/services/mealComponentService.test.ts
-// Group 10X Phase 1 — Build-a-Plate backend service tests.
+// Group 10X Phase 1+2 — Build-a-Plate backend service tests.
 
 import {
   listComponents,
   saveComposedPlate,
   computePantryCoverage,
+  generatePermutations,
+  getPlateFromPantry,
 } from '../../src/services/mealComponentService';
 import { MEAL_COMPONENT_SEED, SEED_SLOT_COUNTS } from '../../src/services/mealComponentSeedData';
 import { prisma } from '../../src/lib/prisma';
@@ -23,6 +25,11 @@ beforeAll(() => {
     mockPrisma.composedPlate = {
       create: jest.fn(),
       update: jest.fn(),
+    };
+  }
+  if (!mockPrisma.user) {
+    mockPrisma.user = {
+      findUnique: jest.fn(),
     };
   }
 });
@@ -327,6 +334,261 @@ describe('mealComponentService.saveComposedPlate', () => {
     });
 
     expect(result.plate.name).toMatch(/Salmon.*Brown Rice/);
+  });
+});
+
+describe('mealComponentService.generatePermutations', () => {
+  const makeDbComponent = (id: string, slot: string, cuisines: string[], dietary: string[] = []) => ({
+    id,
+    slot,
+    name: `Component-${id}`,
+    description: null,
+    defaultPortionGrams: 150,
+    caloriesPerPortion: 200,
+    proteinG: 20,
+    carbsG: 10,
+    fatG: 5,
+    fiberG: 2,
+    estimatedCostPerPortion: 2,
+    cuisineTags: JSON.stringify(cuisines),
+    dietaryTags: JSON.stringify(dietary),
+    cookMethodHint: 'pan_sear',
+    pantryIngredientNames: JSON.stringify(['ingredient-a']),
+    imageUrl: null,
+    isUserCreated: false,
+    userId: null,
+    createdAt: new Date(),
+  });
+
+  const proteinKorean = makeDbComponent('p-korean', 'protein', ['Korean', 'Asian']);
+  const proteinArgentinian = makeDbComponent('p-arg', 'protein', ['Argentinian', 'South American']);
+  const proteinMed = makeDbComponent('p-med', 'protein', ['Mediterranean']);
+  const sauceMed = makeDbComponent('s-med', 'sauce', ['Mediterranean']);
+  const sauceKorean = makeDbComponent('s-korean', 'sauce', ['Korean', 'Asian']);
+
+  const veganProtein = makeDbComponent('p-vegan', 'protein', ['Asian'], ['vegan', 'vegetarian']);
+  const nonVeganProtein = makeDbComponent('p-nonvegan', 'protein', ['Mediterranean'], ['gluten_free']);
+
+  beforeEach(() => {
+    mockPrisma.mealComponent.findMany.mockReset();
+    mockPrisma.pantryItem.findMany.mockReset();
+    mockPrisma.user.findUnique.mockReset();
+  });
+
+  it('respects locked slots — locked componentId appears in every permutation', async () => {
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    mockPrisma.mealComponent.findMany
+      .mockResolvedValueOnce([sauceMed, sauceKorean])  // slotsToFill: sauce
+      .mockResolvedValueOnce([proteinMed]);  // lookup for locked component p-med
+
+    const result = await generatePermutations({
+      userId: 'u1',
+      lockedSlots: [{ slot: 'protein', componentId: 'p-med' }],
+      slotsToFill: ['sauce'],
+      maxResults: 10,
+      prioritizePantry: false,
+    });
+
+    for (const perm of result) {
+      const proteinSlot = perm.components.find((c) => c.slot === 'protein');
+      expect(proteinSlot?.component.id).toBe('p-med');
+    }
+  });
+
+  it('rejects permutations where components clash (kimchi/Korean + chimichurri/Argentinian)', async () => {
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    mockPrisma.mealComponent.findMany
+      .mockResolvedValueOnce([sauceMed, makeDbComponent('s-arg', 'sauce', ['Argentinian', 'South American'])])
+      .mockResolvedValueOnce([proteinKorean]);  // lookup for locked component p-korean
+
+    const result = await generatePermutations({
+      userId: 'u1',
+      lockedSlots: [{ slot: 'protein', componentId: 'p-korean' }],
+      slotsToFill: ['sauce'],
+      maxResults: 10,
+      prioritizePantry: false,
+    });
+
+    for (const perm of result) {
+      const sauceSlot = perm.components.find((c) => c.slot === 'sauce');
+      expect(sauceSlot?.component.id).not.toBe('s-arg');
+    }
+  });
+
+  it('dietary filter excludes non-vegan components when user requires vegan', async () => {
+    mockPrisma.user.findUnique.mockResolvedValueOnce({
+      id: 'u1',
+      preferences: {
+        dietaryRestrictions: [{ name: 'vegan', severity: 'strict' }],
+      },
+      macroGoals: null,
+    });
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    // No locked slots — no initial findMany for locked components
+    mockPrisma.mealComponent.findMany
+      .mockResolvedValueOnce([veganProtein, nonVeganProtein]);
+
+    const result = await generatePermutations({
+      userId: 'u1',
+      lockedSlots: [],
+      slotsToFill: ['protein'],
+      maxResults: 10,
+      prioritizePantry: false,
+    });
+
+    for (const perm of result) {
+      const proteinSlot = perm.components.find((c) => c.slot === 'protein');
+      expect(proteinSlot?.component.id).toBe('p-vegan');
+    }
+  });
+
+  it('returns at most maxResults permutations', async () => {
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    mockPrisma.mealComponent.findMany
+      .mockResolvedValueOnce([proteinMed, proteinKorean, proteinArgentinian]);
+
+    const result = await generatePermutations({
+      userId: 'u1',
+      lockedSlots: [],
+      slotsToFill: ['protein'],
+      maxResults: 2,
+      prioritizePantry: false,
+    });
+
+    expect(result.length).toBeLessThanOrEqual(2);
+  });
+
+  it('each permutation has a coherenceScore and pantryCoveragePercent', async () => {
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    mockPrisma.mealComponent.findMany
+      .mockResolvedValueOnce([proteinMed]);
+
+    const result = await generatePermutations({
+      userId: 'u1',
+      lockedSlots: [],
+      slotsToFill: ['protein'],
+      maxResults: 5,
+      prioritizePantry: false,
+    });
+
+    expect(result.length).toBeGreaterThan(0);
+    for (const perm of result) {
+      expect(typeof perm.coherenceScore).toBe('number');
+      expect(typeof perm.pantryCoveragePercent).toBe('number');
+    }
+  });
+});
+
+describe('mealComponentService.getPlateFromPantry', () => {
+  const makeDbComponent = (id: string, slot: string, ingredients: string[], cuisines: string[] = ['Mediterranean']) => ({
+    id,
+    slot,
+    name: `Component-${id}`,
+    description: null,
+    defaultPortionGrams: 150,
+    caloriesPerPortion: 200,
+    proteinG: 20,
+    carbsG: 10,
+    fatG: 5,
+    fiberG: 2,
+    estimatedCostPerPortion: 2,
+    cuisineTags: JSON.stringify(cuisines),
+    dietaryTags: JSON.stringify([]),
+    cookMethodHint: 'pan_sear',
+    pantryIngredientNames: JSON.stringify(ingredients),
+    imageUrl: null,
+    isUserCreated: false,
+    userId: null,
+    createdAt: new Date(),
+  });
+
+  beforeEach(() => {
+    mockPrisma.mealComponent.findMany.mockReset();
+    mockPrisma.pantryItem.findMany.mockReset();
+    mockPrisma.user.findUnique.mockReset();
+  });
+
+  it('returns null when pantry is empty', async () => {
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+    mockPrisma.mealComponent.findMany.mockResolvedValue([]);
+
+    const result = await getPlateFromPantry({ userId: 'u1' });
+    expect(result).toBeNull();
+  });
+
+  it('returns a coherent plate when pantry contains a complete coherent set', async () => {
+    const protein = makeDbComponent('p1', 'protein', ['salmon', 'olive oil']);
+    const base = makeDbComponent('b1', 'base', ['brown rice', 'salt']);
+    const veg = makeDbComponent('v1', 'vegetable', ['spinach', 'garlic']);
+    const sauce = makeDbComponent('s1', 'sauce', ['greek yogurt', 'lemon']);
+
+    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+    mockPrisma.pantryItem.findMany.mockResolvedValueOnce([
+      { name: 'salmon' }, { name: 'olive oil' },
+      { name: 'brown rice' }, { name: 'salt' },
+      { name: 'spinach' }, { name: 'garlic' },
+      { name: 'greek yogurt' }, { name: 'lemon' },
+    ]);
+    mockPrisma.mealComponent.findMany.mockImplementation(({ where }: any) => {
+      const slot = where?.slot;
+      if (slot === 'protein') return Promise.resolve([protein]);
+      if (slot === 'base') return Promise.resolve([base]);
+      if (slot === 'vegetable') return Promise.resolve([veg]);
+      if (slot === 'sauce') return Promise.resolve([sauce]);
+      return Promise.resolve([]);
+    });
+
+    const result = await getPlateFromPantry({ userId: 'u1' });
+
+    expect(result).not.toBeNull();
+    expect(result!.components).toHaveLength(4);
+    expect(result!.pantryCoveragePercent).toBeGreaterThanOrEqual(80);
+    expect(result!.coherenceScore).toBeGreaterThan(0);
+  });
+
+  it('is deterministic — same inputs return the same plate', async () => {
+    const protein = makeDbComponent('p1', 'protein', ['salmon']);
+    const base = makeDbComponent('b1', 'base', ['brown rice']);
+    const veg = makeDbComponent('v1', 'vegetable', ['spinach']);
+    const sauce = makeDbComponent('s1', 'sauce', ['lemon']);
+
+    const setupMocks = () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.pantryItem.findMany.mockResolvedValueOnce([
+        { name: 'salmon' }, { name: 'brown rice' },
+        { name: 'spinach' }, { name: 'lemon' },
+      ]);
+      mockPrisma.mealComponent.findMany.mockImplementation(({ where }: any) => {
+        const slot = where?.slot;
+        if (slot === 'protein') return Promise.resolve([protein]);
+        if (slot === 'base') return Promise.resolve([base]);
+        if (slot === 'vegetable') return Promise.resolve([veg]);
+        if (slot === 'sauce') return Promise.resolve([sauce]);
+        return Promise.resolve([]);
+      });
+    };
+
+    setupMocks();
+    const result1 = await getPlateFromPantry({ userId: 'u1' });
+
+    mockPrisma.user.findUnique.mockReset();
+    mockPrisma.pantryItem.findMany.mockReset();
+    mockPrisma.mealComponent.findMany.mockReset();
+
+    setupMocks();
+    const result2 = await getPlateFromPantry({ userId: 'u1' });
+
+    expect(result1).not.toBeNull();
+    expect(result2).not.toBeNull();
+    expect(result1!.id).toBe(result2!.id);
+    expect(result1!.components.map((c) => c.component.id)).toEqual(
+      result2!.components.map((c) => c.component.id)
+    );
   });
 });
 

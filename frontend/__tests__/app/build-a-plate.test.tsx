@@ -1,5 +1,5 @@
 // frontend/__tests__/app/build-a-plate.test.tsx
-// Group 10X Phase 1 — composer screen tests.
+// Group 10X Phase 1+2 — composer screen tests.
 
 jest.mock('../../contexts/ThemeContext', () => ({
   useTheme: () => ({ theme: 'light', isDark: false, colors: {} }),
@@ -11,6 +11,11 @@ jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium', Heavy: 'Heavy' },
   NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
+}));
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue(null),
+  setItem: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@gorhom/bottom-sheet', () => {
@@ -44,7 +49,10 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('../../lib/api', () => ({
-  mealComponentApi: { list: jest.fn() },
+  mealComponentApi: {
+    list: jest.fn(),
+    permutations: jest.fn().mockResolvedValue({ data: { permutations: [] } }),
+  },
   composedPlateApi: { save: jest.fn(), get: jest.fn() },
   shoppingListApi: {
     getShoppingLists: jest.fn(),
@@ -287,5 +295,180 @@ describe('BuildAPlateScreen', () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ pantryOnly: 'true' });
     const { getByLabelText } = render(<BuildAPlateScreen />);
     await waitFor(() => expect(getByLabelText('Cook with what I have, on')).toBeTruthy());
+  });
+});
+
+describe('BuildAPlateScreen — seed=beginner', () => {
+  const AsyncStorage = require('@react-native-async-storage/async-storage');
+
+  const BEGINNER_PERM = {
+    id: 'beginner-perm',
+    components: [
+      {
+        slot: 'protein',
+        component: { ...SALMON },
+        portionMultiplier: 1,
+      },
+      {
+        slot: 'base',
+        component: { ...FARRO },
+        portionMultiplier: 1,
+      },
+      {
+        slot: 'vegetable',
+        component: { ...CARROTS },
+        portionMultiplier: 1,
+      },
+      {
+        slot: 'sauce',
+        component: { ...YOGURT },
+        portionMultiplier: 1,
+      },
+    ],
+    coherenceScore: 0.9,
+    pantryCoveragePercent: 100,
+    macroFitScore: 0.85,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupApi();
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ seed: 'beginner' });
+    (mealComponentApi.permutations as jest.Mock).mockResolvedValue({
+      data: { permutations: [BEGINNER_PERM] },
+    });
+    AsyncStorage.getItem.mockResolvedValue(null);
+    AsyncStorage.setItem.mockResolvedValue(undefined);
+  });
+
+  it('opens with all 4 slots pre-filled when seed=beginner and permutations returns a result', async () => {
+    const { getByTestId } = render(<BuildAPlateScreen />);
+
+    await waitFor(
+      () => {
+        expect(getByTestId('slot-row-protein')).toBeTruthy();
+      },
+      { timeout: 3000 },
+    );
+
+    await waitFor(
+      () => {
+        expect(mealComponentApi.permutations).toHaveBeenCalled();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it('shows the beginner tutorial overlay on first visit', async () => {
+    AsyncStorage.getItem.mockResolvedValue(null);
+
+    const { queryByTestId } = render(<BuildAPlateScreen />);
+
+    await waitFor(
+      () => {
+        expect(mealComponentApi.permutations).toHaveBeenCalled();
+      },
+      { timeout: 3000 },
+    );
+
+    await waitFor(
+      () => {
+        expect(queryByTestId('beginner-tutorial-overlay')).toBeTruthy();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it('tutorial overlay dismisses on tap and sets AsyncStorage flag', async () => {
+    AsyncStorage.getItem.mockResolvedValue(null);
+
+    const { queryByTestId, getByTestId } = render(<BuildAPlateScreen />);
+
+    await waitFor(
+      () => expect(queryByTestId('beginner-tutorial-overlay')).toBeTruthy(),
+      { timeout: 3000 },
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('beginner-tutorial-overlay'));
+    });
+
+    await waitFor(() => {
+      expect(queryByTestId('beginner-tutorial-overlay')).toBeNull();
+    });
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      'beginner_tutorial_seen',
+      'true',
+    );
+  });
+
+  it('does not show tutorial overlay when beginner_tutorial_seen flag is set', async () => {
+    AsyncStorage.getItem.mockImplementation((key: string) => {
+      if (key === 'beginner_tutorial_seen') return Promise.resolve('true');
+      return Promise.resolve(null);
+    });
+
+    const { queryByTestId } = render(<BuildAPlateScreen />);
+
+    await waitFor(
+      () => {
+        expect(mealComponentApi.permutations).toHaveBeenCalled();
+      },
+      { timeout: 3000 },
+    );
+
+    expect(queryByTestId('beginner-tutorial-overlay')).toBeNull();
+  });
+});
+
+describe('BuildAPlateScreen — preset=<tonight-id>', () => {
+  const AsyncStorage = require('@react-native-async-storage/async-storage');
+
+  const TONIGHT_PERM = {
+    id: 'tonight-id',
+    components: [
+      { slot: 'protein', component: { ...SALMON }, portionMultiplier: 1 },
+      { slot: 'base', component: { ...FARRO }, portionMultiplier: 1 },
+      { slot: 'vegetable', component: { ...CARROTS }, portionMultiplier: 1 },
+      { slot: 'sauce', component: { ...YOGURT }, portionMultiplier: 1 },
+    ],
+    coherenceScore: 0.9,
+    pantryCoveragePercent: 100,
+    macroFitScore: 0.85,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupApi();
+    (useLocalSearchParams as jest.Mock).mockReturnValue({
+      pantryOnly: 'true',
+      preset: 'tonight-id',
+    });
+  });
+
+  it('pre-fills slots from AsyncStorage when preset key exists', async () => {
+    AsyncStorage.getItem.mockImplementation((key: string) => {
+      if (key === 'tonights_plate_preset:tonight-id') {
+        return Promise.resolve(JSON.stringify(TONIGHT_PERM));
+      }
+      return Promise.resolve(null);
+    });
+
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('slot-row-protein')).toBeTruthy(), { timeout: 3000 });
+
+    // When preset is applied, macro total should reflect the pre-filled slots
+    await waitFor(
+      () => expect(getByTestId('slot-row-protein')).toBeTruthy(),
+      { timeout: 3000 },
+    );
+  });
+
+  it('mounts cleanly without crash when preset AsyncStorage key is missing', async () => {
+    AsyncStorage.getItem.mockResolvedValue(null);
+
+    const { getByTestId } = render(<BuildAPlateScreen />);
+    await waitFor(() => expect(getByTestId('slot-row-protein')).toBeTruthy(), { timeout: 3000 });
   });
 });

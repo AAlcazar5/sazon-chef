@@ -2,7 +2,7 @@
 // Group 10X Phase 1 — composer state: selections per slot, locks, pantry-only mode, derived totals.
 
 import { useCallback, useMemo, useState } from 'react';
-import type { MealComponent, MealComponentSlot } from '../lib/api';
+import type { MealComponent, MealComponentSlot, PermutationCandidate } from '../lib/api';
 
 export type SlotSelections = Partial<Record<MealComponentSlot, MealComponent>>;
 export type SlotLocks = Partial<Record<MealComponentSlot, boolean>>;
@@ -31,6 +31,8 @@ interface BuildAPlateState {
   togglePantryOnly: () => void;
   setPantryOnly: (value: boolean) => void;
   rollUnlocked: (poolBySlot: Partial<Record<MealComponentSlot, MealComponent[]>>) => void;
+  applyPermutation: (permutation: PermutationCandidate) => void;
+  applySeed: (permutation: PermutationCandidate) => void;
   reset: () => void;
 }
 
@@ -126,6 +128,27 @@ export default function useBuildAPlate(initial?: {
     [locks],
   );
 
+  const applyPermutation = useCallback((permutation: PermutationCandidate) => {
+    setSelections((prev) => {
+      const next: SlotSelections = { ...prev };
+      for (const { slot, component } of permutation.components) {
+        if (locks[slot]) continue;
+        next[slot] = component;
+      }
+      return next;
+    });
+  }, [locks]);
+
+  const applySeed = useCallback((permutation: PermutationCandidate) => {
+    setSelections(() => {
+      const next: SlotSelections = {};
+      for (const { slot, component } of permutation.components) {
+        next[slot] = component;
+      }
+      return next;
+    });
+  }, []);
+
   const reset = useCallback(() => {
     setSelections({});
     setLocks({});
@@ -149,6 +172,8 @@ export default function useBuildAPlate(initial?: {
     togglePantryOnly,
     setPantryOnly,
     rollUnlocked,
+    applyPermutation,
+    applySeed,
     reset,
   };
 }
