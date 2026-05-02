@@ -14,6 +14,7 @@ jest.mock('../../src/lib/prisma', () => ({
     },
     mergeDismissal: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
     },
   },
@@ -104,6 +105,8 @@ describe('GET /api/shopping-lists/active/merge-suggestion', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (mockPrisma.mergeDismissal.findFirst as jest.Mock).mockResolvedValue(null);
+    // Default: no dismissals — refactored getMergeSuggestion now uses findMany
+    (mockPrisma.mergeDismissal.findMany as jest.Mock).mockResolvedValue([]);
   });
 
   it('returns suggestion when recent archived list has >= 70% overlap', async () => {
@@ -200,13 +203,15 @@ describe('GET /api/shopping-lists/active/merge-suggestion', () => {
     (mockPrisma.shoppingListItem.findMany as jest.Mock)
       .mockResolvedValueOnce(ACTIVE_10.map(n => makeItem('list-active', n)))
       .mockResolvedValueOnce(ARCHIVED_7_OVERLAP.map(n => makeItem('list-arch', n)));
-    // Dismissal exists for this pair
-    (mockPrisma.mergeDismissal.findFirst as jest.Mock).mockResolvedValue({
-      id: 'dismissal-1',
-      userId: 'user-1',
-      sourceListId: 'list-arch',
-      targetListId: 'list-active',
-    });
+    // Dismissal exists for this pair (refactored to findMany batch)
+    (mockPrisma.mergeDismissal.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: 'dismissal-1',
+        userId: 'user-1',
+        sourceListId: 'list-arch',
+        targetListId: 'list-active',
+      },
+    ]);
 
     const req = makeReq();
     const res = makeRes();

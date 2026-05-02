@@ -8,7 +8,6 @@
 
 import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
 import { shoppingListApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 
@@ -18,29 +17,40 @@ const MS_24H = 24 * 60 * 60 * 1000;
 export function useShoppingListAppOpenCleanup(): void {
   const { showToast } = useToast();
   const hasRun = useRef(false);
+  // Hold the latest showToast in a ref so the once-only effect uses the
+  // current callback even if ToastContext remounts.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
 
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
 
     const run = async () => {
-      const raw = await AsyncStorage.getItem(CLEANUP_KEY);
+      const raw = await AsyncStorage.getItem(CLEANUP_KEY).catch(() => null);
       if (raw) {
         const lastRun = Number(raw);
-        if (Date.now() - lastRun < MS_24H) return;
+        if (Number.isFinite(lastRun) && Date.now() - lastRun < MS_24H) return;
       }
 
-      const [cleanupRes, archiveRes] = await Promise.all([
+      const [, archiveRes] = await Promise.all([
         shoppingListApi.cleanupOrphans(),
         shoppingListApi.autoArchiveStale(),
         shoppingListApi.tierArchived(),
       ]);
 
-      await AsyncStorage.setItem(CLEANUP_KEY, String(Date.now()));
+      await AsyncStorage.setItem(CLEANUP_KEY, String(Date.now())).catch(() => {});
 
-      const archivedIds: string[] = archiveRes.data?.archivedIds ?? [];
+      // Backend wraps responses as { success: true, data: { archivedIds } } —
+      // axios then puts that body on response.data, so we need data.data in
+      // production. Tests mock the simpler { data: { archivedIds } } shape,
+      // so accept both via a fallback.
+      const body = archiveRes?.data as
+        | { archivedIds?: string[]; data?: { archivedIds?: string[] } }
+        | undefined;
+      const archivedIds = body?.data?.archivedIds ?? body?.archivedIds ?? [];
       if (archivedIds.length > 0) {
-        showToast(
+        showToastRef.current(
           `Archived ${archivedIds.length} old list${archivedIds.length === 1 ? '' : 's'} — tap to view`,
           'info',
         );

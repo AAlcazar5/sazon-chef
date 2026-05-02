@@ -56,84 +56,110 @@ export const shoppingListShareController = {
       const userId = getUserId(req);
       const { token } = req.params;
 
-      const share = await prisma.shoppingListShare.findUnique({ where: { token } });
-      if (!share) {
-        return res.status(404).json({ error: 'Share link not found' });
+      // Cheap format guard before hitting the DB
+      if (!token || typeof token !== 'string' || !/^[A-Za-z0-9_\-]{10,64}$/.test(token)) {
+        return res.status(400).json({ error: 'Invalid share token format' });
       }
 
-      if (share.expiresAt < new Date()) {
-        return res.status(410).json({ error: 'Share link has expired' });
-      }
+      // Wrap the entire read-check-create-update sequence in a transaction so two
+      // concurrent imports cannot both pass the maxUses check on stale state.
+      const result = await prisma.$transaction(async (tx) => {
+        const share = await tx.shoppingListShare.findUnique({ where: { token } });
+        if (!share) {
+          return { kind: 'not_found' as const };
+        }
+        if (share.expiresAt < new Date()) {
+          return { kind: 'expired' as const };
+        }
 
-      // Parse usedBy: supports both legacy string[] and current {userId, listId}[] format
-      let importedByMap: Record<string, string> = {};
-      try {
-        const parsed = JSON.parse(share.usedBy || '[]');
-        if (Array.isArray(parsed)) {
+        // Parse usedBy: supports both legacy string[] and current
+        // {userId, listId}[] format. Corrupt JSON → fail closed (treat as
+        // exhausted) rather than silently resetting to zero.
+        let importedByMap: Record<string, string> = {};
+        try {
+          const parsed = JSON.parse(share.usedBy || '[]');
+          if (!Array.isArray(parsed)) {
+            return { kind: 'corrupt' as const };
+          }
           parsed.forEach((entry: string | { userId: string; listId: string }) => {
             if (typeof entry === 'object' && entry !== null && entry.userId) {
               importedByMap[entry.userId] = entry.listId;
             }
-            // Legacy string entries tracked separately below
+          });
+        } catch {
+          return { kind: 'corrupt' as const };
+        }
+
+        // Idempotent: if user already imported, return their list
+        if (importedByMap[userId]) {
+          return { kind: 'idempotent' as const, listId: importedByMap[userId] };
+        }
+
+        // Check max uses against unique user count
+        const uniqueUserCount = Object.keys(importedByMap).length;
+        if (uniqueUserCount >= share.maxUses) {
+          return { kind: 'max_uses' as const };
+        }
+
+        // Fetch original list name
+        const sourceList = await tx.shoppingList.findFirst({
+          where: { id: share.listId },
+        });
+        const listName = sourceList?.name ?? 'Shared Shopping List';
+
+        // Copy only unpurchased items
+        const sourceItems = await tx.shoppingListItem.findMany({
+          where: { shoppingListId: share.listId, purchased: false },
+        });
+
+        const newList = await tx.shoppingList.create({
+          data: { userId, name: listName },
+        });
+
+        if (sourceItems.length > 0) {
+          await tx.shoppingListItem.createMany({
+            data: sourceItems.map(item => ({
+              shoppingListId: newList.id,
+              name: item.name,
+              quantity: item.quantity,
+              category: item.category,
+              notes: item.notes,
+              purchased: false,
+              price: item.price,
+            })),
           });
         }
-      } catch {
-        // ignore parse errors
-      }
 
-      // Idempotent: if user already imported, return their list
-      if (importedByMap[userId]) {
-        return res.status(200).json({ listId: importedByMap[userId], imported: false });
-      }
-
-      // Check max uses against unique user count
-      const uniqueUserCount = Object.keys(importedByMap).length;
-      if (uniqueUserCount >= share.maxUses) {
-        return res.status(403).json({ error: 'Share link has reached maximum uses' });
-      }
-
-      // Fetch original list name
-      const sourceList = await prisma.shoppingList.findFirst({
-        where: { id: share.listId },
-      });
-      const listName = sourceList?.name ?? 'Shared Shopping List';
-
-      // Copy only unpurchased items
-      const sourceItems = await prisma.shoppingListItem.findMany({
-        where: { shoppingListId: share.listId, purchased: false },
-      });
-
-      const newList = await prisma.shoppingList.create({
-        data: { userId, name: listName },
-      });
-
-      if (sourceItems.length > 0) {
-        await prisma.shoppingListItem.createMany({
-          data: sourceItems.map(item => ({
-            shoppingListId: newList.id,
-            name: item.name,
-            quantity: item.quantity,
-            category: item.category,
-            notes: item.notes,
-            purchased: false,
-            price: item.price,
-          })),
+        const updatedMap = { ...importedByMap, [userId]: newList.id };
+        const updatedUsedBy = JSON.stringify(
+          Object.entries(updatedMap).map(([uid, lid]) => ({ userId: uid, listId: lid }))
+        );
+        await tx.shoppingListShare.update({
+          where: { id: share.id },
+          data: { usedBy: updatedUsedBy },
         });
-      }
 
-      // Append userId to usedBy (as object with listId for idempotency)
-      const updatedMap = { ...importedByMap, [userId]: newList.id };
-      const updatedUsedBy = JSON.stringify(
-        Object.entries(updatedMap).map(([uid, lid]) => ({ userId: uid, listId: lid }))
-      );
-      await prisma.shoppingListShare.update({
-        where: { id: share.id },
-        data: { usedBy: updatedUsedBy },
+        return { kind: 'imported' as const, listId: newList.id };
       });
 
-      return res.status(200).json({ listId: newList.id, imported: true });
+      switch (result.kind) {
+        case 'not_found':
+          return res.status(404).json({ error: 'Share link not found' });
+        case 'expired':
+          return res.status(410).json({ error: 'Share link has expired' });
+        case 'corrupt':
+          console.error('[shoppingListShare] usedBy column is corrupt for token', token);
+          return res.status(500).json({ error: 'Share link is in an invalid state' });
+        case 'max_uses':
+          return res.status(403).json({ error: 'Share link has reached maximum uses' });
+        case 'idempotent':
+          return res.status(200).json({ listId: result.listId, imported: false });
+        case 'imported':
+          return res.status(200).json({ listId: result.listId, imported: true });
+      }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[shoppingListShare] importShare failed:', msg);
       return res.status(500).json({ error: 'Could not import share link' });
     }
   },
