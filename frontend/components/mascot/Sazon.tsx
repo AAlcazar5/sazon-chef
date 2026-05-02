@@ -232,15 +232,28 @@ export default function Sazon({
   const reduced = useReducedMotion();
   const bodyStyle = useBodyMotion(motion, reduced);
 
+  // The source PNGs have transparent padding around the chili — render the image
+  // at 1.3× the container and clip with overflow:hidden so the visible mascot
+  // fills the box (mirrors the trick LogoMascot uses for its xsmall icon).
+  const imageOverscan = size * 0.3;
+  const imageDim = size * 1.3;
+
   return (
     <View style={[{ width: size, height: size }, styles.container, style]}>
       <Animated.View style={[StyleSheet.absoluteFill, bodyStyle]}>
-        <Image
-          source={SAZON_VARIANTS[variant]}
-          style={styles.body}
-          contentFit="contain"
-          cachePolicy="memory-disk"
-        />
+        <View style={[styles.bodyClip, { width: size, height: size }]}>
+          <Image
+            source={SAZON_VARIANTS[variant]}
+            style={{
+              width: imageDim,
+              height: imageDim,
+              marginLeft: -imageOverscan / 2,
+              marginTop: -imageOverscan / 2,
+            }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        </View>
       </Animated.View>
       {fx.length > 0 && (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -567,8 +580,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
   },
-  body: {
-    width: '100%',
-    height: '100%',
+  bodyClip: {
+    overflow: 'hidden',
   },
 });
