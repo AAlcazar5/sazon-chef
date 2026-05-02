@@ -28,6 +28,7 @@ import {
   getPlateOfTheWeek,
   savePlateForUser,
 } from '../../services/plateShareService';
+import { getUserSkillTier, visibleSlotsForTier } from '../../services/skillTierService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -372,6 +373,21 @@ export const mealComponentController = {
     } catch (error) {
       console.error('Error listing leftovers:', error);
       return res.status(500).json({ error: 'Failed to list leftovers' });
+    }
+  },
+
+  async getSkillTier(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+      const userId = getUserId(req);
+      const tier = await getUserSkillTier(userId);
+      const visibleSlots = visibleSlotsForTier(tier);
+      return res.json({ tier, visibleSlots });
+    } catch (error) {
+      console.error('Error fetching skill tier:', error);
+      return res.status(500).json({ error: 'Failed to fetch skill tier' });
     }
   },
 
