@@ -333,6 +333,36 @@ describe('smartCollectionsService', () => {
     });
   });
 
+  describe('buildUserScopedFilter — composed (Group 10X)', () => {
+    it('filters to source=user-composed scoped to the calling user', () => {
+      const filter = buildUserScopedFilter('composed', 'user-1') as any;
+      expect(filter).not.toBeNull();
+      expect(filter.source).toBe('user-composed');
+      expect(filter.userId).toBe('user-1');
+    });
+
+    it('definition is exposed in SMART_COLLECTION_DEFINITIONS with the My Plates label', () => {
+      const def = getSmartCollectionById('composed');
+      expect(def).toBeDefined();
+      expect(def!.name).toBe('My Plates');
+      expect(def!.icon).toBe('🍽️');
+    });
+
+    it('suggestCollectionsForRecipe excludes composed (it is user-scoped)', () => {
+      const recipe: Recipe = {
+        title: 'Composed Plate',
+        description: 'Composed plate: Salmon, Rice.',
+        cookTime: 25,
+        difficulty: 'easy',
+        calories: 500,
+        protein: 30,
+        carbs: 50,
+        fat: 15,
+      };
+      expect(suggestCollectionsForRecipe(recipe)).not.toContain('composed');
+    });
+  });
+
   describe('smart collection counts update', () => {
     it('recipeMatchesSmartCollection reflects new recipe matching criteria', () => {
       const base: Recipe = {

@@ -31,6 +31,11 @@ jest.mock('../../../src/services/leftoverInventoryService', () => ({
   consumeLeftoversForPlate: (...args: unknown[]) => mockConsumeLeftoversForPlate(...args),
 }));
 
+const mockGeneratePlateVariations = jest.fn();
+jest.mock('../../../src/services/composedPlateVariationService', () => ({
+  generatePlateVariations: (...args: unknown[]) => mockGeneratePlateVariations(...args),
+}));
+
 jest.mock('../../../src/services/cookTimelineService', () => ({
   solveCookTimeline: (...args: unknown[]) => mockSolveCookTimeline(...args),
 }));
@@ -79,6 +84,7 @@ beforeEach(() => {
   mockGetActiveLeftovers.mockResolvedValue([]);
   mockAddLeftoversFromPlate.mockResolvedValue(undefined);
   mockConsumeLeftoversForPlate.mockResolvedValue(undefined);
+  mockGeneratePlateVariations.mockResolvedValue([]);
   mockFitPlateToMacros.mockResolvedValue({
     achievable: true,
     plate: [{ slot: 'base', componentId: 'rice-1', portionMultiplier: 1 }],
@@ -640,6 +646,64 @@ describe('POST /api/composed-plates/:id/mark-cooked (Phase 6)', () => {
     const req = { params: { id: 'plate-1' }, body: validBody } as unknown as Request;
     const res = buildRes();
     await mealComponentController.markPlateCooked(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe('GET /api/composed-plates/:id/variations (Group 10X straggler)', () => {
+  it('returns 401 when not authenticated', async () => {
+    mockIsAuthenticated.mockReturnValueOnce(false);
+    const req = { params: { id: 'plate-1' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.plateVariations(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(mockGeneratePlateVariations).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 on missing/invalid plate id', async () => {
+    const req = { params: { id: '' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.plateVariations(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('200 happy path returns { variations } envelope and forwards count=3 default', async () => {
+    const variations = [{ swappedSlot: 'protein', swappedFrom: 'salmon-1', swappedTo: 'chicken-1' }];
+    mockGeneratePlateVariations.mockResolvedValueOnce(variations);
+    const req = { params: { id: 'plate-1' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.plateVariations(req, res);
+    expect(mockGeneratePlateVariations).toHaveBeenCalledWith({
+      plateId: 'plate-1',
+      userId: 'user-1',
+      count: 3,
+    });
+    expect(res.json).toHaveBeenCalledWith({ variations });
+  });
+
+  it('parses ?count=N from the query string', async () => {
+    mockGeneratePlateVariations.mockResolvedValueOnce([]);
+    const req = { params: { id: 'plate-1' }, query: { count: '5' } } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.plateVariations(req, res);
+    expect(mockGeneratePlateVariations).toHaveBeenCalledWith(
+      expect.objectContaining({ count: 5 })
+    );
+  });
+
+  it('returns 404 when service throws "forbidden" or "not found" (IDOR)', async () => {
+    mockGeneratePlateVariations.mockRejectedValueOnce(new Error('Plate not found or forbidden'));
+    const req = { params: { id: 'plate-1' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.plateVariations(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it('returns 500 when service throws unexpectedly', async () => {
+    mockGeneratePlateVariations.mockRejectedValueOnce(new Error('db boom'));
+    const req = { params: { id: 'plate-1' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.plateVariations(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
   });
 });
