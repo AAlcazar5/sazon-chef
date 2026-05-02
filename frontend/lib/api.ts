@@ -231,6 +231,11 @@ api.interceptors.response.use(
                             error.config?.url?.includes('/auth/forgot-password') ||
                             error.config?.url?.includes('/auth/reset-password');
 
+      // Bootstrap-time verify call (AuthContext.loadStoredAuth) handles its
+      // own 401 — opt-out of the auto-logout Alert so we don't double-fire
+      // logout while the user is mid-relogin.
+      const skipAuthAutoLogout = (error.config as any)?._skipAuthAutoLogout === true;
+
       if (statusCode === 401 || statusCode === 403) {
         apiError.code = statusCode === 401 ? 'HTTP_401' : 'HTTP_403';
 
@@ -243,8 +248,9 @@ api.interceptors.response.use(
             : 'You do not have permission to perform this action.';
         }
 
-        // Automatically logout on authentication errors (but NOT on auth endpoints)
-        if (logoutCallback && !isAuthEndpoint) {
+        // Automatically logout on authentication errors (but NOT on auth
+        // endpoints, NOT on the bootstrap verify call).
+        if (logoutCallback && !isAuthEndpoint && !skipAuthAutoLogout) {
           const doLogout = logoutCallback;
           Alert.alert(
             'Session Expired',
