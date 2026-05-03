@@ -604,9 +604,6 @@ export const authController = {
         }
       });
 
-      console.log(`Password reset code for ${email}: ${resetCode}`);
-      console.log(`Code expires at: ${resetCodeExpiry}`);
-
       res.json({
         success: true,
         message: 'A password reset code has been sent to your email.',
