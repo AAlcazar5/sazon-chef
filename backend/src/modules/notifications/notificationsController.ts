@@ -36,6 +36,7 @@ export const notificationsController = {
    */
   async unregisterToken(req: Request, res: Response) {
     try {
+      const userId = getUserId(req);
       const { token } = req.body;
 
       if (!token || typeof token !== 'string') {
@@ -43,7 +44,7 @@ export const notificationsController = {
       }
 
       await prisma.pushToken.deleteMany({
-        where: { token },
+        where: { token, userId },
       });
 
       res.json({ success: true, message: 'Push token unregistered' });
