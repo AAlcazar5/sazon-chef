@@ -1,7 +1,10 @@
-// 10Y Phase 3: inline Coach tool-call rendering. Two variants:
-//   - find_recipes / search_cookbook → horizontal recipe carousel with
-//     personalization overlays (pantryCoverage chip, macroFit pill, affinity).
+// 10Y Phase 3 + Phase 7: inline Coach tool-call rendering.
+// Variants:
+//   - find_recipes / search_cookbook → recipe carousel with personalization.
 //   - get_pantry / get_today_remaining_macros → compact summary card.
+//   - compose_plate → Build-a-Plate result card (sage tint).
+//   - log_meal → "Logged ✓" chip (peach tint).
+//   - compose_plate allergen-blocked → amber warning card.
 
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
@@ -42,6 +45,29 @@ interface MacroResult {
   remaining: { calories: number; protein: number; carbs: number; fat: number; fiber?: number } | null;
 }
 
+interface ComposePlateResult {
+  plateId: string;
+  slots: Array<{ slot: string; componentId: string; name: string }>;
+  totalMacros: { calories: number; protein: number; carbs: number; fat: number };
+  pantryCoverage: number;
+  allergenSafe: true | { violations: string[] };
+}
+
+interface ComposePlateBlocked {
+  allergenSafe: { violations: string[] };
+  slots?: Array<{ slot: string; componentId: string; name: string }>;
+}
+
+interface LogMealResult {
+  id: string;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  mealType: string;
+  eatenAt?: string;
+}
+
 interface ToolCallCardProps {
   name: string;
   result: unknown;
@@ -74,6 +100,43 @@ function isMacroResult(name: string, result: unknown): result is MacroResult {
     result !== null &&
     'remaining' in (result as MacroResult)
   );
+}
+
+function isComposePlateBlocked(
+  name: string,
+  result: unknown,
+): result is ComposePlateBlocked {
+  if (name !== 'compose_plate') return false;
+  if (typeof result !== 'object' || result === null) return false;
+  const safe = (result as { allergenSafe?: unknown }).allergenSafe;
+  return (
+    typeof safe === 'object' &&
+    safe !== null &&
+    Array.isArray((safe as { violations?: unknown }).violations)
+  );
+}
+
+function isComposePlateResult(
+  name: string,
+  result: unknown,
+): result is ComposePlateResult {
+  if (name !== 'compose_plate') return false;
+  if (typeof result !== 'object' || result === null) return false;
+  const r = result as ComposePlateResult;
+  return (
+    typeof r.plateId === 'string' &&
+    Array.isArray(r.slots) &&
+    typeof r.totalMacros === 'object' &&
+    r.totalMacros !== null &&
+    r.allergenSafe === true
+  );
+}
+
+function isLogMealResult(name: string, result: unknown): result is LogMealResult {
+  if (name !== 'log_meal') return false;
+  if (typeof result !== 'object' || result === null) return false;
+  const r = result as LogMealResult;
+  return typeof r.id === 'string' && typeof r.totalCalories === 'number';
 }
 
 export default function ToolCallCard({ name, result }: ToolCallCardProps) {
@@ -149,6 +212,78 @@ export default function ToolCallCard({ name, result }: ToolCallCardProps) {
           {result.pantry.length} items · {result.leftoverInventory.length} leftover
         </Text>
       </View>
+    );
+  }
+
+  if (isComposePlateBlocked(name, result)) {
+    const amber = isDark ? PastelDark.golden : Pastel.golden;
+    return (
+      <View
+        accessibilityLabel="Allergen blocked plate"
+        style={[styles.summary, Shadows.SM as object, { backgroundColor: amber }]}
+      >
+        <Text style={[styles.summaryHead, { color: text }]}>
+          Allergen blocked
+        </Text>
+        <Text style={[styles.summaryBody, { color: subText }]}>
+          Switched to a safe option above. Violations: {result.allergenSafe.violations.join(', ')}
+        </Text>
+      </View>
+    );
+  }
+
+  if (isComposePlateResult(name, result)) {
+    const sage = isDark ? PastelDark.sage : Pastel.sage;
+    const coverPct = Math.round(result.pantryCoverage);
+    const macros = result.totalMacros;
+    return (
+      <HapticTouchableOpacity
+        accessibilityLabel="Compose-plate result"
+        accessibilityRole="button"
+        onPress={() =>
+          router.push(
+            `/build-a-plate?prefilledPlateId=${result.plateId}` as never,
+          )
+        }
+        style={[styles.summary, Shadows.SM as object, { backgroundColor: sage }]}
+      >
+        <Text style={[styles.summaryHead, { color: text }]}>Plate composed</Text>
+        <Text style={[styles.summaryBody, { color: subText }]}>
+          {result.slots.map((s) => s.name).join(' + ')}
+        </Text>
+        <View style={styles.chipRow}>
+          <View style={[styles.coverChip, { backgroundColor: sage }]}>
+            <Text style={[styles.chipText, { color: text }]}>
+              {coverPct}% pantry
+            </Text>
+          </View>
+          <View style={[styles.fitPill, { backgroundColor: sage }]}>
+            <Text style={[styles.chipText, { color: text }]}>
+              Allergen safe
+            </Text>
+          </View>
+        </View>
+        <Text style={[styles.affinity, { color: subText }]}>
+          {Math.round(macros.calories)} cal · {Math.round(macros.protein)} P · {Math.round(macros.carbs)} C · {Math.round(macros.fat)} F
+        </Text>
+      </HapticTouchableOpacity>
+    );
+  }
+
+  if (isLogMealResult(name, result)) {
+    const peach = isDark ? PastelDark.peach : Pastel.peach;
+    return (
+      <HapticTouchableOpacity
+        accessibilityLabel="Logged meal"
+        accessibilityRole="button"
+        onPress={() => router.push('/meal-plan' as never)}
+        style={[styles.summary, Shadows.SM as object, { backgroundColor: peach }]}
+      >
+        <Text style={[styles.summaryHead, { color: text }]}>Logged ✓</Text>
+        <Text style={[styles.summaryBody, { color: subText }]}>
+          {Math.round(result.totalCalories)} cal · {result.mealType}
+        </Text>
+      </HapticTouchableOpacity>
     );
   }
 

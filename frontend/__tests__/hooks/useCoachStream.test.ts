@@ -174,6 +174,71 @@ describe('useCoachStream', () => {
     expect(result.current.paywallReason).toBe('photos');
   });
 
+  it('Phase 7: tool_result with PRO_FEATURE sets paywallReason="generic" exactly once', async () => {
+    mockedCoachApi.createConversation.mockResolvedValue({
+      id: 'c1',
+      title: 'Hi',
+      tier: 'free',
+      createdAt: 'now',
+      lastMessageAt: 'now',
+    });
+
+    // First send: 2 PRO_FEATURE tool_results in sequence — only the first
+    // should flip the paywall reason.
+    const events1 = [
+      { type: 'tool_use', name: 'log_meal', toolUseId: 'tu_1', input: {} },
+      {
+        type: 'tool_result',
+        toolUseId: 'tu_1',
+        result: { error: 'PRO_FEATURE', feature: 'write_tools' },
+      },
+      { type: 'tool_use', name: 'compose_plate', toolUseId: 'tu_2', input: {} },
+      {
+        type: 'tool_result',
+        toolUseId: 'tu_2',
+        result: { error: 'PRO_FEATURE', feature: 'write_tools' },
+      },
+      { type: 'text', text: 'That is a Pro feature' },
+      { type: 'done' },
+    ];
+    mockedCoachApi.streamMessage.mockReturnValueOnce(mkRichStream(events1));
+
+    const { result } = renderHook(() => useCoachStream());
+
+    await act(async () => {
+      await result.current.sendMessage('log my meal');
+    });
+
+    await waitFor(() => {
+      expect(result.current.paywallReason).toBe('generic');
+    });
+    expect(result.current.paywall).not.toBeNull();
+
+    // Dismiss the paywall — second occurrence in the same conversation MUST
+    // NOT re-open it (the ref guards against re-prompting).
+    act(() => {
+      result.current.dismissPaywall();
+    });
+    expect(result.current.paywallReason).toBeNull();
+
+    const events2 = [
+      { type: 'tool_use', name: 'log_meal', toolUseId: 'tu_3', input: {} },
+      {
+        type: 'tool_result',
+        toolUseId: 'tu_3',
+        result: { error: 'PRO_FEATURE', feature: 'write_tools' },
+      },
+      { type: 'text', text: 'Still Pro only' },
+      { type: 'done' },
+    ];
+    mockedCoachApi.streamMessage.mockReturnValueOnce(mkRichStream(events2));
+
+    await act(async () => {
+      await result.current.sendMessage('try again');
+    });
+    expect(result.current.paywallReason).toBeNull();
+  });
+
   it('surfaces paywall info when streamMessage throws COACH_DAILY_CAP', async () => {
     mockedCoachApi.createConversation.mockResolvedValue({
       id: 'c1',

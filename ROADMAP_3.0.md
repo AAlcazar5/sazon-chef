@@ -3260,7 +3260,7 @@ Phases 1–2 ship for launch. Phases 3–9 form the post-launch "depth" releases
 4. **Phase 4 — Paywall + tier enforcement (10Y-D):** tier-aware client, Coach paywall sheet, server-side tier verification, usage analytics. Opus + extended thinking lights up for Pro.
 5. **Phase 5 — Photo attachments (Pro):** vision content blocks, paperclip UI, attachment paywall on free tier.
 6. **Phase 6 — Memory & personalization (10Y-C):** memory model, extractor job, memory settings screen, weekly check-in.
-7. **Phase 7 — Write tools (Pro):** `compose_plate` (calls 10X), `log_meal`. Coach can act, not just advise.
+7. **Phase 7 — Write tools (Pro):** `compose_plate` (calls 10X), `log_meal`. Coach can act, not just advise. ✅ SHIPPED — allergen guard pre-persistence, free tier sees `PRO_FEATURE` in tool_result + auto paywall once per conversation.
 8. **Phase 8 — Safety hardening (10Y-E):** guardrail corpus, allergy guard wiring, prompt-injection defense, cost ceiling, export.
 
 Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-launch retention engine.

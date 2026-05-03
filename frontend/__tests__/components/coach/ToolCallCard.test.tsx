@@ -120,6 +120,98 @@ describe('ToolCallCard — get_pantry variant', () => {
   });
 });
 
+describe('ToolCallCard — compose_plate variant', () => {
+  it('renders happy path with macros, pantry coverage, and allergen-safe badge', () => {
+    const composeResult = {
+      plateId: 'plate-1',
+      slots: [
+        { slot: 'protein', componentId: 'c1', name: 'Grilled Chicken' },
+        { slot: 'base', componentId: 'c2', name: 'Brown Rice' },
+      ],
+      totalMacros: { calories: 520, protein: 42, carbs: 38, fat: 18 },
+      pantryCoverage: 80,
+      allergenSafe: true as const,
+    };
+    const { getByText, getByLabelText } = render(
+      <ToolCallCard name="compose_plate" result={composeResult} />
+    );
+    expect(getByText(/plate composed/i)).toBeTruthy();
+    expect(getByText(/80%/)).toBeTruthy();
+    expect(getByText(/allergen safe/i)).toBeTruthy();
+    expect(getByText(/520 cal/i)).toBeTruthy();
+    expect(getByLabelText(/compose-plate result/i)).toBeTruthy();
+  });
+
+  it('navigates to build-a-plate composer on tap', () => {
+    mockPush.mockClear();
+    const composeResult = {
+      plateId: 'plate-42',
+      slots: [{ slot: 'protein', componentId: 'c1', name: 'X' }],
+      totalMacros: { calories: 100, protein: 10, carbs: 5, fat: 2 },
+      pantryCoverage: 50,
+      allergenSafe: true as const,
+    };
+    const { getByLabelText } = render(
+      <ToolCallCard name="compose_plate" result={composeResult} />
+    );
+    fireEvent.press(getByLabelText(/compose-plate result/i));
+    expect(mockPush).toHaveBeenCalledWith(
+      '/build-a-plate?prefilledPlateId=plate-42',
+    );
+  });
+
+  it('renders amber allergen-blocked card when violations present', () => {
+    const blocked = {
+      allergenSafe: { violations: ['peanut'] },
+      slots: [{ slot: 'protein', componentId: 'c1', name: 'Peanut Chicken' }],
+    };
+    const { getByText, getByLabelText } = render(
+      <ToolCallCard name="compose_plate" result={blocked} />
+    );
+    expect(getByText(/allergen blocked/i)).toBeTruthy();
+    expect(getByText(/peanut/i)).toBeTruthy();
+    expect(getByLabelText(/allergen blocked plate/i)).toBeTruthy();
+  });
+});
+
+describe('ToolCallCard — log_meal variant', () => {
+  it('renders Logged chip with totalCalories + mealType', () => {
+    const logResult = {
+      id: 'mh-1',
+      totalCalories: 520,
+      totalProtein: 42,
+      totalCarbs: 38,
+      totalFat: 18,
+      mealType: 'dinner',
+      eatenAt: '2026-05-03T18:00:00Z',
+    };
+    const { getByText, getByLabelText } = render(
+      <ToolCallCard name="log_meal" result={logResult} />
+    );
+    expect(getByText(/logged/i)).toBeTruthy();
+    expect(getByText(/520 cal/i)).toBeTruthy();
+    expect(getByText(/dinner/i)).toBeTruthy();
+    expect(getByLabelText(/logged meal/i)).toBeTruthy();
+  });
+
+  it('navigates to meal-plan on tap', () => {
+    mockPush.mockClear();
+    const logResult = {
+      id: 'mh-1',
+      totalCalories: 200,
+      totalProtein: 10,
+      totalCarbs: 20,
+      totalFat: 5,
+      mealType: 'snack',
+    };
+    const { getByLabelText } = render(
+      <ToolCallCard name="log_meal" result={logResult} />
+    );
+    fireEvent.press(getByLabelText(/logged meal/i));
+    expect(mockPush).toHaveBeenCalledWith('/meal-plan');
+  });
+});
+
 describe('ToolCallCard — get_today_remaining_macros variant', () => {
   it('renders compact macro summary', () => {
     const macroResult = {
