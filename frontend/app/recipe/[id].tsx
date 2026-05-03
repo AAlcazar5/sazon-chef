@@ -62,9 +62,12 @@ const SLOT_PASTEL_DARK: Record<string, string> = {
   garnish: PastelDark.lavender,
 };
 
-function getInstructionText(item: any): string {
+function getInstructionText(item: unknown): string {
   if (typeof item === 'string') return item;
-  if (item && typeof item === 'object' && 'text' in item) return item.text;
+  if (item && typeof item === 'object' && 'text' in item) {
+    const text = (item as { text: unknown }).text;
+    return typeof text === 'string' ? text : String(text);
+  }
   return String(item);
 }
 

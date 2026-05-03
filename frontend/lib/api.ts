@@ -1863,7 +1863,6 @@ export interface ComponentVariantResponse {
   variantKey: string;
   label: string;
   compatibilityScore: number;
-  hint?: string;
   caloriesDeltaPerPortion?: number;
   cookTimeMinutes?: number;
 }
@@ -1934,6 +1933,7 @@ export type TrackedNutrient = 'fiberG' | 'omega3G' | 'vitaminDIu' | 'ironMg' | '
 export interface NutrientGapResponse {
   topGap: TrackedNutrient | null;
   pctRemainingByNutrient: Record<TrackedNutrient, number>;
+  targets: Record<TrackedNutrient, number>;
 }
 
 export const nutrientGapApi = {
