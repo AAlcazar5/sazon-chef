@@ -424,7 +424,7 @@ export const shoppingListController = {
       }
 
       const updated = await prisma.shoppingListItem.update({
-        where: { id: itemId },
+        where: { id: itemId, shoppingListId: listId },
         data: {
           ...(name && { name }),
           ...(quantity && { quantity }),
@@ -608,9 +608,13 @@ export const shoppingListController = {
         return res.status(404).json({ error: 'Shopping list not found' });
       }
 
-      await prisma.shoppingListItem.delete({
-        where: { id: itemId },
+      const deleted = await prisma.shoppingListItem.deleteMany({
+        where: { id: itemId, shoppingListId: listId },
       });
+
+      if (deleted.count === 0) {
+        return res.status(404).json({ error: 'Item not found in this list' });
+      }
 
       res.json({ message: 'Item deleted successfully' });
     } catch (error: any) {
