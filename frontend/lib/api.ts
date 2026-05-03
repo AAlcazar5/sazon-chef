@@ -2169,4 +2169,170 @@ export const sharedPlatesApi = {
     ),
 };
 
+// ─── Sazon Coach (Group 10Y) ─────────────────────────────────────────────────
+
+export type CoachTier = 'free' | 'pro';
+export type CoachMessageRole = 'user' | 'assistant';
+
+export interface CoachConversation {
+  id: string;
+  title: string;
+  tier: CoachTier;
+  createdAt: string;
+  lastMessageAt: string;
+}
+
+export interface CoachMessage {
+  id: string;
+  role: CoachMessageRole;
+  content: string;
+  createdAt: string;
+}
+
+export interface CoachConversationDetail extends CoachConversation {
+  messages: CoachMessage[];
+}
+
+export interface CoachPaywallInfo {
+  headline: string;
+  cta: string;
+}
+
+export class CoachStreamError extends Error {
+  code: string;
+  paywall?: CoachPaywallInfo;
+  status?: number;
+  constructor(message: string, code: string, options?: { paywall?: CoachPaywallInfo; status?: number }) {
+    super(message);
+    this.name = 'CoachStreamError';
+    this.code = code;
+    this.paywall = options?.paywall;
+    this.status = options?.status;
+  }
+}
+
+interface CoachStreamRawError {
+  error?: string;
+  paywall?: CoachPaywallInfo;
+}
+
+// SSE stream → async iterator of text chunks. Uses raw fetch because axios in
+// React Native does not expose ReadableStream bodies. Caller treats yielded
+// strings as token chunks; throws CoachStreamError on 402 / network failure.
+async function* streamCoachMessage(params: {
+  conversationId: string;
+  message: string;
+  signal?: AbortSignal;
+}): AsyncIterableIterator<string> {
+  const url = `${getBaseURL()}/coach/message`;
+  const token = getAuthToken();
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      conversationId: params.conversationId,
+      message: params.message,
+    }),
+    signal: params.signal,
+  });
+
+  if (response.status === 402) {
+    let parsed: CoachStreamRawError = {};
+    try {
+      parsed = (await response.json()) as CoachStreamRawError;
+    } catch {
+      // ignore — keep empty parsed object
+    }
+    throw new CoachStreamError(
+      parsed.error ?? 'COACH_DAILY_CAP',
+      'COACH_DAILY_CAP',
+      { paywall: parsed.paywall, status: 402 },
+    );
+  }
+
+  if (!response.ok || !response.body) {
+    throw new CoachStreamError(
+      `Coach stream failed: ${response.status}`,
+      'COACH_STREAM_ERROR',
+      { status: response.status },
+    );
+  }
+
+  const reader = (response.body as unknown as ReadableStream<Uint8Array>).getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE events are separated by blank lines.
+      let sepIdx = buffer.indexOf('\n\n');
+      while (sepIdx !== -1) {
+        const rawEvent = buffer.slice(0, sepIdx);
+        buffer = buffer.slice(sepIdx + 2);
+        const parsed = parseSseEvent(rawEvent);
+        if (parsed.event === 'done') {
+          return;
+        }
+        if (parsed.data && parsed.event !== 'done') {
+          yield parsed.data;
+        }
+        sepIdx = buffer.indexOf('\n\n');
+      }
+    }
+  } finally {
+    try { reader.releaseLock(); } catch { /* ignore */ }
+  }
+}
+
+function parseSseEvent(raw: string): { event?: string; data?: string } {
+  const lines = raw.split('\n');
+  let event: string | undefined;
+  const dataLines: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith('event:')) {
+      event = line.slice(6).trim();
+    } else if (line.startsWith('data:')) {
+      dataLines.push(line.slice(5).replace(/^ /, ''));
+    }
+  }
+  return { event, data: dataLines.length ? dataLines.join('\n') : undefined };
+}
+
+interface CoachApi {
+  listConversations: () => Promise<CoachConversation[]>;
+  getConversation: (id: string) => Promise<CoachConversationDetail>;
+  createConversation: (firstMessage: string) => Promise<CoachConversation>;
+  streamMessage: (params: {
+    conversationId: string;
+    message: string;
+    signal?: AbortSignal;
+  }) => AsyncIterableIterator<string>;
+}
+
+export const coachApi: CoachApi = {
+  listConversations: async () => {
+    const res = await api.get<CoachConversation[]>('/coach/conversations');
+    return res.data;
+  },
+  getConversation: async (id: string) => {
+    const res = await api.get<CoachConversationDetail>(
+      `/coach/conversations/${encodeURIComponent(id)}`,
+    );
+    return res.data;
+  },
+  createConversation: async (firstMessage: string) => {
+    const res = await api.post<CoachConversation>('/coach/conversations', { firstMessage });
+    return res.data;
+  },
+  streamMessage: streamCoachMessage,
+};
+
 export type { ApiResponse, ApiError };

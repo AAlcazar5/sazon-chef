@@ -411,6 +411,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="coach"
+        options={{
+          title: 'Coach',
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="chatbubbles-outline" color={color} size={size} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="shopping-list"
         options={{
           title: 'Shopping',
