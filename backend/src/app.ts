@@ -23,6 +23,7 @@ import ingredientAvailabilityRoutes from '@modules/ingredientAvailability/ingred
 import pantryRoutes from '@modules/pantry/pantryRoutes';
 import { mealComponentRoutes, composedPlateRoutes, leftoverInventoryRoutes, sharedPlateRoutes, nutrientGapRoutes, householdRoutes } from '@modules/mealComponent/mealComponentRoutes';
 import { kitchenIQRoutes } from '@modules/kitchenIQ/kitchenIQRoutes';
+import { affinityRoutes } from '@modules/affinity/affinityRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { searchRoutes } from '@modules/search/searchRoutes';
@@ -153,6 +154,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/user/kitchen-iq', kitchenIQRoutes);
+app.use('/api/user/affinity', affinityRoutes);
 app.use('/api/health-metrics', healthMetricsRoutes);
 app.use('/api/weight-goal', weightGoalRoutes);
 app.use('/api/meal-plan', mealPlanRoutes);

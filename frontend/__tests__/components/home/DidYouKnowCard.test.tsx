@@ -78,6 +78,7 @@ const USER_STATE = {
   rolling7dNutrientGaps: [],
   skillTier: 'cook' as const,
   goalPhase: 'any' as const,
+  last7DaysIngredients: ['turmeric', 'lentils'],
 };
 
 describe('DidYouKnowCard', () => {
@@ -172,12 +173,26 @@ describe('DidYouKnowCard', () => {
     expect(await findByTestId('dyk-card')).toBeTruthy();
   });
 
-  it('calls matcher with home screenType and the user state from the hook', async () => {
+  it('calls matcher with last 7 days ingredients + home screenType + user state', async () => {
+    render(<DidYouKnowCard />);
+    await waitFor(() => {
+      expect(mockMatchFoodIntelTips).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ingredients: ['turmeric', 'lentils'],
+          screenType: 'home',
+        }),
+        USER_STATE
+      );
+    });
+  });
+
+  it('falls back to empty ingredients when user state has no last7DaysIngredients', async () => {
+    mockUseFoodIntelUserState.mockReturnValue({ ...USER_STATE, last7DaysIngredients: undefined });
     render(<DidYouKnowCard />);
     await waitFor(() => {
       expect(mockMatchFoodIntelTips).toHaveBeenCalledWith(
         expect.objectContaining({ ingredients: [], screenType: 'home' }),
-        USER_STATE
+        expect.any(Object)
       );
     });
   });
