@@ -144,6 +144,29 @@ export default function TabLayout() {
   }, [executeSearch]);
 
   const actionItems: ActionSheetItem[] = [
+    // Group 10X — Build-a-Plate is the flagship surface; lead the action sheet
+    // with it so the always-visible "+" FAB is one tap away from composing a
+    // plate tailored to *this* user's pantry/macros/taste (N=1 north star).
+    {
+      label: 'Build a plate',
+      icon: 'restaurant',
+      subtitle: 'Compose tonight’s meal',
+      onPress: () => {
+        setShowActionSheet(false);
+        router.push('/build-a-plate' as any);
+      },
+      tint: 'sage',
+    },
+    {
+      label: 'Cook for the family',
+      icon: 'people-outline',
+      subtitle: 'Multi-plate composer',
+      onPress: () => {
+        setShowActionSheet(false);
+        router.push('/build-a-plate-family' as any);
+      },
+      tint: 'lavender',
+    },
     {
       label: 'Take a Picture',
       icon: 'camera-outline',
