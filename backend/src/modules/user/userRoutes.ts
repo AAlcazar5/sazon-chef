@@ -2,11 +2,15 @@ import { Router } from 'express';
 import { userController, uploadProfilePictureMiddleware } from './userController';
 import { authenticateToken } from '../auth/authMiddleware';
 import { userPresetController } from './userPresetController';
+import { userPreferencesRoutes } from './userPreferencesRoutes';
 
 const router = Router();
 
 // All user routes require authentication
 router.use(authenticateToken);
+
+// Group 10Y Phase 6: weekly check-in opt-in toggle (Pro-gated when enabling).
+router.use(userPreferencesRoutes);
 
 // User profile routes
 router.get('/profile', userController.getProfile);

@@ -3,6 +3,7 @@
 // Runs hourly, dispatches condition-based triggers based on day/hour.
 
 import { notificationTriggerService } from './notificationTriggerService';
+import { runOnce as runCoachWeeklyCheckin } from '@/jobs/coachWeeklyCheckinJob';
 
 let intervalId: NodeJS.Timeout | null = null;
 
@@ -29,6 +30,12 @@ export function startNotificationScheduler(): void {
       // Sunday at 9am: weekly digest
       if (day === 0 && hour === 9) {
         await notificationTriggerService.checkWeeklyDigest();
+        // Group 10Y Phase 6 (10Y-C): Pro coach weekly check-in.
+        try {
+          await runCoachWeeklyCheckin(now);
+        } catch (error) {
+          console.error('❌ [NotificationScheduler] coachWeeklyCheckin failed:', error);
+        }
       }
 
       // Daily at 10am: trial ending + day 3 nudge lifecycle emails

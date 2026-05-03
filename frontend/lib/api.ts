@@ -970,6 +970,12 @@ export const userApi = {
     return apiClient.put('/user/preferences', preferences);
   },
 
+  // Phase 6 (10Y-C): Pro-gated coach prefs (e.g. weeklyCheckinOptIn).
+  // Distinct from updatePreferences which targets the legacy taste profile.
+  updateMyPreferences: (patch: { weeklyCheckinOptIn?: boolean }) => {
+    return apiClient.patch('/user/preferences/weekly-checkin', patch);
+  },
+
   // Superfood preferences
   getPreferredSuperfoods: () => {
     return apiClient.get('/user/superfoods');
@@ -2414,6 +2420,24 @@ function parseSseEvent(raw: string): { event?: string; data?: string } {
   return { event, data: dataLines.length ? dataLines.join('\n') : undefined };
 }
 
+export type CoachMemoryKind =
+  | 'preference'
+  | 'goal'
+  | 'constraint'
+  | 'milestone';
+
+export interface CoachMemory {
+  id: string;
+  userId: string;
+  kind: CoachMemoryKind;
+  content: string;
+  confidence: number;
+  sourceConversationId: string | null;
+  sourceMessageId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface CoachApi {
   listConversations: () => Promise<CoachConversation[]>;
   getConversation: (id: string) => Promise<CoachConversationDetail>;
@@ -2429,6 +2453,12 @@ interface CoachApi {
     imageBase64: string;
     mediaType: CoachAttachmentMediaType;
   }) => Promise<CoachExtractPantryResponse>;
+  listMemories: () => Promise<CoachMemory[]>;
+  updateMemory: (
+    id: string,
+    patch: { content?: string; confidence?: number },
+  ) => Promise<CoachMemory>;
+  deleteMemory: (id: string) => Promise<void>;
 }
 
 export interface CoachContextResponse {
@@ -2470,6 +2500,20 @@ export const coachApi: CoachApi = {
       { imageBase64, mediaType },
     );
     return res.data;
+  },
+  listMemories: async () => {
+    const res = await api.get<CoachMemory[]>('/coach/memories');
+    return res.data;
+  },
+  updateMemory: async (id, patch) => {
+    const res = await api.patch<CoachMemory>(
+      `/coach/memories/${encodeURIComponent(id)}`,
+      patch,
+    );
+    return res.data;
+  },
+  deleteMemory: async (id) => {
+    await api.delete(`/coach/memories/${encodeURIComponent(id)}`);
   },
 };
 

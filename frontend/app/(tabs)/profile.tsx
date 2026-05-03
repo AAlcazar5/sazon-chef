@@ -27,6 +27,7 @@ import {
   CulinaryPreferencesCard,
   CookingJourneyCard,
   KitchenIQSection,
+  CoachMemoryCard,
   BudgetCard,
   NotificationsCard,
   DataPrivacyCard,
@@ -234,6 +235,12 @@ export default function ProfileScreen() {
 
         <StaggerItem index={7}>
           <KitchenIQSection testID="kitchen-iq-section" />
+        </StaggerItem>
+
+        <StaggerItem index={8}>
+          <CoachMemoryCard
+            initialWeeklyCheckin={Boolean(preferences?.weeklyCheckinOptIn)}
+          />
         </StaggerItem>
 
         <StaggerItem index={8}>

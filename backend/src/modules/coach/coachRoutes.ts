@@ -30,6 +30,11 @@ import {
   type VisionMediaType,
 } from '@/services/coachVisionService';
 import { coachContextRoutes } from './coachContextRoutes';
+import { coachMemoryRoutes } from './coachMemoryRoutes';
+import {
+  enqueueExtraction,
+  topMemoriesForUser,
+} from '@/services/coachMemoryService';
 
 const FREE_DAILY_MESSAGE_CAP = 10;
 const MAX_TOOL_USE_ITERATIONS = 5;
@@ -166,6 +171,8 @@ export const coachRoutes = Router();
 
 // Mount the lightweight context endpoint as a sub-route.
 coachRoutes.use(coachContextRoutes);
+// Phase 6: Pro-only memory CRUD.
+coachRoutes.use('/memories', coachMemoryRoutes);
 
 coachRoutes.post('/conversations', async (req: Request, res: Response) => {
   const userId = getUserId(req);
@@ -325,7 +332,24 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
 
   const profile = await buildCoachProfile(userId);
   const snapshot = buildProfileSnapshot(profile);
-  const systemPrompt = buildSystemPrompt(snapshot);
+  // Phase 6: Pro users get long-term memories injected into the system prompt.
+  // Free users get the same prompt as Phase 5 (no memory section).
+  let memoriesForPrompt: Array<{ kind: string; content: string; confidence: number }> = [];
+  if (tier === 'premium') {
+    try {
+      const top = await topMemoriesForUser(userId, 20);
+      memoriesForPrompt = top.map((m) => ({
+        kind: m.kind,
+        content: m.content,
+        confidence: m.confidence,
+      }));
+    } catch {
+      memoriesForPrompt = [];
+    }
+  }
+  const systemPrompt = buildSystemPrompt(snapshot, {
+    memories: memoriesForPrompt.length > 0 ? memoriesForPrompt : undefined,
+  });
 
   res.status(200);
   res.setHeader('Content-Type', 'text/event-stream');
@@ -490,6 +514,15 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
       conversationId,
       model: lastModel,
     });
+  }
+
+  // Phase 6: Pro-only — kick off async memory extraction over the recent
+  // turns. Non-blocking; never throws back into the response stream.
+  if (tier === 'premium') {
+    enqueueExtraction(userId, conversationId, [
+      { role: 'user', content: message },
+      { role: 'assistant', content: assistantText },
+    ]);
   }
 
   res.write('event: done\ndata: {}\n\n');
