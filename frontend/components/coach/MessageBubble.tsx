@@ -9,6 +9,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Pastel, PastelDark, Colors, DarkColors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Shadows } from '../../constants/Shadows';
+import { BorderRadius } from '../../constants/Spacing';
 
 import ToolCallCard from './ToolCallCard';
 import type { CoachToolUse } from '../../hooks/useCoachStream';
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   bubble: {
-    borderRadius: 16,
+    borderRadius: BorderRadius.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,

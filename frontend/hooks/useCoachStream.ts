@@ -62,6 +62,10 @@ export interface CoachUiMessage {
   toolUses?: CoachToolUse[];
 }
 
+export interface CoachMedicalDeflectionState {
+  reason: string;
+}
+
 export interface UseCoachStreamResult {
   messages: CoachUiMessage[];
   isStreaming: boolean;
@@ -71,6 +75,7 @@ export interface UseCoachStreamResult {
   conversationId: string | null;
   attachmentError: string | null;
   costNotice: string | null;
+  medicalDeflection: CoachMedicalDeflectionState | null;
   sendMessage: (text: string, attachments?: CoachAttachment[]) => Promise<void>;
   setConversationId: (id: string | null) => void;
   setMessages: (messages: CoachUiMessage[]) => void;
@@ -78,6 +83,7 @@ export interface UseCoachStreamResult {
   dismissPaywall: () => void;
   dismissAttachmentError: () => void;
   dismissCostNotice: () => void;
+  dismissMedicalDeflection: () => void;
 }
 
 const makeId = () => `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -107,6 +113,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
   const [paywallReason, setPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [costNotice, setCostNotice] = useState<string | null>(null);
+  const [medicalDeflection, setMedicalDeflection] = useState<CoachMedicalDeflectionState | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(initial?.conversationId ?? null);
   const abortRef = useRef<AbortController | null>(null);
   // Phase 7: only auto-surface the Pro paywall sheet ONCE per conversation
@@ -124,6 +131,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     setPaywallReason(null);
     setAttachmentError(null);
     setCostNotice(null);
+    setMedicalDeflection(null);
     setConversationId(null);
     paywallShownThisConversationRef.current = false;
   }, []);
@@ -141,6 +149,10 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     setCostNotice(null);
   }, []);
 
+  const dismissMedicalDeflection = useCallback(() => {
+    setMedicalDeflection(null);
+  }, []);
+
   const sendMessage = useCallback(async (text: string, attachments?: CoachAttachment[]) => {
     const trimmed = text.trim();
     if (!trimmed || isStreaming) return;
@@ -149,6 +161,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     setPaywall(null);
     setPaywallReason(null);
     setAttachmentError(null);
+    setMedicalDeflection(null);
 
     const userMsg: CoachUiMessage = { id: makeId(), role: 'user', content: trimmed };
     const assistantId = makeId();
@@ -185,6 +198,8 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
           setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, content: acc } : m)));
         } else if (event.type === 'cost_notice') {
           setCostNotice(event.message);
+        } else if (event.type === 'medical_deflection') {
+          setMedicalDeflection({ reason: event.reason });
         } else if (event.type === 'tool_use') {
           toolUses.push({
             name: event.name,
@@ -259,6 +274,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     conversationId,
     attachmentError,
     costNotice,
+    medicalDeflection,
     sendMessage,
     setConversationId,
     setMessages,
@@ -266,5 +282,6 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     dismissPaywall,
     dismissAttachmentError,
     dismissCostNotice,
+    dismissMedicalDeflection,
   };
 }

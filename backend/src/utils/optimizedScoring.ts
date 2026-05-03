@@ -78,6 +78,9 @@ export function calculateQuickScore(
   }
 
   // 2. Banned Ingredients (VETO) - CRITICAL
+  // TODO Sec H2 (security review): substring match here over-flags ("nut" vs
+  // "coconut"). Token-boundary fix shipped in coachTools.checkAllergens; apply
+  // here as a follow-up once 70/30 characterization tests are in place.
   if (prefs.bannedIngredients.length > 0 && recipe.ingredients) {
     const ingredientTexts = recipe.ingredients
       .map(ing => ing.text.toLowerCase())

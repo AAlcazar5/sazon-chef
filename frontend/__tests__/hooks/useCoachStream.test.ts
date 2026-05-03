@@ -243,7 +243,7 @@ describe('useCoachStream', () => {
     mockedCoachApi.createConversation.mockResolvedValue({
       id: 'c1',
       title: 'Hi',
-      tier: 'pro',
+      tier: 'premium',
       createdAt: 'now',
       lastMessageAt: 'now',
     });
@@ -269,6 +269,43 @@ describe('useCoachStream', () => {
       result.current.dismissCostNotice();
     });
     expect(result.current.costNotice).toBeNull();
+  });
+
+  it('TS#4: medical_deflection event sets state without contaminating assistant text', async () => {
+    mockedCoachApi.createConversation.mockResolvedValue({
+      id: 'c1',
+      title: 'Hi',
+      tier: 'free',
+      createdAt: 'now',
+      lastMessageAt: 'now',
+    });
+
+    // Backend emits: event: medical_deflection → data: <text> → event: done.
+    // After SSE parsing the hook receives a typed medical_deflection event
+    // followed by a text event with the assistant reply.
+    const events = [
+      { type: 'medical_deflection', reason: 'medical_claim' },
+      { type: 'text', text: 'take a deep breath' },
+      { type: 'done' },
+    ];
+    mockedCoachApi.streamMessage.mockReturnValue(mkRichStream(events));
+
+    const { result } = renderHook(() => useCoachStream());
+
+    await act(async () => {
+      await result.current.sendMessage('is creatine bad for my kidneys?');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    expect(result.current.medicalDeflection).toEqual({ reason: 'medical_claim' });
+    const assistant = result.current.messages.find(m => m.role === 'assistant');
+    expect(assistant?.content).toBe('take a deep breath');
+    // No JSON contamination — the deflection data is NOT in the message text.
+    expect(assistant?.content).not.toContain('reason');
+    expect(assistant?.content).not.toContain('medical_claim');
   });
 
   it('surfaces paywall info when streamMessage throws COACH_DAILY_CAP', async () => {

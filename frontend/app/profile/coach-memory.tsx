@@ -11,8 +11,8 @@ import {
   Alert,
   Modal,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
+import AnimatedLogoMascot from '../../components/mascot/AnimatedLogoMascot';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
@@ -216,7 +216,10 @@ export default function CoachMemoryScreen() {
         </View>
       ) : loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={isDark ? DarkColors.primary : Colors.primary} />
+          <AnimatedLogoMascot expression="thinking" size="medium" />
+          <Text style={[styles.loadingText, { color: subtle }]}>
+            Loading conversations…
+          </Text>
         </View>
       ) : memories.length === 0 ? (
         <AnimatedEmptyState
@@ -373,6 +376,11 @@ export default function CoachMemoryScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: {
+    fontSize: 13,
+    marginTop: 12,
+    textAlign: 'center',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',

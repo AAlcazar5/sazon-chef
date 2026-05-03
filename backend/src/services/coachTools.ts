@@ -10,6 +10,11 @@ import { matchesPantry, isStaple } from './pantryMatchService';
 import type { CoachTier } from './coachService';
 import { saveComposedPlate } from '@/services/mealComponentService';
 import { emit as emitAnalytics } from '@/services/coachAnalytics';
+import { computeSkillTier, type SkillTier } from '@/services/skillTierService';
+import type {
+  CoachProfileInput,
+  GoalPhase,
+} from '@/services/coachPromptService';
 
 export type CoachToolName =
   | 'search_cookbook'
@@ -541,19 +546,40 @@ function safeJsonStringArray(raw: string | null | undefined): string[] {
   }
 }
 
-function checkAllergens(
+// Tokenize an ingredient string by non-word boundaries, lowercase each token,
+// and strip a trailing 's' for naive plural handling. "Coconut milk" →
+// ["coconut", "milk"]; "peanuts" → ["peanut"]. This avoids the Sec H2 bug
+// where `String.includes` matched "nut" inside "coconut".
+function tokenizeIngredient(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((t) => t.length > 0)
+    .map((t) => (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t));
+}
+
+function bannedTokens(banned: string): string[] {
+  return banned
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((t) => t.length > 0)
+    .map((t) => (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t));
+}
+
+export function checkAllergens(
   ingredientTexts: string[],
   bannedIngredientNames: string[],
 ): AllergenCheckResult {
   if (bannedIngredientNames.length === 0) return { ok: true, violations: [] };
-  const lowerIngredients = ingredientTexts.map((t) => t.toLowerCase());
+  const ingredientTokenSets = ingredientTexts.map((t) => new Set(tokenizeIngredient(t)));
   const violations: string[] = [];
   for (const banned of bannedIngredientNames) {
-    const lower = banned.toLowerCase().trim();
-    if (!lower) continue;
-    if (lowerIngredients.some((ing) => ing.includes(lower))) {
-      violations.push(banned);
-    }
+    const tokens = bannedTokens(banned);
+    if (tokens.length === 0) continue;
+    // Multi-word banned (e.g. "shellfish broth") matches if every token is
+    // present in any single ingredient. Single-word banned matches that token.
+    const hit = ingredientTokenSets.some((set) => tokens.every((t) => set.has(t)));
+    if (hit) violations.push(banned);
   }
   return { ok: violations.length === 0, violations };
 }
@@ -839,4 +865,230 @@ export async function runCoachTool(
     ...(errorCode !== undefined ? { errorCode } : {}),
   });
   return { result };
+}
+
+// ─── Phase 4 hardening: shared profile snapshot loader ───────────────────
+// Reused by coachRoutes.buildCoachProfile so the system prompt has full N=1
+// signal (pantry, leftovers, slot/pair/cuisine affinity, allergens, dietary
+// profile, recent cooks, skill tier).
+
+const LAST_7_COOKS_LIMIT = 7;
+const SLOT_AFFINITY_LIMIT = 60;
+const PAIR_AFFINITY_LIMIT = 40;
+
+function resolveGoalPhaseFromFitnessGoal(
+  fitnessGoal: string | null | undefined,
+): GoalPhase {
+  switch (fitnessGoal) {
+    case 'lose_weight':
+      return 'cut';
+    case 'gain_muscle':
+    case 'gain_weight':
+      return 'bulk';
+    case 'recomp':
+      return 'recomp';
+    default:
+      return 'maintain';
+  }
+}
+
+function tierToString(tier: SkillTier): string {
+  return tier;
+}
+
+interface PrismaModelMaybe {
+  findMany?: (...args: unknown[]) => Promise<unknown[]>;
+  findUnique?: (...args: unknown[]) => Promise<unknown>;
+  count?: (...args: unknown[]) => Promise<number>;
+}
+
+async function safeFindMany<T>(
+  model: PrismaModelMaybe | undefined,
+  args: unknown,
+): Promise<T[]> {
+  if (!model || typeof model.findMany !== 'function') return [];
+  return (await model.findMany(args)) as T[];
+}
+
+async function safeFindUnique<T>(
+  model: PrismaModelMaybe | undefined,
+  args: unknown,
+): Promise<T | null> {
+  if (!model || typeof model.findUnique !== 'function') return null;
+  return (await model.findUnique(args)) as T | null;
+}
+
+async function safeCount(
+  model: PrismaModelMaybe | undefined,
+  args: unknown,
+): Promise<number> {
+  if (!model || typeof model.count !== 'function') return 0;
+  return await model.count(args);
+}
+
+export async function buildCoachProfileSnapshot(
+  userId: string,
+): Promise<CoachProfileInput> {
+  const prismaUntyped = prisma as unknown as Record<string, PrismaModelMaybe>;
+
+  // Each loader is wrapped in a safe-* helper because some test fixtures only
+  // mock a subset of prisma models. Missing model → empty default.
+  const [
+    pantryRows,
+    leftoverRows,
+    slotAffinityRows,
+    pairAffinityRows,
+    macroGoals,
+    physical,
+    todayMealsMaybe,
+    prefs,
+    cookingLogs,
+    platesCount,
+  ] = await Promise.all([
+    safeFindMany<{ name: string }>(prismaUntyped.pantryItem, { where: { userId } }),
+    safeFindMany<{ componentId: string; portionsRemaining: number; expiresAt: Date }>(
+      prismaUntyped.leftoverInventory,
+      { where: { userId } },
+    ),
+    safeFindMany<{ componentId: string; slot: string; score: number }>(
+      prismaUntyped.slotAffinity,
+      {
+        where: { userId },
+        orderBy: { score: 'desc' },
+        take: SLOT_AFFINITY_LIMIT,
+      },
+    ),
+    safeFindMany<{ componentIdA: string; componentIdB: string; score: number }>(
+      prismaUntyped.pairAffinity,
+      {
+        where: { userId },
+        orderBy: { score: 'desc' },
+        take: PAIR_AFFINITY_LIMIT,
+      },
+    ),
+    safeFindUnique<{
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+      fiber: number | null;
+    }>(prismaUntyped.macroGoals, { where: { userId } }),
+    safeFindUnique<{ fitnessGoal: string | null }>(
+      prismaUntyped.userPhysicalProfile,
+      { where: { userId } },
+    ),
+    (typeof prismaUntyped.meal?.findMany === 'function'
+      ? fetchTodayMeals(userId)
+      : Promise.resolve([] as AggregatableMeal[])),
+    safeFindUnique<PrefsShape & { dietaryRestrictions?: Array<{ name: string }> }>(
+      prismaUntyped.userPreferences,
+      {
+        where: { userId },
+        include: {
+          bannedIngredients: true,
+          likedCuisines: true,
+          dietaryRestrictions: true,
+        },
+      },
+    ),
+    safeFindMany<{
+      recipeId: string;
+      cookedAt: Date;
+      recipe?: { id: string; title: string } | null;
+    }>(prismaUntyped.cookingLog, {
+      where: { userId },
+      orderBy: { cookedAt: 'desc' },
+      take: LAST_7_COOKS_LIMIT,
+      include: { recipe: { select: { id: true, title: true } } },
+    }),
+    safeCount(prismaUntyped.composedPlate, { where: { userId } }),
+  ]);
+  const todayMeals = todayMealsMaybe;
+
+  const consumed = todayMeals.reduce<{
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number;
+  }>(
+    (acc, m) => ({
+      calories: acc.calories + pickMacro(m, 'calories'),
+      protein: acc.protein + pickMacro(m, 'protein'),
+      carbs: acc.carbs + pickMacro(m, 'carbs'),
+      fat: acc.fat + pickMacro(m, 'fat'),
+      fiber: acc.fiber + Number(m.fiber ?? 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+  );
+
+  const remainingMacros = macroGoals
+    ? {
+        calories: macroGoals.calories - consumed.calories,
+        protein: macroGoals.protein - consumed.protein,
+        carbs: macroGoals.carbs - consumed.carbs,
+        fat: macroGoals.fat - consumed.fat,
+        fiber:
+          macroGoals.fiber !== null && macroGoals.fiber !== undefined
+            ? macroGoals.fiber - consumed.fiber
+            : null,
+      }
+    : null;
+
+  const prefsTyped = prefs as
+    | (PrefsShape & {
+        dietaryRestrictions?: Array<{ name: string }>;
+      })
+    | null;
+  const allergens = (prefsTyped?.bannedIngredients ?? []).map((b) => b.name);
+  const dietaryProfile = (prefsTyped?.dietaryRestrictions ?? []).map((d) => d.name);
+  const likedCuisines = (prefsTyped?.likedCuisines ?? []).map((c) => c.name);
+
+  // Cuisine affinity: count cuisines from cooking logs, blend with liked.
+  const cuisineCounts = new Map<string, number>();
+  const last7Cooks = cookingLogs.map((log) => {
+    const r = (log as { recipe?: { id: string; title: string } | null }).recipe;
+    return {
+      recipeId: r?.id ?? log.recipeId,
+      title: r?.title ?? '',
+      cookedAt: log.cookedAt,
+      rating: null as number | null,
+    };
+  });
+  for (const liked of likedCuisines) {
+    cuisineCounts.set(liked, (cuisineCounts.get(liked) ?? 0) + 1);
+  }
+  const cuisineAffinity = Array.from(cuisineCounts.entries()).map(
+    ([cuisine, score]) => ({ cuisine, score }),
+  );
+
+  const skillTier = tierToString(computeSkillTier(platesCount));
+
+  return {
+    userId,
+    pantry: pantryRows.map((p) => p.name),
+    leftoverInventory: leftoverRows.map((l) => ({
+      name: l.componentId,
+      portions: l.portionsRemaining,
+      expiresAt: l.expiresAt,
+    })),
+    slotAffinity: slotAffinityRows.map((r) => ({
+      componentId: r.componentId,
+      slot: r.slot,
+      score: r.score,
+    })),
+    pairAffinity: pairAffinityRows.map((r) => ({
+      componentIdA: r.componentIdA,
+      componentIdB: r.componentIdB,
+      score: r.score,
+    })),
+    remainingMacros,
+    last7Cooks,
+    dietaryProfile,
+    allergens,
+    cuisineAffinity,
+    skillTier,
+    goalPhase: resolveGoalPhaseFromFitnessGoal(physical?.fitnessGoal),
+    currentMealPlanDay: null,
+  };
 }
