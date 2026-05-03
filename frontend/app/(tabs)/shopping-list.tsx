@@ -63,6 +63,7 @@ import { useAutoArchiveOnCompletion } from '../../hooks/useShoppingList.autoArch
 import InStoreDoneButton from '../../components/shopping/InStoreDoneButton';
 import StartFreshAction from '../../components/shopping/StartFreshAction';
 import MergeSuggestionBanner, { MergeSuggestion } from '../../components/shopping/MergeSuggestionBanner';
+import FoodIntelToast from '../../components/shopping/FoodIntelToast';
 
 // CONFETTI constant kept for backward compat reference (celebration now uses CelebrationOverlay)
 
@@ -150,6 +151,21 @@ export default function ShoppingListScreen() {
 
   // Merge suggestion banner state
   const [mergeSuggestion, setMergeSuggestion] = useState<MergeSuggestion | null>(null);
+
+  // 10R Surface 4: Food Intel toast on item check-off
+  const [intelToast, setIntelToast] = useState<{ name: string; purchaseCount: number } | null>(null);
+
+  const handleTogglePurchasedWithIntel = (item: ShoppingListItemType) => {
+    if (!item.purchased) {
+      const key = item.name.toLowerCase().trim();
+      const history = state.purchaseHistory.find(
+        (h) => h.itemName.toLowerCase().trim() === key,
+      );
+      const purchaseCount = (history?.purchaseCount ?? 0) + 1;
+      setIntelToast({ name: item.name, purchaseCount });
+    }
+    handleTogglePurchased(item);
+  };
 
   // Fetch merge suggestion when active list loads
   useEffect(() => {
@@ -489,7 +505,7 @@ export default function ShoppingListScreen() {
                       inStoreMode={state.inStoreMode}
                       isCantFind={state.cantFindItems.includes(item.id)}
                       isPantryItem={pantrySet.has(item.name.toLowerCase().trim())}
-                      onTogglePurchased={handleTogglePurchased}
+                      onTogglePurchased={handleTogglePurchasedWithIntel}
                       onEditQuantity={(editItem) => dispatch({ type: 'OPEN_EDIT_QUANTITY', item: editItem })}
                       onToggleSelection={(itemId) => dispatch({ type: 'TOGGLE_ITEM_SELECTION', itemId })}
                       onLongPress={(itemId) => dispatch({ type: 'ENTER_SELECTION_MODE', itemId })}
@@ -516,7 +532,7 @@ export default function ShoppingListScreen() {
                     selectedItems={state.selectedItems}
                     cantFindItems={state.cantFindItems}
                     inStoreMode={state.inStoreMode}
-                    onTogglePurchased={handleTogglePurchased}
+                    onTogglePurchased={handleTogglePurchasedWithIntel}
                     onEditQuantity={(item) => dispatch({ type: 'OPEN_EDIT_QUANTITY', item })}
                     onDeleteItem={handleDeleteItem}
                     onToggleSelection={(itemId) => dispatch({ type: 'TOGGLE_ITEM_SELECTION', itemId })}
@@ -538,7 +554,7 @@ export default function ShoppingListScreen() {
                         inStoreMode={state.inStoreMode}
                         isCantFind={state.cantFindItems.includes(item.id)}
                         isPantryItem={pantrySet.has(item.name.toLowerCase().trim())}
-                        onTogglePurchased={handleTogglePurchased}
+                        onTogglePurchased={handleTogglePurchasedWithIntel}
                         onEditQuantity={(item) => dispatch({ type: 'OPEN_EDIT_QUANTITY', item })}
                         onToggleSelection={(itemId) => dispatch({ type: 'TOGGLE_ITEM_SELECTION', itemId })}
                         onLongPress={(itemId) => dispatch({ type: 'ENTER_SELECTION_MODE', itemId })}
@@ -713,6 +729,13 @@ export default function ShoppingListScreen() {
         onQuickAddSuggestion={handleQuickAddSuggestion}
       />
     </View></ScreenGradient>
+
+    {/* 10R Surface 4: Food Intel toast on item check-off */}
+    <FoodIntelToast
+      itemName={intelToast?.name ?? null}
+      purchaseCount={intelToast?.purchaseCount}
+      onHide={() => setIntelToast(null)}
+    />
 
     {/* All-done celebration overlay — full-screen */}
     <CelebrationOverlay

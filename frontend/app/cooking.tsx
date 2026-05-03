@@ -41,6 +41,7 @@ import TasteSurveySheet from '../components/recipe/TasteSurveySheet';
 import ConsumeIngredientsSheet from '../components/cooking/ConsumeIngredientsSheet';
 import LeftoverIdeasSheet from '../components/cooking/LeftoverIdeasSheet';
 import TechniqueTip from '../components/cooking/TechniqueTip';
+import FoodIntelCookingTip from '../components/cooking/FoodIntelCookingTip';
 import { detectTechniques } from '../lib/cookingTechniques';
 import { useVoicePlayback, } from '../hooks/useVoicePlayback';
 
@@ -701,6 +702,16 @@ export default function CookingScreen() {
                       }
                     />
                   ))}
+
+                {/* 10R Surface 2: Step-adjacent Food Intel tip (max 1 per session) */}
+                {currentInstruction?.text && (
+                  <FoodIntelCookingTip
+                    testID="food-intel-cooking-tip"
+                    stepText={currentInstruction.text}
+                    stepIndex={currentStep}
+                    sessionId={`${recipe.id}::${startTimeRef.current}`}
+                  />
+                )}
 
                 {/* Timer suggestion buttons — tap to start */}
                 {stepTimerSuggestions.length > 0 && (

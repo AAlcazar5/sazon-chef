@@ -62,6 +62,7 @@ import {
   CravingFlowModal,
   BoringWeekNudge,
 } from '../../components/meal-plan';
+import NutrientNudge from '../../components/meal-plan/NutrientNudge';
 import { useVarietyScore } from '../../hooks/useVarietyScore';
 import { useBudget } from '../../hooks/useBudget';
 import { computeDailyRollovers } from '../../utils/dailyRollover';
@@ -667,6 +668,24 @@ export default function MealPlanScreen() {
             weeklyPlan={weeklyPlan}
             weekDates={weekDates}
             rollover={dailyRolloverForSelected}
+          />
+
+          <NutrientNudge
+            dayMacros={{
+              fiberG: dailyMacros.fiber ?? 0,
+              proteinG: dailyMacros.protein ?? 0,
+              proteinTargetG: targetMacros.protein ?? 0,
+              ingredients: Object.values(hourlyMeals)
+                .flat()
+                .flatMap((meal: any) =>
+                  Array.isArray(meal?.ingredients)
+                    ? meal.ingredients.map((i: any) =>
+                        typeof i === 'string' ? i.toLowerCase() : (i?.name ?? '').toLowerCase(),
+                      )
+                    : [],
+                )
+                .filter(Boolean),
+            }}
           />
 
           {/* Supporting cards — kept after the macro budget */}
