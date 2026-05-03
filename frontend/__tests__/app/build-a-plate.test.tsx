@@ -65,6 +65,9 @@ jest.mock('../../lib/api', () => ({
     autoFit: jest.fn().mockResolvedValue({
       data: { result: { achievable: true, filled: [], totals: { calories: 0, protein: 0, carbs: 0, fat: 0 } } },
     }),
+    weeklySummary: jest.fn().mockResolvedValue({
+      data: { totalPlatesThisWeek: 0, greenVegCount: 0 },
+    }),
   },
   leftoverInventoryApi: {
     list: jest.fn().mockResolvedValue({ data: { leftovers: [] } }),

@@ -43,9 +43,20 @@ export default function SharedPlateDeepLinkScreen() {
           setState('notFound');
           return;
         }
-        // Hand off to the composer with the shared plate pre-loaded.
+        // Compute substitution count vs the user's pantry so the composer can
+        // surface the substitution banner immediately. Failure is non-fatal —
+        // the composer will simply render without the banner.
+        let subsCount = 0;
+        try {
+          const subRes = await sharedPlatesApi.fetchSubCount(slug);
+          if (!cancelled) subsCount = subRes?.data?.subsCount ?? 0;
+        } catch {
+          /* unauthenticated or transient — proceed with 0 */
+        }
+        if (cancelled) return;
+        const subsParam = subsCount > 0 ? `&subsCount=${subsCount}` : '';
         router.replace(
-          `/build-a-plate?plateId=${encodeURIComponent(String(plateId))}&from=shared` as any,
+          `/build-a-plate?plateId=${encodeURIComponent(String(plateId))}&from=shared${subsParam}` as any,
         );
       } catch {
         if (cancelled) return;

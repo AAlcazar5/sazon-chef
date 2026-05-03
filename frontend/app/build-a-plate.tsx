@@ -29,6 +29,7 @@ import useDailyPlateSeed from '../hooks/useDailyPlateSeed';
 import useBuildAPlate, { SLOT_ORDER, REQUIRED_SLOTS } from '../hooks/useBuildAPlate';
 import useFavoriteComponents, { invalidateAffinitySlot } from '../hooks/useFavoriteComponents';
 import useSkillTier from '../hooks/useSkillTier';
+import { useRecent7DayPlates } from '../hooks/useRecent7DayPlates';
 import {
   mealComponentApi,
   composedPlateApi,
@@ -98,10 +99,16 @@ export default function BuildAPlateScreen() {
   const presetInitialized = useRef(false);
 
   const skillTier = useSkillTier();
+  const weeklyPlates = useRecent7DayPlates();
   const [macroFitState, setMacroFitState] = useState<MacroFitState>('idle');
   const [budgetMode, setBudgetMode] = useState<boolean>(false);
   const [leftoversBySlot, setLeftoversBySlot] = useState<Partial<Record<MealComponentSlot, LeftoverInventoryItem[]>>>({});
   const [variantsByComponent, setVariantsByComponent] = useState<Record<string, ComponentVariant[]>>({});
+  // Track which componentIds we've already fetched variants for, without
+  // putting `variantsByComponent` in the handleOpenPicker dep array (which
+  // would re-create the callback on every variant fetch and re-render every
+  // downstream consumer).
+  const fetchedVariantIds = useRef<Set<string>>(new Set());
   const [topNutrientGap, setTopNutrientGap] = useState<TrackedNutrient | null>(null);
 
   const loadSlot = useCallback(async (slot: MealComponentSlot) => {
@@ -248,16 +255,19 @@ export default function BuildAPlateScreen() {
     // Phase 6 — fetch variants for the currently-selected component when the
     // picker opens (chef tier renders the chip row).
     const selected = composer.selections[slot];
-    if (selected && skillTier.isVariantChipsVisible && !variantsByComponent[selected.id]) {
+    if (selected && skillTier.isVariantChipsVisible && !fetchedVariantIds.current.has(selected.id)) {
+      fetchedVariantIds.current.add(selected.id);
       try {
         const res = await mealComponentApi.variants(selected.id);
         const list: ComponentVariantResponse[] = res.data?.variants ?? [];
         setVariantsByComponent((prev) => ({ ...prev, [selected.id]: list }));
       } catch {
         // Non-blocking — chips just won't render.
+        fetchedVariantIds.current.delete(selected.id);
+        if (__DEV__) console.warn('[build-a-plate] variant fetch failed for', selected.id);
       }
     }
-  }, [loadSlot, composer.selections, skillTier.isVariantChipsVisible, variantsByComponent]);
+  }, [loadSlot, composer.selections, skillTier.isVariantChipsVisible]);
 
   const handleSelect = useCallback((component: MealComponent) => {
     if (!pickerSlot) return;
@@ -695,6 +705,8 @@ export default function BuildAPlateScreen() {
         }
         onSelectVariant={handleVariantSelect}
         topNutrientGap={topNutrientGap}
+        greenVegCount={weeklyPlates.isLoading ? undefined : weeklyPlates.greenVegCount}
+        totalPlatesThisWeek={weeklyPlates.isLoading ? undefined : weeklyPlates.totalPlatesThisWeek}
       />
 
       {showBeginnerTutorial && (

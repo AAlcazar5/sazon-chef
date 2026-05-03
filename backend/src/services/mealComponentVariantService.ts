@@ -59,11 +59,10 @@ const parseScores = (raw: string | null): Record<string, number> => {
 export const listVariantsForComponent = async (
   componentId: string
 ): Promise<MealComponentVariantRow[]> => {
-  const rows = await (prisma as any).mealComponentVariant.findMany({
+  return prisma.mealComponentVariant.findMany({
     where: { componentId },
     orderBy: { variantKey: 'asc' },
   });
-  return rows as MealComponentVariantRow[];
 };
 
 export const getCompatibleVariants = async (

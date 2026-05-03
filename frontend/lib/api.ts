@@ -2011,6 +2011,11 @@ export const composedPlateApi = {
 
   composeFromUtterance: (utterance: string) =>
     apiClient.post<UtteranceComposeResponse>('/composed-plates/from-utterance', { utterance }),
+
+  weeklySummary: () =>
+    apiClient.get<{ totalPlatesThisWeek: number; greenVegCount: number }>(
+      '/composed-plates/weekly-summary',
+    ),
 };
 
 // ─── Shared Plates (Group 10X Phase 8 — deep link routing) ───────────────────
@@ -2038,6 +2043,10 @@ export interface SharedPlateResponse {
 export const sharedPlatesApi = {
   fetchBySlug: (slug: string) =>
     apiClient.get<SharedPlateResponse>(`/shared-plates/${encodeURIComponent(slug)}`),
+  fetchSubCount: (slug: string) =>
+    apiClient.get<{ subsCount: number }>(
+      `/shared-plates/${encodeURIComponent(slug)}/sub-count`,
+    ),
 };
 
 export type { ApiResponse, ApiError };

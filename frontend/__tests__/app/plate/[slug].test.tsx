@@ -67,6 +67,7 @@ jest.mock('expo-router', () => ({
 jest.mock('../../../lib/api', () => ({
   sharedPlatesApi: {
     fetchBySlug: jest.fn(),
+    fetchSubCount: jest.fn(),
   },
 }));
 
@@ -76,11 +77,13 @@ import SharedPlateDeepLinkScreen from '../../../app/plate/[slug]';
 import { sharedPlatesApi } from '../../../lib/api';
 
 const mockFetchBySlug = sharedPlatesApi.fetchBySlug as jest.Mock;
+const mockFetchSubCount = sharedPlatesApi.fetchSubCount as jest.Mock;
 
 describe('SharedPlateDeepLinkScreen (/plate/[slug])', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseLocalSearchParams.mockReturnValue({ slug: 'cozy-salmon-1234' });
+    mockFetchSubCount.mockResolvedValue({ data: { subsCount: 0 } });
   });
 
   it('shows the thinking Sazon mascot while the slug fetch is in-flight', async () => {
@@ -164,5 +167,33 @@ describe('SharedPlateDeepLinkScreen (/plate/[slug])', () => {
 
     await findByText(/can't find that plate/i);
     expect(mockFetchBySlug).not.toHaveBeenCalled();
+  });
+
+  it('appends subsCount to the redirect when sub-count returns > 0', async () => {
+    mockFetchBySlug.mockResolvedValue({
+      data: {
+        share: { id: 'share-1', slug: 'cozy-salmon-1234', plate: { id: 'plate-99' } },
+      },
+    });
+    mockFetchSubCount.mockResolvedValueOnce({ data: { subsCount: 2 } });
+
+    render(<SharedPlateDeepLinkScreen />);
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(1));
+    expect(mockReplace.mock.calls[0][0]).toContain('subsCount=2');
+  });
+
+  it('omits subsCount when sub-count fetch fails (still redirects)', async () => {
+    mockFetchBySlug.mockResolvedValue({
+      data: {
+        share: { id: 'share-1', slug: 'cozy-salmon-1234', plate: { id: 'plate-99' } },
+      },
+    });
+    mockFetchSubCount.mockRejectedValueOnce(new Error('unauth'));
+
+    render(<SharedPlateDeepLinkScreen />);
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(1));
+    expect(mockReplace.mock.calls[0][0]).not.toContain('subsCount');
   });
 });
