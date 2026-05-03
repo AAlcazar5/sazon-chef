@@ -3,8 +3,10 @@
 
 import rateLimit from 'express-rate-limit';
 
-// Check if we're in development mode
-const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+// Check if we're in development mode. Test env (NODE_ENV=test, set by Jest)
+// also disables limits so test suites that fire many requests don't hit 429.
+const isDevelopment =
+  process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
 
 if (isDevelopment) {
   console.log('🔓 [RateLimiter] Development mode detected - rate limiting DISABLED');
