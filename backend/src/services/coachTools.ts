@@ -1,6 +1,6 @@
-// Group 10Y Phase 3: Coach tool-use bridge — read-only personalized tools.
-// Each tool runs through the existing 70/30 personalization stack so the
-// model's output never bypasses scoring.
+// Group 10Y Phase 3 + Phase 7: Coach tool-use bridge — read + write tools.
+// Read tools surface personalization (70/30 + adjacency). Write tools (Pro-only)
+// compose plates and log meals through the existing services.
 
 import type Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/prisma';
@@ -8,12 +8,28 @@ import { calculateRecipeScore } from '@/utils/scoring';
 import { calculateAdjacencyBoost } from '@/utils/cuisineAdjacency';
 import { matchesPantry, isStaple } from './pantryMatchService';
 import type { CoachTier } from './coachService';
+import { saveComposedPlate } from '@/services/mealComponentService';
+import { emit as emitAnalytics } from '@/services/coachAnalytics';
 
 export type CoachToolName =
   | 'search_cookbook'
   | 'get_pantry'
   | 'get_today_remaining_macros'
-  | 'find_recipes';
+  | 'find_recipes'
+  | 'compose_plate'
+  | 'log_meal';
+
+const READ_TOOL_NAMES: ReadonlySet<CoachToolName> = new Set([
+  'search_cookbook',
+  'get_pantry',
+  'get_today_remaining_macros',
+  'find_recipes',
+]);
+
+const WRITE_TOOL_NAMES: ReadonlySet<CoachToolName> = new Set([
+  'compose_plate',
+  'log_meal',
+]);
 
 export const coachToolDefinitions: Anthropic.Tool[] = [
   {
@@ -68,6 +84,53 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
         minProtein: { type: 'number' },
         maxCalories: { type: 'number' },
       },
+    },
+  },
+  {
+    name: 'compose_plate',
+    description:
+      "PRO-ONLY WRITE TOOL. Compose a Build-a-Plate (10X) plate from per-slot component IDs or queries and persist it for the user. Only use after the user has explicitly confirmed they want to build/save a plate in chat — never call speculatively. Runs an allergen safety check against the user's profile before persisting.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        slots: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              slot: {
+                type: 'string',
+                enum: ['protein', 'veg', 'carb', 'sauce', 'extra'],
+              },
+              componentId: { type: 'string' },
+              query: { type: 'string' },
+            },
+            required: ['slot'],
+          },
+        },
+        servings: { type: 'number' },
+      },
+      required: ['slots'],
+    },
+  },
+  {
+    name: 'log_meal',
+    description:
+      "PRO-ONLY WRITE TOOL. Record a meal the user actually ate to their meal history. Only use after the user has explicitly confirmed they want to log a meal — never call speculatively. Exactly one of recipeId / plateId / foodItemId must be provided. Runs an allergen safety check before writing.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        recipeId: { type: 'string' },
+        plateId: { type: 'string' },
+        foodItemId: { type: 'string' },
+        servings: { type: 'number' },
+        mealType: {
+          type: 'string',
+          enum: ['breakfast', 'lunch', 'dinner', 'snack'],
+        },
+        eatenAt: { type: 'string' },
+      },
+      required: ['servings', 'mealType'],
     },
   },
 ];
@@ -131,7 +194,6 @@ function macroFit(
   remaining: { calories: number; protein: number; carbs: number; fat: number } | null,
 ): 'green' | 'amber' | 'red' {
   if (!remaining || remaining.calories <= 0) return 'amber';
-  // Treat fit as ratio of recipe macros to remaining; closer to 1 = green.
   const calRatio = recipe.calories / Math.max(1, remaining.calories);
   if (calRatio <= MACRO_FIT_GREEN) return 'green';
   if (calRatio <= MACRO_FIT_AMBER) return 'amber';
@@ -160,8 +222,6 @@ function pickMacro(meal: AggregatableMeal, key: 'calories' | 'protein' | 'carbs'
 }
 
 async function fetchTodayMeals(userId: string): Promise<AggregatableMeal[]> {
-  // Today's meals can live under a user-owned MealPlan or directly via MealHistory.
-  // Tests mock prisma.meal.findMany returning a flat shape, so use that.
   const start = startOfTodayUTC();
   const meals = (await prisma.meal.findMany({
     where: { date: { gte: start }, mealPlan: { userId } },
@@ -407,35 +467,351 @@ async function runGetTodayRemainingMacros(userId: string): Promise<unknown> {
   };
 }
 
-export async function runCoachTool(
+// ─── Phase 7: write tools ────────────────────────────────────────────────
+
+// Coach tool slot vocabulary differs slightly from 10X composer slots.
+type CoachSlot = 'protein' | 'veg' | 'carb' | 'sauce' | 'extra';
+type ComposerSlot = 'protein' | 'base' | 'vegetable' | 'sauce' | 'garnish';
+
+const COACH_TO_COMPOSER_SLOT: Record<CoachSlot, ComposerSlot> = {
+  protein: 'protein',
+  veg: 'vegetable',
+  carb: 'base',
+  sauce: 'sauce',
+  extra: 'garnish',
+};
+
+interface ComposeSlotInput {
+  slot: CoachSlot;
+  componentId?: string;
+  query?: string;
+}
+
+interface ComposePlateInput {
+  slots: ComposeSlotInput[];
+  servings?: number;
+}
+
+interface LogMealInput {
+  recipeId?: string;
+  plateId?: string;
+  foodItemId?: string;
+  servings: number;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  eatenAt?: string;
+}
+
+interface AllergenCheckResult {
+  ok: boolean;
+  violations: string[];
+}
+
+function safeJsonStringArray(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function checkAllergens(
+  ingredientTexts: string[],
+  bannedIngredientNames: string[],
+): AllergenCheckResult {
+  if (bannedIngredientNames.length === 0) return { ok: true, violations: [] };
+  const lowerIngredients = ingredientTexts.map((t) => t.toLowerCase());
+  const violations: string[] = [];
+  for (const banned of bannedIngredientNames) {
+    const lower = banned.toLowerCase().trim();
+    if (!lower) continue;
+    if (lowerIngredients.some((ing) => ing.includes(lower))) {
+      violations.push(banned);
+    }
+  }
+  return { ok: violations.length === 0, violations };
+}
+
+async function loadUserAllergens(userId: string): Promise<string[]> {
+  const prefs = await prisma.userPreferences.findUnique({
+    where: { userId },
+    include: { bannedIngredients: true },
+  });
+  const banned = (prefs as { bannedIngredients?: Array<{ name: string }> } | null)
+    ?.bannedIngredients ?? [];
+  return banned.map((b) => b.name);
+}
+
+interface ComponentRow {
+  id: string;
+  slot: string;
+  name: string;
+  pantryIngredientNames: string;
+  cuisineTags?: string;
+  dietaryTags?: string;
+}
+
+async function resolveComponentForSlot(
+  slot: CoachSlot,
+  componentId: string | undefined,
+  query: string | undefined,
+  userId: string,
+): Promise<ComponentRow | null> {
+  const composerSlot = COACH_TO_COMPOSER_SLOT[slot];
+  if (componentId) {
+    const rows = (await prisma.mealComponent.findMany({
+      where: { id: componentId },
+    })) as unknown as ComponentRow[];
+    return rows[0] ?? null;
+  }
+  if (query) {
+    const q = query.trim().toLowerCase();
+    const rows = (await prisma.mealComponent.findMany({
+      where: {
+        slot: composerSlot,
+        OR: [{ userId: null }, { userId }],
+      },
+    })) as unknown as ComponentRow[];
+    const match = rows.find((r) => r.name.toLowerCase().includes(q));
+    return match ?? null;
+  }
+  return null;
+}
+
+async function runComposePlate(
+  userId: string,
+  input: ComposePlateInput,
+): Promise<unknown> {
+  const slots = Array.isArray(input.slots) ? input.slots : [];
+  const resolvedSlots: Array<{
+    slot: ComposerSlot;
+    componentId: string;
+    name: string;
+    ingredientNames: string[];
+  }> = [];
+  for (const s of slots) {
+    const comp = await resolveComponentForSlot(s.slot, s.componentId, s.query, userId);
+    if (!comp) {
+      return {
+        error: 'COMPONENT_NOT_FOUND',
+        slot: s.slot,
+        query: s.query ?? null,
+        componentId: s.componentId ?? null,
+      };
+    }
+    resolvedSlots.push({
+      slot: COACH_TO_COMPOSER_SLOT[s.slot],
+      componentId: comp.id,
+      name: comp.name,
+      ingredientNames: safeJsonStringArray(comp.pantryIngredientNames),
+    });
+  }
+
+  const allIngredients = resolvedSlots.flatMap((s) => s.ingredientNames);
+  const allergens = await loadUserAllergens(userId);
+  const allergenCheck = checkAllergens(allIngredients, allergens);
+  if (!allergenCheck.ok) {
+    return {
+      allergenSafe: { violations: allergenCheck.violations },
+      slots: resolvedSlots.map((s) => ({
+        slot: s.slot,
+        componentId: s.componentId,
+        name: s.name,
+      })),
+    };
+  }
+
+  const portionMultiplier = typeof input.servings === 'number' && input.servings > 0
+    ? input.servings
+    : 1;
+  const composed = await saveComposedPlate({
+    userId,
+    components: resolvedSlots.map((s) => ({
+      slot: s.slot,
+      componentId: s.componentId,
+      portionMultiplier,
+    })),
+    saveAsRecipe: false,
+  });
+
+  const plate = composed.plate as {
+    id: string;
+    totalCalories: number;
+    totalProtein: number;
+    totalCarbs: number;
+    totalFat: number;
+    pantryCoveragePercent: number;
+  };
+
+  return {
+    plateId: plate.id,
+    slots: resolvedSlots.map((s) => ({
+      slot: s.slot,
+      componentId: s.componentId,
+      name: s.name,
+    })),
+    totalMacros: {
+      calories: plate.totalCalories,
+      protein: plate.totalProtein,
+      carbs: plate.totalCarbs,
+      fat: plate.totalFat,
+    },
+    pantryCoverage: plate.pantryCoveragePercent,
+    allergenSafe: true,
+  };
+}
+
+interface RecipeOwnerRow {
+  id: string;
+  userId: string | null;
+  title: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  ingredients: Array<{ text: string }>;
+}
+
+async function runLogMeal(
+  userId: string,
+  input: LogMealInput,
+): Promise<unknown> {
+  const sources = [input.recipeId, input.plateId, input.foodItemId].filter(Boolean);
+  if (sources.length !== 1) {
+    return {
+      error: 'INVALID_INPUT',
+      message: 'Exactly one of recipeId, plateId, or foodItemId is required.',
+    };
+  }
+  if (!Number.isFinite(input.servings) || input.servings <= 0) {
+    return { error: 'INVALID_INPUT', message: 'servings must be > 0' };
+  }
+
+  // Phase 7 ships recipe-backed log_meal — plateId/foodItemId paths land in Phase 8.
+  if (!input.recipeId) {
+    return {
+      error: 'NOT_IMPLEMENTED',
+      message: 'plateId / foodItemId logging arrives in Phase 8.',
+    };
+  }
+
+  const recipe = (await prisma.recipe.findUnique({
+    where: { id: input.recipeId },
+    include: { ingredients: true },
+  })) as unknown as RecipeOwnerRow | null;
+
+  if (!recipe) {
+    return { error: 'NOT_FOUND', message: 'Recipe not found' };
+  }
+  // Recipes with userId === null are global/seeded; those are loggable. User
+  // recipes must belong to the caller.
+  if (recipe.userId !== null && recipe.userId !== userId) {
+    return { error: 'NOT_FOUND', message: 'Recipe not found' };
+  }
+
+  const allergens = await loadUserAllergens(userId);
+  const ingredientTexts = (recipe.ingredients ?? []).map((i) => i.text);
+  const allergenCheck = checkAllergens(ingredientTexts, allergens);
+  if (!allergenCheck.ok) {
+    return {
+      error: 'ALLERGEN_VIOLATION',
+      details: { violations: allergenCheck.violations },
+    };
+  }
+
+  const eatenAt = input.eatenAt ? new Date(input.eatenAt) : new Date();
+  const mh = await prisma.mealHistory.create({
+    data: {
+      recipeId: recipe.id,
+      userId,
+      date: eatenAt,
+      consumed: true,
+    },
+  });
+
+  const servings = input.servings;
+  return {
+    id: (mh as { id: string }).id,
+    totalCalories: recipe.calories * servings,
+    totalProtein: recipe.protein * servings,
+    totalCarbs: recipe.carbs * servings,
+    totalFat: recipe.fat * servings,
+    mealType: input.mealType,
+    eatenAt: eatenAt.toISOString(),
+  };
+}
+
+function isWriteTool(name: string): boolean {
+  return WRITE_TOOL_NAMES.has(name as CoachToolName);
+}
+
+function isKnownTool(name: string): boolean {
+  return READ_TOOL_NAMES.has(name as CoachToolName) || WRITE_TOOL_NAMES.has(name as CoachToolName);
+}
+
+function extractErrorCode(result: unknown): string | undefined {
+  if (typeof result === 'object' && result !== null && 'error' in result) {
+    const code = (result as { error: unknown }).error;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
+
+async function dispatchTool(
   args: RunCoachToolInput,
-): Promise<RunCoachToolResult> {
-  const { userId, name, input } = args;
+): Promise<unknown> {
+  const { userId, name, input, tier } = args;
+
+  if (isWriteTool(name) && tier !== 'premium') {
+    return {
+      error: 'PRO_FEATURE',
+      feature: 'write_tools',
+      message: 'Logging and plate composition are Pro features.',
+    };
+  }
+
   switch (name) {
     case 'get_pantry':
-      return { result: await runGetPantry(userId) };
+      return runGetPantry(userId);
     case 'get_today_remaining_macros':
-      return { result: await runGetTodayRemainingMacros(userId) };
+      return runGetTodayRemainingMacros(userId);
     case 'find_recipes':
-      return {
-        result: await runFindRecipes(
-          userId,
-          (input ?? {}) as {
-            cuisines?: string[];
-            maxPrepMinutes?: number;
-            minProtein?: number;
-            maxCalories?: number;
-          },
-        ),
-      };
+      return runFindRecipes(
+        userId,
+        (input ?? {}) as {
+          cuisines?: string[];
+          maxPrepMinutes?: number;
+          minProtein?: number;
+          maxCalories?: number;
+        },
+      );
     case 'search_cookbook':
-      return {
-        result: await runSearchCookbook(
-          userId,
-          (input ?? {}) as { query: string },
-        ),
-      };
+      return runSearchCookbook(userId, (input ?? {}) as { query: string });
+    case 'compose_plate':
+      return runComposePlate(userId, (input ?? { slots: [] }) as ComposePlateInput);
+    case 'log_meal':
+      return runLogMeal(userId, (input ?? {}) as LogMealInput);
     default:
       throw new Error(`Unknown coach tool: ${name}`);
   }
+}
+
+export async function runCoachTool(
+  args: RunCoachToolInput,
+): Promise<RunCoachToolResult> {
+  if (!isKnownTool(args.name)) {
+    throw new Error(`Unknown coach tool: ${args.name}`);
+  }
+
+  const result = await dispatchTool(args);
+  const errorCode = extractErrorCode(result);
+  emitAnalytics('coach_tool_call', {
+    userId: args.userId,
+    tool: args.name,
+    tier: args.tier,
+    success: errorCode === undefined,
+    ...(errorCode !== undefined ? { errorCode } : {}),
+  });
+  return { result };
 }

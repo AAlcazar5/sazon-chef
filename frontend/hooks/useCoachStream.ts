@@ -106,6 +106,10 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(initial?.conversationId ?? null);
   const abortRef = useRef<AbortController | null>(null);
+  // Phase 7: only auto-surface the Pro paywall sheet ONCE per conversation
+  // when a write-tool tool_result returns PRO_FEATURE. The assistant text
+  // reply already explains the gate; we don't want to spam the modal.
+  const paywallShownThisConversationRef = useRef(false);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -117,6 +121,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     setPaywallReason(null);
     setAttachmentError(null);
     setConversationId(null);
+    paywallShownThisConversationRef.current = false;
   }, []);
 
   const dismissPaywall = useCallback(() => {
@@ -190,6 +195,21 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
                 m.id === assistantId ? { ...m, toolUses: [...toolUses] } : m,
               ),
             );
+          }
+          // Phase 7: write-tool PRO_FEATURE → surface Coach paywall once per
+          // conversation. The assistant text reply still flows through.
+          if (
+            !paywallShownThisConversationRef.current &&
+            typeof event.result === 'object' &&
+            event.result !== null &&
+            (event.result as { error?: string }).error === 'PRO_FEATURE'
+          ) {
+            paywallShownThisConversationRef.current = true;
+            setPaywall({
+              headline: 'Pro Coach can plan, save, and shop for you.',
+              cta: 'Upgrade to Pro',
+            });
+            setPaywallReason('generic');
           }
         } else if (event.type === 'done') {
           break;
