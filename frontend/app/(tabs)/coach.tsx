@@ -19,12 +19,15 @@ import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import { MessageBubble, QuickStartChips } from '../../components/coach';
+import CoachPaywallSheet, { type CoachPaywallReason } from '../../components/coach/CoachPaywallSheet';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { coachApi, type CoachConversation } from '../../lib/api';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
+import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { useFoodIntelUserState } from '../../hooks/useFoodIntelUserState';
+import { useSubscription } from '../../hooks/useSubscription';
+import { deriveCoachFlags } from '../../lib/coachClient';
 
 type CoachView = 'list' | 'conversation';
 
@@ -44,14 +47,23 @@ export default function CoachScreen() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const userState = useFoodIntelUserState();
+  const { subscription } = useSubscription();
+  const flags = useMemo(
+    () => deriveCoachFlags({ tier: subscription.tier, isPremium: subscription.isPremium }),
+    [subscription.tier, subscription.isPremium],
+  );
 
   const [view, setView] = useState<CoachView>('list');
   const [conversations, setConversations] = useState<CoachConversation[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [composerText, setComposerText] = useState('');
+  const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
 
   const stream = useCoachStream();
   const chips = useMemo(() => deriveChips(userState), [userState]);
+
+  const paywallReason: CoachPaywallReason | null =
+    manualPaywallReason ?? stream.paywallReason ?? (stream.paywall ? 'cap' : null);
 
   const screenBg = isDark ? DarkColors.background : '#FAF7F4';
   const text = isDark ? DarkColors.text.primary : Colors.text.primary;
@@ -125,9 +137,14 @@ export default function CoachScreen() {
           >
             <Ionicons name="chevron-back" size={24} color={text} />
           </HapticTouchableOpacity>
-          <Text style={[styles.headerTitle, { color: text }]} numberOfLines={1}>
-            Sazon Coach
-          </Text>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: text }]} numberOfLines={1}>
+              Sazon Coach
+            </Text>
+            <Text style={[styles.headerModel, { color: subtle }]} numberOfLines={1}>
+              {flags.modelLabel}
+            </Text>
+          </View>
           <View style={styles.headerBtn} />
         </View>
 
@@ -151,24 +168,6 @@ export default function CoachScreen() {
             <MessageBubble key={m.id} role={m.role} content={m.content} />
           ))}
 
-          {stream.paywall && (
-            <View
-              accessibilityLabel="Coach upgrade card"
-              style={[
-                styles.paywallCard,
-                Shadows.MD as any,
-                { backgroundColor: isDark ? PastelDark.peach : Pastel.peach },
-              ]}
-            >
-              <Text style={[styles.paywallHeadline, { color: text }]}>
-                {stream.paywall.headline}
-              </Text>
-              <Text style={[styles.paywallCta, { color: isDark ? DarkColors.primary : Colors.primary }]}>
-                {stream.paywall.cta}
-              </Text>
-            </View>
-          )}
-
           {stream.error && !stream.paywall && (
             <Text style={[styles.errorText, { color: isDark ? DarkColors.error : Colors.error }]}>
               Hmm, the coach went quiet. Try again in a sec.
@@ -184,6 +183,33 @@ export default function CoachScreen() {
               { backgroundColor: isDark ? DarkColors.surface : '#FFFFFF' },
             ]}
           >
+            <HapticTouchableOpacity
+              onPress={() => {
+                if (!flags.canAttachPhotos) {
+                  setManualPaywallReason('photos');
+                  return;
+                }
+                // TODO Phase 5: wire camera/photo picker for Pro users
+              }}
+              accessibilityLabel={
+                flags.canAttachPhotos
+                  ? 'Attach a photo'
+                  : 'Attach a photo (Pro only)'
+              }
+              accessibilityRole="button"
+              style={styles.attachBtn}
+            >
+              <Ionicons
+                name="image-outline"
+                size={20}
+                color={flags.canAttachPhotos ? text : subtle}
+              />
+              {!flags.canAttachPhotos && (
+                <View style={styles.attachLock}>
+                  <Ionicons name="lock-closed" size={9} color="#FFFFFF" />
+                </View>
+              )}
+            </HapticTouchableOpacity>
             <TextInput
               value={composerText}
               onChangeText={setComposerText}
@@ -216,6 +242,15 @@ export default function CoachScreen() {
             </HapticTouchableOpacity>
           </View>
         </View>
+
+        <CoachPaywallSheet
+          visible={paywallReason !== null}
+          reason={paywallReason ?? 'generic'}
+          onClose={() => {
+            setManualPaywallReason(null);
+            stream.dismissPaywall();
+          }}
+        />
       </KeyboardAvoidingView>
     );
   }
@@ -302,9 +337,36 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 56 : 24,
     paddingBottom: 12,
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  headerModel: {
+    fontSize: 11,
+    marginTop: 2,
+    letterSpacing: 0.4,
+  },
+  attachBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachLock: {
+    position: 'absolute',
+    right: 4,
+    bottom: 4,
+    width: 14,
+    height: 14,
+    borderRadius: 100,
+    backgroundColor: '#888',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerBtn: {
     width: 40,
@@ -357,21 +419,6 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  paywallCard: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 20,
-    padding: 16,
-    gap: 6,
-  },
-  paywallHeadline: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  paywallCta: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   errorText: {
     paddingHorizontal: 16,

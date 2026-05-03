@@ -4,6 +4,25 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export type CoachTier = 'free' | 'premium';
 
+interface CoachTierUserShape {
+  subscriptionTier?: string | null;
+  subscriptionStatus?: string | null;
+}
+
+const PREMIUM_STATUSES = new Set(['active', 'trialing']);
+
+export function resolveCoachTier(
+  user: CoachTierUserShape | null | undefined,
+): CoachTier {
+  if (!user) return 'free';
+  const tier = user.subscriptionTier;
+  const status = user.subscriptionStatus;
+  if (tier === 'premium' && typeof status === 'string' && PREMIUM_STATUSES.has(status)) {
+    return 'premium';
+  }
+  return 'free';
+}
+
 export const COACH_MODELS = {
   free: 'claude-sonnet-4-6',
   premium: 'claude-opus-4-7',

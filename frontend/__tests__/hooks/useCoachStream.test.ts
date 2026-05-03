@@ -139,6 +139,41 @@ describe('useCoachStream', () => {
     expect(assistant?.toolUses?.[0].result).toEqual(recipeResult);
   });
 
+  it('surfaces paywall info with reason="photos" when streamMessage throws PRO_FEATURE attachments', async () => {
+    mockedCoachApi.createConversation.mockResolvedValue({
+      id: 'c1',
+      title: 'Hi',
+      tier: 'free',
+      createdAt: 'now',
+      lastMessageAt: 'now',
+    });
+
+    const proFeatureError: any = new Error('PRO_FEATURE');
+    proFeatureError.code = 'PRO_FEATURE';
+    proFeatureError.feature = 'attachments';
+    proFeatureError.paywall = { headline: 'Snap your fridge', cta: 'Upgrade' };
+
+    mockedCoachApi.streamMessage.mockImplementation((() => {
+      async function* errStream() {
+        throw proFeatureError;
+        // eslint-disable-next-line no-unreachable
+        yield { type: 'text', text: '' };
+      }
+      return errStream();
+    }) as any);
+
+    const { result } = renderHook(() => useCoachStream());
+
+    await act(async () => {
+      await result.current.sendMessage('photo me');
+    });
+
+    await waitFor(() => {
+      expect(result.current.paywall).not.toBeNull();
+    });
+    expect(result.current.paywallReason).toBe('photos');
+  });
+
   it('surfaces paywall info when streamMessage throws COACH_DAILY_CAP', async () => {
     mockedCoachApi.createConversation.mockResolvedValue({
       id: 'c1',

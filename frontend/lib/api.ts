@@ -2230,18 +2230,25 @@ export interface CoachPaywallInfo {
 export class CoachStreamError extends Error {
   code: string;
   paywall?: CoachPaywallInfo;
+  feature?: string;
   status?: number;
-  constructor(message: string, code: string, options?: { paywall?: CoachPaywallInfo; status?: number }) {
+  constructor(
+    message: string,
+    code: string,
+    options?: { paywall?: CoachPaywallInfo; status?: number; feature?: string },
+  ) {
     super(message);
     this.name = 'CoachStreamError';
     this.code = code;
     this.paywall = options?.paywall;
     this.status = options?.status;
+    this.feature = options?.feature;
   }
 }
 
 interface CoachStreamRawError {
   error?: string;
+  feature?: string;
   paywall?: CoachPaywallInfo;
 }
 
@@ -2280,6 +2287,20 @@ async function* streamCoachMessage(params: {
       parsed.error ?? 'COACH_DAILY_CAP',
       'COACH_DAILY_CAP',
       { paywall: parsed.paywall, status: 402 },
+    );
+  }
+
+  if (response.status === 403) {
+    let parsed: CoachStreamRawError = {};
+    try {
+      parsed = (await response.json()) as CoachStreamRawError;
+    } catch {
+      // ignore — keep empty parsed object
+    }
+    throw new CoachStreamError(
+      parsed.error ?? 'PRO_FEATURE',
+      'PRO_FEATURE',
+      { paywall: parsed.paywall, status: 403, feature: parsed.feature },
     );
   }
 
