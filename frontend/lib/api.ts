@@ -2018,6 +2018,104 @@ export const composedPlateApi = {
     apiClient.get<{ totalPlatesThisWeek: number; greenVegCount: number }>(
       '/composed-plates/weekly-summary',
     ),
+
+  family: (body: FamilyMealBody) =>
+    apiClient.post<{ familyMeal: FamilyMealResponse; persisted?: PersistedFamilyMeal }>(
+      '/composed-plates/family',
+      body,
+    ),
+
+  diverge: (body: DivergeBody) =>
+    apiClient.post<{ plates: FamilyPlatePayload[] }>(
+      '/composed-plates/diverge',
+      body,
+    ),
+};
+
+// ─── Family meal types ──────────────────────────────────────────────────────
+
+export interface FamilyPlateComponentPayload {
+  slot: MealComponentSlot;
+  componentId: string;
+  portionMultiplier: number;
+}
+
+export interface FamilyPlatePayload {
+  plateId: string;
+  components: FamilyPlateComponentPayload[];
+}
+
+export interface FamilyMealBody {
+  plates: Array<FamilyPlatePayload & { householdMemberId?: string }>;
+  name?: string;
+  persist?: boolean;
+}
+
+export interface MergedCookStep {
+  componentId: string;
+  totalPortions: number;
+  servesPlateIds: string[];
+  slot: MealComponentSlot;
+}
+
+export interface FamilyMealResponse {
+  userId: string;
+  plates: FamilyPlatePayload[];
+  cookSteps: MergedCookStep[];
+}
+
+export interface PersistedFamilyMeal {
+  id: string;
+  userId: string;
+  name: string | null;
+  cookSteps: MergedCookStep[];
+  plateIds: string[];
+}
+
+export interface DivergeBody {
+  sharedSlots: { slot: MealComponentSlot; componentId: string }[];
+  perPlateDivergentSlots: {
+    plateId: string;
+    slots: { slot: MealComponentSlot; componentId: string }[];
+  }[];
+}
+
+// ─── Household roster (Group 10X Phase 7) ───────────────────────────────────
+
+export type AgeBand = 'toddler' | 'kid' | 'teen' | 'adult' | 'elder';
+
+export interface HouseholdMember {
+  id: string;
+  userId: string;
+  displayName: string;
+  ageBand: AgeBand;
+  pickinessLevel: number;
+  dietaryFlags: string[];
+  bannedComponentIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HouseholdMemberInput {
+  displayName: string;
+  ageBand: AgeBand;
+  pickinessLevel?: number;
+  dietaryFlags?: string[];
+  bannedComponentIds?: string[];
+}
+
+export const householdApi = {
+  list: () =>
+    apiClient.get<{ members: HouseholdMember[] }>('/household'),
+  create: (body: HouseholdMemberInput) =>
+    apiClient.post<{ member: HouseholdMember }>('/household', body),
+  update: (id: string, body: Partial<HouseholdMemberInput>) =>
+    apiClient.patch<{ member: HouseholdMember }>(
+      `/household/${encodeURIComponent(id)}`,
+      body,
+    ),
+  remove: (id: string) =>
+    apiClient.delete<void>(`/household/${encodeURIComponent(id)}`),
 };
 
 // ─── Shared Plates (Group 10X Phase 8 — deep link routing) ───────────────────

@@ -22,7 +22,19 @@ import {
   getActiveLeftovers,
 } from '../../services/leftoverInventoryService';
 import { composePlateFromUtterance } from '../../services/utteranceComposerService';
-import { buildFamilyMeal, type FamilyPlateInput } from '../../services/familyMealService';
+import {
+  buildFamilyMeal,
+  divergeFromSharedBase,
+  persistFamilyMeal,
+  type FamilyPlateInput,
+} from '../../services/familyMealService';
+import {
+  listHouseholdMembers,
+  createHouseholdMember,
+  updateHouseholdMember,
+  deleteHouseholdMember,
+  type AgeBand,
+} from '../../services/householdRosterService';
 import {
   createShareLink,
   getPlateBySlug,
@@ -122,11 +134,45 @@ const familyMealBodySchema = z.object({
       z.object({
         plateId: z.string().min(1).max(64),
         components: z.array(familyPlateComponentSchema).min(1).max(10),
+        householdMemberId: z.string().min(1).max(128).optional(),
+      })
+    )
+    .min(1)
+    .max(6),
+  name: z.string().min(1).max(120).optional(),
+  persist: z.boolean().optional().default(false),
+});
+
+const divergeBodySchema = z.object({
+  sharedSlots: z
+    .array(z.object({ slot: slotEnum, componentId: z.string().min(1).max(128) }))
+    .min(1)
+    .max(5),
+  perPlateDivergentSlots: z
+    .array(
+      z.object({
+        plateId: z.string().min(1).max(64),
+        slots: z
+          .array(z.object({ slot: slotEnum, componentId: z.string().min(1).max(128) }))
+          .min(1)
+          .max(5),
       })
     )
     .min(1)
     .max(6),
 });
+
+const ageBandEnum = z.enum(['toddler', 'kid', 'teen', 'adult', 'elder']);
+
+const householdMemberBodySchema = z.object({
+  displayName: z.string().min(1).max(64),
+  ageBand: ageBandEnum,
+  pickinessLevel: z.number().int().min(0).max(4).optional(),
+  dietaryFlags: z.array(z.string().min(1).max(64)).max(20).optional(),
+  bannedComponentIds: z.array(z.string().min(1).max(128)).max(100).optional(),
+});
+
+const householdMemberPatchSchema = householdMemberBodySchema.partial();
 
 const formatZodIssues = (error: z.ZodError): string =>
   Array.isArray((error as any).issues)
@@ -691,14 +737,150 @@ export const mealComponentController = {
         userId,
         plates: parsed.data.plates as FamilyPlateInput[],
       });
+
+      // When persist=true, write to ComposedFamilyMeal + join rows so the
+      // composer can re-open the family meal later and the cook timeline can
+      // read the merged steps without recomputing.
+      if (parsed.data.persist) {
+        const persisted = await persistFamilyMeal({
+          userId,
+          name: parsed.data.name,
+          plates: parsed.data.plates.map((p) => ({
+            plateId: p.plateId,
+            components: p.components as FamilyPlateInput['components'],
+            householdMemberId: p.householdMemberId,
+          })),
+        });
+        return res.status(201).json({ familyMeal, persisted });
+      }
+
       return res.status(201).json({ familyMeal });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown';
-      if (/at least one plate|maximum.*plates/i.test(message)) {
+      if (/at least one plate|maximum.*plates|forbidden|not found/i.test(message)) {
         return res.status(400).json({ error: message });
       }
       console.error('Error building family meal:', error);
       return res.status(500).json({ error: 'Failed to build family meal' });
+    }
+  },
+
+  async divergeFromBase(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const parsed = divergeBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+    try {
+      const plates = divergeFromSharedBase(parsed.data);
+      return res.status(200).json({ plates });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/at least one|at most/i.test(message)) {
+        return res.status(400).json({ error: message });
+      }
+      console.error('Error diverging from base:', error);
+      return res.status(500).json({ error: 'Failed to diverge from base' });
+    }
+  },
+
+  async listHousehold(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+      const members = await listHouseholdMembers(getUserId(req));
+      return res.json({ members });
+    } catch (error) {
+      console.error('Error listing household:', error);
+      return res.status(500).json({ error: 'Failed to list household' });
+    }
+  },
+
+  async createHouseholdMember(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const parsed = householdMemberBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+    try {
+      const member = await createHouseholdMember(getUserId(req), {
+        ...parsed.data,
+        ageBand: parsed.data.ageBand as AgeBand,
+      });
+      return res.status(201).json({ member });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/required|must be/i.test(message)) {
+        return res.status(400).json({ error: message });
+      }
+      console.error('Error creating household member:', error);
+      return res.status(500).json({ error: 'Failed to create household member' });
+    }
+  },
+
+  async updateHouseholdMember(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const memberId = req.params.id;
+    if (!memberId || memberId.length > 128) {
+      return res.status(400).json({ error: 'Invalid member id' });
+    }
+    const parsed = householdMemberPatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+    try {
+      const member = await updateHouseholdMember(getUserId(req), memberId, {
+        ...parsed.data,
+        ageBand: parsed.data.ageBand as AgeBand | undefined,
+      });
+      return res.json({ member });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/forbidden|not found/i.test(message)) {
+        return res.status(404).json({ error: message });
+      }
+      if (/required|must be/i.test(message)) {
+        return res.status(400).json({ error: message });
+      }
+      console.error('Error updating household member:', error);
+      return res.status(500).json({ error: 'Failed to update household member' });
+    }
+  },
+
+  async deleteHouseholdMember(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const memberId = req.params.id;
+    if (!memberId || memberId.length > 128) {
+      return res.status(400).json({ error: 'Invalid member id' });
+    }
+    try {
+      await deleteHouseholdMember(getUserId(req), memberId);
+      return res.status(204).end();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/forbidden|not found/i.test(message)) {
+        return res.status(404).json({ error: message });
+      }
+      console.error('Error deleting household member:', error);
+      return res.status(500).json({ error: 'Failed to delete household member' });
     }
   },
 

@@ -5,6 +5,8 @@
 // plates (same componentId) are cooked once but portioned across all plates
 // that contain them, so the cook-timeline solver merges those steps.
 
+import { prisma } from '../lib/prisma';
+
 export type ComponentSlot = 'protein' | 'base' | 'vegetable' | 'sauce' | 'garnish';
 
 const MAX_FAMILY_PLATES = 6;
@@ -110,5 +112,115 @@ export const buildFamilyMeal = (input: BuildFamilyMealInput): FamilyMeal => {
     userId: input.userId,
     plates: input.plates,
     cookSteps,
+  };
+};
+
+// ─── Diverge from a shared base ────────────────────────────────────────────────
+
+export interface DivergeSpec {
+  /** Slot pairs that all output plates share (e.g. [{slot:'protein', componentId:'p_chicken'}]) */
+  sharedSlots: { slot: ComponentSlot; componentId: string }[];
+  /** Per-output-plate divergent slots — typically vegetable/sauce variants per family member. */
+  perPlateDivergentSlots: { plateId: string; slots: { slot: ComponentSlot; componentId: string }[] }[];
+}
+
+/**
+ * "Diverge from a shared base" — kid-vs-adult plate one-tap.
+ * Builds N FamilyPlateInputs where every plate carries the same `sharedSlots`
+ * and additionally the per-plate divergent slots. Portion multiplier defaults
+ * to 1; callers can post-process if they want to scale a kid plate down.
+ */
+export const divergeFromSharedBase = (spec: DivergeSpec): FamilyPlateInput[] => {
+  if (spec.perPlateDivergentSlots.length === 0) {
+    throw new Error('Diverge requires at least one output plate');
+  }
+  if (spec.perPlateDivergentSlots.length > MAX_FAMILY_PLATES) {
+    throw new Error(`Diverge supports at most ${MAX_FAMILY_PLATES} output plates`);
+  }
+  return spec.perPlateDivergentSlots.map(({ plateId, slots }) => ({
+    plateId,
+    components: [
+      ...spec.sharedSlots.map((s) => ({ ...s, portionMultiplier: 1 })),
+      ...slots.map((s) => ({ ...s, portionMultiplier: 1 })),
+    ],
+  }));
+};
+
+// ─── Persistence ───────────────────────────────────────────────────────────────
+
+export interface PersistFamilyMealInput {
+  userId: string;
+  name?: string;
+  plates: Array<{
+    plateId: string;
+    components: PlateComponent[];
+    householdMemberId?: string;
+  }>;
+}
+
+export interface PersistedFamilyMeal {
+  id: string;
+  userId: string;
+  name: string | null;
+  cookSteps: MergedCookStep[];
+  plateIds: string[];
+}
+
+/**
+ * Persist a built family meal to the database. Each input plate must reference
+ * an existing ComposedPlate row (callers create those via the composer first).
+ * Returns the persisted family-meal id + the merged cook-steps payload.
+ */
+export const persistFamilyMeal = async (
+  input: PersistFamilyMealInput,
+): Promise<PersistedFamilyMeal> => {
+  if (input.plates.length === 0) {
+    throw new Error('Family meal requires at least one plate');
+  }
+  if (input.plates.length > MAX_FAMILY_PLATES) {
+    throw new Error(`Family meal supports a maximum of ${MAX_FAMILY_PLATES} plates`);
+  }
+
+  // Verify every referenced plate belongs to this user (IDOR guard).
+  const ownedPlates = await prisma.composedPlate.findMany({
+    where: {
+      id: { in: input.plates.map((p) => p.plateId) },
+      userId: input.userId,
+    },
+    select: { id: true },
+  });
+  const ownedIds = new Set(ownedPlates.map((p) => p.id));
+  for (const p of input.plates) {
+    if (!ownedIds.has(p.plateId)) {
+      throw new Error(`Plate ${p.plateId} not found or forbidden`);
+    }
+  }
+
+  const cookSteps = mergeSharedCookSteps(
+    input.plates.map((p) => ({ plateId: p.plateId, components: p.components })),
+  );
+
+  const created = await prisma.composedFamilyMeal.create({
+    data: {
+      userId: input.userId,
+      name: input.name ?? null,
+      cookStepsJson: JSON.stringify(cookSteps),
+      plates: {
+        create: input.plates.map((p, idx) => ({
+          plateId: p.plateId,
+          householdMemberId: p.householdMemberId ?? null,
+          positionIndex: idx,
+        })),
+      },
+    },
+    include: { plates: true },
+  });
+
+  return {
+    id: created.id,
+    userId: created.userId,
+    name: created.name,
+    cookSteps,
+    plateIds: created.plates.sort((a, b) => a.positionIndex - b.positionIndex).map((p) => p.plateId),
   };
 };

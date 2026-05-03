@@ -207,6 +207,23 @@ const createPrismaMock = () => ({
       findUnique: jest.fn(),
       findMany: jest.fn(),
     },
+    householdMember: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    composedFamilyMeal: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    composedFamilyMealPlate: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
     leftoverInventory: {
       create: jest.fn(),
       createMany: jest.fn(),
