@@ -2218,6 +2218,27 @@ export type CoachStreamEvent =
   | CoachToolResultEvent
   | CoachDoneEvent;
 
+export type CoachAttachmentMediaType =
+  | 'image/jpeg'
+  | 'image/png'
+  | 'image/gif'
+  | 'image/webp';
+
+export interface CoachAttachment {
+  type: 'image_base64';
+  mediaType: CoachAttachmentMediaType;
+  data: string;
+}
+
+export interface CoachIdentifiedIngredient {
+  name: string;
+  confidence: number;
+}
+
+export interface CoachExtractPantryResponse {
+  ingredients: CoachIdentifiedIngredient[];
+}
+
 export interface CoachConversationDetail extends CoachConversation {
   messages: CoachMessage[];
 }
@@ -2259,6 +2280,7 @@ async function* streamCoachMessage(params: {
   conversationId: string;
   message: string;
   signal?: AbortSignal;
+  attachments?: CoachAttachment[];
 }): AsyncIterableIterator<CoachStreamEvent> {
   const url = `${getBaseURL()}/coach/message`;
   const token = getAuthToken();
@@ -2272,9 +2294,26 @@ async function* streamCoachMessage(params: {
     body: JSON.stringify({
       conversationId: params.conversationId,
       message: params.message,
+      ...(params.attachments && params.attachments.length > 0
+        ? { attachments: params.attachments }
+        : {}),
     }),
     signal: params.signal,
   });
+
+  if (response.status === 400) {
+    let parsed: CoachStreamRawError = {};
+    try {
+      parsed = (await response.json()) as CoachStreamRawError;
+    } catch {
+      // ignore
+    }
+    throw new CoachStreamError(
+      parsed.error ?? 'INVALID_ATTACHMENTS',
+      parsed.error ?? 'INVALID_ATTACHMENTS',
+      { status: 400 },
+    );
+  }
 
   if (response.status === 402) {
     let parsed: CoachStreamRawError = {};
@@ -2383,8 +2422,13 @@ interface CoachApi {
     conversationId: string;
     message: string;
     signal?: AbortSignal;
+    attachments?: CoachAttachment[];
   }) => AsyncIterableIterator<CoachStreamEvent>;
   getCoachContext: () => Promise<CoachContextResponse>;
+  extractPantryFromImage: (params: {
+    imageBase64: string;
+    mediaType: CoachAttachmentMediaType;
+  }) => Promise<CoachExtractPantryResponse>;
 }
 
 export interface CoachContextResponse {
@@ -2418,6 +2462,13 @@ export const coachApi: CoachApi = {
   streamMessage: streamCoachMessage,
   getCoachContext: async () => {
     const res = await api.get<CoachContextResponse>('/coach/context');
+    return res.data;
+  },
+  extractPantryFromImage: async ({ imageBase64, mediaType }) => {
+    const res = await api.post<CoachExtractPantryResponse>(
+      '/coach/extract-pantry-from-image',
+      { imageBase64, mediaType },
+    );
     return res.data;
   },
 };

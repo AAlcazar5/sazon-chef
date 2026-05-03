@@ -50,6 +50,9 @@ export function selectThinkingBudget(tier: CoachTier): ThinkingBudget {
 export interface BuildCoachParamsInput {
   tier: CoachTier;
   systemPrompt: string;
+  // Phase 5: messages may carry multi-block content (text + image blocks) for
+  // Pro photo attachments. The Anthropic SDK already accepts both string and
+  // array forms on MessageParam.content — pass through unchanged.
   messages: Anthropic.MessageParam[];
   tools?: Anthropic.Tool[];
 }

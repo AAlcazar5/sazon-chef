@@ -174,7 +174,14 @@ describe('POST /api/coach/message — attachments paywall (Phase 4)', () => {
       .send({
         conversationId: 'c1',
         message: 'check this out',
-        attachments: [{ type: 'image_url', url: 'https://example.com/a.jpg' }],
+        // Phase 5: image_base64 is the canonical attachment shape.
+        attachments: [
+          {
+            type: 'image_base64',
+            mediaType: 'image/jpeg',
+            data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+          },
+        ],
       });
 
     expect(res.status).toBe(200);

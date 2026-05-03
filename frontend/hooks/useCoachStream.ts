@@ -5,7 +5,12 @@
 // message's toolUses array so cards can render inline.
 
 import { useCallback, useRef, useState } from 'react';
-import { coachApi, type CoachMessage, type CoachPaywallInfo } from '../lib/api';
+import {
+  coachApi,
+  type CoachAttachment,
+  type CoachMessage,
+  type CoachPaywallInfo,
+} from '../lib/api';
 
 export type CoachPaywallReason =
   | 'cap'
@@ -64,11 +69,13 @@ export interface UseCoachStreamResult {
   paywall: CoachPaywallInfo | null;
   paywallReason: CoachPaywallReason | null;
   conversationId: string | null;
-  sendMessage: (text: string) => Promise<void>;
+  attachmentError: string | null;
+  sendMessage: (text: string, attachments?: CoachAttachment[]) => Promise<void>;
   setConversationId: (id: string | null) => void;
   setMessages: (messages: CoachUiMessage[]) => void;
   reset: () => void;
   dismissPaywall: () => void;
+  dismissAttachmentError: () => void;
 }
 
 const makeId = () => `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -96,6 +103,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
   const [error, setError] = useState<string | null>(null);
   const [paywall, setPaywall] = useState<CoachPaywallInfo | null>(null);
   const [paywallReason, setPaywallReason] = useState<CoachPaywallReason | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(initial?.conversationId ?? null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -107,6 +115,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     setError(null);
     setPaywall(null);
     setPaywallReason(null);
+    setAttachmentError(null);
     setConversationId(null);
   }, []);
 
@@ -115,13 +124,18 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     setPaywallReason(null);
   }, []);
 
-  const sendMessage = useCallback(async (text: string) => {
+  const dismissAttachmentError = useCallback(() => {
+    setAttachmentError(null);
+  }, []);
+
+  const sendMessage = useCallback(async (text: string, attachments?: CoachAttachment[]) => {
     const trimmed = text.trim();
     if (!trimmed || isStreaming) return;
 
     setError(null);
     setPaywall(null);
     setPaywallReason(null);
+    setAttachmentError(null);
 
     const userMsg: CoachUiMessage = { id: makeId(), role: 'user', content: trimmed };
     const assistantId = makeId();
@@ -147,6 +161,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
         conversationId: convoId,
         message: trimmed,
         signal: controller.signal,
+        attachments,
       });
 
       let acc = '';
@@ -184,6 +199,15 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
       if (isPaywallError(err)) {
         setPaywall(err.paywall ?? { headline: 'Daily limit reached', cta: 'Upgrade' });
         setPaywallReason(reasonFromError(err));
+      } else if (
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        (err as { code?: string }).code === 'INVALID_ATTACHMENTS'
+      ) {
+        setAttachmentError(
+          "That photo didn't upload — try a smaller one or fewer photos.",
+        );
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -203,10 +227,12 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     paywall,
     paywallReason,
     conversationId,
+    attachmentError,
     sendMessage,
     setConversationId,
     setMessages,
     reset,
     dismissPaywall,
+    dismissAttachmentError,
   };
 }
