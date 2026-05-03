@@ -15,20 +15,18 @@ import {
 import {
   buildAnthropicCreateParams,
   getAnthropicClient,
-  type CoachTier,
+  resolveCoachTier,
 } from '@/services/coachService';
 import {
   coachToolDefinitions,
   runCoachTool,
 } from '@/services/coachTools';
+import { COACH_PAYWALL_COPY } from '@/middleware/requireCoachPro';
+import { emit as emitAnalytics } from '@/services/coachAnalytics';
 import { coachContextRoutes } from './coachContextRoutes';
 
 const FREE_DAILY_MESSAGE_CAP = 10;
 const MAX_TOOL_USE_ITERATIONS = 5;
-
-function resolveTier(subscriptionTier: string | null | undefined): CoachTier {
-  return subscriptionTier === 'premium' ? 'premium' : 'free';
-}
 
 function resolveGoalPhase(fitnessGoal: string | null | undefined): GoalPhase {
   switch (fitnessGoal) {
@@ -91,7 +89,7 @@ coachRoutes.post('/conversations', async (req: Request, res: Response) => {
   const firstMessage = String(req.body?.firstMessage ?? '');
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  const tier = resolveTier(user?.subscriptionTier);
+  const tier = resolveCoachTier(user);
 
   const profile = await buildCoachProfile(userId);
   const title = generateConversationTitle({
@@ -154,9 +152,27 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
   const userId = getUserId(req);
   const conversationId = String(req.body?.conversationId ?? '');
   const message = String(req.body?.message ?? '');
+  const attachments = Array.isArray(req.body?.attachments)
+    ? req.body.attachments
+    : [];
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  const tier = resolveTier(user?.subscriptionTier);
+  const tier = resolveCoachTier(user);
+
+  // Pro-only: photo attachments. Reject free tier with the Coach paywall payload.
+  if (attachments.length > 0 && tier !== 'premium') {
+    emitAnalytics('coach_paywall_view', {
+      userId,
+      feature: 'attachments',
+      source: 'message_route',
+    });
+    res.status(403).json({
+      error: 'PRO_FEATURE',
+      feature: 'attachments',
+      paywall: COACH_PAYWALL_COPY.attachments,
+    });
+    return;
+  }
 
   if (tier === 'free') {
     const todaysCount = await prisma.coachMessage.count({
@@ -167,6 +183,12 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
       },
     });
     if (todaysCount >= FREE_DAILY_MESSAGE_CAP) {
+      emitAnalytics('coach_cap_hit', { userId, count: todaysCount });
+      emitAnalytics('coach_paywall_view', {
+        userId,
+        feature: 'daily_cap',
+        source: 'message_route',
+      });
       res.status(402).json({
         error: 'COACH_DAILY_CAP',
         paywall: {
@@ -336,6 +358,24 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
     where: { id: conversationId },
     data: { lastMessageAt: new Date() },
   });
+
+  emitAnalytics('coach_message_sent', {
+    userId,
+    conversationId,
+    tier,
+    model: lastModel,
+    promptTokens: totalUsage.input_tokens,
+    completionTokens: totalUsage.output_tokens,
+    cacheReadTokens: totalUsage.cache_read_input_tokens,
+    cacheWriteTokens: totalUsage.cache_creation_input_tokens,
+  });
+  if (tier === 'premium') {
+    emitAnalytics('coach_pro_message_sent', {
+      userId,
+      conversationId,
+      model: lastModel,
+    });
+  }
 
   res.write('event: done\ndata: {}\n\n');
   res.end();
