@@ -13,12 +13,22 @@ const mockGetActiveLeftovers = jest.fn();
 const mockAddLeftoversFromPlate = jest.fn();
 const mockConsumeLeftoversForPlate = jest.fn();
 
+const mockComputePantryCoverage = jest.fn();
 jest.mock('../../../src/services/mealComponentService', () => ({
   listComponents: (...args: unknown[]) => mockListComponents(...args),
   saveComposedPlate: (...args: unknown[]) => mockSaveComposedPlate(...args),
   generatePermutations: (...args: unknown[]) => mockGeneratePermutations(...args),
   getPlateFromPantry: (...args: unknown[]) => mockGetPlateFromPantry(...args),
+  computePantryCoverage: (...args: unknown[]) => mockComputePantryCoverage(...args),
   COMPONENT_SLOTS: ['protein', 'base', 'vegetable', 'sauce', 'garnish'],
+}));
+
+const mockGetPlateBySlug = jest.fn();
+jest.mock('../../../src/services/plateShareService', () => ({
+  createShareLink: jest.fn(),
+  getPlateBySlug: (...args: unknown[]) => mockGetPlateBySlug(...args),
+  getPlateOfTheWeek: jest.fn(),
+  savePlateForUser: jest.fn(),
 }));
 
 jest.mock('../../../src/services/macroAutoFitService', () => ({
@@ -57,11 +67,13 @@ jest.mock('../../../src/utils/authHelper', () => ({
 const mockPrismaComposedPlate = { findFirst: jest.fn(), findUnique: jest.fn() };
 const mockPrismaComponent = { findMany: jest.fn() };
 const mockPrismaCookingLog = { findMany: jest.fn() };
+const mockPrismaPantryItem = { findMany: jest.fn() };
 jest.mock('../../../src/lib/prisma', () => ({
   prisma: {
     composedPlate: mockPrismaComposedPlate,
     mealComponent: mockPrismaComponent,
     cookingLog: mockPrismaCookingLog,
+    pantryItem: mockPrismaPantryItem,
   },
 }));
 
@@ -97,6 +109,9 @@ beforeEach(() => {
   mockListVariantsForComponent.mockResolvedValue([]);
   mockGetCompatibleVariants.mockResolvedValue([]);
   mockPrismaCookingLog.findMany.mockResolvedValue([]);
+  mockPrismaPantryItem.findMany.mockResolvedValue([]);
+  mockGetPlateBySlug.mockResolvedValue(null);
+  mockComputePantryCoverage.mockReturnValue(0);
   mockFitPlateToMacros.mockResolvedValue({
     achievable: true,
     plate: [{ slot: 'base', componentId: 'rice-1', portionMultiplier: 1 }],
@@ -814,6 +829,86 @@ describe('GET /api/meal-components/:id/variants', () => {
     await mealComponentController.listComponentVariants(req, res);
     const passedSlots = mockGetCompatibleVariants.mock.calls[0][1];
     expect(passedSlots.length).toBeLessThanOrEqual(5);
+  });
+});
+
+describe('GET /api/shared-plates/:slug/sub-count', () => {
+  it('returns 401 when unauthenticated', async () => {
+    mockIsAuthenticated.mockReturnValueOnce(false);
+    const req = { params: { slug: 'abc' } } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getSharedPlateSubCount(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  it('returns 404 when slug has no plate', async () => {
+    mockGetPlateBySlug.mockResolvedValueOnce(null);
+    const req = { params: { slug: 'gone' } } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getSharedPlateSubCount(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it('returns 0 when plate has no componentIds', async () => {
+    mockGetPlateBySlug.mockResolvedValueOnce({ id: 'sh', slug: 'abc', plate: {} });
+    const req = { params: { slug: 'abc' } } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getSharedPlateSubCount(req, res);
+    expect(res.json).toHaveBeenCalledWith({ subsCount: 0 });
+  });
+
+  it('counts components with zero pantry coverage as substitutions', async () => {
+    mockGetPlateBySlug.mockResolvedValueOnce({
+      id: 'sh',
+      slug: 'abc',
+      plate: { componentIds: JSON.stringify([
+        { slot: 'protein', componentId: 'p_salmon' },
+        { slot: 'base', componentId: 'b_farro' },
+        { slot: 'vegetable', componentId: 'v_spinach' },
+      ]) },
+    });
+    mockPrismaComponent.findMany.mockResolvedValueOnce([
+      { id: 'p_salmon', pantryIngredientNames: JSON.stringify(['salmon']) },
+      { id: 'b_farro', pantryIngredientNames: JSON.stringify(['farro']) },
+      { id: 'v_spinach', pantryIngredientNames: JSON.stringify(['spinach']) },
+    ]);
+    mockPrismaPantryItem.findMany.mockResolvedValueOnce([{ name: 'salmon' }]);
+    // First component has coverage > 0; the rest are 0 (substitutions)
+    mockComputePantryCoverage
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0);
+    const req = { params: { slug: 'abc' } } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getSharedPlateSubCount(req, res);
+    expect(res.json).toHaveBeenCalledWith({ subsCount: 2 });
+  });
+
+  it('counts missing components (not in DB) as substitutions', async () => {
+    mockGetPlateBySlug.mockResolvedValueOnce({
+      id: 'sh',
+      slug: 'abc',
+      plate: { componentIds: JSON.stringify([
+        { slot: 'protein', componentId: 'p_unknown' },
+      ]) },
+    });
+    mockPrismaComponent.findMany.mockResolvedValueOnce([]);
+    const req = { params: { slug: 'abc' } } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getSharedPlateSubCount(req, res);
+    expect(res.json).toHaveBeenCalledWith({ subsCount: 1 });
+  });
+
+  it('returns 0 when componentIds JSON is malformed', async () => {
+    mockGetPlateBySlug.mockResolvedValueOnce({
+      id: 'sh',
+      slug: 'abc',
+      plate: { componentIds: '{not json' },
+    });
+    const req = { params: { slug: 'abc' } } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getSharedPlateSubCount(req, res);
+    expect(res.json).toHaveBeenCalledWith({ subsCount: 0 });
   });
 });
 

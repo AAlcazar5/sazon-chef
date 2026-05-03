@@ -30,6 +30,9 @@ export const composedPlateRoutes = Router();
 // /of-the-week is intentionally PUBLIC — editorial home card must work for
 // unauthenticated visitors. Register it before the per-route auth middleware.
 composedPlateRoutes.get('/of-the-week', mealComponentController.plateOfTheWeek);
+// Static routes registered BEFORE /:id/* to avoid Express matching them as
+// the `id` param (e.g. /weekly-summary would otherwise hit /:id/variations).
+composedPlateRoutes.get('/weekly-summary', authenticateToken, mealComponentController.getWeeklyPlateSummary);
 composedPlateRoutes.post('/', authenticateToken, mealComponentController.createPlate);
 composedPlateRoutes.post('/auto-fit', authenticateToken, mealComponentController.autoFit);
 composedPlateRoutes.post('/from-utterance', authenticateToken, mealComponentController.fromUtterance);
@@ -42,7 +45,10 @@ composedPlateRoutes.get('/:id/variations', authenticateToken, mealComponentContr
 
 // Note: sharedPlateRoutes is intentionally PUBLIC — sharing a plate by slug
 // must work without auth so unauthenticated users can preview before signup.
+// The /sub-count subroute is authenticated (per-user pantry diff) and must
+// be registered BEFORE the catch-all /:slug.
 export const sharedPlateRoutes = Router();
+sharedPlateRoutes.get('/:slug/sub-count', authenticateToken, mealComponentController.getSharedPlateSubCount);
 sharedPlateRoutes.get('/:slug', mealComponentController.getSharedPlate);
 
 export const leftoverInventoryRoutes = Router();

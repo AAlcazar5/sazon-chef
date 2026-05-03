@@ -9,6 +9,7 @@ import {
   saveComposedPlate,
   generatePermutations,
   getPlateFromPantry,
+  computePantryCoverage,
   COMPONENT_SLOTS,
   type ComponentSlot,
 } from '../../services/mealComponentService';
@@ -39,6 +40,7 @@ import {
   TARGET_DAILY_NUTRIENTS,
   type TrackedNutrient,
 } from '../../services/nutrientGapService';
+import { computeWeeklyPlateSummary } from '../../services/recentPlatesService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -477,6 +479,20 @@ export const mealComponentController = {
     }
   },
 
+  async getWeeklyPlateSummary(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+      const userId = getUserId(req);
+      const summary = await computeWeeklyPlateSummary(userId);
+      return res.json(summary);
+    } catch (error) {
+      console.error('Error fetching weekly plate summary:', error);
+      return res.status(500).json({ error: 'Failed to fetch weekly plate summary' });
+    }
+  },
+
   async getNutrientGapTop(req: Request, res: Response) {
     if (!isAuthenticated(req)) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -542,6 +558,66 @@ export const mealComponentController = {
     } catch (error) {
       console.error('Error fetching shared plate:', error);
       return res.status(500).json({ error: 'Failed to fetch shared plate' });
+    }
+  },
+
+  async getSharedPlateSubCount(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const slug = req.params.slug;
+    if (!slug || slug.length > 64) {
+      return res.status(400).json({ error: 'Invalid slug' });
+    }
+    try {
+      const userId = getUserId(req);
+      const result = await getPlateBySlug(slug);
+      if (!result) return res.status(404).json({ error: 'Plate not found' });
+      const plate = result.plate as { componentIds?: string } | null;
+      if (!plate?.componentIds) return res.json({ subsCount: 0 });
+
+      let parsed: { componentId: string }[] = [];
+      try {
+        const arr = JSON.parse(plate.componentIds);
+        if (Array.isArray(arr)) parsed = arr;
+      } catch {
+        return res.json({ subsCount: 0 });
+      }
+      if (parsed.length === 0) return res.json({ subsCount: 0 });
+
+      const componentIds = parsed
+        .map((c) => c?.componentId)
+        .filter((id): id is string => typeof id === 'string');
+
+      const [components, pantryItems] = await Promise.all([
+        prisma.mealComponent.findMany({
+          where: { id: { in: componentIds } },
+          select: { id: true, pantryIngredientNames: true },
+        }),
+        prisma.pantryItem.findMany({ where: { userId } }),
+      ]);
+
+      const pantryNames = pantryItems.map((p) => p.name);
+      const compsById = new Map(components.map((c) => [c.id, c]));
+      const subsCount = componentIds.reduce((count, id) => {
+        const comp = compsById.get(id);
+        if (!comp) return count + 1;
+        let ingredients: string[] = [];
+        try {
+          const arr = JSON.parse(comp.pantryIngredientNames);
+          if (Array.isArray(arr)) ingredients = arr.filter((s): s is string => typeof s === 'string');
+        } catch {
+          /* fall through */
+        }
+        if (ingredients.length === 0) return count;
+        const coverage = computePantryCoverage(ingredients, pantryNames);
+        return coverage === 0 ? count + 1 : count;
+      }, 0);
+
+      return res.json({ subsCount });
+    } catch (error) {
+      console.error('Error computing shared plate sub count:', error);
+      return res.status(500).json({ error: 'Failed to compute substitution count' });
     }
   },
 
