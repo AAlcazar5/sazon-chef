@@ -73,7 +73,7 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'find_recipes',
     description:
-      "Return a personalized list of recipes ranked through the Sazon 70/30 macro-match / taste-match scoring engine plus pantry coverage + cuisine adjacency boost. Each result carries a personalization envelope (pantryCoverage, macroFit, affinityScore). NOT a generic search — every result is ranked for THIS user.",
+      "Return a personalized list of recipes ranked through the Sazon 70/30 macro-match / taste-match scoring engine plus pantry coverage + cuisine adjacency boost. Each result carries a personalization envelope (pantryCoverage, macroFit, affinityScore). NOT a generic search — every result is ranked for THIS user. Pass `forHouseholdMemberId` to rank for *this* kid/adult's affinity instead of the account holder's.",
     input_schema: {
       type: 'object',
       properties: {
@@ -88,6 +88,11 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
         },
         minProtein: { type: 'number' },
         maxCalories: { type: 'number' },
+        forHouseholdMemberId: {
+          type: 'string',
+          description:
+            "Optional household member id. When set, ranking uses *this* member's slot affinity instead of the account holder's — kid plate adapts to *this* kid.",
+        },
       },
     },
   },
@@ -296,8 +301,10 @@ function rankRecipes(
   macroGoals: { id: string; userId: string; calories: number; protein: number; carbs: number; fat: number } | null,
   pantryNames: string[],
   remaining: { calories: number; protein: number; carbs: number; fat: number } | null,
+  memberAffinityNames: readonly string[] = [],
 ) {
   const likedCuisines = prefs?.likedCuisines.map((c) => c.name) ?? [];
+  const lowerNames = memberAffinityNames.map((n) => n.toLowerCase());
   return recipes
     .map((r) => {
       const score = calculateRecipeScore(r, prefs, macroGoals);
@@ -307,7 +314,18 @@ function rankRecipes(
         r.cuisine,
         0.3,
       );
-      const affinityScore = score.total + adjacencyBoost * 100;
+      // Per-member affinity boost: count high-affinity component names that
+      // appear in the recipe's ingredients. Each match adds 5 points so a
+      // member-scoped query produces a *materially different* ranking from the
+      // default account-level query.
+      let memberBoost = 0;
+      if (lowerNames.length > 0) {
+        const hay = r.ingredients.map((i) => i.text.toLowerCase()).join(' | ');
+        for (const name of lowerNames) {
+          if (hay.includes(name)) memberBoost += 5;
+        }
+      }
+      const affinityScore = score.total + adjacencyBoost * 100 + memberBoost;
       return {
         id: r.id,
         title: r.title,
@@ -335,6 +353,7 @@ async function runFindRecipes(
     maxPrepMinutes?: number;
     minProtein?: number;
     maxCalories?: number;
+    forHouseholdMemberId?: string;
   },
 ): Promise<unknown> {
   const { pantryNames, prefs, macroGoals, remaining } =
@@ -372,8 +391,37 @@ async function runFindRecipes(
       filteredForAllergens += 1;
     }
   }
-  const ranked = rankRecipes(safeRecipes, prefs as PrefsShape | null, macroGoals, pantryNames, remaining);
+  const memberAffinityNames = input.forHouseholdMemberId
+    ? await loadMemberAffinityComponentNames(userId, input.forHouseholdMemberId)
+    : [];
+  const ranked = rankRecipes(
+    safeRecipes,
+    prefs as PrefsShape | null,
+    macroGoals,
+    pantryNames,
+    remaining,
+    memberAffinityNames,
+  );
   return { recipes: ranked.slice(0, 8), filteredForAllergens };
+}
+
+async function loadMemberAffinityComponentNames(
+  userId: string,
+  householdMemberId: string,
+): Promise<string[]> {
+  const prismaUntyped = prisma as unknown as Record<string, PrismaModelMaybe>;
+  const rows = await safeFindMany<{ score: number; component: { name: string } | null }>(
+    prismaUntyped.slotAffinity,
+    {
+      where: { userId, householdMemberId, score: { gt: 0 } },
+      include: { component: { select: { name: true } } },
+      orderBy: { score: 'desc' },
+      take: 20,
+    },
+  );
+  return rows
+    .map((r) => r.component?.name)
+    .filter((n): n is string => typeof n === 'string' && n.length > 0);
 }
 
 async function runSearchCookbook(
@@ -953,7 +1001,10 @@ export async function buildCoachProfileSnapshot(
     safeFindMany<{ componentId: string; slot: string; score: number }>(
       prismaUntyped.slotAffinity,
       {
-        where: { userId },
+        // Coach prompt uses the household head's own affinity context — per-
+        // member rows are excluded so the cached system prompt stays N=1 for
+        // the account holder, not noisy from kid plates.
+        where: { userId, householdMemberId: null },
         orderBy: { score: 'desc' },
         take: SLOT_AFFINITY_LIMIT,
       },

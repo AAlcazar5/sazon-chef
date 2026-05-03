@@ -1,8 +1,15 @@
 // frontend/__tests__/app/coach.test.tsx
 // 10Y-B: Coach chat screen — empty state + chips + composer seeding.
+// 10Y entry-points: also covers ?conversationId / ?seedMessage URL params.
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+
+const mockSearchParams: { conversationId?: string; seedMessage?: string } = {};
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn() },
+  useLocalSearchParams: () => mockSearchParams,
+}));
 
 jest.mock('../../lib/api', () => ({
   coachApi: {
@@ -84,5 +91,51 @@ describe('CoachScreen', () => {
       const composer = getByPlaceholderText(/Tell me what you're hungry for/i) as any;
       expect(composer.props.value).toBe("Try a cuisine I haven't yet");
     });
+  });
+});
+
+describe('CoachScreen URL params (10Y entry-points)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSearchParams.conversationId = undefined;
+    mockSearchParams.seedMessage = undefined;
+  });
+
+  it('skips thread-list and shows active conversation when conversationId is present', async () => {
+    mockSearchParams.conversationId = 'c1';
+    const api = require('../../lib/api').coachApi;
+    api.getConversation.mockResolvedValue({
+      id: 'c1',
+      title: 'Salmon thread',
+      messages: [{ id: 'm1', role: 'user', content: 'hello' }],
+    });
+
+    const { findByPlaceholderText } = render(<CoachScreen />);
+    // Composer is only visible in active-conversation view.
+    expect(await findByPlaceholderText(/Tell me what you're hungry for/i)).toBeTruthy();
+    await waitFor(() => {
+      expect(api.getConversation).toHaveBeenCalledWith('c1');
+    });
+  });
+
+  it('auto-sends seedMessage after loading conversation', async () => {
+    mockSearchParams.conversationId = 'c2';
+    mockSearchParams.seedMessage = 'hello';
+
+    const api = require('../../lib/api').coachApi;
+    api.getConversation.mockResolvedValue({
+      id: 'c2',
+      title: 'Seeded thread',
+      messages: [],
+    });
+    api.streamMessage.mockReturnValue((async function* () { /* empty */ })());
+
+    render(<CoachScreen />);
+    await waitFor(() => {
+      expect(api.streamMessage).toHaveBeenCalledTimes(1);
+    });
+    const callArg = api.streamMessage.mock.calls[0][0];
+    expect(callArg.message).toBe('hello');
+    expect(callArg.conversationId).toBe('c2');
   });
 });

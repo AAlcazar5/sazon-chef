@@ -30,6 +30,7 @@ jest.mock('../../../lib/api', () => ({
 
 jest.mock('expo-router', () => ({
   router: { push: (...a: unknown[]) => mockRouterPush(...a), back: jest.fn() },
+  useLocalSearchParams: () => ({}),
 }));
 
 jest.mock('../../../hooks/useSubscription', () => ({
