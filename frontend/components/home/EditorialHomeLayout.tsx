@@ -5,6 +5,7 @@ import { VerticalCategoryRail } from '../ui/VerticalCategoryRail';
 import { PlateHeroCard } from '../ui/PlateHeroCard';
 import PantryPlateHeroCard from './PantryPlateHeroCard';
 import DidYouKnowCard from './DidYouKnowCard';
+import KitchenIQPromoCard from './KitchenIQPromoCard';
 import { useTonightsPlate } from '../../hooks/useTonightsPlate';
 import type { SuggestedRecipe } from '../../types';
 
@@ -94,6 +95,9 @@ export function EditorialHomeLayout({
 
       {/* Group 10R Surface 3 — rotating "Did You Know?" tip */}
       <DidYouKnowCard />
+
+      {/* Group 10S Surface 4 — Kitchen IQ promo for the most recent unlock */}
+      <KitchenIQPromoCard />
 
       {/* Macro widget row */}
       <EditorialMacroWidgets

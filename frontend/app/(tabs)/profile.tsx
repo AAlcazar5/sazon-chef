@@ -26,6 +26,7 @@ import {
   MacroGoalsCard,
   CulinaryPreferencesCard,
   CookingJourneyCard,
+  KitchenIQSection,
   BudgetCard,
   NotificationsCard,
   DataPrivacyCard,
@@ -229,6 +230,10 @@ export default function ProfileScreen() {
 
         <StaggerItem index={7}>
           <CookingJourneyCard testID="cooking-journey-card" />
+        </StaggerItem>
+
+        <StaggerItem index={7}>
+          <KitchenIQSection testID="kitchen-iq-section" />
         </StaggerItem>
 
         <StaggerItem index={8}>
