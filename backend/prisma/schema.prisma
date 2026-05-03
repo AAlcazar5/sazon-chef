@@ -1102,19 +1102,25 @@ model MealComponentVariant {
 }
 
 // Group 10X Phase 4: per-user per-component slot affinity scores
+// Phase 7+: optional householdMemberId narrows affinity to a specific kid/adult
+// — kid plate must adapt to *this* kid, not a generic kid template (N=1).
+// householdMemberId === null means "the account holder's own affinity".
 model SlotAffinity {
-  id          String        @id @default(cuid())
-  userId      String
-  componentId String
-  slot        String
-  score       Float         @default(0)
-  sampleCount Int           @default(0)
-  updatedAt   DateTime      @updatedAt
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  component   MealComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  id                String           @id @default(cuid())
+  userId            String
+  componentId       String
+  householdMemberId String?
+  slot              String
+  score             Float            @default(0)
+  sampleCount       Int              @default(0)
+  updatedAt         DateTime         @updatedAt
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  component         MealComponent    @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  householdMember   HouseholdMember? @relation(fields: [householdMemberId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, componentId])
+  @@unique([userId, householdMemberId, componentId])
   @@index([userId, slot])
+  @@index([householdMemberId, slot])
   @@map("slot_affinities")
 }
 
@@ -1222,6 +1228,7 @@ model HouseholdMember {
   updatedAt         DateTime @updatedAt
 
   familyPlateAssignments ComposedFamilyMealPlate[]
+  slotAffinities         SlotAffinity[]
 
   @@index([userId])
   @@map("household_members")

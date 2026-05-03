@@ -3,6 +3,8 @@ import { View, Text, ScrollView, Alert } from 'react-native';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { EditorialSectionHeader } from '../../components/home/EditorialSectionHeader';
+import WhyThisPlanLink from '../../components/coach/WhyThisPlanLink';
+import { useFoodIntelUserState } from '../../hooks/useFoodIntelUserState';
 import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
 import { useToast } from '../../contexts/ToastContext';
 import SuccessModal from '../../components/ui/SuccessModal';
@@ -73,6 +75,8 @@ export default function MealPlanScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const isMountedRef = useRef(false);
   const { showToast } = useToast();
+  // 10Y entry-point: read goal phase for the "Why this plan?" coach seed
+  const foodIntelState = useFoodIntelUserState();
 
   // Recurring meal state
   const [recurringModalVisible, setRecurringModalVisible] = useState(false);
@@ -711,6 +715,17 @@ export default function MealPlanScreen() {
           />
 
           <TotalPrepTimeCard totalPrepTime={totalPrepTime} isDark={isDark} />
+
+          {/* 10Y entry-point: ask Coach why today's plan */}
+          <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+            <WhyThisPlanLink
+              mealTitles={Object.values(hourlyMeals)
+                .flat()
+                .map((m: any) => (typeof m?.name === 'string' ? m.name : ''))
+                .filter((s: string) => s.length > 0)}
+              goalPhase={foodIntelState?.goalPhase}
+            />
+          </View>
 
           {/* Editorial section header for the timeline */}
           <EditorialSectionHeader

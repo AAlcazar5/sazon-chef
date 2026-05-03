@@ -34,7 +34,7 @@ import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill'
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
 import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   coachApi,
   type CoachAttachment,
@@ -71,6 +71,9 @@ export default function CoachScreen() {
     () => deriveCoachFlags({ tier: subscription.tier, isPremium: subscription.isPremium }),
     [subscription.tier, subscription.isPremium],
   );
+  // 10Y entry-points: contextual deep-links pass conversationId + optional
+  // seedMessage so we can jump directly into an active conversation.
+  const params = useLocalSearchParams<{ conversationId?: string; seedMessage?: string }>();
 
   const [view, setView] = useState<CoachView>('list');
   const [conversations, setConversations] = useState<CoachConversation[]>([]);
@@ -130,6 +133,31 @@ export default function CoachScreen() {
       stream.reset();
     }
   }, [stream]);
+
+  // Deep-link entry: if conversationId is present, jump into the active view
+  // immediately. We split this into two effects: (1) load the conversation
+  // exactly once on mount, (2) auto-send seedMessage after the stream's
+  // conversationId reflects the loaded thread (so sendMessage's closure
+  // doesn't create a duplicate conversation).
+  const loadedRef = React.useRef(false);
+  const seededRef = React.useRef(false);
+  useEffect(() => {
+    if (loadedRef.current) return;
+    const convId = typeof params.conversationId === 'string' ? params.conversationId : undefined;
+    if (!convId) return;
+    loadedRef.current = true;
+    void openExisting(convId);
+  }, [params.conversationId, openExisting]);
+
+  useEffect(() => {
+    if (seededRef.current) return;
+    const convId = typeof params.conversationId === 'string' ? params.conversationId : undefined;
+    const seed = typeof params.seedMessage === 'string' ? params.seedMessage : undefined;
+    if (!convId || !seed || seed.trim().length === 0) return;
+    if (stream.conversationId !== convId) return;
+    seededRef.current = true;
+    void stream.sendMessage(seed);
+  }, [params.conversationId, params.seedMessage, stream]);
 
   const onSelectChip = useCallback((value: string) => {
     setComposerText(value);

@@ -22,6 +22,7 @@ import PlateVariationsSheet from '../../components/recipe/PlateVariationsSheet';
 import PlateMenuExportButton, {
   type PlateMenuPlate,
 } from '../../components/recipe/PlateMenuExportButton';
+import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
 import { recipeApi } from '../../lib/api';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { Pastel, PastelDark, Accent } from '../../constants/Colors';
@@ -251,6 +252,9 @@ export default function RecipeIdScreen() {
               </View>
             </View>
           )}
+
+          {/* 10Y entry-point: lead actions with the Coach pill */}
+          <AskCoachAboutRecipePill recipeTitle={recipe.title} />
 
           {/* Vary this plate button — only for composed plates */}
           {isComposed && (

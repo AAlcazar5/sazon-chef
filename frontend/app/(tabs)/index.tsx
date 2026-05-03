@@ -29,6 +29,7 @@ import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
+import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 // PantryMatchCard removed — editorial v2 absorbs pantry info into subtitle
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
@@ -858,6 +859,9 @@ export default function HomeScreen() {
       >
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
+
+        {/* 10Y entry-point: contextual Ask Sazon Coach card above the recipe grid */}
+        <AskSazonHomeCard />
 
         {/* Editorial v2 layout */}
         <EditorialHomeLayout
