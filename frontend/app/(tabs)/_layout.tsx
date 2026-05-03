@@ -6,7 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SearchBar from '../../components/ui/SearchBar';
 import { router, usePathname, useSegments } from 'expo-router';
-import ActionSheet, { ActionSheetItem } from '../../components/ui/ActionSheet';
+import { type ActionSheetItem } from '../../components/ui/ActionSheet';
+import QuickActionsSheet from '../../components/action-sheet/QuickActionsSheet';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { scannerApi, shoppingListApi, mealPlanApi } from '../../lib/api';
@@ -143,33 +144,36 @@ export default function TabLayout() {
     executeSearch(query);
   }, [executeSearch]);
 
-  const actionItems: ActionSheetItem[] = [
-    // Group 10X — Build-a-Plate is the flagship surface; lead the action sheet
-    // with it so the always-visible "+" FAB is one tap away from composing a
-    // plate tailored to *this* user's pantry/macros/taste (N=1 north star).
+  // Group 9O — Tier 1 (always-visible primary): the 5 highest-frequency,
+  // N=1-aligned actions. Build-a-Plate is the hero (sage tint, top of list)
+  // and serves the flagship N=1 surface; the rest are daily-use entry points
+  // that feed the personalization model (logging, snap-to-log, discovery).
+  const primaryActions: ActionSheetItem[] = [
     {
       label: 'Build a plate',
       icon: 'restaurant',
       subtitle: 'Compose tonight’s meal',
-      onPress: () => {
-        setShowActionSheet(false);
-        router.push('/build-a-plate' as any);
-      },
+      onPress: () => router.push('/build-a-plate' as any),
       tint: 'sage',
     },
     {
       label: 'Cook for the family',
       icon: 'people-outline',
       subtitle: 'Multi-plate composer',
-      onPress: () => {
-        setShowActionSheet(false);
-        router.push('/build-a-plate-family' as any);
-      },
+      onPress: () => router.push('/build-a-plate-family' as any),
       tint: 'lavender',
+    },
+    {
+      label: 'Log a Meal',
+      icon: 'nutrition-outline',
+      subtitle: 'Track what you ate',
+      onPress: () => setShowQuickMealLog(true),
+      tint: 'peach',
     },
     {
       label: 'Take a Picture',
       icon: 'camera-outline',
+      subtitle: 'Snap to log a meal',
       onPress: async () => {
         if (!cameraPermission?.granted) {
           const result = await requestCameraPermission();
@@ -179,19 +183,26 @@ export default function TabLayout() {
         }
         setShowCamera(true);
       },
-      color: 'red',
+      tint: 'blush',
     },
     {
       label: 'Surprise Me!',
       icon: 'dice-outline',
+      subtitle: 'Pick a recipe for me',
       onPress: () => {
         router.push({
           pathname: '/(tabs)',
           params: { openRoulette: 'true' },
         });
       },
-      color: 'orange',
+      tint: 'sky',
     },
+  ];
+
+  // Group 9O — Tier 2 (behind "More actions" → secondary sheet): occasional
+  // power-user actions and items that have natural homes elsewhere (kept
+  // reachable here until contextual relocation lands as a follow-up).
+  const secondaryActions: ActionSheetItem[] = [
     {
       label: 'Add Recipe',
       icon: 'restaurant-outline',
@@ -210,14 +221,6 @@ export default function TabLayout() {
         });
       },
       color: 'blue',
-    },
-    {
-      label: 'Log a Meal',
-      icon: 'nutrition-outline',
-      onPress: () => {
-        setShowQuickMealLog(true);
-      },
-      color: 'orange',
     },
     {
       label: 'Quick Timer',
@@ -610,12 +613,12 @@ export default function TabLayout() {
 
       </View>
 
-      {/* Action Sheet */}
-      <ActionSheet
+      {/* Quick Actions — two-tier sheet (5 hero items + "More actions" → 8 secondary). */}
+      <QuickActionsSheet
         visible={showActionSheet}
         onClose={() => setShowActionSheet(false)}
-        items={actionItems}
-        title="Quick Actions"
+        primaryItems={primaryActions}
+        secondaryItems={secondaryActions}
       />
 
       {/* Quick Timer Modal */}
