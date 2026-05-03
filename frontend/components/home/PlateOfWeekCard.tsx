@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     ...cardShadow,
   },
   cardLight: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAF7F4',
   },
   cardDark: {
     backgroundColor: '#1C1C1E',

@@ -438,10 +438,19 @@ export const mealComponentController = {
     try {
       const lockedRaw = req.query.lockedSlots;
       const lockedSlots: { slot: string; componentId: string }[] = [];
-      if (typeof lockedRaw === 'string' && lockedRaw.length > 0) {
+      const MAX_LOCKED_QUERY_LEN = 512;
+      const MAX_LOCKED_PAIRS = 5;
+      if (
+        typeof lockedRaw === 'string' &&
+        lockedRaw.length > 0 &&
+        lockedRaw.length <= MAX_LOCKED_QUERY_LEN
+      ) {
         for (const pair of lockedRaw.split(',')) {
+          if (lockedSlots.length >= MAX_LOCKED_PAIRS) break;
           const [slot, cid] = pair.split(':');
-          if (slot && cid) lockedSlots.push({ slot, componentId: cid });
+          if (slot && cid && slot.length <= 32 && cid.length <= 128) {
+            lockedSlots.push({ slot, componentId: cid });
+          }
         }
       }
       const variants = lockedSlots.length

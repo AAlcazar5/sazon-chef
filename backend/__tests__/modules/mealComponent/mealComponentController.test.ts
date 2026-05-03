@@ -789,6 +789,32 @@ describe('GET /api/meal-components/:id/variants', () => {
     await mealComponentController.listComponentVariants(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
   });
+
+  it('caps lockedSlots query string length to defeat algorithmic DoS', async () => {
+    const huge = Array.from({ length: 200 }, (_, i) => `protein:p_${i}`).join(',');
+    expect(huge.length).toBeGreaterThan(512);
+    const req = {
+      params: { id: 'comp-1' },
+      query: { lockedSlots: huge },
+    } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listComponentVariants(req, res);
+    // Falls through to plain list (lockedSlots ignored when over cap).
+    expect(mockListVariantsForComponent).toHaveBeenCalledWith('comp-1');
+    expect(mockGetCompatibleVariants).not.toHaveBeenCalled();
+  });
+
+  it('caps lockedSlots pair count to MAX_LOCKED_PAIRS', async () => {
+    mockGetCompatibleVariants.mockResolvedValueOnce([]);
+    const req = {
+      params: { id: 'comp-1' },
+      query: { lockedSlots: 'protein:a,base:b,vegetable:c,sauce:d,garnish:e,extra:f,more:g' },
+    } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listComponentVariants(req, res);
+    const passedSlots = mockGetCompatibleVariants.mock.calls[0][1];
+    expect(passedSlots.length).toBeLessThanOrEqual(5);
+  });
 });
 
 describe('GET /api/nutrient-gap/top', () => {

@@ -2,8 +2,15 @@
 // Group 10X Phase 5 — "Fit my macros" pill: green when fit, amber when impossible.
 
 import React, { useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import { View, Text, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withRepeat,
+  withTiming,
+  cancelAnimation,
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Pastel, Accent } from '../../constants/Colors';
@@ -63,6 +70,7 @@ export default function MacroFitButton({ state, onPress, testID }: MacroFitButto
   const isDark = theme === 'dark';
   const visuals = STATE_VISUALS[state];
   const scale = useSharedValue(1);
+  const pulse = useSharedValue(1);
 
   // Spring pulse when state transitions to fit / impossible
   useEffect(() => {
@@ -73,7 +81,22 @@ export default function MacroFitButton({ state, onPress, testID }: MacroFitButto
     }
   }, [state, scale]);
 
+  // Loading state — soft opacity pulse on the icon (no ActivityIndicator)
+  useEffect(() => {
+    if (state === 'loading') {
+      pulse.value = withRepeat(
+        withTiming(0.4, { duration: 700 }),
+        -1,
+        true,
+      );
+    } else {
+      cancelAnimation(pulse);
+      pulse.value = withTiming(1, { duration: 200 });
+    }
+  }, [state, pulse]);
+
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const iconAnimatedStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
 
   const handlePress = useCallback(() => {
     if (state === 'loading') return;
@@ -94,15 +117,12 @@ export default function MacroFitButton({ state, onPress, testID }: MacroFitButto
         testID={testID}
         accessibilityLabel={visuals.a11y}
       >
-        {state === 'loading' ? (
-          <ActivityIndicator
-            size="small"
-            color={visuals.fg}
-            testID={testID ? `${testID}-loading` : undefined}
-          />
-        ) : (
+        <Animated.View
+          style={state === 'loading' ? iconAnimatedStyle : undefined}
+          testID={state === 'loading' && testID ? `${testID}-loading` : undefined}
+        >
           <Ionicons name={visuals.icon} size={16} color={visuals.fg} />
-        )}
+        </Animated.View>
         <Text style={[styles.label, { color: visuals.fg }]} numberOfLines={1}>{visuals.label}</Text>
       </HapticTouchableOpacity>
     </Animated.View>

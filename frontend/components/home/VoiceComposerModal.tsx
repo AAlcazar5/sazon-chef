@@ -40,6 +40,7 @@ export default function VoiceComposerModal({
   const isDark = colorScheme === 'dark';
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const voice = useVoiceInput({
     continuous: false,
@@ -50,34 +51,41 @@ export default function VoiceComposerModal({
     },
   });
 
+  // Destructure stable primitives from voice so the dep arrays below don't thrash
+  // (useVoiceInput returns a fresh object on every render).
+  const { interimTranscript, transcript, startListening, stopListening } = voice;
+
   // Auto-start listening when the modal opens (if available).
   useEffect(() => {
     if (!visible) return;
-    void voice.startListening();
-    // We intentionally only depend on visibility so we don't restart mid-session.
+    void startListening();
+    // Only depend on visibility so we don't restart mid-session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   // Mirror live interim transcript into the text input field for visibility.
   useEffect(() => {
-    if (voice.interimTranscript) {
-      setText(voice.interimTranscript);
-    } else if (voice.transcript) {
-      setText(voice.transcript);
+    if (interimTranscript) {
+      setText(interimTranscript);
+    } else if (transcript) {
+      setText(transcript);
     }
-  }, [voice.interimTranscript, voice.transcript]);
+  }, [interimTranscript, transcript]);
 
   const handleClose = useCallback(() => {
-    voice.stopListening();
+    stopListening();
     setText('');
+    setErrorMsg(null);
     onClose();
-  }, [voice, onClose]);
+  }, [stopListening, onClose]);
 
   const handleSubmit = useCallback(async () => {
-    const trimmed = text.trim();
+    const trimmed = text.trim().slice(0, 500);
     if (!trimmed) return;
     if (submitting) return;
     setSubmitting(true);
-    voice.stopListening();
+    setErrorMsg(null);
+    stopListening();
     try {
       const res = await composedPlateApi.composeFromUtterance(trimmed);
       const composedId = res.data?.plate?.id;
@@ -88,13 +96,15 @@ export default function VoiceComposerModal({
           pathname: '/build-a-plate',
           params: { plateId: composedId },
         });
+      } else {
+        setErrorMsg("Sazon couldn't plate that yet — try a different way of saying it.");
       }
     } catch {
-      // Sazon-friendly fallback: keep the modal open so the user can retry.
+      setErrorMsg("Couldn't reach Sazon — check your connection and tap again.");
     } finally {
       setSubmitting(false);
     }
-  }, [text, submitting, voice, router, onClose]);
+  }, [text, submitting, stopListening, router, onClose]);
 
   if (!visible) return null;
 
@@ -112,7 +122,7 @@ export default function VoiceComposerModal({
     >
       <View style={styles.backdrop}>
         <View
-          style={[styles.sheet, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}
+          style={[styles.sheet, { backgroundColor: isDark ? '#1C1C1E' : '#FAF7F4' }]}
           accessibilityLabel="Voice composer"
           testID="voice-composer-modal"
         >
@@ -155,6 +165,7 @@ export default function VoiceComposerModal({
             onChangeText={setText}
             placeholder="Type your plate (e.g. salmon farro carrots yogurt)"
             placeholderTextColor={subtitleColor}
+            maxLength={500}
             style={[
               styles.input,
               {
@@ -166,6 +177,16 @@ export default function VoiceComposerModal({
             accessibilityLabel="Plate utterance input"
             testID="voice-composer-input"
           />
+
+          {errorMsg ? (
+            <Text
+              style={[styles.errorMsg, { color: isDark ? '#FCA5A5' : '#B45309' }]}
+              accessibilityLiveRegion="polite"
+              testID="voice-composer-error"
+            >
+              {errorMsg}
+            </Text>
+          ) : null}
 
           <BrandButton
             label="Build my plate"
@@ -265,5 +286,11 @@ const styles = StyleSheet.create({
   },
   submit: {
     alignSelf: 'flex-start',
+  },
+  errorMsg: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
   },
 });

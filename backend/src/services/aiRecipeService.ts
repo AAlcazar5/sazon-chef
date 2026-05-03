@@ -5,6 +5,17 @@ import { AIProviderManager } from './aiProviders/AIProviderManager';
 import { getHealthPromptAddendum } from '../utils/cuisineHealthTier';
 import { getAdjacentCuisines } from '../utils/cuisineAdjacency';
 
+const SAFE_CUISINE_PATTERN = /^[A-Za-z][A-Za-z '-]{0,63}$/;
+
+export const sanitizeCuisineForPrompt = (raw: unknown): string | null => {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > 64) return null;
+  if (!SAFE_CUISINE_PATTERN.test(trimmed)) return null;
+  return trimmed;
+};
+
 interface RecipeGenerationParams {
   userId: string | null;
   recipeTitle?: string; // Optional: specific recipe title to generate
@@ -564,9 +575,14 @@ Return JSON only.`;
       }
     }
 
+    // Sanitize cuisineOverride before any prompt interpolation to defeat
+    // prompt-injection via the user-supplied `cuisine` query param. Cuisine
+    // names are short alphabetic strings; anything else gets dropped.
+    const safeCuisine = sanitizeCuisineForPrompt(params.cuisineOverride);
+
     // Cuisine preference
-    if (params.cuisineOverride) {
-      parts.push(`The recipe must be ${params.cuisineOverride} cuisine.`);
+    if (safeCuisine) {
+      parts.push(`The recipe must be ${safeCuisine} cuisine.`);
     } else if (params.userPreferences?.likedCuisines && params.userPreferences.likedCuisines.length > 0) {
       parts.push(
         `Choose from these cuisines: ${params.userPreferences.likedCuisines.join(', ')}.`
@@ -574,16 +590,16 @@ Return JSON only.`;
     }
 
     // Group 11 Phase 3 — health-tier addendum (cuisine-specific generation strategy)
-    if (params.cuisineOverride) {
-      const healthAddendum = getHealthPromptAddendum(params.cuisineOverride);
+    if (safeCuisine) {
+      const healthAddendum = getHealthPromptAddendum(safeCuisine);
       if (healthAddendum) {
         parts.push(healthAddendum);
       }
     }
 
     // Group 11 Phase 1 — cuisine adjacency hints (top-3 related cuisines by weight)
-    if (params.cuisineOverride) {
-      const adjacent = getAdjacentCuisines(params.cuisineOverride)
+    if (safeCuisine) {
+      const adjacent = getAdjacentCuisines(safeCuisine)
         .sort((a, b) => b.weight - a.weight)
         .slice(0, 3)
         .map((edge) => edge.cuisine);
