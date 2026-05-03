@@ -32,13 +32,14 @@ export interface BuildCoachParamsInput {
   tier: CoachTier;
   systemPrompt: string;
   messages: Anthropic.MessageParam[];
+  tools?: Anthropic.Tool[];
 }
 
 export function buildAnthropicCreateParams(
   input: BuildCoachParamsInput,
 ): Anthropic.MessageCreateParamsStreaming {
-  const { tier, systemPrompt, messages } = input;
-  return {
+  const { tier, systemPrompt, messages, tools } = input;
+  const params: Anthropic.MessageCreateParamsStreaming = {
     model: selectModel(tier),
     max_tokens: tier === 'premium' ? MAX_TOKENS_PREMIUM : MAX_TOKENS_FREE,
     thinking: selectThinkingBudget(tier),
@@ -52,6 +53,10 @@ export function buildAnthropicCreateParams(
     messages: [...messages],
     stream: true,
   };
+  if (tools && tools.length > 0) {
+    params.tools = tools;
+  }
+  return params;
 }
 
 export interface StreamCoachReplyInput {
