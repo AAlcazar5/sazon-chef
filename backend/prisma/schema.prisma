@@ -91,6 +91,9 @@ model User {
   // Group 10Y: Sazon Coach
   coachConversations      CoachConversation[]
   coachMessages           CoachMessage[]
+  // Group 10Y Phase 6: Coach memory & weekly check-in
+  coachMemories           CoachMemory[]
+  lastWeeklyCheckinAt     DateTime?
 
   @@map("users")
 }
@@ -120,6 +123,9 @@ model UserPreferences {
   // Group 10S: Kitchen IQ — JSON-stringified array of card IDs the user has already
   // been notified about as "unlocked"; used to compute `newUnlocks` diff on next read.
   lastCheckedUnlocks  String?
+
+  // Group 10Y Phase 6: weekly check-in opt-in for Pro Coach
+  weeklyCheckinOptIn  Boolean @default(false)
 
   // Cost tracking & budget preferences (Phase 6, Group 13)
   maxRecipeCost      Float? // Maximum cost per recipe
@@ -1292,6 +1298,24 @@ model CoachMessage {
   @@index([conversationId, createdAt])
   @@index([userId, createdAt])
   @@map("coach_messages")
+}
+
+// Group 10Y Phase 6: Coach memory — long-term per-user notes that Sazon learns
+// across conversations. Pro-only at injection time.
+model CoachMemory {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind                 String   // "preference" | "goal" | "constraint" | "milestone"
+  content              String
+  confidence           Float    @default(0.7)
+  sourceConversationId String?
+  sourceMessageId      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+  @@map("coach_memories")
 }
 
 // Branded/restaurant food item cache (Group 10L)

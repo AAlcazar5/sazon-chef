@@ -27,8 +27,11 @@ import {
   PantryConfirmSheet,
 } from '../../components/coach';
 import CoachPaywallSheet, { type CoachPaywallReason } from '../../components/coach/CoachPaywallSheet';
+import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
+import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
+import { router } from 'expo-router';
 import {
   coachApi,
   type CoachAttachment,
@@ -76,6 +79,7 @@ export default function CoachScreen() {
   const stream = useCoachStream();
   const attachments = useCoachAttachments();
   const chips = useMemo(() => deriveChips(userState), [userState]);
+  const memoryCount = useCoachMemoryCount();
 
   const paywallReason: CoachPaywallReason | null =
     manualPaywallReason ?? stream.paywallReason ?? (stream.paywall ? 'cap' : null);
@@ -227,6 +231,13 @@ export default function CoachScreen() {
           contentContainerStyle={styles.bubbles}
           keyboardShouldPersistTaps="handled"
         >
+          {flags.hasMemory && (
+            <CoachMemoryHeaderPill
+              count={memoryCount}
+              onPress={() => router.push('/profile/coach-memory' as never)}
+            />
+          )}
+
           {stream.messages.length === 0 && (
             <View style={styles.intro}>
               <Text style={[styles.introText, { color: subtle }]}>

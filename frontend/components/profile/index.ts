@@ -17,3 +17,4 @@ export { default as AccountCard } from './AccountCard';
 export { default as ProfileStatWidgets } from './ProfileStatWidgets';
 export { default as CookingJourneyCard } from './CookingJourneyCard';
 export { default as KitchenIQSection } from './KitchenIQSection';
+export { default as CoachMemoryCard } from './CoachMemoryCard';
