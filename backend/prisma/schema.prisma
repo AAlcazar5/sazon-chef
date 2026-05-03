@@ -88,6 +88,10 @@ model User {
   // Group 8: Revenue Optimization
   cancellationSurveys     CancellationSurvey[]
 
+  // Group 10Y: Sazon Coach
+  coachConversations      CoachConversation[]
+  coachMessages           CoachMessage[]
+
   @@map("users")
 }
 
@@ -1251,6 +1255,43 @@ model ComposedFamilyMealPlate {
   @@index([familyMealId])
   @@index([plateId])
   @@map("composed_family_meal_plates")
+}
+
+// Group 10Y: Sazon Coach — conversational AI nutrition + cooking companion.
+model CoachConversation {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String         // Auto-generated, injects user signals (cuisine affinity, goal phase)
+  tier          String         // "free" | "premium" — recorded at creation
+  createdAt     DateTime       @default(now())
+  lastMessageAt DateTime       @default(now())
+  messages      CoachMessage[]
+
+  @@index([userId, lastMessageAt])
+  @@map("coach_conversations")
+}
+
+model CoachMessage {
+  id               String            @id @default(cuid())
+  conversationId   String
+  conversation     CoachConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role             String            // "user" | "assistant"
+  content          String            // Text content
+  attachments      String            @default("[]") // JSON array of attachment descriptors
+  thinkingTokens   Int?
+  modelUsed        String?
+  promptTokens     Int               @default(0)
+  completionTokens Int               @default(0)
+  cacheReadTokens  Int               @default(0)
+  cacheWriteTokens Int               @default(0)
+  createdAt        DateTime          @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([userId, createdAt])
+  @@map("coach_messages")
 }
 
 // Branded/restaurant food item cache (Group 10L)
