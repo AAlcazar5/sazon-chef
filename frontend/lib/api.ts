@@ -1104,6 +1104,16 @@ export const userApi = {
       data,
     );
   },
+
+  // Group 10S: Kitchen IQ progress
+  getKitchenIQProgress: () => {
+    return apiClient.get<{
+      totalCards: number;
+      unlockedCount: number;
+      unlockedIds: string[];
+      newUnlocks: string[];
+    }>('/user/kitchen-iq/progress');
+  },
 };
 
 export const mealPlanApi = {

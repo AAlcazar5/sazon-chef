@@ -113,6 +113,10 @@ model UserPreferences {
   // (JSON-stringified array, e.g. '["Italian","Thai"]') — merged into cuisinesExplored stat
   seededCuisines      String?
 
+  // Group 10S: Kitchen IQ — JSON-stringified array of card IDs the user has already
+  // been notified about as "unlocked"; used to compute `newUnlocks` diff on next read.
+  lastCheckedUnlocks  String?
+
   // Cost tracking & budget preferences (Phase 6, Group 13)
   maxRecipeCost      Float? // Maximum cost per recipe
   maxMealCost        Float? // Maximum cost per meal
