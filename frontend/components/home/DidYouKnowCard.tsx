@@ -33,7 +33,11 @@ export default function DidYouKnowCard({ testID, onDismiss }: DidYouKnowCardProp
   useEffect(() => {
     let cancelled = false;
     if (!userState) return;
-    matchFoodIntelTips({ ingredients: [], screenType: 'home' }, userState)
+    // Group 10R-Phase2: pass last 7 days of cooked ingredients so the matcher's
+    // primary scoring path (novelty + ingredient + nutrient signals) fires
+    // instead of falling through to cuisine-affinity-only.
+    const ingredients = userState.last7DaysIngredients ?? [];
+    matchFoodIntelTips({ ingredients, screenType: 'home' }, userState)
       .then((tips) => {
         if (cancelled) return;
         setTip(tips[0] ?? null);

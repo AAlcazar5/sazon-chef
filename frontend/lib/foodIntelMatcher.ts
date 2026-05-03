@@ -34,6 +34,8 @@ export interface UserState {
   ingredientFirstSeenAt?: Record<string, string>;
   /** Optional: shopping purchaseCount per item, for tier-by-purchase tip depth */
   purchaseCount?: Record<string, number>;
+  /** Group 10R-Phase2: distinct ingredient names cooked in the last 7 days. */
+  last7DaysIngredients?: string[];
 }
 
 export type EngagementSignal = 'expanded' | 'dismissed' | 'ignored';

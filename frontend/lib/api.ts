@@ -1114,6 +1114,16 @@ export const userApi = {
       newUnlocks: string[];
     }>('/user/kitchen-iq/progress');
   },
+
+  // Group 10R-Phase2: Affinity snapshot (top ingredients × nutrient gaps × goal × recent ingredients)
+  getAffinitySnapshot: () => {
+    return apiClient.get<{
+      topAffinityIngredients: string[];
+      rolling7dNutrientGaps: string[];
+      goalPhase: 'cut' | 'maintain' | 'bulk' | 'recomp';
+      last7DaysIngredients: string[];
+    }>('/user/affinity/snapshot');
+  },
 };
 
 export const mealPlanApi = {
