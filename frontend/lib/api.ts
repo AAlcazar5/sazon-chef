@@ -2218,10 +2218,16 @@ export interface CoachDoneEvent {
   type: 'done';
 }
 
+export interface CoachCostNoticeEvent {
+  type: 'cost_notice';
+  message: string;
+}
+
 export type CoachStreamEvent =
   | CoachTextEvent
   | CoachToolUseEvent
   | CoachToolResultEvent
+  | CoachCostNoticeEvent
   | CoachDoneEvent;
 
 export type CoachAttachmentMediaType =
@@ -2388,6 +2394,13 @@ async function* streamCoachMessage(params: {
           } catch {
             // ignore malformed event
           }
+        } else if (parsed.event === 'cost_notice') {
+          try {
+            const payload = JSON.parse(parsed.data) as { message: string };
+            yield { type: 'cost_notice', message: payload.message };
+          } catch {
+            // ignore malformed event
+          }
         } else if (parsed.event === 'tool_result') {
           try {
             const payload = JSON.parse(parsed.data) as { toolUseId: string; result: unknown };
@@ -2459,6 +2472,7 @@ interface CoachApi {
     patch: { content?: string; confidence?: number },
   ) => Promise<CoachMemory>;
   deleteMemory: (id: string) => Promise<void>;
+  exportConversation: (id: string) => Promise<string>;
 }
 
 export interface CoachContextResponse {
@@ -2514,6 +2528,13 @@ export const coachApi: CoachApi = {
   },
   deleteMemory: async (id) => {
     await api.delete(`/coach/memories/${encodeURIComponent(id)}`);
+  },
+  exportConversation: async (id: string) => {
+    const res = await api.get<string>(
+      `/coach/conversations/${encodeURIComponent(id)}/export`,
+      { responseType: 'text', transformResponse: [(d) => d as string] },
+    );
+    return res.data;
   },
 };
 

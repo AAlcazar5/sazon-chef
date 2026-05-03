@@ -239,6 +239,38 @@ describe('useCoachStream', () => {
     expect(result.current.paywallReason).toBeNull();
   });
 
+  it('Phase 8: cost_notice event sets the costNotice flag and clears via dismissCostNotice', async () => {
+    mockedCoachApi.createConversation.mockResolvedValue({
+      id: 'c1',
+      title: 'Hi',
+      tier: 'pro',
+      createdAt: 'now',
+      lastMessageAt: 'now',
+    });
+
+    const events = [
+      { type: 'cost_notice', message: "I'm taking a quick breath — back at full power tomorrow." },
+      { type: 'text', text: 'Got it.' },
+      { type: 'done' },
+    ];
+    mockedCoachApi.streamMessage.mockReturnValue(mkRichStream(events));
+
+    const { result } = renderHook(() => useCoachStream());
+
+    await act(async () => {
+      await result.current.sendMessage('hi');
+    });
+
+    await waitFor(() => {
+      expect(result.current.costNotice).toContain('full power tomorrow');
+    });
+
+    act(() => {
+      result.current.dismissCostNotice();
+    });
+    expect(result.current.costNotice).toBeNull();
+  });
+
   it('surfaces paywall info when streamMessage throws COACH_DAILY_CAP', async () => {
     mockedCoachApi.createConversation.mockResolvedValue({
       id: 'c1',

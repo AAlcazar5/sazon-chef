@@ -70,12 +70,14 @@ export interface UseCoachStreamResult {
   paywallReason: CoachPaywallReason | null;
   conversationId: string | null;
   attachmentError: string | null;
+  costNotice: string | null;
   sendMessage: (text: string, attachments?: CoachAttachment[]) => Promise<void>;
   setConversationId: (id: string | null) => void;
   setMessages: (messages: CoachUiMessage[]) => void;
   reset: () => void;
   dismissPaywall: () => void;
   dismissAttachmentError: () => void;
+  dismissCostNotice: () => void;
 }
 
 const makeId = () => `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -104,6 +106,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
   const [paywall, setPaywall] = useState<CoachPaywallInfo | null>(null);
   const [paywallReason, setPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [costNotice, setCostNotice] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(initial?.conversationId ?? null);
   const abortRef = useRef<AbortController | null>(null);
   // Phase 7: only auto-surface the Pro paywall sheet ONCE per conversation
@@ -120,6 +123,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     setPaywall(null);
     setPaywallReason(null);
     setAttachmentError(null);
+    setCostNotice(null);
     setConversationId(null);
     paywallShownThisConversationRef.current = false;
   }, []);
@@ -131,6 +135,10 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
 
   const dismissAttachmentError = useCallback(() => {
     setAttachmentError(null);
+  }, []);
+
+  const dismissCostNotice = useCallback(() => {
+    setCostNotice(null);
   }, []);
 
   const sendMessage = useCallback(async (text: string, attachments?: CoachAttachment[]) => {
@@ -175,6 +183,8 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
         if (event.type === 'text') {
           acc += event.text;
           setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, content: acc } : m)));
+        } else if (event.type === 'cost_notice') {
+          setCostNotice(event.message);
         } else if (event.type === 'tool_use') {
           toolUses.push({
             name: event.name,
@@ -248,11 +258,13 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     paywallReason,
     conversationId,
     attachmentError,
+    costNotice,
     sendMessage,
     setConversationId,
     setMessages,
     reset,
     dismissPaywall,
     dismissAttachmentError,
+    dismissCostNotice,
   };
 }

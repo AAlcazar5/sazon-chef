@@ -20,6 +20,9 @@ jest.mock('@/lib/prisma', () => ({
     coachMessage: {
       create: (...a: unknown[]) => mockMessageCreate(...a),
       count: (...a: unknown[]) => mockMessageCount(...a),
+      aggregate: jest.fn().mockResolvedValue({
+        _sum: { promptTokens: 0, cacheReadTokens: 0, completionTokens: 0 },
+      }),
     },
     macroGoals: {
       findUnique: (...a: unknown[]) => mockMacroGoalsFindUnique(...a),
