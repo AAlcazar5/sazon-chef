@@ -38,6 +38,7 @@ composedPlateRoutes.post('/', authenticateToken, mealComponentController.createP
 composedPlateRoutes.post('/auto-fit', authenticateToken, mealComponentController.autoFit);
 composedPlateRoutes.post('/from-utterance', authenticateToken, mealComponentController.fromUtterance);
 composedPlateRoutes.post('/family', authenticateToken, mealComponentController.createFamilyMeal);
+composedPlateRoutes.post('/diverge', authenticateToken, mealComponentController.divergeFromBase);
 composedPlateRoutes.post('/:id/timeline', authenticateToken, mealComponentController.plateTimeline);
 composedPlateRoutes.post('/:id/mark-cooked', authenticateToken, mealComponentController.markPlateCooked);
 composedPlateRoutes.post('/:id/share', authenticateToken, mealComponentController.sharePlate);
@@ -55,3 +56,11 @@ sharedPlateRoutes.get('/:slug', mealComponentController.getSharedPlate);
 export const leftoverInventoryRoutes = Router();
 leftoverInventoryRoutes.use(authenticateToken);
 leftoverInventoryRoutes.get('/', mealComponentController.listLeftovers);
+
+// Group 10X Phase 7 — household roster CRUD. All routes require auth.
+export const householdRoutes = Router();
+householdRoutes.use(authenticateToken);
+householdRoutes.get('/', mealComponentController.listHousehold);
+householdRoutes.post('/', mealComponentController.createHouseholdMember);
+householdRoutes.patch('/:id', mealComponentController.updateHouseholdMember);
+householdRoutes.delete('/:id', mealComponentController.deleteHouseholdMember);

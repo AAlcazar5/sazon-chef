@@ -495,6 +495,15 @@ export default function BuildAPlateScreen() {
             <Text style={[styles.title, { color: isDark ? '#FFF' : '#1F2937' }]}>Plate</Text>
           </View>
           <HapticTouchableOpacity
+            onPress={() => router.push('/build-a-plate-family' as any)}
+            hapticStyle="light"
+            style={styles.headerBtn}
+            accessibilityLabel="Cook for the family — switch to multi-plate composer"
+            testID="family-mode-btn"
+          >
+            <Ionicons name="people-outline" size={22} color={isDark ? '#FFF' : '#1F2937'} />
+          </HapticTouchableOpacity>
+          <HapticTouchableOpacity
             onPress={handleRoll}
             hapticStyle="medium"
             style={[styles.headerBtn, styles.rollBtn]}

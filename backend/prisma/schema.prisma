@@ -71,6 +71,9 @@ model User {
   leftoverInventory       LeftoverInventory[]
   plateShares             PlateShare[]
   plateSaves              PlateSave[]
+  // Group 10X Phase 7: family mode
+  householdMembers        HouseholdMember[]
+  composedFamilyMeals     ComposedFamilyMeal[]
 
   // Group 6: Email verification
   emailVerified           Boolean  @default(false)
@@ -1182,8 +1185,68 @@ model ComposedPlate {
   shares                PlateShare[]
   saves                 PlateSave[]
 
+  // Phase 7: family-meal membership
+  familyMealMembers     ComposedFamilyMealPlate[]
+
   @@index([userId, createdAt])
   @@map("composed_plates")
+}
+
+// Group 10X Phase 7: household roster — per-member dietary/age/pickiness so
+// kid-vs-adult plates and family meals adapt to *this* family member, not a
+// generic kid template (N=1 north star).
+model HouseholdMember {
+  id                String   @id @default(cuid())
+  userId            String   // owning account
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName       String   // "Mia (kid)" / "Alex" / "Mom"
+  ageBand           String   // "toddler" | "kid" | "teen" | "adult" | "elder"
+  pickinessLevel    Int      @default(0) // 0..4 (0 = adventurous, 4 = beige-foods-only)
+  dietaryFlags      String   @default("[]") // JSON: ["dairy_free", "no_spicy", "no_seafood"]
+  bannedComponentIds String  @default("[]") // JSON: componentIds this member rejects outright
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  familyPlateAssignments ComposedFamilyMealPlate[]
+
+  @@index([userId])
+  @@map("household_members")
+}
+
+// Group 10X Phase 7: persisted family meal — N plates that belong to one
+// cook event, with the merged cook-step plan persisted alongside.
+model ComposedFamilyMeal {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String?  // "Sunday dinner" / auto-generated
+  // Merged cook-step plan as JSON for fast read on the cook timeline.
+  // Shape: [{componentId, totalPortions, servesPlateIds, slot}, ...]
+  cookStepsJson   String
+  createdAt       DateTime @default(now())
+
+  plates          ComposedFamilyMealPlate[]
+
+  @@index([userId, createdAt])
+  @@map("composed_family_meals")
+}
+
+// Join row — one ComposedPlate participates in one ComposedFamilyMeal,
+// optionally assigned to a HouseholdMember (kid plate vs adult plate).
+model ComposedFamilyMealPlate {
+  id                  String              @id @default(cuid())
+  familyMealId        String
+  familyMeal          ComposedFamilyMeal  @relation(fields: [familyMealId], references: [id], onDelete: Cascade)
+  plateId             String
+  plate               ComposedPlate       @relation(fields: [plateId], references: [id], onDelete: Cascade)
+  householdMemberId   String?
+  householdMember     HouseholdMember?    @relation(fields: [householdMemberId], references: [id], onDelete: SetNull)
+  positionIndex       Int                 // 0..N-1 column order in the composer
+
+  @@unique([familyMealId, plateId])
+  @@index([familyMealId])
+  @@index([plateId])
+  @@map("composed_family_meal_plates")
 }
 
 // Branded/restaurant food item cache (Group 10L)
