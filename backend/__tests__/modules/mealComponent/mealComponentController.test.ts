@@ -56,11 +56,20 @@ jest.mock('../../../src/utils/authHelper', () => ({
 
 const mockPrismaComposedPlate = { findFirst: jest.fn(), findUnique: jest.fn() };
 const mockPrismaComponent = { findMany: jest.fn() };
+const mockPrismaCookingLog = { findMany: jest.fn() };
 jest.mock('../../../src/lib/prisma', () => ({
   prisma: {
     composedPlate: mockPrismaComposedPlate,
     mealComponent: mockPrismaComponent,
+    cookingLog: mockPrismaCookingLog,
   },
+}));
+
+const mockListVariantsForComponent = jest.fn();
+const mockGetCompatibleVariants = jest.fn();
+jest.mock('../../../src/services/mealComponentVariantService', () => ({
+  listVariantsForComponent: (...args: unknown[]) => mockListVariantsForComponent(...args),
+  getCompatibleVariants: (...args: unknown[]) => mockGetCompatibleVariants(...args),
 }));
 
 import { mealComponentController } from '../../../src/modules/mealComponent/mealComponentController';
@@ -85,6 +94,9 @@ beforeEach(() => {
   mockAddLeftoversFromPlate.mockResolvedValue(undefined);
   mockConsumeLeftoversForPlate.mockResolvedValue(undefined);
   mockGeneratePlateVariations.mockResolvedValue([]);
+  mockListVariantsForComponent.mockResolvedValue([]);
+  mockGetCompatibleVariants.mockResolvedValue([]);
+  mockPrismaCookingLog.findMany.mockResolvedValue([]);
   mockFitPlateToMacros.mockResolvedValue({
     achievable: true,
     plate: [{ slot: 'base', componentId: 'rice-1', portionMultiplier: 1 }],
@@ -704,6 +716,115 @@ describe('GET /api/composed-plates/:id/variations (Group 10X straggler)', () => 
     const req = { params: { id: 'plate-1' }, query: {} } as unknown as Request;
     const res = buildRes();
     await mealComponentController.plateVariations(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe('GET /api/meal-components/:id/variants', () => {
+  it('returns 401 when unauthenticated', async () => {
+    mockIsAuthenticated.mockReturnValueOnce(false);
+    const req = { params: { id: 'comp-1' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listComponentVariants(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  it('returns 400 on missing id', async () => {
+    const req = { params: { id: '' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listComponentVariants(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('returns plain variants when no lockedSlots are passed', async () => {
+    mockListVariantsForComponent.mockResolvedValueOnce([
+      { id: 'v1', variantKey: 'roasted', displayName: 'Roasted', caloriePerPortionDelta: 30, cookTimeMinutes: 25 },
+    ]);
+    const req = { params: { id: 'comp-1' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listComponentVariants(req, res);
+    expect(mockListVariantsForComponent).toHaveBeenCalledWith('comp-1');
+    expect(res.json).toHaveBeenCalledWith({
+      variants: [
+        expect.objectContaining({
+          id: 'v1',
+          variantKey: 'roasted',
+          label: 'Roasted',
+          compatibilityScore: 0.5,
+          caloriesDeltaPerPortion: 30,
+          cookTimeMinutes: 25,
+        }),
+      ],
+    });
+  });
+
+  it('returns compat-ranked variants when lockedSlots query is provided', async () => {
+    mockGetCompatibleVariants.mockResolvedValueOnce([
+      { variant: { id: 'v1', variantKey: 'charred', displayName: 'Charred', caloriePerPortionDelta: 20, cookTimeMinutes: 15 }, compatibilityScore: 0.9 },
+    ]);
+    const req = {
+      params: { id: 'comp-1' },
+      query: { lockedSlots: 'protein:p_salmon,sauce:s_chimichurri' },
+    } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listComponentVariants(req, res);
+    expect(mockGetCompatibleVariants).toHaveBeenCalledWith(
+      'comp-1',
+      [
+        { slot: 'protein', componentId: 'p_salmon' },
+        { slot: 'sauce', componentId: 's_chimichurri' },
+      ],
+    );
+    expect(res.json).toHaveBeenCalledWith({
+      variants: [
+        expect.objectContaining({ id: 'v1', label: 'Charred', compatibilityScore: 0.9 }),
+      ],
+    });
+  });
+
+  it('returns 500 on service failure', async () => {
+    mockListVariantsForComponent.mockRejectedValueOnce(new Error('db boom'));
+    const req = { params: { id: 'comp-1' }, query: {} } as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.listComponentVariants(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe('GET /api/nutrient-gap/top', () => {
+  it('returns 401 when unauthenticated', async () => {
+    mockIsAuthenticated.mockReturnValueOnce(false);
+    const req = {} as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getNutrientGapTop(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  it('aggregates today fiber from cooking logs and returns topGap', async () => {
+    mockPrismaCookingLog.findMany.mockResolvedValueOnce([
+      { recipe: { fiber: 5 } },
+      { recipe: { fiber: 3 } },
+      { recipe: { fiber: null } },
+    ]);
+    const req = {} as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getNutrientGapTop(req, res);
+    expect(mockPrismaCookingLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: 'user-1' }),
+      }),
+    );
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    expect(payload.topGap).toBeTruthy();
+    expect(payload.pctRemainingByNutrient.fiberG).toBeCloseTo((28 - 8) / 28, 4);
+    expect(payload.targets.fiberG).toBe(28);
+  });
+
+  it('returns 500 when prisma throws', async () => {
+    mockPrismaCookingLog.findMany.mockRejectedValueOnce(new Error('db boom'));
+    const req = {} as unknown as Request;
+    const res = buildRes();
+    await mealComponentController.getNutrientGapTop(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
   });
 });

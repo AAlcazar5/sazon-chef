@@ -19,7 +19,12 @@ mealComponentRoutes.post('/permutations', mealComponentController.permutations);
 mealComponentRoutes.get('/plate-from-pantry', mealComponentController.plateFromPantry);
 mealComponentRoutes.get('/affinity', mealComponentController.slotAffinity);
 mealComponentRoutes.get('/skill-tier', mealComponentController.getSkillTier);
+mealComponentRoutes.get('/:id/variants', mealComponentController.listComponentVariants);
 mealComponentRoutes.post('/:id/swap-away', mealComponentController.swapAway);
+
+export const nutrientGapRoutes = Router();
+nutrientGapRoutes.use(authenticateToken);
+nutrientGapRoutes.get('/top', mealComponentController.getNutrientGapTop);
 
 export const composedPlateRoutes = Router();
 // /of-the-week is intentionally PUBLIC — editorial home card must work for
