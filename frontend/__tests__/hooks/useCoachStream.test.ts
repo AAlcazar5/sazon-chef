@@ -15,9 +15,15 @@ import { coachApi } from '../../lib/api';
 
 const mockedCoachApi = coachApi as jest.Mocked<typeof coachApi>;
 
-async function* mkStream(chunks: string[]): AsyncIterableIterator<string> {
+async function* mkStream(chunks: string[]): AsyncIterableIterator<any> {
   for (const c of chunks) {
-    yield c;
+    yield { type: 'text', text: c };
+  }
+}
+
+async function* mkRichStream(events: any[]): AsyncIterableIterator<any> {
+  for (const e of events) {
+    yield e;
   }
 }
 
@@ -71,12 +77,12 @@ describe('useCoachStream', () => {
     const streamComplete = new Promise<void>(r => { resolveStreamComplete = r; });
 
     async function* slowStream() {
-      yield 'first ';
+      yield { type: 'text', text: 'first ' };
       await streamComplete;
-      yield 'last';
+      yield { type: 'text', text: 'last' };
     }
 
-    mockedCoachApi.streamMessage.mockReturnValue(slowStream());
+    mockedCoachApi.streamMessage.mockReturnValue(slowStream() as any);
 
     const { result } = renderHook(() => useCoachStream());
 
@@ -97,6 +103,42 @@ describe('useCoachStream', () => {
     expect(result.current.isStreaming).toBe(false);
   });
 
+  it('accumulates tool_use + tool_result events into the assistant message toolUses', async () => {
+    mockedCoachApi.createConversation.mockResolvedValue({
+      id: 'c1',
+      title: 'Hi',
+      tier: 'free',
+      createdAt: 'now',
+      lastMessageAt: 'now',
+    });
+
+    const recipeResult = { recipes: [{ id: 'r1', title: 'A' }] };
+    const events = [
+      { type: 'tool_use', name: 'find_recipes', toolUseId: 'tu_1', input: { cuisines: ['Italian'] } },
+      { type: 'tool_result', toolUseId: 'tu_1', result: recipeResult },
+      { type: 'text', text: 'Here is a pick' },
+      { type: 'done' },
+    ];
+    mockedCoachApi.streamMessage.mockReturnValue(mkRichStream(events));
+
+    const { result } = renderHook(() => useCoachStream());
+
+    await act(async () => {
+      await result.current.sendMessage('find me dinner');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    const assistant = result.current.messages.find(m => m.role === 'assistant');
+    expect(assistant?.content).toBe('Here is a pick');
+    expect(assistant?.toolUses).toHaveLength(1);
+    expect(assistant?.toolUses?.[0].name).toBe('find_recipes');
+    expect(assistant?.toolUses?.[0].toolUseId).toBe('tu_1');
+    expect(assistant?.toolUses?.[0].result).toEqual(recipeResult);
+  });
+
   it('surfaces paywall info when streamMessage throws COACH_DAILY_CAP', async () => {
     mockedCoachApi.createConversation.mockResolvedValue({
       id: 'c1',
@@ -110,14 +152,14 @@ describe('useCoachStream', () => {
     paywallError.code = 'COACH_DAILY_CAP';
     paywallError.paywall = { headline: 'Daily limit', cta: 'Upgrade' };
 
-    mockedCoachApi.streamMessage.mockImplementation(() => {
+    mockedCoachApi.streamMessage.mockImplementation((() => {
       async function* errStream() {
         throw paywallError;
         // eslint-disable-next-line no-unreachable
-        yield '';
+        yield { type: 'text', text: '' };
       }
       return errStream();
-    });
+    }) as any);
 
     const { result } = renderHook(() => useCoachStream());
 

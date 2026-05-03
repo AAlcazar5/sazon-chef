@@ -10,6 +10,9 @@ import { Pastel, PastelDark, Colors, DarkColors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Shadows } from '../../constants/Shadows';
 
+import ToolCallCard from './ToolCallCard';
+import type { CoachToolUse } from '../../hooks/useCoachStream';
+
 const COLLAPSE_THRESHOLD = 480;
 
 export type CoachRole = 'assistant' | 'user';
@@ -17,6 +20,7 @@ export type CoachRole = 'assistant' | 'user';
 interface MessageBubbleProps {
   role: CoachRole;
   content: string;
+  toolUses?: CoachToolUse[];
 }
 
 interface ParsedBlock {
@@ -83,7 +87,7 @@ function renderInline(text: string, baseColor: string): React.ReactNode {
   });
 }
 
-export default function MessageBubble({ role, content }: MessageBubbleProps) {
+export default function MessageBubble({ role, content, toolUses }: MessageBubbleProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [expanded, setExpanded] = useState(false);
@@ -147,6 +151,15 @@ export default function MessageBubble({ role, content }: MessageBubbleProps) {
           </HapticTouchableOpacity>
         )}
       </View>
+      {isAssistant && toolUses && toolUses.length > 0 && (
+        <View style={styles.toolUseStack}>
+          {toolUses.map((tu) =>
+            tu.result !== undefined ? (
+              <ToolCallCard key={tu.toolUseId} name={tu.name} result={tu.result} />
+            ) : null,
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -189,5 +202,9 @@ const styles = StyleSheet.create({
   readMoreText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  toolUseStack: {
+    marginTop: 8,
+    gap: 4,
   },
 });

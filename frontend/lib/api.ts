@@ -2187,7 +2187,36 @@ export interface CoachMessage {
   role: CoachMessageRole;
   content: string;
   createdAt: string;
+  attachments?: string;
 }
+
+export interface CoachToolUseEvent {
+  type: 'tool_use';
+  name: string;
+  toolUseId: string;
+  input: unknown;
+}
+
+export interface CoachToolResultEvent {
+  type: 'tool_result';
+  toolUseId: string;
+  result: unknown;
+}
+
+export interface CoachTextEvent {
+  type: 'text';
+  text: string;
+}
+
+export interface CoachDoneEvent {
+  type: 'done';
+}
+
+export type CoachStreamEvent =
+  | CoachTextEvent
+  | CoachToolUseEvent
+  | CoachToolResultEvent
+  | CoachDoneEvent;
 
 export interface CoachConversationDetail extends CoachConversation {
   messages: CoachMessage[];
@@ -2216,14 +2245,14 @@ interface CoachStreamRawError {
   paywall?: CoachPaywallInfo;
 }
 
-// SSE stream → async iterator of text chunks. Uses raw fetch because axios in
-// React Native does not expose ReadableStream bodies. Caller treats yielded
-// strings as token chunks; throws CoachStreamError on 402 / network failure.
+// SSE stream → async iterator of typed events. Uses raw fetch because axios in
+// React Native does not expose ReadableStream bodies. Throws CoachStreamError
+// on 402 / network failure.
 async function* streamCoachMessage(params: {
   conversationId: string;
   message: string;
   signal?: AbortSignal;
-}): AsyncIterableIterator<string> {
+}): AsyncIterableIterator<CoachStreamEvent> {
   const url = `${getBaseURL()}/coach/message`;
   const token = getAuthToken();
   const response = await fetch(url, {
@@ -2279,10 +2308,29 @@ async function* streamCoachMessage(params: {
         buffer = buffer.slice(sepIdx + 2);
         const parsed = parseSseEvent(rawEvent);
         if (parsed.event === 'done') {
+          yield { type: 'done' };
           return;
         }
-        if (parsed.data && parsed.event !== 'done') {
-          yield parsed.data;
+        if (parsed.data === undefined) {
+          sepIdx = buffer.indexOf('\n\n');
+          continue;
+        }
+        if (parsed.event === 'tool_use') {
+          try {
+            const payload = JSON.parse(parsed.data) as { name: string; toolUseId: string; input: unknown };
+            yield { type: 'tool_use', name: payload.name, toolUseId: payload.toolUseId, input: payload.input };
+          } catch {
+            // ignore malformed event
+          }
+        } else if (parsed.event === 'tool_result') {
+          try {
+            const payload = JSON.parse(parsed.data) as { toolUseId: string; result: unknown };
+            yield { type: 'tool_result', toolUseId: payload.toolUseId, result: payload.result };
+          } catch {
+            // ignore malformed event
+          }
+        } else {
+          yield { type: 'text', text: parsed.data };
         }
         sepIdx = buffer.indexOf('\n\n');
       }
@@ -2314,7 +2362,21 @@ interface CoachApi {
     conversationId: string;
     message: string;
     signal?: AbortSignal;
-  }) => AsyncIterableIterator<string>;
+  }) => AsyncIterableIterator<CoachStreamEvent>;
+  getCoachContext: () => Promise<CoachContextResponse>;
+}
+
+export interface CoachContextResponse {
+  pantryExpiringSoon: string[];
+  leftoverInventory: Array<{
+    id: string;
+    componentId: string;
+    slot: string;
+    portionsRemaining: number;
+    expiresAt: string;
+  }>;
+  remainingMacros: { calories: number; protein: number; carbs: number; fat: number } | null;
+  topAdjacentCuisine: string | null;
 }
 
 export const coachApi: CoachApi = {
@@ -2333,6 +2395,10 @@ export const coachApi: CoachApi = {
     return res.data;
   },
   streamMessage: streamCoachMessage,
+  getCoachContext: async () => {
+    const res = await api.get<CoachContextResponse>('/coach/context');
+    return res.data;
+  },
 };
 
 export type { ApiResponse, ApiError };
