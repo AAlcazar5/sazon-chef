@@ -37,6 +37,9 @@ jest.mock('@/lib/prisma', () => ({
       create: (...a: unknown[]) => mockMessageCreate(...a),
       findMany: (...a: unknown[]) => mockMessageFindMany(...a),
       count: (...a: unknown[]) => mockMessageCount(...a),
+      aggregate: jest.fn().mockResolvedValue({
+        _sum: { promptTokens: 0, cacheReadTokens: 0, completionTokens: 0 },
+      }),
     },
     pantryItem: { findMany: (...a: unknown[]) => mockPantryFindMany(...a) },
     leftoverInventory: {

@@ -10,7 +10,8 @@ export type CoachProFeature =
   | 'attachments'
   | 'memory'
   | 'weekly_checkin'
-  | 'write_tools';
+  | 'write_tools'
+  | 'export';
 
 interface PaywallCopy {
   headline: string;
@@ -32,6 +33,10 @@ const FEATURE_COPY: Record<CoachProFeature, PaywallCopy> = {
   },
   write_tools: {
     headline: 'Pro Coach can plan, save, and shop for you. Free is read-only.',
+    cta: 'Upgrade to Pro',
+  },
+  export: {
+    headline: 'Save your coach chats. Export is Pro.',
     cta: 'Upgrade to Pro',
   },
 };

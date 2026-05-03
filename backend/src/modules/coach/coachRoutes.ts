@@ -14,9 +14,20 @@ import {
 } from '@/services/coachPromptService';
 import {
   buildAnthropicCreateParams,
+  COACH_MODELS,
   getAnthropicClient,
   resolveCoachTier,
 } from '@/services/coachService';
+import {
+  getMedicalDeflectionText,
+  sanitizeUserContent,
+  shouldDeflectMedicalClaim,
+  tagToolResult,
+} from '@/services/coachSafetyService';
+import {
+  COST_CEILING_NOTICE_TEXT,
+  selectModelWithBudget,
+} from '@/services/coachCostCeilingService';
 import {
   coachToolDefinitions,
   runCoachTool,
@@ -231,6 +242,62 @@ coachRoutes.get(
   },
 );
 
+// Phase 8 (10Y-E): Pro-only Markdown export of a full conversation.
+coachRoutes.get(
+  '/conversations/:id/export',
+  requireCoachPro('export'),
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const { id } = req.params;
+    const conversation = await prisma.coachConversation.findFirst({
+      where: { id, userId },
+    });
+    if (!conversation) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+    const messages = await prisma.coachMessage.findMany({
+      where: { conversationId: id },
+      orderBy: { createdAt: 'asc' },
+    });
+    const md = formatConversationMarkdown({
+      title: conversation.title,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        createdAt: m.createdAt,
+      })),
+    });
+    res.status(200);
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.send(md);
+  },
+);
+
+interface ExportableMessage {
+  role: string;
+  content: string;
+  createdAt: Date;
+}
+
+function formatConversationMarkdown(input: {
+  title: string;
+  messages: ExportableMessage[];
+}): string {
+  const header = `# ${input.title}`;
+  const body = input.messages
+    .map((m) => {
+      const role = m.role === 'user' ? 'You' : 'Sazon Coach';
+      const ts =
+        m.createdAt instanceof Date
+          ? m.createdAt.toISOString()
+          : new Date(m.createdAt).toISOString();
+      return `## ${role} · ${ts}\n\n${m.content}`;
+    })
+    .join('\n\n');
+  return `${header}\n\n${body}\n`;
+}
+
 interface RecordedToolUse {
   name: string;
   input: unknown;
@@ -330,6 +397,39 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
     },
   });
 
+  // Phase 8: medical-claim deflection runs BEFORE any SDK call. We persist a
+  // deterministic assistant message and stream it as SSE — guarantees a stable
+  // refusal pattern across the corpus.
+  if (shouldDeflectMedicalClaim(message)) {
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    const deflection = getMedicalDeflectionText();
+    res.write(`event: medical_deflection\ndata: ${JSON.stringify({ reason: 'medical_claim' })}\n\n`);
+    res.write(`data: ${deflection}\n\n`);
+
+    await prisma.coachMessage.create({
+      data: {
+        conversationId,
+        userId,
+        role: 'assistant',
+        content: deflection,
+        attachments: JSON.stringify({ deflected: 'medical_claim' }),
+      },
+    });
+    await prisma.coachConversation.update({
+      where: { id: conversationId },
+      data: { lastMessageAt: new Date() },
+    });
+    emitAnalytics('coach_medical_deflection', { userId, conversationId });
+    res.write('event: done\ndata: {}\n\n');
+    res.end();
+    return;
+  }
+
   const profile = await buildCoachProfile(userId);
   const snapshot = buildProfileSnapshot(profile);
   // Phase 6: Pro users get long-term memories injected into the system prompt.
@@ -351,18 +451,44 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
     memories: memoriesForPrompt.length > 0 ? memoriesForPrompt : undefined,
   });
 
+  // Phase 8: Pro cost ceiling. If a Pro user has crossed today's budget on
+  // either input or output tokens, downgrade their model to Sonnet for this
+  // turn and emit a one-time soft notice via SSE.
+  let effectiveTier = tier;
+  let costNotice: string | null = null;
+  if (tier === 'premium') {
+    const budgetCheck = await selectModelWithBudget({
+      userId,
+      defaultModel: COACH_MODELS.premium,
+    });
+    if (budgetCheck.overBudget) {
+      effectiveTier = 'free';
+      costNotice = budgetCheck.notice;
+      emitAnalytics('coach_cost_ceiling', {
+        userId,
+        inputUsage: budgetCheck.usage.input,
+        outputUsage: budgetCheck.usage.output,
+      });
+    }
+  }
+
   res.status(200);
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders?.();
 
+  if (costNotice) {
+    res.write(`event: cost_notice\ndata: ${JSON.stringify({ message: costNotice })}\n\n`);
+  }
+
   const anthropic = getAnthropicClient();
   const toolUses: RecordedToolUse[] = [];
+  const sanitizedMessage = sanitizeUserContent(message);
   const userContent =
     validated.length > 0
-      ? buildUserMessageContent(message, validated)
-      : message;
+      ? buildUserMessageContent(sanitizedMessage, validated)
+      : sanitizedMessage;
   const conversationMessages: Anthropic.MessageParam[] = [
     { role: 'user', content: userContent },
   ];
@@ -378,7 +504,7 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
 
   for (let iter = 0; iter < MAX_TOOL_USE_ITERATIONS; iter += 1) {
     const params = buildAnthropicCreateParams({
-      tier,
+      tier: effectiveTier,
       systemPrompt,
       messages: conversationMessages,
       tools: coachToolDefinitions,
@@ -465,10 +591,11 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
           result: toolResult,
         })}\n\n`,
       );
+      const taggedResult = tagToolResult(toolResult);
       toolResultBlocks.push({
         type: 'tool_result',
         tool_use_id: tu.id,
-        content: JSON.stringify(toolResult),
+        content: JSON.stringify(taggedResult),
       });
     }
 

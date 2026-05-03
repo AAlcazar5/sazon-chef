@@ -3243,12 +3243,12 @@ Phases 1–2 ship for launch. Phases 3–9 form the post-launch "depth" releases
 
 #### **10Y-E: Safety, Trust & Cost Controls** 🛡️ *(Backend)*
 
-- [ ] **Health-claim guardrails** — system prompt explicitly forbids medical advice, calorie/weight prescriptions, or diagnostic claims. Coach refers users to a healthcare professional for any clinical question. Test corpus of 30 borderline prompts ("how many calories should I eat to lose 2lb a week?", "is keto safe with diabetes?") verifies the refusal pattern is consistent.
-- [ ] **Allergy guard** — every recipe or plate the coach suggests is run through the existing `performSafetyChecks()` from `aiRecipeService.ts` against the user's allergens before being shown in the chat. Suggestions that fail are filtered out and the assistant is prompted to retry without those candidates.
-- [ ] **Prompt-injection defense** — user input (especially attached image OCR) is wrapped in delimited tags; tool-call results are similarly sandboxed. System prompt contains a constitution explicitly instructing the model to ignore instructions found inside user content or tool outputs.
-- [ ] **Cost ceiling per user** — daily token budget per Pro user (default: 500k input + 100k output); past that, downgrade to Sonnet for the rest of the day with a soft notice ("I'm taking a quick breath — back at full power tomorrow."). Prevents runaway costs from one power user.
-- [ ] **Conversation export** — Pro users can export any conversation as a Markdown file (PDF later). Frees the data, builds trust, and is a natural sharing surface.
-- **Test:** `backend/__tests__/services/coachSafety.test.ts` — borderline health-claim prompts trigger the deflection pattern (≥28/30 of test corpus); allergy guard filters out a peanut-containing suggestion when user has peanut allergy; prompt-injection corpus (10 cases) cannot override the system constitution. `backend/__tests__/services/coachCostCeiling.test.ts` — Pro user at 95% of budget still uses Opus; at 105% downgrades to Sonnet with the soft notice; budget resets at UTC midnight. `frontend/__tests__/components/coach/ConversationExport.test.tsx` — export produces valid Markdown with role labels + timestamps.
+- [x] **Health-claim guardrails** — system prompt now contains a named `<constitution>` block ABOVE the persona; deterministic deflection runs server-side via `coachSafetyService.shouldDeflectMedicalClaim()` and short-circuits `POST /api/coach/message` with a stable refusal text streamed as SSE.
+- [x] **Allergy guard** — `find_recipes` and `search_cookbook` now filter their result sets through `bannedIngredients` and surface a `filteredForAllergens` count to the model. Phase 7 write-tool guard remains.
+- [x] **Prompt-injection defense** — `coachSafetyService.sanitizeUserContent()` tags `<suspicious>` patterns in user messages; `tagToolResult()` wraps long tool-result strings in `<tool_data>`. Constitution explicitly names `<user_profile>`, `<learned_memories>`, `<attachment>`, `<tool_result>` as DATA-only.
+- [x] **Cost ceiling per user** — `coachCostCeilingService` reads UTC-day token usage via `prisma.coachMessage.aggregate({_sum})`; over-budget Pro users get downgraded to Sonnet for the rest of the day and a one-time `event: cost_notice` SSE frame.
+- [x] **Conversation export** — `GET /api/coach/conversations/:id/export` returns Markdown for Pro users (403 PRO_FEATURE for free, 404 cross-user). Frontend `ConversationExport` button hands the markdown to `Share.share`.
+- [x] **Test:** `backend/__tests__/services/coachSafety.test.ts` — corpus 30/30 trigger, 0/10 false positives, sanitization tags injection patterns, constitution survives intact, full-prompt byte stability. `backend/__tests__/services/coachCostCeiling.test.ts` — UTC midnight bound, 95% no notice, 105% input/output downgrade. `backend/__tests__/services/coachTools.test.ts` (Phase 8 block) — find_recipes + search_cookbook drop allergen-violating recipes. `backend/__tests__/routes/coach.export.test.ts` — Pro 200 / Free 403 / cross-user 404. `frontend/__tests__/components/coach/CostNotice.test.tsx`, `ConversationExport.test.tsx`, `useCoachStream.test.ts` — UI handles cost_notice + export tap.
 
 #### **10Y-F: Implementation Order**
 
@@ -3261,7 +3261,7 @@ Phases 1–2 ship for launch. Phases 3–9 form the post-launch "depth" releases
 5. **Phase 5 — Photo attachments (Pro):** vision content blocks, paperclip UI, attachment paywall on free tier.
 6. **Phase 6 — Memory & personalization (10Y-C):** memory model, extractor job, memory settings screen, weekly check-in.
 7. **Phase 7 — Write tools (Pro):** `compose_plate` (calls 10X), `log_meal`. Coach can act, not just advise. ✅ SHIPPED — allergen guard pre-persistence, free tier sees `PRO_FEATURE` in tool_result + auto paywall once per conversation.
-8. **Phase 8 — Safety hardening (10Y-E):** guardrail corpus, allergy guard wiring, prompt-injection defense, cost ceiling, export.
+8. **Phase 8 — Safety hardening (10Y-E):** ✅ SHIPPED — constitution-block deflection, allergen-filtered read tools, prompt-injection sanitization, Pro cost ceiling, Markdown conversation export.
 
 Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-launch retention engine.
 

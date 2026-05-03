@@ -278,7 +278,10 @@ describe('buildSystemPrompt with memories — byte stability', () => {
   it('omits the memory block entirely when no memories provided (Phase 5 regression guard)', () => {
     const snap = buildProfileSnapshot(baseInput);
     const prompt = buildSystemPrompt(snap);
-    expect(prompt).not.toContain('<learned_memories>');
+    // Only the rendered block tag is forbidden — the constitution may name the
+    // tag for the model's awareness, that does not count.
+    expect(prompt).not.toMatch(/<learned_memories>\{/);
+    expect(prompt).not.toContain('</learned_memories>');
   });
 
   it('produces a stable byte sequence across runs with same memories', () => {

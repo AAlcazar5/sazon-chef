@@ -25,6 +25,8 @@ import {
   QuickStartChips,
   AttachmentBar,
   PantryConfirmSheet,
+  CostNotice,
+  ConversationExport,
 } from '../../components/coach';
 import CoachPaywallSheet, { type CoachPaywallReason } from '../../components/coach/CoachPaywallSheet';
 import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill';
@@ -75,6 +77,7 @@ export default function CoachScreen() {
   const [composerText, setComposerText] = useState('');
   const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [pantryConfirm, setPantryConfirm] = useState<CoachIdentifiedIngredient[] | null>(null);
+  const [activeTitle, setActiveTitle] = useState<string>('Sazon Coach');
 
   const stream = useCoachStream();
   const attachments = useCoachAttachments();
@@ -110,6 +113,7 @@ export default function CoachScreen() {
   const openNewConversation = useCallback((seed?: string) => {
     stream.reset();
     setComposerText(seed ?? '');
+    setActiveTitle('Sazon Coach');
     setView('conversation');
   }, [stream]);
 
@@ -119,6 +123,7 @@ export default function CoachScreen() {
       const detail = await coachApi.getConversation(id);
       stream.setConversationId(detail.id);
       stream.setMessages(detail.messages.map(m => ({ id: m.id, role: m.role, content: m.content })));
+      setActiveTitle(detail.title || 'Sazon Coach');
     } catch {
       // Conversation may have been deleted; reset to fresh.
       stream.reset();
@@ -223,7 +228,11 @@ export default function CoachScreen() {
               {flags.modelLabel}
             </Text>
           </View>
-          <View style={styles.headerBtn} />
+          <ConversationExport
+            conversationId={stream.conversationId}
+            conversationTitle={activeTitle}
+            isPremium={subscription.isPremium}
+          />
         </View>
 
         <ScrollView
@@ -237,6 +246,8 @@ export default function CoachScreen() {
               onPress={() => router.push('/profile/coach-memory' as never)}
             />
           )}
+
+          <CostNotice message={stream.costNotice} />
 
           {stream.messages.length === 0 && (
             <View style={styles.intro}>

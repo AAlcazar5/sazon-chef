@@ -403,6 +403,100 @@ describe('runCoachTool: search_cookbook', () => {
   });
 });
 
+describe('runCoachTool: read-tool allergen guard (Phase 8)', () => {
+  it('find_recipes excludes recipes that violate banned ingredients and reports filteredForAllergens', async () => {
+    const peanutRecipe = {
+      ...baseRecipe,
+      id: 'r-peanut',
+      title: 'Peanut Sauce Bowl',
+      ingredients: [
+        { text: 'chicken thigh' },
+        { text: 'peanut butter sauce' },
+      ],
+    };
+    const safeRecipe = { ...baseRecipe, id: 'r-safe', title: 'Lemon Chicken' };
+    mockRecipeFindMany.mockResolvedValue([peanutRecipe, safeRecipe]);
+    mockUserPreferencesFindUnique.mockResolvedValue({
+      id: 'pref-1',
+      userId: 'user-1',
+      cookTimePreference: 30,
+      bannedIngredients: [{ name: 'peanut' }],
+      likedCuisines: [],
+      dietaryRestrictions: [],
+      preferredSuperfoods: [],
+    });
+
+    const { result } = await runCoachTool({
+      userId: 'user-1',
+      name: 'find_recipes',
+      input: {},
+      tier: 'free',
+    });
+
+    const r = result as {
+      recipes: Array<{ id: string }>;
+      filteredForAllergens: number;
+    };
+    expect(r.recipes.find((x) => x.id === 'r-peanut')).toBeUndefined();
+    expect(r.recipes.find((x) => x.id === 'r-safe')).toBeDefined();
+    expect(r.filteredForAllergens).toBeGreaterThanOrEqual(1);
+  });
+
+  it('search_cookbook excludes saved recipes that violate banned ingredients', async () => {
+    const peanutRecipe = {
+      ...baseRecipe,
+      id: 'r-peanut',
+      title: 'Peanut Chicken',
+      ingredients: [
+        { text: 'chicken thigh' },
+        { text: 'peanut sauce' },
+      ],
+    };
+    const safeRecipe = { ...baseRecipe, id: 'r-safe', title: 'Lemon Chicken' };
+    mockSavedRecipeFindMany.mockResolvedValue([
+      {
+        id: 's1',
+        recipeId: 'r-peanut',
+        userId: 'user-1',
+        rating: null,
+        recipe: peanutRecipe,
+      },
+      {
+        id: 's2',
+        recipeId: 'r-safe',
+        userId: 'user-1',
+        rating: null,
+        recipe: safeRecipe,
+      },
+    ]);
+    mockCookingLogFindMany.mockResolvedValue([]);
+    mockUserPreferencesFindUnique.mockResolvedValue({
+      id: 'pref-1',
+      userId: 'user-1',
+      cookTimePreference: 30,
+      bannedIngredients: [{ name: 'peanut' }],
+      likedCuisines: [],
+      dietaryRestrictions: [],
+      preferredSuperfoods: [],
+    });
+
+    const { result } = await runCoachTool({
+      userId: 'user-1',
+      name: 'search_cookbook',
+      input: { query: 'chicken' },
+      tier: 'free',
+    });
+
+    const r = result as {
+      recipes: Array<{ id: string }>;
+      filteredForAllergens: number;
+    };
+    expect(r.recipes.find((x) => x.id === 'r-peanut')).toBeUndefined();
+    expect(r.recipes.find((x) => x.id === 'r-safe')).toBeDefined();
+    expect(r.filteredForAllergens).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe('runCoachTool: tier gating', () => {
   it('all 4 read-only tools run on free tier', async () => {
     mockPantryFindMany.mockResolvedValue([]);

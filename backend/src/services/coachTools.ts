@@ -355,8 +355,20 @@ async function runFindRecipes(
     take: 50,
   })) as unknown as RecipeShape[];
 
-  const ranked = rankRecipes(recipes, prefs as PrefsShape | null, macroGoals, pantryNames, remaining);
-  return { recipes: ranked.slice(0, 8) };
+  const allergenNames = ((prefs as PrefsShape | null)?.bannedIngredients ?? []).map((b) => b.name);
+  const safeRecipes: RecipeShape[] = [];
+  let filteredForAllergens = 0;
+  for (const r of recipes) {
+    const ingredientTexts = r.ingredients.map((i) => i.text);
+    const check = checkAllergens(ingredientTexts, allergenNames);
+    if (check.ok) {
+      safeRecipes.push(r);
+    } else {
+      filteredForAllergens += 1;
+    }
+  }
+  const ranked = rankRecipes(safeRecipes, prefs as PrefsShape | null, macroGoals, pantryNames, remaining);
+  return { recipes: ranked.slice(0, 8), filteredForAllergens };
 }
 
 async function runSearchCookbook(
@@ -389,9 +401,22 @@ async function runSearchCookbook(
     return hay.includes(query);
   });
 
-  const recipes = filtered.map((s) => s.recipe as unknown as RecipeShape);
+  const allergenNames = ((prefs as PrefsShape | null)?.bannedIngredients ?? []).map((b) => b.name);
+  let filteredForAllergens = 0;
+  const safeSaved = filtered.filter((s) => {
+    const r = s.recipe as unknown as RecipeShape;
+    const ingredientTexts = r.ingredients.map((i) => i.text);
+    const check = checkAllergens(ingredientTexts, allergenNames);
+    if (!check.ok) {
+      filteredForAllergens += 1;
+      return false;
+    }
+    return true;
+  });
+
+  const recipes = safeSaved.map((s) => s.recipe as unknown as RecipeShape);
   const ratingByRecipe = new Map<string, number | null>();
-  for (const s of filtered) {
+  for (const s of safeSaved) {
     ratingByRecipe.set(s.recipeId, s.rating ?? null);
   }
 
@@ -412,7 +437,7 @@ async function runSearchCookbook(
     })
     .sort((a, b) => b.personalization.affinityScore - a.personalization.affinityScore);
 
-  return { recipes: ranked };
+  return { recipes: ranked, filteredForAllergens };
 }
 
 async function runGetPantry(userId: string): Promise<unknown> {
