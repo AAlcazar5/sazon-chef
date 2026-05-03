@@ -46,6 +46,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useServingScaler } from '../hooks/useServingScaler';
 import ServingSelector from '../components/recipe/ServingSelector';
 import HitMyMacrosSheet from '../components/recipe/HitMyMacrosSheet';
+import FoodIntelCard from '../components/recipe/FoodIntelCard';
 
 const HERO_HEIGHT = 300;
 
@@ -1620,6 +1621,13 @@ export default function RecipeModal() {
                 onSwapIngredient={handleSwapIngredient}
                 activeSwaps={activeSwaps}
                 onUndoSwap={handleUndoSwap}
+              />
+            )}
+            {recipe.ingredients && Array.isArray(recipe.ingredients) && (
+              <FoodIntelCard
+                ingredients={recipe.ingredients.map((i: any) => getTextContent(i).toLowerCase())}
+                recipeId={recipe.id}
+                testID="recipe-food-intel-card"
               />
             )}
           </View>

@@ -4,6 +4,7 @@ import { EditorialMacroWidgets } from './EditorialMacroWidgets';
 import { VerticalCategoryRail } from '../ui/VerticalCategoryRail';
 import { PlateHeroCard } from '../ui/PlateHeroCard';
 import PantryPlateHeroCard from './PantryPlateHeroCard';
+import DidYouKnowCard from './DidYouKnowCard';
 import { useTonightsPlate } from '../../hooks/useTonightsPlate';
 import type { SuggestedRecipe } from '../../types';
 
@@ -90,6 +91,9 @@ export function EditorialHomeLayout({
       {tonightsPlate && (
         <PantryPlateHeroCard plate={tonightsPlate} />
       )}
+
+      {/* Group 10R Surface 3 — rotating "Did You Know?" tip */}
+      <DidYouKnowCard />
 
       {/* Macro widget row */}
       <EditorialMacroWidgets
