@@ -1,5 +1,24 @@
 # Sazon Chef - Project Guide
 
+## North Star
+
+Sazon is an **N=1 experience**. Every recommendation, screen, and copy choice is tailored to *this* specific user — their pantry, taste history, macros, allergies, schedule, leftovers, and mood today. Generic content is the failure mode.
+
+Three driving principles:
+
+1. **Hypersonalization** — no two users see the same thing. The home feed, Build-a-Plate slots, Cookbook ranking, recipe titles, even error copy all bend to who's looking. If a feature can be parameterized by user state, it must be.
+2. **Adaptive iteration** — every signal (cook, save, swap, rate, skip, scroll-past) refines the next recommendation. The app should feel smarter today than yesterday. Static templates and "popular recipes" feeds are the antipattern.
+3. **N=1 experience** — every product decision starts with "what would the right move be for *this* user *right now*?" If the answer is "show them the same thing as everyone else," reconsider the feature.
+
+**How existing systems serve N=1:**
+- **Build-a-Plate (10X)** — the flagship N=1 surface. Slots filled by *this user's* taste/pantry/macros/leftovers, not a static template.
+- **Liked recipes / Cookbook (10Q)** — training data, not storage. Every save, swap, and rating reshapes tomorrow's recommendations.
+- **Slot affinity, taste learning, cuisine adjacency, leftover continuity, skill tier** — the adaptation engine. They exist to serve N=1, not as standalone features.
+- **Pantry, macros, allergies** — *inputs* to a personalized model, not just filters.
+- **Sazon Coach (10Y)** — the conversational layer where the model can *use* everything it knows about this user.
+
+**When weighing tradeoffs:** prefer the option that increases personalization signal or reduces generic content. **When designing new features:** ask "how does this learn?" and "what does it know about *this* user that no other product does?" If a feature can't answer both, sharpen it before building.
+
 ## Role
 
 Automatically switch role based on the file being modified — no explicit instruction needed:
