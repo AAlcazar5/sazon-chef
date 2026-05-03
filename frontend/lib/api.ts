@@ -2177,7 +2177,7 @@ export const sharedPlatesApi = {
 
 // ─── Sazon Coach (Group 10Y) ─────────────────────────────────────────────────
 
-export type CoachTier = 'free' | 'pro';
+export type CoachTier = 'free' | 'premium';
 export type CoachMessageRole = 'user' | 'assistant';
 
 export interface CoachConversation {
@@ -2223,11 +2223,17 @@ export interface CoachCostNoticeEvent {
   message: string;
 }
 
+export interface CoachMedicalDeflectionEvent {
+  type: 'medical_deflection';
+  reason: string;
+}
+
 export type CoachStreamEvent =
   | CoachTextEvent
   | CoachToolUseEvent
   | CoachToolResultEvent
   | CoachCostNoticeEvent
+  | CoachMedicalDeflectionEvent
   | CoachDoneEvent;
 
 export type CoachAttachmentMediaType =
@@ -2405,6 +2411,13 @@ async function* streamCoachMessage(params: {
           try {
             const payload = JSON.parse(parsed.data) as { toolUseId: string; result: unknown };
             yield { type: 'tool_result', toolUseId: payload.toolUseId, result: payload.result };
+          } catch {
+            // ignore malformed event
+          }
+        } else if (parsed.event === 'medical_deflection') {
+          try {
+            const payload = JSON.parse(parsed.data) as { reason?: string };
+            yield { type: 'medical_deflection', reason: payload.reason ?? 'medical_claim' };
           } catch {
             // ignore malformed event
           }

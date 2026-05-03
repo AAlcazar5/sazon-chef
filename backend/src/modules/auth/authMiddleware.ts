@@ -4,6 +4,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+// TODO Sec H1 (security review): require JWT_SECRET in env; remove dev fallback.
+// Tracked separately from Group 10Y CRITICAL fixes — broader auth refactor.
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Extend Express Request to include user

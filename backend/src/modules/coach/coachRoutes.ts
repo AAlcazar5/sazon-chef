@@ -10,7 +10,6 @@ import {
   buildSystemPrompt,
   generateConversationTitle,
   type CoachProfileInput,
-  type GoalPhase,
 } from '@/services/coachPromptService';
 import {
   buildAnthropicCreateParams,
@@ -31,6 +30,7 @@ import {
 import {
   coachToolDefinitions,
   runCoachTool,
+  buildCoachProfileSnapshot,
 } from '@/services/coachTools';
 import { COACH_PAYWALL_COPY, requireCoachPro } from '@/middleware/requireCoachPro';
 import { emit as emitAnalytics } from '@/services/coachAnalytics';
@@ -127,20 +127,6 @@ function buildUserMessageContent(
   return [...imageBlocks, { type: 'text', text }];
 }
 
-function resolveGoalPhase(fitnessGoal: string | null | undefined): GoalPhase {
-  switch (fitnessGoal) {
-    case 'lose_weight':
-      return 'cut';
-    case 'gain_muscle':
-    case 'gain_weight':
-      return 'bulk';
-    case 'recomp':
-      return 'recomp';
-    default:
-      return 'maintain';
-  }
-}
-
 function startOfTodayUTC(): Date {
   const now = new Date();
   return new Date(
@@ -148,34 +134,11 @@ function startOfTodayUTC(): Date {
   );
 }
 
+// Wraps the shared snapshot loader so existing call sites keep their import.
+// The snapshot lives in coachTools.ts so the read-only tools and the system
+// prompt builder share one source of truth — N=1 personalization signal.
 async function buildCoachProfile(userId: string): Promise<CoachProfileInput> {
-  const macroGoals = await prisma.macroGoals.findUnique({ where: { userId } });
-  const physical = await prisma.userPhysicalProfile.findUnique({
-    where: { userId },
-  });
-  return {
-    userId,
-    pantry: [],
-    leftoverInventory: [],
-    slotAffinity: [],
-    pairAffinity: [],
-    remainingMacros: macroGoals
-      ? {
-          calories: macroGoals.calories,
-          protein: macroGoals.protein,
-          carbs: macroGoals.carbs,
-          fat: macroGoals.fat,
-          fiber: macroGoals.fiber ?? null,
-        }
-      : null,
-    last7Cooks: [],
-    dietaryProfile: [],
-    allergens: [],
-    cuisineAffinity: [],
-    skillTier: 'beginner',
-    goalPhase: resolveGoalPhase(physical?.fitnessGoal),
-    currentMealPlanDay: null,
-  };
+  return buildCoachProfileSnapshot(userId);
 }
 
 export const coachRoutes = Router();
@@ -478,182 +441,240 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders?.();
 
-  if (costNotice) {
-    res.write(`event: cost_notice\ndata: ${JSON.stringify({ message: costNotice })}\n\n`);
-  }
+  // Code#1: wrap the entire SSE flow so any uncaught error emits an `error`
+  // event and ends the stream cleanly instead of dropping the socket mid-turn.
+  try {
+    if (costNotice) {
+      res.write(`event: cost_notice\ndata: ${JSON.stringify({ message: costNotice })}\n\n`);
+    }
 
-  const anthropic = getAnthropicClient();
-  const toolUses: RecordedToolUse[] = [];
-  const sanitizedMessage = sanitizeUserContent(message);
-  const userContent =
-    validated.length > 0
-      ? buildUserMessageContent(sanitizedMessage, validated)
-      : sanitizedMessage;
-  const conversationMessages: Anthropic.MessageParam[] = [
-    { role: 'user', content: userContent },
-  ];
+    const anthropic = getAnthropicClient();
+    const toolUses: RecordedToolUse[] = [];
+    const sanitizedMessage = sanitizeUserContent(message);
+    const userContent =
+      validated.length > 0
+        ? buildUserMessageContent(sanitizedMessage, validated)
+        : sanitizedMessage;
+    const conversationMessages: Anthropic.MessageParam[] = [
+      { role: 'user', content: userContent },
+    ];
 
-  let assistantText = '';
-  let lastModel = '';
-  let totalUsage = {
-    input_tokens: 0,
-    output_tokens: 0,
-    cache_read_input_tokens: 0,
-    cache_creation_input_tokens: 0,
-  };
+    let assistantText = '';
+    let lastModel = '';
+    let totalUsage = {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_read_input_tokens: 0,
+      cache_creation_input_tokens: 0,
+    };
 
-  for (let iter = 0; iter < MAX_TOOL_USE_ITERATIONS; iter += 1) {
-    const params = buildAnthropicCreateParams({
-      tier: effectiveTier,
-      systemPrompt,
-      messages: conversationMessages,
-      tools: coachToolDefinitions,
-    });
-    const stream = anthropic.messages.stream(params);
+    for (let iter = 0; iter < MAX_TOOL_USE_ITERATIONS; iter += 1) {
+      const params = buildAnthropicCreateParams({
+        tier: effectiveTier,
+        systemPrompt,
+        messages: conversationMessages,
+        tools: coachToolDefinitions,
+      });
+      const stream = anthropic.messages.stream(params);
 
-    const pendingToolUses: Array<{ id: string; name: string; input: unknown }> = [];
+      // Capture the IDs/names from the streaming protocol for early SSE echo.
+      // `block.input` from `content_block_start` is per Anthropic spec always
+      // `{}` — the populated input arrives via `input_json_delta` and is only
+      // assembled on `final.content`. So we re-attach inputs after finalMessage.
+      const pendingToolUses: Array<{ id: string; name: string; input: unknown }> = [];
 
-    for await (const event of stream as AsyncIterable<Anthropic.RawMessageStreamEvent>) {
-      if (
-        event.type === 'content_block_delta' &&
-        event.delta.type === 'text_delta'
-      ) {
-        assistantText += event.delta.text;
-        res.write(`data: ${event.delta.text}\n\n`);
-      } else if (
-        event.type === 'content_block_start' &&
-        event.content_block.type === 'tool_use'
-      ) {
-        const block = event.content_block;
-        pendingToolUses.push({
-          id: block.id,
-          name: block.name,
-          input: block.input,
-        });
-        res.write(
-          `event: tool_use\ndata: ${JSON.stringify({
+      for await (const event of stream as AsyncIterable<Anthropic.RawMessageStreamEvent>) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          assistantText += event.delta.text;
+          res.write(`data: ${event.delta.text}\n\n`);
+        } else if (
+          event.type === 'content_block_start' &&
+          event.content_block.type === 'tool_use'
+        ) {
+          const block = event.content_block;
+          pendingToolUses.push({
+            id: block.id,
+            name: block.name,
+            input: {},
+          });
+          // Early echo — IDs/names are reliable; input filled in below.
+          res.write(
+            `event: tool_use\ndata: ${JSON.stringify({
+              name: block.name,
+              input: {},
+              toolUseId: block.id,
+              partial: true,
+            })}\n\n`,
+          );
+        }
+      }
+
+      const final = await stream.finalMessage();
+      lastModel = final.model;
+      totalUsage = {
+        input_tokens: totalUsage.input_tokens + (final.usage.input_tokens ?? 0),
+        output_tokens: totalUsage.output_tokens + (final.usage.output_tokens ?? 0),
+        cache_read_input_tokens:
+          totalUsage.cache_read_input_tokens +
+          (final.usage.cache_read_input_tokens ?? 0),
+        cache_creation_input_tokens:
+          totalUsage.cache_creation_input_tokens +
+          (final.usage.cache_creation_input_tokens ?? 0),
+      };
+
+      // Populate tool_use inputs from the final assembled message. This is the
+      // canonical fix for TS#1 — `content_block_start.input` is always `{}` per
+      // the Anthropic streaming spec.
+      const pendingById = new Map(pendingToolUses.map((p) => [p.id, p]));
+      for (const block of final.content) {
+        if (block.type !== 'tool_use') continue;
+        const pending = pendingById.get(block.id);
+        if (pending) {
+          pending.input = block.input;
+        } else {
+          // Defensive: tool_use appeared in final.content but not in stream
+          // events (shouldn't happen with current SDK). Surface anyway.
+          pendingToolUses.push({
+            id: block.id,
             name: block.name,
             input: block.input,
-            toolUseId: block.id,
+          });
+        }
+      }
+
+      if (pendingToolUses.length === 0) {
+        break;
+      }
+
+      // Re-broadcast tool_use with populated input so the frontend sees the
+      // real args (and our DB log records them too).
+      for (const tu of pendingToolUses) {
+        res.write(
+          `event: tool_use\ndata: ${JSON.stringify({
+            name: tu.name,
+            input: tu.input,
+            toolUseId: tu.id,
           })}\n\n`,
         );
       }
-    }
 
-    const final = await stream.finalMessage();
-    lastModel = final.model;
-    totalUsage = {
-      input_tokens: totalUsage.input_tokens + (final.usage.input_tokens ?? 0),
-      output_tokens: totalUsage.output_tokens + (final.usage.output_tokens ?? 0),
-      cache_read_input_tokens:
-        totalUsage.cache_read_input_tokens +
-        (final.usage.cache_read_input_tokens ?? 0),
-      cache_creation_input_tokens:
-        totalUsage.cache_creation_input_tokens +
-        (final.usage.cache_creation_input_tokens ?? 0),
-    };
+      // Echo assistant turn (text + tool_use blocks) into conversation history.
+      conversationMessages.push({
+        role: 'assistant',
+        content: final.content as Anthropic.ContentBlock[],
+      });
 
-    if (pendingToolUses.length === 0) {
-      break;
-    }
-
-    // Echo assistant turn (text + tool_use blocks) into conversation history.
-    conversationMessages.push({
-      role: 'assistant',
-      content: final.content as Anthropic.ContentBlock[],
-    });
-
-    const toolResultBlocks: Anthropic.ToolResultBlockParam[] = [];
-    for (const tu of pendingToolUses) {
-      let toolResult: unknown;
-      try {
-        const { result } = await runCoachTool({
-          userId,
+      const toolResultBlocks: Anthropic.ToolResultBlockParam[] = [];
+      for (const tu of pendingToolUses) {
+        let toolResult: unknown;
+        try {
+          const { result } = await runCoachTool({
+            userId,
+            name: tu.name,
+            input: tu.input,
+            tier,
+          });
+          toolResult = result;
+        } catch (err) {
+          toolResult = {
+            error: err instanceof Error ? err.message : 'tool_error',
+          };
+        }
+        toolUses.push({
           name: tu.name,
           input: tu.input,
-          tier,
-        });
-        toolResult = result;
-      } catch (err) {
-        toolResult = {
-          error: err instanceof Error ? err.message : 'tool_error',
-        };
-      }
-      toolUses.push({
-        name: tu.name,
-        input: tu.input,
-        result: toolResult,
-        toolUseId: tu.id,
-      });
-      res.write(
-        `event: tool_result\ndata: ${JSON.stringify({
-          toolUseId: tu.id,
           result: toolResult,
-        })}\n\n`,
-      );
-      const taggedResult = tagToolResult(toolResult);
-      toolResultBlocks.push({
-        type: 'tool_result',
-        tool_use_id: tu.id,
-        content: JSON.stringify(taggedResult),
+          toolUseId: tu.id,
+        });
+        res.write(
+          `event: tool_result\ndata: ${JSON.stringify({
+            toolUseId: tu.id,
+            result: toolResult,
+          })}\n\n`,
+        );
+        const taggedResult = tagToolResult(toolResult);
+        toolResultBlocks.push({
+          type: 'tool_result',
+          tool_use_id: tu.id,
+          content: JSON.stringify(taggedResult),
+        });
+      }
+
+      conversationMessages.push({
+        role: 'user',
+        content: toolResultBlocks,
       });
     }
 
-    conversationMessages.push({
-      role: 'user',
-      content: toolResultBlocks,
+    await prisma.coachMessage.create({
+      data: {
+        conversationId,
+        userId,
+        role: 'assistant',
+        content: assistantText,
+        attachments: JSON.stringify({ toolUses }),
+        modelUsed: lastModel,
+        promptTokens: totalUsage.input_tokens,
+        completionTokens: totalUsage.output_tokens,
+        cacheReadTokens: totalUsage.cache_read_input_tokens,
+        cacheWriteTokens: totalUsage.cache_creation_input_tokens,
+      },
     });
-  }
 
-  await prisma.coachMessage.create({
-    data: {
-      conversationId,
+    await prisma.coachConversation.update({
+      where: { id: conversationId },
+      data: { lastMessageAt: new Date() },
+    });
+
+    emitAnalytics('coach_message_sent', {
       userId,
-      role: 'assistant',
-      content: assistantText,
-      attachments: JSON.stringify({ toolUses }),
-      modelUsed: lastModel,
+      conversationId,
+      tier,
+      model: lastModel,
       promptTokens: totalUsage.input_tokens,
       completionTokens: totalUsage.output_tokens,
       cacheReadTokens: totalUsage.cache_read_input_tokens,
       cacheWriteTokens: totalUsage.cache_creation_input_tokens,
-    },
-  });
+    });
+    if (tier === 'premium') {
+      emitAnalytics('coach_pro_message_sent', {
+        userId,
+        conversationId,
+        model: lastModel,
+      });
+    }
 
-  await prisma.coachConversation.update({
-    where: { id: conversationId },
-    data: { lastMessageAt: new Date() },
-  });
+    // Phase 6: Pro-only — kick off async memory extraction over the recent
+    // turns. Non-blocking; never throws back into the response stream.
+    if (tier === 'premium') {
+      enqueueExtraction(userId, conversationId, [
+        { role: 'user', content: message },
+        { role: 'assistant', content: assistantText },
+      ]);
+    }
 
-  emitAnalytics('coach_message_sent', {
-    userId,
-    conversationId,
-    tier,
-    model: lastModel,
-    promptTokens: totalUsage.input_tokens,
-    completionTokens: totalUsage.output_tokens,
-    cacheReadTokens: totalUsage.cache_read_input_tokens,
-    cacheWriteTokens: totalUsage.cache_creation_input_tokens,
-  });
-  if (tier === 'premium') {
-    emitAnalytics('coach_pro_message_sent', {
+    res.write('event: done\ndata: {}\n\n');
+    res.end();
+  } catch (err) {
+    // Code#1: SSE-aware error path. Headers are already flushed at this point,
+    // so we cannot send an HTTP error; emit an SSE `error` event and end.
+    emitAnalytics('coach_stream_error', {
       userId,
       conversationId,
-      model: lastModel,
+      message: err instanceof Error ? err.message : 'unknown',
     });
+    if (!res.writableEnded) {
+      try {
+        res.write(`event: error\ndata: ${JSON.stringify({ code: 'INTERNAL' })}\n\n`);
+      } catch {
+        // socket already closed — nothing to do
+      }
+      res.end();
+    }
   }
-
-  // Phase 6: Pro-only — kick off async memory extraction over the recent
-  // turns. Non-blocking; never throws back into the response stream.
-  if (tier === 'premium') {
-    enqueueExtraction(userId, conversationId, [
-      { role: 'user', content: message },
-      { role: 'assistant', content: assistantText },
-    ]);
-  }
-
-  res.write('event: done\ndata: {}\n\n');
-  res.end();
 });
 
 // Phase 5: Pro-only — identify food ingredients in a photo for pantry write-back.

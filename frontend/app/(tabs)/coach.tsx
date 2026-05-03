@@ -20,6 +20,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
+import AnimatedLogoMascot from '../../components/mascot/AnimatedLogoMascot';
 import {
   MessageBubble,
   QuickStartChips,
@@ -249,6 +250,17 @@ export default function CoachScreen() {
 
           <CostNotice message={stream.costNotice} />
 
+          {stream.medicalDeflection && (
+            <View
+              accessibilityLabel="Medical deflection notice"
+              style={styles.medicalNotice}
+            >
+              <Text style={styles.medicalNoticeText}>
+                Sazon's not a medical pro — try a registered dietitian for that one.
+              </Text>
+            </View>
+          )}
+
           {stream.messages.length === 0 && (
             <View style={styles.intro}>
               <Text style={[styles.introText, { color: subtle }]}>
@@ -334,6 +346,8 @@ export default function CoachScreen() {
               ]}
             >
               {stream.isStreaming ? (
+                // TODO: Design system has no spinner that fits a 40x40 button —
+                // keep ActivityIndicator until a ProgressDot/inline mascot lands.
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
@@ -378,13 +392,16 @@ export default function CoachScreen() {
 
       {loadingList ? (
         <View style={styles.center}>
-          <ActivityIndicator color={isDark ? DarkColors.primary : Colors.primary} />
+          <AnimatedLogoMascot expression="thinking" size="medium" />
+          <Text style={[styles.loadingText, { color: subtle }]}>
+            Loading conversations…
+          </Text>
         </View>
       ) : conversations.length === 0 ? (
         <View style={styles.flex}>
           <AnimatedEmptyState
             useMascot
-            mascotExpression="chef-kiss"
+            mascotExpression="curious"
             title="Your private chef, ready when you are"
             description="Pantry, macros, leftovers — I know it all. Ask me anything about tonight."
             actionLabel="Tell me what you're hungry for."
@@ -529,6 +546,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     fontSize: 13,
+  },
+  loadingText: {
+    fontSize: 13,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  medicalNotice: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#FFF4D6',
+  },
+  medicalNoticeText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#7A4F00',
   },
   listPad: {
     paddingHorizontal: 16,
