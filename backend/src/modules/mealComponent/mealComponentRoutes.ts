@@ -10,7 +10,7 @@
 
 import { Router } from 'express';
 import { mealComponentController } from './mealComponentController';
-import { authenticateToken } from '../auth/authMiddleware';
+import { authenticateToken, optionalAuth } from '../auth/authMiddleware';
 
 export const mealComponentRoutes = Router();
 mealComponentRoutes.use(authenticateToken);
@@ -27,9 +27,10 @@ nutrientGapRoutes.use(authenticateToken);
 nutrientGapRoutes.get('/top', mealComponentController.getNutrientGapTop);
 
 export const composedPlateRoutes = Router();
-// /of-the-week is intentionally PUBLIC — editorial home card must work for
-// unauthenticated visitors. Register it before the per-route auth middleware.
-composedPlateRoutes.get('/of-the-week', mealComponentController.plateOfTheWeek);
+// /of-the-week is intentionally PUBLIC for unauthenticated visitors, but uses
+// optionalAuth so signed-in viewers get a personalized N=1 ranking instead of
+// the generic global most-saved plate.
+composedPlateRoutes.get('/of-the-week', optionalAuth, mealComponentController.plateOfTheWeek);
 // Static routes registered BEFORE /:id/* to avoid Express matching them as
 // the `id` param (e.g. /weekly-summary would otherwise hit /:id/variations).
 composedPlateRoutes.get('/weekly-summary', authenticateToken, mealComponentController.getWeeklyPlateSummary);

@@ -1975,6 +1975,8 @@ export interface PlateOfTheWeek {
   totalFat: number;
   region?: string;
   saveCount?: number;
+  /** Personalization rationale (only present when viewer is authenticated). */
+  reason?: string;
 }
 
 export interface PlateVariation {

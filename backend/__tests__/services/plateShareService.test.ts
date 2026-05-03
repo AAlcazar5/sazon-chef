@@ -169,6 +169,142 @@ describe('getPlateOfTheWeek', () => {
     const result = await getPlateOfTheWeek();
     expect(result).toBeNull();
   });
+
+  describe('personalization (viewerUserId provided)', () => {
+    const baseGroups = [
+      { plateId: 'plate-A', _count: { plateId: 8 } },
+      { plateId: 'plate-B', _count: { plateId: 3 } },
+    ];
+    const platesByPantryFavor = [
+      {
+        id: 'plate-A',
+        userId: 'creator-a',
+        componentIds: JSON.stringify([
+          { slot: 'protein', componentId: 'p_unknown' },
+        ]),
+      },
+      {
+        id: 'plate-B',
+        userId: 'creator-b',
+        componentIds: JSON.stringify([
+          { slot: 'protein', componentId: 'p_salmon' },
+          { slot: 'base', componentId: 'b_farro' },
+        ]),
+      },
+    ];
+
+    it('re-ranks candidates by pantry coverage even when save count is lower', async () => {
+      mockPrisma.plateSave.groupBy.mockResolvedValueOnce(baseGroups);
+      mockPrisma.composedPlate.findMany.mockResolvedValueOnce(platesByPantryFavor);
+      mockPrisma.pantryItem.findMany.mockResolvedValueOnce([
+        { name: 'salmon' },
+        { name: 'farro' },
+      ]);
+      mockPrisma.userPreferences.findUnique.mockResolvedValueOnce({
+        likedCuisines: [],
+        bannedIngredients: [],
+      });
+      mockPrisma.mealComponent.findMany.mockResolvedValueOnce([
+        { id: 'p_unknown', pantryIngredientNames: JSON.stringify(['octopus']), cuisineTags: '[]' },
+        { id: 'p_salmon', pantryIngredientNames: JSON.stringify(['salmon']), cuisineTags: '[]' },
+        { id: 'b_farro', pantryIngredientNames: JSON.stringify(['farro']), cuisineTags: '[]' },
+      ]);
+
+      const result = await getPlateOfTheWeek('viewer-1');
+      // plate-B wins despite lower save count (8 vs 3) because pantry covers
+      // 100% of its ingredients vs 0% of plate-A's.
+      expect(result?.plate.id).toBe('plate-B');
+      expect(result?.reason).toMatch(/in your pantry/i);
+    });
+
+    it('disqualifies plates whose components contain banned ingredients', async () => {
+      mockPrisma.plateSave.groupBy.mockResolvedValueOnce(baseGroups);
+      mockPrisma.composedPlate.findMany.mockResolvedValueOnce(platesByPantryFavor);
+      mockPrisma.pantryItem.findMany.mockResolvedValueOnce([{ name: 'salmon' }]);
+      mockPrisma.userPreferences.findUnique.mockResolvedValueOnce({
+        likedCuisines: [],
+        bannedIngredients: [{ name: 'salmon' }],
+      });
+      mockPrisma.mealComponent.findMany.mockResolvedValueOnce([
+        { id: 'p_unknown', pantryIngredientNames: JSON.stringify(['octopus']), cuisineTags: '[]' },
+        { id: 'p_salmon', pantryIngredientNames: JSON.stringify(['salmon']), cuisineTags: '[]' },
+        { id: 'b_farro', pantryIngredientNames: JSON.stringify(['farro']), cuisineTags: '[]' },
+      ]);
+
+      const result = await getPlateOfTheWeek('viewer-1');
+      // plate-B is filtered out (contains banned salmon); plate-A wins by default.
+      expect(result?.plate.id).toBe('plate-A');
+    });
+
+    it('applies cuisine bonus when plate matches viewer likedCuisines', async () => {
+      mockPrisma.plateSave.groupBy.mockResolvedValueOnce(baseGroups);
+      mockPrisma.composedPlate.findMany.mockResolvedValueOnce(platesByPantryFavor);
+      mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+      mockPrisma.userPreferences.findUnique.mockResolvedValueOnce({
+        likedCuisines: [{ name: 'Italian' }],
+        bannedIngredients: [],
+      });
+      mockPrisma.mealComponent.findMany.mockResolvedValueOnce([
+        { id: 'p_unknown', pantryIngredientNames: JSON.stringify([]), cuisineTags: '[]' },
+        { id: 'p_salmon', pantryIngredientNames: JSON.stringify([]), cuisineTags: JSON.stringify(['Italian']) },
+        { id: 'b_farro', pantryIngredientNames: JSON.stringify([]), cuisineTags: '[]' },
+      ]);
+
+      const result = await getPlateOfTheWeek('viewer-1');
+      expect(result?.plate.id).toBe('plate-B');
+      expect(result?.reason).toMatch(/cuisine you love/i);
+    });
+
+    it('returns null when all candidates are banned', async () => {
+      mockPrisma.plateSave.groupBy.mockResolvedValueOnce(baseGroups);
+      mockPrisma.composedPlate.findMany.mockResolvedValueOnce(platesByPantryFavor);
+      mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+      mockPrisma.userPreferences.findUnique.mockResolvedValueOnce({
+        likedCuisines: [],
+        bannedIngredients: [{ name: 'salmon' }, { name: 'octopus' }, { name: 'farro' }],
+      });
+      mockPrisma.mealComponent.findMany.mockResolvedValueOnce([
+        { id: 'p_unknown', pantryIngredientNames: JSON.stringify(['octopus']), cuisineTags: '[]' },
+        { id: 'p_salmon', pantryIngredientNames: JSON.stringify(['salmon']), cuisineTags: '[]' },
+        { id: 'b_farro', pantryIngredientNames: JSON.stringify(['farro']), cuisineTags: '[]' },
+      ]);
+
+      const result = await getPlateOfTheWeek('viewer-1');
+      expect(result).toBeNull();
+    });
+
+    it('falls back to count-based reason when pantry + cuisine signals are weak', async () => {
+      mockPrisma.plateSave.groupBy.mockResolvedValueOnce([
+        { plateId: 'plate-A', _count: { plateId: 8 } },
+      ]);
+      mockPrisma.composedPlate.findMany.mockResolvedValueOnce([
+        {
+          id: 'plate-A',
+          userId: 'creator-a',
+          componentIds: JSON.stringify([{ slot: 'protein', componentId: 'p_x' }]),
+        },
+      ]);
+      mockPrisma.pantryItem.findMany.mockResolvedValueOnce([]);
+      mockPrisma.userPreferences.findUnique.mockResolvedValueOnce({
+        likedCuisines: [],
+        bannedIngredients: [],
+      });
+      mockPrisma.mealComponent.findMany.mockResolvedValueOnce([
+        { id: 'p_x', pantryIngredientNames: JSON.stringify(['weird']), cuisineTags: '[]' },
+      ]);
+
+      const result = await getPlateOfTheWeek('viewer-1');
+      expect(result?.plate.id).toBe('plate-A');
+      expect(result?.reason).toMatch(/cooks this week/i);
+    });
+
+    it('requests TOP_N_CANDIDATES when personalizing (not just 1)', async () => {
+      mockPrisma.plateSave.groupBy.mockResolvedValueOnce([]);
+      await getPlateOfTheWeek('viewer-1');
+      const groupArgs = mockPrisma.plateSave.groupBy.mock.calls[0][0];
+      expect(groupArgs.take).toBeGreaterThanOrEqual(5);
+    });
+  });
 });
 
 describe('savePlateForUser', () => {

@@ -621,9 +621,13 @@ export const mealComponentController = {
     }
   },
 
-  async plateOfTheWeek(_req: Request, res: Response) {
+  async plateOfTheWeek(req: Request, res: Response) {
     try {
-      const top = await getPlateOfTheWeek();
+      // Optional auth — when present, ranking is personalized to viewer's
+      // pantry + cuisine prefs + dietary safety. Anonymous viewers get the
+      // global top plate (legacy behavior).
+      const viewerUserId = isAuthenticated(req) ? getUserId(req) : undefined;
+      const top = await getPlateOfTheWeek(viewerUserId);
       return res.json({ plate: top });
     } catch (error) {
       console.error('Error fetching plate-of-the-week:', error);
