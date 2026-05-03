@@ -21,12 +21,95 @@ import {
   coachToolDefinitions,
   runCoachTool,
 } from '@/services/coachTools';
-import { COACH_PAYWALL_COPY } from '@/middleware/requireCoachPro';
+import { COACH_PAYWALL_COPY, requireCoachPro } from '@/middleware/requireCoachPro';
 import { emit as emitAnalytics } from '@/services/coachAnalytics';
+import {
+  identifyPantryFromImage,
+  CoachVisionError,
+  SUPPORTED_VISION_MEDIA_TYPES,
+  type VisionMediaType,
+} from '@/services/coachVisionService';
 import { coachContextRoutes } from './coachContextRoutes';
 
 const FREE_DAILY_MESSAGE_CAP = 10;
 const MAX_TOOL_USE_ITERATIONS = 5;
+// Phase 5: photo attachments. Wire-level cap per image; the server rejects
+// payloads above this with INVALID_ATTACHMENTS. Base64 inflates raw bytes ~33%,
+// so 2MB encoded ≈ 1.5MB original — comfortably above iOS HEIC compressed at
+// quality 0.7 for typical fridge photos.
+const MAX_ATTACHMENTS_PER_MESSAGE = 4;
+export const MAX_ATTACHMENT_BASE64_BYTES = 2 * 1024 * 1024;
+const SUPPORTED_ATTACHMENT_TYPE = 'image_base64';
+
+interface RawAttachment {
+  type?: unknown;
+  mediaType?: unknown;
+  data?: unknown;
+}
+
+interface ValidatedAttachment {
+  type: 'image_base64';
+  mediaType: VisionMediaType;
+  data: string;
+  sizeBytes: number;
+}
+
+function validateAttachments(
+  raw: unknown[],
+): { ok: true; attachments: ValidatedAttachment[] } | { ok: false; reason: string } {
+  if (raw.length > MAX_ATTACHMENTS_PER_MESSAGE) {
+    return { ok: false, reason: 'too_many' };
+  }
+  const out: ValidatedAttachment[] = [];
+  for (const item of raw) {
+    const a = item as RawAttachment;
+    if (a.type !== SUPPORTED_ATTACHMENT_TYPE) {
+      return { ok: false, reason: 'unsupported_type' };
+    }
+    if (typeof a.mediaType !== 'string' || !SUPPORTED_VISION_MEDIA_TYPES.has(a.mediaType as VisionMediaType)) {
+      return { ok: false, reason: 'unsupported_media' };
+    }
+    if (typeof a.data !== 'string' || a.data.length === 0) {
+      return { ok: false, reason: 'missing_data' };
+    }
+    if (a.data.length > MAX_ATTACHMENT_BASE64_BYTES) {
+      return { ok: false, reason: 'too_large' };
+    }
+    out.push({
+      type: 'image_base64',
+      mediaType: a.mediaType as VisionMediaType,
+      data: a.data,
+      sizeBytes: a.data.length,
+    });
+  }
+  return { ok: true, attachments: out };
+}
+
+function sanitizeForPersistence(
+  attachments: ValidatedAttachment[],
+): Array<{ type: 'image_base64'; mediaType: VisionMediaType; sizeBytes: number }> {
+  // TODO Phase 8+: migrate base64 to S3/Supabase blob storage and persist URLs here.
+  return attachments.map((a) => ({
+    type: a.type,
+    mediaType: a.mediaType,
+    sizeBytes: a.sizeBytes,
+  }));
+}
+
+function buildUserMessageContent(
+  text: string,
+  attachments: ValidatedAttachment[],
+): Anthropic.ContentBlockParam[] {
+  const imageBlocks: Anthropic.ImageBlockParam[] = attachments.map((a) => ({
+    type: 'image',
+    source: {
+      type: 'base64',
+      media_type: a.mediaType,
+      data: a.data,
+    },
+  }));
+  return [...imageBlocks, { type: 'text', text }];
+}
 
 function resolveGoalPhase(fitnessGoal: string | null | undefined): GoalPhase {
   switch (fitnessGoal) {
@@ -152,15 +235,15 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
   const userId = getUserId(req);
   const conversationId = String(req.body?.conversationId ?? '');
   const message = String(req.body?.message ?? '');
-  const attachments = Array.isArray(req.body?.attachments)
-    ? req.body.attachments
+  const rawAttachments = Array.isArray(req.body?.attachments)
+    ? (req.body.attachments as unknown[])
     : [];
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const tier = resolveCoachTier(user);
 
   // Pro-only: photo attachments. Reject free tier with the Coach paywall payload.
-  if (attachments.length > 0 && tier !== 'premium') {
+  if (rawAttachments.length > 0 && tier !== 'premium') {
     emitAnalytics('coach_paywall_view', {
       userId,
       feature: 'attachments',
@@ -172,6 +255,23 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
       paywall: COACH_PAYWALL_COPY.attachments,
     });
     return;
+  }
+
+  // Phase 5: validate attachment shape + cap count + cap size before any DB or
+  // Anthropic call. Free tier never reaches here (paywall short-circuited above).
+  let validated: ValidatedAttachment[] = [];
+  if (rawAttachments.length > 0) {
+    const result = validateAttachments(rawAttachments);
+    if (!result.ok) {
+      res.status(400).json({
+        error: 'INVALID_ATTACHMENTS',
+        reason: result.reason,
+        maxCount: MAX_ATTACHMENTS_PER_MESSAGE,
+        maxBase64Bytes: MAX_ATTACHMENT_BASE64_BYTES,
+      });
+      return;
+    }
+    validated = result.attachments;
   }
 
   if (tier === 'free') {
@@ -208,8 +308,19 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
     return;
   }
 
+  // Persist sanitized attachment record on the user message (no raw base64).
+  const userAttachmentsJson =
+    validated.length > 0
+      ? JSON.stringify({ attachments: sanitizeForPersistence(validated) })
+      : '[]';
   await prisma.coachMessage.create({
-    data: { conversationId, userId, role: 'user', content: message },
+    data: {
+      conversationId,
+      userId,
+      role: 'user',
+      content: message,
+      attachments: userAttachmentsJson,
+    },
   });
 
   const profile = await buildCoachProfile(userId);
@@ -224,8 +335,12 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
 
   const anthropic = getAnthropicClient();
   const toolUses: RecordedToolUse[] = [];
+  const userContent =
+    validated.length > 0
+      ? buildUserMessageContent(message, validated)
+      : message;
   const conversationMessages: Anthropic.MessageParam[] = [
-    { role: 'user', content: message },
+    { role: 'user', content: userContent },
   ];
 
   let assistantText = '';
@@ -380,3 +495,56 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
   res.write('event: done\ndata: {}\n\n');
   res.end();
 });
+
+// Phase 5: Pro-only — identify food ingredients in a photo for pantry write-back.
+// The frontend confirms the picks via UI, then writes via the existing pantry
+// bulk-add endpoint. The model-side `add_pantry_items` tool is deferred to Phase 7.
+coachRoutes.post(
+  '/extract-pantry-from-image',
+  requireCoachPro('attachments'),
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const imageBase64 = req.body?.imageBase64;
+    const mediaType = req.body?.mediaType;
+
+    if (typeof imageBase64 !== 'string' || imageBase64.length === 0) {
+      res.status(400).json({ error: 'INVALID_IMAGE' });
+      return;
+    }
+    if (imageBase64.length > MAX_ATTACHMENT_BASE64_BYTES) {
+      res.status(400).json({
+        error: 'INVALID_ATTACHMENTS',
+        reason: 'too_large',
+        maxBase64Bytes: MAX_ATTACHMENT_BASE64_BYTES,
+      });
+      return;
+    }
+    if (
+      typeof mediaType !== 'string' ||
+      !SUPPORTED_VISION_MEDIA_TYPES.has(mediaType as VisionMediaType)
+    ) {
+      res.status(400).json({ error: 'INVALID_MEDIA_TYPE' });
+      return;
+    }
+
+    try {
+      const result = await identifyPantryFromImage({
+        imageBase64,
+        mediaType: mediaType as VisionMediaType,
+      });
+      emitAnalytics('coach_pantry_extract', {
+        userId,
+        count: result.ingredients.length,
+      });
+      res.status(200).json(result);
+    } catch (err) {
+      const code =
+        err instanceof CoachVisionError ? err.code : 'provider_error';
+      const status = code === 'invalid_response' || code === 'refusal' ? 422 : 502;
+      res.status(status).json({
+        error: 'VISION_FAILED',
+        code,
+      });
+    }
+  },
+);

@@ -14,14 +14,27 @@ import {
   Platform,
   StyleSheet,
   ActivityIndicator,
+  ActionSheetIOS,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
-import { MessageBubble, QuickStartChips } from '../../components/coach';
+import {
+  MessageBubble,
+  QuickStartChips,
+  AttachmentBar,
+  PantryConfirmSheet,
+} from '../../components/coach';
 import CoachPaywallSheet, { type CoachPaywallReason } from '../../components/coach/CoachPaywallSheet';
 import { useCoachStream } from '../../hooks/useCoachStream';
-import { coachApi, type CoachConversation } from '../../lib/api';
+import { useCoachAttachments } from '../../hooks/useCoachAttachments';
+import {
+  coachApi,
+  type CoachAttachment,
+  type CoachConversation,
+  type CoachIdentifiedIngredient,
+} from '../../lib/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
@@ -58,8 +71,10 @@ export default function CoachScreen() {
   const [loadingList, setLoadingList] = useState(true);
   const [composerText, setComposerText] = useState('');
   const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
+  const [pantryConfirm, setPantryConfirm] = useState<CoachIdentifiedIngredient[] | null>(null);
 
   const stream = useCoachStream();
+  const attachments = useCoachAttachments();
   const chips = useMemo(() => deriveChips(userState), [userState]);
 
   const paywallReason: CoachPaywallReason | null =
@@ -114,8 +129,67 @@ export default function CoachScreen() {
     const value = composerText.trim();
     if (!value) return;
     setComposerText('');
-    await stream.sendMessage(value);
-  }, [composerText, stream]);
+    const pending = attachments.attachments;
+    const wireAttachments: CoachAttachment[] = pending.map((a) => ({
+      type: 'image_base64',
+      mediaType: a.mediaType,
+      data: a.base64,
+    }));
+    attachments.clear();
+
+    // Run extraction in parallel with the chat send so the confirm sheet can
+    // pop up after the assistant reply lands. First photo only — multi-photo
+    // pantry extraction is deferred.
+    let extractPromise: Promise<CoachIdentifiedIngredient[]> | null = null;
+    if (pending.length > 0) {
+      const first = pending[0];
+      extractPromise = coachApi
+        .extractPantryFromImage({ imageBase64: first.base64, mediaType: first.mediaType })
+        .then((r) => r.ingredients)
+        .catch(() => []);
+    }
+
+    await stream.sendMessage(value, wireAttachments.length > 0 ? wireAttachments : undefined);
+
+    if (extractPromise) {
+      const ingredients = await extractPromise;
+      if (ingredients.length > 0) {
+        setPantryConfirm(ingredients);
+      }
+    }
+  }, [composerText, stream, attachments]);
+
+  const onPickPhoto = useCallback(() => {
+    if (!flags.canAttachPhotos) {
+      setManualPaywallReason('photos');
+      return;
+    }
+    if (!attachments.canAdd) {
+      Alert.alert('Photo limit reached', 'You can attach up to 4 photos.');
+      return;
+    }
+    const launchCamera = () => attachments.pickFromCamera();
+    const launchLibrary = () => attachments.pickFromLibrary();
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Camera', 'Photo Library'],
+          cancelButtonIndex: 0,
+        },
+        (idx) => {
+          if (idx === 1) void launchCamera();
+          else if (idx === 2) void launchLibrary();
+        },
+      );
+    } else {
+      Alert.alert('Add a photo', 'Where from?', [
+        { text: 'Camera', onPress: () => void launchCamera() },
+        { text: 'Photo Library', onPress: () => void launchLibrary() },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  }, [attachments, flags.canAttachPhotos]);
 
   const onBack = useCallback(() => {
     setView('list');
@@ -176,6 +250,15 @@ export default function CoachScreen() {
         </ScrollView>
 
         <View style={[styles.composerBar, { backgroundColor: screenBg }]}>
+          {stream.attachmentError && (
+            <Text style={[styles.errorText, { color: isDark ? DarkColors.error : Colors.error }]}>
+              {stream.attachmentError}
+            </Text>
+          )}
+          <AttachmentBar
+            attachments={attachments.attachments}
+            onRemove={attachments.remove}
+          />
           <View
             style={[
               styles.composerInner,
@@ -184,13 +267,7 @@ export default function CoachScreen() {
             ]}
           >
             <HapticTouchableOpacity
-              onPress={() => {
-                if (!flags.canAttachPhotos) {
-                  setManualPaywallReason('photos');
-                  return;
-                }
-                // TODO Phase 5: wire camera/photo picker for Pro users
-              }}
+              onPress={onPickPhoto}
               accessibilityLabel={
                 flags.canAttachPhotos
                   ? 'Attach a photo'
@@ -250,6 +327,12 @@ export default function CoachScreen() {
             setManualPaywallReason(null);
             stream.dismissPaywall();
           }}
+        />
+
+        <PantryConfirmSheet
+          visible={pantryConfirm !== null}
+          ingredients={pantryConfirm ?? []}
+          onClose={() => setPantryConfirm(null)}
         />
       </KeyboardAvoidingView>
     );

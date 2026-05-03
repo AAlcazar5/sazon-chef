@@ -3,4 +3,6 @@
 
 export { default as MessageBubble } from './MessageBubble';
 export { default as QuickStartChips } from './QuickStartChips';
+export { default as AttachmentBar } from './AttachmentBar';
+export { default as PantryConfirmSheet } from './PantryConfirmSheet';
 export type { CoachRole } from './MessageBubble';
