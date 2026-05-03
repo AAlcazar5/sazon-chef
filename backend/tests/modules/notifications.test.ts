@@ -112,7 +112,7 @@ describe('Notifications (Group 6)', () => {
       await notificationsController.unregisterToken(mockReq as Request, mockRes as Response);
 
       expect(prisma.pushToken.deleteMany).toHaveBeenCalledWith({
-        where: { token: 'ExponentPushToken[abc123]' },
+        where: { token: 'ExponentPushToken[abc123]', userId: 'test-user-id' },
       });
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true })
