@@ -86,6 +86,15 @@ export default function PlateOfWeekCard() {
         >
           {macroLine}
         </Text>
+        {plate.reason ? (
+          <Text
+            style={[styles.reason, { color: eyebrowColor }]}
+            testID="plate-of-week-reason"
+            accessibilityLabel={`Picked because ${plate.reason}`}
+          >
+            {`✨ ${plate.reason}`}
+          </Text>
+        ) : null}
         <BrandButton
           label="Build this plate"
           variant="sage"
@@ -170,6 +179,12 @@ const styles = StyleSheet.create({
     fontFamily: EditorialFontFamily.body.regular,
     fontSize: 13,
     letterSpacing: 0.2,
+  },
+  reason: {
+    fontFamily: EditorialFontFamily.body.medium,
+    fontSize: 12,
+    letterSpacing: 0.2,
+    marginTop: 2,
   },
   cta: {
     alignSelf: 'flex-start',

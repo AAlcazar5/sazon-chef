@@ -151,4 +151,25 @@ describe('PlateOfWeekCard', () => {
     expect(card.props.accessibilityLabel).toMatch(/plate of the week/i);
     expect(card.props.accessibilityLabel).toContain('Mediterranean Salmon Bowl');
   });
+
+  it('renders the personalization reason badge when plate.reason is set (N=1)', async () => {
+    mockFetchOfTheWeek.mockResolvedValue({
+      data: { plate: { ...MOCK_PLATE, reason: '83% in your pantry · cuisine you love' } },
+    });
+    const { findByTestId } = render(<PlateOfWeekCard />);
+    const reason = await findByTestId('plate-of-week-reason');
+    const text = Array.isArray(reason.props.children)
+      ? reason.props.children.join(' ')
+      : String(reason.props.children);
+    expect(text).toContain('in your pantry');
+    expect(text).toContain('cuisine you love');
+    expect(reason.props.accessibilityLabel).toMatch(/picked because/i);
+  });
+
+  it('hides the reason badge for anonymous viewers (no reason field)', async () => {
+    mockFetchOfTheWeek.mockResolvedValue({ data: { plate: MOCK_PLATE } });
+    const { queryByTestId, findByText } = render(<PlateOfWeekCard />);
+    await findByText('PLATE OF THE WEEK');
+    expect(queryByTestId('plate-of-week-reason')).toBeNull();
+  });
 });
