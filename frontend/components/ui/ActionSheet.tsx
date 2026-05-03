@@ -25,6 +25,10 @@ export interface ActionSheetItem {
   subtitle?: string;
   /** Pastel tint applied to the icon chip. If absent, falls back to a rotation by index. */
   tint?: ActionSheetTint;
+  /** When true, the sheet stays open after this item is pressed. Used by tiered
+   *  sheets (e.g. "More actions" → swap into a secondary item list without
+   *  closing-then-reopening). */
+  keepOpen?: boolean;
 }
 
 const TINT_ROTATION: ActionSheetTint[] = ['sage', 'peach', 'lavender', 'sky', 'blush', 'golden'];
@@ -101,7 +105,9 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
       HapticPatterns.buttonPress();
     }
     item.onPress();
-    onClose();
+    if (!item.keepOpen) {
+      onClose();
+    }
   };
 
   const handleCancel = () => {
