@@ -19,6 +19,9 @@ import { useColorScheme } from 'nativewind';
 import BrandButton from '../../components/ui/BrandButton';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import PlateVariationsSheet from '../../components/recipe/PlateVariationsSheet';
+import PlateMenuExportButton, {
+  type PlateMenuPlate,
+} from '../../components/recipe/PlateMenuExportButton';
 import { recipeApi } from '../../lib/api';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { Pastel, PastelDark, Accent } from '../../constants/Colors';
@@ -119,6 +122,24 @@ export default function RecipeIdScreen() {
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
+
+  const menuPlate = useMemo<PlateMenuPlate | null>(() => {
+    if (!recipe || recipe.source !== 'user-composed') return null;
+    const components = (recipe.composedComponents ?? []).map((c) => ({
+      slot: c.slot,
+      label: c.slot.charAt(0).toUpperCase() + c.slot.slice(1),
+      variants: [{ id: `${recipe.id}-${c.slot}`, name: c.componentName }],
+    }));
+    return {
+      id: recipe.id,
+      title: recipe.title,
+      components,
+      totalCalories: recipe.calories,
+      totalProtein: recipe.protein,
+      totalCarbs: recipe.carbs,
+      totalFat: recipe.fat,
+    };
+  }, [recipe]);
 
   const titleColor = isDark ? '#F9FAFB' : '#1F2937';
   const subtitleColor = isDark ? '#9CA3AF' : '#6B7280';
@@ -238,6 +259,11 @@ export default function RecipeIdScreen() {
               testID="recipe-vary-this-plate"
               style={styles.varyBtn}
             />
+          )}
+
+          {/* Export as menu PDF — only for composed plates (Phase 9) */}
+          {isComposed && menuPlate && (
+            <PlateMenuExportButton plate={menuPlate} testID="recipe-export-menu" />
           )}
 
           {/* Macros line */}

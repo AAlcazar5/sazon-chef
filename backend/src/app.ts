@@ -21,7 +21,7 @@ import shoppingListShareRoutes from '@modules/shoppingListShare/shoppingListShar
 import costTrackingRoutes from '@modules/costTracking/costTrackingRoutes';
 import ingredientAvailabilityRoutes from '@modules/ingredientAvailability/ingredientAvailabilityRoutes';
 import pantryRoutes from '@modules/pantry/pantryRoutes';
-import { mealComponentRoutes, composedPlateRoutes, leftoverInventoryRoutes, sharedPlateRoutes } from '@modules/mealComponent/mealComponentRoutes';
+import { mealComponentRoutes, composedPlateRoutes, leftoverInventoryRoutes, sharedPlateRoutes, nutrientGapRoutes } from '@modules/mealComponent/mealComponentRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { searchRoutes } from '@modules/search/searchRoutes';
@@ -170,6 +170,7 @@ app.use('/api/meal-components', mealComponentRoutes);
 app.use('/api/composed-plates', composedPlateRoutes);
 app.use('/api/leftover-inventory', leftoverInventoryRoutes);
 app.use('/api/shared-plates', sharedPlateRoutes);
+app.use('/api/nutrient-gap', nutrientGapRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/notifications', notificationsRoutes);

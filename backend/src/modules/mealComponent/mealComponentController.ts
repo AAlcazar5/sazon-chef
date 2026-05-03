@@ -30,6 +30,15 @@ import {
 } from '../../services/plateShareService';
 import { getUserSkillTier, visibleSlotsForTier } from '../../services/skillTierService';
 import { generatePlateVariations } from '../../services/composedPlateVariationService';
+import {
+  listVariantsForComponent,
+  getCompatibleVariants,
+} from '../../services/mealComponentVariantService';
+import {
+  computeNutrientGap,
+  TARGET_DAILY_NUTRIENTS,
+  type TrackedNutrient,
+} from '../../services/nutrientGapService';
 import { prisma } from '../../lib/prisma';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
@@ -415,6 +424,78 @@ export const mealComponentController = {
     } catch (error) {
       console.error('Error fetching skill tier:', error);
       return res.status(500).json({ error: 'Failed to fetch skill tier' });
+    }
+  },
+
+  async listComponentVariants(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const componentId = req.params.id;
+    if (!componentId || componentId.length > 128) {
+      return res.status(400).json({ error: 'Invalid component id' });
+    }
+    try {
+      const lockedRaw = req.query.lockedSlots;
+      const lockedSlots: { slot: string; componentId: string }[] = [];
+      if (typeof lockedRaw === 'string' && lockedRaw.length > 0) {
+        for (const pair of lockedRaw.split(',')) {
+          const [slot, cid] = pair.split(':');
+          if (slot && cid) lockedSlots.push({ slot, componentId: cid });
+        }
+      }
+      const variants = lockedSlots.length
+        ? (await getCompatibleVariants(componentId, lockedSlots)).map((v) => ({
+            id: v.variant.id,
+            variantKey: v.variant.variantKey,
+            label: v.variant.displayName,
+            compatibilityScore: v.compatibilityScore,
+            caloriesDeltaPerPortion: v.variant.caloriePerPortionDelta,
+            cookTimeMinutes: v.variant.cookTimeMinutes,
+          }))
+        : (await listVariantsForComponent(componentId)).map((v) => ({
+            id: v.id,
+            variantKey: v.variantKey,
+            label: v.displayName,
+            compatibilityScore: 0.5,
+            caloriesDeltaPerPortion: v.caloriePerPortionDelta,
+            cookTimeMinutes: v.cookTimeMinutes,
+          }));
+      return res.json({ variants });
+    } catch (error) {
+      console.error('Error fetching component variants:', error);
+      return res.status(500).json({ error: 'Failed to fetch component variants' });
+    }
+  },
+
+  async getNutrientGapTop(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    try {
+      const userId = getUserId(req);
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const todaysCooks = await prisma.cookingLog.findMany({
+        where: { userId, cookedAt: { gte: startOfToday } },
+        include: { recipe: { select: { fiber: true } } },
+      });
+
+      const fiberG = todaysCooks.reduce(
+        (sum, log) => sum + (log.recipe?.fiber ?? 0),
+        0,
+      );
+
+      const result = computeNutrientGap({ fiberG });
+      return res.json({
+        topGap: result.topGap,
+        pctRemainingByNutrient: result.pctRemainingByNutrient,
+        targets: TARGET_DAILY_NUTRIENTS,
+      });
+    } catch (error) {
+      console.error('Error fetching nutrient gap:', error);
+      return res.status(500).json({ error: 'Failed to fetch nutrient gap' });
     }
   },
 
