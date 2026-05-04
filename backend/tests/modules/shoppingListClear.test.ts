@@ -20,7 +20,7 @@ jest.mock('../../src/utils/authHelper', () => ({
 
 import { Request, Response } from 'express';
 import { prisma } from '../../src/lib/prisma';
-import { shoppingListController } from '../../src/modules/shoppingList/shoppingListController';
+import { shoppingListMergeController as shoppingListController } from '../../src/modules/shoppingList/shoppingListMergeController';
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>;
 
