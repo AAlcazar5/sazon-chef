@@ -53,6 +53,14 @@ export const SUPERFOODS = {
   sweetPotato: ['sweet potato', 'sweet potatoes', 'yam'],
   broccoli: ['broccoli', 'broccoli florets', 'broccoli crown'],
   garlic: ['garlic', 'garlic cloves', 'minced garlic', 'garlic powder'],
+
+  // Group 11 Phase 3 — global cuisine superfood expansion.
+  // These cover the high-value cuisine angles that the Phase 2 generation
+  // pipeline will produce (Latin American + African + Ethiopian + Okinawan).
+  plantain: ['plantain', 'plantains', 'green plantain', 'green plantains', 'ripe plantain', 'ripe plantains'],
+  fenugreek: ['fenugreek', 'fenugreek seeds', 'fenugreek leaves', 'methi'],
+  teff: ['teff', 'teff flour', 'teff grain'],
+  bitterMelon: ['bitter melon', 'bitter gourd', 'goya', 'karela'],
 };
 
 export type SuperfoodCategory = keyof typeof SUPERFOODS;
@@ -140,6 +148,10 @@ export function getAllSuperfoodCategories(): Array<{
     { id: 'sweetPotato', name: 'Sweet Potato', description: 'Sweet potatoes/yams' },
     { id: 'broccoli', name: 'Broccoli', description: 'Broccoli' },
     { id: 'garlic', name: 'Garlic', description: 'Garlic' },
+    { id: 'plantain', name: 'Plantain', description: 'Latin American + African staple — fiber + potassium' },
+    { id: 'fenugreek', name: 'Fenugreek', description: 'Yemeni + Ethiopian + Indian — blood-sugar regulation, anti-inflammatory' },
+    { id: 'teff', name: 'Teff', description: 'Ethiopian whole grain — high iron, complete protein' },
+    { id: 'bitterMelon', name: 'Bitter Melon', description: 'Okinawan + Filipino + Indian — blood-sugar regulation, antioxidants' },
   ];
 }
 
