@@ -758,7 +758,7 @@ describe('GET /api/meal-components/:id/variants', () => {
     const req = { params: { id: 'comp-1' }, query: {} } as unknown as Request;
     const res = buildRes();
     await mealComponentController.listComponentVariants(req, res);
-    expect(mockListVariantsForComponent).toHaveBeenCalledWith('comp-1');
+    expect(mockListVariantsForComponent).toHaveBeenCalledWith('comp-1', 'user-1');
     expect(res.json).toHaveBeenCalledWith({
       variants: [
         expect.objectContaining({
@@ -785,6 +785,7 @@ describe('GET /api/meal-components/:id/variants', () => {
     await mealComponentController.listComponentVariants(req, res);
     expect(mockGetCompatibleVariants).toHaveBeenCalledWith(
       'comp-1',
+      'user-1',
       [
         { slot: 'protein', componentId: 'p_salmon' },
         { slot: 'sauce', componentId: 's_chimichurri' },
@@ -815,7 +816,7 @@ describe('GET /api/meal-components/:id/variants', () => {
     const res = buildRes();
     await mealComponentController.listComponentVariants(req, res);
     // Falls through to plain list (lockedSlots ignored when over cap).
-    expect(mockListVariantsForComponent).toHaveBeenCalledWith('comp-1');
+    expect(mockListVariantsForComponent).toHaveBeenCalledWith('comp-1', 'user-1');
     expect(mockGetCompatibleVariants).not.toHaveBeenCalled();
   });
 
@@ -827,7 +828,7 @@ describe('GET /api/meal-components/:id/variants', () => {
     } as unknown as Request;
     const res = buildRes();
     await mealComponentController.listComponentVariants(req, res);
-    const passedSlots = mockGetCompatibleVariants.mock.calls[0][1];
+    const passedSlots = mockGetCompatibleVariants.mock.calls[0][2];
     expect(passedSlots.length).toBeLessThanOrEqual(5);
   });
 });
