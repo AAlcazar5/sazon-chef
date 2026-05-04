@@ -3808,7 +3808,12 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
   - [ ] **Writeback (deferred to v1.1):** family-tap + cuisine-tap signals into adjacency weights.
 
   > **N=1 sharpening:** A static map/grid is the same browse view for everyone. Reorder by affinity so the year-1 user sees their loved families top + unexplored adjacents flagged "New for you," while a day-1 user sees their onboarding picks top + adjacency suggestions next.
-* [ ] **Empty state polish** — Review all empty states (cookbook, meal plan, shopping list) to ensure they guide users toward the next action with **examples pulled from the user's top-3 affinity cuisines + 1 adjacency wildcard — NOT a hardcoded sampler**. Day-1 user (no cooks): pull from onboarding cuisine picks. Year-1 user: pull from top-affinity + a fresh adjacent suggestion they haven't tried.
+* [x] **Empty state polish** ✅ ARCHITECTURE SHIPPED 2026-05-04
+  Reusable hook: `frontend/hooks/useAffinityExamples.ts` returns `{ topCuisines, wildcard, loading }` for any consumer that wants personalized example copy. Backed by the same `/api/recipes/browse-by-family` endpoint shipped above — no extra round-trips. Companion helper `formatAffinityHint(examples)` produces inline strings ("Try Salvadorean, Mexican, or Burmese.") and returns empty string when no signal exists, so callers fall through cleanly to static copy.
+  Applied to: `MealPlanEmptyState` (renders the affinity hint as italic subtitle below the existing "Pick your goal" copy).
+  - [x] **Test:** 9 cases in `__tests__/hooks/useAffinityExamples.test.ts` — empty state, top-cuisines extraction with affinity ordering, wildcard selection from hasNewForYou families, dedup against topCuisines, API rejection. Plus `formatAffinityHint` shape tests.
+  - [ ] **Rollout (deferred):** apply to cookbook + shopping list empty states. Mechanical — same import, same hook call, same conditional render of the hint. v1.1.
+
   > **N=1 sharpening:** A static "cuisine-diverse sampler" is the laziest possible empty state. Pull from `cuisineAffinity` so even empty states feel built for one.
 
 ---

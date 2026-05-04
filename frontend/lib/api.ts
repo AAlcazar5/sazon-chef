@@ -544,6 +544,22 @@ export const recipeApi = {
     return apiClient.get('/recipes/recipe-of-the-day');
   },
 
+  // Group 11 Phase 5 — "New to you" personalized adjacency feed.
+  // Returns recipes from cuisines adjacent to (but not yet explored by)
+  // the caller. Each recipe carries personalizationReason + sourceCuisine.
+  getNewToYou: (options?: { limit?: number }) => {
+    const params: any = {};
+    if (options?.limit !== undefined) params.limit = options.limit;
+    return apiClient.get('/recipes/new-to-you', { params });
+  },
+
+  // Group 11 Phase 5 — "Browse by Region" cuisine-family ranking.
+  // Returns CUISINE_FAMILIES annotated with this user's affinity, sorted
+  // most-cooked → unexplored-but-adjacent ("New for you") → never-touched.
+  getBrowseByFamily: () => {
+    return apiClient.get('/recipes/browse-by-family');
+  },
+
   // Consolidated home feed (replaces 7 separate API calls)
   getHomeFeed: (options?: {
     page?: number;
