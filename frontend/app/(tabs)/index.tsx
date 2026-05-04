@@ -29,6 +29,8 @@ import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
+import { NewToYouSection } from '../../components/home/NewToYouSection';
+import { BrowseByFamilySection, type FamilyEntry } from '../../components/home/BrowseByFamilySection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 // PantryMatchCard removed — editorial v2 absorbs pantry info into subtitle
@@ -922,6 +924,27 @@ export default function HomeScreen() {
         {/* Personalized Sections - Moved to bottom after Recipes for You */}
         {user?.id && (
           <>
+            {/* Group 11 Phase 5 — adaptive cuisine surfaces */}
+            <NewToYouSection
+              isDark={isDark}
+              userFeedback={userFeedback}
+              feedbackLoading={feedbackLoading}
+              onRecipePress={handleRecipePress}
+              onRecipeLongPress={handleLongPress}
+              onLike={handleLike}
+              onDislike={handleShowDislikeSheet}
+              onSave={handleSave}
+            />
+
+            <BrowseByFamilySection
+              isDark={isDark}
+              onFamilyPress={(entry: FamilyEntry) => {
+                // Set the cuisine filter to this family's cuisines and scroll
+                // back to top so the user sees the filtered home feed.
+                applyFilters({ ...filters, cuisines: entry.cuisines });
+              }}
+            />
+
             {/* Premium upsell card — only for free-tier users */}
             {!subscription.isPremium && <PremiumUpsellCard testID="home-upsell-card" />}
 

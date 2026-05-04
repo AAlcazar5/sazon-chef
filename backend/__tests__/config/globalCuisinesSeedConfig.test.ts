@@ -5,10 +5,16 @@ import {
   GLOBAL_CUISINES_SEED,
   summarizeSeed,
   buildPromptContext,
+  V1_SCOPE_CUISINES,
+  getV1ScopeCuisines,
+  v1ScopeRecipeTotal,
 } from '../../src/config/globalCuisinesSeedConfig';
 import {
   GLOBAL_SNACKS_SEED,
   summarizeSnacksSeed,
+  V1_SCOPE_CATEGORIES,
+  getV1ScopeCategories,
+  v1ScopeSnackTotal,
 } from '../../src/config/globalSnacksSeedConfig';
 
 describe('GLOBAL_CUISINES_SEED', () => {
@@ -105,5 +111,73 @@ describe('GLOBAL_SNACKS_SEED', () => {
   it('does not include duplicate category names', () => {
     const names = GLOBAL_SNACKS_SEED.map((c) => c.category);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe('Group 11 v1 scope', () => {
+  describe('cuisines', () => {
+    it('defines exactly 30 v1-scope cuisines', () => {
+      expect(V1_SCOPE_CUISINES.size).toBe(30);
+    });
+
+    it('every v1-scope cuisine has a corresponding entry in GLOBAL_CUISINES_SEED', () => {
+      for (const name of V1_SCOPE_CUISINES) {
+        const found = GLOBAL_CUISINES_SEED.find((t) => t.name === name);
+        expect(found).toBeDefined();
+      }
+    });
+
+    it('getV1ScopeCuisines returns 30 entries that match the V1_SCOPE_CUISINES set', () => {
+      const v1 = getV1ScopeCuisines();
+      expect(v1.length).toBe(30);
+      for (const t of v1) {
+        expect(V1_SCOPE_CUISINES.has(t.name)).toBe(true);
+      }
+    });
+
+    it('v1 scope total recipe count is in the 750-850 range (target ~800)', () => {
+      const total = v1ScopeRecipeTotal();
+      expect(total).toBeGreaterThanOrEqual(750);
+      expect(total).toBeLessThanOrEqual(850);
+    });
+
+    it('includes the personal N=1 anchor (Salvadorean) and blue-zone signal (Okinawan)', () => {
+      expect(V1_SCOPE_CUISINES.has('Salvadorean')).toBe(true);
+      expect(V1_SCOPE_CUISINES.has('Okinawan')).toBe(true);
+    });
+  });
+
+  describe('snacks', () => {
+    it('defines exactly 5 v1-scope categories', () => {
+      expect(V1_SCOPE_CATEGORIES.size).toBe(5);
+    });
+
+    it('every v1-scope category has a corresponding entry in GLOBAL_SNACKS_SEED', () => {
+      for (const name of V1_SCOPE_CATEGORIES) {
+        const found = GLOBAL_SNACKS_SEED.find((c) => c.category === name);
+        expect(found).toBeDefined();
+      }
+    });
+
+    it('getV1ScopeCategories returns 5 entries with the v1-override recipe counts', () => {
+      const v1 = getV1ScopeCategories();
+      expect(v1.length).toBe(5);
+      // No category should exceed 50 in v1 scope (overrides cap them)
+      for (const c of v1) {
+        expect(c.recipeCount).toBeLessThanOrEqual(50);
+      }
+    });
+
+    it('v1 snack total recipe count is exactly 200', () => {
+      expect(v1ScopeSnackTotal()).toBe(200);
+    });
+  });
+
+  describe('combined v1 budget', () => {
+    it('cuisines + snacks total is approximately 1000 recipes', () => {
+      const total = v1ScopeRecipeTotal() + v1ScopeSnackTotal();
+      expect(total).toBeGreaterThanOrEqual(900);
+      expect(total).toBeLessThanOrEqual(1100);
+    });
   });
 });
