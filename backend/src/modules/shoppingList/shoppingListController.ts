@@ -8,6 +8,7 @@ import { notificationTriggerService } from '../../services/notificationTriggerSe
 import { categorizeItem } from '../../utils/aisleCategorizer';
 import { setActiveList, getActiveList } from '../../services/shoppingListLifecycleService';
 import { resolveVoiceUtterance } from '../../services/voiceRecipeResolver';
+import { logger } from '../../utils/logger';
 
 // Cap on how many recipes can be processed in a single generate-from-recipes /
 // budget-preview call. Prevents DoS via massive IN(...) queries + unbounded item creation.
@@ -118,16 +119,11 @@ export const shoppingListController = {
         },
       });
 
-      console.log(`[SHOPPING_LIST] GET /api/shopping-lists - Success - Found ${shoppingLists.length} lists`);
+      logger.debug({ count: shoppingLists.length }, 'shopping_list.list.success');
       res.json(shoppingLists);
     } catch (error: any) {
-      console.error('[SHOPPING_LIST] GET /api/shopping-lists - ERROR:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack,
-        name: error.name,
-      });
-      res.status(500).json({ 
+      logger.error({ err: error }, 'shopping_list.list.failed');
+      res.status(500).json({
         error: 'Failed to get shopping lists',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -144,14 +140,14 @@ export const shoppingListController = {
       const userId = getUserId(req);
       const { id } = req.params;
 
-      console.log(`[SHOPPING_LIST] GET /api/shopping-lists/${id} - User: ${userId} - Start: ${new Date().toISOString()}`);
+      logger.debug({ listId: id }, 'shopping_list.get.start');
 
       const shoppingList = await prisma.shoppingList.findFirst({
         where: { id, userId },
       });
 
       if (!shoppingList) {
-        console.log(`[SHOPPING_LIST] GET /api/shopping-lists/${id} - Not found`);
+        logger.debug({ listId: id }, 'shopping_list.get.not_found');
         return res.status(404).json({ error: 'Shopping list not found' });
       }
 
@@ -173,18 +169,11 @@ export const shoppingListController = {
       const shoppingListWithItems = { ...shoppingList, items };
 
       const duration = Date.now() - startTime;
-      console.log(`[SHOPPING_LIST] GET /api/shopping-lists/${id} - Success - Duration: ${duration}ms - Items: ${items.length}`);
+      logger.debug({ listId: id, duration, itemCount: items.length }, 'shopping_list.get.success');
       res.json(shoppingListWithItems);
     } catch (error: any) {
       const duration = Date.now() - startTime;
-      console.error(`[SHOPPING_LIST] GET /api/shopping-lists/${req.params.id} - ERROR after ${duration}ms:`, {
-        message: error.message,
-        code: error.code,
-        status: error.status,
-        stack: error.stack,
-        name: error.name,
-        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
-      });
+      logger.error({ err: error, listId: req.params.id, duration }, 'shopping_list.get.failed');
       res.status(500).json({ 
         error: 'Failed to get shopping list',
         code: error.code || 'SHOPPING_LIST_ERROR',

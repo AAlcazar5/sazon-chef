@@ -1,6 +1,7 @@
 // Privacy helper utilities
 import { Request } from 'express';
 import { prisma } from '../lib/prisma';
+import { logger } from './logger';
 
 export interface PrivacySettings {
   analyticsEnabled: boolean;
@@ -80,7 +81,9 @@ export async function getUserPreferencesForRecommendations(
   const dataSharingEnabled = isDataSharingEnabledFromRequest(req);
   
   if (!dataSharingEnabled) {
-    console.log('🔒 Data sharing disabled - using generic recommendations for user:', userId);
+    // PII-safe: log decision without userId. If we ever need per-user audit,
+    // route through logger with redact paths — never bare console with IDs.
+    logger.debug('privacy.recommendations.generic');
     // Return null/empty data when data sharing is disabled
     return {
       preferences: null,
@@ -90,8 +93,8 @@ export async function getUserPreferencesForRecommendations(
       usePersonalization: false,
     };
   }
-  
-  console.log('✅ Data sharing enabled - using personalized recommendations for user:', userId);
+
+  logger.debug('privacy.recommendations.personalized');
   
   // Fetch user data for personalization
   const [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([

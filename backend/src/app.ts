@@ -34,6 +34,7 @@ import { stripeRoutes } from '@modules/stripe/stripeRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 import { prisma } from '@/lib/prisma';
 import { cacheService } from '@/utils/cacheService';
+import { logger } from '@/utils/logger';
 
 import type { Request, Response, NextFunction } from 'express';
 
@@ -200,7 +201,7 @@ if (process.env.SENTRY_DSN) {
 
 // Generic error handler
 app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Global error handler:', error);
+  logger.error({ err: error }, 'http.unhandled_error');
 
   if (error.name === 'UnauthenticatedError') {
     return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
@@ -215,9 +216,17 @@ app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
     return res.status(400).json({ error: 'Validation failed', details: error.details });
   }
 
+  // ERR-1: error.message from Prisma can leak constraint names and column
+  // names ("Unique constraint failed on the fields: (`userId_email`)").
+  // Only surface error.message when the error sets a 4xx status and is
+  // therefore client-actionable; everything else gets a generic message.
   const statusCode = error.status || error.statusCode || 500;
+  const isClientError = statusCode >= 400 && statusCode < 500;
+  const safeMessage = isClientError
+    ? error.message || 'Bad request'
+    : 'Internal server error';
   res.status(statusCode).json({
-    error: error.message || 'Internal server error',
+    error: safeMessage,
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
   });
 });
