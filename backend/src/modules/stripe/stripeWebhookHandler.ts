@@ -7,7 +7,14 @@ import { prisma } from '@/lib/prisma';
 import { stripeService } from '@/services/stripeService';
 import { emailService } from '@/services/emailService';
 
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+  throw new Error(
+    'STRIPE_WEBHOOK_SECRET env var is required. ' +
+    'Without it, webhook signature verification cannot run and any forged ' +
+    'request would be accepted as a real Stripe event.'
+  );
+}
+const STRIPE_WEBHOOK_SECRET: string = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function handleStripeWebhook(req: Request, res: Response) {
   const sig = req.headers['stripe-signature'];

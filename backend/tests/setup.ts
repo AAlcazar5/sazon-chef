@@ -1,4 +1,9 @@
 // Test setup file
+
+// Required env vars for modules that fail-fast on missing config.
+// Set BEFORE any imports below so module-load-time guards see them.
+process.env.STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test_dummy';
+
 import { PrismaClient } from '@prisma/client';
 
 // Shared Prisma mock object
