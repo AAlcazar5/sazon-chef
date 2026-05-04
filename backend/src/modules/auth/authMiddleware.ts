@@ -4,9 +4,13 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// TODO Sec H1 (security review): require JWT_SECRET in env; remove dev fallback.
-// Tracked separately from Group 10Y CRITICAL fixes — broader auth refactor.
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  throw new Error(
+    'JWT_SECRET env var is required and must be at least 32 characters. ' +
+    'Generate one via: openssl rand -base64 48'
+  );
+}
+const JWT_SECRET: string = process.env.JWT_SECRET;
 
 // Extend Express Request to include user
 declare global {

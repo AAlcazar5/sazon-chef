@@ -3,6 +3,8 @@
 // Required env vars for modules that fail-fast on missing config.
 // Set BEFORE any imports below so module-load-time guards see them.
 process.env.STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test_dummy';
+process.env.JWT_SECRET =
+  process.env.JWT_SECRET || 'test_jwt_secret_at_least_32_characters_long_for_guard';
 
 import { PrismaClient } from '@prisma/client';
 
