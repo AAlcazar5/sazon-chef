@@ -409,6 +409,18 @@ async function loadMemberAffinityComponentNames(
   userId: string,
   householdMemberId: string,
 ): Promise<string[]> {
+  // Defence-in-depth: verify the member belongs to the caller before issuing
+  // the affinity query. The slotAffinity scope already filters by userId, so
+  // a foreign id would return empty rows — but the LLM-supplied id should
+  // never reach the DB query in the first place.
+  const member = await prisma.householdMember.findFirst({
+    where: { id: householdMemberId, userId },
+    select: { id: true },
+  });
+  if (!member) {
+    return [];
+  }
+
   const prismaUntyped = prisma as unknown as Record<string, PrismaModelMaybe>;
   const rows = await safeFindMany<{ score: number; component: { name: string } | null }>(
     prismaUntyped.slotAffinity,
@@ -659,8 +671,11 @@ async function resolveComponentForSlot(
 ): Promise<ComponentRow | null> {
   const composerSlot = COACH_TO_COMPOSER_SLOT[slot];
   if (componentId) {
+    // Restrict to seed components (userId: null) or components owned by the
+    // caller. Without this, a guessed/leaked componentId from another user's
+    // private library would resolve and end up on this user's plate.
     const rows = (await prisma.mealComponent.findMany({
-      where: { id: componentId },
+      where: { id: componentId, OR: [{ userId: null }, { userId }] },
     })) as unknown as ComponentRow[];
     return rows[0] ?? null;
   }
