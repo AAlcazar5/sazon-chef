@@ -56,9 +56,29 @@ const parseScores = (raw: string | null): Record<string, number> => {
   return {};
 };
 
+/**
+ * Verify the requesting user can read variants for this component. Component
+ * is accessible when it is a seed component (userId null) or owned by the
+ * caller. Throws nothing; returns boolean so callers can 404/empty cleanly.
+ */
+const userCanReadComponent = async (
+  componentId: string,
+  userId: string,
+): Promise<boolean> => {
+  const component = await prisma.mealComponent.findFirst({
+    where: { id: componentId, OR: [{ userId: null }, { userId }] },
+    select: { id: true },
+  });
+  return !!component;
+};
+
 export const listVariantsForComponent = async (
-  componentId: string
+  componentId: string,
+  userId: string,
 ): Promise<MealComponentVariantRow[]> => {
+  if (!(await userCanReadComponent(componentId, userId))) {
+    return [];
+  }
   return prisma.mealComponentVariant.findMany({
     where: { componentId },
     orderBy: { variantKey: 'asc' },
@@ -67,9 +87,10 @@ export const listVariantsForComponent = async (
 
 export const getCompatibleVariants = async (
   componentId: string,
-  lockedSlots: LockedSlotRef[]
+  userId: string,
+  lockedSlots: LockedSlotRef[],
 ): Promise<VariantWithCompatibility[]> => {
-  const variants = await listVariantsForComponent(componentId);
+  const variants = await listVariantsForComponent(componentId, userId);
   if (variants.length === 0) return [];
 
   const scored: VariantWithCompatibility[] = variants.map((variant) => {

@@ -11,10 +11,16 @@ import { prisma } from '../lib/prisma';
 const SLUG_ADJECTIVES = ['cozy', 'bright', 'smoky', 'spicy', 'fresh', 'crisp', 'silky', 'hearty'];
 const SLUG_NOUNS = ['salmon', 'tomato', 'farro', 'tahini', 'broccoli', 'lemon', 'pepper', 'thyme'];
 
+// 16 random bytes = 128 bits of entropy in the suffix. The adj-noun prefix
+// is human-friendly window dressing — security comes from the suffix alone.
+// Previous 2-byte (16-bit) suffix made enumeration of all share slugs
+// trivially feasible behind only the global IP rate limit.
+const SLUG_RANDOM_BYTES = 16;
+
 const generateSlug = (): string => {
   const adj = SLUG_ADJECTIVES[Math.floor(Math.random() * SLUG_ADJECTIVES.length)];
   const noun = SLUG_NOUNS[Math.floor(Math.random() * SLUG_NOUNS.length)];
-  const hash = randomBytes(2).toString('hex');
+  const hash = randomBytes(SLUG_RANDOM_BYTES).toString('hex');
   return `${adj}-${noun}-${hash}`;
 };
 
@@ -260,7 +266,38 @@ export interface SavePlateInput {
   plateId: string;
 }
 
+export class PlateNotShareableError extends Error {
+  status = 404;
+  constructor() {
+    super('Plate not found or not available to save');
+    this.name = 'PlateNotShareableError';
+  }
+}
+
+/**
+ * Save a plate to the user's saved-plate list. The source plate must either
+ * be owned by the caller OR have at least one active share row — without this
+ * check, a caller could construct plateSave rows pointing at arbitrary plate
+ * IDs (probing existence, polluting analytics, surfacing unintended plates
+ * in saved-plate views).
+ */
 export const savePlateForUser = async (input: SavePlateInput): Promise<void> => {
+  const plate = await (prisma as any).composedPlate.findUnique({
+    where: { id: input.plateId },
+    select: { id: true, userId: true },
+  });
+  if (!plate) {
+    throw new PlateNotShareableError();
+  }
+  if (plate.userId !== input.userId) {
+    const share = await (prisma as any).plateShare.findFirst({
+      where: { plateId: input.plateId },
+      select: { id: true },
+    });
+    if (!share) {
+      throw new PlateNotShareableError();
+    }
+  }
   await (prisma as any).plateSave.upsert({
     where: { userId_plateId: { userId: input.userId, plateId: input.plateId } },
     update: {},

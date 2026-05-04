@@ -69,7 +69,7 @@ describe('createShareLink', () => {
       userId: 'user-1',
     });
     const result = await createShareLink({ plateId: 'plate-1', userId: 'user-1' });
-    expect(result.slug).toMatch(/^[a-z0-9-]{6,40}$/);
+    expect(result.slug).toMatch(/^[a-z0-9-]{6,80}$/);
     expect(mockPrisma.plateShare.create).toHaveBeenCalledWith({
       data: {
         slug: result.slug,
@@ -308,12 +308,46 @@ describe('getPlateOfTheWeek', () => {
 });
 
 describe('savePlateForUser', () => {
-  it('creates a plate save (upsert to be idempotent)', async () => {
+  it('creates a plate save when the caller owns the source plate', async () => {
+    mockPrisma.composedPlate.findUnique.mockResolvedValueOnce({
+      id: 'plate-A',
+      userId: 'u1',
+    });
     await savePlateForUser({ userId: 'u1', plateId: 'plate-A' });
     expect(mockPrisma.plateSave.upsert).toHaveBeenCalledWith({
       where: { userId_plateId: { userId: 'u1', plateId: 'plate-A' } },
       update: {},
       create: { userId: 'u1', plateId: 'plate-A' },
     });
+  });
+
+  it('creates a plate save when the source plate has a public share', async () => {
+    mockPrisma.composedPlate.findUnique.mockResolvedValueOnce({
+      id: 'plate-A',
+      userId: 'somebody-else',
+    });
+    mockPrisma.plateShare.findFirst.mockResolvedValueOnce({ id: 'share-1' });
+    await savePlateForUser({ userId: 'u1', plateId: 'plate-A' });
+    expect(mockPrisma.plateSave.upsert).toHaveBeenCalled();
+  });
+
+  it('rejects when the source plate does not exist', async () => {
+    mockPrisma.composedPlate.findUnique.mockResolvedValueOnce(null);
+    await expect(
+      savePlateForUser({ userId: 'u1', plateId: 'plate-ghost' }),
+    ).rejects.toThrow(/not found|not available/i);
+    expect(mockPrisma.plateSave.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects when the source plate is private to another user (no share row)', async () => {
+    mockPrisma.composedPlate.findUnique.mockResolvedValueOnce({
+      id: 'plate-A',
+      userId: 'somebody-else',
+    });
+    mockPrisma.plateShare.findFirst.mockResolvedValueOnce(null);
+    await expect(
+      savePlateForUser({ userId: 'u1', plateId: 'plate-A' }),
+    ).rejects.toThrow(/not found|not available/i);
+    expect(mockPrisma.plateSave.upsert).not.toHaveBeenCalled();
   });
 });

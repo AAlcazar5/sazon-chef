@@ -19,10 +19,20 @@ beforeAll(() => {
       upsert: jest.fn(),
     };
   }
+  if (!mockPrisma.mealComponent) {
+    mockPrisma.mealComponent = {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    };
+  }
 });
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Default: caller may read the component (seed or owned). Tests that verify
+  // ownership refusal can override with mockResolvedValueOnce(null).
+  mockPrisma.mealComponent.findFirst = jest.fn().mockResolvedValue({ id: 'c1' });
 });
 
 const buildVariant = (overrides: Partial<any> = {}) => ({
@@ -48,7 +58,7 @@ describe('mealComponentVariantService.listVariantsForComponent', () => {
     ];
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce(variants);
 
-    const result = await listVariantsForComponent('c1');
+    const result = await listVariantsForComponent('c1', 'user-1');
 
     expect(result).toHaveLength(2);
     expect(result.map((v) => v.variantKey)).toEqual(['roasted', 'steamed']);
@@ -60,7 +70,7 @@ describe('mealComponentVariantService.listVariantsForComponent', () => {
   it('returns an empty list when the component has no variants', async () => {
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce([]);
 
-    const result = await listVariantsForComponent('c1');
+    const result = await listVariantsForComponent('c1', 'user-1');
 
     expect(result).toEqual([]);
   });
@@ -68,7 +78,7 @@ describe('mealComponentVariantService.listVariantsForComponent', () => {
   it('returns [] when componentId is not found (prisma returns empty)', async () => {
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce([]);
 
-    const result = await listVariantsForComponent('does-not-exist');
+    const result = await listVariantsForComponent('does-not-exist', 'user-1');
 
     expect(result).toEqual([]);
   });
@@ -98,7 +108,7 @@ describe('mealComponentVariantService.getCompatibleVariants', () => {
     ];
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce(variants);
 
-    const result = await getCompatibleVariants('c1', [
+    const result = await getCompatibleVariants('c1', 'user-1', [
       { slot: 'protein', componentId: 'protein-chimi' },
     ]);
 
@@ -123,7 +133,7 @@ describe('mealComponentVariantService.getCompatibleVariants', () => {
     ];
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce(variants);
 
-    const result = await getCompatibleVariants('c1', [
+    const result = await getCompatibleVariants('c1', 'user-1', [
       { slot: 'protein', componentId: 'p1' },
     ]);
 
@@ -140,7 +150,7 @@ describe('mealComponentVariantService.getCompatibleVariants', () => {
     ];
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce(variants);
 
-    const result = await getCompatibleVariants('c1', [
+    const result = await getCompatibleVariants('c1', 'user-1', [
       { slot: 'protein', componentId: 'p1' },
     ]);
 
@@ -157,7 +167,7 @@ describe('mealComponentVariantService.getCompatibleVariants', () => {
     ];
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce(variants);
 
-    const result = await getCompatibleVariants('c1', [
+    const result = await getCompatibleVariants('c1', 'user-1', [
       { slot: 'protein', componentId: 'p1' },
       { slot: 'sauce', componentId: 's1' },
     ]);
@@ -174,7 +184,7 @@ describe('mealComponentVariantService.getCompatibleVariants', () => {
     ];
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce(variants);
 
-    const result = await getCompatibleVariants('c1', [
+    const result = await getCompatibleVariants('c1', 'user-1', [
       { slot: 'protein', componentId: 'p1' },
       { slot: 'sauce', componentId: 's1' },
     ]);
@@ -185,7 +195,7 @@ describe('mealComponentVariantService.getCompatibleVariants', () => {
   it('returns [] when the component has no variants', async () => {
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce([]);
 
-    const result = await getCompatibleVariants('c1', [
+    const result = await getCompatibleVariants('c1', 'user-1', [
       { slot: 'protein', componentId: 'p1' },
     ]);
 
@@ -198,7 +208,7 @@ describe('mealComponentVariantService.getCompatibleVariants', () => {
     ];
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce(variants);
 
-    const result = await getCompatibleVariants('c1', []);
+    const result = await getCompatibleVariants('c1', 'user-1', []);
 
     expect(result).toHaveLength(1);
     expect(result[0].compatibilityScore).toBe(0.5);
@@ -211,7 +221,7 @@ describe('mealComponentVariantService.getCompatibleVariants', () => {
     ];
     mockPrisma.mealComponentVariant.findMany.mockResolvedValueOnce(variants);
 
-    const result = await getCompatibleVariants('c1', [
+    const result = await getCompatibleVariants('c1', 'user-1', [
       { slot: 'protein', componentId: 'p1' },
     ]);
 

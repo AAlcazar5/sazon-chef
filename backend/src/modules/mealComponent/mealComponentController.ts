@@ -479,6 +479,7 @@ export const mealComponentController = {
     if (!isAuthenticated(req)) {
       return res.status(401).json({ error: 'Authentication required' });
     }
+    const userId = getUserId(req);
     const componentId = req.params.id;
     if (!componentId || componentId.length > 128) {
       return res.status(400).json({ error: 'Invalid component id' });
@@ -502,7 +503,7 @@ export const mealComponentController = {
         }
       }
       const variants = lockedSlots.length
-        ? (await getCompatibleVariants(componentId, lockedSlots)).map((v) => ({
+        ? (await getCompatibleVariants(componentId, userId, lockedSlots)).map((v) => ({
             id: v.variant.id,
             variantKey: v.variant.variantKey,
             label: v.variant.displayName,
@@ -510,7 +511,7 @@ export const mealComponentController = {
             caloriesDeltaPerPortion: v.variant.caloriePerPortionDelta,
             cookTimeMinutes: v.variant.cookTimeMinutes,
           }))
-        : (await listVariantsForComponent(componentId)).map((v) => ({
+        : (await listVariantsForComponent(componentId, userId)).map((v) => ({
             id: v.id,
             variantKey: v.variantKey,
             label: v.displayName,
@@ -693,7 +694,10 @@ export const mealComponentController = {
       const userId = getUserId(req);
       await savePlateForUser({ userId, plateId });
       return res.json({ ok: true });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'PlateNotShareableError') {
+        return res.status(404).json({ error: 'Plate not found' });
+      }
       console.error('Error saving plate:', error);
       return res.status(500).json({ error: 'Failed to save plate' });
     }
