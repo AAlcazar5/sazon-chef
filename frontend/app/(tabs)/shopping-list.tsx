@@ -12,6 +12,7 @@ import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import BrandButton from '../../components/ui/BrandButton';
 import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
+import { useAffinityExamples, formatAffinityHint } from '../../hooks/useAffinityExamples';
 import SwipeableItem from '../../components/ui/SwipeableItem';
 import LoadingState from '../../components/ui/LoadingState';
 import LogoMascot from '../../components/mascot/LogoMascot';
@@ -71,6 +72,8 @@ export default function ShoppingListScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { activateInStore } = useLocalSearchParams<{ activateInStore?: string }>();
+  const affinityExamples = useAffinityExamples();
+  const affinityHint = formatAffinityHint(affinityExamples);
 
   // Singleton UX: always open to the active list, no list-picker on mount
   const { list: activeList, isLoading: activeListLoading, refetch: refetchActiveList } = useActiveList();
@@ -653,6 +656,11 @@ export default function ShoppingListScreen() {
           <AnimatedEmptyState
             config={ShoppingListEmptyStates.noLists}
             title=""
+            description={
+              affinityHint
+                ? `Tap + to start your first list. ${affinityHint}`
+                : undefined
+            }
             onAction={handleCreateList}
           />
         </View>

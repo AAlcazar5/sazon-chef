@@ -22,6 +22,34 @@ const target = (name: string, recipeCount: number, healthAngle: string): Cuisine
   healthAngle,
 });
 
+/**
+ * Group 11 v1 launch scope (2026-05-04).
+ *
+ * The full GLOBAL_CUISINES_SEED below defines ~134 cuisines. v1 ships only
+ * the 30 cuisines listed here — the seed runner filters by membership in
+ * this set when invoked with --v1. Selection rationale (per ROADMAP):
+ *   - Top-demand globals (Mexican, Italian, Indian, Chinese)
+ *   - Adjacency anchors that unlock multiple cuisines (Persian, Thai,
+ *     Nigerian, Vietnamese, Mediterranean)
+ *   - Personal N=1 anchor (Salvadorean — user's grandmother)
+ *   - Blue-zone signal (Okinawan)
+ *   - Health-forward + diaspora completeness (Soul Food, Ethiopian, etc.)
+ *
+ * v1.1 trigger: cuisine-search-no-results > 5% on any deferred cuisine.
+ */
+export const V1_SCOPE_CUISINES: ReadonlySet<string> = new Set([
+  // Top-demand globals
+  'Persian', 'Mexican', 'Italian', 'Indian', 'Chinese',
+  // High-discovery + adjacency anchors
+  'Thai', 'Japanese', 'Nigerian', 'Vietnamese', 'North African',
+  // Core staples
+  'French', 'Korean', 'American', 'Greek', 'Lebanese',
+  'Salvadorean', 'Soul Food', 'Puerto Rican', 'Ethiopian', 'Filipino',
+  // Health-forward + regional fillers
+  'Spanish', 'Turkish', 'Tex-Mex', 'Cuban', 'Brazilian',
+  'Peruvian', 'Colombian', 'Cajun/Creole', 'Okinawan', 'Ghanaian',
+]);
+
 // Latin American — break the catch-all into 24 specific national cuisines.
 const LATIN_AMERICAN: CuisineTarget[] = [
   target('Puerto Rican', 40, 'Plantain-based, bean-heavy proteins, sofrito as flavor base.'),
@@ -236,3 +264,46 @@ export const buildPromptContext = (target: CuisineTarget): string => {
   const tierLine = tier ? `Health tier: ${tier}` : '';
   return [target.healthAngle, tierLine].filter(Boolean).join(' ');
 };
+
+/**
+ * Per-cuisine v1 recipe-count overrides. The full seed config aspires to
+ * larger per-cuisine pools (v1.1 targets); v1 ships smaller pools so the
+ * cuisines+snacks total lands at ~1000 within the launch budget.
+ *
+ * Tier shape:
+ *   - Top-5 globals: 35 each (175)
+ *   - Adjacency anchors (5): 30 each (150)
+ *   - Core staples (10): 25 each (250)
+ *   - Regional fillers (10): 22-23 each (~225)
+ * Total: ~800 cuisine recipes.
+ */
+const V1_RECIPE_COUNT_OVERRIDES: Record<string, number> = {
+  // Top-demand globals — 35
+  'Persian': 35, 'Mexican': 35, 'Italian': 35, 'Indian': 35, 'Chinese': 35,
+  // Adjacency anchors — 30
+  'Thai': 30, 'Japanese': 30, 'Nigerian': 30, 'Vietnamese': 30, 'North African': 30,
+  // Core staples — 25
+  'French': 25, 'Korean': 25, 'American': 25, 'Greek': 25, 'Lebanese': 25,
+  'Salvadorean': 25, 'Soul Food': 25, 'Puerto Rican': 25, 'Ethiopian': 25, 'Filipino': 25,
+  // Regional fillers — 22-23
+  'Spanish': 23, 'Turkish': 22, 'Tex-Mex': 22, 'Cuban': 22, 'Brazilian': 23,
+  'Peruvian': 22, 'Colombian': 22, 'Cajun/Creole': 23, 'Okinawan': 22, 'Ghanaian': 22,
+};
+
+/**
+ * Group 11 v1 launch scope — return only the cuisines in V1_SCOPE_CUISINES,
+ * each with its v1-override recipe count applied. The seed runner uses
+ * this when --v1 is passed.
+ */
+export const getV1ScopeCuisines = (): CuisineTarget[] =>
+  GLOBAL_CUISINES_SEED.filter((t) => V1_SCOPE_CUISINES.has(t.name)).map((t) => ({
+    ...t,
+    recipeCount: V1_RECIPE_COUNT_OVERRIDES[t.name] ?? t.recipeCount,
+  }));
+
+/**
+ * Total recipe count if the v1 scope is generated end-to-end. Useful for
+ * cost estimation before pulling the trigger on the AI pipeline.
+ */
+export const v1ScopeRecipeTotal = (): number =>
+  getV1ScopeCuisines().reduce((sum, t) => sum + t.recipeCount, 0);

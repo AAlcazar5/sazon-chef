@@ -3371,11 +3371,11 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
 > **Deferred to v1.1:** the remaining ~104 cuisines stay defined in seed config but are not generated. v1.1 trigger: monthly active users × cuisine-search-no-results ratio > 5% on any specific cuisine listed in the deferred set.
 >
 > **Pre-run gates:**
-> 1. `globalCuisinesSeedConfig.ts` updated with `v1Scope: true` flag on the 30 cuisines above; runner filters by it
-> 2. Backend coverage on `modules/recipe` ≥ 80% before running (currently 22%) — generation amplifies any scoring/adjacency bug into 800 corrupted records
-> 3. Phase 5 "New to you" feed shipped first so the corpus has a personalized surface to land in
+> 1. ✅ `globalCuisinesSeedConfig.ts` `V1_SCOPE_CUISINES` set + `getV1ScopeCuisines()` + `v1ScopeRecipeTotal()` shipped 2026-05-04 — total = 800 recipes across 30 cuisines. Per-cuisine v1 overrides defined to land cleanly within budget.
+> 2. ⏳ Backend coverage on `modules/recipe` (currently 22%) — generation amplifies any scoring/adjacency bug into 800 corrupted records. Coverage push remains a gating step before running the pipeline.
+> 3. ✅ Phase 5 "New to you" feed shipped (backend + frontend + tests + wired into home screen).
 >
-> The pre-run gates are the gating items, not the scope cut itself.
+> The actual `npm run seed:ai -- --v1` runner script remains pending (script will iterate `getV1ScopeCuisines()` × `getV1ScopeCategories()` and call `aiRecipeService.generateRecipe`). User-triggered: real money + multi-day op.
 
 *The current seed has ~40 cuisines but uses overly broad buckets ("West African", "Latin American", "Caribbean"). Nobody searches for "West African food" — they search for Jollof rice, suya, waakye. Specificity = emotional connection = retention. Break every broad category into specific national/regional cuisines.*
 
@@ -3654,7 +3654,7 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
 >
 > Categories deferred to v1.1: Macro-Friendly Cocktails (legal disclaimer surface), Protein Brownies, Frozen Treats (non-Creami), Trail Mixes, Energy Bars, Granola, etc. — all useful, none essential at launch.
 >
-> Same pre-run gates as Phase 2 (config flag + coverage + Phase 5 surface).
+> Same pre-run gates as Phase 2 (config flag ✅ + coverage ⏳ + Phase 5 surface ✅).
 
 > **Why this is a show-stopping feature.**
 >
@@ -3795,7 +3795,7 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
   Backend service: `backend/src/services/newToYouFeedService.ts` — `buildNewToYouFeed(userId, opts)`. Reads `cookingLog` + `savedRecipe` for affinity (cooks weighted 2× saves), falls back to onboarding `userPreferences.likedCuisines` on cold start, ranks adjacent cuisines via `getAdjacentCuisines`, round-robins recipe selection across adjacents to keep the surface varied. Each surfaced recipe carries `personalizationReason` + `sourceCuisine`.
   Endpoint: `GET /api/recipes/new-to-you?limit=<n>` (default 8, max 24).
   - [x] **Test:** 12 service cases + 6 controller cases in `__tests__/services/newToYouFeedService.test.ts` and `__tests__/modules/recipe/newToYouController.test.ts`. Covers cold-start seeding, warm-start affinity weighting, exclusion of already-explored cuisines, variety, limit clamping, null-cuisine robustness.
-  - [ ] **Frontend (deferred):** `NewToYouSection` component on home feed.
+  - [x] **Frontend:** `NewToYouSection` component shipped + wired into home `index.tsx` between "Recipes for You" and the meal-prep section. 5 RTL tests in `__tests__/components/home/NewToYouSection.test.tsx`.
   - [ ] **Writeback (deferred to v1.1):** impression + tap signals into adjacency weights — needs schema change for per-user-per-cuisine exposure counter.
 
   > **N=1 sharpening:** "Staff Picks" is the canonical fixed-editorial antipattern — same 8 dishes for every user is everything Sazon isn't. "New to you" delivers the same exploration goal but *as a personalized ranking dressed in editorial copy*, which is the only acceptable form of editorial in an N=1 product.
@@ -3804,15 +3804,14 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
   Backend service: `backend/src/services/browseByFamilyService.ts` — `buildBrowseByFamily(userId)`. Returns every `CUISINE_FAMILIES` entry annotated with `affinityScore`, `exploredCuisines`, `isExplored`, `hasNewForYou`. Sort order: highest-affinity first, then `hasNewForYou` first within zero-affinity, then alphabetical for stability.
   Endpoint: `GET /api/recipes/browse-by-family`.
   - [x] **Test:** 7 service cases in `__tests__/services/browseByFamilyService.test.ts` + 2 controller cases. Covers affinity ordering, cook/save weighting, hasNewForYou flagging, null-cuisine skip, canonical family/cuisine names.
-  - [ ] **Frontend (deferred):** family-grid UI consuming the endpoint, "New for you" badge rendering.
+  - [x] **Frontend:** `BrowseByFamilySection` component shipped + wired into home `index.tsx` after `NewToYouSection`. Tap on a family card sets the home cuisine filter to that family's cuisines and scrolls back to top. 6 RTL tests covering badge rendering, "N cooked" indicator, tap callback, fetch on mount.
   - [ ] **Writeback (deferred to v1.1):** family-tap + cuisine-tap signals into adjacency weights.
 
   > **N=1 sharpening:** A static map/grid is the same browse view for everyone. Reorder by affinity so the year-1 user sees their loved families top + unexplored adjacents flagged "New for you," while a day-1 user sees their onboarding picks top + adjacency suggestions next.
 * [x] **Empty state polish** ✅ ARCHITECTURE SHIPPED 2026-05-04
   Reusable hook: `frontend/hooks/useAffinityExamples.ts` returns `{ topCuisines, wildcard, loading }` for any consumer that wants personalized example copy. Backed by the same `/api/recipes/browse-by-family` endpoint shipped above — no extra round-trips. Companion helper `formatAffinityHint(examples)` produces inline strings ("Try Salvadorean, Mexican, or Burmese.") and returns empty string when no signal exists, so callers fall through cleanly to static copy.
-  Applied to: `MealPlanEmptyState` (renders the affinity hint as italic subtitle below the existing "Pick your goal" copy).
+  Applied to: `MealPlanEmptyState`, `cookbook.tsx` (saved-recipes empty), `shopping-list.tsx` (no-lists empty). Each renders the affinity hint as italic subtitle that falls through to static copy when the user has no signal.
   - [x] **Test:** 9 cases in `__tests__/hooks/useAffinityExamples.test.ts` — empty state, top-cuisines extraction with affinity ordering, wildcard selection from hasNewForYou families, dedup against topCuisines, API rejection. Plus `formatAffinityHint` shape tests.
-  - [ ] **Rollout (deferred):** apply to cookbook + shopping list empty states. Mechanical — same import, same hook call, same conditional render of the hint. v1.1.
 
   > **N=1 sharpening:** A static "cuisine-diverse sampler" is the laziest possible empty state. Pull from `cuisineAffinity` so even empty states feel built for one.
 

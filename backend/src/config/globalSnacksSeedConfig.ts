@@ -112,3 +112,39 @@ export const summarizeSnacksSeed = (): SnackSeedSummary => ({
   totalCategories: GLOBAL_SNACKS_SEED.length,
   totalRecipes: GLOBAL_SNACKS_SEED.reduce((acc, c) => acc + c.recipeCount, 0),
 });
+
+/**
+ * Group 11 v1 launch scope (2026-05-04).
+ *
+ * v1 ships only the 5 categories below — chosen for highest virality + N=1
+ * personal anchors (Ninja Creami is the user's documented home appliance).
+ * Per-category counts are reduced from the full config to total ~200 recipes.
+ *
+ * The remaining categories stay defined for v1.1 (Cocktails — legal review;
+ * Brownies, Trail Mixes, Energy Bars, Granola, etc. — useful but non-essential).
+ */
+export const V1_SCOPE_CATEGORIES: ReadonlySet<string> = new Set([
+  'Protein Ice Cream & Frozen Treats',
+  'Macro-Friendly Cookies & Bars',
+  'Lightened Global Desserts',
+  'High-Protein Smoothies',
+  'Frozen Fruit Treats',
+]);
+
+/** Per-category recipe counts under v1 scope (totals ~200 recipes). */
+const V1_SCOPE_OVERRIDES: Record<string, number> = {
+  'Protein Ice Cream & Frozen Treats': 50,
+  'Macro-Friendly Cookies & Bars': 40,
+  'Lightened Global Desserts': 50,
+  'High-Protein Smoothies': 30,
+  'Frozen Fruit Treats': 30,
+};
+
+export const getV1ScopeCategories = (): SnackCategoryTarget[] =>
+  GLOBAL_SNACKS_SEED.filter((t) => V1_SCOPE_CATEGORIES.has(t.category)).map((t) => ({
+    ...t,
+    recipeCount: V1_SCOPE_OVERRIDES[t.category] ?? t.recipeCount,
+  }));
+
+export const v1ScopeSnackTotal = (): number =>
+  getV1ScopeCategories().reduce((sum, t) => sum + t.recipeCount, 0);

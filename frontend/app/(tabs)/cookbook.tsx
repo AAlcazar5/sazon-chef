@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import { recipeApi, collectionsApi } from '../../lib/api';
 import { useCookbookCache } from '../../hooks/useCookbookCache';
+import { useAffinityExamples, formatAffinityHint } from '../../hooks/useAffinityExamples';
 import OfflineBanner from '../../components/shopping/OfflineBanner';
 import type { SavedRecipe, Collection } from '../../types';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -86,6 +87,8 @@ export default function CookbookScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
+  const affinityExamples = useAffinityExamples();
+  const affinityHint = formatAffinityHint(affinityExamples);
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   // Multi-select: empty array => All
@@ -1503,6 +1506,11 @@ export default function CookbookScreen() {
             <AnimatedEmptyState
               config={CookbookEmptyStates.noSavedRecipes}
               title=""
+              description={
+                affinityHint
+                  ? `Save recipes you love by tapping the bookmark — they'll live here. ${affinityHint}`
+                  : undefined
+              }
               onAction={() => router.push('/')}
             />
           )}
