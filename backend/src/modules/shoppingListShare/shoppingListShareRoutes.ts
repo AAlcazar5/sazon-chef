@@ -3,13 +3,17 @@
 
 import { Router } from 'express';
 import { shoppingListShareController } from './shoppingListShareController';
+import { authenticateToken } from '../auth/authMiddleware';
 
 export function createShoppingListShareRoutes(): Router {
   const router = Router();
 
-  // Import must come before /:id to avoid conflict with GET /:id
+  // GET /import/:token is public by design — the unguessable token is the
+  // credential, used in share URLs sent to people who may not be Sazon users.
   router.get('/import/:token', shoppingListShareController.importShare);
-  router.post('/:id/share', shoppingListShareController.createShare);
+
+  // Creating a share requires authentication.
+  router.post('/:id/share', authenticateToken, shoppingListShareController.createShare);
 
   return router;
 }
