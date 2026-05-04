@@ -123,7 +123,7 @@ jest.mock('../../src/utils/packageSizeCalculator', () => ({
 
 import { Request, Response } from 'express';
 import { prisma } from '../../src/lib/prisma';
-import { shoppingListController } from '../../src/modules/shoppingList/shoppingListController';
+import { shoppingListGenerationController as shoppingListController } from '../../src/modules/shoppingList/shoppingListGenerationController';
 
 const mockReq = (body: object): Partial<Request> => ({
   body,
