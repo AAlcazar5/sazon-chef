@@ -3791,10 +3791,22 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
 
 ##### First-Run Experience
 
-* [ ] **Pre-populated home feed → "New to you" personalized adjacency feed** — Replace the static "Staff Picks" / "Explore Global Flavors" concept with a **"New to you" section ranked by adjacency distance from the user's cooked + saved cuisines**. Cold start (day 1): seed from onboarding cuisines → top adjacencies (e.g., picked Thai → show Burmese, Lao, Vietnamese first). Warm start: rank by lowest-explored adjacent family weighted by user's affinity vector. Read: `cookHistory.cuisines`, `liked.cuisines`, `cuisineAdjacency`. Write: impression + tap signals back into adjacency graph weights.
+* [x] **Pre-populated home feed → "New to you" personalized adjacency feed** ✅ BACKEND SHIPPED 2026-05-04
+  Backend service: `backend/src/services/newToYouFeedService.ts` — `buildNewToYouFeed(userId, opts)`. Reads `cookingLog` + `savedRecipe` for affinity (cooks weighted 2× saves), falls back to onboarding `userPreferences.likedCuisines` on cold start, ranks adjacent cuisines via `getAdjacentCuisines`, round-robins recipe selection across adjacents to keep the surface varied. Each surfaced recipe carries `personalizationReason` + `sourceCuisine`.
+  Endpoint: `GET /api/recipes/new-to-you?limit=<n>` (default 8, max 24).
+  - [x] **Test:** 12 service cases + 6 controller cases in `__tests__/services/newToYouFeedService.test.ts` and `__tests__/modules/recipe/newToYouController.test.ts`. Covers cold-start seeding, warm-start affinity weighting, exclusion of already-explored cuisines, variety, limit clamping, null-cuisine robustness.
+  - [ ] **Frontend (deferred):** `NewToYouSection` component on home feed.
+  - [ ] **Writeback (deferred to v1.1):** impression + tap signals into adjacency weights — needs schema change for per-user-per-cuisine exposure counter.
+
   > **N=1 sharpening:** "Staff Picks" is the canonical fixed-editorial antipattern — same 8 dishes for every user is everything Sazon isn't. "New to you" delivers the same exploration goal but *as a personalized ranking dressed in editorial copy*, which is the only acceptable form of editorial in an N=1 product.
 * [ ] **Onboarding-to-feed connection** — Verify that onboarding preferences (cuisine, dietary, skill level) immediately affect the first home feed load. If a user selects "Nigerian" in onboarding, they should see jollof rice and suya within their first 5 recipes. Adjacency should kick in: selecting Nigerian should also surface Ghanaian and Senegalese dishes.
-* [ ] **Cuisine browse view** — Add a "Browse by Region" section to the home feed or explore tab. Uses `CUISINE_FAMILIES` constant to group cuisines visually (map or grid). Tapping "African" shows Nigerian, Ghanaian, Ethiopian, etc. as sub-options. **Order families by the user's affinity vector — most-cooked family first, unexplored-but-adjacent family second, never-touched family last. Badge "New for you" on adjacent-but-uncooked families. Within each family, sort cuisines the same way.** Write: family-tap and cuisine-tap as exploration signals into adjacency weights.
+* [x] **Cuisine browse view** ✅ BACKEND SHIPPED 2026-05-04
+  Backend service: `backend/src/services/browseByFamilyService.ts` — `buildBrowseByFamily(userId)`. Returns every `CUISINE_FAMILIES` entry annotated with `affinityScore`, `exploredCuisines`, `isExplored`, `hasNewForYou`. Sort order: highest-affinity first, then `hasNewForYou` first within zero-affinity, then alphabetical for stability.
+  Endpoint: `GET /api/recipes/browse-by-family`.
+  - [x] **Test:** 7 service cases in `__tests__/services/browseByFamilyService.test.ts` + 2 controller cases. Covers affinity ordering, cook/save weighting, hasNewForYou flagging, null-cuisine skip, canonical family/cuisine names.
+  - [ ] **Frontend (deferred):** family-grid UI consuming the endpoint, "New for you" badge rendering.
+  - [ ] **Writeback (deferred to v1.1):** family-tap + cuisine-tap signals into adjacency weights.
+
   > **N=1 sharpening:** A static map/grid is the same browse view for everyone. Reorder by affinity so the year-1 user sees their loved families top + unexplored adjacents flagged "New for you," while a day-1 user sees their onboarding picks top + adjacency suggestions next.
 * [ ] **Empty state polish** — Review all empty states (cookbook, meal plan, shopping list) to ensure they guide users toward the next action with **examples pulled from the user's top-3 affinity cuisines + 1 adjacency wildcard — NOT a hardcoded sampler**. Day-1 user (no cooks): pull from onboarding cuisine picks. Year-1 user: pull from top-affinity + a fresh adjacent suggestion they haven't tried.
   > **N=1 sharpening:** A static "cuisine-diverse sampler" is the laziest possible empty state. Pull from `cuisineAffinity` so even empty states feel built for one.

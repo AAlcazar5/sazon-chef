@@ -5,9 +5,14 @@
 import { Request, Response } from 'express';
 
 const mockBuildNewToYouFeed = jest.fn();
+const mockBuildBrowseByFamily = jest.fn();
 
 jest.mock('@/services/newToYouFeedService', () => ({
   buildNewToYouFeed: (...args: unknown[]) => mockBuildNewToYouFeed(...args),
+}));
+
+jest.mock('@/services/browseByFamilyService', () => ({
+  buildBrowseByFamily: (...args: unknown[]) => mockBuildBrowseByFamily(...args),
 }));
 
 jest.mock('@/utils/authHelper', () => ({
@@ -103,5 +108,35 @@ describe('newToYouController.getNewToYou', () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: 'Failed to build new-to-you feed' });
+  });
+});
+
+describe('newToYouController.getBrowseByFamily', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockBuildBrowseByFamily.mockResolvedValue([]);
+  });
+
+  it('wraps the service result in { families }', async () => {
+    const families = [
+      { family: 'Latin American', cuisines: ['Mexican'], affinityScore: 4, exploredCuisines: ['Mexican'], isExplored: true, hasNewForYou: false },
+    ];
+    mockBuildBrowseByFamily.mockResolvedValueOnce(families);
+    const req = { query: {} } as unknown as Request;
+    const res = buildRes();
+
+    await newToYouController.getBrowseByFamily(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({ families });
+  });
+
+  it('returns 500 when the service throws', async () => {
+    mockBuildBrowseByFamily.mockRejectedValueOnce(new Error('boom'));
+    const req = { query: {} } as unknown as Request;
+    const res = buildRes();
+
+    await newToYouController.getBrowseByFamily(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
   });
 });

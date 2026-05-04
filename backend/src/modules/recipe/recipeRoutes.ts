@@ -24,6 +24,7 @@ router.get('/random', recipeController.getRandomRecipe);
 router.get('/home-feed', recipeController.getHomeFeed); // Consolidated home page data
 router.get('/recipe-of-the-day', recipeController.getRecipeOfTheDay); // Home Page 2.0
 router.get('/new-to-you', newToYouController.getNewToYou); // 11.5: personalized adjacency feed
+router.get('/browse-by-family', newToYouController.getBrowseByFamily); // 11.5: cuisine-family ranking by user affinity
 router.get('/saved', recipeController.getSavedRecipes);
 router.get('/liked', recipeController.getLikedRecipes);
 router.get('/disliked', recipeController.getDislikedRecipes);
