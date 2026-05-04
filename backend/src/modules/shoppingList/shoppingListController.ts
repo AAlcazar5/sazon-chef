@@ -9,6 +9,7 @@ import { categorizeItem } from '../../utils/aisleCategorizer';
 import { setActiveList, getActiveList } from '../../services/shoppingListLifecycleService';
 import { resolveVoiceUtterance } from '../../services/voiceRecipeResolver';
 import { logger } from '../../utils/logger';
+import { extractIngredientName } from '../../utils/ingredientNameExtractor';
 
 // Cap on how many recipes can be processed in a single generate-from-recipes /
 // budget-preview call. Prevents DoS via massive IN(...) queries + unbounded item creation.
@@ -350,16 +351,15 @@ export const shoppingListController = {
       const resolved = await resolveVoiceUtterance(userId, utterance);
 
       if (resolved.matchType === 'recipe' && resolved.recipeId) {
-        // Forward to generate-from-recipes. Stash and restore the original
-        // body so we don't leave a mutated body for downstream middleware
-        // (logging, request tracing).
-        const originalBody = req.body;
-        req.body = { recipeIds: [resolved.recipeId] };
-        try {
-          await shoppingListController.generateFromRecipes(req, res);
-        } finally {
-          req.body = originalBody;
-        }
+        // Forward to generate-from-recipes via a prototype-based shadow that
+        // overrides `body` only — avoids mutating the original request,
+        // which is unsafe when async code elsewhere holds a reference to
+        // req.body or when downstream middleware (logging, tracing) reads
+        // the body after the handler returns.
+        const forwardedReq = Object.create(req, {
+          body: { value: { recipeIds: [resolved.recipeId] }, writable: true, enumerable: true, configurable: true },
+        }) as Request;
+        await shoppingListController.generateFromRecipes(forwardedReq, res);
         return;
       }
 
@@ -656,45 +656,7 @@ export const shoppingListController = {
             const parsed = rawParsed ? { ...rawParsed, amount: rawParsed.amount * multiplier } : null;
             if (parsed) {
               // Extract ingredient name from the original text
-              // The parsed.originalText contains the full match, so we need to extract the ingredient name
-              const text = ing.text.trim();
-              let ingredientName: string = '';
-
-              // Build a pattern to match the quantity and unit we parsed
-              const unitStr = parsed.unit;
-
-              // Try to match and remove the quantity + unit from the beginning
-              // Handle various formats: "2 cups", "1/2 cup", "2.5 cups", etc.
-              const patterns = [
-                // Pattern with unit: "2 cups flour" or "1/2 cup milk"
-                new RegExp(`^[\\d\\s\\/\\.]+\\s+${unitStr}\\s+(.+)$`, 'i'),
-                // Pattern without explicit unit (for "2 chicken breasts" where unit is "piece")
-                /^[\d\s\/\.]+\s+(.+)$/i,
-              ];
-
-              let matched = false;
-              for (const pattern of patterns) {
-                const match = text.match(pattern);
-                if (match && match[1]) {
-                  ingredientName = match[1].toLowerCase().trim();
-                  matched = true;
-                  break;
-                }
-              }
-
-              if (!matched) {
-                // Fallback: remove quantity and common unit words
-                ingredientName = text
-                  .replace(/^[\d\s\/\.]+/, '')
-                  .replace(/^\s*(cup|cups|lb|lbs|oz|tbsp|tsp|piece|pieces|clove|cloves|bunch|bunches|fl\s*oz|pint|pints|quart|quarts|gallon|gallons|ml|l|liter|liters|g|gram|grams|kg|kilogram|kilograms)\s+/i, '')
-                  .toLowerCase()
-                  .trim() || text.toLowerCase().trim();
-              }
-
-              // Clean up: remove trailing commas, periods, etc.
-              if (ingredientName) {
-                ingredientName = ingredientName.replace(/[,\\.]+$/, '').trim();
-              }
+              const ingredientName = extractIngredientName(ing.text, parsed.unit);
 
               if (!ingredientQuantities.has(ingredientName)) {
                 ingredientQuantities.set(ingredientName, []);
@@ -926,9 +888,7 @@ export const shoppingListController = {
                 amount: scaledAmount,
               };
 
-              // Extract ingredient name (remove quantity from text)
-              const nameMatch = ing.text.replace(/^[\d\s\/\.]+/, '').trim();
-              const ingredientName = nameMatch.toLowerCase().trim();
+              const ingredientName = extractIngredientName(ing.text, scaledParsed.unit);
 
               if (!ingredientQuantities.has(ingredientName)) {
                 ingredientQuantities.set(ingredientName, []);
