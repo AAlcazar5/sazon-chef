@@ -62,4 +62,8 @@ router.put('/presets/:id', userPresetController.updatePreset);
 router.delete('/presets/:id', userPresetController.deletePreset);
 router.post('/presets/:id/apply', userPresetController.applyPreset);
 
+// GDPR/CCPA + Apple App Store — privacy-required user data controls
+router.get('/export-data', userController.exportData);
+router.delete('/account', userController.deleteAccount);
+
 export const userRoutes = router;
