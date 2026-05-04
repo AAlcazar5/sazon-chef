@@ -1,6 +1,7 @@
 // backend/src/modules/recipe/recipeRoutes.simple.ts
 import { Router } from 'express';
 import { recipeController } from './recipeController';
+import { newToYouController } from './newToYouController';
 import { aiLimiter } from '../../middleware/rateLimiter';
 
 const router = Router();
@@ -22,6 +23,7 @@ router.get('/suggested', recipeController.getSuggestedRecipes);
 router.get('/random', recipeController.getRandomRecipe);
 router.get('/home-feed', recipeController.getHomeFeed); // Consolidated home page data
 router.get('/recipe-of-the-day', recipeController.getRecipeOfTheDay); // Home Page 2.0
+router.get('/new-to-you', newToYouController.getNewToYou); // 11.5: personalized adjacency feed
 router.get('/saved', recipeController.getSavedRecipes);
 router.get('/liked', recipeController.getLikedRecipes);
 router.get('/disliked', recipeController.getDislikedRecipes);
