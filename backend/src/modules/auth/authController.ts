@@ -582,12 +582,17 @@ export const authController = {
         });
       }
 
-      // For security: Always return success even if user doesn't exist
-      // This prevents email enumeration attacks
+      // Email enumeration defense: identical response message + status whether
+      // or not the email matches a real account. Differing copy ("a password
+      // reset code WILL be sent" vs "a code HAS been sent") is itself an
+      // oracle. Use one canonical message for both branches.
+      const ENUMERATION_SAFE_MESSAGE =
+        'If an account exists with this email, a password reset code has been sent.';
+
       if (!user) {
         return res.json({
           success: true,
-          message: 'If an account exists with this email, a password reset code will be sent.'
+          message: ENUMERATION_SAFE_MESSAGE,
         });
       }
 
@@ -606,7 +611,7 @@ export const authController = {
 
       res.json({
         success: true,
-        message: 'A password reset code has been sent to your email.',
+        message: ENUMERATION_SAFE_MESSAGE,
         // Only in development - return the code for testing
         ...(process.env.NODE_ENV === 'development' && { resetCode, expiresAt: resetCodeExpiry })
       });
