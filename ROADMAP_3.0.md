@@ -3286,7 +3286,9 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
 
 #### **Phase 1: Cuisine Adjacency Engine** 🧭 *(CRITICAL — do first, everything else depends on it)* ✅ SHIPPED
 
-✅ Backend: `backend/src/utils/cuisineAdjacency.ts` (typed adjacency graph + auto-bidirectional + family lookup) + scoring integration in `scoring.ts` via `calculateAdjacencyBoost`. 14 families, ~100+ cuisines covered. 17 adjacency tests + 4 scoring tests. AI prompt addendum integration in `aiRecipeService.ts` deferred (touches existing AI service — separate PR).
+✅ Backend: `backend/src/utils/cuisineAdjacency.ts` (typed adjacency graph + auto-bidirectional + family lookup) + scoring integration in `scoring.ts` via `calculateAdjacencyBoost`. 14 families, ~100+ cuisines covered. 17 adjacency tests + 4 scoring tests.
+
+✅ AI prompt addendum integration in `aiRecipeService.ts` (line 600-609) — `getAdjacentCuisines(safeCuisine)` produces top-3 adjacents by weight, prompt includes "Also consider influences from {cuisines}". Verified shipped 2026-05-04 during Group 11 Bucket 1.
 
 
 *The growth hack hiding in plain sight. When someone likes a Persian recipe, the engine should surface Afghan and Iraqi dishes. When someone loves Soul Food collard greens, they might discover Nigerian egusi soup (also leafy-green based) or Ghanaian red red (also bean-based). That's the "recipes they've never thought of" moment that makes users tell their friends.*
@@ -3574,9 +3576,11 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
 
 ---
 
-#### **Phase 3: Health-Forward Recipe Positioning** 💚 *(CRITICAL — the second pillar)* ✅ SHIPPED (tier system)
+#### **Phase 3: Health-Forward Recipe Positioning** 💚 *(CRITICAL — the second pillar)* ✅ SHIPPED
 
-✅ `backend/src/utils/cuisineHealthTier.ts` — 4-tier classification (`naturally_healthy`, `easily_adapted`, `hidden_superfoods`, `protein_forward`) + `TIER_PROMPT_ADDENDUM` strings consumed by seed config's `buildPromptContext`. 10 tier tests verify exclusivity + lookup correctness. Per-cuisine `healthAngle` lives in seed config (Phase 2). Superfood detection expansion (plantain, fenugreek, teff, bitter melon, etc.) deferred — touches existing `superfoodDetection.ts`.
+✅ `backend/src/utils/cuisineHealthTier.ts` — 4-tier classification (`naturally_healthy`, `easily_adapted`, `hidden_superfoods`, `protein_forward`) + `TIER_PROMPT_ADDENDUM` strings consumed by seed config's `buildPromptContext`. 10 tier tests verify exclusivity + lookup correctness. Per-cuisine `healthAngle` lives in seed config (Phase 2).
+
+✅ Superfood detection expansion shipped 2026-05-04: `plantain`, `fenugreek`, `teff`, `bitterMelon` added to `SUPERFOODS` map + `getAllSuperfoodCategories()` UI list. 13 new tests in `__tests__/utils/superfoodDetection.global.test.ts` cover the four explicit Phase 3 cases (plantain in Nigerian jollof, fenugreek in Yemeni saltah, teff in Ethiopian injera, bitter melon in Okinawan goya champuru) plus aggregation + category-shape guards.
 
 
 *Every cuisine has a health story. This is Sazon's differentiator — not just "here's jollof rice" but "here's jollof rice at 420 calories with 35g protein using cauliflower rice." The AI generation prompts need to encode this.*
@@ -3616,12 +3620,12 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
 
 #### **Phase 3 Tests**
 
-**`backend/tests/utils/superfoodDetection.expanded.test.ts`**
-- [ ] Plantain detected in Nigerian jollof rice ingredient list
-- [ ] Fenugreek detected in Yemeni saltah ingredient list
-- [ ] Teff detected in Ethiopian injera ingredient list
-- [ ] Bitter melon detected in Okinawan goya champuru ingredient list
-- [ ] All new superfoods have correct category assignments
+**`backend/__tests__/utils/superfoodDetection.global.test.ts`** ✅ SHIPPED
+- [x] Plantain detected in Nigerian jollof rice ingredient list
+- [x] Fenugreek detected in Yemeni saltah ingredient list
+- [x] Teff detected in Ethiopian injera ingredient list
+- [x] Bitter melon detected in Okinawan goya champuru ingredient list
+- [x] All new superfoods have correct category assignments (verified via `getAllSuperfoodCategories()` returning name + description for each)
 
 **`backend/tests/services/aiRecipeService.healthTier.test.ts`**
 - [ ] "Naturally Healthy" cuisines include health benefit language in AI prompt
