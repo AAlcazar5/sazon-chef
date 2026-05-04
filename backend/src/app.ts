@@ -153,34 +153,36 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 
 // ─── API routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
-app.use('/api/recipes', recipeRoutes);
+app.use('/api/recipes', authenticateToken, recipeRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/user/kitchen-iq', kitchenIQRoutes);
 app.use('/api/coach', authenticateToken, coachRoutes);
 app.use('/api/user/affinity', affinityRoutes);
-app.use('/api/health-metrics', healthMetricsRoutes);
-app.use('/api/weight-goal', weightGoalRoutes);
-app.use('/api/meal-plan', mealPlanRoutes);
-app.use('/api/daily-suggestions', dailySuggestionsRoutes);
-app.use('/api/meal-history', mealHistoryRoutes);
-app.use('/api/meal-prep', mealPrepRoutes);
-app.use('/api/ai-recipes', aiRecipeRoutes);
-app.use('/api/scanner', scannerRoutes);
-app.use('/api/food', foodRoutes);
+app.use('/api/health-metrics', authenticateToken, healthMetricsRoutes);
+app.use('/api/weight-goal', authenticateToken, weightGoalRoutes);
+app.use('/api/meal-plan', authenticateToken, mealPlanRoutes);
+app.use('/api/daily-suggestions', authenticateToken, dailySuggestionsRoutes);
+app.use('/api/meal-history', authenticateToken, mealHistoryRoutes);
+app.use('/api/meal-prep', authenticateToken, mealPrepRoutes);
+app.use('/api/ai-recipes', authenticateToken, aiRecipeRoutes);
+app.use('/api/scanner', authenticateToken, scannerRoutes);
+app.use('/api/food', authenticateToken, foodRoutes);
+// shoppingListShareRoutes has a public GET /import/:token; auth is applied
+// inside the router on the share-creation route only.
 app.use('/api/shopping-lists', shoppingListShareRoutes);
-app.use('/api/shopping-lists', shoppingListRoutes);
-app.use('/api/shopping-apps', shoppingAppRoutes);
-app.use('/api/cost-tracking', costTrackingRoutes);
-app.use('/api/ingredient-availability', ingredientAvailabilityRoutes);
-app.use('/api/pantry', pantryRoutes);
+app.use('/api/shopping-lists', authenticateToken, shoppingListRoutes);
+app.use('/api/shopping-apps', authenticateToken, shoppingAppRoutes);
+app.use('/api/cost-tracking', authenticateToken, costTrackingRoutes);
+app.use('/api/ingredient-availability', authenticateToken, ingredientAvailabilityRoutes);
+app.use('/api/pantry', authenticateToken, pantryRoutes);
 app.use('/api/meal-components', mealComponentRoutes);
 app.use('/api/composed-plates', composedPlateRoutes);
 app.use('/api/leftover-inventory', leftoverInventoryRoutes);
 app.use('/api/shared-plates', sharedPlateRoutes);
 app.use('/api/nutrient-gap', nutrientGapRoutes);
 app.use('/api/household', householdRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/search', searchRoutes);
+app.use('/api/upload', authenticateToken, uploadRoutes);
+app.use('/api/search', authenticateToken, searchRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/stripe', stripeRoutes);
 
@@ -200,6 +202,9 @@ if (process.env.SENTRY_DSN) {
 app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Global error handler:', error);
 
+  if (error.name === 'UnauthenticatedError') {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
+  }
   if (error.code?.startsWith('P')) {
     return res.status(400).json({ error: 'Database error', message: 'An error occurred while processing your request' });
   }
