@@ -18,14 +18,27 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for profile picture uploads
+// Allowed profile picture extensions. Anything outside this set falls back
+// to .jpg — the original filename is user-controlled and can carry hostile
+// suffixes ("..passwd", weird unicode) that we don't want surfacing in URLs
+// or filesystem paths. multer normalizes basename so path traversal isn't
+// reachable here, but a strict allowlist keeps the served Content-Type
+// predictable and the stored filename boring.
+const ALLOWED_PICTURE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+
+// Profile pictures are served from the public /uploads static mount
+// (NEW-2). The file path is essentially userId + ext; knowledge of a
+// userId reveals the URL. This matches the typical "public profile
+// picture by URL" pattern (Twitter, GitHub, Slack). If profile pictures
+// ever carry sensitive context, migrate to Cloudinary signed URLs.
 const profilePictureStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (req, _file, cb) => {
     const userId = (req as any).user?.id || 'unknown';
-    const ext = path.extname(_file.originalname) || '.jpg';
+    const rawExt = path.extname(_file.originalname).toLowerCase();
+    const ext = ALLOWED_PICTURE_EXTS.has(rawExt) ? rawExt : '.jpg';
     cb(null, `${userId}${ext}`);
   },
 });
