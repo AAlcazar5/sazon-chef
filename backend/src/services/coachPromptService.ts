@@ -244,6 +244,26 @@ function serializeMemories(memories: ReadonlyArray<MemoryForPrompt>): string {
   return JSON.stringify({ memories: sorted });
 }
 
+/**
+ * COACH-9 — data categories sent to Anthropic.
+ *
+ * The system prompt includes the following user data and is transmitted to
+ * Anthropic on every Coach turn:
+ *   - allergens (health-adjacent, e.g. "tree nuts", "shellfish")
+ *   - dietaryProfile (e.g. "vegetarian", "low-FODMAP")
+ *   - goalPhase ("cut" / "maintain" / "bulk")
+ *   - last7Cooks (recipe titles + cook timestamps)
+ *   - slotAffinity component IDs (taste signal)
+ *   - pantry item names
+ *
+ * NOT included: real name, email, phone number, address, or any direct
+ * identifier. The userId is used to scope DB queries server-side and does
+ * not appear in the prompt body.
+ *
+ * Compliance assumption: the API key in use is configured for Anthropic's
+ * zero-data-retention program (separate agreement). If that ever lapses,
+ * audit the categories above against the privacy policy before continuing.
+ */
 export function buildSystemPrompt(
   snapshot: CoachProfileSnapshot,
   options?: BuildSystemPromptOptions,
