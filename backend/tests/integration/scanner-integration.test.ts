@@ -9,6 +9,16 @@ jest.mock('../../src/services/healthifyService', () => ({
   },
 }));
 
+// This integration test predates the C2b fail-closed change to authHelper
+// (the temp-user-id fallback was removed; getUserId now throws on missing
+// req.user). The test bodies don't construct req.user, so without this
+// mock every controller call 401s. Returning the same 'temp-user-id' the
+// test's beforeAll seeds keeps all DB scoping consistent.
+jest.mock('../../src/utils/authHelper', () => ({
+  getUserId: jest.fn(() => 'temp-user-id'),
+  isAuthenticated: jest.fn(() => true),
+}));
+
 // Use real Prisma for integration tests (not mocked)
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
