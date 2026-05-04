@@ -33,6 +33,7 @@ import {
   buildCoachProfileSnapshot,
 } from '@/services/coachTools';
 import { COACH_PAYWALL_COPY, requireCoachPro } from '@/middleware/requireCoachPro';
+import { coachMessageLimiter } from '@/middleware/rateLimiter';
 import { emit as emitAnalytics } from '@/services/coachAnalytics';
 import {
   identifyPantryFromImage,
@@ -269,7 +270,49 @@ interface RecordedToolUse {
   toolUseId: string;
 }
 
-coachRoutes.post('/message', async (req: Request, res: Response) => {
+// Per-user concurrent-stream guard. A single Coach message can spawn up to
+// MAX_TOOL_USE_ITERATIONS sequential Anthropic calls; allowing multiple
+// concurrent streams per user lets one user exhaust server resources and
+// also opens a TOCTOU race on the daily-budget check (two streams both read
+// "under budget", both run a full Opus turn, daily cap is bypassed).
+// One in-flight stream per user closes both holes.
+const inFlightCoachStreams = new Map<string, number>();
+const MAX_CONCURRENT_STREAMS_PER_USER = 1;
+
+function ensureSingleCoachStream(req: Request, res: Response, next: () => void): void {
+  let userId: string;
+  try {
+    userId = getUserId(req);
+  } catch {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  const current = inFlightCoachStreams.get(userId) ?? 0;
+  if (current >= MAX_CONCURRENT_STREAMS_PER_USER) {
+    res.status(429).json({
+      error: 'COACH_BUSY',
+      message: 'A previous Coach message is still streaming. Wait for it to finish.',
+    });
+    return;
+  }
+  inFlightCoachStreams.set(userId, current + 1);
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    const after = (inFlightCoachStreams.get(userId) ?? 1) - 1;
+    if (after <= 0) {
+      inFlightCoachStreams.delete(userId);
+    } else {
+      inFlightCoachStreams.set(userId, after);
+    }
+  };
+  res.on('close', release);
+  res.on('finish', release);
+  next();
+}
+
+coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async (req: Request, res: Response) => {
   const userId = getUserId(req);
   const conversationId = String(req.body?.conversationId ?? '');
   const message = String(req.body?.message ?? '');

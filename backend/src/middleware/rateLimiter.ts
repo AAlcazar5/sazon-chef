@@ -1,6 +1,7 @@
 // backend/src/middleware/rateLimiter.ts
 // Rate limiting middleware for API endpoints
 
+import type { Request } from 'express';
 import rateLimit from 'express-rate-limit';
 
 // Check if we're in development mode. Test env (NODE_ENV=test, set by Jest)
@@ -77,5 +78,24 @@ export const aiLimiter = rateLimit({
     }
     return false;
   },
+});
+
+/**
+ * Per-user rate limiter for Coach message endpoints. Coach turns spawn an
+ * Anthropic tool-use loop with high token cost — IP keying alone is not
+ * enough because multiple users share an IP and a single user can rotate IPs.
+ * Falls back to IP if userId is somehow missing (route MUST be auth-gated).
+ */
+export const coachMessageLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: isDevelopment ? Number.MAX_SAFE_INTEGER : 30,
+  message: {
+    error: 'Too many Coach messages',
+    message: 'Too many Coach messages this hour. Please slow down.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => req.user?.id || req.ip || 'anonymous',
+  skip: () => isDevelopment,
 });
 
