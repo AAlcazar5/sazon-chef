@@ -3351,6 +3351,29 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
 
 ✅ Seed config data: `backend/src/config/globalCuisinesSeedConfig.ts` defines 130+ specific cuisines with per-cuisine recipe-count targets and `healthAngle` strings. Run `npm run seed:ai -- --config global` to fire the actual AI generation pipeline (multi-day op). 15 config-validation tests verify cuisine count, recipe-count floor, no catch-alls, no duplicates.
 
+> ✂️ **V1 SCOPE CUT (2026-05-04): generation pipeline targets ~1000 recipes total, not ~5400.**
+>
+> Reasoning: $500–$1,500 in AI generation cost is too steep a bet before the product proves retention. The full 134-cuisine config remains in `globalCuisinesSeedConfig.ts` for v1.1 — the v1 launch ships 30 cuisines with deeper per-cuisine coverage instead of 134 cuisines spread thin.
+>
+> **V1 in-scope (~800 recipes across 30 cuisines):**
+>
+> | Tier | Allocation | Cuisines |
+> |---|---|---|
+> | **Top-demand globals (35 each = 175)** | Persian, Mexican, Italian, Indian, Chinese | Big proven cuisines + Persian as adjacency anchor |
+> | **High-discovery + adjacency anchors (30 each = 150)** | Thai, Japanese, Nigerian, Vietnamese, Mediterranean | Each is a hub for 3+ adjacent cuisines |
+> | **Core staples (25 each = 250)** | French, Korean, American, Greek, Lebanese, Salvadorean, Soul Food, Puerto Rican, Ethiopian, Filipino | Salvadorean = N=1 personal angle (user's grandmother). Soul Food + Ethiopian + Lebanese = high health-tier representation. |
+> | **Health-forward + regional fillers (~20–22 each = ~225)** | Spanish, Turkish, Moroccan, Cuban, Brazilian, Peruvian, Colombian, Cajun/Creole, Okinawan (blue zone), Ghanaian | Adjacency completion + blue-zone signal |
+>
+> Cuisine count = 30. Per-cuisine averages ~27 recipes — comfortably above the original 15-recipe quality floor.
+>
+> **Deferred to v1.1:** the remaining ~104 cuisines stay defined in seed config but are not generated. v1.1 trigger: monthly active users × cuisine-search-no-results ratio > 5% on any specific cuisine listed in the deferred set.
+>
+> **Pre-run gates:**
+> 1. `globalCuisinesSeedConfig.ts` updated with `v1Scope: true` flag on the 30 cuisines above; runner filters by it
+> 2. Backend coverage on `modules/recipe` ≥ 80% before running (currently 22%) — generation amplifies any scoring/adjacency bug into 800 corrupted records
+> 3. Phase 5 "New to you" feed shipped first so the corpus has a personalized surface to land in
+>
+> The pre-run gates are the gating items, not the scope cut itself.
 
 *The current seed has ~40 cuisines but uses overly broad buckets ("West African", "Latin American", "Caribbean"). Nobody searches for "West African food" — they search for Jollof rice, suya, waakye. Specificity = emotional connection = retention. Break every broad category into specific national/regional cuisines.*
 
@@ -3611,6 +3634,23 @@ Phases 1–4 ship for launch as the premium anchor. Phases 5–8 are the post-la
 
 ✅ Seed config data: `backend/src/config/globalSnacksSeedConfig.ts` defines 15 snack/dessert categories totaling ~635 recipes (Protein Ice Cream, Macro-Friendly Cookies, High-Protein Smoothies, Lightened Global Desserts, etc.). Run `npm run seed:ai -- --config snacks`. Tests verify category count + recipe targets.
 
+> ✂️ **V1 SCOPE CUT (2026-05-04): generation pipeline targets ~200 recipes total, not ~635.**
+>
+> The total v1 launch budget is 1000 recipes (Phase 2 v1 = 800 + Phase 4 v1 = 200). The full 15-category config remains for v1.1 expansion.
+>
+> **V1 in-scope (~200 recipes across 5 categories):**
+>
+> | Category | Recipes | Why this category survives the cut |
+> |---|---|---|
+> | **Protein Ice Cream** | 50 | Ninja Creami is the user's documented home appliance — N=1 personal anchor + screenshot-worthy |
+> | **Macro-Friendly Cookies & Baked Goods** | 40 | Highest daily-search category in fitness food |
+> | **Lightened Global Desserts** (Persian faloodeh, Filipino bibingka, Ethiopian ambasha, etc.) | 50 | The "wait, that exists?" virality wedge — direct adjacency to Phase 2 cuisines |
+> | **High-Protein Smoothies & Bowls** | 30 | Ninja Creami crossover + lowest cook-time bar |
+> | **Air-Fryer Treats** | 30 | Single-appliance category with high cook-time-saving payoff |
+>
+> Categories deferred to v1.1: Macro-Friendly Cocktails (legal disclaimer surface), Protein Brownies, Frozen Treats (non-Creami), Trail Mixes, Energy Bars, Granola, etc. — all useful, none essential at launch.
+>
+> Same pre-run gates as Phase 2 (config flag + coverage + Phase 5 surface).
 
 > **Why this is a show-stopping feature.**
 >
