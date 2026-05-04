@@ -1,6 +1,7 @@
 // backend/src/modules/recipe/recipeRoutes.simple.ts
 import { Router } from 'express';
 import { recipeController } from './recipeController';
+import { aiLimiter } from '../../middleware/rateLimiter';
 
 const router = Router();
 
@@ -42,9 +43,10 @@ router.delete('/bulk-unsave', recipeController.bulkUnsaveRecipes);
 router.patch('/bulk-move-collection', recipeController.bulkMoveToCollection);
 
 // Recipe actions - specific routes before parameterized
-router.post('/generate', recipeController.generateRecipe);
-router.post('/import-url', recipeController.importRecipeFromUrl);
-router.post('/generate-from-description', recipeController.generateFromDescription);
+// AI-cost-bearing: per-IP hourly limiter on top of the global apiLimiter.
+router.post('/generate', aiLimiter, recipeController.generateRecipe);
+router.post('/import-url', aiLimiter, recipeController.importRecipeFromUrl);
+router.post('/generate-from-description', aiLimiter, recipeController.generateFromDescription);
 
 // External data enrichment - specific routes before parameterized
 router.post('/enrich/batch', recipeController.batchEnrichRecipes);
@@ -60,19 +62,19 @@ router.get('/export', recipeController.exportCookbook);
 router.get('/autocomplete', recipeController.getAutoCompleteSuggestions);
 router.get('/popular-searches', recipeController.getPopularSearches);
 
-// 10D: "I'm Craving..." Search
-router.post('/craving-search', recipeController.cravingSearch);
+// 10D: "I'm Craving..." Search — AI-cost-bearing
+router.post('/craving-search', aiLimiter, recipeController.cravingSearch);
 router.post('/craving-search/event', recipeController.logCravingSearchEvent);
 
-// 10G-C: "I want to eat X tonight" flow — estimate + healthify + lighter suggestions
-router.post('/craving-flow', recipeController.cravingFlow);
+// 10G-C: "I want to eat X tonight" flow — AI-cost-bearing
+router.post('/craving-flow', aiLimiter, recipeController.cravingFlow);
 
-// 10P: Craving + Weekly Budget Integration — three paths with remaining macro budget
-router.post('/craving-budget', recipeController.cravingBudget);
+// 10P: Craving + Weekly Budget Integration — AI-cost-bearing
+router.post('/craving-budget', aiLimiter, recipeController.cravingBudget);
 
 // 10H: "What can I make right now?" — pantry-based recipe matching + leftover transformer
 router.get('/pantry-match', recipeController.pantryMatch);
-router.post('/leftover-ideas', recipeController.leftoverIdeas);
+router.post('/leftover-ideas', aiLimiter, recipeController.leftoverIdeas);
 
 // 10E: Ingredient substitution engine
 router.get('/ingredient-swaps', recipeController.getIngredientSwaps);
@@ -87,9 +89,10 @@ router.put('/:id', recipeController.updateRecipe);
 router.delete('/:id', recipeController.deleteRecipe);
 router.patch('/:id/move-to-collection', recipeController.moveSavedRecipe);
 router.post('/:id/enrich', recipeController.enrichRecipe);
-router.post('/:id/healthify', recipeController.healthifyRecipe);
-router.post('/:id/flavor-boost', recipeController.flavorBoost);
-router.post('/:id/ask-substitution', recipeController.askSubstitution);
+// AI-cost-bearing: per-IP hourly limiter
+router.post('/:id/healthify', aiLimiter, recipeController.healthifyRecipe);
+router.post('/:id/flavor-boost', aiLimiter, recipeController.flavorBoost);
+router.post('/:id/ask-substitution', aiLimiter, recipeController.askSubstitution);
 router.post('/:id/fork', recipeController.forkRecipe);
 router.post('/:id/save', recipeController.saveRecipe);
 router.delete('/:id/save', recipeController.unsaveRecipe);
