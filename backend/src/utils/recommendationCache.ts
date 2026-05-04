@@ -1,6 +1,7 @@
 // backend/src/utils/recommendationCache.ts
 
 import { cacheService } from './cacheService';
+import { logger } from './logger';
 
 interface RecipeFilters {
   cuisines?: string[];
@@ -170,7 +171,7 @@ class RecommendationCacheService {
       keysToDelete.forEach(key => cacheService['cache'].delete(key));
     });
 
-    console.log(`🗑️ Invalidated all caches for user ${userId}`);
+    logger.debug('cache.invalidate.user');
   }
 
   /**
@@ -188,7 +189,7 @@ class RecommendationCacheService {
       cacheService.invalidate(prefix);
     });
 
-    console.log('🗑️ Invalidated all recipe caches');
+    logger.debug('cache.invalidate.recipes');
   }
 
   /**
