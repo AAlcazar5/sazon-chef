@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { shoppingListController } from './shoppingListController';
 import { shoppingListLifecycleController } from './shoppingListLifecycleController';
 import { shoppingListMergeController } from './shoppingListMergeController';
+import { shoppingListGenerationController } from './shoppingListGenerationController';
 
 const router = Router();
 
@@ -16,21 +17,21 @@ router.post('/:id/archive', shoppingListLifecycleController.archive);
 router.post('/:id/complete', shoppingListLifecycleController.archiveOnCompletion);
 
 // Generate shopping list from recipes (must come before /:id routes)
-router.post('/generate-from-recipes', shoppingListController.generateFromRecipes);
+router.post('/generate-from-recipes', shoppingListGenerationController.generateFromRecipes);
 
 // Voice-add: utterance → fuzzy recipe match or literal item add
 router.post('/voice-add', shoppingListController.voiceAdd);
 
 // Budget preview (must come before /:id routes)
-router.post('/budget-preview', shoppingListController.getBudgetPreview);
+router.post('/budget-preview', shoppingListGenerationController.getBudgetPreview);
 
 // Generate shopping list from meal plan (must come before /:id routes)
-router.post('/generate-from-meal-plan', shoppingListController.generateFromMealPlan);
+router.post('/generate-from-meal-plan', shoppingListGenerationController.generateFromMealPlan);
 
 // Purchase history routes (must come before /:id routes)
-router.get('/purchase-history', shoppingListController.getPurchaseHistory);
-router.get('/purchase-history/recent', shoppingListController.getRecentPurchases);
-router.put('/purchase-history/:id/favorite', shoppingListController.togglePurchaseHistoryFavorite);
+router.get('/purchase-history', shoppingListGenerationController.getPurchaseHistory);
+router.get('/purchase-history/recent', shoppingListGenerationController.getRecentPurchases);
+router.put('/purchase-history/:id/favorite', shoppingListGenerationController.togglePurchaseHistoryFavorite);
 
 // Shopping list routes
 router.get('/', shoppingListController.getShoppingLists);

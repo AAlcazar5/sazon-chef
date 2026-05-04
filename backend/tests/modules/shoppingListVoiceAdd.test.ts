@@ -3,6 +3,7 @@
 
 import { Request, Response } from 'express';
 import { shoppingListController } from '../../src/modules/shoppingList/shoppingListController';
+import { shoppingListGenerationController } from '../../src/modules/shoppingList/shoppingListGenerationController';
 import { prisma } from '../../src/lib/prisma';
 import * as voiceResolver from '../../src/services/voiceRecipeResolver';
 import * as lifecycleService from '../../src/services/shoppingListLifecycleService';
@@ -52,22 +53,22 @@ describe('POST /api/shopping-lists/voice-add', () => {
       name: 'Thai Basil Chicken',
     });
 
+    let capturedBody: unknown = null;
     const generateSpy = jest
-      .spyOn(shoppingListController, 'generateFromRecipes')
+      .spyOn(shoppingListGenerationController, 'generateFromRecipes')
       .mockImplementation(async (innerReq: Request) => {
         // Capture body at call-time (it should be the forwarded recipeIds shape)
         capturedBody = (innerReq as any).body;
         return undefined as any;
       });
 
-    let capturedBody: unknown = null;
     req = { body: { utterance: 'Thai basil chicken' } };
     await shoppingListController.voiceAdd(req as Request, res as Response);
 
     expect(generateSpy).toHaveBeenCalled();
     // While generateFromRecipes ran it saw the forwarded body…
     expect(capturedBody).toEqual({ recipeIds: ['recipe-xyz'] });
-    // …and after the call returns, the original body is restored.
+    // …and after the call returns, the original body is unmutated.
     expect((req as any).body).toEqual({ utterance: 'Thai basil chicken' });
     generateSpy.mockRestore();
   });
