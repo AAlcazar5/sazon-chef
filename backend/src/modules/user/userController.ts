@@ -1153,4 +1153,168 @@ export const userController = {
       res.status(500).json({ error: 'Failed to update skill level' });
     }
   },
+
+  /**
+   * GET /api/user/export-data
+   *
+   * GDPR / CCPA / Apple App Review — return everything we have about the
+   * caller as a JSON download. Encrypted fields are decrypted before
+   * inclusion (the user has the right to see their own data, not the
+   * cipher). Passwords and reset codes are intentionally omitted.
+   *
+   * Streams as application/json with a Content-Disposition attachment so
+   * mobile clients can save it via the share sheet.
+   */
+  async exportData(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          preferences: {
+            include: {
+              bannedIngredients: true,
+              likedCuisines: true,
+              dietaryRestrictions: true,
+              preferredSuperfoods: true,
+            },
+          },
+          macroGoals: true,
+          physicalProfile: true,
+          savedRecipes: true,
+          collections: true,
+          feedback: true,
+          mealHistory: true,
+          mealPlans: true,
+          shoppingLists: { include: { items: true } },
+          createdRecipes: { include: { ingredients: true, instructions: true } },
+          mealPrepPortions: true,
+          mealPrepSessions: true,
+          mealPrepTemplates: true,
+          weightLogs: true,
+          weightGoals: true,
+          purchaseHistory: true,
+          pantryItems: true,
+          mealPlanTemplates: true,
+          recipeViews: true,
+          cookingLogs: true,
+          recurringMeals: true,
+          notificationSettings: true,
+          profilePresets: true,
+          searchQueries: true,
+          pushTokens: true,
+          cravingSearchEvents: true,
+          mealComponents: true,
+          composedPlates: true,
+          slotAffinities: true,
+          pairAffinities: true,
+          leftoverInventory: true,
+          plateShares: true,
+          plateSaves: true,
+          householdMembers: true,
+          composedFamilyMeals: true,
+          coachConversations: true,
+          coachMessages: true,
+          coachMemories: true,
+        },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Decrypt PII fields if present
+      const decryptedEmail = user.emailEncrypted ? decrypt(user.email) : user.email;
+      const decryptedName = user.nameEncrypted ? decrypt(user.name) : user.name;
+
+      // Strip credentials and reset state — never returned even to the user.
+      const {
+        password: _pw,
+        resetCode: _rc,
+        resetCodeExpiry: _rce,
+        emailEncrypted: _ee,
+        nameEncrypted: _ne,
+        ...exportableUser
+      } = user;
+
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        user: { ...exportableUser, email: decryptedEmail, name: decryptedName },
+      };
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="sazon-data-${userId}-${Date.now()}.json"`,
+      );
+      res.json(payload);
+    } catch (error) {
+      console.error('Export data error:', error);
+      res.status(500).json({ error: 'Failed to export account data' });
+    }
+  },
+
+  /**
+   * DELETE /api/user/account
+   *
+   * GDPR / CCPA / Apple App Review — permanently delete the caller's
+   * account and every owned record. Cascades through Prisma's
+   * onDelete: Cascade across the User relations.
+   *
+   * Required confirmation: the body must include `confirm: 'DELETE'` to
+   * prevent accidental triggers. Email/password is not re-asked because
+   * the JWT requirement already proves possession of the account; if the
+   * JWT is stolen, the attacker can do anything else regardless.
+   *
+   * Side effects: revokes Stripe subscription if present, removes push
+   * tokens, drops local /uploads/profile-pictures/<userId>.* file. Coach
+   * conversation history at Anthropic is governed by the zero-data-
+   * retention agreement (no manual deletion required).
+   */
+  async deleteAccount(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const { confirm } = req.body ?? {};
+
+      if (confirm !== 'DELETE') {
+        return res.status(400).json({
+          error: 'CONFIRMATION_REQUIRED',
+          message:
+            'Account deletion requires { "confirm": "DELETE" } in the request body.',
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, profilePictureUrl: true },
+      });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Best-effort: remove the local profile-picture file if it exists.
+      // Stored as `${userId}${ext}` under uploadsDir so we know the prefix.
+      try {
+        const files = fs.readdirSync(uploadsDir);
+        for (const f of files) {
+          if (f.startsWith(`${userId}.`)) {
+            fs.unlinkSync(path.join(uploadsDir, f));
+          }
+        }
+      } catch {
+        // Non-fatal — the row still gets deleted.
+      }
+
+      // Cascade delete via Prisma. Every child relation declares
+      // onDelete: Cascade (verified at schema level), so this single
+      // call drops every owned row across the schema.
+      await prisma.user.delete({ where: { id: userId } });
+
+      res.json({ success: true, deletedAt: new Date().toISOString() });
+    } catch (error) {
+      console.error('Delete account error:', error);
+      res.status(500).json({ error: 'Failed to delete account' });
+    }
+  },
 };

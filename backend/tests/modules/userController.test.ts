@@ -512,4 +512,80 @@ describe('User Controller', () => {
       });
     });
   });
+
+  describe('deleteAccount', () => {
+    beforeEach(() => {
+      (prisma.user as any).delete = jest.fn();
+    });
+
+    test('rejects without confirmation token', async () => {
+      mockReq.body = {};
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'CONFIRMATION_REQUIRED' }),
+      );
+      expect((prisma.user as any).delete).not.toHaveBeenCalled();
+    });
+
+    test('rejects with wrong confirmation string', async () => {
+      mockReq.body = { confirm: 'delete' }; // lowercase, must be exact 'DELETE'
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect((prisma.user as any).delete).not.toHaveBeenCalled();
+    });
+
+    test('returns 404 when user no longer exists', async () => {
+      mockReq.body = { confirm: 'DELETE' };
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(null);
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect((prisma.user as any).delete).not.toHaveBeenCalled();
+    });
+
+    test('cascades delete when confirmation is correct', async () => {
+      mockReq.body = { confirm: 'DELETE' };
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({
+        id: 'test-user-id',
+        profilePictureUrl: null,
+      });
+      (prisma.user as any).delete.mockResolvedValueOnce({ id: 'test-user-id' });
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
+      expect((prisma.user as any).delete).toHaveBeenCalledWith({
+        where: { id: 'test-user-id' },
+      });
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      );
+    });
+  });
+
+  describe('exportData', () => {
+    test('returns 404 when user does not exist', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(null);
+      await userController.exportData(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+    });
+
+    test('strips password and reset code from the export payload', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({
+        id: 'test-user-id',
+        email: 'alex@example.com',
+        name: 'Alex',
+        password: 'hashed-pw-MUST-NOT-LEAK',
+        resetCode: '123456',
+        resetCodeExpiry: new Date(),
+        emailEncrypted: false,
+        nameEncrypted: false,
+        savedRecipes: [],
+        coachMessages: [],
+      });
+      mockRes.setHeader = jest.fn();
+      await userController.exportData(mockReq as Request, mockRes as Response);
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0];
+      expect(payload.user.password).toBeUndefined();
+      expect(payload.user.resetCode).toBeUndefined();
+      expect(payload.user.email).toBe('alex@example.com');
+    });
+  });
 });
