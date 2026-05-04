@@ -49,6 +49,7 @@ import {
 
 const FREE_DAILY_MESSAGE_CAP = 10;
 const MAX_TOOL_USE_ITERATIONS = 5;
+const MAX_MESSAGE_CHARS = 4000;
 // Phase 5: photo attachments. Wire-level cap per image; the server rejects
 // payloads above this with INVALID_ATTACHMENTS. Base64 inflates raw bytes ~33%,
 // so 2MB encoded ≈ 1.5MB original — comfortably above iOS HEIC compressed at
@@ -276,6 +277,21 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
     ? (req.body.attachments as unknown[])
     : [];
 
+  if (message.length > MAX_MESSAGE_CHARS) {
+    res.status(400).json({
+      error: 'MESSAGE_TOO_LONG',
+      max: MAX_MESSAGE_CHARS,
+      received: message.length,
+    });
+    return;
+  }
+
+  // Sanitize once and reuse for every downstream consumer (DB persist,
+  // Anthropic call, memory extractor). The raw `message` is only used for
+  // the medical-claim regex below — sanitization can mask obfuscated
+  // claims and weaken that detector.
+  const sanitizedMessage = sanitizeUserContent(message);
+
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const tier = resolveCoachTier(user);
 
@@ -355,7 +371,7 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
       conversationId,
       userId,
       role: 'user',
-      content: message,
+      content: sanitizedMessage,
       attachments: userAttachmentsJson,
     },
   });
@@ -450,7 +466,6 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
 
     const anthropic = getAnthropicClient();
     const toolUses: RecordedToolUse[] = [];
-    const sanitizedMessage = sanitizeUserContent(message);
     const userContent =
       validated.length > 0
         ? buildUserMessageContent(sanitizedMessage, validated)
@@ -651,7 +666,7 @@ coachRoutes.post('/message', async (req: Request, res: Response) => {
     // turns. Non-blocking; never throws back into the response stream.
     if (tier === 'premium') {
       enqueueExtraction(userId, conversationId, [
-        { role: 'user', content: message },
+        { role: 'user', content: sanitizedMessage },
         { role: 'assistant', content: assistantText },
       ]);
     }
