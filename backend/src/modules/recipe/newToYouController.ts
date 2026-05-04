@@ -1,14 +1,15 @@
 // backend/src/modules/recipe/newToYouController.ts
 //
-// Group 11 Phase 5 — "New to you" personalized adjacency feed.
+// Group 11 Phase 5 — "New to you" feed + "Browse by Region" family ranking.
 //
-// Thin HTTP handler around `buildNewToYouFeed`. Lives in its own file
-// rather than the 4500-line recipeController so the feature stays easy
-// to find and test without dragging the rest of recipe surface in.
+// Thin HTTP handlers around the two services. Lives in its own file rather
+// than the 4500-line recipeController so the Phase 5 surface stays easy
+// to find and test without dragging the rest of the recipe controller in.
 
 import { Request, Response } from 'express';
 import { getUserId } from '@/utils/authHelper';
 import { buildNewToYouFeed } from '@/services/newToYouFeedService';
+import { buildBrowseByFamily } from '@/services/browseByFamilyService';
 
 const DEFAULT_LIMIT = 8;
 const MAX_LIMIT = 24;
@@ -44,6 +45,35 @@ export const newToYouController = {
     } catch (error: any) {
       console.error('Error building new-to-you feed:', error);
       res.status(500).json({ error: 'Failed to build new-to-you feed' });
+    }
+  },
+
+  /**
+   * GET /api/recipes/browse-by-family
+   *
+   * Returns CUISINE_FAMILIES annotated with this user's affinity, ordered:
+   *   1. Highest-affinity families first
+   *   2. Within zero-affinity families: those flagged "New for you" first
+   *   3. Then alphabetical
+   *
+   * Response shape:
+   *   [{
+   *     family: string,
+   *     cuisines: string[],
+   *     affinityScore: number,
+   *     exploredCuisines: string[],
+   *     isExplored: boolean,
+   *     hasNewForYou: boolean,
+   *   }, ...]
+   */
+  async getBrowseByFamily(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const families = await buildBrowseByFamily(userId);
+      res.json({ families });
+    } catch (error: any) {
+      console.error('Error building browse-by-family:', error);
+      res.status(500).json({ error: 'Failed to build family browse' });
     }
   },
 };
