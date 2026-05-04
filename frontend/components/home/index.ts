@@ -22,6 +22,12 @@ export { default as NoResultsState } from './NoResultsState';
 export { default as SeasonalPicksSection } from './SeasonalPicksSection';
 export { default as IngredientSpotlightCard } from './IngredientSpotlightCard';
 
+// Group 11 Phase 5 — adaptive surfaces
+export { NewToYouSection } from './NewToYouSection';
+export type { NewToYouRecipe, NewToYouFeed } from './NewToYouSection';
+export { BrowseByFamilySection } from './BrowseByFamilySection';
+export type { FamilyEntry, BrowseByFamilyResponse } from './BrowseByFamilySection';
+
 // Editorial v2 components
 export { EditorialGreeting } from './EditorialGreeting';
 export { EditorialMacroWidgets } from './EditorialMacroWidgets';

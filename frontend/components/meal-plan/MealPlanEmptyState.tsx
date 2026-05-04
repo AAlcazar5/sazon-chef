@@ -17,6 +17,7 @@ import BrandButton from '../ui/BrandButton';
 import { AnimatedLottieMascot } from '../mascot';
 import GoalModeSelector, { GoalMode } from './GoalModeSelector';
 import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
+import { useAffinityExamples, formatAffinityHint } from '../../hooks/useAffinityExamples';
 
 interface MealPlanEmptyStateProps {
   isDark: boolean;
@@ -32,6 +33,8 @@ export default function MealPlanEmptyState({
   onPlanMyWeek,
 }: MealPlanEmptyStateProps) {
   const [selectedMode, setSelectedMode] = useState<GoalMode>(defaultMode);
+  const examples = useAffinityExamples();
+  const affinityHint = formatAffinityHint(examples);
 
   // Staggered entrance animations
   const mascotOpacity = useSharedValue(0);
@@ -108,13 +111,25 @@ export default function MealPlanEmptyState({
 
       <Animated.View style={subtitleAnimStyle}>
         <Text
-          className="text-base text-center mt-2 mb-8"
+          className="text-base text-center mt-2 mb-2"
           style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}
         >
           {generatingPlan
             ? 'Building your perfect week...'
             : 'Pick your goal and I\'ll handle the rest. Takes about 10 seconds.'}
         </Text>
+
+        {!generatingPlan && affinityHint ? (
+          <Text
+            className="text-sm text-center italic mb-6"
+            style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}
+            accessibilityLabel={`Personalized hint: ${affinityHint}`}
+          >
+            {affinityHint}
+          </Text>
+        ) : (
+          <View style={{ height: 24 }} />
+        )}
       </Animated.View>
 
       {!generatingPlan && (
