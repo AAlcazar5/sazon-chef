@@ -51,6 +51,31 @@ jest.mock('../../../components/mascot/LogoMascot', () => {
   return function MockLogoMascot() { return <View testID="logo-mascot" />; };
 });
 
+// SazonHeader → ProfileAvatarButton → useAuth chain isn't relevant to this
+// flow; stub it out so we don't need an AuthProvider in the test tree, but
+// keep the new-conversation button so the existing flow still works.
+jest.mock('../../../components/coach/SazonHeader', () => {
+  const { View, TouchableOpacity, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: function MockSazonHeader({ onNewConversation }: any) {
+      return (
+        <View testID="sazon-header">
+          {onNewConversation && (
+            <TouchableOpacity
+              onPress={onNewConversation}
+              accessibilityLabel="New Sazon conversation"
+              accessibilityRole="button"
+            >
+              <Text>+</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    },
+  };
+});
+
 jest.mock('../../../hooks/useFoodIntelUserState', () => ({
   __esModule: true,
   default: () => ({
@@ -102,7 +127,7 @@ describe('Coach paperclip — photo attachment entry point', () => {
   it('free tier: tapping paperclip surfaces the photos paywall sheet (no picker)', async () => {
     const { findByLabelText, findByText } = render(<CoachScreen />);
     // Open a fresh conversation so the composer is visible.
-    const newBtn = await findByLabelText('New coach conversation');
+    const newBtn = await findByLabelText('New Sazon conversation');
     fireEvent.press(newBtn);
 
     const paperclip = await findByLabelText(/Attach a photo \(Pro only\)/i);
@@ -125,7 +150,7 @@ describe('Coach paperclip — photo attachment entry point', () => {
       .mockImplementation(() => {});
 
     const { findByLabelText } = render(<CoachScreen />);
-    const newBtn = await findByLabelText('New coach conversation');
+    const newBtn = await findByLabelText('New Sazon conversation');
     fireEvent.press(newBtn);
 
     const paperclip = await findByLabelText('Attach a photo');
@@ -145,7 +170,7 @@ describe('Coach paperclip — photo attachment entry point', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
     const { findByLabelText } = render(<CoachScreen />);
-    const newBtn = await findByLabelText('New coach conversation');
+    const newBtn = await findByLabelText('New Sazon conversation');
     fireEvent.press(newBtn);
 
     const paperclip = await findByLabelText('Attach a photo');

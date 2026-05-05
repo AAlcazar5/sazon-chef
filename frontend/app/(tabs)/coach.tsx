@@ -31,6 +31,7 @@ import {
 } from '../../components/coach';
 import CoachPaywallSheet, { type CoachPaywallReason } from '../../components/coach/CoachPaywallSheet';
 import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill';
+import SazonHeader from '../../components/coach/SazonHeader';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
 import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
@@ -405,18 +406,8 @@ export default function CoachScreen() {
   // ─── Thread list view ──────────────────────────────────────────────────────
   return (
     <View style={[styles.flex, { backgroundColor: screenBg }]}>
-      <View style={[styles.header, { backgroundColor: screenBg }]}>
-        <View style={styles.headerBtn} />
-        <Text style={[styles.headerTitle, { color: text }]}>Sazon</Text>
-        <HapticTouchableOpacity
-          onPress={() => openNewConversation()}
-          accessibilityLabel="New coach conversation"
-          accessibilityRole="button"
-          style={styles.headerBtn}
-        >
-          <Ionicons name="add" size={24} color={text} />
-        </HapticTouchableOpacity>
-      </View>
+      {/* ROADMAP 4.0 — header matches Home/Kitchen/Week pattern + ProfileAvatarButton */}
+      <SazonHeader onNewConversation={() => openNewConversation()} />
 
       {loadingList ? (
         <View style={styles.center}>

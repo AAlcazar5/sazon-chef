@@ -1199,6 +1199,53 @@ export default function CookbookScreen() {
         }}
       />
 
+      {/* ROADMAP 4.0 — Filter row attached below the header (saved view only) */}
+      {viewMode === 'saved' && (
+        <FilterRow
+          chips={DEFAULT_FILTER_CHIPS.filter(c => c.id !== 'low_carb' && c.id !== 'high_fiber')}
+          activeChipIds={[
+            ...(cookbookFilters.maxCookTime !== null ? ['quick'] : []),
+            ...(cookbookFilters.difficulty.includes('Easy') ? ['easy'] : []),
+            ...(cookbookFilters.highProtein ? ['high_protein'] : []),
+            ...(cookbookFilters.lowCal ? ['low_cal'] : []),
+            ...(cookbookFilters.mealPrepOnly ? ['meal_prep'] : []),
+            ...(cookbookFilters.budget ? ['budget'] : []),
+            ...(cookbookFilters.onePot ? ['one_pot'] : []),
+          ]}
+          activeAdvancedCount={cookbookActiveFilterCount}
+          onAdvancedFilterPress={() => setShowFilterModal(true)}
+          onChipToggle={(chipId) => {
+            setCookbookFilters((prev) => {
+              switch (chipId) {
+                case 'quick':
+                  return { ...prev, maxCookTime: prev.maxCookTime === null ? 30 : null };
+                case 'easy': {
+                  const isActive = prev.difficulty.includes('Easy');
+                  return {
+                    ...prev,
+                    difficulty: isActive
+                      ? prev.difficulty.filter(d => d !== 'Easy')
+                      : [...prev.difficulty, 'Easy'],
+                  };
+                }
+                case 'high_protein':
+                  return { ...prev, highProtein: !prev.highProtein };
+                case 'low_cal':
+                  return { ...prev, lowCal: !prev.lowCal };
+                case 'meal_prep':
+                  return { ...prev, mealPrepOnly: !prev.mealPrepOnly };
+                case 'budget':
+                  return { ...prev, budget: !prev.budget };
+                case 'one_pot':
+                  return { ...prev, onePot: !prev.onePot };
+                default:
+                  return prev;
+              }
+            });
+          }}
+        />
+      )}
+
       {/* Cookbook Filter Modal */}
       <CookbookFilterModal
         visible={showFilterModal}
@@ -1652,53 +1699,6 @@ export default function CookbookScreen() {
               recipes={recentlySavedRecipes}
               onSort={() => setShowSortPicker(true)}
               onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
-            />
-          )}
-
-          {/* ROADMAP 4.0 — Filter row above "Your Recipes" list */}
-          {viewMode === 'saved' && (
-            <FilterRow
-              chips={DEFAULT_FILTER_CHIPS.filter(c => c.id !== 'low_carb' && c.id !== 'high_fiber')}
-              activeChipIds={[
-                ...(cookbookFilters.maxCookTime !== null ? ['quick'] : []),
-                ...(cookbookFilters.difficulty.includes('Easy') ? ['easy'] : []),
-                ...(cookbookFilters.highProtein ? ['high_protein'] : []),
-                ...(cookbookFilters.lowCal ? ['low_cal'] : []),
-                ...(cookbookFilters.mealPrepOnly ? ['meal_prep'] : []),
-                ...(cookbookFilters.budget ? ['budget'] : []),
-                ...(cookbookFilters.onePot ? ['one_pot'] : []),
-              ]}
-              activeAdvancedCount={cookbookActiveFilterCount}
-              onAdvancedFilterPress={() => setShowFilterModal(true)}
-              onChipToggle={(chipId) => {
-                setCookbookFilters((prev) => {
-                  switch (chipId) {
-                    case 'quick':
-                      return { ...prev, maxCookTime: prev.maxCookTime === null ? 30 : null };
-                    case 'easy': {
-                      const isActive = prev.difficulty.includes('Easy');
-                      return {
-                        ...prev,
-                        difficulty: isActive
-                          ? prev.difficulty.filter(d => d !== 'Easy')
-                          : [...prev.difficulty, 'Easy'],
-                      };
-                    }
-                    case 'high_protein':
-                      return { ...prev, highProtein: !prev.highProtein };
-                    case 'low_cal':
-                      return { ...prev, lowCal: !prev.lowCal };
-                    case 'meal_prep':
-                      return { ...prev, mealPrepOnly: !prev.mealPrepOnly };
-                    case 'budget':
-                      return { ...prev, budget: !prev.budget };
-                    case 'one_pot':
-                      return { ...prev, onePot: !prev.onePot };
-                    default:
-                      return prev;
-                  }
-                });
-              }}
             />
           )}
 
