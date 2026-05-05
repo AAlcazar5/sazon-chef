@@ -25,6 +25,7 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import LogoMascot from '../components/mascot/LogoMascot';
 import Sazon from '../components/mascot/Sazon';
 import { initSentry } from '../lib/sentry';
+import { initRevenueCat, setUserId as setRevenueCatUserId, logOut as revenueCatLogOut } from '../lib/revenueCat';
 import '../global.css';
 
 // Initialize Sentry once at module load — runs before any component renders.
@@ -36,7 +37,19 @@ function RootLayoutNav() {
   const [fontsLoaded] = useFonts(EDITORIAL_FONTS);
   const router = useRouter();
   const segments = useSegments();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  // RevenueCat: configure once at boot, then sync the appUserID with auth state.
+  useEffect(() => {
+    initRevenueCat({ userId: user?.id ?? null }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      setRevenueCatUserId(user.id).catch(() => {});
+    } else if (!isAuthenticated) {
+      revenueCatLogOut().catch(() => {});
+    }
+  }, [isAuthenticated, user?.id]);
 
   // Register for push notifications when authenticated
   usePushNotifications();
