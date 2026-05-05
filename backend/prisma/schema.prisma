@@ -1397,3 +1397,45 @@ model CohortDistanceSnapshot {
   @@index([cohortId, asOfDate])
   @@map("cohort_distance_snapshots")
 }
+
+// B3 — Per-surface signal-yield instrumentation.
+// Single event log for every recommendation surface in the app. Action funnel:
+// impression → tap → cook → rate. Daily aggregation lives in
+// SurfaceYieldSnapshot below. Surfaces with low yield are noise — kill or
+// rework.
+// `surface` enum (string): today_hero | week_swap | kitchen_discover |
+// sazon_tool | smart_collection | cravings_made_real | new_to_you |
+// browse_by_family | other.
+model SurfaceEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  surface   String
+  recipeId  String?
+  action    String   // impression | tap | cook | rate
+  variant   String?  // B4 — algorithmic A/B variant key, optional
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([surface, createdAt])
+  @@index([surface, action, createdAt])
+  @@map("surface_events")
+}
+
+// B3 — Daily roll-up of SurfaceEvent funnel per surface.
+// Computed daily by surfaceYieldService.
+model SurfaceYieldSnapshot {
+  id            String   @id @default(cuid())
+  surface       String
+  asOfDate      DateTime
+  variant       String?  // null = aggregate; non-null = per-variant for B4
+  impressions   Int      @default(0)
+  taps          Int      @default(0)
+  cooks         Int      @default(0)
+  rates         Int      @default(0)
+  signalYield   Float    @default(0) // (cooks + rates) / max(impressions, 1)
+  createdAt     DateTime @default(now())
+
+  @@unique([surface, asOfDate, variant])
+  @@index([surface, asOfDate])
+  @@map("surface_yield_snapshots")
+}
