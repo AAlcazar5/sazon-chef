@@ -1,10 +1,23 @@
 // frontend/hooks/useSubscription.ts
-// Hook for managing subscription state and Stripe checkout flows
+// Subscription state + purchase flow. Native (iOS/Android) drives RevenueCat
+// → StoreKit/Play Billing per Apple/Google guidelines. Web continues to use
+// Stripe Checkout. Backend `getSubscription` is the unified source of truth —
+// both Stripe and RevenueCat webhooks (E4) write the same User columns.
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { stripeApi } from '../lib/api';
+import {
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
+  type PurchasesPackage,
+} from '../lib/revenueCat';
 import { HapticChoreography } from '../utils/hapticChoreography';
+
+function isNativePlatform(): boolean {
+  return Platform.OS === 'ios' || Platform.OS === 'android';
+}
 
 export interface SubscriptionState {
   status: string; // free | trialing | active | past_due | canceled
@@ -14,6 +27,11 @@ export interface SubscriptionState {
   currentPeriodEnd: string | null;
   loading: boolean;
   error: string | null;
+}
+
+export interface SubscriptionOfferings {
+  monthly: PurchasesPackage | null;
+  annual: PurchasesPackage | null;
 }
 
 const DEFAULT_STATE: SubscriptionState = {
@@ -26,10 +44,25 @@ const DEFAULT_STATE: SubscriptionState = {
   error: null,
 };
 
+const DEFAULT_OFFERINGS: SubscriptionOfferings = { monthly: null, annual: null };
+
+function pickPackage(packages: PurchasesPackage[], interval: 'month' | 'year'): PurchasesPackage | null {
+  // RC's package.identifier convention: $rc_monthly, $rc_annual, $rc_lifetime, …
+  const wanted = interval === 'month' ? '$rc_monthly' : '$rc_annual';
+  const direct = packages.find(p => p.identifier === wanted);
+  if (direct) return direct;
+  // Fallback: match by product identifier substring (handles custom packages
+  // like 'sazon_membership_annual' where the RC identifier was renamed).
+  const needle = interval === 'month' ? 'month' : 'annual';
+  return packages.find(p => p.product.identifier.toLowerCase().includes(needle)) ?? null;
+}
+
 export function useSubscription() {
   const [subscription, setSubscription] = useState<SubscriptionState>(DEFAULT_STATE);
+  const [offerings, setOfferings] = useState<SubscriptionOfferings>(DEFAULT_OFFERINGS);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
   const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const wasPremiumRef = useRef<boolean | null>(null);
 
@@ -66,38 +99,103 @@ export function useSubscription() {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  /**
-   * Opens Stripe Checkout in the device browser.
-   * interval: 'month' | 'year'
-   */
-  const startCheckout = useCallback(async (interval: 'month' | 'year' = 'month') => {
-    try {
-      setCheckoutLoading(true);
-      const res = await stripeApi.createCheckout(interval);
-      const { url } = res.data;
-      if (url) {
-        await Linking.openURL(url);
-      }
-    } catch (err: any) {
-      console.error('Checkout error:', err);
-    } finally {
-      setCheckoutLoading(false);
-    }
+  // Pull RC offerings on mount (native only). On web this is a no-op;
+  // pricing renders from Stripe-side defaults at the call site.
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    let cancelled = false;
+    (async () => {
+      const packages = await getOfferings();
+      if (cancelled) return;
+      setOfferings({
+        monthly: pickPackage(packages, 'month'),
+        annual: pickPackage(packages, 'year'),
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /**
-   * Opens Stripe Customer Portal so the user can manage/cancel their subscription.
+   * Native: drive RevenueCat → StoreKit / Play Billing. The webhook then
+   *         flips backend columns via E4; we refresh after.
+   * Web:    open Stripe Checkout in the device browser.
+   */
+  const purchase = useCallback(
+    async (interval: 'month' | 'year' = 'month') => {
+      try {
+        setCheckoutLoading(true);
+        if (isNativePlatform()) {
+          const pkg = interval === 'month' ? offerings.monthly : offerings.annual;
+          if (!pkg) {
+            setSubscription(prev => ({ ...prev, error: 'No offering available' }));
+            return;
+          }
+          await purchasePackage(pkg);
+          await fetchSubscription();
+        } else {
+          const res = await stripeApi.createCheckout(interval);
+          const { url } = res.data;
+          if (url) {
+            await Linking.openURL(url);
+          }
+        }
+      } catch (err: any) {
+        // RC throws on user-cancel — silence that path; surface other errors.
+        if (err?.userCancelled) return;
+        const msg = err?.response?.data?.message || err?.message || 'Purchase failed';
+        setSubscription(prev => ({ ...prev, error: msg }));
+      } finally {
+        setCheckoutLoading(false);
+      }
+    },
+    [offerings.monthly, offerings.annual, fetchSubscription],
+  );
+
+  /**
+   * Backwards-compat alias — older callsites still use `startCheckout`.
+   */
+  const startCheckout = purchase;
+
+  /**
+   * Restore previous purchases. Required by Apple guideline 3.1.1 — every
+   * paywall must have a Restore button. Native runs RC restore + refreshes
+   * server state; web just refreshes (Stripe receipts are server-side).
+   */
+  const restore = useCallback(async () => {
+    try {
+      setRestoreLoading(true);
+      if (isNativePlatform()) {
+        await restorePurchases();
+      }
+      await fetchSubscription();
+    } catch (err: any) {
+      const msg = err?.message || 'Restore failed';
+      setSubscription(prev => ({ ...prev, error: msg }));
+    } finally {
+      setRestoreLoading(false);
+    }
+  }, [fetchSubscription]);
+
+  /**
+   * Manage subscription. iOS deep-links to App Store subscriptions, Android
+   * to Play Store, web opens Stripe Customer Portal.
    */
   const openPortal = useCallback(async () => {
     try {
       setPortalLoading(true);
-      const res = await stripeApi.createPortal();
-      const { url } = res.data;
-      if (url) {
-        await Linking.openURL(url);
+      if (Platform.OS === 'ios') {
+        await Linking.openURL('https://apps.apple.com/account/subscriptions');
+      } else if (Platform.OS === 'android') {
+        await Linking.openURL('https://play.google.com/store/account/subscriptions');
+      } else {
+        const res = await stripeApi.createPortal();
+        const { url } = res.data;
+        if (url) {
+          await Linking.openURL(url);
+        }
       }
-    } catch (err: any) {
-      console.error('Portal error:', err);
     } finally {
       setPortalLoading(false);
     }
@@ -116,13 +214,17 @@ export function useSubscription() {
 
   return {
     subscription,
+    offerings,
     checkoutLoading,
     portalLoading,
+    restoreLoading,
     trialDaysLeft,
     showPremiumCelebration,
     dismissPremiumCelebration,
     refresh: fetchSubscription,
-    startCheckout,
+    purchase,
+    restore,
+    startCheckout, // legacy alias of `purchase` — keep for compat
     openPortal,
   };
 }

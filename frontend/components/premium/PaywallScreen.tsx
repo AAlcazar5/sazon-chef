@@ -46,9 +46,24 @@ interface PaywallScreenProps {
 }
 
 export function PaywallScreen({ onClose }: PaywallScreenProps) {
-  const { subscription, checkoutLoading, trialDaysLeft, startCheckout, openPortal, showPremiumCelebration, dismissPremiumCelebration } =
-    useSubscription();
+  const {
+    subscription,
+    offerings,
+    checkoutLoading,
+    restoreLoading,
+    trialDaysLeft,
+    purchase,
+    restore,
+    openPortal,
+    showPremiumCelebration,
+    dismissPremiumCelebration,
+  } = useSubscription();
   const [interval, setInterval] = useState<'month' | 'year'>('month');
+
+  // Native: prefer RC's locale-formatted price strings. Web/fallback uses
+  // the Stripe-side defaults so pricing isn't blank during dev.
+  const monthlyPriceLabel = offerings.monthly?.product.priceString ?? '$9 / mo';
+  const annualPriceLabel = offerings.annual?.product.priceString ?? '$60 / yr';
 
   // Shimmer animation for CTA
   const shimmerX = useSharedValue(-1);
@@ -201,7 +216,7 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
                     styles.pricingAmount,
                     { color: interval === 'month' ? '#FFB74D' : '#6B7280' },
                   ]}>
-                    $4.99 / mo
+                    {monthlyPriceLabel}
                   </Text>
                 </HapticTouchableOpacity>
               </MotiView>
@@ -233,7 +248,7 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
                     styles.pricingAmount,
                     { color: interval === 'year' ? '#FFB74D' : '#6B7280' },
                   ]}>
-                    $39.99 / yr
+                    {annualPriceLabel}
                   </Text>
                 </HapticTouchableOpacity>
               </MotiView>
@@ -244,7 +259,7 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
               <View>
                 <GradientButton
                   label="Start Free Trial"
-                  onPress={() => startCheckout(interval)}
+                  onPress={() => purchase(interval)}
                   loading={checkoutLoading}
                   disabled={checkoutLoading}
                   colors={premiumCTA as unknown as [string, string]}
@@ -267,6 +282,20 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
                 No charge for 7 days. Cancel anytime in{' '}
                 {Platform.OS === 'ios' ? 'App Store' : 'Google Play'} settings.
               </Text>
+
+              {/* Restore Purchases — required by App Store guideline 3.1.1 */}
+              <HapticTouchableOpacity
+                style={styles.restoreButton}
+                onPress={restore}
+                accessibilityLabel="Restore previous purchases"
+                accessibilityRole="button"
+                disabled={restoreLoading}
+                testID="paywall-restore-purchases"
+              >
+                <Text style={styles.restoreLabel}>
+                  {restoreLoading ? 'Restoring…' : 'Restore Purchases'}
+                </Text>
+              </HapticTouchableOpacity>
             </View>
           </MotiView>
         )}
@@ -453,5 +482,17 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
     textAlign: 'center',
     marginTop: 12,
+  },
+  restoreButton: {
+    alignSelf: 'center',
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  restoreLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: FontSize.sm,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    textDecorationLine: 'underline',
   },
 });
