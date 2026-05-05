@@ -25,7 +25,6 @@ import {
   WeightHistoryCard,
   MacroGoalsCard,
   CulinaryPreferencesCard,
-  CookingJourneyCard,
   KitchenIQSection,
   CoachMemoryCard,
   BudgetCard,
@@ -229,9 +228,7 @@ export default function ProfileScreen() {
           />
         </StaggerItem>
 
-        <StaggerItem index={7}>
-          <CookingJourneyCard testID="cooking-journey-card" />
-        </StaggerItem>
+        {/* ROADMAP 4.0 A3-e — CookingJourneyCard relocated to Kitchen → Journey */}
 
         <StaggerItem index={7}>
           <KitchenIQSection testID="kitchen-iq-section" />

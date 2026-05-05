@@ -76,7 +76,7 @@ export default function ProfileAvatarButton({ size = 36 }: ProfileAvatarButtonPr
           isPremium={Boolean(subscription?.isPremium)}
           onOpenFullProfile={() => goTo('/(tabs)/profile')}
           onOpenMacros={() => goTo('/(tabs)/profile?focus=macros')}
-          onOpenJourney={() => goTo('/(tabs)/profile?focus=journey')}
+          onOpenJourney={() => goTo('/(tabs)/cookbook?view=journey')}
           onOpenMemory={() => goTo('/(tabs)/profile?focus=memory')}
           onOpenNotifications={() => goTo('/(tabs)/profile?focus=notifications')}
           onOpenAppearance={() => goTo('/(tabs)/profile?focus=appearance')}
