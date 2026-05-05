@@ -106,6 +106,12 @@ model User {
   coachMemories           CoachMemory[]
   lastWeeklyCheckinAt     DateTime?
 
+  // ROADMAP 4.0 J5: discovery milestones (single-fire celebrations)
+  // JSON-stringified array of milestone keys the user has crossed for the
+  // first time (e.g. ["first-photo","first-leftover","first-appliance:ninja-creami"]).
+  // Stored as String? because SQLite has no native Json type.
+  discoveryMilestones     String?
+
   @@map("users")
 }
 
