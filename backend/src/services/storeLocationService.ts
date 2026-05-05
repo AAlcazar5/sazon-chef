@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/storeLocationService.ts
 // Service for finding nearby grocery stores based on location
 
@@ -50,7 +51,7 @@ export async function zipCodeToCoordinates(zipCode: string): Promise<LocationCoo
       };
     }
   } catch (error) {
-    console.warn('Error geocoding zip code:', error);
+    logger.warn({ err: error }, 'Error geocoding zip code:');
   }
 
   // Fallback: Try common zip code lookup (simplified)
@@ -191,7 +192,7 @@ export async function findNearbyStores(
 
     return uniqueStores;
   } catch (error) {
-    console.error('Error finding nearby stores:', error);
+    logger.error({ err: error }, 'Error finding nearby stores:');
     // Fallback: return stores from our list with estimated distances
     return getFallbackStores(coordinates, radiusMiles);
   }

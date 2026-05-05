@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/recipeImportService.ts
 // Imports a recipe from a URL using JSON-LD structured data (primary) or Claude Haiku (fallback)
 
@@ -319,31 +320,31 @@ ${pageText}`;
 }
 
 export async function importRecipeFromUrl(url: string): Promise<ImportedRecipe> {
-  console.log('🔗 Importing recipe from URL:', url);
+  logger.info({ data: url }, '🔗 Importing recipe from URL:');
 
   // 1. Validate URL
   validateUrl(url);
 
   // 2. Fetch HTML
   const html = await fetchHtml(url);
-  console.log('✅ Fetched HTML, size:', html.length, 'chars');
+  logger.info({ size: html.length }, '✅ Fetched HTML');
 
   // 3. Try JSON-LD extraction first
   const jsonLdResult = tryExtractJsonLd(html);
   if (jsonLdResult) {
-    console.log('✅ Extracted recipe via JSON-LD:', jsonLdResult.title);
+    logger.info({ data: jsonLdResult.title }, '✅ Extracted recipe via JSON-LD:');
     jsonLdResult.sourceUrl = url;
     jsonLdResult.sourceName = extractSourceName(url);
     return jsonLdResult;
   }
 
   // 4. Fallback: AI extraction
-  console.log('⚠️ JSON-LD not found, falling back to AI extraction...');
+  logger.info('⚠️ JSON-LD not found, falling back to AI extraction...');
   const pageText = cleanHtmlForAi(html);
   const aiResult = await extractWithAi(url, pageText);
   aiResult.sourceUrl = url;
   aiResult.sourceName = extractSourceName(url);
-  console.log('✅ Extracted recipe via AI:', aiResult.title);
+  logger.info({ data: aiResult.title }, '✅ Extracted recipe via AI:');
 
   return aiResult;
 }

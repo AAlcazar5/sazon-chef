@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/shoppingListSyncService.ts
 // Bidirectional shopping list synchronization with 3rd party apps
 
@@ -103,7 +104,7 @@ export async function syncShoppingListBidirectional(
       message: pushResult.message || 'Shopping list synced successfully',
     };
   } catch (error: any) {
-    console.error('Error syncing shopping list:', error);
+    logger.error({ err: error }, 'Error syncing shopping list:');
     return {
       success: false,
       itemsSynced: 0,

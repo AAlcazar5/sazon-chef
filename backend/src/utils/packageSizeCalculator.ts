@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/utils/packageSizeCalculator.ts
 // Calculate how much to buy based on package sizes available at stores
 
@@ -144,7 +145,7 @@ export function calculatePurchaseQuantity(
     } else {
       // If conversion fails, try to estimate (rough fallback)
       // For now, just use the needed amount and let the user adjust
-      console.warn(`⚠️ Could not convert ${needed.totalAmount} ${needed.totalUnit} to ${packageInfo.unit} for ${needed.name}`);
+      logger.warn(`⚠️ Could not convert ${needed.totalAmount} ${needed.totalUnit} to ${packageInfo.unit} for ${needed.name}`);
     }
   }
 

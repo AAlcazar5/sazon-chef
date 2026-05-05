@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/auth/authMiddleware.ts
 // JWT authentication middleware
 
@@ -58,7 +59,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
       next();
     });
   } catch (error: any) {
-    console.error('Authentication middleware error:', error);
+    logger.error({ err: error }, 'Authentication middleware error:');
     return res.status(500).json({
       error: 'Authentication error',
       message: 'An error occurred during authentication'

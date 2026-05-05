@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/utils/autoBackup.ts
 // Automatic recipe backup on server startup and periodic backups
 
@@ -54,7 +55,7 @@ async function createBackup(): Promise<string | null> {
     
     fs.writeFileSync(backupFile, JSON.stringify(backup, null, 2));
     
-    console.log(`💾 Auto-backup created: ${backupFile} (${recipes.length} recipes)`);
+    logger.info(`💾 Auto-backup created: ${backupFile} (${recipes.length} recipes)`);
 
     // Keep only the last MAX_BACKUPS backups
     const backupFiles = fs.readdirSync(BACKUPS_DIR)
@@ -71,7 +72,7 @@ async function createBackup(): Promise<string | null> {
       const toDelete = backupFiles.slice(MAX_BACKUPS);
       for (const file of toDelete) {
         fs.unlinkSync(file.path);
-        console.log(`🗑️  Deleted old backup: ${file.name}`);
+        logger.info(`🗑️  Deleted old backup: ${file.name}`);
       }
     }
 
@@ -81,7 +82,7 @@ async function createBackup(): Promise<string | null> {
 
     return backupFile;
   } catch (error: any) {
-    console.error('❌ Auto-backup error:', error);
+    logger.error({ err: error }, '❌ Auto-backup error:');
     return null;
   }
 }
@@ -115,13 +116,13 @@ function shouldBackup(): boolean {
  */
 export async function initializeAutoBackup(): Promise<void> {
   try {
-    console.log('🔄 Initializing automatic recipe backups...');
+    logger.info('🔄 Initializing automatic recipe backups...');
 
     // Create initial backup on startup
     if (shouldBackup()) {
       await createBackup();
     } else {
-      console.log('ℹ️  Recent backup exists, skipping startup backup');
+      logger.info('ℹ️  Recent backup exists, skipping startup backup');
     }
 
     // Set up periodic backups
@@ -133,9 +134,9 @@ export async function initializeAutoBackup(): Promise<void> {
       }
     }, backupInterval);
 
-    console.log(`✅ Auto-backup initialized (every ${BACKUP_INTERVAL_HOURS} hours)`);
+    logger.info(`✅ Auto-backup initialized (every ${BACKUP_INTERVAL_HOURS} hours)`);
   } catch (error: any) {
-    console.error('❌ Failed to initialize auto-backup:', error);
+    logger.error({ err: error }, '❌ Failed to initialize auto-backup:');
   }
 }
 

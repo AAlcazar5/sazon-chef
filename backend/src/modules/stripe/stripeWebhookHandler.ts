@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/stripe/stripeWebhookHandler.ts
 // Handles incoming Stripe webhook events with idempotency via StripeWebhookEvent log
 
@@ -31,7 +32,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
       STRIPE_WEBHOOK_SECRET,
     );
   } catch (err: any) {
-    console.error('Stripe webhook signature verification failed:', err.message);
+    logger.error({ err: err.message }, 'Stripe webhook signature verification failed:');
     return res.status(400).json({ error: 'Webhook signature verification failed' });
   }
 
@@ -89,7 +90,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         break;
     }
   } catch (err) {
-    console.error(`Error processing Stripe event ${event.type}:`, err);
+    logger.error({ err: err }, `Error processing Stripe event ${event.type}:`);
     // Return 200 anyway so Stripe doesn't retry infinitely for processing errors
   }
 
@@ -144,7 +145,7 @@ async function handlePaymentFailed(obj: any, userId: string | undefined) {
       ? (() => { try { const { decrypt } = require('@/utils/encryption'); return decrypt(user.email); } catch { return null; } })()
       : user.email;
     if (email) {
-      emailService.sendPaymentFailed(email).catch(console.error);
+      emailService.sendPaymentFailed(email).catch((err: unknown) => logger.error({ err }, 'stripe.paymentFailedEmail.failed'));
     }
   }
 }

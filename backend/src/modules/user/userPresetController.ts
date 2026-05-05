@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/user/userPresetController.ts
 // Profile preset CRUD + apply
 
@@ -16,7 +17,7 @@ export const userPresetController = {
       });
       res.json(presets);
     } catch (error) {
-      console.error('Get presets error:', error);
+      logger.error({ err: error }, 'Get presets error:');
       res.status(500).json({ error: 'Failed to fetch presets' });
     }
   },
@@ -66,7 +67,7 @@ export const userPresetController = {
       if (error.code === 'P2002') {
         return res.status(409).json({ error: 'A preset with that name already exists' });
       }
-      console.error('Create preset error:', error);
+      logger.error({ err: error }, 'Create preset error:');
       res.status(500).json({ error: 'Failed to create preset' });
     }
   },
@@ -99,7 +100,7 @@ export const userPresetController = {
       if (error.code === 'P2002') {
         return res.status(409).json({ error: 'A preset with that name already exists' });
       }
-      console.error('Update preset error:', error);
+      logger.error({ err: error }, 'Update preset error:');
       res.status(500).json({ error: 'Failed to update preset' });
     }
   },
@@ -121,7 +122,7 @@ export const userPresetController = {
       await (prisma as any).profilePreset.delete({ where: { id } });
       res.json({ message: 'Preset deleted successfully' });
     } catch (error) {
-      console.error('Delete preset error:', error);
+      logger.error({ err: error }, 'Delete preset error:');
       res.status(500).json({ error: 'Failed to delete preset' });
     }
   },
@@ -206,7 +207,7 @@ export const userPresetController = {
 
       res.json({ message: 'Preset applied successfully', preset });
     } catch (error) {
-      console.error('Apply preset error:', error);
+      logger.error({ err: error }, 'Apply preset error:');
       res.status(500).json({ error: 'Failed to apply preset' });
     }
   },

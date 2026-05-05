@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // Group 10S: Kitchen IQ progress endpoint.
 
 import { Request, Response } from 'express';
@@ -70,7 +71,7 @@ export const kitchenIQController = {
 
       return res.json(progress);
     } catch (error) {
-      console.error('Get kitchen IQ progress error:', error);
+      logger.error({ err: error }, 'Get kitchen IQ progress error:');
       return res.status(500).json({ error: 'Failed to fetch kitchen IQ progress' });
     }
   },

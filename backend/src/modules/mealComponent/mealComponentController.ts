@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/mealComponent/mealComponentController.ts
 // Group 10X Phase 1+2+5 — Build-a-Plate API surface.
 
@@ -202,7 +203,7 @@ export const mealComponentController = {
       if (message.startsWith('Locked component not found')) {
         return res.status(400).json({ error: message });
       }
-      console.error('Error generating permutations:', error);
+      logger.error({ err: error }, 'Error generating permutations:');
       return res.status(500).json({ error: 'Failed to generate permutations' });
     }
   },
@@ -217,7 +218,7 @@ export const mealComponentController = {
       const plate = await getPlateFromPantry({ userId });
       return res.json({ plate });
     } catch (error) {
-      console.error('Error fetching plate from pantry:', error);
+      logger.error({ err: error }, 'Error fetching plate from pantry:');
       return res.status(500).json({ error: 'Failed to fetch plate from pantry' });
     }
   },
@@ -241,7 +242,7 @@ export const mealComponentController = {
       const components = await listComponents({ userId, ...parsed.data });
       return res.json({ components });
     } catch (error) {
-      console.error('Error listing meal components:', error);
+      logger.error({ err: error }, 'Error listing meal components:');
       return res.status(500).json({ error: 'Failed to list meal components' });
     }
   },
@@ -273,7 +274,7 @@ export const mealComponentController = {
       if (/component not found|at least one component/i.test(message)) {
         return res.status(400).json({ error: message });
       }
-      console.error('Error creating composed plate:', error);
+      logger.error({ err: error }, 'Error creating composed plate:');
       return res.status(500).json({ error: 'Failed to save composed plate' });
     }
   },
@@ -338,7 +339,7 @@ export const mealComponentController = {
       const timeline = solveCookTimeline(tasks);
       return res.json({ timeline });
     } catch (error) {
-      console.error('Error computing cook timeline:', error);
+      logger.error({ err: error }, 'Error computing cook timeline:');
       return res.status(500).json({ error: 'Failed to compute cook timeline' });
     }
   },
@@ -365,7 +366,7 @@ export const mealComponentController = {
       const favorites = await getTopComponentsForSlot(userId, slot as ComponentSlot, limit);
       return res.json({ slot, favorites });
     } catch (error) {
-      console.error('Error fetching slot affinity:', error);
+      logger.error({ err: error }, 'Error fetching slot affinity:');
       return res.status(500).json({ error: 'Failed to fetch slot affinity' });
     }
   },
@@ -383,7 +384,7 @@ export const mealComponentController = {
       await recordAffinityEvent({ type: 'swap_away', userId, componentId });
       return res.json({ ok: true });
     } catch (error) {
-      console.error('Error recording swap_away:', error);
+      logger.error({ err: error }, 'Error recording swap_away:');
       return res.status(500).json({ error: 'Failed to record swap event' });
     }
   },
@@ -415,7 +416,7 @@ export const mealComponentController = {
       if (/not found or not owned/i.test(message)) {
         return res.status(400).json({ error: message });
       }
-      console.error('Error running macro auto-fit:', error);
+      logger.error({ err: error }, 'Error running macro auto-fit:');
       return res.status(500).json({ error: 'Failed to compute macro auto-fit' });
     }
   },
@@ -429,7 +430,7 @@ export const mealComponentController = {
       const leftovers = await getActiveLeftovers(userId);
       return res.json({ leftovers });
     } catch (error) {
-      console.error('Error listing leftovers:', error);
+      logger.error({ err: error }, 'Error listing leftovers:');
       return res.status(500).json({ error: 'Failed to list leftovers' });
     }
   },
@@ -455,7 +456,7 @@ export const mealComponentController = {
       if (/forbidden|not found/i.test(message)) {
         return res.status(404).json({ error: message });
       }
-      console.error('Error generating plate variations:', error);
+      logger.error({ err: error }, 'Error generating plate variations:');
       return res.status(500).json({ error: 'Failed to generate plate variations' });
     }
   },
@@ -470,7 +471,7 @@ export const mealComponentController = {
       const visibleSlots = visibleSlotsForTier(tier);
       return res.json({ tier, visibleSlots });
     } catch (error) {
-      console.error('Error fetching skill tier:', error);
+      logger.error({ err: error }, 'Error fetching skill tier:');
       return res.status(500).json({ error: 'Failed to fetch skill tier' });
     }
   },
@@ -521,7 +522,7 @@ export const mealComponentController = {
           }));
       return res.json({ variants });
     } catch (error) {
-      console.error('Error fetching component variants:', error);
+      logger.error({ err: error }, 'Error fetching component variants:');
       return res.status(500).json({ error: 'Failed to fetch component variants' });
     }
   },
@@ -535,7 +536,7 @@ export const mealComponentController = {
       const summary = await computeWeeklyPlateSummary(userId);
       return res.json(summary);
     } catch (error) {
-      console.error('Error fetching weekly plate summary:', error);
+      logger.error({ err: error }, 'Error fetching weekly plate summary:');
       return res.status(500).json({ error: 'Failed to fetch weekly plate summary' });
     }
   },
@@ -566,7 +567,7 @@ export const mealComponentController = {
         targets: TARGET_DAILY_NUTRIENTS,
       });
     } catch (error) {
-      console.error('Error fetching nutrient gap:', error);
+      logger.error({ err: error }, 'Error fetching nutrient gap:');
       return res.status(500).json({ error: 'Failed to fetch nutrient gap' });
     }
   },
@@ -588,7 +589,7 @@ export const mealComponentController = {
       if (/not found|forbidden/i.test(message)) {
         return res.status(404).json({ error: message });
       }
-      console.error('Error creating share link:', error);
+      logger.error({ err: error }, 'Error creating share link:');
       return res.status(500).json({ error: 'Failed to create share link' });
     }
   },
@@ -603,7 +604,7 @@ export const mealComponentController = {
       if (!result) return res.status(404).json({ error: 'Plate not found' });
       return res.json({ share: result });
     } catch (error) {
-      console.error('Error fetching shared plate:', error);
+      logger.error({ err: error }, 'Error fetching shared plate:');
       return res.status(500).json({ error: 'Failed to fetch shared plate' });
     }
   },
@@ -663,7 +664,7 @@ export const mealComponentController = {
 
       return res.json({ subsCount });
     } catch (error) {
-      console.error('Error computing shared plate sub count:', error);
+      logger.error({ err: error }, 'Error computing shared plate sub count:');
       return res.status(500).json({ error: 'Failed to compute substitution count' });
     }
   },
@@ -677,7 +678,7 @@ export const mealComponentController = {
       const top = await getPlateOfTheWeek(viewerUserId);
       return res.json({ plate: top });
     } catch (error) {
-      console.error('Error fetching plate-of-the-week:', error);
+      logger.error({ err: error }, 'Error fetching plate-of-the-week:');
       return res.status(500).json({ error: 'Failed to fetch plate-of-the-week' });
     }
   },
@@ -698,7 +699,7 @@ export const mealComponentController = {
       if (error?.name === 'PlateNotShareableError') {
         return res.status(404).json({ error: 'Plate not found' });
       }
-      console.error('Error saving plate:', error);
+      logger.error({ err: error }, 'Error saving plate:');
       return res.status(500).json({ error: 'Failed to save plate' });
     }
   },
@@ -719,7 +720,7 @@ export const mealComponentController = {
       const result = await composePlateFromUtterance({ userId, utterance: parsed.data.utterance });
       return res.json({ result });
     } catch (error) {
-      console.error('Error composing from utterance:', error);
+      logger.error({ err: error }, 'Error composing from utterance:');
       return res.status(500).json({ error: 'Failed to compose from utterance' });
     }
   },
@@ -764,7 +765,7 @@ export const mealComponentController = {
       if (/at least one plate|maximum.*plates|forbidden|not found/i.test(message)) {
         return res.status(400).json({ error: message });
       }
-      console.error('Error building family meal:', error);
+      logger.error({ err: error }, 'Error building family meal:');
       return res.status(500).json({ error: 'Failed to build family meal' });
     }
   },
@@ -788,7 +789,7 @@ export const mealComponentController = {
       if (/at least one|at most/i.test(message)) {
         return res.status(400).json({ error: message });
       }
-      console.error('Error diverging from base:', error);
+      logger.error({ err: error }, 'Error diverging from base:');
       return res.status(500).json({ error: 'Failed to diverge from base' });
     }
   },
@@ -801,7 +802,7 @@ export const mealComponentController = {
       const members = await listHouseholdMembers(getUserId(req));
       return res.json({ members });
     } catch (error) {
-      console.error('Error listing household:', error);
+      logger.error({ err: error }, 'Error listing household:');
       return res.status(500).json({ error: 'Failed to list household' });
     }
   },
@@ -828,7 +829,7 @@ export const mealComponentController = {
       if (/required|must be/i.test(message)) {
         return res.status(400).json({ error: message });
       }
-      console.error('Error creating household member:', error);
+      logger.error({ err: error }, 'Error creating household member:');
       return res.status(500).json({ error: 'Failed to create household member' });
     }
   },
@@ -862,7 +863,7 @@ export const mealComponentController = {
       if (/required|must be/i.test(message)) {
         return res.status(400).json({ error: message });
       }
-      console.error('Error updating household member:', error);
+      logger.error({ err: error }, 'Error updating household member:');
       return res.status(500).json({ error: 'Failed to update household member' });
     }
   },
@@ -883,7 +884,7 @@ export const mealComponentController = {
       if (/forbidden|not found/i.test(message)) {
         return res.status(404).json({ error: message });
       }
-      console.error('Error deleting household member:', error);
+      logger.error({ err: error }, 'Error deleting household member:');
       return res.status(500).json({ error: 'Failed to delete household member' });
     }
   },
@@ -923,7 +924,7 @@ export const mealComponentController = {
 
       return res.json({ ok: true });
     } catch (error) {
-      console.error('Error marking plate cooked:', error);
+      logger.error({ err: error }, 'Error marking plate cooked:');
       return res.status(500).json({ error: 'Failed to mark plate cooked' });
     }
   },

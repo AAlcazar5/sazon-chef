@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // AI Provider Manager - Handles automatic fallback between providers
 import { AIProvider, RecipeGenerationRequest, AIProviderError } from './AIProvider';
 import type { AITaskType, ModelRoute } from './AIProvider';
@@ -86,18 +87,18 @@ export class AIProviderManager {
       const provider = allProviders[providerKey.toLowerCase()];
       if (provider && provider.isAvailable()) {
         this.providers.push(provider);
-        console.log(`✅ [ProviderManager] ${provider.getName()} initialized and available`);
+        logger.info(`✅ [ProviderManager] ${provider.getName()} initialized and available`);
       } else {
-        console.log(`⚠️  [ProviderManager] ${providerKey} is not configured or unavailable`);
+        logger.info(`⚠️  [ProviderManager] ${providerKey} is not configured or unavailable`);
       }
     }
 
     if (this.providers.length === 0) {
-      console.error('❌ [ProviderManager] No AI providers are configured!');
+      logger.error('❌ [ProviderManager] No AI providers are configured!');
       throw new Error('No AI providers configured. Please set at least one: ANTHROPIC_API_KEY or GOOGLE_AI_API_KEY');
     }
 
-    console.log(`✅ [ProviderManager] ${this.providers.length} provider(s) ready: ${this.providers.map(p => p.getName()).join(', ')}`);
+    logger.info(`✅ [ProviderManager] ${this.providers.length} provider(s) ready: ${this.providers.map(p => p.getName()).join(', ')}`);
   }
 
   /**
@@ -110,10 +111,10 @@ export class AIProviderManager {
 
     for (const provider of this.providers) {
       try {
-        console.log(`🔄 [ProviderManager] Attempting generation with ${provider.getName()}...`);
+        logger.info(`🔄 [ProviderManager] Attempting generation with ${provider.getName()}...`);
         const recipe = await provider.generateRecipe(request);
         this.lastUsedProvider = provider.getName();
-        console.log(`✅ [ProviderManager] Successfully generated recipe using ${provider.getName()}`);
+        logger.info(`✅ [ProviderManager] Successfully generated recipe using ${provider.getName()}`);
         return recipe;
       } catch (error: any) {
         // Ensure error is normalized (providers should normalize, but check just in case)
@@ -130,7 +131,7 @@ export class AIProviderManager {
         errors.push({ provider: provider.getName(), error: normalizedError });
         lastError = normalizedError;
 
-        console.warn(`⚠️  [ProviderManager] ${provider.getName()} failed:`, {
+        logger.warn({
           code: normalizedError.code,
           status: normalizedError.status,
           message: normalizedError.message,
@@ -139,40 +140,40 @@ export class AIProviderManager {
           rawErrorCode: error.code,
           rawErrorStatus: error.status,
           rawErrorType: error.error?.code || error.error?.type,
-        });
+        }, `⚠️  [ProviderManager] ${provider.getName()} failed`);
 
         // If it's a quota/rate limit error, try next provider
         if (normalizedError.isQuotaError || normalizedError.isRateLimitError) {
-          console.log(`⏭️  [ProviderManager] ${provider.getName()} quota exceeded, trying next provider...`);
+          logger.info(`⏭️  [ProviderManager] ${provider.getName()} quota exceeded, trying next provider...`);
           continue;
         }
 
         // If it's a retryable error, try next provider
         if (normalizedError.retryable) {
-          console.log(`🔄 [ProviderManager] ${provider.getName()} retryable error, trying next provider...`);
+          logger.info(`🔄 [ProviderManager] ${provider.getName()} retryable error, trying next provider...`);
           continue;
         }
 
         // Explicitly handle 529 (Overloaded) errors - treat as retryable and fallback
         if (normalizedError.status === 529) {
-          console.log(`🔄 [ProviderManager] ${provider.getName()} overloaded (529), trying next provider...`);
+          logger.info(`🔄 [ProviderManager] ${provider.getName()} overloaded (529), trying next provider...`);
           continue;
         }
 
         // For configuration/validation errors (400, 404), still try next provider as fallback
         // This allows fallback even if one provider has config issues
         if (normalizedError.status === 400 || normalizedError.status === 404) {
-          console.log(`⏭️  [ProviderManager] ${provider.getName()} configuration error (${normalizedError.status}), trying next provider...`);
+          logger.info(`⏭️  [ProviderManager] ${provider.getName()} configuration error (${normalizedError.status}), trying next provider...`);
           continue;
         }
 
         // For any other error, still try next provider as fallback
-        console.log(`⏭️  [ProviderManager] ${provider.getName()} error (${normalizedError.code}), trying next provider...`);
+        logger.info(`⏭️  [ProviderManager] ${provider.getName()} error (${normalizedError.code}), trying next provider...`);
       }
     }
 
     // All providers failed
-    console.error('❌ [ProviderManager] All providers failed:', errors);
+    logger.error({ data: errors }, '❌ [ProviderManager] All providers failed:');
     
     // Determine the most appropriate error to throw
     const quotaErrors = errors.filter(e => e.error.isQuotaError || e.error.isRateLimitError);

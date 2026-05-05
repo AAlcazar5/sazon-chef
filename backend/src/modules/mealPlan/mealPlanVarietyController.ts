@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { logger } from '../../utils/logger';
 import {
   calculateVarietyScore,
   findRepetitiveMealIds,
@@ -61,7 +62,7 @@ export const getMealPlanVarietyScore = async (req: Request, res: Response): Prom
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error computing variety score:', message);
+    logger.error({ err: message }, 'Error computing variety score:');
     res.status(500).json({ error: 'Failed to compute variety score', details: message });
   }
 };

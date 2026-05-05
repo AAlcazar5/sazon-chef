@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/imageService.ts
 import axios from 'axios';
 
@@ -64,11 +65,11 @@ export class ImageService {
 
       const query = searchTerms.join(' ');
 
-      console.log('🖼️  Searching for image:', query, `(page: ${page}, index: ${resultIndex})`);
+      logger.info({ query, page, resultIndex }, '🖼️  Searching for image');
 
       // If no API key, use a fallback approach (less reliable)
       if (!this.unsplashAccessKey) {
-        console.log('⚠️  No Unsplash API key - using fallback image URL');
+        logger.info('⚠️  No Unsplash API key - using fallback image URL');
         return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
       }
 
@@ -112,8 +113,8 @@ export class ImageService {
         const unsplashUrl = `https://unsplash.com/photos/${photo.id}?utm_source=${this.appName}&utm_medium=referral`;
         const attributionText = `Photo by ${photographer.name} on Unsplash`;
 
-        console.log(`✅ Found image [${photoIndex}]:`, imageUrl);
-        console.log('📸 Photographer:', photographer.name);
+        logger.info({ data: imageUrl }, `✅ Found image [${photoIndex}]:`);
+        logger.info({ data: photographer.name }, '📸 Photographer:');
 
         return {
           id: photo.id,
@@ -125,10 +126,10 @@ export class ImageService {
         };
       }
 
-      console.log('⚠️  No image found, using fallback');
+      logger.info('⚠️  No image found, using fallback');
       return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
     } catch (error: any) {
-      console.error('❌ Error fetching image from Unsplash:', error.message);
+      logger.error({ data: error.message }, '❌ Error fetching image from Unsplash:');
       return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
     }
   }
@@ -143,16 +144,16 @@ export class ImageService {
     }
 
     try {
-      console.log('📸 Triggering Unsplash download endpoint:', downloadLocation);
+      logger.info({ data: downloadLocation }, '📸 Triggering Unsplash download endpoint:');
       await axios.get(downloadLocation, {
         headers: {
           Authorization: `Client-ID ${this.unsplashAccessKey}`,
         },
         timeout: 3000, 
       });
-      console.log('✅ Download event triggered successfully for Unsplash');
+      logger.info('✅ Download event triggered successfully for Unsplash');
     } catch (error: any) {
-      console.error('⚠️  Failed to trigger download event:', error.message);
+      logger.error({ data: error.message }, '⚠️  Failed to trigger download event:');
       // Non-critical error, don't throw
     }
   }
@@ -181,7 +182,7 @@ export class ImageService {
     const randomSeed = Date.now() + resultIndex;
     const fallbackUrl = `https://source.unsplash.com/800x600/?${keywordString}&sig=${randomSeed}`;
 
-    console.log('🖼️  Using fallback image URL:', fallbackUrl);
+    logger.info({ data: fallbackUrl }, '🖼️  Using fallback image URL:');
 
     // Return minimal photo object
     return {

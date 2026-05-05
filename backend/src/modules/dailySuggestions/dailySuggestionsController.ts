@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/dailySuggestions/dailySuggestionsController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
@@ -10,7 +11,7 @@ export const dailySuggestionsController = {
   // Get daily meal suggestions for a user
   async getDailySuggestions(req: Request, res: Response) {
     try {
-      console.log('📅 GET /api/daily-suggestions - METHOD CALLED');
+      logger.info('📅 GET /api/daily-suggestions - METHOD CALLED');
       const userId = getUserId(req);
       
       // Get user data
@@ -101,7 +102,7 @@ export const dailySuggestionsController = {
       // Get insights
       const insights = getDailySuggestionInsights(dailyPlan);
       
-      console.log(`✅ Generated daily suggestions with ${Object.values(dailyPlan).filter(Boolean).length} meals`);
+      logger.info(`✅ Generated daily suggestions with ${Object.values(dailyPlan).filter(Boolean).length} meals`);
       
       res.json({
         dailyPlan,
@@ -110,7 +111,7 @@ export const dailySuggestionsController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in getDailySuggestions:', error);
+      logger.error({ err: error }, '❌ Error in getDailySuggestions:');
       res.status(500).json({ 
         error: 'Failed to generate daily suggestions',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -189,7 +190,7 @@ export const dailySuggestionsController = {
       scoredRecipes.sort((a, b) => b.score.total - a.score.total);
       const topSuggestions = scoredRecipes.slice(0, 5);
       
-      console.log(`✅ Generated ${topSuggestions.length} ${mealType} suggestions`);
+      logger.info(`✅ Generated ${topSuggestions.length} ${mealType} suggestions`);
       
       res.json({
         mealType,
@@ -198,7 +199,7 @@ export const dailySuggestionsController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in getMealSuggestions:', error);
+      logger.error({ err: error }, '❌ Error in getMealSuggestions:');
       res.status(500).json({ 
         error: 'Failed to generate meal suggestions',
         details: error instanceof Error ? error.message : 'Unknown error'

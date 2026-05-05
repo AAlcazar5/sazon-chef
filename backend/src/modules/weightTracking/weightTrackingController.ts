@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/weightTracking/weightTrackingController.ts
 // Weight tracking and goal management (Phase 6, Group 12)
 
@@ -32,7 +33,7 @@ export const weightTrackingController = {
       const userId = getUserId(req);
       const { date, weightKg, notes } = req.body;
 
-      console.log('⚖️ POST /api/weight-tracking/log called');
+      logger.info('⚖️ POST /api/weight-tracking/log called');
 
       if (!weightKg || weightKg <= 0) {
         return res.status(400).json({
@@ -63,7 +64,7 @@ export const weightTrackingController = {
         data: { weightKg },
       });
 
-      console.log('✅ Weight logged successfully');
+      logger.info('✅ Weight logged successfully');
 
       res.json({
         success: true,
@@ -76,7 +77,7 @@ export const weightTrackingController = {
         },
       });
     } catch (error: any) {
-      console.error('❌ Log weight error:', error);
+      logger.error({ err: error }, '❌ Log weight error:');
       res.status(500).json({
         error: 'Failed to log weight',
         message: error.message,
@@ -90,7 +91,7 @@ export const weightTrackingController = {
       const userId = getUserId(req);
       const days = parseInt(req.query.days as string) || 30;
 
-      console.log(`⚖️ GET /api/weight-tracking/history called (${days} days)`);
+      logger.info(`⚖️ GET /api/weight-tracking/history called (${days} days)`);
 
       const daysAgo = new Date();
       daysAgo.setDate(daysAgo.getDate() - days);
@@ -107,7 +108,7 @@ export const weightTrackingController = {
         weightLogs: weightLogs || [],
       });
     } catch (error: any) {
-      console.error('❌ Get weight history error:', error);
+      logger.error({ err: error }, '❌ Get weight history error:');
       res.status(500).json({
         error: 'Failed to fetch weight history',
         message: error.message,
@@ -120,7 +121,7 @@ export const weightTrackingController = {
     try {
       const userId = getUserId(req);
 
-      console.log('⚖️ GET /api/weight-tracking/latest called');
+      logger.info('⚖️ GET /api/weight-tracking/latest called');
 
       const latestWeight = await prisma.$queryRaw`
         SELECT * FROM weight_logs
@@ -136,7 +137,7 @@ export const weightTrackingController = {
         weight: weight,
       });
     } catch (error: any) {
-      console.error('❌ Get latest weight error:', error);
+      logger.error({ err: error }, '❌ Get latest weight error:');
       res.status(500).json({
         error: 'Failed to fetch latest weight',
         message: error.message,
@@ -150,7 +151,7 @@ export const weightTrackingController = {
       const userId = getUserId(req);
       const { targetWeightKg, weeksToGoal, goalType } = req.body;
 
-      console.log('⚖️ POST /api/weight-tracking/goal called');
+      logger.info('⚖️ POST /api/weight-tracking/goal called');
 
       if (!targetWeightKg || !weeksToGoal) {
         return res.status(400).json({
@@ -247,7 +248,7 @@ export const weightTrackingController = {
         )
       `;
 
-      console.log('✅ Weight goal set successfully');
+      logger.info('✅ Weight goal set successfully');
 
       res.json({
         success: true,
@@ -258,7 +259,7 @@ export const weightTrackingController = {
         },
       });
     } catch (error: any) {
-      console.error('❌ Set weight goal error:', error);
+      logger.error({ err: error }, '❌ Set weight goal error:');
       res.status(500).json({
         error: 'Failed to set weight goal',
         message: error.message,
@@ -271,7 +272,7 @@ export const weightTrackingController = {
     try {
       const userId = getUserId(req);
 
-      console.log('⚖️ GET /api/weight-tracking/goal called');
+      logger.info('⚖️ GET /api/weight-tracking/goal called');
 
       const activeGoals = await prisma.$queryRaw`
         SELECT * FROM weight_goals
@@ -360,7 +361,7 @@ export const weightTrackingController = {
         },
       });
     } catch (error: any) {
-      console.error('❌ Get weight goal error:', error);
+      logger.error({ err: error }, '❌ Get weight goal error:');
       res.status(500).json({
         error: 'Failed to fetch weight goal',
         message: error.message,
@@ -373,7 +374,7 @@ export const weightTrackingController = {
     try {
       const userId = getUserId(req);
 
-      console.log('⚖️ GET /api/weight-tracking/progress called');
+      logger.info('⚖️ GET /api/weight-tracking/progress called');
 
       // Get active goal
       const activeGoals = await prisma.$queryRaw`
@@ -460,7 +461,7 @@ export const weightTrackingController = {
         },
       });
     } catch (error: any) {
-      console.error('❌ Get weight progress error:', error);
+      logger.error({ err: error }, '❌ Get weight progress error:');
       res.status(500).json({
         error: 'Failed to fetch weight progress',
         message: error.message,

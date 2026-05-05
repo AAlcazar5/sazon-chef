@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/spoonacularService.ts
 import axios from 'axios';
 
@@ -65,7 +66,7 @@ class SpoonacularService {
     this.baseUrl = SPOONACULAR_BASE_URL;
 
     if (!this.apiKey) {
-      console.warn('⚠️  Spoonacular API key not found. External recipe enrichment will be disabled.');
+      logger.warn('⚠️  Spoonacular API key not found. External recipe enrichment will be disabled.');
     }
   }
 
@@ -86,7 +87,7 @@ class SpoonacularService {
     number?: number;
   }): Promise<SpoonacularSearchResult | null> {
     if (!this.isConfigured()) {
-      console.warn('⚠️  Spoonacular API not configured');
+      logger.warn('⚠️  Spoonacular API not configured');
       return null;
     }
 
@@ -106,7 +107,7 @@ class SpoonacularService {
       const response = await axios.get(`${this.baseUrl}/recipes/complexSearch`, { params });
       return response.data;
     } catch (error: any) {
-      console.error('❌ Error searching Spoonacular recipes:', error.response?.data || error.message);
+      logger.error({ data: error.response?.data || error.message }, '❌ Error searching Spoonacular recipes:');
       return null;
     }
   }
@@ -116,7 +117,7 @@ class SpoonacularService {
    */
   async getRecipeInformation(spoonacularId: number): Promise<SpoonacularRecipeInfo | null> {
     if (!this.isConfigured()) {
-      console.warn('⚠️  Spoonacular API not configured');
+      logger.warn('⚠️  Spoonacular API not configured');
       return null;
     }
 
@@ -132,7 +133,7 @@ class SpoonacularService {
       );
       return response.data;
     } catch (error: any) {
-      console.error('❌ Error fetching Spoonacular recipe info:', error.response?.data || error.message);
+      logger.error({ data: error.response?.data || error.message }, '❌ Error fetching Spoonacular recipe info:');
       return null;
     }
   }
@@ -142,7 +143,7 @@ class SpoonacularService {
    */
   async getRecipeNutrition(spoonacularId: number): Promise<any | null> {
     if (!this.isConfigured()) {
-      console.warn('⚠️  Spoonacular API not configured');
+      logger.warn('⚠️  Spoonacular API not configured');
       return null;
     }
 
@@ -155,7 +156,7 @@ class SpoonacularService {
       );
       return response.data;
     } catch (error: any) {
-      console.error('❌ Error fetching nutrition info:', error.response?.data || error.message);
+      logger.error({ data: error.response?.data || error.message }, '❌ Error fetching nutrition info:');
       return null;
     }
   }
@@ -184,21 +185,21 @@ class SpoonacularService {
    */
   async enrichRecipeData(recipeTitle: string): Promise<ExternalRecipeData | null> {
     if (!this.isConfigured()) {
-      console.warn('⚠️  Spoonacular API not configured, skipping enrichment for:', recipeTitle);
+      logger.warn({ data: recipeTitle }, '⚠️  Spoonacular API not configured, skipping enrichment for:');
       return null;
     }
 
     try {
-      console.log(`🔍 Searching for external data for recipe: "${recipeTitle}"`);
+      logger.info(`🔍 Searching for external data for recipe: "${recipeTitle}"`);
       
       const recipeInfo = await this.findRecipeByTitle(recipeTitle);
       
       if (!recipeInfo) {
-        console.log(`❌ No match found on Spoonacular for: "${recipeTitle}"`);
+        logger.info(`❌ No match found on Spoonacular for: "${recipeTitle}"`);
         return null;
       }
 
-      console.log(`✅ Found match: "${recipeInfo.title}" (ID: ${recipeInfo.id})`);
+      logger.info(`✅ Found match: "${recipeInfo.title}" (ID: ${recipeInfo.id})`);
 
       // Calculate quality score (0-100) based on health score and spoonacular score
       const qualityScore = Math.round(
@@ -223,17 +224,17 @@ class SpoonacularService {
         sourceName: recipeInfo.sourceName,
       };
 
-      console.log(`📊 Enriched data:`, {
+      logger.info({
         title: recipeInfo.title,
         qualityScore,
         popularityScore,
         healthScore: recipeInfo.healthScore,
         likes: recipeInfo.aggregateLikes,
-      });
+      }, '📊 Enriched data');
 
       return enrichedData;
     } catch (error: any) {
-      console.error('❌ Error enriching recipe data:', error.message);
+      logger.error({ data: error.message }, '❌ Error enriching recipe data:');
       return null;
     }
   }
@@ -266,7 +267,7 @@ class SpoonacularService {
     tags?: string[];
   }): Promise<any | null> {
     if (!this.isConfigured()) {
-      console.warn('⚠️  Spoonacular API not configured');
+      logger.warn('⚠️  Spoonacular API not configured');
       return null;
     }
 
@@ -283,7 +284,7 @@ class SpoonacularService {
       const response = await axios.get(`${this.baseUrl}/recipes/random`, { params });
       return response.data;
     } catch (error: any) {
-      console.error('❌ Error fetching random recipes:', error.response?.data || error.message);
+      logger.error({ data: error.response?.data || error.message }, '❌ Error fetching random recipes:');
       return null;
     }
   }

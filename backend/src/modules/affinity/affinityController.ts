@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // Group 10R-Phase2: GET /api/user/affinity-snapshot
 // Wires Prisma reads → pure affinitySnapshotService.
 
@@ -117,7 +118,7 @@ export const affinityController = {
 
       return res.json(snapshot);
     } catch (error) {
-      console.error('Get affinity snapshot error:', error);
+      logger.error({ err: error }, 'Get affinity snapshot error:');
       return res.status(500).json({ error: 'Failed to fetch affinity snapshot' });
     }
   },

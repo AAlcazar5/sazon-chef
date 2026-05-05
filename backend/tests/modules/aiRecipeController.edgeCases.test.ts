@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AIRecipeController } from '../../src/modules/aiRecipe/aiRecipeController';
 import { aiRecipeService } from '../../src/services/aiRecipeService';
 import { prisma } from '../../src/lib/prisma';
+import { logger } from '../../src/utils/logger';
 
 // Mock dependencies
 jest.mock('../../src/services/aiRecipeService', () => ({
@@ -509,11 +510,13 @@ describe('AIRecipeController - Edge Cases', () => {
         instructions: []
       });
 
-      const consoleLog = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLog = jest.spyOn(logger, 'info').mockImplementation();
 
       await controller.generateRecipe(mockRequest as Request, mockResponse as Response);
 
-      const calls = consoleLog.mock.calls.map(c => c.join(' '));
+      const calls = consoleLog.mock.calls.map(c =>
+        c.map(arg => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' '),
+      );
       expect(calls.some(c => c.includes('AI Recipe Generation: Completed in'))).toBe(true);
 
       const timingCall = calls.find(c => c.includes('Completed in'));

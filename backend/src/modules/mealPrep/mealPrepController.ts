@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/mealPrep/mealPrepController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
@@ -7,7 +8,7 @@ export const mealPrepController = {
   // Create a meal prep portion entry
   async createMealPrepPortion(req: Request, res: Response) {
     try {
-      console.log('🍱 POST /api/meal-prep/portions - METHOD CALLED');
+      logger.info('🍱 POST /api/meal-prep/portions - METHOD CALLED');
       const userId = getUserId(req);
 
       const {
@@ -95,14 +96,14 @@ export const mealPrepController = {
         },
       });
 
-      console.log(`✅ Created meal prep portion: ${recipe.title} (${totalServings} servings)`);
+      logger.info(`✅ Created meal prep portion: ${recipe.title} (${totalServings} servings)`);
 
       res.status(201).json({
         message: 'Meal prep portion created successfully',
         mealPrepPortion,
       });
     } catch (error: any) {
-      console.error('❌ Error in createMealPrepPortion:', error);
+      logger.error({ err: error }, '❌ Error in createMealPrepPortion:');
       res.status(500).json({
         error: 'Failed to create meal prep portion',
         details: error.message,
@@ -113,7 +114,7 @@ export const mealPrepController = {
   // Get all meal prep portions for a user
   async getMealPrepPortions(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/meal-prep/portions - METHOD CALLED');
+      logger.info('🍱 GET /api/meal-prep/portions - METHOD CALLED');
       const userId = getUserId(req);
 
       const { includeConsumed = 'true' } = req.query;
@@ -133,11 +134,11 @@ export const mealPrepController = {
         orderBy: { prepDate: 'desc' },
       });
 
-      console.log(`✅ Retrieved ${mealPrepPortions.length} meal prep portions`);
+      logger.info(`✅ Retrieved ${mealPrepPortions.length} meal prep portions`);
 
       res.json(mealPrepPortions);
     } catch (error: any) {
-      console.error('❌ Error in getMealPrepPortions:', error);
+      logger.error({ err: error }, '❌ Error in getMealPrepPortions:');
       res.status(500).json({
         error: 'Failed to fetch meal prep portions',
         details: error.message,
@@ -148,7 +149,7 @@ export const mealPrepController = {
   // Get a specific meal prep portion
   async getMealPrepPortion(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/meal-prep/portions/:id - METHOD CALLED');
+      logger.info('🍱 GET /api/meal-prep/portions/:id - METHOD CALLED');
       const userId = getUserId(req);
       const { id } = req.params;
 
@@ -179,7 +180,7 @@ export const mealPrepController = {
 
       res.json(mealPrepPortion);
     } catch (error: any) {
-      console.error('❌ Error in getMealPrepPortion:', error);
+      logger.error({ err: error }, '❌ Error in getMealPrepPortion:');
       res.status(500).json({
         error: 'Failed to fetch meal prep portion',
         details: error.message,
@@ -190,7 +191,7 @@ export const mealPrepController = {
   // Record consumption of a meal prep portion
   async consumeMealPrepPortion(req: Request, res: Response) {
     try {
-      console.log('🍱 POST /api/meal-prep/portions/:id/consume - METHOD CALLED');
+      logger.info('🍱 POST /api/meal-prep/portions/:id/consume - METHOD CALLED');
       const userId = getUserId(req);
       const { id } = req.params;
 
@@ -273,7 +274,7 @@ export const mealPrepController = {
         },
       });
 
-      console.log(`✅ Recorded consumption: ${servings} ${portionType} servings`);
+      logger.info(`✅ Recorded consumption: ${servings} ${portionType} servings`);
 
       res.json({
         message: 'Consumption recorded successfully',
@@ -281,7 +282,7 @@ export const mealPrepController = {
         mealPrepPortion: updatedPortion,
       });
     } catch (error: any) {
-      console.error('❌ Error in consumeMealPrepPortion:', error);
+      logger.error({ err: error }, '❌ Error in consumeMealPrepPortion:');
       res.status(500).json({
         error: 'Failed to record consumption',
         details: error.message,
@@ -292,7 +293,7 @@ export const mealPrepController = {
   // Get meal prep portion statistics
   async getMealPrepStats(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/meal-prep/stats - METHOD CALLED');
+      logger.info('🍱 GET /api/meal-prep/stats - METHOD CALLED');
       const userId = getUserId(req);
 
       const mealPrepPortions = await prisma.mealPrepPortion.findMany({
@@ -369,7 +370,7 @@ export const mealPrepController = {
 
       res.json(stats);
     } catch (error: any) {
-      console.error('❌ Error in getMealPrepStats:', error);
+      logger.error({ err: error }, '❌ Error in getMealPrepStats:');
       res.status(500).json({
         error: 'Failed to fetch meal prep statistics',
         details: error.message,
@@ -380,7 +381,7 @@ export const mealPrepController = {
   // Create a meal prep session
   async createMealPrepSession(req: Request, res: Response) {
     try {
-      console.log('🍱 POST /api/meal-prep/sessions - METHOD CALLED');
+      logger.info('🍱 POST /api/meal-prep/sessions - METHOD CALLED');
       const userId = getUserId(req);
 
       const {
@@ -410,14 +411,14 @@ export const mealPrepController = {
         },
       });
 
-      console.log(`✅ Created meal prep session: ${mealPrepSession.id}`);
+      logger.info(`✅ Created meal prep session: ${mealPrepSession.id}`);
 
       res.status(201).json({
         message: 'Meal prep session created successfully',
         mealPrepSession,
       });
     } catch (error: any) {
-      console.error('❌ Error in createMealPrepSession:', error);
+      logger.error({ err: error }, '❌ Error in createMealPrepSession:');
       res.status(500).json({
         error: 'Failed to create meal prep session',
         details: error.message,
@@ -428,7 +429,7 @@ export const mealPrepController = {
   // Get meal prep sessions for a date range
   async getMealPrepSessions(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/meal-prep/sessions - METHOD CALLED');
+      logger.info('🍱 GET /api/meal-prep/sessions - METHOD CALLED');
       const userId = getUserId(req);
       const { startDate, endDate } = req.query;
 
@@ -460,11 +461,11 @@ export const mealPrepController = {
         orderBy: { scheduledDate: 'asc' },
       });
 
-      console.log(`✅ Retrieved ${sessions.length} meal prep sessions`);
+      logger.info(`✅ Retrieved ${sessions.length} meal prep sessions`);
 
       res.json(sessions);
     } catch (error: any) {
-      console.error('❌ Error in getMealPrepSessions:', error);
+      logger.error({ err: error }, '❌ Error in getMealPrepSessions:');
       res.status(500).json({
         error: 'Failed to fetch meal prep sessions',
         details: error.message,
@@ -475,7 +476,7 @@ export const mealPrepController = {
   // Update meal prep session
   async updateMealPrepSession(req: Request, res: Response) {
     try {
-      console.log('🍱 PUT /api/meal-prep/sessions/:id - METHOD CALLED');
+      logger.info('🍱 PUT /api/meal-prep/sessions/:id - METHOD CALLED');
       const userId = getUserId(req);
       const { id } = req.params;
 
@@ -525,14 +526,14 @@ export const mealPrepController = {
         },
       });
 
-      console.log(`✅ Updated meal prep session: ${id}`);
+      logger.info(`✅ Updated meal prep session: ${id}`);
 
       res.json({
         message: 'Meal prep session updated successfully',
         mealPrepSession: updatedSession,
       });
     } catch (error: any) {
-      console.error('❌ Error in updateMealPrepSession:', error);
+      logger.error({ err: error }, '❌ Error in updateMealPrepSession:');
       res.status(500).json({
         error: 'Failed to update meal prep session',
         details: error.message,
@@ -543,7 +544,7 @@ export const mealPrepController = {
   // Delete meal prep session
   async deleteMealPrepSession(req: Request, res: Response) {
     try {
-      console.log('🍱 DELETE /api/meal-prep/sessions/:id - METHOD CALLED');
+      logger.info('🍱 DELETE /api/meal-prep/sessions/:id - METHOD CALLED');
       const userId = getUserId(req);
       const { id } = req.params;
 
@@ -563,13 +564,13 @@ export const mealPrepController = {
         where: { id },
       });
 
-      console.log(`✅ Deleted meal prep session: ${id}`);
+      logger.info(`✅ Deleted meal prep session: ${id}`);
 
       res.json({
         message: 'Meal prep session deleted successfully',
       });
     } catch (error: any) {
-      console.error('❌ Error in deleteMealPrepSession:', error);
+      logger.error({ err: error }, '❌ Error in deleteMealPrepSession:');
       res.status(500).json({
         error: 'Failed to delete meal prep session',
         details: error.message,
@@ -580,7 +581,7 @@ export const mealPrepController = {
   // Get meal prep portions that need thawing reminders
   async getThawingReminders(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/meal-prep/thawing-reminders - METHOD CALLED');
+      logger.info('🍱 GET /api/meal-prep/thawing-reminders - METHOD CALLED');
       const userId = getUserId(req);
       const { daysAhead = 1 } = req.query; // Default to 1 day ahead
 
@@ -633,7 +634,7 @@ export const mealPrepController = {
         reminderDate: reminderDate.toISOString(),
       });
     } catch (error: any) {
-      console.error('❌ Error in getThawingReminders:', error);
+      logger.error({ err: error }, '❌ Error in getThawingReminders:');
       res.status(500).json({
         error: 'Failed to fetch thawing reminders',
         details: error.message,
@@ -644,7 +645,7 @@ export const mealPrepController = {
   // Schedule a thawing reminder for a meal prep portion
   async scheduleThawingReminder(req: Request, res: Response) {
     try {
-      console.log('🍱 POST /api/meal-prep/thawing-reminders - METHOD CALLED');
+      logger.info('🍱 POST /api/meal-prep/thawing-reminders - METHOD CALLED');
       const userId = getUserId(req);
       const { mealPrepPortionId, reminderDate, reminderTime } = req.body;
 
@@ -695,7 +696,7 @@ export const mealPrepController = {
         note: 'In a full implementation, this would schedule a push notification',
       });
     } catch (error: any) {
-      console.error('❌ Error in scheduleThawingReminder:', error);
+      logger.error({ err: error }, '❌ Error in scheduleThawingReminder:');
       res.status(500).json({
         error: 'Failed to schedule thawing reminder',
         details: error.message,
@@ -706,7 +707,7 @@ export const mealPrepController = {
   // Get cost optimization analysis for meal prep
   async getMealPrepCostAnalysis(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/meal-prep/cost-analysis - METHOD CALLED');
+      logger.info('🍱 GET /api/meal-prep/cost-analysis - METHOD CALLED');
       const userId = getUserId(req);
       const { recipeId, totalServings } = req.query;
 
@@ -805,7 +806,7 @@ export const mealPrepController = {
 
       res.json(analysis);
     } catch (error: any) {
-      console.error('❌ Error in getMealPrepCostAnalysis:', error);
+      logger.error({ err: error }, '❌ Error in getMealPrepCostAnalysis:');
       res.status(500).json({
         error: 'Failed to calculate meal prep cost analysis',
         details: error.message,
@@ -849,7 +850,7 @@ export const mealPrepTemplateController = {
   // Create or update a meal prep template
   async createOrUpdateTemplate(req: Request, res: Response) {
     try {
-      console.log('🍱 POST /api/meal-prep/templates - METHOD CALLED');
+      logger.info('🍱 POST /api/meal-prep/templates - METHOD CALLED');
       const userId = getUserId(req);
 
       const {
@@ -915,7 +916,7 @@ export const mealPrepTemplateController = {
             },
           },
         });
-        console.log(`✅ Updated meal prep template: ${template.id}`);
+        logger.info(`✅ Updated meal prep template: ${template.id}`);
       } else {
         // Create new template
         template = await prisma.mealPrepTemplate.create({
@@ -939,7 +940,7 @@ export const mealPrepTemplateController = {
             },
           },
         });
-        console.log(`✅ Created meal prep template: ${template.id}`);
+        logger.info(`✅ Created meal prep template: ${template.id}`);
       }
 
       res.status(existingTemplate ? 200 : 201).json({
@@ -947,7 +948,7 @@ export const mealPrepTemplateController = {
         template,
       });
     } catch (error: any) {
-      console.error('❌ Error in createOrUpdateTemplate:', error);
+      logger.error({ err: error }, '❌ Error in createOrUpdateTemplate:');
       res.status(500).json({
         error: 'Failed to create/update meal prep template',
         details: error.message,
@@ -958,7 +959,7 @@ export const mealPrepTemplateController = {
   // Get all meal prep templates for user
   async getTemplates(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/meal-prep/templates - METHOD CALLED');
+      logger.info('🍱 GET /api/meal-prep/templates - METHOD CALLED');
       const userId = getUserId(req);
       const { favoriteOnly } = req.query;
 
@@ -989,11 +990,11 @@ export const mealPrepTemplateController = {
         ],
       });
 
-      console.log(`✅ Retrieved ${templates.length} meal prep templates`);
+      logger.info(`✅ Retrieved ${templates.length} meal prep templates`);
 
       res.json(templates);
     } catch (error: any) {
-      console.error('❌ Error in getTemplates:', error);
+      logger.error({ err: error }, '❌ Error in getTemplates:');
       res.status(500).json({
         error: 'Failed to fetch meal prep templates',
         details: error.message,
@@ -1004,7 +1005,7 @@ export const mealPrepTemplateController = {
   // Get template by recipe ID
   async getTemplateByRecipe(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/meal-prep/templates/recipe/:recipeId - METHOD CALLED');
+      logger.info('🍱 GET /api/meal-prep/templates/recipe/:recipeId - METHOD CALLED');
       const userId = getUserId(req);
       const { recipeId } = req.params;
 
@@ -1036,7 +1037,7 @@ export const mealPrepTemplateController = {
 
       res.json(template);
     } catch (error: any) {
-      console.error('❌ Error in getTemplateByRecipe:', error);
+      logger.error({ err: error }, '❌ Error in getTemplateByRecipe:');
       res.status(500).json({
         error: 'Failed to fetch meal prep template',
         details: error.message,
@@ -1047,7 +1048,7 @@ export const mealPrepTemplateController = {
   // Delete template
   async deleteTemplate(req: Request, res: Response) {
     try {
-      console.log('🍱 DELETE /api/meal-prep/templates/:id - METHOD CALLED');
+      logger.info('🍱 DELETE /api/meal-prep/templates/:id - METHOD CALLED');
       const userId = getUserId(req);
       const { id } = req.params;
 
@@ -1067,13 +1068,13 @@ export const mealPrepTemplateController = {
         where: { id },
       });
 
-      console.log(`✅ Deleted meal prep template: ${id}`);
+      logger.info(`✅ Deleted meal prep template: ${id}`);
 
       res.json({
         message: 'Meal prep template deleted successfully',
       });
     } catch (error: any) {
-      console.error('❌ Error in deleteTemplate:', error);
+      logger.error({ err: error }, '❌ Error in deleteTemplate:');
       res.status(500).json({
         error: 'Failed to delete meal prep template',
         details: error.message,
@@ -1084,7 +1085,7 @@ export const mealPrepTemplateController = {
   // Use template to create meal prep portion
   async useTemplate(req: Request, res: Response) {
     try {
-      console.log('🍱 POST /api/meal-prep/templates/:id/use - METHOD CALLED');
+      logger.info('🍱 POST /api/meal-prep/templates/:id/use - METHOD CALLED');
       const userId = getUserId(req);
       const { id } = req.params;
       const { overrideServings, overrideServingsToFreeze, overrideServingsForWeek, prepDate, notes } = req.body;
@@ -1169,7 +1170,7 @@ export const mealPrepTemplateController = {
         },
       });
 
-      console.log(`✅ Created meal prep portion from template: ${mealPrepPortion.id}`);
+      logger.info(`✅ Created meal prep portion from template: ${mealPrepPortion.id}`);
 
       res.status(201).json({
         message: 'Meal prep portion created from template successfully',
@@ -1177,7 +1178,7 @@ export const mealPrepTemplateController = {
         template,
       });
     } catch (error: any) {
-      console.error('❌ Error in useTemplate:', error);
+      logger.error({ err: error }, '❌ Error in useTemplate:');
       res.status(500).json({
         error: 'Failed to use meal prep template',
         details: error.message,

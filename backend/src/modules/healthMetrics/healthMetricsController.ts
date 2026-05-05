@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/healthMetrics/healthMetricsController.ts
 // Health metrics API controller (Phase 6, Group 12)
 
@@ -17,7 +18,7 @@ export const healthMetricsController = {
         steps,
       } = req.body;
 
-      console.log('💓 POST /api/health-metrics called');
+      logger.info('💓 POST /api/health-metrics called');
 
       // Validate required fields
       if (!date) {
@@ -50,14 +51,14 @@ export const healthMetricsController = {
         )
       `;
 
-      console.log('✅ Health metrics stored successfully');
+      logger.info('✅ Health metrics stored successfully');
 
       res.json({
         success: true,
         message: 'Health metrics stored successfully',
       });
     } catch (error: any) {
-      console.error('❌ Store health metrics error:', error);
+      logger.error({ err: error }, '❌ Store health metrics error:');
       res.status(500).json({
         error: 'Failed to store health metrics',
         message: error.message,
@@ -71,7 +72,7 @@ export const healthMetricsController = {
       const userId = getUserId(req);
       const days = parseInt(req.query.days as string) || 7;
 
-      console.log(`💓 GET /api/health-metrics/recent called (${days} days)`);
+      logger.info(`💓 GET /api/health-metrics/recent called (${days} days)`);
 
       const daysAgo = new Date();
       daysAgo.setDate(daysAgo.getDate() - days);
@@ -88,7 +89,7 @@ export const healthMetricsController = {
         metrics: metrics || [],
       });
     } catch (error: any) {
-      console.error('❌ Get health metrics error:', error);
+      logger.error({ err: error }, '❌ Get health metrics error:');
       res.status(500).json({
         error: 'Failed to fetch health metrics',
         message: error.message,
@@ -101,7 +102,7 @@ export const healthMetricsController = {
     try {
       const userId = getUserId(req);
 
-      console.log('💓 GET /api/health-metrics/today called');
+      logger.info('💓 GET /api/health-metrics/today called');
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -124,7 +125,7 @@ export const healthMetricsController = {
         metrics: todayMetrics,
       });
     } catch (error: any) {
-      console.error('❌ Get today health metrics error:', error);
+      logger.error({ err: error }, '❌ Get today health metrics error:');
       res.status(500).json({
         error: 'Failed to fetch today health metrics',
         message: error.message,

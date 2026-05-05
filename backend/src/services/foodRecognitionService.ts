@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/foodRecognitionService.ts
 // Food recognition and macro estimation from photos
 // Primary: Claude (Anthropic) — Fallback: Gemini (Google)
@@ -83,17 +84,17 @@ export class FoodRecognitionService {
     if (process.env.ANTHROPIC_API_KEY) {
       this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       this.providerOrder.push('claude');
-      console.log('✅ Food Recognition: Claude configured (primary)');
+      logger.info('✅ Food Recognition: Claude configured (primary)');
     }
 
     if (process.env.GOOGLE_AI_API_KEY) {
       this.gemini = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
       this.providerOrder.push('gemini');
-      console.log('✅ Food Recognition: Gemini configured (fallback)');
+      logger.info('✅ Food Recognition: Gemini configured (fallback)');
     }
 
     if (this.providerOrder.length === 0) {
-      console.log('⚠️  Food Recognition: No vision providers configured (set ANTHROPIC_API_KEY or GOOGLE_AI_API_KEY)');
+      logger.info('⚠️  Food Recognition: No vision providers configured (set ANTHROPIC_API_KEY or GOOGLE_AI_API_KEY)');
     }
   }
 
@@ -113,14 +114,14 @@ export class FoodRecognitionService {
 
     for (const provider of this.providerOrder) {
       try {
-        console.log(`🍽️  Recognizing food via ${provider}...`);
+        logger.info(`🍽️  Recognizing food via ${provider}...`);
         const raw = provider === 'claude'
           ? await this.recognizeWithClaude(imageBase64, imageMimeType)
           : await this.recognizeWithGemini(imageBase64, imageMimeType);
 
         return this.normalizeResult(raw);
       } catch (error: any) {
-        console.warn(`⚠️  ${provider} food recognition failed: ${error.message}`);
+        logger.warn(`⚠️  ${provider} food recognition failed: ${error.message}`);
         lastError = error;
         // Continue to next provider
       }
@@ -232,7 +233,7 @@ export class FoodRecognitionService {
       }
 
       // Text fallback
-      console.warn('⚠️  Could not parse JSON response, using text extraction fallback');
+      logger.warn('⚠️  Could not parse JSON response, using text extraction fallback');
       return this.parseTextResponse(content);
     }
   }
@@ -298,14 +299,14 @@ export class FoodRecognitionService {
 
   async scanBarcode(barcode: string): Promise<BarcodeScanResult | null> {
     try {
-      console.log('📱 Scanning barcode:', barcode);
+      logger.info({ err: barcode }, '📱 Scanning barcode:');
 
       const response = await axios.get(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`, {
         timeout: 5000,
       });
 
       if (response.data.status === 0 || !response.data.product) {
-        console.log('⚠️  Product not found in OpenFoodFacts database');
+        logger.info('⚠️  Product not found in OpenFoodFacts database');
         return null;
       }
 
@@ -328,7 +329,7 @@ export class FoodRecognitionService {
         barcode,
       };
     } catch (error: any) {
-      console.error('❌ Barcode scan error:', error);
+      logger.error({ err: error }, '❌ Barcode scan error:');
 
       if (process.env.NUTRITIONIX_API_KEY && process.env.NUTRITIONIX_APP_ID) {
         return this.scanBarcodeNutritionix(barcode);
@@ -372,7 +373,7 @@ export class FoodRecognitionService {
         barcode,
       };
     } catch (error: any) {
-      console.error('❌ Nutritionix barcode scan error:', error);
+      logger.error({ err: error }, '❌ Nutritionix barcode scan error:');
       return null;
     }
   }

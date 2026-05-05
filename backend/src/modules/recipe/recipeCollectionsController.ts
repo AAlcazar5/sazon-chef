@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/recipe/recipeCollectionsController.ts
 //
 // R1-2 split (round 2, 2026-05-04) — extracted collection-management
@@ -30,7 +31,7 @@ export const recipeCollectionsController = {
       }));
       res.json({ success: true, data: result });
     } catch (error: any) {
-      console.error('❌ Get collections error:', error);
+      logger.error({ err: error }, '❌ Get collections error:');
       res.status(500).json({ error: 'Failed to fetch collections' });
     }
   },
@@ -58,7 +59,7 @@ export const recipeCollectionsController = {
       });
       res.json({ success: true, data: collection });
     } catch (error: any) {
-      console.error('❌ Create collection error:', error);
+      logger.error({ err: error }, '❌ Create collection error:');
       if (error?.code === 'P2002') {
         return res.status(409).json({ error: 'Collection already exists' });
       }
@@ -87,7 +88,7 @@ export const recipeCollectionsController = {
       const updated = await (prisma as any).collection.update({ where: { id }, data });
       res.json({ success: true, data: updated });
     } catch (error: any) {
-      console.error('❌ Update collection error:', error);
+      logger.error({ err: error }, '❌ Update collection error:');
       res.status(500).json({ error: 'Failed to update collection' });
     }
   },
@@ -104,7 +105,7 @@ export const recipeCollectionsController = {
       await (prisma as any).collection.delete({ where: { id } });
       res.json({ success: true });
     } catch (error: any) {
-      console.error('❌ Delete collection error:', error);
+      logger.error({ err: error }, '❌ Delete collection error:');
       res.status(500).json({ error: 'Failed to delete collection' });
     }
   },
@@ -142,7 +143,7 @@ export const recipeCollectionsController = {
 
       res.json({ success: true });
     } catch (error: any) {
-      console.error('❌ Move saved recipe error:', error);
+      logger.error({ err: error }, '❌ Move saved recipe error:');
       res.status(500).json({ error: 'Failed to move recipe to collection' });
     }
   },
@@ -160,7 +161,7 @@ export const recipeCollectionsController = {
       });
       res.json({ success: true, data: updated });
     } catch (error: any) {
-      console.error('❌ Toggle pin collection error:', error);
+      logger.error({ err: error }, '❌ Toggle pin collection error:');
       res.status(500).json({ error: 'Failed to toggle pin' });
     }
   },
@@ -178,7 +179,7 @@ export const recipeCollectionsController = {
       );
       res.json({ success: true });
     } catch (error: any) {
-      console.error('❌ Reorder collections error:', error);
+      logger.error({ err: error }, '❌ Reorder collections error:');
       res.status(500).json({ error: 'Failed to reorder collections' });
     }
   },
@@ -220,7 +221,7 @@ export const recipeCollectionsController = {
         data: { ...newCollection, recipeCount: source.recipeCollections.length },
       });
     } catch (error: any) {
-      console.error('❌ Duplicate collection error:', error);
+      logger.error({ err: error }, '❌ Duplicate collection error:');
       if (error?.code === 'P2002') {
         return res.status(409).json({ error: 'A collection with that name already exists' });
       }
@@ -273,7 +274,7 @@ export const recipeCollectionsController = {
         },
       });
     } catch (error: any) {
-      console.error('❌ Merge collections error:', error);
+      logger.error({ err: error }, '❌ Merge collections error:');
       res.status(500).json({ error: 'Failed to merge collections' });
     }
   },

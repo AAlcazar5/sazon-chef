@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/mealHistory/mealHistoryController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
@@ -7,7 +8,7 @@ export const mealHistoryController = {
   // Get user's meal history
   async getMealHistory(req: Request, res: Response) {
     try {
-      console.log('📊 GET /api/meal-history - METHOD CALLED');
+      logger.info('📊 GET /api/meal-history - METHOD CALLED');
       const userId = getUserId(req);
       
       const { 
@@ -50,7 +51,7 @@ export const mealHistoryController = {
       // Calculate summary statistics
       const summary = await calculateMealHistorySummary(userId, mealHistory);
       
-      console.log(`✅ Retrieved ${mealHistory.length} meal history entries`);
+      logger.info(`✅ Retrieved ${mealHistory.length} meal history entries`);
       
       res.json({
         mealHistory,
@@ -63,7 +64,7 @@ export const mealHistoryController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in getMealHistory:', error);
+      logger.error({ err: error }, '❌ Error in getMealHistory:');
       res.status(500).json({ 
         error: 'Failed to fetch meal history',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -74,7 +75,7 @@ export const mealHistoryController = {
   // Add a meal to history
   async addMealToHistory(req: Request, res: Response) {
     try {
-      console.log('📝 POST /api/meal-history - METHOD CALLED');
+      logger.info('📝 POST /api/meal-history - METHOD CALLED');
       const userId = getUserId(req);
       
       const {
@@ -123,7 +124,7 @@ export const mealHistoryController = {
         }
       });
       
-      console.log(`✅ Added meal to history: ${recipe.title}`);
+      logger.info(`✅ Added meal to history: ${recipe.title}`);
       
       res.status(201).json({
         message: 'Meal added to history successfully',
@@ -131,7 +132,7 @@ export const mealHistoryController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in addMealToHistory:', error);
+      logger.error({ err: error }, '❌ Error in addMealToHistory:');
       res.status(500).json({ 
         error: 'Failed to add meal to history',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -142,7 +143,7 @@ export const mealHistoryController = {
   // Update a meal history entry
   async updateMealHistory(req: Request, res: Response) {
     try {
-      console.log('📝 PUT /api/meal-history/:id - METHOD CALLED');
+      logger.info('📝 PUT /api/meal-history/:id - METHOD CALLED');
       const { id } = req.params;
       const userId = getUserId(req);
       
@@ -183,7 +184,7 @@ export const mealHistoryController = {
         }
       });
       
-      console.log(`✅ Updated meal history entry: ${id}`);
+      logger.info(`✅ Updated meal history entry: ${id}`);
       
       res.json({
         message: 'Meal history updated successfully',
@@ -191,7 +192,7 @@ export const mealHistoryController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in updateMealHistory:', error);
+      logger.error({ err: error }, '❌ Error in updateMealHistory:');
       res.status(500).json({ 
         error: 'Failed to update meal history',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -202,7 +203,7 @@ export const mealHistoryController = {
   // Delete a meal history entry
   async deleteMealHistory(req: Request, res: Response) {
     try {
-      console.log('🗑️ DELETE /api/meal-history/:id - METHOD CALLED');
+      logger.info('🗑️ DELETE /api/meal-history/:id - METHOD CALLED');
       const { id } = req.params;
       const userId = getUserId(req);
       
@@ -226,14 +227,14 @@ export const mealHistoryController = {
         where: { id }
       });
       
-      console.log(`✅ Deleted meal history entry: ${id}`);
+      logger.info(`✅ Deleted meal history entry: ${id}`);
       
       res.json({
         message: 'Meal history entry deleted successfully'
       });
       
     } catch (error) {
-      console.error('❌ Error in deleteMealHistory:', error);
+      logger.error({ err: error }, '❌ Error in deleteMealHistory:');
       res.status(500).json({ 
         error: 'Failed to delete meal history',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -244,7 +245,7 @@ export const mealHistoryController = {
   // Get meal history analytics
   async getMealHistoryAnalytics(req: Request, res: Response) {
     try {
-      console.log('📈 GET /api/meal-history/analytics - METHOD CALLED');
+      logger.info('📈 GET /api/meal-history/analytics - METHOD CALLED');
       const userId = getUserId(req);
       
       const { 
@@ -273,7 +274,7 @@ export const mealHistoryController = {
       // Calculate analytics
       const analytics = await calculateMealHistoryAnalytics(mealHistory, groupBy as string);
       
-      console.log(`✅ Generated analytics for ${mealHistory.length} meals over ${days} days`);
+      logger.info(`✅ Generated analytics for ${mealHistory.length} meals over ${days} days`);
       
       res.json({
         period: `${days} days`,
@@ -283,7 +284,7 @@ export const mealHistoryController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in getMealHistoryAnalytics:', error);
+      logger.error({ err: error }, '❌ Error in getMealHistoryAnalytics:');
       res.status(500).json({ 
         error: 'Failed to generate meal history analytics',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -294,7 +295,7 @@ export const mealHistoryController = {
   // Get meal history insights
   async getMealHistoryInsights(req: Request, res: Response) {
     try {
-      console.log('🔍 GET /api/meal-history/insights - METHOD CALLED');
+      logger.info('🔍 GET /api/meal-history/insights - METHOD CALLED');
       const userId = getUserId(req);
       
       // Get recent meal history (last 30 days)
@@ -317,7 +318,7 @@ export const mealHistoryController = {
       // Generate insights
       const insights = await generateMealHistoryInsights(recentMeals);
       
-      console.log(`✅ Generated insights from ${recentMeals.length} recent meals`);
+      logger.info(`✅ Generated insights from ${recentMeals.length} recent meals`);
       
       res.json({
         insights,
@@ -327,7 +328,7 @@ export const mealHistoryController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in getMealHistoryInsights:', error);
+      logger.error({ err: error }, '❌ Error in getMealHistoryInsights:');
       res.status(500).json({ 
         error: 'Failed to generate meal history insights',
         details: error instanceof Error ? error.message : 'Unknown error'

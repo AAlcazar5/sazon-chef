@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/utils/recipeOptimizationHelpers.ts
 // Helper functions for optimized recipe fetching and scoring
 
@@ -68,7 +69,7 @@ export async function getUserPreferencesOptimized(
       fitnessGoal: physicalProfile?.fitnessGoal || undefined,
     };
   } catch (error) {
-    console.error('Error fetching user preferences:', error);
+    logger.error({ err: error }, 'Error fetching user preferences:');
     return null;
   }
 }
@@ -123,7 +124,7 @@ export async function getBehavioralDataOptimized(userId: string) {
         .filter(Boolean) as string[],
     };
   } catch (error) {
-    console.error('Error fetching behavioral data:', error);
+    logger.error({ err: error }, 'Error fetching behavioral data:');
     return {
       likedRecipeIds: [],
       dislikedRecipeIds: [],

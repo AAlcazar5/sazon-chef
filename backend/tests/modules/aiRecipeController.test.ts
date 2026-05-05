@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AIRecipeController } from '../../src/modules/aiRecipe/aiRecipeController';
 import { aiRecipeService } from '../../src/services/aiRecipeService';
 import { prisma } from '../../src/lib/prisma';
+import { logger } from '../../src/utils/logger';
 
 // Mock dependencies
 jest.mock('../../src/services/aiRecipeService', () => ({
@@ -244,12 +245,14 @@ describe('AIRecipeController', () => {
     });
 
     test('should log generation timing', async () => {
-      const consoleLog = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLog = jest.spyOn(logger, 'info').mockImplementation();
 
       await controller.generateRecipe(mockRequest as Request, mockResponse as Response);
 
-      // console.log is called with emoji prefix as first arg, rest as additional args
-      const calls = consoleLog.mock.calls.map(c => c.join(' '));
+      // logger.info is called as either (msg) or (bindings, msg) — flatten both shapes.
+      const calls = consoleLog.mock.calls.map(c =>
+        c.map(arg => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' '),
+      );
       expect(calls.some(c => c.includes('AI Recipe Generation: Request started'))).toBe(true);
       expect(calls.some(c => c.includes('AI Recipe Generation: Completed in'))).toBe(true);
 

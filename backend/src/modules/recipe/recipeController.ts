@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/recipe/recipeController.simple.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
@@ -49,7 +50,7 @@ function mapSkillLevel(level: string | null | undefined): 'beginner' | 'intermed
 // Helper function to get user behavioral data
 export async function getUserBehaviorData(userId: string) {
   try {
-    console.log('🔍 Fetching user behavioral data for:', userId);
+    logger.info({ data: userId }, '🔍 Fetching user behavioral data for:');
 
     // Run all 4 queries in parallel; cap at 100 most recent each to bound data size
     const [likedRecipes, dislikedRecipes, savedRecipes, consumedRecipes] = await Promise.all([
@@ -120,7 +121,7 @@ export async function getUserBehaviorData(userId: string) {
       }),
     ]);
 
-    console.log(`📊 Behavioral data found: ${likedRecipes.length} liked, ${dislikedRecipes.length} disliked, ${savedRecipes.length} saved, ${consumedRecipes.length} consumed`);
+    logger.info(`📊 Behavioral data found: ${likedRecipes.length} liked, ${dislikedRecipes.length} disliked, ${savedRecipes.length} saved, ${consumedRecipes.length} consumed`);
 
     return {
       likedRecipes: likedRecipes.map((feedback: any) => ({
@@ -170,7 +171,7 @@ export async function getUserBehaviorData(userId: string) {
       }))
     };
   } catch (error) {
-    console.error('❌ Error getting user behavioral data:', error);
+    logger.error({ data: error }, '❌ Error getting user behavioral data:');
     return {
       likedRecipes: [],
       dislikedRecipes: [],
@@ -188,7 +189,7 @@ async function recordSearchQuery(userId: string, query: string, resultCount: num
     });
   } catch (error) {
     // Non-blocking — don't fail the search if logging fails
-    console.error('⚠️ Failed to record search query:', error);
+    logger.error({ data: error }, '⚠️ Failed to record search query:');
   }
 }
 
@@ -200,7 +201,7 @@ export const recipeController = {
    */
   async getRecipesOptimized(req: Request, res: Response) {
     try {
-      console.log('⚡ GET /api/recipes/optimized called');
+      logger.info('⚡ GET /api/recipes/optimized called');
       const userId = getUserId(req);
 
       const page = Math.max(0, parseInt(req.query.page as string) || 0);
@@ -245,7 +246,7 @@ export const recipeController = {
       // Debug: Check imageUrl presence
       const recipesWithImages = result.recipes.filter((r: any) => r.imageUrl);
       if (recipesWithImages.length < result.recipes.length) {
-        console.log(`⚠️  ${result.recipes.length - recipesWithImages.length} recipes missing imageUrl out of ${result.recipes.length} total`);
+        logger.info(`⚠️  ${result.recipes.length - recipesWithImages.length} recipes missing imageUrl out of ${result.recipes.length} total`);
       }
 
       // Apply runtime image variation for unique images per page
@@ -254,14 +255,14 @@ export const recipeController = {
       // Verify imageUrl is preserved after variation
       const variedWithImages = result.recipes.filter((r: any) => r.imageUrl);
       if (variedWithImages.length < recipesWithImages.length) {
-        console.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} recipes`);
+        logger.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} recipes`);
       }
 
-      console.log(`✅ Returned ${result.recipes.length} optimized recipes (page ${page + 1}/${result.totalPages})`);
+      logger.info(`✅ Returned ${result.recipes.length} optimized recipes (page ${page + 1}/${result.totalPages})`);
 
       res.json(result);
     } catch (error: any) {
-      console.error('❌ Error in getRecipesOptimized:', error);
+      logger.error({ data: error }, '❌ Error in getRecipesOptimized:');
       res.status(500).json({
         error: 'Failed to fetch recipes',
         details: error.message,
@@ -272,7 +273,7 @@ export const recipeController = {
   // Get all recipes with pagination support
   async getRecipes(req: Request, res: Response) {
     try {
-      console.log('🍳 GET /api/recipes called');
+      logger.info('🍳 GET /api/recipes called');
       const userId = getUserId(req);
       
       // Pagination parameters
@@ -407,7 +408,7 @@ export const recipeController = {
           if (criteria.cuisines && !where.cuisine) {
             where.cuisine = { in: criteria.cuisines };
           }
-          console.log(`🎭 Mood filter applied: ${mood}`, criteria);
+          logger.info({ data: criteria }, `🎭 Mood filter applied: ${mood}`);
         }
       }
 
@@ -552,7 +553,7 @@ export const recipeController = {
           try {
             behavioralScore = calculateBehavioralScoreFromProfile(recipe, userTasteProfile);
           } catch (error) {
-            console.warn('⚠️ Error calculating behavioral score:', error);
+            logger.warn({ data: error }, '⚠️ Error calculating behavioral score:');
             behavioralScore = { total: 0 };
           }
           
@@ -561,7 +562,7 @@ export const recipeController = {
           try {
             temporalScore = calculateTemporalScore(recipe, temporalContext, userTemporalPatterns);
           } catch (error) {
-            console.warn('⚠️ Error calculating temporal score:', error);
+            logger.warn({ data: error }, '⚠️ Error calculating temporal score:');
             temporalScore = { total: 0 };
           }
           
@@ -570,7 +571,7 @@ export const recipeController = {
           try {
             enhancedScore = calculateEnhancedScore(recipe, cookTimeContext, userKitchenProfile);
           } catch (error) {
-            console.warn('⚠️ Error calculating enhanced score:', error);
+            logger.warn({ data: error }, '⚠️ Error calculating enhanced score:');
             enhancedScore = { total: 0 };
           }
           
@@ -581,7 +582,7 @@ export const recipeController = {
               calculateDiscriminatoryScore(recipe, userPrefsForScoring) : 
               { total: 50, breakdown: { cuisineMatch: 50, ingredientPenalty: 0, cookTimeMatch: 50, dietaryMatch: 50, spiceMatch: 50 } };
           } catch (error) {
-            console.warn('⚠️ Error calculating discriminatory score:', error);
+            logger.warn({ data: error }, '⚠️ Error calculating discriminatory score:');
             discriminatoryScore = { total: 50, breakdown: { cuisineMatch: 50, ingredientPenalty: 0, cookTimeMatch: 50, dietaryMatch: 50, spiceMatch: 50 } };
           }
           
@@ -599,7 +600,7 @@ export const recipeController = {
               } : null
             );
           } catch (error) {
-            console.warn('⚠️ Error calculating health goal score:', error);
+            logger.warn({ data: error }, '⚠️ Error calculating health goal score:');
             healthGoalScore = { total: 50 };
           }
           
@@ -608,7 +609,7 @@ export const recipeController = {
           try {
             healthGrade = calculateHealthGrade(recipe);
           } catch (error) {
-            console.warn('⚠️ Error calculating health grade:', error);
+            logger.warn({ data: error }, '⚠️ Error calculating health grade:');
             healthGrade = { grade: 'C', score: 50 };
           }
           
@@ -617,7 +618,7 @@ export const recipeController = {
           try {
             baseScore = calculateRecipeScore(recipe, userPreferences, macroGoals, behavioralScore.total, temporalScore.total);
           } catch (error) {
-            console.warn('⚠️ Error calculating base score:', error);
+            logger.warn({ data: error }, '⚠️ Error calculating base score:');
             baseScore = { total: 50, macroScore: 50, tasteScore: 50 };
           }
           
@@ -657,7 +658,7 @@ export const recipeController = {
             }
           };
         } catch (error) {
-          console.error('❌ Error calculating score for recipe:', recipe.title, error);
+          logger.error({ data: recipe.title, error }, '❌ Error calculating score for recipe:');
           return {
             ...recipe,
             score: {
@@ -694,7 +695,7 @@ export const recipeController = {
           const j = Math.floor(biasedRandom * (i + 1));
           [allRecipesWithScores[i], allRecipesWithScores[j]] = [allRecipesWithScores[j], allRecipesWithScores[i]];
         }
-        console.log('🔀 Applied shuffle for discovery mode');
+        logger.info('🔀 Applied shuffle for discovery mode');
       }
 
       // Apply pagination after sorting
@@ -704,7 +705,7 @@ export const recipeController = {
       const recipesWithImages = recipes.filter((r: any) => r.imageUrl);
       const recipesWithoutImages = recipes.filter((r: any) => !r.imageUrl);
       if (recipesWithoutImages.length > 0) {
-        console.log(`⚠️  ${recipesWithoutImages.length} recipes missing imageUrl out of ${recipes.length} total`);
+        logger.info(`⚠️  ${recipesWithoutImages.length} recipes missing imageUrl out of ${recipes.length} total`);
       }
 
       // Apply runtime image variation for unique images per page
@@ -713,16 +714,16 @@ export const recipeController = {
       // Debug: Check imageUrl presence after variation
       const variedWithImages = recipesWithVariedImages.filter((r: any) => r.imageUrl);
       if (variedWithImages.length < recipesWithImages.length) {
-        console.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} recipes`);
+        logger.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} recipes`);
       }
 
       // Debug: Log sample imageUrls to verify they're valid
       if (variedWithImages.length > 0) {
         const sampleRecipe = variedWithImages[0];
-        console.log(`🖼️  Sample imageUrl: ${sampleRecipe.imageUrl?.substring(0, 100)}...`);
+        logger.info(`🖼️  Sample imageUrl: ${sampleRecipe.imageUrl?.substring(0, 100)}...`);
       }
 
-      console.log(`📊 Found ${recipes.length} of ${total} total recipes (page ${page + 1}, limit ${limit}), sorted by match percentage`);
+      logger.info(`📊 Found ${recipes.length} of ${total} total recipes (page ${page + 1}, limit ${limit}), sorted by match percentage`);
 
       // Track search query for analytics (non-blocking)
       if (search && typeof search === 'string' && search.trim().length > 0) {
@@ -741,8 +742,8 @@ export const recipeController = {
         }
       });
     } catch (error: any) {
-      console.error('❌ Get recipes error:', error);
-      console.error('❌ Error stack:', error.stack);
+      logger.error({ data: error }, '❌ Get recipes error:');
+      logger.error({ data: error.stack }, '❌ Error stack:');
       res.status(500).json({ 
         error: 'Failed to fetch recipes', 
         details: error.message,
@@ -758,7 +759,7 @@ export const recipeController = {
    */
   async getRecipeOfTheDay(req: Request, res: Response) {
     try {
-      console.log('🌟 GET /api/recipes/recipe-of-the-day called');
+      logger.info('🌟 GET /api/recipes/recipe-of-the-day called');
       const userId = getUserId(req);
 
       // Get today's date as a seed for consistent daily selection
@@ -793,7 +794,7 @@ export const recipeController = {
 
       // Fallback: If no recipes with images, get any non-user-created recipes
       if (recipes.length === 0) {
-        console.log('🌟 No recipes with images found, falling back to any recipes');
+        logger.info('🌟 No recipes with images found, falling back to any recipes');
         recipes = await prisma.recipe.findMany({
           where: {
             isUserCreated: false,
@@ -809,7 +810,7 @@ export const recipeController = {
 
       // Final fallback: Get any recipe at all
       if (recipes.length === 0) {
-        console.log('🌟 No non-user recipes found, getting any available recipe');
+        logger.info('🌟 No non-user recipes found, getting any available recipe');
         recipes = await prisma.recipe.findMany({
           include: {
             ingredients: { orderBy: { order: 'asc' } },
@@ -820,7 +821,7 @@ export const recipeController = {
       }
 
       if (recipes.length === 0) {
-        console.log('🌟 No recipes found in database at all');
+        logger.info('🌟 No recipes found in database at all');
         return res.status(404).json({ error: 'No recipes available in database' });
       }
 
@@ -836,7 +837,7 @@ export const recipeController = {
           healthGrade = healthGradeUtil.calculateHealthGrade(recipeOfTheDay);
         }
       } catch (e) {
-        console.log('🌟 Health grade utility not available, using default');
+        logger.info('🌟 Health grade utility not available, using default');
       }
 
       // Add scoring info
@@ -847,14 +848,14 @@ export const recipeController = {
         selectedDate: today.toISOString().split('T')[0]
       };
 
-      console.log(`🌟 Recipe of the Day: "${recipeOfTheDay.title}" (index ${selectedIndex}/${recipes.length}, from ${recipes.length} candidates)`);
+      logger.info(`🌟 Recipe of the Day: "${recipeOfTheDay.title}" (index ${selectedIndex}/${recipes.length}, from ${recipes.length} candidates)`);
 
       res.json({
         recipe: enrichedRecipe,
         message: 'Recipe of the Day'
       });
     } catch (error: any) {
-      console.error('❌ Error getting Recipe of the Day:', error);
+      logger.error({ data: error }, '❌ Error getting Recipe of the Day:');
       res.status(500).json({
         error: 'Failed to get Recipe of the Day',
         details: error.message
@@ -915,7 +916,7 @@ export const recipeController = {
 
       res.status(201).json(created);
     } catch (error: any) {
-      console.error('❌ Error generating recipe:', error);
+      logger.error({ data: error }, '❌ Error generating recipe:');
       res.status(500).json({ error: 'Failed to generate recipe' });
     }
   },
@@ -924,7 +925,7 @@ export const recipeController = {
   async getRecipe(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      console.log(`🍳 GET /api/recipes/${id} called`);
+      logger.info(`🍳 GET /api/recipes/${id} called`);
 
       const recipe = await prisma.recipe.findUnique({
         where: { id },
@@ -935,7 +936,7 @@ export const recipeController = {
       });
 
       if (!recipe) {
-        console.log('❌ Recipe not found:', id);
+        logger.info({ data: id }, '❌ Recipe not found:');
         return res.status(404).json({ error: 'Recipe not found' });
       }
 
@@ -951,7 +952,7 @@ export const recipeController = {
       if (recipe.unsplashDownloadLocation) {
         const { imageService } = await import('../../services/imageService');
         imageService.triggerDownload(recipe.unsplashDownloadLocation).catch(err => {
-          console.error('⚠️  Failed to trigger Unsplash download:', err);
+          logger.error({ data: err }, '⚠️  Failed to trigger Unsplash download:');
         });
       }
 
@@ -963,7 +964,7 @@ export const recipeController = {
       const { performNutritionalAnalysis } = require('@/utils/nutritionalAnalysis');
       const nutritionalAnalysis = performNutritionalAnalysis(recipe);
 
-      console.log('✅ Recipe found:', recipe.title);
+      logger.info({ data: recipe.title }, '✅ Recipe found:');
       res.json({
         ...recipe,
         healthGrade: healthGrade.grade,
@@ -979,7 +980,7 @@ export const recipeController = {
         }
       });
     } catch (error: any) {
-      console.error('❌ Get recipe error:', error);
+      logger.error({ data: error }, '❌ Get recipe error:');
       res.status(500).json({ error: 'Failed to fetch recipe' });
     }
   },
@@ -987,7 +988,7 @@ export const recipeController = {
   // Get suggested recipes
   async getSuggestedRecipes(req: Request, res: Response) {
     try {
-    console.log('🎯 GET /api/recipes/suggested - METHOD CALLED');
+    logger.info('🎯 GET /api/recipes/suggested - METHOD CALLED');
       const userId = getUserId(req);
       
       // Check if data sharing is enabled for recommendations
@@ -1007,8 +1008,8 @@ export const recipeController = {
         scope, // Search scope: 'all' | 'saved' | 'liked'
       } = req.query;
       
-      console.log('🔍 Filter parameters:', { cuisines, dietaryRestrictions, maxCookTime, difficulty });
-      console.log('🔒 Data sharing enabled:', dataSharingEnabled);
+      logger.info({ cuisines, dietaryRestrictions, maxCookTime, difficulty }, '🔍 Filter parameters:');
+      logger.info({ data: dataSharingEnabled }, '🔒 Data sharing enabled:');
 
       // Get user preferences, macro goals, and physical profile for scoring (only if data sharing enabled)
       let userPreferences = null;
@@ -1034,21 +1035,21 @@ export const recipeController = {
           })
         ]);
       } else {
-        console.log('🔒 Data sharing disabled - using generic recommendations without personalization');
+        logger.info('🔒 Data sharing disabled - using generic recommendations without personalization');
       }
       
       // Import cost calculator
       const { calculateRecipeCost, isWithinBudget, calculateCostScore } = await import('../../utils/costCalculator');
       
-      console.log('👤 User preferences found:', !!userPreferences);
-      console.log('🎯 Macro goals found:', !!macroGoals);
+      logger.info({ data: !!userPreferences }, '👤 User preferences found:');
+      logger.info({ data: !!macroGoals }, '🎯 Macro goals found:');
       
       // Extract search term for case-insensitive filtering in JavaScript
       // (SQLite doesn't support Prisma's mode: 'insensitive')
       let searchTerm: string | null = null;
       if (search && typeof search === 'string' && search.trim().length > 0) {
         searchTerm = search.trim().toLowerCase();
-        console.log('🔍 Searching for (case-insensitive):', searchTerm);
+        logger.info({ data: searchTerm }, '🔍 Searching for (case-insensitive):');
       }
       
       // Get offset/rotation parameter for pagination (to get different recipes on reload)
@@ -1060,7 +1061,7 @@ export const recipeController = {
       let allRecipes;
       if (searchTerm) {
         // For search: fetch more recipes with minimal filters, then filter in JavaScript
-        console.log('🔍 Search mode: fetching broader set of recipes for search');
+        logger.info('🔍 Search mode: fetching broader set of recipes for search');
         
         // Fetch meals first (70% of results)
         const searchMealRecipes = await prisma.recipe.findMany({
@@ -1102,7 +1103,7 @@ export const recipeController = {
           [allRecipes[i], allRecipes[j]] = [allRecipes[j], allRecipes[i]];
         }
         
-        console.log(`📊 Found ${allRecipes.length} recipes in database (search mode)`);
+        logger.info(`📊 Found ${allRecipes.length} recipes in database (search mode)`);
         
         // Apply case-insensitive search filter first
         allRecipes = allRecipes.filter(recipe => {
@@ -1110,7 +1111,7 @@ export const recipeController = {
           const descriptionMatch = recipe.description?.toLowerCase().includes(searchTerm!);
           return titleMatch || descriptionMatch;
         });
-        console.log(`🔍 After case-insensitive search filter: ${allRecipes.length} recipes match "${searchTerm}"`);
+        logger.info(`🔍 After case-insensitive search filter: ${allRecipes.length} recipes match "${searchTerm}"`);
       } else {
         // No search: apply all filters in database query
         // Build where clause for filtering
@@ -1157,10 +1158,10 @@ export const recipeController = {
           andConditions.push({
             mealPrepScore: { gte: 60 }
           });
-          console.log('🍱 Filtering for meal prep suitable recipes (min score: 60/100)');
+          logger.info('🍱 Filtering for meal prep suitable recipes (min score: 60/100)');
         } else if (mealPrepMode === 'false' || mealPrepMode === '0') {
           // Explicitly disabled - ensure no meal prep filter is applied
-          console.log('🍽️ Meal prep mode disabled - showing all recipes');
+          logger.info('🍽️ Meal prep mode disabled - showing all recipes');
         }
         
         // Combine AND conditions if any exist
@@ -1168,8 +1169,8 @@ export const recipeController = {
           where.AND = andConditions;
         }
         
-        console.log('🔍 Querying database for recipes with filters...');
-        console.log('🔍 Where clause:', JSON.stringify(where, null, 2));
+        logger.info('🔍 Querying database for recipes with filters...');
+        logger.info({ data: JSON.stringify(where, null, 2) }, '🔍 Where clause:');
         
         // Fetch recipes with balanced mealType distribution
         // First, get meals (breakfast, lunch, dinner) and recipes with null mealType
@@ -1232,7 +1233,7 @@ export const recipeController = {
           const j = Math.floor(Math.random() * (i + 1));
           [allRecipes[i], allRecipes[j]] = [allRecipes[j], allRecipes[i]];
         }
-        console.log(`📊 Found ${allRecipes.length} recipes in database`);
+        logger.info(`📊 Found ${allRecipes.length} recipes in database`);
       }
       
       // Apply additional filters in JavaScript if we're in search mode
@@ -1249,7 +1250,7 @@ export const recipeController = {
           filteredByCuisine = searchFilteredRecipes.filter(recipe => 
             recipe.cuisine && cuisineArray.includes(recipe.cuisine)
           );
-          console.log(`🍽️ After cuisine filter: ${filteredByCuisine.length} recipes`);
+          logger.info(`🍽️ After cuisine filter: ${filteredByCuisine.length} recipes`);
         }
         
         let filteredByCookTime = filteredByCuisine;
@@ -1257,7 +1258,7 @@ export const recipeController = {
           filteredByCookTime = filteredByCuisine.filter(recipe => 
             recipe.cookTime && recipe.cookTime <= Number(maxCookTime)
           );
-          console.log(`⏱️ After cook time filter: ${filteredByCookTime.length} recipes`);
+          logger.info(`⏱️ After cook time filter: ${filteredByCookTime.length} recipes`);
         }
         
         let filteredByDifficulty = filteredByCookTime;
@@ -1270,7 +1271,7 @@ export const recipeController = {
             if (diff === 'hard') return recipe.cookTime >= 46;
             return true;
           });
-          console.log(`📊 After difficulty filter: ${filteredByDifficulty.length} recipes`);
+          logger.info(`📊 After difficulty filter: ${filteredByDifficulty.length} recipes`);
         }
         
         let filteredByMealPrep = filteredByDifficulty;
@@ -1281,17 +1282,17 @@ export const recipeController = {
                    recipe.mealPrepScore !== undefined && 
                    recipe.mealPrepScore >= 60;
           });
-          console.log(`🍱 After meal prep filter (min score: 60/100): ${filteredByMealPrep.length} recipes`);
+          logger.info(`🍱 After meal prep filter (min score: 60/100): ${filteredByMealPrep.length} recipes`);
         }
         
         // If strict filtering removed all results but we had search matches, 
         // still respect meal prep filter (don't bypass it)
         // Only bypass other filters (cuisine, cook time, difficulty) but keep meal prep requirement
         if (filteredByMealPrep.length === 0 && originalCount > 0 && mealPrepMode === 'true') {
-          console.log(`⚠️ Meal prep filter removed all search results. No meal prep suitable recipes found.`);
+          logger.info(`⚠️ Meal prep filter removed all search results. No meal prep suitable recipes found.`);
           searchFilteredRecipes = []; // Return empty - meal prep requirement is strict
         } else if (filteredByMealPrep.length === 0 && originalCount > 0 && mealPrepMode !== 'true' && mealPrepMode !== '1') {
-          console.log(`⚠️ Strict filters removed all search results. Showing ${originalCount} search result(s) anyway.`);
+          logger.info(`⚠️ Strict filters removed all search results. Showing ${originalCount} search result(s) anyway.`);
           searchFilteredRecipes = allRecipes; // Return search results without strict filters (only if not in meal prep mode)
         } else {
           searchFilteredRecipes = filteredByMealPrep;
@@ -1300,16 +1301,16 @@ export const recipeController = {
 
       // If no recipes found, return empty array
       if (searchFilteredRecipes.length === 0) {
-        console.log('❌ No recipes found matching criteria');
+        logger.info('❌ No recipes found matching criteria');
         return res.json([]);
       }
 
-      console.log(`📝 First recipe title: "${searchFilteredRecipes[0].title}"`);
-      console.log(`🔍 Debug: searchTerm="${searchTerm}", searchFilteredRecipes.length=${searchFilteredRecipes.length}`);
+      logger.info(`📝 First recipe title: "${searchFilteredRecipes[0].title}"`);
+      logger.info(`🔍 Debug: searchTerm="${searchTerm}", searchFilteredRecipes.length=${searchFilteredRecipes.length}`);
 
       // If we have a search term, find similar recipes and add them to the pool
       if (searchTerm && searchFilteredRecipes.length > 0) {
-        console.log(`🔍 Starting similar recipes search for "${searchTerm}" with ${searchFilteredRecipes.length} exact match(es)`);
+        logger.info(`🔍 Starting similar recipes search for "${searchTerm}" with ${searchFilteredRecipes.length} exact match(es)`);
         try {
           const { findSimilarToSearchQuery } = require('../../utils/recipeSimilarity');
           
@@ -1343,7 +1344,7 @@ export const recipeController = {
           // If exact matches have a cuisine, prioritize that cuisine and related cuisines for similar recipes
           if (expandedCuisines.size > 0) {
             candidatePoolWhere.cuisine = { in: [...expandedCuisines] };
-            console.log(`🔍 Looking for similar recipes in cuisines: ${[...expandedCuisines].join(', ')}`);
+            logger.info(`🔍 Looking for similar recipes in cuisines: ${[...expandedCuisines].join(', ')}`);
           }
           
           const candidatePool = await prisma.recipe.findMany({
@@ -1371,7 +1372,7 @@ export const recipeController = {
             candidatePool.push(...additionalCandidates);
           }
           
-          console.log(`🔍 Candidate pool for similar recipes: ${candidatePool.length} recipes`);
+          logger.info(`🔍 Candidate pool for similar recipes: ${candidatePool.length} recipes`);
 
           // Find similar recipes
           const similarRecipes = findSimilarToSearchQuery(
@@ -1406,9 +1407,9 @@ export const recipeController = {
           );
 
           if (similarRecipes.length > 0) {
-            console.log(`🔍 Found ${similarRecipes.length} similar recipes for search query "${searchTerm}"`);
-            console.log(`🔍 Similar recipe IDs: ${similarRecipes.map((s: { recipeId: string }) => s.recipeId).join(', ')}`);
-            console.log(`🔍 Similar recipe scores: ${similarRecipes.map((s: { recipeId: string; score: number }) => `${s.recipeId.substring(0, 8)}:${s.score.toFixed(2)}`).join(', ')}`);
+            logger.info(`🔍 Found ${similarRecipes.length} similar recipes for search query "${searchTerm}"`);
+            logger.info(`🔍 Similar recipe IDs: ${similarRecipes.map((s: { recipeId: string }) => s.recipeId).join(', ')}`);
+            logger.info(`🔍 Similar recipe scores: ${similarRecipes.map((s: { recipeId: string; score: number }) => `${s.recipeId.substring(0, 8)}:${s.score.toFixed(2)}`).join(', ')}`);
             
             // Fetch full recipe data for similar recipes
             const similarRecipeIds = similarRecipes.map((s: { recipeId: string }) => s.recipeId);
@@ -1419,7 +1420,7 @@ export const recipeController = {
             // Apply meal prep filter to similar recipes if meal prep mode is enabled
             if (mealPrepMode === 'true' || mealPrepMode === '1') {
               similarRecipesWhere.mealPrepScore = { gte: 60 };
-              console.log('🍱 Filtering similar recipes for meal prep mode (min score: 60/100)');
+              logger.info('🍱 Filtering similar recipes for meal prep mode (min score: 60/100)');
             }
             
             const similarRecipesFull = await prisma.recipe.findMany({
@@ -1430,7 +1431,7 @@ export const recipeController = {
               }
             });
 
-            console.log(`🔍 Similar recipe titles: ${similarRecipesFull.map(r => r.title).join(', ')}`);
+            logger.info(`🔍 Similar recipe titles: ${similarRecipesFull.map(r => r.title).join(', ')}`);
 
             // Mark exact matches so we can prioritize them in sorting
             const exactMatchIds = new Set(searchFilteredRecipes.map(r => r.id));
@@ -1449,20 +1450,20 @@ export const recipeController = {
             // This ensures users see related recipes when searching
             const exactMatchCount = searchFilteredRecipes.length;
             searchFilteredRecipes = [...searchFilteredRecipes, ...similarRecipesFull];
-            console.log(`📊 Total recipes after adding similar: ${searchFilteredRecipes.length} (${exactMatchCount} exact + ${similarRecipesFull.length} similar)`);
+            logger.info(`📊 Total recipes after adding similar: ${searchFilteredRecipes.length} (${exactMatchCount} exact + ${similarRecipesFull.length} similar)`);
           } else {
-            console.log(`⚠️ No similar recipes found for search query "${searchTerm}"`);
-            console.log(`⚠️ Exact match cuisines: ${exactMatchCuisines.join(', ')}`);
-            console.log(`⚠️ Candidate pool size: ${candidatePool.length}`);
+            logger.info(`⚠️ No similar recipes found for search query "${searchTerm}"`);
+            logger.info(`⚠️ Exact match cuisines: ${exactMatchCuisines.join(', ')}`);
+            logger.info(`⚠️ Candidate pool size: ${candidatePool.length}`);
           }
         } catch (error) {
-          console.error('❌ Error finding similar recipes:', error);
-          console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+          logger.error({ data: error }, '❌ Error finding similar recipes:');
+          logger.error({ data: error instanceof Error ? error.stack : 'No stack trace' }, '❌ Error stack:');
           // Continue without similar recipes if there's an error
         }
       } else {
         if (searchTerm) {
-          console.log(`⚠️ Skipping similar recipes: searchTerm="${searchTerm}", searchFilteredRecipes.length=${searchFilteredRecipes.length}`);
+          logger.info(`⚠️ Skipping similar recipes: searchTerm="${searchTerm}", searchFilteredRecipes.length=${searchFilteredRecipes.length}`);
         }
       }
 
@@ -1484,10 +1485,10 @@ export const recipeController = {
         }
         const before = searchFilteredRecipes.length;
         searchFilteredRecipes = searchFilteredRecipes.filter(r => scopeRecipeIds.has(r.id));
-        console.log(`🔎 Scope "${scope}" filter: ${before} → ${searchFilteredRecipes.length} recipes`);
+        logger.info(`🔎 Scope "${scope}" filter: ${before} → ${searchFilteredRecipes.length} recipes`);
 
         if (searchFilteredRecipes.length === 0) {
-          console.log(`❌ No recipes found for scope "${scope}"`);
+          logger.info(`❌ No recipes found for scope "${scope}"`);
           return res.json([]);
         }
       }
@@ -1562,7 +1563,7 @@ export const recipeController = {
         cookTimePreference: (userPreferences as any).cookTimePreference,
         spiceLevel: (userPreferences as any).spiceLevel,
       } : null;
-      console.log('🔍 User preferences for scoring:', userPrefsForScoring);
+      logger.info({ data: userPrefsForScoring }, '🔍 User preferences for scoring:');
       const likedCuisineSet = new Set((userPreferences?.likedCuisines || []).map((c: any) => (c.name || '').toLowerCase()));
       
       // Calculate optimal weights based on user behavior (Phase 6 - dynamic weight adjustment)
@@ -1582,10 +1583,10 @@ export const recipeController = {
         
         if (historicalScores.length > 0) {
           optimalWeights = getOptimalWeights(userBehavior, historicalScores);
-          console.log('🎯 Optimal weights calculated:', optimalWeights);
+          logger.info({ data: optimalWeights }, '🎯 Optimal weights calculated:');
         }
       } catch (error) {
-        console.error('⚠️ Error calculating optimal weights, using defaults:', error);
+        logger.error({ data: error }, '⚠️ Error calculating optimal weights, using defaults:');
       }
       
       // Use optimal weights if available, otherwise use defaults
@@ -1614,7 +1615,7 @@ export const recipeController = {
               recipe.estimatedCostPerServing = costResult.estimatedCostPerServing;
               recipe.costSource = costResult.costSource;
             } catch (error) {
-              console.warn('⚠️ Could not calculate cost for recipe:', recipe.title);
+              logger.warn({ data: recipe.title }, '⚠️ Could not calculate cost for recipe:');
             }
           }
           
@@ -1650,9 +1651,9 @@ export const recipeController = {
             discriminatoryScore = userPrefsForScoring ? 
               calculateDiscriminatoryScore(recipe, userPrefsForScoring) : 
               { total: 50, breakdown: { cuisineMatch: 50, ingredientPenalty: 0, cookTimeMatch: 50, dietaryMatch: 50, spiceMatch: 50 } };
-            console.log(`🎯 Discriminatory score for ${recipe.title}:`, discriminatoryScore.total);
+            logger.info({ data: discriminatoryScore.total }, `🎯 Discriminatory score for ${recipe.title}:`);
           } catch (error) {
-            console.error('❌ Error calculating discriminatory score:', error);
+            logger.error({ data: error }, '❌ Error calculating discriminatory score:');
             discriminatoryScore = { total: 50, breakdown: { cuisineMatch: 50, ingredientPenalty: 0, cookTimeMatch: 50, dietaryMatch: 50, spiceMatch: 50 } };
           }
           
@@ -1686,7 +1687,7 @@ export const recipeController = {
           try {
             collaborativeScore = await calculateCollaborativeScore(recipe, userId, userBehavior);
           } catch (error) {
-            console.warn('⚠️ Collaborative filtering failed, continuing without it:', error);
+            logger.warn({ data: error }, '⚠️ Collaborative filtering failed, continuing without it:');
           }
           
           // Calculate health metrics score (Phase 6 - health app data integration - fitness goal based)
@@ -1743,7 +1744,7 @@ export const recipeController = {
               // }
             }
           } catch (error) {
-            console.warn('⚠️ Health metrics scoring failed, continuing without it:', error);
+            logger.warn({ data: error }, '⚠️ Health metrics scoring failed, continuing without it:');
           }
           
           // Calculate overall score with all factors
@@ -1841,7 +1842,7 @@ export const recipeController = {
             }
           };
         } catch (error) {
-          console.error('❌ Error calculating score for recipe:', recipe.title, error);
+          logger.error({ data: recipe.title, error }, '❌ Error calculating score for recipe:');
           // Return recipe with basic score if scoring fails
           return {
         ...recipe,
@@ -1877,7 +1878,7 @@ export const recipeController = {
           const availableIdsSet = new Set(availableRecipeIds);
           filteredRecipes = filteredRecipes.filter((r: any) => availableIdsSet.has(r.id));
         } catch (error) {
-          console.warn('⚠️ Ingredient availability filtering failed, continuing without it:', error);
+          logger.warn({ data: error }, '⚠️ Ingredient availability filtering failed, continuing without it:');
         }
       }
       
@@ -1925,7 +1926,7 @@ export const recipeController = {
         for (const r of shuffledRecipes) {
           // Skip if we've already added this recipe
           if (seenIds.has(r.id)) {
-            console.log(`🔁 Skipping duplicate recipe: ${r.title} (ID: ${r.id})`);
+            logger.info(`🔁 Skipping duplicate recipe: ${r.title} (ID: ${r.id})`);
             continue;
           }
           
@@ -1956,7 +1957,7 @@ export const recipeController = {
         );
         
         if (uniqueRecipes.length !== topRecipes.length) {
-          console.warn(`⚠️ Removed ${topRecipes.length - uniqueRecipes.length} duplicate(s) from final response`);
+          logger.warn(`⚠️ Removed ${topRecipes.length - uniqueRecipes.length} duplicate(s) from final response`);
         }
 
         // Final safety check: Ensure no recipes with mealPrepScore < 60 are returned when meal prep mode is enabled
@@ -1966,26 +1967,26 @@ export const recipeController = {
           finalRecipes = finalRecipes.filter((recipe: any) => {
             const score = recipe.mealPrepScore;
             if (score === null || score === undefined || score < 60) {
-              console.warn(`⚠️ Filtering out recipe "${recipe.title}" with mealPrepScore=${score} (below 60 threshold)`);
+              logger.warn(`⚠️ Filtering out recipe "${recipe.title}" with mealPrepScore=${score} (below 60 threshold)`);
               return false;
             }
             return true;
           });
           if (beforeCount !== finalRecipes.length) {
-            console.log(`🍱 Final meal prep filter: Removed ${beforeCount - finalRecipes.length} recipe(s) with score < 60`);
+            logger.info(`🍱 Final meal prep filter: Removed ${beforeCount - finalRecipes.length} recipe(s) with score < 60`);
           }
         }
         
-        console.log(`✅ Returning ${finalRecipes.length} recipes with real scores`);
-        console.log(`🏆 Top recipe: "${finalRecipes[0]?.title}" (${finalRecipes[0]?.score?.total}% match)`);
+        logger.info(`✅ Returning ${finalRecipes.length} recipes with real scores`);
+        logger.info(`🏆 Top recipe: "${finalRecipes[0]?.title}" (${finalRecipes[0]?.score?.total}% match)`);
 
         // Log all recipe IDs for debugging
-        console.log('📋 Recipe IDs:', finalRecipes.map(r => r.id).join(', '));
+        logger.info({ data: finalRecipes.map(r => r.id).join(', ') }, '📋 Recipe IDs:');
 
         // Debug: Check imageUrl presence before variation
         const recipesWithImages = finalRecipes.filter((r: any) => r.imageUrl);
         if (recipesWithImages.length < finalRecipes.length) {
-          console.log(`⚠️  ${finalRecipes.length - recipesWithImages.length} suggested recipes missing imageUrl out of ${finalRecipes.length} total`);
+          logger.info(`⚠️  ${finalRecipes.length - recipesWithImages.length} suggested recipes missing imageUrl out of ${finalRecipes.length} total`);
         }
 
         // Apply runtime image variation for unique images per page
@@ -1994,7 +1995,7 @@ export const recipeController = {
         // Verify imageUrl is preserved after variation
         const variedWithImages = recipesWithVariedImages.filter((r: any) => r.imageUrl);
         if (variedWithImages.length < recipesWithImages.length) {
-          console.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} suggested recipes`);
+          logger.warn(`⚠️  Image variation may have removed imageUrl from ${recipesWithImages.length - variedWithImages.length} suggested recipes`);
         }
 
         // Track search query for analytics (non-blocking)
@@ -2004,8 +2005,8 @@ export const recipeController = {
 
         res.json(recipesWithVariedImages);
     } catch (error: any) {
-      console.error('❌ Error in getSuggestedRecipes:', error);
-      console.error('❌ Error details:', error.message);
+      logger.error({ data: error }, '❌ Error in getSuggestedRecipes:');
+      logger.error({ data: error.message }, '❌ Error details:');
         res.status(500).json({ error: 'Failed to fetch suggested recipes', details: error.message });
       }
     },
@@ -2013,7 +2014,7 @@ export const recipeController = {
   // Get random recipe
   async getRandomRecipe(req: Request, res: Response) {
     try {
-      console.log('🎲 GET /api/recipes/random - METHOD CALLED');
+      logger.info('🎲 GET /api/recipes/random - METHOD CALLED');
       
       const recipes = await prisma.recipe.findMany({
         where: { isUserCreated: false },
@@ -2029,10 +2030,10 @@ export const recipeController = {
       }
 
       const randomRecipe = recipes[Math.floor(Math.random() * recipes.length)];
-      console.log(`✅ Returning random recipe: ${randomRecipe.title}`);
+      logger.info(`✅ Returning random recipe: ${randomRecipe.title}`);
       res.json(randomRecipe);
     } catch (error: any) {
-      console.error('❌ Error in getRandomRecipe:', error);
+      logger.error({ data: error }, '❌ Error in getRandomRecipe:');
       res.status(500).json({ error: 'Failed to fetch random recipe' });
     }
   },
@@ -2040,7 +2041,7 @@ export const recipeController = {
   // Get saved recipes
   async getSavedRecipes(req: Request, res: Response) {
     try {
-      console.log('📚 GET /api/recipes/saved called');
+      logger.info('📚 GET /api/recipes/saved called');
       const userId = getUserId(req);
       const { collectionId, page: pageParam, limit: limitParam } = req.query as { collectionId?: string; page?: string; limit?: string };
       const paginated = pageParam !== undefined;
@@ -2119,7 +2120,7 @@ export const recipeController = {
         }
       }
 
-      console.log(`📚 Found ${savedRecipes.length} saved recipes`);
+      logger.info(`📚 Found ${savedRecipes.length} saved recipes`);
 
       // Get user preferences, macro goals, and physical profile for scoring
       const [userPreferences, macroGoals, physicalProfile] = await Promise.all([
@@ -2234,7 +2235,7 @@ export const recipeController = {
               calculateDiscriminatoryScore(recipe, userPrefsForScoring) : 
               { total: 50, breakdown: { cuisineMatch: 50, ingredientPenalty: 0, cookTimeMatch: 50, dietaryMatch: 50, spiceMatch: 50 } };
           } catch (error) {
-            console.error('❌ Error calculating discriminatory score:', error);
+            logger.error({ data: error }, '❌ Error calculating discriminatory score:');
             discriminatoryScore = { total: 50, breakdown: { cuisineMatch: 50, ingredientPenalty: 0, cookTimeMatch: 50, dietaryMatch: 50, spiceMatch: 50 } };
           }
           
@@ -2300,7 +2301,7 @@ export const recipeController = {
             }
           };
         } catch (error) {
-          console.error(`❌ Error calculating score for recipe ${recipe.id}:`, error);
+          logger.error({ data: error }, `❌ Error calculating score for recipe ${recipe.id}:`);
           const cookStats = cookingStatsMap.get(recipe.id);
           return {
             ...recipe,
@@ -2323,7 +2324,7 @@ export const recipeController = {
         res.json(recipesWithScores);
       }
     } catch (error: any) {
-      console.error('❌ Get saved recipes error:', error);
+      logger.error({ data: error }, '❌ Get saved recipes error:');
       res.status(500).json({ error: 'Failed to fetch saved recipes' });
     }
   },
@@ -2331,7 +2332,7 @@ export const recipeController = {
   // Get liked recipes
   async getLikedRecipes(req: Request, res: Response) {
     try {
-      console.log('👍 GET /api/recipes/liked called');
+      logger.info('👍 GET /api/recipes/liked called');
       const userId = getUserId(req);
       const { collectionId } = req.query;
       const { page: pageParam, limit: limitParam } = req.query as { page?: string; limit?: string };
@@ -2371,7 +2372,7 @@ export const recipeController = {
         });
       }
 
-      console.log(`👍 Found ${feedbackEntries.length} liked recipes${paginated ? ` (page ${page}, total ${total})` : ''}`);
+      logger.info(`👍 Found ${feedbackEntries.length} liked recipes${paginated ? ` (page ${page}, total ${total})` : ''}`);
       
       // Import scoring functions
       const { calculateRecipeScore } = require('@/utils/scoring');
@@ -2467,7 +2468,7 @@ export const recipeController = {
             }
           };
         } catch (error) {
-          console.warn('⚠️ Error calculating score for liked recipe:', recipe.title, error);
+          logger.warn({ data: recipe.title, error }, '⚠️ Error calculating score for liked recipe:');
           return {
             ...recipe,
             savedDate: entry.createdAt.toISOString().split('T')[0],
@@ -2492,7 +2493,7 @@ export const recipeController = {
           ? collectionId.map(id => String(id).trim())
           : [String(collectionId).trim()];
         
-        console.log(`📁 Filtering liked recipes by collections: ${collectionIds.join(', ')}`);
+        logger.info(`📁 Filtering liked recipes by collections: ${collectionIds.join(', ')}`);
         
         // Get recipe IDs that are in the specified collections
         const savedRecipesInCollections = await (prisma as any).recipeCollection.findMany({
@@ -2514,7 +2515,7 @@ export const recipeController = {
         // Filter to only recipes that are both liked AND in the specified collections
         recipes = recipes.filter((recipe: any) => recipeIdsInCollections.has(recipe.id));
         
-        console.log(`📁 Found ${recipes.length} liked recipes in specified collections`);
+        logger.info(`📁 Found ${recipes.length} liked recipes in specified collections`);
       }
 
       if (paginated) {
@@ -2526,7 +2527,7 @@ export const recipeController = {
         res.json(recipes);
       }
     } catch (error: any) {
-      console.error('❌ Get liked recipes error:', error);
+      logger.error({ data: error }, '❌ Get liked recipes error:');
       res.status(500).json({ error: 'Failed to fetch liked recipes' });
     }
   },
@@ -2534,7 +2535,7 @@ export const recipeController = {
   // Get disliked recipes
   async getDislikedRecipes(req: Request, res: Response) {
     try {
-      console.log('👎 GET /api/recipes/disliked called');
+      logger.info('👎 GET /api/recipes/disliked called');
       const userId = getUserId(req);
       const { collectionId } = req.query;
       const { page: pageParam, limit: limitParam } = req.query as { page?: string; limit?: string };
@@ -2574,7 +2575,7 @@ export const recipeController = {
         });
       }
 
-      console.log(`👎 Found ${feedbackEntries.length} disliked recipes${paginated ? ` (page ${page}, total ${total})` : ''}`);
+      logger.info(`👎 Found ${feedbackEntries.length} disliked recipes${paginated ? ` (page ${page}, total ${total})` : ''}`);
       
       // Import scoring functions
       const { calculateRecipeScore } = require('@/utils/scoring');
@@ -2629,7 +2630,7 @@ export const recipeController = {
           ? collectionId.map(id => String(id).trim())
           : [String(collectionId).trim()];
         
-        console.log(`📁 Filtering disliked recipes by collections: ${collectionIds.join(', ')}`);
+        logger.info(`📁 Filtering disliked recipes by collections: ${collectionIds.join(', ')}`);
         
         // Get recipe IDs that are in the specified collections
         const savedRecipesInCollections = await (prisma as any).recipeCollection.findMany({
@@ -2651,7 +2652,7 @@ export const recipeController = {
         // Filter to only recipes that are both disliked AND in the specified collections
         recipes = recipes.filter((recipe: any) => recipeIdsInCollections.has(recipe.id));
         
-        console.log(`📁 Found ${recipes.length} disliked recipes in specified collections`);
+        logger.info(`📁 Found ${recipes.length} disliked recipes in specified collections`);
       }
 
       if (paginated) {
@@ -2663,7 +2664,7 @@ export const recipeController = {
         res.json(recipes);
       }
     } catch (error: any) {
-      console.error('❌ Get disliked recipes error:', error);
+      logger.error({ data: error }, '❌ Get disliked recipes error:');
       res.status(500).json({ error: 'Failed to fetch disliked recipes' });
     }
   },
@@ -2675,7 +2676,7 @@ export const recipeController = {
       const userId = getUserId(req);
       const { collectionIds } = req.body as { collectionIds?: string[] };
       
-      console.log('💾 Save recipe request:', { recipeId: id, collectionIds });
+      logger.info({ recipeId: id, collectionIds }, '💾 Save recipe request:');
       
       // Verify recipe exists
       const recipe = await prisma.recipe.findUnique({
@@ -2683,7 +2684,7 @@ export const recipeController = {
       });
       
       if (!recipe) {
-        console.error('❌ Recipe not found:', id);
+        logger.error({ data: id }, '❌ Recipe not found:');
         return res.status(404).json({ error: 'Recipe not found' });
       }
       
@@ -2693,7 +2694,7 @@ export const recipeController = {
       });
 
       if (savedRecipe) {
-        console.log('⚠️  Recipe already saved:', savedRecipe.id);
+        logger.info({ data: savedRecipe.id }, '⚠️  Recipe already saved:');
         return res.status(409).json({ error: 'Recipe already saved' });
       }
 
@@ -2701,11 +2702,11 @@ export const recipeController = {
       savedRecipe = await prisma.savedRecipe.create({
         data: { userId, recipeId: id }
       });
-      console.log('✅ SavedRecipe created:', savedRecipe.id);
+      logger.info({ data: savedRecipe.id }, '✅ SavedRecipe created:');
 
       // Add to selected collections (multi-collection support)
       if (collectionIds && Array.isArray(collectionIds) && collectionIds.length > 0) {
-        console.log('📁 Adding to collections:', collectionIds);
+        logger.info({ data: collectionIds }, '📁 Adding to collections:');
         
         // Validate that collections exist
         const existingCollections = await (prisma as any).collection.findMany({
@@ -2720,7 +2721,7 @@ export const recipeController = {
         const invalidIds = collectionIds.filter(id => !validCollectionIds.includes(id));
         
         if (invalidIds.length > 0) {
-          console.warn('⚠️  Invalid collection IDs:', invalidIds);
+          logger.warn({ data: invalidIds }, '⚠️  Invalid collection IDs:');
         }
         
         if (validCollectionIds.length > 0) {
@@ -2740,27 +2741,27 @@ export const recipeController = {
             } catch (error: any) {
               // Skip duplicates (unique constraint violation)
               if (error.code === 'P2002') {
-                console.log(`⏭️  Skipping duplicate: recipe ${savedRecipe!.id} -> collection ${collectionId}`);
+                logger.info(`⏭️  Skipping duplicate: recipe ${savedRecipe!.id} -> collection ${collectionId}`);
               } else {
                 throw error;
               }
             }
           }
-          console.log('✅ Added to collections:', created);
+          logger.info({ data: created }, '✅ Added to collections:');
         }
       }
 
       // Invalidate behavioral cache so next request reflects saved recipe
       recommendationCache.invalidateUserCache(userId);
-      console.log('✅ Recipe saved successfully');
+      logger.info('✅ Recipe saved successfully');
       res.json({ message: 'Recipe saved successfully' });
     } catch (error: any) {
-      console.error('❌ Save recipe error:', error);
-      console.error('❌ Error details:', {
+      logger.error({ data: error }, '❌ Save recipe error:');
+      logger.error({
         message: error.message,
         code: error.code,
-        meta: error.meta
-      });
+        meta: error.meta,
+      }, '❌ Error details');
       res.status(500).json({ 
         error: 'Failed to save recipe',
         message: error.message,
@@ -2781,10 +2782,10 @@ export const recipeController = {
 
       // Invalidate behavioral cache
       recommendationCache.invalidateUserCache(userId);
-      console.log('✅ Recipe unsaved successfully');
+      logger.info('✅ Recipe unsaved successfully');
       res.json({ message: 'Recipe unsaved successfully' });
     } catch (error: any) {
-      console.error('❌ Unsave recipe error:', error);
+      logger.error({ data: error }, '❌ Unsave recipe error:');
       res.status(500).json({ error: 'Failed to unsave recipe' });
     }
   },
@@ -2805,7 +2806,7 @@ export const recipeController = {
       recommendationCache.invalidateUserCache(userId);
       res.json({ message: `${deleted.count} recipes unsaved`, count: deleted.count });
     } catch (error: any) {
-      console.error('❌ Bulk unsave error:', error);
+      logger.error({ data: error }, '❌ Bulk unsave error:');
       res.status(500).json({ error: 'Failed to bulk unsave recipes' });
     }
   },
@@ -2845,7 +2846,7 @@ export const recipeController = {
 
       res.json({ success: true, count: savedRecipes.length });
     } catch (error: any) {
-      console.error('❌ Bulk move error:', error);
+      logger.error({ data: error }, '❌ Bulk move error:');
       res.status(500).json({ error: 'Failed to bulk move recipes' });
     }
   },
@@ -2893,7 +2894,7 @@ export const recipeController = {
       res.setHeader('Content-Disposition', `attachment; filename="sazon-cookbook-${new Date().toISOString().slice(0, 10)}.json"`);
       res.json(exportData);
     } catch (error: any) {
-      console.error('❌ Export cookbook error:', error);
+      logger.error({ data: error }, '❌ Export cookbook error:');
       res.status(500).json({ error: 'Failed to export cookbook' });
     }
   },
@@ -2979,7 +2980,7 @@ export const recipeController = {
           savedDate: new Date() // Explicitly set savedDate
         }
       });
-      console.log('✅ Auto-saved user-created recipe to cookbook:', savedRecipe.id);
+      logger.info({ data: savedRecipe.id }, '✅ Auto-saved user-created recipe to cookbook:');
 
       // Add to selected collections (multi-collection support)
       const { collectionIds } = data as { collectionIds?: string[] };
@@ -3010,7 +3011,7 @@ export const recipeController = {
 
       res.json({ success: true, data: full });
     } catch (error: any) {
-      console.error('❌ Create recipe error:', error);
+      logger.error({ data: error }, '❌ Create recipe error:');
       res.status(500).json({ error: 'Failed to create recipe' });
     }
   },
@@ -3081,7 +3082,7 @@ export const recipeController = {
 
       res.json({ success: true, data: full });
     } catch (error: any) {
-      console.error('❌ Update recipe error:', error);
+      logger.error({ data: error }, '❌ Update recipe error:');
       res.status(500).json({ error: 'Failed to update recipe' });
     }
   },
@@ -3096,7 +3097,7 @@ export const recipeController = {
       await prisma.recipe.delete({ where: { id } });
       res.json({ success: true });
     } catch (error: any) {
-      console.error('❌ Delete recipe error:', error);
+      logger.error({ data: error }, '❌ Delete recipe error:');
       res.status(500).json({ error: 'Failed to delete recipe' });
     }
   },
@@ -3124,10 +3125,10 @@ export const recipeController = {
 
       // Invalidate behavioral cache so next request reflects new feedback
       recommendationCache.invalidateUserCache(userId);
-      console.log('✅ Recipe liked successfully');
+      logger.info('✅ Recipe liked successfully');
       res.json({ message: 'Recipe liked successfully' });
     } catch (error: any) {
-      console.error('❌ Like recipe error:', error);
+      logger.error({ data: error }, '❌ Like recipe error:');
       res.status(500).json({ error: 'Failed to like recipe' });
     }
   },
@@ -3159,10 +3160,10 @@ export const recipeController = {
 
       // Invalidate behavioral cache so next request reflects new feedback
       recommendationCache.invalidateUserCache(userId);
-      console.log('✅ Recipe disliked successfully', dislikeReason ? `(reason: ${dislikeReason})` : '');
+      logger.info({ reason: dislikeReason || null }, '✅ Recipe disliked successfully');
       res.json({ message: 'Recipe disliked successfully' });
     } catch (error: any) {
-      console.error('❌ Dislike recipe error:', error);
+      logger.error({ data: error }, '❌ Dislike recipe error:');
       res.status(500).json({ error: 'Failed to dislike recipe' });
     }
   },
@@ -3171,7 +3172,7 @@ export const recipeController = {
   async enrichRecipe(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      console.log(`🔍 Enriching recipe: ${id}`);
+      logger.info(`🔍 Enriching recipe: ${id}`);
       
       const recipe = await prisma.recipe.findUnique({ 
         where: { id }
@@ -3184,7 +3185,7 @@ export const recipeController = {
       const { spoonacularService } = require('@/services/spoonacularService');
       const { aiEnrichmentService } = require('@/services/aiEnrichmentService');
 
-      console.log(`📊 Fetching external data for: "${recipe.title}"`);
+      logger.info(`📊 Fetching external data for: "${recipe.title}"`);
       let externalData = null as any;
       if (spoonacularService.isConfigured()) {
         externalData = await spoonacularService.enrichRecipeData(recipe.title);
@@ -3232,14 +3233,14 @@ export const recipeController = {
         }
       });
 
-      console.log('✅ Recipe enriched successfully');
+      logger.info('✅ Recipe enriched successfully');
       res.json({
         message: 'Recipe enriched successfully',
         recipe: updatedRecipe,
         externalData
       });
     } catch (error: any) {
-      console.error('❌ Error enriching recipe:', error);
+      logger.error({ data: error }, '❌ Error enriching recipe:');
       res.status(500).json({ error: 'Failed to enrich recipe', details: error.message });
     }
   },
@@ -3248,7 +3249,7 @@ export const recipeController = {
   async batchEnrichRecipes(req: Request, res: Response) {
     try {
       const { limit = 10, onlyUnenriched = true } = req.query;
-      console.log(`🔄 Starting batch enrichment (limit: ${limit}, onlyUnenriched: ${onlyUnenriched})`);
+      logger.info(`🔄 Starting batch enrichment (limit: ${limit}, onlyUnenriched: ${onlyUnenriched})`);
       
       const { spoonacularService } = require('@/services/spoonacularService');
       const { aiEnrichmentService } = require('@/services/aiEnrichmentService');
@@ -3265,7 +3266,7 @@ export const recipeController = {
         orderBy: { createdAt: 'desc' }
       });
 
-      console.log(`📊 Found ${recipes.length} recipes to enrich`);
+      logger.info(`📊 Found ${recipes.length} recipes to enrich`);
 
       const results = {
         total: recipes.length,
@@ -3277,7 +3278,7 @@ export const recipeController = {
 
       for (const recipe of recipes) {
         try {
-          console.log(`🔍 Processing: "${recipe.title}"`);
+          logger.info(`🔍 Processing: "${recipe.title}"`);
           
           let externalData = null as any;
           if (spoonacularService.isConfigured()) {
@@ -3313,7 +3314,7 @@ export const recipeController = {
               externalData
             });
             
-            console.log(`✅ Enriched: "${recipe.title}"`);
+            logger.info(`✅ Enriched: "${recipe.title}"`);
     } else {
             const hasImage = !!recipe.imageUrl;
             const ingredientCount = Array.isArray((recipe as any).ingredients) ? (recipe as any).ingredients.length : 0;
@@ -3355,7 +3356,7 @@ export const recipeController = {
               title: recipe.title,
               status: 'local_fallback'
             });
-            console.log(`✅ Locally enriched: "${recipe.title}"`);
+            logger.info(`✅ Locally enriched: "${recipe.title}"`);
           }
           
           // Delay to respect API rate limits (150 requests per minute for free tier)
@@ -3370,17 +3371,17 @@ export const recipeController = {
             error: error.message
           });
           
-          console.error(`❌ Failed to enrich "${recipe.title}":`, error.message);
+          logger.error({ data: error.message }, `❌ Failed to enrich "${recipe.title}":`);
         }
       }
 
-      console.log(`✅ Batch enrichment complete:`, results);
+      logger.info({ data: results }, `✅ Batch enrichment complete:`);
       res.json({
         message: 'Batch enrichment complete',
         results
       });
     } catch (error: any) {
-      console.error('❌ Error in batch enrichment:', error);
+      logger.error({ data: error }, '❌ Error in batch enrichment:');
       res.status(500).json({ error: 'Failed to batch enrich recipes', details: error.message });
     }
   },
@@ -3425,7 +3426,7 @@ export const recipeController = {
         recentlyEnriched
       });
     } catch (error: any) {
-      console.error('❌ Error getting enrichment status:', error);
+      logger.error({ data: error }, '❌ Error getting enrichment status:');
       res.status(500).json({ error: 'Failed to get enrichment status' });
     }
   },
@@ -3433,7 +3434,7 @@ export const recipeController = {
   // Healthify recipe - transform to healthier version
   async healthifyRecipe(req: Request, res: Response) {
     try {
-      console.log('💚 POST /api/recipes/:id/healthify called');
+      logger.info('💚 POST /api/recipes/:id/healthify called');
       const { id } = req.params;
       const userId = getUserId(req);
       
@@ -3509,14 +3510,14 @@ export const recipeController = {
       // Generate healthified recipe
       const healthifiedRecipe = await healthifyService.healthifyRecipe(healthifyParams);
 
-      console.log('✅ Recipe healthified successfully:', healthifiedRecipe.title);
+      logger.info({ data: healthifiedRecipe.title }, '✅ Recipe healthified successfully:');
 
       res.json({
         success: true,
         recipe: healthifiedRecipe,
       });
     } catch (error: any) {
-      console.error('❌ Healthify recipe error:', error);
+      logger.error({ data: error }, '❌ Healthify recipe error:');
       
       // Check if it's a quota/billing error
       const isQuotaError = error.code === 'insufficient_quota' || 
@@ -3553,7 +3554,7 @@ export const recipeController = {
       const swaps = getIngredientSwaps(ingredient.trim(), restrictions);
       return res.json({ success: true, ingredient: ingredient.trim(), swaps });
     } catch (error: any) {
-      console.error('❌ getIngredientSwaps error:', error);
+      logger.error({ data: error }, '❌ getIngredientSwaps error:');
       return res.status(500).json({ error: 'Failed to fetch ingredient swaps' });
     }
   },
@@ -3599,7 +3600,7 @@ export const recipeController = {
 
       return res.json({ success: true, ...result });
     } catch (error: any) {
-      console.error('❌ flavorBoost error:', error);
+      logger.error({ data: error }, '❌ flavorBoost error:');
       return res.status(500).json({ error: 'Failed to get flavor boosts' });
     }
   },
@@ -3653,7 +3654,7 @@ export const recipeController = {
 
       return res.json({ success: true, diff });
     } catch (error: any) {
-      console.error('❌ askSubstitution error:', error);
+      logger.error({ data: error }, '❌ askSubstitution error:');
 
       const isQuotaError = error.code === 'insufficient_quota' || error.message?.includes('quota');
       const statusCode = isQuotaError ? 429 : 500;
@@ -3668,16 +3669,16 @@ export const recipeController = {
   // Get batch cooking recommendations based on user preferences
   async getBatchCookingRecommendations(req: Request, res: Response) {
     try {
-      console.log('🍱 GET /api/recipes/batch-cooking-recommendations - METHOD CALLED');
+      logger.info('🍱 GET /api/recipes/batch-cooking-recommendations - METHOD CALLED');
       const userId = getUserId(req);
       const limit = parseInt(req.query.limit as string) || 10;
 
       const recommendations = await generateBatchCookingRecommendations(userId, limit);
 
-      console.log(`✅ Returning ${recommendations.length} batch cooking recommendations`);
+      logger.info(`✅ Returning ${recommendations.length} batch cooking recommendations`);
       res.json(recommendations);
     } catch (error: any) {
-      console.error('❌ Error in getBatchCookingRecommendations:', error);
+      logger.error({ data: error }, '❌ Error in getBatchCookingRecommendations:');
       res.status(500).json({ error: 'Failed to fetch batch cooking recommendations', details: error.message });
     }
   },
@@ -3761,7 +3762,7 @@ export const recipeController = {
       const recipesWithVariedImages = varyImageUrlsForPage(sorted, 0);
       res.json(recipesWithVariedImages);
     } catch (error: any) {
-      console.error('❌ Error in getRelatedRecipes:', error);
+      logger.error({ data: error }, '❌ Error in getRelatedRecipes:');
       res.status(500).json({ error: 'Failed to fetch related recipes' });
     }
   },
@@ -3774,7 +3775,7 @@ export const recipeController = {
       const limit = parseInt(req.query.limit as string) || 5;
       const mealPrepMode = req.query.mealPrepMode as string;
 
-      console.log(`🔍 GET /api/recipes/${recipeId}/similar - METHOD CALLED (mealPrepMode: ${mealPrepMode})`);
+      logger.info(`🔍 GET /api/recipes/${recipeId}/similar - METHOD CALLED (mealPrepMode: ${mealPrepMode})`);
 
       // Get the target recipe
       const targetRecipe = await prisma.recipe.findUnique({
@@ -3814,7 +3815,7 @@ export const recipeController = {
       // Filter by meal prep mode if enabled
       if (mealPrepMode === 'true' || mealPrepMode === '1') {
         whereClause.mealPrepScore = { gte: 60 };
-        console.log('🍱 Filtering similar recipes for meal prep mode (min score: 60/100)');
+        logger.info('🍱 Filtering similar recipes for meal prep mode (min score: 60/100)');
       }
 
       // Fetch candidate recipes (exclude the target recipe and user-created recipes)
@@ -3928,7 +3929,7 @@ export const recipeController = {
             };
           } catch (e: any) {
             // Log scoring error for debugging
-            console.warn(`⚠️ Score calculation failed for similar recipe ${recipe.id}:`, e.message);
+            logger.warn({ data: e.message }, `⚠️ Score calculation failed for similar recipe ${recipe.id}:`);
             score = undefined;
           }
 
@@ -3942,14 +3943,14 @@ export const recipeController = {
         })
         .sort((a, b) => b.similarityScore - a.similarityScore);
 
-      console.log(`✅ Returning ${sortedSimilar.length} similar recipes`);
+      logger.info(`✅ Returning ${sortedSimilar.length} similar recipes`);
 
       // Apply runtime image variation for unique images
       const recipesWithVariedImages = varyImageUrlsForPage(sortedSimilar, 0);
 
       res.json(recipesWithVariedImages);
     } catch (error: any) {
-      console.error('❌ Error in getSimilarRecipes:', error);
+      logger.error({ data: error }, '❌ Error in getSimilarRecipes:');
       res.status(500).json({ error: 'Failed to fetch similar recipes', details: error.message });
     }
   },
@@ -4069,7 +4070,7 @@ export const recipeController = {
 
       res.json({ suggestions: suggestions.slice(0, limit) });
     } catch (error: any) {
-      console.error('❌ Auto-complete error:', error);
+      logger.error({ data: error }, '❌ Auto-complete error:');
       res.status(500).json({ error: 'Failed to fetch suggestions' });
     }
   },
@@ -4100,7 +4101,7 @@ export const recipeController = {
         })),
       });
     } catch (error: any) {
-      console.error('❌ Popular searches error:', error);
+      logger.error({ data: error }, '❌ Popular searches error:');
       res.status(500).json({ error: 'Failed to fetch popular searches' });
     }
   },
@@ -4112,7 +4113,7 @@ export const recipeController = {
    */
   async getHomeFeed(req: Request, res: Response) {
     try {
-      console.log('🏠 GET /api/recipes/home-feed called');
+      logger.info('🏠 GET /api/recipes/home-feed called');
       const userId = getUserId(req);
 
       // Parse filter params (same as getRecipes)
@@ -4148,7 +4149,7 @@ export const recipeController = {
       if (!isShuffleRequest) {
         const cached = cacheService.get<any>(`home_feed:${userId}:${filterKey}`);
         if (cached) {
-          console.log('📦 Home feed cache HIT');
+          logger.info('📦 Home feed cache HIT');
           return res.json(cached);
         }
       }
@@ -4518,7 +4519,7 @@ export const recipeController = {
         }
       }
 
-      console.log(`🏠 Home feed: ${paginatedRecipes.length} suggested, ${scoredQuickMeals.length} quick, ${perfectMatches.length} perfect, ${likedRecipes.length} liked, ROTD: ${recipeOfTheDay?.title || 'none'}`);
+      logger.info(`🏠 Home feed: ${paginatedRecipes.length} suggested, ${scoredQuickMeals.length} quick, ${perfectMatches.length} perfect, ${likedRecipes.length} liked, ROTD: ${recipeOfTheDay?.title || 'none'}`);
 
       const feedResponse = {
         recipeOfTheDay,
@@ -4545,7 +4546,7 @@ export const recipeController = {
 
       res.json(feedResponse);
     } catch (error: any) {
-      console.error('❌ Error in getHomeFeed:', error);
+      logger.error({ data: error }, '❌ Error in getHomeFeed:');
       res.status(500).json({ error: 'Failed to fetch home feed', details: error.message });
     }
   },
@@ -4560,7 +4561,7 @@ export const recipeController = {
         return res.status(400).json({ error: 'URL is required' });
       }
 
-      console.log('🔗 [importRecipe] Importing from URL:', url);
+      logger.info({ data: url }, '🔗 [importRecipe] Importing from URL:');
 
       const imported = await importFromUrl(url.trim());
 
@@ -4613,7 +4614,7 @@ export const recipeController = {
         include: { ingredients: true, instructions: true },
       });
 
-      console.log('✅ [importRecipe] Imported and saved:', full?.title);
+      logger.info({ data: full?.title }, '✅ [importRecipe] Imported and saved:');
       res.json({ success: true, data: full });
     } catch (error: any) {
       if (error instanceof RecipeImportError) {
@@ -4628,7 +4629,7 @@ export const recipeController = {
           code: error.code,
         });
       }
-      console.error('❌ [importRecipe] Error:', error);
+      logger.error({ data: error }, '❌ [importRecipe] Error:');
       res.status(500).json({ error: 'Failed to import recipe', details: error.message });
     }
   },
@@ -4736,7 +4737,7 @@ export const recipeController = {
 
       res.json({ success: true, data: full });
     } catch (error: any) {
-      console.error('❌ [forkRecipe] Error:', error);
+      logger.error({ data: error }, '❌ [forkRecipe] Error:');
       res.status(500).json({ error: 'Failed to fork recipe', details: error.message });
     }
   },
@@ -4791,7 +4792,7 @@ export const recipeController = {
       if (error?.isQuotaError || error?.status === 429) {
         return res.status(429).json({ error: 'AI quota exceeded. Try again later.' });
       }
-      console.error('❌ [generateFromDescription] Error:', error);
+      logger.error({ data: error }, '❌ [generateFromDescription] Error:');
       res.status(500).json({ error: 'Failed to generate recipe', details: error.message });
     }
   },
@@ -4839,7 +4840,7 @@ export const recipeController = {
 
       return res.json({ collections });
     } catch (error: any) {
-      console.error('❌ [getSmartCollections] Error:', error);
+      logger.error({ data: error }, '❌ [getSmartCollections] Error:');
       return res.status(500).json({ error: 'Failed to load smart collections' });
     }
   },
@@ -4885,7 +4886,7 @@ export const recipeController = {
         total: savedRecipes.length,
       });
     } catch (error: any) {
-      console.error('❌ [getSmartCollectionRecipes] Error:', error);
+      logger.error({ data: error }, '❌ [getSmartCollectionRecipes] Error:');
       return res.status(500).json({ error: 'Failed to load smart collection recipes' });
     }
   },
@@ -4930,7 +4931,7 @@ export const recipeController = {
         },
       });
     } catch (error: any) {
-      console.error('❌ [getWeatherSmartCollection] Error:', error);
+      logger.error({ data: error }, '❌ [getWeatherSmartCollection] Error:');
       return res.status(500).json({ error: 'Failed to load weather collection' });
     }
   },
@@ -4955,7 +4956,7 @@ export const recipeController = {
 
       return res.status(201).json({ success: true });
     } catch (error: any) {
-      console.error('❌ [logCravingSearchEvent] Error:', error);
+      logger.error({ data: error }, '❌ [logCravingSearchEvent] Error:');
       return res.status(500).json({ error: 'Failed to log craving search event' });
     }
   },
@@ -5038,7 +5039,7 @@ export const recipeController = {
         lighterSuggestions,
       });
     } catch (error) {
-      console.error('❌ [cravingFlow] Error:', error);
+      logger.error({ data: error }, '❌ [cravingFlow] Error:');
       return res.status(500).json({ error: 'Failed to run craving flow' });
     }
   },
@@ -5087,7 +5088,7 @@ export const recipeController = {
 
       return res.json(result);
     } catch (error) {
-      console.error('❌ [cravingBudget] Error:', error);
+      logger.error({ data: error }, '❌ [cravingBudget] Error:');
       return res.status(500).json({ error: 'Failed to analyze craving budget' });
     }
   },
@@ -5165,7 +5166,7 @@ export const recipeController = {
 
       return res.json({ recipes: scored, pantrySize: pantryNames.length });
     } catch (error) {
-      console.error('❌ [pantryMatch] Error:', error);
+      logger.error({ data: error }, '❌ [pantryMatch] Error:');
       return res.status(500).json({ error: 'Failed to match pantry' });
     }
   },
@@ -5241,7 +5242,7 @@ export const recipeController = {
 
       return res.json({ recipes: scored });
     } catch (error) {
-      console.error('❌ [leftoverIdeas] Error:', error);
+      logger.error({ data: error }, '❌ [leftoverIdeas] Error:');
       return res.status(500).json({ error: 'Failed to find leftover ideas' });
     }
   },
@@ -5447,7 +5448,7 @@ export const recipeController = {
         totalMatches: recipes.length,
       });
     } catch (error: any) {
-      console.error('❌ [cravingSearch] Error:', error);
+      logger.error({ data: error }, '❌ [cravingSearch] Error:');
       return res.status(500).json({ error: 'Craving search failed' });
     }
   },

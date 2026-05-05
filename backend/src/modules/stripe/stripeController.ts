@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/stripe/stripeController.ts
 // Stripe checkout + portal + subscription status endpoints
 
@@ -38,7 +39,7 @@ export const stripeController = {
         isPremium: user.subscriptionTier === 'premium',
       });
     } catch (err: any) {
-      console.error('getSubscription error:', err);
+      logger.error({ err: err }, 'getSubscription error:');
       return res.status(500).json({ error: 'Failed to get subscription status' });
     }
   },
@@ -73,7 +74,7 @@ export const stripeController = {
 
       return res.json({ url: session.url, sessionId: session.id });
     } catch (err: any) {
-      console.error('createCheckout error:', err);
+      logger.error({ err: err }, 'createCheckout error:');
       return res.status(500).json({ error: 'Failed to create checkout session' });
     }
   },
@@ -128,7 +129,7 @@ export const stripeController = {
 
       return res.json({ cancelled: true });
     } catch (err: any) {
-      console.error('cancelSubscription error:', err);
+      logger.error({ err: err }, 'cancelSubscription error:');
       return res.status(500).json({ error: err.message || 'Failed to cancel subscription' });
     }
   },
@@ -149,7 +150,7 @@ export const stripeController = {
       const session = await stripeService.createPortalSession(userId, returnUrl);
       return res.json({ url: session.url });
     } catch (err: any) {
-      console.error('createPortal error:', err);
+      logger.error({ err: err }, 'createPortal error:');
       return res.status(500).json({ error: 'Failed to create portal session' });
     }
   },

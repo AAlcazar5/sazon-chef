@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/auth/authController.ts
 // Authentication controller for user registration, login, and password management
 
@@ -133,12 +134,12 @@ export const authController = {
       });
 
       // Fire-and-forget: send welcome email + create Stripe customer
-      emailService.sendWelcome(email, name).catch(console.error);
+      emailService.sendWelcome(email, name).catch((err: unknown) => logger.error({ err }, 'auth.welcomeEmail.failed'));
       if (stripeService.isConfigured()) {
-        stripeService.getOrCreateCustomer(user.id).catch(console.error);
+        stripeService.getOrCreateCustomer(user.id).catch((err: unknown) => logger.error({ err }, 'auth.stripeCustomer.failed'));
       }
     } catch (error: any) {
-      console.error('Registration error:', error);
+      logger.error({ err: error }, 'Registration error:');
       res.status(500).json({
         success: false,
         error: 'An unexpected error occurred. Please try again.'
@@ -277,7 +278,7 @@ export const authController = {
         token
       });
     } catch (error: any) {
-      console.error('Login error:', error);
+      logger.error({ err: error }, 'Login error:');
       res.status(500).json({
         success: false,
         error: 'An unexpected error occurred. Please try again.'
@@ -332,7 +333,7 @@ export const authController = {
         user: userResponse
       });
     } catch (error: any) {
-      console.error('Get profile error:', error);
+      logger.error({ err: error }, 'Get profile error:');
       res.status(500).json({
         error: 'Failed to fetch profile',
         message: error.message
@@ -442,7 +443,7 @@ export const authController = {
         user: userResponse
       });
     } catch (error: any) {
-      console.error('Update profile error:', error);
+      logger.error({ err: error }, 'Update profile error:');
       res.status(500).json({
         error: 'Failed to update profile',
         message: error.message
@@ -521,7 +522,7 @@ export const authController = {
         message: 'Password changed successfully'
       });
     } catch (error: any) {
-      console.error('Change password error:', error);
+      logger.error({ err: error }, 'Change password error:');
       res.status(500).json({
         error: 'Failed to change password',
         message: error.message
@@ -617,9 +618,9 @@ export const authController = {
       });
 
       // Fire-and-forget: send password reset email
-      emailService.sendPasswordReset(email, resetCode).catch(console.error);
+      emailService.sendPasswordReset(email, resetCode).catch((err: unknown) => logger.error({ err }, 'auth.passwordResetEmail.failed'));
     } catch (error: any) {
-      console.error('Request password reset error:', error);
+      logger.error({ err: error }, 'Request password reset error:');
       res.status(500).json({
         success: false,
         error: 'An unexpected error occurred. Please try again.'
@@ -670,7 +671,7 @@ export const authController = {
         message: 'Account and all associated data have been permanently deleted'
       });
     } catch (error: any) {
-      console.error('Delete account error:', error);
+      logger.error({ err: error }, 'Delete account error:');
       res.status(500).json({
         success: false,
         error: 'Failed to delete account. Please try again.'
@@ -805,7 +806,7 @@ export const authController = {
         message: 'Password reset successfully. You can now log in with your new password.'
       });
     } catch (error: any) {
-      console.error('Reset password error:', error);
+      logger.error({ err: error }, 'Reset password error:');
       res.status(500).json({
         success: false,
         error: 'An unexpected error occurred. Please try again.'
@@ -852,7 +853,7 @@ export const authController = {
 
       res.json({ success: true, message: 'Email verified successfully!' });
     } catch (error: any) {
-      console.error('Email verification error:', error);
+      logger.error({ err: error }, 'Email verification error:');
       res.status(500).json({ success: false, error: 'Verification failed. Please try again.' });
     }
   }

@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // Google Gemini Provider Implementation
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIProvider, RecipeGenerationRequest, AIProviderError } from './AIProvider';
@@ -44,7 +45,7 @@ export class GeminiProvider extends AIProvider {
 
       // Gemini returns JSON directly when responseMimeType is set
       const recipe = JSON.parse(text) as GeneratedRecipe;
-      console.log(`✅ [Gemini] Recipe generated: ${recipe.title}`);
+      logger.info(`✅ [Gemini] Recipe generated: ${recipe.title}`);
       return recipe;
     } catch (error: any) {
       throw this.normalizeError(error, 'generateRecipe');

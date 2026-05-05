@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { logger } from '../../utils/logger';
 
 /**
  * Find or create an active meal plan covering the given date.
@@ -233,7 +234,7 @@ export const duplicateMeals = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid mode. Use "week", "day", or "meal".' });
     }
   } catch (error) {
-    console.error('Error duplicating meals:', error);
+    logger.error({ err: error }, 'Error duplicating meals:');
     res.status(500).json({ error: 'Failed to duplicate meals' });
   }
 };

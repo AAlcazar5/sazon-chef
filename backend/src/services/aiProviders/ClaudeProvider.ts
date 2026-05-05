@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // Anthropic Claude Provider Implementation
 import Anthropic from '@anthropic-ai/sdk';
 import { AIProvider, RecipeGenerationRequest, AIProviderError } from './AIProvider';
@@ -55,16 +56,16 @@ export class ClaudeProvider extends AIProvider {
         // Try multiple JSON extraction strategies
         recipe = this.extractAndParseJSON(text);
       } catch (parseError: any) {
-        console.error('❌ [Claude] JSON parsing failed:', parseError.message);
-        console.error('📄 [Claude] Full raw response length:', text.length);
-        console.error('📄 [Claude] Raw response (first 1000 chars):', text.substring(0, 1000));
-        console.error('📄 [Claude] Raw response (last 500 chars):', text.substring(Math.max(0, text.length - 500)));
+        logger.error({ data: parseError.message }, '❌ [Claude] JSON parsing failed:');
+        logger.error({ data: text.length }, '📄 [Claude] Full raw response length:');
+        logger.error({ data: text.substring(0, 1000) }, '📄 [Claude] Raw response (first 1000 chars):');
+        logger.error({ data: text.substring(Math.max(0, text.length - 500)) }, '📄 [Claude] Raw response (last 500 chars):');
         // Save full response for debugging
-        console.error('📄 [Claude] Full response saved to error log above');
+        logger.error('📄 [Claude] Full response saved to error log above');
         throw new Error(`Failed to parse Claude response as JSON: ${parseError.message}`);
       }
 
-      console.log(`✅ [Claude] Recipe generated: ${recipe.title}`);
+      logger.info(`✅ [Claude] Recipe generated: ${recipe.title}`);
       return recipe;
     } catch (error: any) {
       throw this.normalizeError(error, 'generateRecipe');

@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/shoppingList/shoppingListMergeController.ts
 // R1-2: extracted from shoppingListController.ts as part of the 1956-line
 // split. Owns terminal-state list actions and merge-suggestion UX:
@@ -77,7 +78,7 @@ export const shoppingListMergeController = {
         rolledOverItemCount: unpurchasedItems.length,
       });
     } catch (error: any) {
-      console.error('[SHOPPING_LIST] POST /:id/done - ERROR:', error.message);
+      logger.error({ err: error.message }, '[SHOPPING_LIST] POST /:id/done - ERROR:');
       res.status(500).json({ error: 'Unable to complete shopping session' });
     }
   },
@@ -105,7 +106,7 @@ export const shoppingListMergeController = {
 
       return res.json({ success: true, deletedCount: result.count });
     } catch (error: any) {
-      console.error('[SHOPPING_LIST] POST /:id/clear - ERROR:', error.message);
+      logger.error({ err: error.message }, '[SHOPPING_LIST] POST /:id/clear - ERROR:');
       res.status(500).json({ error: 'Unable to clear shopping list' });
     }
   },
@@ -146,7 +147,7 @@ export const shoppingListMergeController = {
 
       return res.json({ success: true, addedCount: items.length });
     } catch (error: any) {
-      console.error('[SHOPPING_LIST] POST /:id/bulk-add - ERROR:', error.message);
+      logger.error({ err: error.message }, '[SHOPPING_LIST] POST /:id/bulk-add - ERROR:');
       res.status(500).json({ error: 'Unable to add items' });
     }
   },
@@ -246,7 +247,7 @@ export const shoppingListMergeController = {
 
       return res.json(null);
     } catch (error: any) {
-      console.error('[SHOPPING_LIST] GET /active/merge-suggestion - ERROR:', error.message);
+      logger.error({ err: error.message }, '[SHOPPING_LIST] GET /active/merge-suggestion - ERROR:');
       res.status(500).json({ error: 'Unable to fetch merge suggestion' });
     }
   },
@@ -295,7 +296,7 @@ export const shoppingListMergeController = {
 
       return res.json({ success: true });
     } catch (error: any) {
-      console.error('[SHOPPING_LIST] POST /active/dismiss-merge-suggestion - ERROR:', error.message);
+      logger.error({ err: error.message }, '[SHOPPING_LIST] POST /active/dismiss-merge-suggestion - ERROR:');
       res.status(500).json({ error: 'Unable to dismiss merge suggestion' });
     }
   },
@@ -321,7 +322,7 @@ export const shoppingListMergeController = {
       if (error.message?.includes('not found')) {
         return res.status(404).json({ error: 'Shopping list not found' });
       }
-      console.error('[SHOPPING_LIST] POST /:id/archive-on-completion - ERROR:', error.message);
+      logger.error({ err: error.message }, '[SHOPPING_LIST] POST /:id/archive-on-completion - ERROR:');
       res.status(500).json({ error: 'Unable to archive shopping list' });
     }
   },

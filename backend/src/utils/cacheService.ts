@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/utils/cacheService.ts
 
 interface CacheEntry<T> {
@@ -86,11 +87,11 @@ class CacheService {
     const cached = this.get<T>(key);
     
     if (cached !== null) {
-      console.log(`📦 Cache HIT for ${prefix}`);
+      logger.info(`📦 Cache HIT for ${prefix}`);
       return cached;
     }
 
-    console.log(`🔄 Cache MISS for ${prefix}, fetching...`);
+    logger.info(`🔄 Cache MISS for ${prefix}, fetching...`);
     const data = await fetchFn();
     this.set(key, data, ttl);
     
@@ -110,7 +111,7 @@ class CacheService {
     }
     
     keysToDelete.forEach(key => this.cache.delete(key));
-    console.log(`🗑️ Invalidated ${keysToDelete.length} cache entries for ${prefix}`);
+    logger.info(`🗑️ Invalidated ${keysToDelete.length} cache entries for ${prefix}`);
   }
 
   /**
@@ -118,7 +119,7 @@ class CacheService {
    */
   clear(): void {
     this.cache.clear();
-    console.log('🧹 Cache cleared');
+    logger.info('🧹 Cache cleared');
   }
 
   /**
@@ -160,7 +161,7 @@ class CacheService {
     keysToDelete.forEach(key => this.cache.delete(key));
     
     if (keysToDelete.length > 0) {
-      console.log(`🧹 Cleaned ${keysToDelete.length} expired cache entries`);
+      logger.info(`🧹 Cleaned ${keysToDelete.length} expired cache entries`);
     }
   }
 }

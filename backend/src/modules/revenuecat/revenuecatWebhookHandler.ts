@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/revenuecat/revenuecatWebhookHandler.ts
 // ROADMAP 4.0 E4 — RevenueCat webhook handler.
 //
@@ -194,7 +195,7 @@ export async function handleRevenueCatWebhook(req: Request, res: Response) {
         break;
     }
   } catch (err) {
-    console.error(`Error processing RevenueCat event ${event.type}:`, err);
+    logger.error({ err: err }, `Error processing RevenueCat event ${event.type}:`);
     // 200 anyway so RevenueCat doesn't infinite-retry processing errors.
   }
 

@@ -1,4 +1,5 @@
 import { AIRecipeService } from '../../src/services/aiRecipeService';
+import { logger } from '../../src/utils/logger';
 
 // Mock AIProviderManager to prevent "No AI providers configured" error
 jest.mock('../../src/services/aiProviders/AIProviderManager', () => ({
@@ -360,14 +361,14 @@ describe('AIRecipeService - Recipe Validation and Safety Checks', () => {
         ]
       };
 
-      const consoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarn = jest.spyOn(logger, 'warn').mockImplementation();
       (aiService as any).performSafetyChecks(recipe, mockParams);
 
       expect(consoleWarn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([expect.stringContaining('raw fish')]),
+        }),
         expect.stringContaining('Recipe Safety Warnings'),
-        expect.arrayContaining([
-          expect.stringContaining('raw fish')
-        ])
       );
 
       consoleWarn.mockRestore();
@@ -382,14 +383,14 @@ describe('AIRecipeService - Recipe Validation and Safety Checks', () => {
         ]
       };
       
-      const consoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarn = jest.spyOn(logger, 'warn').mockImplementation();
       (aiService as any).performSafetyChecks(recipe, mockParams);
       
       expect(consoleWarn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([expect.stringContaining('raw eggs')]),
+        }),
         expect.stringContaining('Recipe Safety Warnings'),
-        expect.arrayContaining([
-          expect.stringContaining('raw eggs')
-        ])
       );
       
       consoleWarn.mockRestore();
@@ -399,14 +400,16 @@ describe('AIRecipeService - Recipe Validation and Safety Checks', () => {
       const recipe = { ...baseRecipe, cookTime: 60 };
       const params = { ...mockParams, mealType: 'breakfast' as const };
       
-      const consoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarn = jest.spyOn(logger, 'warn').mockImplementation();
       (aiService as any).performSafetyChecks(recipe, params);
       
       expect(consoleWarn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.stringContaining('breakfast typically takes less than 45 minutes'),
+          ]),
+        }),
         expect.stringContaining('Recipe Safety Warnings'),
-        expect.arrayContaining([
-          expect.stringContaining('breakfast typically takes less than 45 minutes')
-        ])
       );
       
       consoleWarn.mockRestore();
@@ -487,14 +490,14 @@ describe('AIRecipeService - Recipe Validation and Safety Checks', () => {
         }
       };
       
-      const consoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarn = jest.spyOn(logger, 'warn').mockImplementation();
       (aiService as any).performSafetyChecks(recipe, params);
       
       expect(consoleWarn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([expect.stringContaining('Calories')]),
+        }),
         expect.stringContaining('Recipe Safety Warnings'),
-        expect.arrayContaining([
-          expect.stringContaining('Calories')
-        ])
       );
       
       consoleWarn.mockRestore();
@@ -512,14 +515,14 @@ describe('AIRecipeService - Recipe Validation and Safety Checks', () => {
         }
       };
       
-      const consoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarn = jest.spyOn(logger, 'warn').mockImplementation();
       (aiService as any).performSafetyChecks(recipe, params);
       
       expect(consoleWarn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([expect.stringContaining('Protein')]),
+        }),
         expect.stringContaining('Recipe Safety Warnings'),
-        expect.arrayContaining([
-          expect.stringContaining('Protein')
-        ])
       );
       
       consoleWarn.mockRestore();
@@ -537,15 +540,18 @@ describe('AIRecipeService - Recipe Validation and Safety Checks', () => {
         }
       };
       
-      const consoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarn = jest.spyOn(logger, 'warn').mockImplementation();
       (aiService as any).performSafetyChecks(recipe, params);
       
       // Should not warn about macro misalignment
       const warnCalls = consoleWarn.mock.calls;
-      const macroWarnings = warnCalls.filter(call => 
-        call[1]?.some((msg: string) => msg.includes('Calories') || msg.includes('Protein'))
-      );
-      
+      const macroWarnings = warnCalls.filter(call => {
+        const bindings = call[0] as { data?: string[] };
+        return bindings?.data?.some?.((msg: string) =>
+          msg.includes('Calories') || msg.includes('Protein'),
+        );
+      });
+
       expect(macroWarnings).toHaveLength(0);
       
       consoleWarn.mockRestore();

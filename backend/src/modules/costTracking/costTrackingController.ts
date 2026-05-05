@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/costTracking/costTrackingController.ts
 // Cost tracking and budget management
 
@@ -29,7 +30,7 @@ export const costTrackingController = {
             costSource: result.costSource,
           },
         }).catch((err) => {
-          console.warn(`[costTracking] failed to persist computed cost for recipe ${id}:`, err);
+          logger.warn({ err: err }, `[costTracking] failed to persist computed cost for recipe ${id}:`);
         });
       }
 
@@ -38,7 +39,7 @@ export const costTrackingController = {
         disclaimer: COST_DISCLAIMER,
       });
     } catch (error: any) {
-      console.error('Error getting recipe cost:', error);
+      logger.error({ err: error }, 'Error getting recipe cost:');
       res.status(500).json({ error: 'Failed to get recipe cost' });
     }
   },
@@ -84,7 +85,7 @@ export const costTrackingController = {
         costSource: updated.costSource,
       });
     } catch (error: any) {
-      console.error('Error updating recipe cost:', error);
+      logger.error({ err: error }, 'Error updating recipe cost:');
       res.status(500).json({ error: 'Failed to update recipe cost' });
     }
   },
@@ -104,7 +105,7 @@ export const costTrackingController = {
 
       res.json(costs);
     } catch (error: any) {
-      console.error('Error getting ingredient costs:', error);
+      logger.error({ err: error }, 'Error getting ingredient costs:');
       res.status(500).json({ error: 'Failed to get ingredient costs' });
     }
   },
@@ -156,7 +157,7 @@ export const costTrackingController = {
 
       res.json(cost);
     } catch (error: any) {
-      console.error('Error upserting ingredient cost:', error);
+      logger.error({ err: error }, 'Error upserting ingredient cost:');
       res.status(500).json({ error: 'Failed to save ingredient cost' });
     }
   },
@@ -184,7 +185,7 @@ export const costTrackingController = {
 
       res.json({ message: 'Ingredient cost deleted successfully' });
     } catch (error: any) {
-      console.error('Error deleting ingredient cost:', error);
+      logger.error({ err: error }, 'Error deleting ingredient cost:');
       res.status(500).json({ error: 'Failed to delete ingredient cost' });
     }
   },
@@ -214,7 +215,7 @@ export const costTrackingController = {
         currency: preferences?.currency || 'USD',
       });
     } catch (error: any) {
-      console.error('Error getting budget:', error);
+      logger.error({ err: error }, 'Error getting budget:');
       res.status(500).json({ error: 'Failed to get budget settings' });
     }
   },
@@ -263,7 +264,7 @@ export const costTrackingController = {
         currency: preferences.currency || 'USD',
       });
     } catch (error: any) {
-      console.error('Error updating budget:', error);
+      logger.error({ err: error }, 'Error updating budget:');
       res.status(500).json({ error: 'Failed to update budget settings' });
     }
   },

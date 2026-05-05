@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/weatherService.ts
 // Thin OpenWeatherMap wrapper. Fetches current weather for a lat/lon pair.
 // Cached per rounded coordinate per hour to avoid hammering the API.
@@ -60,7 +61,7 @@ export async function getWeatherContext(
     cacheService.set(cacheKey, result, CACHE_TTL_MS);
     return result;
   } catch (err) {
-    console.warn('⛅ Weather fetch failed (non-critical):', (err as any)?.message);
+    logger.warn('⛅ Weather fetch failed (non-critical):', (err as any)?.message);
     return null;
   }
 }

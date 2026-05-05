@@ -7,6 +7,7 @@ import {
   passwordResetTemplate,
   emailVerificationTemplate,
 } from '../../src/emails/templates';
+import { logger } from '../../src/utils/logger';
 
 // Mock Resend — not configured in test env
 jest.mock('resend', () => ({
@@ -16,6 +17,11 @@ jest.mock('resend', () => ({
     },
   })),
 }));
+
+// Helper — pino logger.info accepts (msg) or (bindings, msg). Capture both.
+function spyLoggerInfo() {
+  return jest.spyOn(logger, 'info').mockImplementation();
+}
 
 describe('Email Service (Group 6)', () => {
   // ─── Template Rendering ──────────────────────────────────────────────
@@ -59,7 +65,7 @@ describe('Email Service (Group 6)', () => {
 
   describe('emailService.send', () => {
     it('should log to console when RESEND_API_KEY is not set', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = spyLoggerInfo();
 
       const result = await emailService.send({
         to: 'test@example.com',
@@ -81,7 +87,7 @@ describe('Email Service (Group 6)', () => {
 
   describe('emailService convenience methods', () => {
     it('sendWelcome should log email to console', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = spyLoggerInfo();
 
       const result = await emailService.sendWelcome('test@example.com', 'Alex');
 
@@ -94,7 +100,7 @@ describe('Email Service (Group 6)', () => {
     });
 
     it('sendPasswordReset should log email to console', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = spyLoggerInfo();
 
       const result = await emailService.sendPasswordReset('test@example.com', '123456');
 
@@ -107,7 +113,7 @@ describe('Email Service (Group 6)', () => {
     });
 
     it('sendEmailVerification should log email to console', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = spyLoggerInfo();
 
       const result = await emailService.sendEmailVerification('test@example.com', 'https://example.com/verify');
 
