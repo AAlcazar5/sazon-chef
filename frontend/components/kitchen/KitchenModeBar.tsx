@@ -39,6 +39,8 @@ export default function KitchenModeBar({ activeMode, onChange }: KitchenModeBarP
   const activeBg = Accent.lavender;
   const inactiveText = isDark ? DarkColors.text.secondary : Colors.text.secondary;
   const activeText = '#FFFFFF';
+  // Solid bg so content scrolling underneath doesn't bleed through.
+  const barBg = isDark ? '#1A1410' : '#FAF7F4';
 
   return (
     <ScrollView
@@ -47,7 +49,7 @@ export default function KitchenModeBar({ activeMode, onChange }: KitchenModeBarP
       contentContainerStyle={styles.container}
       // flexGrow:0 prevents the ScrollView from claiming extra vertical space
       // — without it, the bar leaves a tall gap above the FilterRow.
-      style={styles.scroll}
+      style={[styles.scroll, { backgroundColor: barBg }]}
       testID="kitchen-mode-bar"
     >
       {KITCHEN_MODES.map((mode) => {
