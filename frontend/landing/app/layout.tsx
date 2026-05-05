@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       'The cooking app for people past the spreadsheet. Real food, from everywhere.',
   },
   icons: {
-    icon: '/mascot/sazon-wave.svg',
+    icon: '/mascot/sazon-logo.svg',
   },
 };
 

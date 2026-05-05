@@ -23,11 +23,10 @@ interface SignupResult {
   position?: number;
 }
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:3001';
-
 export async function POST(
   request: Request,
 ): Promise<NextResponse<ApiResponse<SignupResult>>> {
+  const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
   let body: unknown;
   try {
     body = await request.json();
@@ -50,7 +49,7 @@ export async function POST(
   const source = referer ? new URL(referer).hostname : undefined;
 
   try {
-    const upstream = await fetch(`${BACKEND_URL}/api/waitlist`, {
+    const upstream = await fetch(`${backendUrl}/api/waitlist`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...parsed.data, ...(source ? { source } : {}) }),
