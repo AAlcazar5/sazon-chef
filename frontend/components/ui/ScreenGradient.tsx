@@ -77,7 +77,7 @@ export default function ScreenGradient({
   if (gradient) {
     return (
       <LinearGradient
-        colors={gradient as unknown as string[]}
+        colors={gradient as unknown as readonly [string, string]}
         locations={[0, 1]}
         style={[styles.container, style]}
         testID={testID}
@@ -92,8 +92,8 @@ export default function ScreenGradient({
 
   return (
     <LinearGradient
-      colors={colors as unknown as string[]}
-      locations={locations as unknown as number[]}
+      colors={colors as unknown as readonly [string, string]}
+      locations={locations as unknown as readonly [number, number]}
       style={[styles.container, style]}
       testID={testID}
     >

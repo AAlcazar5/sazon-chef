@@ -150,7 +150,7 @@ function RecipeCard({ option, onAddToPlan, isDark }: { option: RecipeOption; onA
           onPress={() => onAddToPlan(recipe)}
           style={{
             flex: 1,
-            backgroundColor: Colors.accent.primary,
+            backgroundColor: Colors.accent,
             borderRadius: 100,
             paddingVertical: 12,
             alignItems: 'center',

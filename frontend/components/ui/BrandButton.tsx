@@ -153,8 +153,8 @@ export default function BrandButton({
 
   const handlePress = () => {
     if (!isInteractive) return;
-    const impactMap = { light: ImpactStyle.LIGHT, medium: ImpactStyle.MEDIUM, heavy: ImpactStyle.HEAVY };
-    triggerHaptic(impactMap[hapticStyle]);
+    const impactMap = { light: ImpactStyle.light, medium: ImpactStyle.medium, heavy: ImpactStyle.heavy };
+    triggerHaptic('impact', impactMap[hapticStyle]);
     onPress();
   };
 

@@ -98,7 +98,7 @@ function PillButton({
         paddingVertical: 8,
         borderRadius: 100,
         backgroundColor: selected
-          ? Colors.accent.primary
+          ? Colors.accent
           : isDark ? '#2C2C2E' : '#F3F4F6',
         marginRight: 8,
         marginBottom: 8,
@@ -351,7 +351,7 @@ export default function MealRequestModal({
                     <SectionHeader title="Quick Preset" isDark={isDark} />
                     {activePreset && (
                       <HapticTouchableOpacity onPress={clearAll}>
-                        <Text style={{ fontSize: 13, color: Colors.accent.primary }}>Clear</Text>
+                        <Text style={{ fontSize: 13, color: Colors.accent }}>Clear</Text>
                       </HapticTouchableOpacity>
                     )}
                   </View>
@@ -473,7 +473,7 @@ export default function MealRequestModal({
                   disabled={loading}
                   accessibilityLabel="Find meals"
                   style={{
-                    backgroundColor: Colors.accent.primary,
+                    backgroundColor: Colors.accent,
                     borderRadius: 100,
                     paddingVertical: 16,
                     alignItems: 'center',

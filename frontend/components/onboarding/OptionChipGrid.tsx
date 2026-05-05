@@ -28,7 +28,7 @@ export function OptionChipGrid({ options, selectedIds, onToggle, columns = 3 }: 
             key={option.id}
             testID={`chip-${option.id}`}
             onPress={() => {
-              triggerHaptic(ImpactStyle.LIGHT);
+              triggerHaptic('impact', ImpactStyle.light);
               onToggle(option.id);
             }}
             style={[

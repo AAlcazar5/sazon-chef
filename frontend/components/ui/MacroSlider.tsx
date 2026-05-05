@@ -106,7 +106,7 @@ export default function MacroSlider({
           style={{
             fontSize: 13,
             fontFamily: 'PlusJakartaSans_700Bold',
-            color: value === undefined ? textSecondary : Colors.accent.primary,
+            color: value === undefined ? textSecondary : Colors.accent,
           }}
         >
           {displayValue}
@@ -139,7 +139,7 @@ export default function MacroSlider({
                 position: 'absolute',
                 left: 0,
                 height: TRACK_HEIGHT,
-                backgroundColor: Colors.accent.primary,
+                backgroundColor: Colors.accent,
                 borderRadius: TRACK_HEIGHT / 2,
               },
               fillStyle,
@@ -161,7 +161,7 @@ export default function MacroSlider({
                   shadowRadius: 4,
                   elevation: 4,
                   borderWidth: 2,
-                  borderColor: Colors.accent.primary,
+                  borderColor: Colors.accent,
                   top: 0,
                   left: -THUMB_SIZE / 2,
                 },

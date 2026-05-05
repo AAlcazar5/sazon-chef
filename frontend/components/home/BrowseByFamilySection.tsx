@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   familyName: {
     flex: 1,
     fontSize: 18,
-    fontFamily: EditorialFontFamily.serif,
+    fontFamily: EditorialFontFamily.body.bold,
     fontWeight: '700',
   },
   badge: {
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   cuisineList: {
     fontSize: 13,
     marginTop: 8,
-    fontFamily: EditorialFontFamily.serif,
+    fontFamily: EditorialFontFamily.body.bold,
     fontStyle: 'italic',
   },
   exploredRow: {
