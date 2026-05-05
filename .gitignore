@@ -301,3 +301,4 @@ plans/
 Security.md
 verify-security.sh
 ops-playbook.md
+.DS_Store
