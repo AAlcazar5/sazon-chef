@@ -56,6 +56,7 @@ import {
   type CollectionSortMode,
 } from '../../components/cookbook';
 import WeeklyRecapCard from '../../components/kitchen/WeeklyRecapCard';
+import DailyCheckIn from '../../components/today/DailyCheckIn';
 import KitchenModeBar, { type KitchenMode } from '../../components/kitchen/KitchenModeBar';
 import KitchenDiscoverView from '../../components/kitchen/KitchenDiscoverView';
 import KitchenJourneyView from '../../components/kitchen/KitchenJourneyView';
@@ -1680,6 +1681,12 @@ export default function CookbookScreen() {
             }
             showsVerticalScrollIndicator={true}
           >
+          {/* ROADMAP 4.0 C7 — Daily check-in (relocated from Home; sits below
+              the Saved/Collections/Discover/Journey/Stories tab row). */}
+          {!selectedListId && (
+            <DailyCheckIn visible={true} onClose={() => { /* dismissable in a follow-up */ }} />
+          )}
+
           {/* Most-cooked editorial hero */}
           {!selectedListId && mostCookedRecipe && mostCookedAccent && (
             <MostCookedHero
