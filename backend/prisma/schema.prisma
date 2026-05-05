@@ -85,6 +85,11 @@ model User {
   trialEndsAt             DateTime?
   currentPeriodEnd        DateTime?
 
+  // ROADMAP 4.0 E4: RevenueCat (parallel to Stripe — same status/tier columns)
+  revenueCatAppUserId     String?  @unique
+  cancelAtPeriodEnd       Boolean  @default(false)
+  revenueCatWebhookEvents RevenueCatWebhookEvent[]
+
   // Group 8: Revenue Optimization
   cancellationSurveys     CancellationSurvey[]
 
@@ -1009,6 +1014,21 @@ model StripeWebhookEvent {
   @@index([userId])
   @@index([type])
   @@map("stripe_webhook_events")
+}
+
+// ROADMAP 4.0 E4: RevenueCat webhook event log (mirrors StripeWebhookEvent)
+model RevenueCatWebhookEvent {
+  id                String   @id @default(cuid())
+  revenueCatEventId String   @unique
+  type              String   // INITIAL_PURCHASE | RENEWAL | CANCELLATION | EXPIRATION | TRIAL_STARTED | TRIAL_CONVERTED | BILLING_ISSUE | …
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  processedAt       DateTime @default(now())
+  data              String   // JSON string of the event payload for audit trail
+
+  @@index([userId])
+  @@index([type])
+  @@map("revenuecat_webhook_events")
 }
 
 // Cancellation survey response (Group 8: Revenue Optimization)

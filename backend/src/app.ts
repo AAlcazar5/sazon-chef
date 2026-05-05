@@ -37,6 +37,7 @@ import { authenticateToken } from '@modules/auth/authMiddleware';
 import { searchRoutes } from '@modules/search/searchRoutes';
 import { notificationsRoutes } from '@modules/notifications/notificationsRoutes';
 import { stripeRoutes } from '@modules/stripe/stripeRoutes';
+import { revenuecatRoutes } from '@modules/revenuecat/revenuecatRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 import { prisma } from '@/lib/prisma';
 import { cacheService } from '@/utils/cacheService';
@@ -204,6 +205,7 @@ app.use('/api/upload', authenticateToken, uploadRoutes);
 app.use('/api/search', authenticateToken, searchRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/webhooks/revenuecat', revenuecatRoutes);
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 
