@@ -1472,3 +1472,20 @@ model CuisineAdjacencyWeight {
   @@index([sourceCuisine])
   @@map("cuisine_adjacency_weights")
 }
+
+// C12 — Adaptive notification log.
+// Cadence-aware push: only at the user's typical cook hour, max 3/day,
+// content adapts to pantry + remaining macros + cuisine variety state.
+model AdaptiveNotificationLog {
+  id           String   @id @default(cuid())
+  userId       String
+  sentAt       DateTime @default(now())
+  template     String   // logical template id, e.g. "expiring-pantry"
+  signalsUsed  String   // JSON snapshot of signals that drove the choice
+  tapped       Boolean  @default(false)
+  tappedAt     DateTime?
+
+  @@index([userId, sentAt])
+  @@index([template, sentAt])
+  @@map("adaptive_notification_logs")
+}
