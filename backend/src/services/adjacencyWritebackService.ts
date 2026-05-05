@@ -125,3 +125,105 @@ export async function getDynamicAdjacencyWeight(
   })) as { weight: number } | null;
   return row?.weight ?? 0;
 }
+
+// ─── F4: per-user adjacency writeback v2 ─────────────────────────────────────
+
+/** Minimum per-user signal count before per-user weights blend in. */
+const PER_USER_BLEND_FLOOR = 3;
+/** When the floor is met, blend per-user × this fraction + global × (1−this). */
+const PER_USER_BLEND_RATIO = 0.3;
+
+interface RecordPerUserSignalInput extends RecordSignalInput {
+  userId: string;
+}
+
+/**
+ * Record an adjacency signal for a specific user. The same call site that
+ * fires `recordAdjacencySignal` (global) should fire this too. The two
+ * tables coexist — global is the prior, per-user is the personalization.
+ */
+export async function recordPerUserAdjacencySignal(
+  input: RecordPerUserSignalInput,
+): Promise<void> {
+  if (!input.userId) {
+    throw new Error('recordPerUserAdjacencySignal: userId required');
+  }
+  if (!ALL_SIGNALS.includes(input.signal)) {
+    throw new Error(`recordPerUserAdjacencySignal: unknown signal "${input.signal}"`);
+  }
+  if (!input.sourceCuisine || !input.targetCuisine) {
+    throw new Error('recordPerUserAdjacencySignal: cuisine name cannot be empty');
+  }
+  const source = normalizeCuisine(input.sourceCuisine);
+  const target = normalizeCuisine(input.targetCuisine);
+  if (source === target) {
+    throw new Error('recordPerUserAdjacencySignal: cannot record self-edge');
+  }
+
+  const w = SIGNAL_WEIGHTS[input.signal];
+  await (prisma as any).userCuisineAdjacencyWeight.upsert({
+    where: {
+      userId_sourceCuisine_targetCuisine: {
+        userId: input.userId,
+        sourceCuisine: source,
+        targetCuisine: target,
+      },
+    },
+    create: {
+      userId: input.userId,
+      sourceCuisine: source,
+      targetCuisine: target,
+      weight: w,
+      signalCount: 1,
+    },
+    update: {
+      weight: { increment: w },
+      signalCount: { increment: 1 },
+    },
+  });
+}
+
+/**
+ * Read the per-user dynamic weight for an edge. Returns 0 when no row exists.
+ */
+export async function getPerUserAdjacencyWeight(
+  userId: string,
+  sourceCuisine: string,
+  targetCuisine: string,
+): Promise<{ weight: number; signalCount: number }> {
+  const row = (await (prisma as any).userCuisineAdjacencyWeight.findUnique({
+    where: {
+      userId_sourceCuisine_targetCuisine: {
+        userId,
+        sourceCuisine: normalizeCuisine(sourceCuisine),
+        targetCuisine: normalizeCuisine(targetCuisine),
+      },
+    },
+  })) as { weight: number; signalCount: number } | null;
+  return { weight: row?.weight ?? 0, signalCount: row?.signalCount ?? 0 };
+}
+
+/**
+ * Read the *blended* weight for an edge — global prior + per-user personalization.
+ *
+ *   - per-user signal count < PER_USER_BLEND_FLOOR (3): return global only.
+ *   - per-user signal count >= floor: return
+ *       global × (1 - PER_USER_BLEND_RATIO) + perUser × PER_USER_BLEND_RATIO
+ *
+ * This is the function callers (NewToYou ranker, BrowseByFamily) should use
+ * when ranking — it handles cold start automatically.
+ */
+export async function getBlendedAdjacencyWeight(
+  userId: string,
+  sourceCuisine: string,
+  targetCuisine: string,
+): Promise<number> {
+  const [global, perUser] = await Promise.all([
+    getDynamicAdjacencyWeight(sourceCuisine, targetCuisine),
+    getPerUserAdjacencyWeight(userId, sourceCuisine, targetCuisine),
+  ]);
+  if (perUser.signalCount < PER_USER_BLEND_FLOOR) {
+    return global;
+  }
+  return global * (1 - PER_USER_BLEND_RATIO) + perUser.weight * PER_USER_BLEND_RATIO;
+}
