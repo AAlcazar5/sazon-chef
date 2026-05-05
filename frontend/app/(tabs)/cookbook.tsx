@@ -58,6 +58,7 @@ import {
 import WeeklyRecapCard from '../../components/kitchen/WeeklyRecapCard';
 import DailyCheckIn from '../../components/today/DailyCheckIn';
 import KitchenModeBar, { type KitchenMode } from '../../components/kitchen/KitchenModeBar';
+import type { CookbookViewMode } from '../../types/kitchen';
 import KitchenDiscoverView from '../../components/kitchen/KitchenDiscoverView';
 import KitchenJourneyView from '../../components/kitchen/KitchenJourneyView';
 import KitchenStoriesView from '../../components/kitchen/KitchenStoriesView';
@@ -103,15 +104,7 @@ export default function CookbookScreen() {
   const [collections, setCollections] = useState<Collection[]>([]);
   // Multi-select: empty array => All
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<
-    | 'saved'
-    | 'liked'
-    | 'disliked'
-    | 'collections'
-    | 'discover'
-    | 'journey'
-    | 'stories'
-  >('saved');
+  const [viewMode, setViewMode] = useState<CookbookViewMode>('saved');
   const [smartCollections, setSmartCollections] = useState<Array<{id: string; name: string; icon: string; description: string; count: number}>>([]);
   const [smartCollectionsLoading, setSmartCollectionsLoading] = useState(false);
   const [collectionsSearchQuery, setCollectionsSearchQuery] = useState('');
