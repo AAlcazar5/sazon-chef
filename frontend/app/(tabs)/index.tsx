@@ -33,6 +33,9 @@ import { NewToYouSection } from '../../components/home/NewToYouSection';
 import { BrowseByFamilySection, type FamilyEntry } from '../../components/home/BrowseByFamilySection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoveryStrip';
+import QuickActionRow from '../../components/today/QuickActionRow';
+import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
+import { FOOD_INTEL_TIPS } from '../../lib/foodIntelTips';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 // PantryMatchCard removed — editorial v2 absorbs pantry info into subtitle
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
@@ -113,6 +116,37 @@ export default function HomeScreen() {
 
   // Main content scroll ref (used for scroll-to-top on mascot press)
   const mainScrollRef = useRef<ScrollView>(null);
+
+  // ── ROADMAP 4.0 A1-c — Today rotating discovery tip (deterministic daily pick) ──
+  const dailyDiscoveryTip = useMemo(() => {
+    if (!FOOD_INTEL_TIPS || FOOD_INTEL_TIPS.length === 0) return null;
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const diff = now.getTime() - start.getTime();
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const idx = dayOfYear % FOOD_INTEL_TIPS.length;
+    const t = FOOD_INTEL_TIPS[idx];
+    return { id: t.id, category: t.category, title: t.title, body: t.body };
+  }, []);
+
+  const handleDiscoveryTipPress = useCallback((tipId: string) => {
+    // ROADMAP 4.0 A1-c — engagement record will land with C10 cultural primer wiring
+    void tipId;
+  }, []);
+
+  // ── ROADMAP 4.0 A1-d — Today quick-action chip handlers ──
+  const handleQuickActionVoice = useCallback(() => {
+    router.push('/(tabs)/?voice=open' as never);
+  }, []);
+  const handleQuickActionSnap = useCallback(() => {
+    router.push('/scanner' as never);
+  }, []);
+  const handleQuickActionBuildAPlate = useCallback(() => {
+    router.push('/build-a-plate' as never);
+  }, []);
+  const handleQuickActionFindMeAMeal = useCallback(() => {
+    router.push('/(tabs)/meal-plan?action=find-me-a-meal' as never);
+  }, []);
 
   // Scroll position for parallax effect
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -872,6 +906,17 @@ export default function HomeScreen() {
           onPress={() => {
             // ROADMAP 4.0 A1-b — expand to today + yesterday view (placeholder route)
           }}
+        />
+
+        {/* ROADMAP 4.0 A1-c — Today rotating discovery card */}
+        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
+
+        {/* ROADMAP 4.0 A1-d — Today quick-action chip row */}
+        <QuickActionRow
+          onVoice={handleQuickActionVoice}
+          onSnap={handleQuickActionSnap}
+          onBuildAPlate={handleQuickActionBuildAPlate}
+          onFindMeAMeal={handleQuickActionFindMeAMeal}
         />
 
         {/* 10Y entry-point: contextual Ask Sazon Coach card above the recipe grid */}
