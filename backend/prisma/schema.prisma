@@ -1377,3 +1377,23 @@ model UserSignalSnapshot {
   @@index([userId, computedAt])
   @@map("user_signal_snapshots")
 }
+
+// B2 — Cohort distance metric.
+// Weekly aggregate of pairwise Jaccard distance between users' Today hero
+// recommendation sets at d7/d30/d90 lookbacks. If the median distance isn't
+// increasing over time, personalization is converging (broken).
+// `cohortId` is a stable bucket name (e.g., "all", "premium", "lifestyle").
+model CohortDistanceSnapshot {
+  id          String   @id @default(cuid())
+  cohortId    String
+  asOfDate    DateTime
+  d7Median    Float
+  d30Median   Float
+  d90Median   Float
+  sampleSize  Int
+  createdAt   DateTime @default(now())
+
+  @@unique([cohortId, asOfDate])
+  @@index([cohortId, asOfDate])
+  @@map("cohort_distance_snapshots")
+}
