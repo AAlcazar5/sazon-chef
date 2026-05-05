@@ -26,9 +26,11 @@ import ViewShot from 'react-native-view-shot';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import Icon from '../components/ui/Icon';
 import { Icons, IconSizes } from '../constants/Icons';
-import { recipeApi, culturalPrimerApi, firstCookStatsApi, type CulturalPrimerPayload, type FirstCookStatsPayload } from '../lib/api';
+import { recipeApi, culturalPrimerApi, firstCookStatsApi, discoveryMilestonesApi, type CulturalPrimerPayload, type FirstCookStatsPayload } from '../lib/api';
 import CulturalPrimerModal from '../components/recipe/CulturalPrimerModal';
 import FirstCuisineStamp from '../components/celebrations/FirstCuisineStamp';
+import DiscoveryMilestoneInline from '../components/celebrations/DiscoveryMilestoneInline';
+import { matchAppliancesMilestoneFromList } from '../utils/discoveryMilestoneKeys';
 import { extractTimers } from '../utils/timerExtraction';
 import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingModeTimers';
 import IngredientChecklist from '../components/recipe/IngredientChecklist';
@@ -71,6 +73,8 @@ interface CookingRecipe {
   protein?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   cuisine?: string;
+  /** JSON-stringified array of equipment names (e.g. ["Ninja Creami","oven"]). */
+  equipmentNeeded?: string;
 }
 
 // --- Helpers ---
@@ -125,6 +129,8 @@ export default function CookingScreen() {
   // ROADMAP 4.0 C10 — first-cook cultural primer modal
   const [culturalPrimer, setCulturalPrimer] = useState<CulturalPrimerPayload['primer']>(null);
   const [firstCookStats, setFirstCookStats] = useState<FirstCookStatsPayload | null>(null);
+  // ROADMAP 4.0 J5 — discovery milestone celebration (single-fire)
+  const [discoveryMilestone, setDiscoveryMilestone] = useState<string | null>(null);
 
   // Voice mode state
   const [voiceMode, setVoiceMode] = useState(false);
@@ -180,7 +186,7 @@ export default function CookingScreen() {
           text: getTextContent(ing),
           order: ing.order ?? i + 1,
         }));
-        setRecipe({ id: data.id, title: data.title, servings: data.servings || 4, ingredients, instructions, imageUrl: data.imageUrl, cookTime: data.cookTime, calories: data.calories, protein: data.protein });
+        setRecipe({ id: data.id, title: data.title, servings: data.servings || 4, ingredients, instructions, imageUrl: data.imageUrl, cookTime: data.cookTime, calories: data.calories, protein: data.protein, cuisine: data.cuisine, equipmentNeeded: data.equipmentNeeded });
         setServings(data.servings || 4);
         setLoading(false);
       } catch (err: any) {
@@ -312,6 +318,28 @@ export default function CookingScreen() {
 
     // Record cooking (non-blocking)
     recipeApi.recordCook(recipe.id).catch(() => {});
+
+    // ROADMAP 4.0 J5 — first-appliance milestone (single-fire per appliance)
+    if (recipe.equipmentNeeded) {
+      try {
+        const list = JSON.parse(recipe.equipmentNeeded);
+        const applianceList: string[] = Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : [];
+        const milestoneKey = matchAppliancesMilestoneFromList(applianceList);
+        if (milestoneKey) {
+          discoveryMilestonesApi
+            .mark(milestoneKey)
+            .then((res) => {
+              const payload = (res?.data ?? res) as { newlyAchieved?: boolean } | undefined;
+              if (payload?.newlyAchieved) {
+                setDiscoveryMilestone(milestoneKey);
+              }
+            })
+            .catch(() => undefined);
+        }
+      } catch {
+        // best-effort — never block cook completion on milestone parse error
+      }
+    }
 
     // Prompt user to mark ingredients as consumed from pantry (opt-in, non-silent)
     setShowConsumeSheet(true);
@@ -507,6 +535,9 @@ export default function CookingScreen() {
             />
           )}
 
+          {/* ROADMAP 4.0 J5 — single-fire discovery milestone (photo / appliance) */}
+          <DiscoveryMilestoneInline milestoneKey={discoveryMilestone} />
+
           {/* Photo + Share row */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 12 }}>
             {/* Add a photo of your dish */}
@@ -521,6 +552,16 @@ export default function CookingScreen() {
                   if (!result.canceled && result.assets[0]) {
                     setUserPhotoUri(result.assets[0].uri);
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    // ROADMAP 4.0 J5 — first-photo discovery milestone
+                    discoveryMilestonesApi
+                      .mark('first-photo')
+                      .then((res) => {
+                        const payload = (res?.data ?? res) as { newlyAchieved?: boolean } | undefined;
+                        if (payload?.newlyAchieved) {
+                          setDiscoveryMilestone('first-photo');
+                        }
+                      })
+                      .catch(() => undefined);
                   }
                 } catch {
                   // Camera permission denied or unavailable — skip silently
@@ -610,7 +651,19 @@ export default function CookingScreen() {
           excludeRecipeId={recipe.id}
           excludeCuisine={recipe.cuisine}
           onClose={() => setShowLeftoverSheet(false)}
-          onSelectRecipe={(recipeId) => router.push(`/recipe/${recipeId}` as any)}
+          onSelectRecipe={(recipeId) => {
+            // ROADMAP 4.0 J5 — first-leftover discovery milestone
+            discoveryMilestonesApi
+              .mark('first-leftover')
+              .then((res) => {
+                const payload = (res?.data ?? res) as { newlyAchieved?: boolean } | undefined;
+                if (payload?.newlyAchieved) {
+                  setDiscoveryMilestone('first-leftover');
+                }
+              })
+              .catch(() => undefined);
+            router.push(`/recipe/${recipeId}` as any);
+          }}
         />
 
         <CoffeeBanner

@@ -16,6 +16,7 @@ export const SURFACES = [
   'cravings_made_real',
   'new_to_you',
   'browse_by_family',
+  'surprise_me_roulette',
   'other',
 ] as const;
 

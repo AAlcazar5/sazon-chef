@@ -1804,6 +1804,7 @@ export type SurfaceName =
   | 'cravings_made_real'
   | 'new_to_you'
   | 'browse_by_family'
+  | 'surprise_me_roulette'
   | 'other';
 
 export type SurfaceAction = 'impression' | 'tap' | 'cook' | 'rate';
@@ -1930,6 +1931,23 @@ export const firstCookStatsApi = {
     apiClient.get<FirstCookStatsPayload>(
       `/first-cook-stats?cuisine=${encodeURIComponent(cuisine)}`,
     ),
+};
+
+// ─── Discovery milestones (J5) ───────────────────────────────────────────────
+
+export interface MarkMilestonePayload {
+  newlyAchieved: boolean;
+  alreadyAchieved: boolean;
+}
+
+export interface MilestonesListPayload {
+  achieved: string[];
+}
+
+export const discoveryMilestonesApi = {
+  mark: (key: string) =>
+    apiClient.post<MarkMilestonePayload>('/discovery-milestones', { key }),
+  list: () => apiClient.get<MilestonesListPayload>('/discovery-milestones'),
 };
 
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
