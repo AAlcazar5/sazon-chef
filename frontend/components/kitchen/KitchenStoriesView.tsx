@@ -21,9 +21,11 @@ interface KitchenStoriesViewProps {
 export default function KitchenStoriesView({ isDark }: KitchenStoriesViewProps) {
   useTheme();
   const accent = Accent.lavender;
-  const monthAccent = Accent.peach;
-  const monthBg = isDark ? PastelDark.peach : Pastel.peach;
-  const archiveBg = isDark ? PastelDark.sage : Pastel.sage;
+  // Spread distinct pastels per card so adjacent stories don't share tint.
+  const monthAccent = Accent.golden;
+  const monthBg = isDark ? PastelDark.golden : Pastel.golden;
+  const archiveBg = isDark ? PastelDark.sky : Pastel.sky;
+  const archiveAccent = Accent.sky;
   const textPrimary = isDark ? DarkColors.text.primary : Colors.text.primary;
   const textSecondary = isDark ? DarkColors.text.secondary : Colors.text.secondary;
 
@@ -51,7 +53,7 @@ export default function KitchenStoriesView({ isDark }: KitchenStoriesViewProps) 
 
       {/* Past recaps archive */}
       <View style={[styles.card, Shadows.SM as object, { backgroundColor: archiveBg }]}>
-        <Text style={[styles.eyebrow, { color: Accent.sage }]}>PAST RECAPS</Text>
+        <Text style={[styles.eyebrow, { color: archiveAccent }]}>PAST RECAPS</Text>
         <Text style={[styles.body, { color: textSecondary }]}>
           Your weekly recaps will be saved here, swipeable + revisitable.
         </Text>

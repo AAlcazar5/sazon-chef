@@ -89,18 +89,34 @@ const GOLDEN_THEME: StepTheme = {
   circleRing: '#FFEFC1',
   circleGradientDark: HeroPlatesDark.orange.bg,
 };
+const SKY_THEME: StepTheme = {
+  gradient: ['#90CAF9', '#E3F2FD', '#FFFFFF'],
+  gradientDark: ['#0F1A24', '#0F1A24', '#0F1A24'],
+  circleBg: '#A8D5FA',
+  circleRing: '#D7EAFB',
+  circleGradientDark: HeroPlatesDark.lavender.bg,
+};
+const BLUSH_THEME: StepTheme = {
+  gradient: ['#F8BBD0', '#FCE4EC', '#FFFFFF'],
+  gradientDark: ['#231016', '#231016', '#231016'],
+  circleBg: '#F4A4BC',
+  circleRing: '#FBD8E4',
+  circleGradientDark: HeroPlatesDark.orange.bg,
+};
 
+// ROADMAP 4.0 A5 — distinct theme per onboarding step. With 10 steps and 6
+// pastels, each step gets its own color and adjacent steps never share.
 const STEP_THEMES: readonly StepTheme[] = [
   PEACH_THEME,    // 0 Welcome
   SAGE_THEME,     // 1 Diet
   LAVENDER_THEME, // 2 Lifestyle (A5-a)
-  PEACH_THEME,    // 3 Favorite meal (A5-b)
-  SAGE_THEME,     // 4 Cuisine clusters (A5-c)
-  LAVENDER_THEME, // 5 Nutrition density (A5-d)
-  PEACH_THEME,    // 6 Pantry top-5 (A5-e)
-  SAGE_THEME,     // 7 Equipment (A5-f)
-  LAVENDER_THEME, // 8 Cook for whom (A5-g)
-  GOLDEN_THEME,   // 9 Build first plate
+  BLUSH_THEME,    // 3 Favorite meal (A5-b)
+  SKY_THEME,      // 4 Cuisine clusters (A5-c)
+  GOLDEN_THEME,   // 5 Nutrition density (A5-d)
+  SAGE_THEME,     // 6 Pantry top-5 (A5-e)
+  LAVENDER_THEME, // 7 Equipment (A5-f)
+  PEACH_THEME,    // 8 Cook for whom (A5-g)
+  BLUSH_THEME,    // 9 Build first plate
 ];
 
 const DIETARY_OPTIONS = [
