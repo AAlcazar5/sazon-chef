@@ -53,10 +53,10 @@ export default function DailyCheckIn({ visible, onClose }: DailyCheckInProps) {
       testID="daily-check-in"
       style={[
         styles.card,
-        { backgroundColor: isDark ? PastelDark.peach : Pastel.peach },
+        { backgroundColor: isDark ? PastelDark.blush : Pastel.blush },
       ]}
     >
-      <Text style={[styles.eyebrow, { color: Accent.peach }]}>QUICK CHECK-IN</Text>
+      <Text style={[styles.eyebrow, { color: Accent.blush }]}>QUICK CHECK-IN</Text>
       <Text
         style={[
           styles.prompt,
@@ -81,7 +81,7 @@ export default function DailyCheckIn({ visible, onClose }: DailyCheckInProps) {
                 styles.likertChip,
                 {
                   backgroundColor: selected
-                    ? Accent.peach
+                    ? Accent.blush
                     : isDark
                     ? 'rgba(255,255,255,0.18)'
                     : 'rgba(255,255,255,0.6)',
@@ -131,7 +131,7 @@ export default function DailyCheckIn({ visible, onClose }: DailyCheckInProps) {
           accessibilityRole="button"
           pressedScale={0.97}
           disabled={saving}
-          style={[styles.saveButton, { backgroundColor: Accent.peach }]}
+          style={[styles.saveButton, { backgroundColor: Accent.blush }]}
         >
           <Text style={styles.saveLabel}>Save</Text>
         </HapticTouchableOpacity>

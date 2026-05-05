@@ -26,10 +26,12 @@ export default function KitchenJourneyView({ isDark }: KitchenJourneyViewProps) 
   useTheme();
   const { stats } = useCookingJourney();
 
-  const accent = Accent.lavender;
-  const cardBg = isDark ? PastelDark.lavender : Pastel.lavender;
-  const arcBg = isDark ? PastelDark.peach : Pastel.peach;
-  const arcAccent = Accent.peach;
+  // Cuisine map → sky (exploration); arc → golden (growth).
+  // Lavender stays reserved for WeeklyRecapCard so cards across views don't bleed.
+  const accent = Accent.sky;
+  const cardBg = isDark ? PastelDark.sky : Pastel.sky;
+  const arcBg = isDark ? PastelDark.golden : Pastel.golden;
+  const arcAccent = Accent.golden;
   const textPrimary = isDark ? DarkColors.text.primary : Colors.text.primary;
   const textSecondary = isDark ? DarkColors.text.secondary : Colors.text.secondary;
 

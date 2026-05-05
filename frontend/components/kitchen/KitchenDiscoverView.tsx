@@ -41,9 +41,10 @@ export default function KitchenDiscoverView({ isDark }: KitchenDiscoverViewProps
   const router = useRouter();
   const surfaceTracker = useSurfaceTracking();
 
-  const eyebrow = isDark ? Accent.lavender : Accent.lavender;
-  const cardBg = isDark ? PastelDark.peach : Pastel.peach;
-  const accent = Accent.peach;
+  const eyebrow = Accent.lavender;
+  // Cravings → blush pastel; the only flagship surface that explicitly references treats.
+  const cardBg = isDark ? PastelDark.blush : Pastel.blush;
+  const accent = Accent.blush;
   const textPrimary = isDark ? DarkColors.text.primary : Colors.text.primary;
   const textSecondary = isDark ? DarkColors.text.secondary : Colors.text.secondary;
 
