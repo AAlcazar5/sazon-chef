@@ -1,9 +1,9 @@
 // frontend/__tests__/components/HomeHeader.test.tsx
-// HomeHeader — logo + brand name + animated filters button
+// HomeHeader — Sazon-mascot logo + brand title + ProfileAvatarButton.
+// Filter button moved to inline FilterRow (R6).
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { TouchableOpacity } from 'react-native';
 import HomeHeader from '../../components/home/HomeHeader';
 
 jest.mock('expo-blur', () => {
@@ -24,10 +24,11 @@ jest.mock('expo-linear-gradient', () => {
   };
 });
 
-jest.mock('../../components/mascot', () => {
+jest.mock('../../components/mascot/Sazon', () => {
   const { View } = require('react-native');
   return {
-    LogoMascot: function MockLogoMascot() { return <View testID="logo-mascot" />; },
+    __esModule: true,
+    default: function MockSazon() { return <View testID="sazon-mascot" />; },
   };
 });
 
@@ -38,20 +39,21 @@ const defaultProps = {
 describe('HomeHeader', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('renders the logo mascot', () => {
+  it('renders the Sazon mascot', () => {
     const { getByTestId } = render(<HomeHeader {...defaultProps} />);
-    expect(getByTestId('logo-mascot')).toBeTruthy();
+    expect(getByTestId('sazon-mascot')).toBeTruthy();
   });
 
-  it('renders "Sazon Chef" brand text', () => {
+  it('renders "Sazon" + italic "Chef" brand text', () => {
     const { getByText } = render(<HomeHeader {...defaultProps} />);
-    expect(getByText('Sazon Chef')).toBeTruthy();
+    expect(getByText(/Sazon/)).toBeTruthy();
+    expect(getByText('Chef')).toBeTruthy();
   });
 
   it('calls onMascotPress when logo is tapped', () => {
-    const { UNSAFE_getAllByType } = render(<HomeHeader {...defaultProps} />);
-    fireEvent.press(UNSAFE_getAllByType(TouchableOpacity)[0]);
-    expect(defaultProps.onMascotPress).toHaveBeenCalledTimes(1);
+    const { getByText } = render(<HomeHeader {...defaultProps} />);
+    fireEvent.press(getByText(/Sazon/));
+    expect(defaultProps.onMascotPress).toHaveBeenCalled();
   });
 
   it('renders without crashing', () => {
@@ -59,70 +61,18 @@ describe('HomeHeader', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  describe('Filters button', () => {
-    it('does not render filters button when onFilterPress is not provided', () => {
-      const { queryByText } = render(<HomeHeader {...defaultProps} />);
-      expect(queryByText('Filters')).toBeNull();
-    });
+  it('accepts deprecated onFilterPress / activeFilterCount for back-compat', () => {
+    const { toJSON } = render(
+      <HomeHeader {...defaultProps} onFilterPress={() => {}} activeFilterCount={2} />,
+    );
+    expect(toJSON()).toBeTruthy();
+  });
 
-    it('renders filters button when onFilterPress is provided', () => {
-      const { getByText } = render(
-        <HomeHeader {...defaultProps} onFilterPress={jest.fn()} />
-      );
-      expect(getByText('Filters')).toBeTruthy();
-    });
-
-    it('calls onFilterPress when filters button is tapped', () => {
-      const onFilterPress = jest.fn();
-      const { getByText } = render(
-        <HomeHeader {...defaultProps} onFilterPress={onFilterPress} />
-      );
-      fireEvent.press(getByText('Filters'));
-      expect(onFilterPress).toHaveBeenCalledTimes(1);
-    });
-
-    it('shows active filter count badge when activeFilterCount > 0', () => {
-      const { getByText } = render(
-        <HomeHeader
-          {...defaultProps}
-          onFilterPress={jest.fn()}
-          activeFilterCount={3}
-        />
-      );
-      expect(getByText('3')).toBeTruthy();
-    });
-
-    it('shows badge with 0 when activeFilterCount is 0', () => {
-      const { getByText } = render(
-        <HomeHeader
-          {...defaultProps}
-          onFilterPress={jest.fn()}
-          activeFilterCount={0}
-        />
-      );
-      expect(getByText('0')).toBeTruthy();
-    });
-
-    it('has correct accessibility label with active filters', () => {
-      const { getByLabelText } = render(
-        <HomeHeader
-          {...defaultProps}
-          onFilterPress={jest.fn()}
-          activeFilterCount={2}
-        />
-      );
-      expect(getByLabelText('Filters, 2 active')).toBeTruthy();
-    });
-
-    it('has correct accessibility label without active filters', () => {
-      const { getByLabelText } = render(
-        <HomeHeader
-          {...defaultProps}
-          onFilterPress={jest.fn()}
-          activeFilterCount={0}
-        />
-      );
-      expect(getByLabelText('Filters, 0 active')).toBeTruthy();
-    });
+  it('renders a Surprise Me pill when onSurpriseMe is provided', () => {
+    const onSurpriseMe = jest.fn();
+    const { getByLabelText } = render(
+      <HomeHeader {...defaultProps} onSurpriseMe={onSurpriseMe} />,
+    );
+    expect(getByLabelText('Surprise Me')).toBeTruthy();
   });
 });
