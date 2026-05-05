@@ -354,6 +354,9 @@ model RecipeInstruction {
   recipeId String
   text     String
   step     Int
+  // ROADMAP 4.0 C2 — optional inline swap; surfaced only when it matches user gap.
+  // JSON shape: {type: 'fiber'|'protein'|'calorie', text: string, deltaMacro: {fiber?: number, protein?: number, calories?: number}}
+  healthierSwap String?
 
   @@map("recipe_instructions")
 }
