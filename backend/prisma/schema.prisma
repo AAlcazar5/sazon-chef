@@ -90,6 +90,9 @@ model User {
   cancelAtPeriodEnd       Boolean  @default(false)
   revenueCatWebhookEvents RevenueCatWebhookEvent[]
 
+  // ROADMAP 4.0 E9: Health platform integration (HealthKit / Health Connect)
+  healthIntegration       HealthIntegration?
+
   // Group 8: Revenue Optimization
   cancellationSurveys     CancellationSurvey[]
 
@@ -1014,6 +1017,26 @@ model StripeWebhookEvent {
   @@index([userId])
   @@index([type])
   @@map("stripe_webhook_events")
+}
+
+// ROADMAP 4.0 E9: Health platform integration. Per-user record of which
+// platform is wired up + which signals are enabled. Read-only at v1; meal
+// write-back gated behind a separate Apple review checkpoint.
+model HealthIntegration {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform              String   // "healthkit" | "healthconnect"
+  weightSyncEnabled     Boolean  @default(false)
+  bodyCompositionSyncEnabled Boolean @default(false)
+  activitySyncEnabled   Boolean  @default(false)
+  sleepSyncEnabled      Boolean  @default(false)
+  mealWriteEnabled      Boolean  @default(false) // gated until Apple checkpoint
+  lastSyncAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("health_integrations")
 }
 
 // ROADMAP 4.0 E4: RevenueCat webhook event log (mirrors StripeWebhookEvent)
