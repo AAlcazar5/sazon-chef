@@ -24,7 +24,8 @@ import PlateMenuExportButton, {
 } from '../../components/recipe/PlateMenuExportButton';
 import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
 import HealthDisclaimer from '../../components/legal/HealthDisclaimer';
-import { recipeApi } from '../../lib/api';
+import NutritionCard, { type NutritionAggregate } from '../../components/recipe/NutritionCard';
+import { recipeApi, nutritionApi } from '../../lib/api';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { Pastel, PastelDark, Accent } from '../../constants/Colors';
 
@@ -83,6 +84,7 @@ export default function RecipeIdScreen() {
   const [recipe, setRecipe] = useState<RecipeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [variationsVisible, setVariationsVisible] = useState(false);
+  const [nutrition, setNutrition] = useState<NutritionAggregate | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +103,24 @@ export default function RecipeIdScreen() {
         if (!cancelled) {
           setIsLoading(false);
         }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  // D14: lazy-load the nutrient aggregate alongside the recipe. Independent
+  // of the main recipe fetch — failure here is silent (the card just hides).
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await nutritionApi.fetchRecipe(id);
+        if (!cancelled) {
+          setNutrition((res?.data?.aggregate as unknown as NutritionAggregate) ?? null);
+        }
+      } catch {
+        if (!cancelled) setNutrition(null);
       }
     })();
     return () => { cancelled = true; };
@@ -287,6 +307,9 @@ export default function RecipeIdScreen() {
               {`${Math.round(recipe.calories)} cal · ${Math.round(recipe.protein ?? 0)}g pro · ${Math.round(recipe.carbs ?? 0)}g carbs · ${Math.round(recipe.fat ?? 0)}g fat`}
             </Text>
           ) : null}
+
+          {/* D14: discovery-mode nutrient breakdown */}
+          <NutritionCard recipeId={recipe.id} aggregate={nutrition} />
 
           {/* Instructions */}
           {recipe.instructions && recipe.instructions.length > 0 && (

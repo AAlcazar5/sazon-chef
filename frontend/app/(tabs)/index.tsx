@@ -31,6 +31,7 @@ import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoveryStrip';
+import NutritionStrip from '../../components/today/NutritionStrip';
 import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
@@ -77,7 +78,7 @@ import { useDarkFeed } from '../../hooks/useDarkFeed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubscription } from '../../hooks/useSubscription';
 import PremiumUpsellCard from '../../components/premium/PremiumUpsellCard';
-import { searchApi } from '../../lib/api';
+import { searchApi, nutritionApi, type DailyNutritionSnapshot } from '../../lib/api';
 
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
@@ -109,6 +110,21 @@ export default function HomeScreen() {
   // Quick meals and perfect matches state managed by extracted hooks (defined after filters/mealPrepMode)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
   const [initialRecipesLoaded, setInitialRecipesLoaded] = useState(false); // Track if we've loaded initial recipes
+
+  // ROADMAP 4.0 D14 — daily nutrient snapshot for the discovery strip.
+  const [dailyNutrition, setDailyNutrition] = useState<DailyNutritionSnapshot | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await nutritionApi.fetchDaily();
+        if (!cancelled) setDailyNutrition(res?.data?.snapshot ?? null);
+      } catch {
+        if (!cancelled) setDailyNutrition(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Recipe Roulette state
   const [showRouletteModal, setShowRouletteModal] = useState(false);
@@ -951,6 +967,9 @@ export default function HomeScreen() {
             // ROADMAP 4.0 A1-b — expand to today + yesterday view (placeholder route)
           }}
         />
+
+        {/* ROADMAP 4.0 D14 — today's nutrient roll-up (top-6 with DV%) */}
+        <NutritionStrip snapshot={dailyNutrition} />
 
         {/* ROADMAP 4.0 F9 — Cohort social proof (hides on cold start) */}
         <CohortSocialProofPill />
