@@ -14,7 +14,7 @@ import SkeletonLoader from '../../components/ui/SkeletonLoader';
 import ScreenGradient from '../../components/ui/ScreenGradient';
 import FrostedHeader from '../../components/ui/FrostedHeader';
 import { router, useLocalSearchParams } from 'expo-router';
-import { recipeApi } from '../../lib/api';
+import { recipeApi, shoppingListApi, pantryApi } from '../../lib/api';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { Spacing, ComponentSpacing } from '../../constants/Spacing';
@@ -58,6 +58,9 @@ import {
   RecurringMealModal,
   RecurringMealsManagerModal,
   MealPlanEmptyState,
+  PantryInlineStrip,
+  PantrySheet,
+  WeeklyNutritionGlance,
   GoalModeSelector,
   MealRequestModal,
   LogFoodSheet,
@@ -389,6 +392,165 @@ export default function MealPlanScreen() {
   const memoizedGroupedMeals = useMemo(() => groupMealsByType(hourlyMeals), [hourlyMeals]);
   const formattedSelectedDate = useMemo(() => formatDate(selectedDate), [selectedDate]);
 
+  // ── ROADMAP 4.0 A2-b: Shop this week pill — count unpurchased items on the active list ──
+  const [missingShopCount, setMissingShopCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchShopCount = async () => {
+      try {
+        const response = await shoppingListApi.getShoppingLists();
+        const lists = response.data || [];
+        const activeList = lists.find((l: { isActive?: boolean }) => l.isActive) || lists[0];
+        if (!cancelled) {
+          if (activeList?.items) {
+            const unpurchased = activeList.items.filter((i: { purchased?: boolean }) => !i.purchased).length;
+            setMissingShopCount(unpurchased);
+          } else {
+            setMissingShopCount(0);
+          }
+        }
+      } catch {
+        if (!cancelled) setMissingShopCount(0);
+      }
+    };
+    fetchShopCount();
+    return () => {
+      cancelled = true;
+    };
+  }, [weeklyPlan?.mealPlanId]);
+
+  const handleShopThisWeek = useCallback(() => {
+    router.push('/shopping-list' as never);
+  }, []);
+
+  // ── ROADMAP 4.0 A2-c/A2-d: Pantry inline strip + sheet state ──
+  const [pantryItems, setPantryItems] = useState<Array<{ id: string; name: string; category?: string; expiresAt?: string }>>([]);
+  const [pantryLoading, setPantryLoading] = useState(false);
+  const [showPantrySheet, setShowPantrySheet] = useState(false);
+
+  const loadPantry = useCallback(async () => {
+    setPantryLoading(true);
+    try {
+      const response = await pantryApi.getAll();
+      const items = ((response.data as any)?.items ?? response.data ?? []) as Array<{ id: string; name: string; category?: string; expiresAt?: string }>;
+      setPantryItems(Array.isArray(items) ? items : []);
+    } catch {
+      setPantryItems([]);
+    } finally {
+      setPantryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPantry();
+  }, [loadPantry]);
+
+  const pantryExpiringCount = useMemo(() => {
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    return pantryItems.filter((it) => {
+      if (!it.expiresAt) return false;
+      const t = new Date(it.expiresAt).getTime();
+      return Number.isFinite(t) && t - now <= sevenDaysMs && t - now > 0;
+    }).length;
+  }, [pantryItems]);
+
+  const handleOpenPantrySheet = useCallback(() => setShowPantrySheet(true), []);
+  const handleClosePantrySheet = useCallback(() => setShowPantrySheet(false), []);
+
+  const handleRemovePantryItem = useCallback(
+    async (id: string) => {
+      try {
+        await pantryApi.removeItem(id);
+        setPantryItems((prev) => prev.filter((it) => it.id !== id));
+      } catch {
+        // silently ignore — refetch on next mount
+      }
+    },
+    []
+  );
+
+  const handleWhatCanIMake = useCallback(() => {
+    setShowPantrySheet(false);
+    router.push('/build-a-plate?pantryOnly=true' as never);
+  }, []);
+
+  // ── ROADMAP 4.0 A2-a: Auto-generated week theme line (cuisine family mode) ──
+  const weekTheme = useMemo(() => {
+    const counts = new Map<string, number>();
+    const plan = weeklyPlan?.weeklyPlan ?? {};
+    Object.keys(plan).forEach((dateKey) => {
+      const day = (plan as any)[dateKey];
+      const meals = day?.meals ?? {};
+      Object.values(meals).forEach((m: any) => {
+        const recipe = m?.recipe ?? m;
+        const cuisine = recipe?.cuisine;
+        if (typeof cuisine === 'string' && cuisine.length > 0) {
+          counts.set(cuisine, (counts.get(cuisine) ?? 0) + 1);
+        }
+      });
+    });
+    let topCuisine: string | undefined;
+    let topCount = 0;
+    counts.forEach((count, cuisine) => {
+      if (count > topCount) {
+        topCount = count;
+        topCuisine = cuisine;
+      }
+    });
+    return topCount >= 3 ? topCuisine : undefined;
+  }, [weeklyPlan]);
+
+  // ── ROADMAP 4.0 A2-e: Weekly nutrition glance ──
+  // Lightweight derivation from existing weeklyPlan; full nutrient aggregation lives in Tier D13.
+  const weeklyGlance = useMemo(() => {
+    const cuisines = new Set<string>();
+    const ingredientNames = new Set<string>();
+    const colors = new Set<string>();
+    const plan = weeklyPlan?.weeklyPlan ?? {};
+    Object.keys(plan).forEach((dateKey) => {
+      const day = (plan as any)[dateKey];
+      const meals = day?.meals ?? {};
+      Object.values(meals).forEach((m: any) => {
+        if (!m) return;
+        const recipe = m.recipe ?? m;
+        if (recipe?.cuisine) cuisines.add(String(recipe.cuisine).toLowerCase());
+        const ings = recipe?.ingredients ?? [];
+        if (Array.isArray(ings)) {
+          ings.forEach((ing: any) => {
+            const name = typeof ing === 'string' ? ing : ing?.name;
+            if (name) ingredientNames.add(String(name).toLowerCase());
+          });
+        }
+      });
+    });
+    // Color proxy: map common ingredient keywords to color buckets.
+    const colorKeywords: Record<string, string> = {
+      red: 'red', tomato: 'red', strawberry: 'red',
+      green: 'green', spinach: 'green', kale: 'green', broccoli: 'green', cucumber: 'green',
+      orange: 'orange', carrot: 'orange', squash: 'orange', sweet_potato: 'orange',
+      yellow: 'yellow', corn: 'yellow', lemon: 'yellow', banana: 'yellow',
+      purple: 'purple', eggplant: 'purple', cabbage: 'purple', blueberry: 'purple',
+      white: 'white', cauliflower: 'white', onion: 'white', garlic: 'white', mushroom: 'white',
+    };
+    ingredientNames.forEach((n) => {
+      Object.keys(colorKeywords).forEach((kw) => {
+        if (n.includes(kw)) colors.add(colorKeywords[kw]);
+      });
+    });
+    return {
+      cuisineCount: cuisines.size,
+      ingredientCount: ingredientNames.size,
+      colorCount: colors.size,
+    };
+  }, [weeklyPlan]);
+
+  const handleOpenWeeklyStories = useCallback(() => {
+    // ROADMAP 4.0 A3-d Stories view lives in Kitchen tab; route lands there.
+    router.push('/(tabs)/cookbook?view=stories' as never);
+  }, []);
+
   // ── 10J: Variety enforcer — fetch variety score for the active plan ──
   const activeMealPlanId: string | null = weeklyPlan?.mealPlanId ?? null;
   const { result: varietyResult, refresh: refreshVariety } = useVarietyScore(activeMealPlanId);
@@ -598,6 +760,9 @@ export default function MealPlanScreen() {
           isSelectedDateToday={isToday(selectedDate)}
           isDark={isDark}
           onJumpToToday={handleJumpToToday}
+          missingShopCount={missingShopCount}
+          onShopThisWeek={handleShopThisWeek}
+          weekTheme={weekTheme}
         />
 
         <QuickActionsBar
@@ -845,8 +1010,33 @@ export default function MealPlanScreen() {
               isDark={isDark}
               onOptimize={handleOptimizeCost}
             />
+
+            {/* ROADMAP 4.0 A2-e — weekly nutrition glance */}
+            <WeeklyNutritionGlance
+              cuisineCount={weeklyGlance.cuisineCount}
+              ingredientCount={weeklyGlance.ingredientCount}
+              colorCount={weeklyGlance.colorCount}
+              onPress={handleOpenWeeklyStories}
+            />
+
+            {/* ROADMAP 4.0 A2-c — pantry inline strip */}
+            <PantryInlineStrip
+              itemCount={pantryItems.length}
+              expiringSoonCount={pantryExpiringCount}
+              onPress={handleOpenPantrySheet}
+            />
           </View>
         </ScrollView>
+
+        {/* ROADMAP 4.0 A2-d — pantry sheet */}
+        <PantrySheet
+          visible={showPantrySheet}
+          onClose={handleClosePantrySheet}
+          items={pantryItems}
+          loading={pantryLoading}
+          onRemoveItem={handleRemovePantryItem}
+          onWhatCanIMake={handleWhatCanIMake}
+        />
 
         {/* Modals */}
         <MealSnackSelectorModal

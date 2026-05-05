@@ -57,6 +57,13 @@ export type { GoalMode } from './GoalModeSelector';
 export { default as MealPlanEmptyState } from './MealPlanEmptyState';
 export { default as SurpriseBadge } from './SurpriseBadge';
 
+// ROADMAP 4.0 Tier A2 — Week tab absorbs Shopping + Pantry
+export { default as ShopThisWeekPill } from './ShopThisWeekPill';
+export { default as PantryInlineStrip } from './PantryInlineStrip';
+export { default as PantrySheet } from './PantrySheet';
+export type { PantrySheetItem } from './PantrySheet';
+export { default as WeeklyNutritionGlance } from './WeeklyNutritionGlance';
+
 // Group 10C: Find Me a Meal
 export { default as MealRequestModal } from './MealRequestModal';
 export { default as MealRequestResults } from './MealRequestResults';

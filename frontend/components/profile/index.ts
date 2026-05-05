@@ -18,3 +18,7 @@ export { default as ProfileStatWidgets } from './ProfileStatWidgets';
 export { default as CookingJourneyCard } from './CookingJourneyCard';
 export { default as KitchenIQSection } from './KitchenIQSection';
 export { default as CoachMemoryCard } from './CoachMemoryCard';
+
+// ROADMAP 4.0 Tier A0-a / A0-b — Profile-as-sheet
+export { default as ProfileSheet } from './ProfileSheet';
+export { default as ProfileAvatarButton } from './ProfileAvatarButton';

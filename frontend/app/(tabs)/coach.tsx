@@ -81,7 +81,7 @@ export default function CoachScreen() {
   const [composerText, setComposerText] = useState('');
   const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [pantryConfirm, setPantryConfirm] = useState<CoachIdentifiedIngredient[] | null>(null);
-  const [activeTitle, setActiveTitle] = useState<string>('Sazon Coach');
+  const [activeTitle, setActiveTitle] = useState<string>('Sazon');
 
   const stream = useCoachStream();
   const attachments = useCoachAttachments();
@@ -117,7 +117,7 @@ export default function CoachScreen() {
   const openNewConversation = useCallback((seed?: string) => {
     stream.reset();
     setComposerText(seed ?? '');
-    setActiveTitle('Sazon Coach');
+    setActiveTitle('Sazon');
     setView('conversation');
   }, [stream]);
 
@@ -127,7 +127,7 @@ export default function CoachScreen() {
       const detail = await coachApi.getConversation(id);
       stream.setConversationId(detail.id);
       stream.setMessages(detail.messages.map(m => ({ id: m.id, role: m.role, content: m.content })));
-      setActiveTitle(detail.title || 'Sazon Coach');
+      setActiveTitle(detail.title || 'Sazon');
     } catch {
       // Conversation may have been deleted; reset to fresh.
       stream.reset();
@@ -251,7 +251,7 @@ export default function CoachScreen() {
           </HapticTouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: text }]} numberOfLines={1}>
-              Sazon Coach
+              Sazon
             </Text>
             <Text style={[styles.headerModel, { color: subtle }]} numberOfLines={1}>
               {flags.modelLabel}
@@ -407,7 +407,7 @@ export default function CoachScreen() {
     <View style={[styles.flex, { backgroundColor: screenBg }]}>
       <View style={[styles.header, { backgroundColor: screenBg }]}>
         <View style={styles.headerBtn} />
-        <Text style={[styles.headerTitle, { color: text }]}>Coach</Text>
+        <Text style={[styles.headerTitle, { color: text }]}>Sazon</Text>
         <HapticTouchableOpacity
           onPress={() => openNewConversation()}
           accessibilityLabel="New coach conversation"

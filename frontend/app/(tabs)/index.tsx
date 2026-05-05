@@ -32,6 +32,7 @@ import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import { NewToYouSection } from '../../components/home/NewToYouSection';
 import { BrowseByFamilySection, type FamilyEntry } from '../../components/home/BrowseByFamilySection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
+import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoveryStrip';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 // PantryMatchCard removed — editorial v2 absorbs pantry info into subtitle
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
@@ -861,6 +862,17 @@ export default function HomeScreen() {
       >
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
+
+        {/* ROADMAP 4.0 A1-b — Nutrition discovery strip (yesterday's plate at a glance) */}
+        <NutritionDiscoveryStrip
+          cuisineCount={0}
+          ingredientCount={0}
+          colorCount={0}
+          topMineral={null}
+          onPress={() => {
+            // ROADMAP 4.0 A1-b — expand to today + yesterday view (placeholder route)
+          }}
+        />
 
         {/* 10Y entry-point: contextual Ask Sazon Coach card above the recipe grid */}
         <AskSazonHomeCard />
