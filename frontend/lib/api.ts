@@ -1950,6 +1950,20 @@ export const discoveryMilestonesApi = {
   list: () => apiClient.get<MilestonesListPayload>('/discovery-milestones'),
 };
 
+// ─── Cooking history stats (J11) ─────────────────────────────────────────────
+
+export interface MostRecentCookPayload {
+  mostRecent: {
+    cookedAt: string;
+    recipe: { id: string; title: string; cuisine: string | null };
+  } | null;
+}
+
+export const cookingHistoryStatsApi = {
+  mostRecent: () =>
+    apiClient.get<MostRecentCookPayload>('/cooking-logs/most-recent'),
+};
+
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
 
 export const stripeApi = {

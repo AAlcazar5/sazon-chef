@@ -34,6 +34,7 @@ import { cohortSocialProofRoutes } from '@modules/cohortSocialProof/cohortSocial
 import { quipsRoutes } from '@modules/quips/quipsRoutes';
 import { firstCookStatsRoutes } from '@modules/firstCookStats/firstCookStatsRoutes';
 import { discoveryMilestonesRoutes } from '@modules/discoveryMilestones/discoveryMilestonesRoutes';
+import { cookingHistoryStatsRoutes } from '@modules/cookingHistoryStats/cookingHistoryStatsRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { authenticateToken } from '@modules/auth/authMiddleware';
@@ -190,6 +191,8 @@ app.use('/api/quips', authenticateToken, quipsRoutes);
 app.use('/api/first-cook-stats', authenticateToken, firstCookStatsRoutes);
 // ROADMAP 4.0 J5 — discovery milestones
 app.use('/api/discovery-milestones', authenticateToken, discoveryMilestonesRoutes);
+// ROADMAP 4.0 J11 — cooking history stats (most-recent cook for Today greeting)
+app.use('/api/cooking-logs', authenticateToken, cookingHistoryStatsRoutes);
 app.use('/api/health-metrics', authenticateToken, healthMetricsRoutes);
 app.use('/api/weight-goal', authenticateToken, weightGoalRoutes);
 app.use('/api/meal-plan', authenticateToken, mealPlanRoutes);

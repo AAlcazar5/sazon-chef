@@ -36,6 +36,7 @@ import FriendsFeedSection from '../../components/today/FriendsFeedSection';
 import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import SazonQuipCard from '../../components/today/SazonQuipCard';
+import FirstOfDayNote from '../../components/home/FirstOfDayNote';
 import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
 import CohortSocialProofPill from '../../components/today/CohortSocialProofPill';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
@@ -80,7 +81,7 @@ import { useDarkFeed } from '../../hooks/useDarkFeed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubscription } from '../../hooks/useSubscription';
 import PremiumUpsellCard from '../../components/premium/PremiumUpsellCard';
-import { searchApi, nutritionApi, type DailyNutritionSnapshot } from '../../lib/api';
+import { searchApi, nutritionApi, cookingHistoryStatsApi, type DailyNutritionSnapshot } from '../../lib/api';
 
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
@@ -123,6 +124,22 @@ export default function HomeScreen() {
         if (!cancelled) setDailyNutrition(res?.data?.snapshot ?? null);
       } catch {
         if (!cancelled) setDailyNutrition(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ROADMAP 4.0 J11 — most-recent-cook cuisine for the first-of-day greeting.
+  const [lastCookCuisine, setLastCookCuisine] = useState<string>('');
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await cookingHistoryStatsApi.mostRecent();
+        const payload = (res?.data ?? res) as { mostRecent?: { recipe?: { cuisine?: string | null } | null } | null } | undefined;
+        if (!cancelled) setLastCookCuisine(payload?.mostRecent?.recipe?.cuisine ?? '');
+      } catch {
+        if (!cancelled) setLastCookCuisine('');
       }
     })();
     return () => { cancelled = true; };
@@ -958,6 +975,9 @@ export default function HomeScreen() {
       >
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
+
+        {/* ROADMAP 4.0 J11 — first-of-day greeting note (renders once per local date) */}
+        <FirstOfDayNote lastCookCuisine={lastCookCuisine} />
 
         {/* ROADMAP 4.0 A1-b — Nutrition discovery strip (yesterday's plate at a glance) */}
         <NutritionDiscoveryStrip
