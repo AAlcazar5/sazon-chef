@@ -7,14 +7,7 @@ import { cookbookCache, type PendingCookbookOperation } from '../lib/cookbookCac
 import { useNetworkStatus } from './useNetworkStatus';
 import type { SavedRecipe } from '../types';
 
-type ViewMode =
-  | 'saved'
-  | 'liked'
-  | 'disliked'
-  | 'collections'
-  | 'discover'
-  | 'journey'
-  | 'stories';
+import type { CookbookViewMode as ViewMode } from '../types/kitchen';
 
 const PAGE_SIZE = 50;
 

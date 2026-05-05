@@ -25,24 +25,8 @@ const SORT_OPTIONS: { key: CollectionSortMode; label: string }[] = [
 interface CollectionPickerProps {
   visible: boolean;
   onClose: () => void;
-  viewMode:
-    | 'saved'
-    | 'liked'
-    | 'disliked'
-    | 'collections'
-    | 'discover'
-    | 'journey'
-    | 'stories';
-  onViewModeChange: (
-    mode:
-      | 'saved'
-      | 'liked'
-      | 'disliked'
-      | 'collections'
-      | 'discover'
-      | 'journey'
-      | 'stories',
-  ) => void;
+  viewMode: import('../../types/kitchen').CookbookViewMode;
+  onViewModeChange: (mode: import('../../types/kitchen').CookbookViewMode) => void;
   collections: Collection[];
   selectedListId: string | null;
   onSelectList: (listId: string | null) => void;

@@ -24,14 +24,10 @@ export interface CookbookFilters {
 
 export type { Collection } from '../../types';
 
-export type ViewMode =
-  | 'saved'
-  | 'liked'
-  | 'disliked'
-  | 'collections'
-  | 'discover'
-  | 'journey'
-  | 'stories';
+// ViewMode union centralized in types/kitchen.ts; re-exported here for
+// backwards compatibility with existing call sites.
+import type { ViewMode } from '../../types/kitchen';
+export type { ViewMode };
 export type SortOption = 'recent' | 'alphabetical' | 'cuisine' | 'matchScore' | 'cookTime' | 'rating' | 'mostCooked';
 
 interface CookbookFilterModalProps {
