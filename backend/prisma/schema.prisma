@@ -1473,6 +1473,28 @@ model CuisineAdjacencyWeight {
   @@map("cuisine_adjacency_weights")
 }
 
+// F4 — Per-user adjacency weights v2.
+// Sibling table to CuisineAdjacencyWeight that captures per-user signal
+// strengths. Used to bias recommendations toward each user's individual
+// adjacency map (one user may strongly bond Persian↔Lebanese while another
+// keeps them separate). Read-time blending: 70% global + 30% per-user when
+// per-user signal count >= 3, otherwise fall back to global only.
+model UserCuisineAdjacencyWeight {
+  id              String   @id @default(cuid())
+  userId          String
+  sourceCuisine   String
+  targetCuisine   String
+  weight          Float    @default(0)
+  signalCount     Int      @default(0)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, sourceCuisine, targetCuisine])
+  @@index([userId])
+  @@index([userId, sourceCuisine])
+  @@map("user_cuisine_adjacency_weights")
+}
+
 // C12 — Adaptive notification log.
 // Cadence-aware push: only at the user's typical cook hour, max 3/day,
 // content adapts to pantry + remaining macros + cuisine variety state.
