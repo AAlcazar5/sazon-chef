@@ -31,6 +31,7 @@ import { weeklyRecapRoutes } from '@modules/recap/weeklyRecapRoutes';
 import { culturalPrimerRoutes } from '@modules/culturalPrimer/culturalPrimerRoutes';
 import { drinkPairingRoutes } from '@modules/drinkPairing/drinkPairingRoutes';
 import { cohortSocialProofRoutes } from '@modules/cohortSocialProof/cohortSocialProofRoutes';
+import { quipsRoutes } from '@modules/quips/quipsRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { authenticateToken } from '@modules/auth/authMiddleware';
@@ -179,6 +180,8 @@ app.use('/api/cultural-primer', authenticateToken, culturalPrimerRoutes);
 app.use('/api/drink-pairing', authenticateToken, drinkPairingRoutes);
 // ROADMAP 4.0 F9 — cohort social proof
 app.use('/api/cohort-social-proof', authenticateToken, cohortSocialProofRoutes);
+// ROADMAP 4.0 J7 — Sazon daily quip
+app.use('/api/quips', authenticateToken, quipsRoutes);
 app.use('/api/health-metrics', authenticateToken, healthMetricsRoutes);
 app.use('/api/weight-goal', authenticateToken, weightGoalRoutes);
 app.use('/api/meal-plan', authenticateToken, mealPlanRoutes);

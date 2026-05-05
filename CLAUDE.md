@@ -8,11 +8,12 @@ The user has graduated from optimization (cut/bulk/maintain) to **enjoyment + no
 
 **Read `plans/persona.md` before any product decision.** It's the loud, opinionated manifesto for who Sazon serves and who it doesn't.
 
-Three driving principles:
+Four driving principles:
 
 1. **Hypersonalization** — no two users see the same thing. Today's hero, Build-a-Plate slots, Kitchen ranking, recipe titles, even error copy all bend to who's looking. If a feature can be parameterized by user state, it must be.
 2. **Adaptive iteration** — every signal (cook, save, swap, rate, skip, scroll-past, pre-cook check-in, post-cook nutrition view) refines the next recommendation. The app should feel smarter today than yesterday. Static templates and "popular recipes" feeds are the antipattern.
 3. **Discovery, not optimization** — present nutrition data as a curiosity surface ("today's plate hit 18 ingredients, top mineral was magnesium"), never as a verdict ("you're under your iron target"). Lifestyle voice, not personal trainer.
+4. **Joy obsession** — utility is the floor, delight is the bar. Every feature must have a designed peak moment — a chef-kiss, a sparkle, a mascot beat, a witty line — that rewards the user for showing up. If a moment could be a screenshot a user sends to a friend, design it; if it can't, sharpen it. Toasts are not peaks. See `REDESIGN_PHILOSOPHY.md` peak-moment table + `ROADMAP_4.0.md` Tier J for the active backlog.
 
 **How existing systems serve N=1:**
 - **Build-a-Plate (10X)** — the flagship N=1 surface. Slots filled by *this user's* taste/pantry/macros/leftovers, not a static template.
@@ -139,7 +140,7 @@ See `docs/COMMAND-AGENT-MAP.md` for slash command → agent mappings.
 6. **Copy = texting a friend** — "I'm allergic" not "strict restriction"
 
 ### Roadmap (`ROADMAP_4.0.md`)
-The active roadmap lives in the project root (gitignored, local-only). Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps. `plans/ROADMAP_3.0.md` is the **closed** completion record for everything shipped through Group 11 Phase 3 (sits next to `plans/ROADMAP_2.0.md` and `plans/ROADMAP_2.5.md`); pre-launch ops live in `plans/launch-marketing.md` + `plans/launch-checklist.md`.
+The active roadmap lives in the project root (gitignored, local-only). Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps. `plans/plan-archives/ROADMAP_3.0.md` is the **closed** completion record for everything shipped through Group 11 Phase 3 (sits next to `plans/plan-archives/ROADMAP_2.0.md` and `plans/plan-archives/ROADMAP_2.5.md`); pre-launch ops live in `plans/launch-marketing.md` + `plans/launch-checklist.md`. Other historical specs (REDESIGN_ROADMAP, ML/optimization post-mortems, recipe-DB architecture, meal-plan refactor, UNIQUE_IMAGES) live in `plans/plan-archives/` — read for historical context only.
 
 **Roadmap Hygiene — Non-Negotiable:**
 - Mark every `- [ ]` item as `- [x]` **immediately** when its implementation is complete — not at the end of a session, not in a batch later.
@@ -179,7 +180,7 @@ Check here before planning new features — prior architectural decisions may al
 - [backend-hardening.md](plans/backend-hardening.md) — pre-launch security audit (C1/C2/H2/H5 + controller split + logger migration)
 - [launch-marketing.md](plans/launch-marketing.md) — TikTok/Instagram, blog posts, Reddit, Discord, influencers, waitlist, beta, Product Hunt, launch playbook
 - [launch-checklist.md](plans/launch-checklist.md) — App Store Connect, Play Console, Ko-fi, Cloudflare/Upstash/UptimeRobot/staging/backups, Privacy/ToS hosting, ASO keywords
-- [5xUpgradeRoadmap.md](plans/5xUpgradeRoadmap.md) — local-only Pro 5x improvement queue (retired)
+- [5xUpgradeRoadmap.md](plans/plan-archives/5xUpgradeRoadmap.md) — local-only Pro 5x improvement queue (retired)
 - [tonight-tasks.md](plans/tonight-tasks.md) — overnight agent task queue (refill nightly)
 
 ## Key Context
@@ -248,6 +249,7 @@ A feature is done when ALL of the following are true:
 - [ ] ROADMAP_4.0.md `[ ]` items checked `[x]` immediately
 - [ ] No banned patterns introduced (see Banned Patterns above)
 - [ ] Both iOS and Android considered for any UI change
+- [ ] **Joy bar (UI features only):** the screen has a designed peak moment, not just a working state. Stop and ask: *would a user screenshot this and send it to a friend?* If no, sharpen it before shipping.
 
 ## Parallel Execution Patterns
 
