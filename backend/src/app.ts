@@ -45,6 +45,7 @@ import { revenuecatRoutes } from '@modules/revenuecat/revenuecatRoutes';
 import { nutritionRoutes } from '@modules/nutrition/nutritionRoutes';
 import { followsRoutes } from '@modules/follows/followsRoutes';
 import { cuisineDessertRoutes } from '@modules/cuisineDessert/cuisineDessertRoutes';
+import { waitlistRoutes } from '@modules/waitlist/waitlistRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 import { prisma } from '@/lib/prisma';
 import { cacheService } from '@/utils/cacheService';
@@ -224,6 +225,8 @@ app.use('/api/webhooks/revenuecat', revenuecatRoutes);
 app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/follows', followsRoutes);
 app.use('/api/cuisine-desserts', cuisineDessertRoutes);
+// Pre-launch waitlist signup (public, no auth) — sazonchef.com landing page
+app.use('/api/waitlist', waitlistRoutes);
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 
