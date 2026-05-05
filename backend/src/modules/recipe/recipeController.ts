@@ -4946,8 +4946,12 @@ export const recipeController = {
         action?: string;
       };
 
-      if (!cravingQuery || !recipeId || !['tap', 'save', 'cook'].includes(action || '')) {
-        return res.status(400).json({ error: 'cravingQuery, recipeId, and action (tap|save|cook) are required' });
+      // ROADMAP 4.0 F2 — accept 'no_results' for cuisine-search-no-results telemetry.
+      const VALID_ACTIONS = ['tap', 'save', 'cook', 'no_results'];
+      if (!cravingQuery || !recipeId || !VALID_ACTIONS.includes(action || '')) {
+        return res.status(400).json({
+          error: `cravingQuery, recipeId, and action (${VALID_ACTIONS.join('|')}) are required`,
+        });
       }
 
       await prisma.cravingSearchEvent.create({
