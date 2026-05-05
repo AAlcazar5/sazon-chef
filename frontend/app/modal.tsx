@@ -1008,6 +1008,7 @@ export default function RecipeModal() {
                 placeholder={{ thumbhash: undefined }}
                 transition={300}
                 contentFit="cover"
+                cachePolicy="memory-disk"
                 style={{ width: '100%', height: '100%' }}
               />
             </ReAnimated.View>
@@ -1801,6 +1802,7 @@ export default function RecipeModal() {
                         source={{ uri: optimizedImageUrl(similarRecipe.imageUrl) }}
                         style={{ width: '100%', height: 130, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
                         contentFit="cover"
+                        cachePolicy="memory-disk"
                       />
                     ) : (
                       <View

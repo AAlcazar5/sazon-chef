@@ -61,7 +61,7 @@ export function PantryMatchCard({ recipe, index, isDark, onPress }: Props) {
     >
       <View style={styles.photoWrap}>
         {recipe.imageUrl ? (
-          <Image source={{ uri: recipe.imageUrl }} style={styles.photo} contentFit="cover" />
+          <Image source={{ uri: recipe.imageUrl }} style={styles.photo} contentFit="cover" cachePolicy="memory-disk" />
         ) : (
           <View style={[styles.photo, styles.photoPlaceholder]}>
             <Text style={{ fontSize: 38 }}>{emoji}</Text>

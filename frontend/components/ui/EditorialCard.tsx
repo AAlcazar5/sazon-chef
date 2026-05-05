@@ -64,6 +64,7 @@ export function EditorialCard({ recipe, bg, titleColor, saved, onToggleSave, onP
           source={{ uri: recipe.imageUrl }}
           style={styles.photo}
           contentFit="cover"
+          cachePolicy="memory-disk"
         />
       </View>
 

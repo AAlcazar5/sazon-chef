@@ -2,6 +2,7 @@
 // Centralized error logging service with structured logging and severity levels
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { captureException as sentryCapture } from '../lib/sentry';
 
 /**
  * Error severity levels for categorization
@@ -242,8 +243,8 @@ export async function logError(
     // Store error locally
     await storeErrorLog(errorLog);
 
-    // In production, send to error monitoring service
-    // Example: Sentry.captureException(error, { extra: { ...context, category, severity } });
+    // Forward to Sentry (no-op if SENTRY_DSN unset or package missing)
+    sentryCapture(error);
   } catch (loggingError) {
     // Don't throw errors from error logging
     console.error('Failed to log error:', loggingError);

@@ -54,6 +54,7 @@ export default function PlateOfWeekCard() {
           source={{ uri: plate.imageUrl }}
           style={styles.heroImage}
           contentFit="cover"
+          cachePolicy="memory-disk"
           testID="plate-of-week-image"
         />
       ) : (

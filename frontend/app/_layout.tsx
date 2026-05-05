@@ -24,7 +24,11 @@ import { useShoppingListAppOpenCleanup } from '../hooks/useShoppingListAppOpenCl
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import LogoMascot from '../components/mascot/LogoMascot';
 import Sazon from '../components/mascot/Sazon';
+import { initSentry } from '../lib/sentry';
 import '../global.css';
+
+// Initialize Sentry once at module load — runs before any component renders.
+initSentry();
 
 function RootLayoutNav() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
