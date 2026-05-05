@@ -23,6 +23,13 @@ import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { QuickMealLogModal } from '../../components/meal-plan';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabBar';
 import { VoiceComposerModal } from '../../components/home';
+import {
+  buildSazonSeedForTab,
+  openSazonForTab,
+  LONG_PRESS_VOICE_MS,
+  LONG_PRESS_SAZON_MS,
+  type SazonShortcutTab,
+} from '../../lib/sazonTabShortcut';
 
 export default function TabLayout() {
   const { colors, theme } = useTheme();
@@ -368,15 +375,40 @@ export default function TabLayout() {
           tabBarButton: (btnProps) => {
             const { onPress, accessibilityState, children, style } = btnProps;
             const focused = accessibilityState?.selected ?? false;
+            // ROADMAP 4.0 A4-b/A4-e — Today tab long-press has dual thresholds:
+            //   1.0s → voice composer (existing 10X Phase 7 behavior)
+            //   1.8s → Sazon thread seeded with tonight context (new)
+            // We track press start; on release the elapsed duration picks one.
+            const pressStartRef = { current: 0 };
+            const sazonFiredRef = { current: false };
             return (
               <HapticTouchableOpacity
+                onPressIn={() => {
+                  pressStartRef.current = Date.now();
+                  sazonFiredRef.current = false;
+                }}
+                onPressOut={() => {
+                  const elapsed = Date.now() - pressStartRef.current;
+                  pressStartRef.current = 0;
+                  if (sazonFiredRef.current) return;
+                  if (elapsed >= LONG_PRESS_SAZON_MS) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                    sazonFiredRef.current = true;
+                    openSazonForTab('today');
+                  }
+                }}
                 onPress={(e: any) => onPress?.(e)}
                 onLongPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  setShowVoiceComposer(true);
+                  // Fires at native delayLongPress (~500ms) — re-check elapsed.
+                  const elapsed = Date.now() - pressStartRef.current;
+                  if (elapsed >= LONG_PRESS_VOICE_MS && elapsed < LONG_PRESS_SAZON_MS) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setShowVoiceComposer(true);
+                  }
                 }}
-                accessibilityLabel={focused ? 'Home tab, selected' : 'Home tab'}
-                accessibilityHint="Long press to compose a plate by voice"
+                delayLongPress={LONG_PRESS_VOICE_MS}
+                accessibilityLabel={focused ? 'Today tab, selected' : 'Today tab'}
+                accessibilityHint="Long press for voice; hold longer to ask Sazon"
                 accessibilityRole="button"
                 style={style as any}
               >
@@ -399,6 +431,27 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="book-outline" color={color} size={size} focused={focused} />
           ),
+          // ROADMAP 4.0 A4-d — long-press opens Sazon with affinity-seeded prompt.
+          tabBarButton: (btnProps) => {
+            const { onPress, accessibilityState, children, style } = btnProps;
+            const focused = accessibilityState?.selected ?? false;
+            return (
+              <HapticTouchableOpacity
+                onPress={(e: any) => onPress?.(e)}
+                onLongPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  openSazonForTab('kitchen');
+                }}
+                delayLongPress={LONG_PRESS_SAZON_MS}
+                accessibilityLabel={focused ? 'Kitchen tab, selected' : 'Kitchen tab'}
+                accessibilityHint="Long press to ask Sazon for something you'd love"
+                accessibilityRole="button"
+                style={style as any}
+              >
+                {children}
+              </HapticTouchableOpacity>
+            );
+          },
         }}
       />
       <Tabs.Screen
@@ -408,6 +461,27 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="calendar-outline" color={color} size={size} focused={focused} badgeDot={mealPlanHasUncooked} badgeColor={colors.primary} />
           ),
+          // ROADMAP 4.0 A4-c — long-press opens Sazon with this-week context.
+          tabBarButton: (btnProps) => {
+            const { onPress, accessibilityState, children, style } = btnProps;
+            const focused = accessibilityState?.selected ?? false;
+            return (
+              <HapticTouchableOpacity
+                onPress={(e: any) => onPress?.(e)}
+                onLongPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  openSazonForTab('week');
+                }}
+                delayLongPress={LONG_PRESS_SAZON_MS}
+                accessibilityLabel={focused ? 'Week tab, selected' : 'Week tab'}
+                accessibilityHint="Long press to ask Sazon why this plan"
+                accessibilityRole="button"
+                style={style as any}
+              >
+                {children}
+              </HapticTouchableOpacity>
+            );
+          },
         }}
       />
       <Tabs.Screen
