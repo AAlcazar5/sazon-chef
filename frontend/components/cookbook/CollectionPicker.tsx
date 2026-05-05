@@ -25,8 +25,24 @@ const SORT_OPTIONS: { key: CollectionSortMode; label: string }[] = [
 interface CollectionPickerProps {
   visible: boolean;
   onClose: () => void;
-  viewMode: 'saved' | 'liked' | 'disliked' | 'collections';
-  onViewModeChange: (mode: 'saved' | 'liked' | 'disliked' | 'collections') => void;
+  viewMode:
+    | 'saved'
+    | 'liked'
+    | 'disliked'
+    | 'collections'
+    | 'discover'
+    | 'journey'
+    | 'stories';
+  onViewModeChange: (
+    mode:
+      | 'saved'
+      | 'liked'
+      | 'disliked'
+      | 'collections'
+      | 'discover'
+      | 'journey'
+      | 'stories',
+  ) => void;
   collections: Collection[];
   selectedListId: string | null;
   onSelectList: (listId: string | null) => void;

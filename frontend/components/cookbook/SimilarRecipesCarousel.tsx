@@ -56,7 +56,14 @@ interface SimilarRecipesCarouselProps {
   /** Called when save button is pressed (for liked/disliked view) */
   onSave?: (recipeId: string) => void;
   /** Current view mode */
-  viewMode: 'saved' | 'liked' | 'disliked' | 'collections';
+  viewMode:
+    | 'saved'
+    | 'liked'
+    | 'disliked'
+    | 'collections'
+    | 'discover'
+    | 'journey'
+    | 'stories';
 }
 
 /**

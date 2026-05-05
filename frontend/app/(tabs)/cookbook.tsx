@@ -56,6 +56,7 @@ import {
   type CollectionSortMode,
 } from '../../components/cookbook';
 import WeeklyRecapCard from '../../components/kitchen/WeeklyRecapCard';
+import KitchenModeBar, { type KitchenMode } from '../../components/kitchen/KitchenModeBar';
 import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 
 // Client-side predicate mirroring smartCollectionsService.recipeMatchesSmartCollection
@@ -97,7 +98,15 @@ export default function CookbookScreen() {
   const [collections, setCollections] = useState<Collection[]>([]);
   // Multi-select: empty array => All
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'saved' | 'liked' | 'disliked' | 'collections'>('saved');
+  const [viewMode, setViewMode] = useState<
+    | 'saved'
+    | 'liked'
+    | 'disliked'
+    | 'collections'
+    | 'discover'
+    | 'journey'
+    | 'stories'
+  >('saved');
   const [smartCollections, setSmartCollections] = useState<Array<{id: string; name: string; icon: string; description: string; count: number}>>([]);
   const [smartCollectionsLoading, setSmartCollectionsLoading] = useState(false);
   const [collectionsSearchQuery, setCollectionsSearchQuery] = useState('');
@@ -1159,6 +1168,19 @@ export default function CookbookScreen() {
         cacheAge={cacheAge}
       />
 
+      {/* ROADMAP 4.0 A3-a — Kitchen 5-pill view-mode bar */}
+      <KitchenModeBar
+        activeMode={
+          viewMode === 'liked' || viewMode === 'disliked'
+            ? 'saved'
+            : (viewMode as KitchenMode)
+        }
+        onChange={(mode) => {
+          setViewMode(mode);
+          setNeedsRefresh(true);
+        }}
+      />
+
       {/* Cookbook Filter Modal */}
       <CookbookFilterModal
         visible={showFilterModal}
@@ -1512,7 +1534,7 @@ export default function CookbookScreen() {
         </ScrollView>
       )}
 
-      {viewMode !== 'collections' && !cacheLoading && allRecipes.length === 0 ? (
+      {viewMode !== 'collections' && viewMode !== 'discover' && viewMode !== 'journey' && viewMode !== 'stories' && !cacheLoading && allRecipes.length === 0 ? (
         // No recipes found (but API call succeeded with null/empty response)
         <>
           {viewMode === 'saved' && (
@@ -1785,6 +1807,46 @@ export default function CookbookScreen() {
 
         </ScrollView>
       ) : null}
+
+      {/* ROADMAP 4.0 A3-a — Discover view (filled in A3-b) */}
+      {viewMode === 'discover' && (
+        <ScrollView
+          testID="kitchen-view-discover"
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', paddingTop: 24 }}>
+            Discover view — coming together in A3-b.
+          </Text>
+        </ScrollView>
+      )}
+
+      {/* ROADMAP 4.0 A3-a — Journey view (filled in A3-c/A3-e) */}
+      {viewMode === 'journey' && (
+        <ScrollView
+          testID="kitchen-view-journey"
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', paddingTop: 24 }}>
+            Journey view — coming together in A3-c.
+          </Text>
+        </ScrollView>
+      )}
+
+      {/* ROADMAP 4.0 A3-a — Stories view (filled in A3-d) */}
+      {viewMode === 'stories' && (
+        <ScrollView
+          testID="kitchen-view-stories"
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
+          showsVerticalScrollIndicator={false}
+        >
+          <WeeklyRecapCard />
+          <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', paddingTop: 24 }}>
+            Past recaps — coming together in A3-d.
+          </Text>
+        </ScrollView>
+      )}
 
       {/* Bulk Action Bar (multi-select mode) */}
       {selectionMode && (
