@@ -147,6 +147,30 @@ The active roadmap lives in the project root (gitignored, local-only). Check it 
 - Test lines (`**Test:**`) must also be marked `[x]` once the described tests are green. If only a subset of test cases are covered, mark `[x] **Test (partial):**` and note what remains.
 - Never leave a shipped feature as `[ ]`. A stale unchecked box creates false backlog and misleads future planning.
 
+**Roadmap Status Reports — render after large completions:**
+After finishing a meaningful chunk of work (≥3 items in a tier, an entire sub-tier, or a multi-commit batch), render a monospace progress table at the end of the response. Format:
+
+```
+ROADMAP 4.0 — Status
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tier A — IA Foundation        ██████████░░░░░░░░░░  50% (18/36)
+  A0 — Tab consolidation      ████████████████████ 100% (4/4)  ✓
+  A1 — Today screen           ████████████████░░░░  83% (5/6)
+  ...
+Tier B — Personalization      ████████████████████ 100% (5/5)  ✓
+Tier C — Adaptation Engine    ████████████████████ 100% (13/13) ✓
+Tier D — Recipe DB / Content  ░░░░░░░░░░░░░░░░░░░░   0% (0/14)
+```
+
+Rules:
+- 20-char-wide bars (`█` filled, `░` empty); each block = 5%.
+- Per-tier rollup at top level; per-sub-tier rows for any tier the user is actively working in or just finished.
+- `✓` suffix on any 100% row.
+- Source the counts by counting `^- \[x\]` vs `^- \[x\]|^- \[ \]` lines per `### A?` / `### B?` / `## Tier` block in `ROADMAP_4.0.md` — do not hand-tally from memory.
+- Render in a fenced code block so the bars stay aligned in monospace.
+- Drop the report if no item flipped `[ ] → [x]` in the response (no progress = no need).
+
 ### Plans (`plans/`)
 Check here before planning new features — prior architectural decisions may already be documented.
 - **[persona.md](plans/persona.md)** — *Read this before any product decision.* The loud, opinionated manifesto for who Sazon is for / who it isn't.
