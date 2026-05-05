@@ -1857,6 +1857,24 @@ export const weeklyRecapApi = {
   fetchThisWeek: () => apiClient.get<WeeklyRecapPayload>('/recap/this-week'),
 };
 
+// ─── ROADMAP 4.0 Tier C10 — Cultural primer ──────────────────────────────────
+
+export interface CulturalPrimerPayload {
+  shouldShow: boolean;
+  primer: {
+    title: string;
+    body: string;
+    nutritionalAngle: string;
+  } | null;
+}
+
+export const culturalPrimerApi = {
+  check: (cuisine: string) =>
+    apiClient.get<CulturalPrimerPayload>(
+      `/cultural-primer/check?cuisine=${encodeURIComponent(cuisine)}`
+    ),
+};
+
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
 
 export const stripeApi = {
