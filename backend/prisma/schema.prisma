@@ -1517,3 +1517,26 @@ model NutritionCoverageSnapshot {
   @@index([userId, asOfDate])
   @@map("nutrition_coverage_snapshots")
 }
+
+// C7 — Daily check-in.
+// 3-tap, 10s max. Top half: today's nutrition card snapshot (the discovery
+// view). Bottom half: 1 conversational reflection. The data + reflection
+// pair is the highest-fidelity adaptation signal in the stack.
+// Hunger + energy are 1..5 Likert scales (1 = very low, 5 = very high).
+model DailyCheckIn {
+  id                  String   @id @default(cuid())
+  userId              String
+  date                DateTime
+  // JSON snapshot of the nutrition card the user tapped on. Optional — user
+  // can submit reflection without expanding the card.
+  nutritionSnapshot   String?
+  reflectionText      String?
+  hungerNow           Int?
+  energyAtLastMeal    Int?
+  satietyFromYesterday Int?
+  createdAt           DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("daily_check_ins")
+}
