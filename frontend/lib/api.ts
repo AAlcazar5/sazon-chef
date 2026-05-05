@@ -2151,6 +2151,38 @@ export const nutritionApi = {
     ),
 };
 
+// ─── ROADMAP 4.0 F1 — Friends feed ──────────────────────────────────────────
+
+export interface FriendsFeedItem {
+  plateId: string;
+  ownerId: string;
+  ownerName: string | null;
+  plateName: string | null;
+  shareSlug: string | null;
+  score: {
+    pantryCoverage: number;
+    dietaryCompatibility: number;
+    slotAffinityOverlap: number;
+    composite: number;
+  };
+  createdAt: string;
+}
+
+export interface FollowSummary {
+  userId: string;
+  followingCount: number;
+  followerCount: number;
+}
+
+export const followsApi = {
+  follow: (userId: string) => apiClient.post(`/follows/${userId}`),
+  unfollow: (userId: string) => apiClient.delete(`/follows/${userId}`),
+  status: (userId: string) =>
+    apiClient.get<{ following: boolean }>(`/follows/${userId}/status`),
+  summary: () => apiClient.get<{ summary: FollowSummary }>('/follows/summary'),
+  feed: () => apiClient.get<{ items: FriendsFeedItem[] }>('/follows/feed'),
+};
+
 export interface ComposedPlateSaveResponse {
   plate: ComposedPlateResponse;
   recipe?: { id: string };
