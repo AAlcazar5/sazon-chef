@@ -24,7 +24,7 @@ function endOfWeek(weekStart: Date): Date {
 interface CookRow {
   recipeId: string;
   cookedAt: Date;
-  recipe: { cuisine: string | null; ingredients: Array<{ name: string }> } | null;
+  recipe: { cuisine: string | null; ingredients: Array<{ text: string }> } | null;
 }
 
 export const weeklyRecapController = {
@@ -40,7 +40,7 @@ export const weeklyRecapController = {
         select: {
           recipeId: true,
           cookedAt: true,
-          recipe: { select: { cuisine: true, ingredients: { select: { name: true } } } },
+          recipe: { select: { cuisine: true, ingredients: { select: { text: true } } } },
         },
       })) as CookRow[];
 
@@ -54,7 +54,7 @@ export const weeklyRecapController = {
       const ingredientCounts = new Map<string, number>();
       for (const c of thisWeekCooks) {
         for (const ing of c.recipe?.ingredients ?? []) {
-          const name = ing.name.toLowerCase();
+          const name = ing.text.toLowerCase();
           ingredientCounts.set(name, (ingredientCounts.get(name) ?? 0) + 1);
         }
       }
