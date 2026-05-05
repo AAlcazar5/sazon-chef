@@ -1442,3 +1442,23 @@ model SurfaceYieldSnapshot {
   @@index([surface, asOfDate])
   @@map("surface_yield_snapshots")
 }
+
+// C3 — Adjacency writeback.
+// Signal-driven adjustments to the cuisine adjacency graph. Currently the
+// adjacency table (utils/cuisineAdjacency.ts) is a hand-curated static graph;
+// this layer adds dynamic per-edge weight updates driven by impression+tap
+// pairs and other surface events. Aggregated globally first; per-user
+// writeback is v1.1 (F4 backlog).
+model CuisineAdjacencyWeight {
+  id              String   @id @default(cuid())
+  sourceCuisine   String
+  targetCuisine   String
+  weight          Float    @default(0)
+  signalCount     Int      @default(0)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@unique([sourceCuisine, targetCuisine])
+  @@index([sourceCuisine])
+  @@map("cuisine_adjacency_weights")
+}
