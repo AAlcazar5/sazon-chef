@@ -224,13 +224,27 @@ export default function CookbookScreen() {
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
   // Open import modal when navigated with ?openImport=true (from quick actions menu)
-  const { openImport } = useLocalSearchParams<{ openImport?: string }>();
+  // Or jump to a specific Kitchen view via ?view=<mode> (from ProfileSheet, deep links)
+  const { openImport, view: viewParam } = useLocalSearchParams<{ openImport?: string; view?: string }>();
   useEffect(() => {
     if (openImport === 'true') {
       setShowImportModal(true);
       router.setParams({ openImport: '' });
     }
   }, [openImport]);
+  useEffect(() => {
+    // ROADMAP 4.0 A3-e — deep link into Kitchen views from ProfileSheet etc.
+    if (
+      viewParam === 'journey' ||
+      viewParam === 'stories' ||
+      viewParam === 'discover' ||
+      viewParam === 'collections' ||
+      viewParam === 'saved'
+    ) {
+      setViewMode(viewParam);
+      router.setParams({ view: '' });
+    }
+  }, [viewParam]);
 
   // Infinite scroll state
   const INITIAL_VISIBLE = 20;
