@@ -259,7 +259,7 @@ function DailyMacrosSummary({
                 color={[Accent.peach, '#FB923C']}
                 testID="calorie-progress-ring"
               >
-                <AnimatedLogoMascot expression={mascotExpression} size="tiny" animationType="idle" />
+                <AnimatedLogoMascot expression={mascotExpression} size="small" animationType="idle" />
               </ProgressRing>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 8, gap: 4 }}>
                 <CountingNumber
