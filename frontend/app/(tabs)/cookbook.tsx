@@ -1600,6 +1600,13 @@ export default function CookbookScreen() {
         </ScrollView>
       )}
 
+      {/* ROADMAP 4.0 C7 — Daily check-in. Lives at the top of the saved view
+          regardless of whether any recipes have been saved yet, so the prompt
+          is the first thing the user sees when there's no library yet. */}
+      {viewMode === 'saved' && !selectedListId && (
+        <DailyCheckIn visible={true} onClose={() => { /* dismissable in a follow-up */ }} />
+      )}
+
       {viewMode !== 'collections' && viewMode !== 'discover' && viewMode !== 'journey' && viewMode !== 'stories' && !cacheLoading && allRecipes.length === 0 ? (
         // No recipes found (but API call succeeded with null/empty response)
         <>
@@ -1681,12 +1688,6 @@ export default function CookbookScreen() {
             }
             showsVerticalScrollIndicator={true}
           >
-          {/* ROADMAP 4.0 C7 — Daily check-in (relocated from Home; sits below
-              the Saved/Collections/Discover/Journey/Stories tab row). */}
-          {!selectedListId && (
-            <DailyCheckIn visible={true} onClose={() => { /* dismissable in a follow-up */ }} />
-          )}
-
           {/* Most-cooked editorial hero */}
           {!selectedListId && mostCookedRecipe && mostCookedAccent && (
             <MostCookedHero
