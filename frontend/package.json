@@ -29,6 +29,7 @@
     "@sentry/react-native": "~7.0.0",
     "react-native-health-connect": "^3.4.0",
     "react-native-purchases": "^10.0.2",
+    "react-native-purchases-ui": "^10.0.2",
     "axios": "^1.12.2",
     "expo": "54.0.22",
     "expo-auth-session": "^7.0.8",
