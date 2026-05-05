@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/recipe/recipeCookbookController.ts
 //
 // R1-2 split (round 2, 2026-05-04) — extracted cookbook-meta + cooking-log
@@ -31,7 +32,7 @@ export const recipeCookbookController = {
 
       res.json({ notes: savedRecipe.notes ?? null, rating: savedRecipe.rating ?? null });
     } catch (error: any) {
-      console.error('❌ Get saved meta error:', error);
+      logger.error({ data: error }, '❌ Get saved meta error:');
       res.status(500).json({ error: 'Failed to get saved recipe metadata' });
     }
   },
@@ -82,7 +83,7 @@ export const recipeCookbookController = {
               const componentIds = entries.map((e) => e.componentId);
               const stars = rating as 1 | 2 | 3 | 4 | 5;
               recordAffinityEvent({ type: 'plate_rated', userId, componentIds, stars }).catch(
-                (err) => console.warn('[affinity] plate_rated event failed (non-fatal):', err)
+                (err) => logger.warn({ data: err }, '[affinity] plate_rated event failed (non-fatal):')
               );
             } catch {
               // malformed componentIds JSON — skip silently
@@ -91,10 +92,10 @@ export const recipeCookbookController = {
         }
       }
 
-      console.log('✅ Saved recipe meta updated:', { recipeId: id, notes: !!updated.notes, rating: updated.rating });
+      logger.info({ recipeId: id, notes: !!updated.notes, rating: updated.rating }, '✅ Saved recipe meta updated:');
       res.json({ message: 'Updated successfully', notes: updated.notes, rating: updated.rating });
     } catch (error: any) {
-      console.error('❌ Update saved meta error:', error);
+      logger.error({ data: error }, '❌ Update saved meta error:');
       res.status(500).json({ error: 'Failed to update saved recipe metadata' });
     }
   },
@@ -111,10 +112,10 @@ export const recipeCookbookController = {
         update: { viewedAt: new Date() },
       });
 
-      console.log('👁️ Recipe view recorded:', id);
+      logger.info({ data: id }, '👁️ Recipe view recorded:');
       res.json({ message: 'View recorded' });
     } catch (error: any) {
-      console.error('❌ Record view error:', error);
+      logger.error({ data: error }, '❌ Record view error:');
       res.status(500).json({ error: 'Failed to record view' });
     }
   },
@@ -150,10 +151,10 @@ export const recipeCookbookController = {
         viewedAt: v.viewedAt.toISOString(),
       }));
 
-      console.log(`👁️ Found ${recipes.length} recently viewed recipes`);
+      logger.info(`👁️ Found ${recipes.length} recently viewed recipes`);
       res.json(recipes);
     } catch (error: any) {
-      console.error('❌ Get recently viewed error:', error);
+      logger.error({ data: error }, '❌ Get recently viewed error:');
       res.status(500).json({ error: 'Failed to get recently viewed recipes' });
     }
   },
@@ -187,7 +188,7 @@ export const recipeCookbookController = {
             const entries: Array<{ componentId: string }> = JSON.parse(plate.componentIds);
             const componentIds = entries.map((e) => e.componentId);
             recordAffinityEvent({ type: 'plate_cooked', userId, componentIds }).catch(
-              (err) => console.warn('[affinity] plate_cooked event failed (non-fatal):', err)
+              (err) => logger.warn({ data: err }, '[affinity] plate_cooked event failed (non-fatal):')
             );
           } catch {
             // malformed componentIds JSON — skip silently
@@ -197,7 +198,7 @@ export const recipeCookbookController = {
 
       res.json({ message: 'Cook recorded' });
     } catch (error: any) {
-      console.error('❌ Record cook error:', error);
+      logger.error({ data: error }, '❌ Record cook error:');
       res.status(500).json({ error: 'Failed to record cook' });
     }
   },
@@ -224,7 +225,7 @@ export const recipeCookbookController = {
         })),
       });
     } catch (error: any) {
-      console.error('❌ Get cooking history error:', error);
+      logger.error({ data: error }, '❌ Get cooking history error:');
       res.status(500).json({ error: 'Failed to get cooking history' });
     }
   },

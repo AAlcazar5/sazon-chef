@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { logger } from '../../utils/logger';
 
 export const pantryController = {
   /**
@@ -18,7 +19,7 @@ export const pantryController = {
 
       res.json(items);
     } catch (error: any) {
-      console.error('Error fetching pantry items:', error);
+      logger.error({ err: error }, 'Error fetching pantry items:');
       res.status(500).json({ error: 'Failed to fetch pantry items' });
     }
   },
@@ -54,7 +55,7 @@ export const pantryController = {
 
       res.status(201).json(item);
     } catch (error: any) {
-      console.error('Error adding pantry item:', error);
+      logger.error({ err: error }, 'Error adding pantry item:');
       res.status(500).json({ error: 'Failed to add pantry item' });
     }
   },
@@ -100,7 +101,7 @@ export const pantryController = {
 
       res.status(201).json({ items: created, count: created.length });
     } catch (error: any) {
-      console.error('Error bulk adding pantry items:', error);
+      logger.error({ err: error }, 'Error bulk adding pantry items:');
       res.status(500).json({ error: 'Failed to add pantry items' });
     }
   },
@@ -126,7 +127,7 @@ export const pantryController = {
 
       res.json({ message: 'Pantry item removed' });
     } catch (error: any) {
-      console.error('Error removing pantry item:', error);
+      logger.error({ err: error }, 'Error removing pantry item:');
       res.status(500).json({ error: 'Failed to remove pantry item' });
     }
   },
@@ -187,7 +188,7 @@ export const pantryController = {
 
       res.json({ consumed, unmatched });
     } catch (error: any) {
-      console.error('Error consuming pantry items:', error);
+      logger.error({ err: error }, 'Error consuming pantry items:');
       res.status(500).json({ error: 'Failed to consume pantry items' });
     }
   },
@@ -219,7 +220,7 @@ export const pantryController = {
 
       res.json({ message: 'Pantry item removed' });
     } catch (error: any) {
-      console.error('Error removing pantry item by name:', error);
+      logger.error({ err: error }, 'Error removing pantry item by name:');
       res.status(500).json({ error: 'Failed to remove pantry item' });
     }
   },

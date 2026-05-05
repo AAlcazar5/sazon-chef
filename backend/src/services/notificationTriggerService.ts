@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/notificationTriggerService.ts
 // Condition-based notification triggers — event-driven and scheduled
 
@@ -7,7 +8,7 @@ import { emailService } from './emailService';
 
 export const notificationTriggerService = {
   // ─── EVENT-DRIVEN TRIGGERS ──────────────────────────────────────────────────
-  // Called inline from controllers (fire-and-forget with .catch(console.error))
+  // Called inline from controllers (fire-and-forget with .catch(logger.error))
 
   /**
    * Fired when a shopping list is generated from a meal plan.
@@ -96,9 +97,9 @@ export const notificationTriggerService = {
         }
       }
 
-      console.log('📋 [Triggers] checkPlanReminders complete');
+      logger.info('📋 [Triggers] checkPlanReminders complete');
     } catch (error) {
-      console.error('❌ [Triggers] checkPlanReminders error:', error);
+      logger.error({ err: error }, '❌ [Triggers] checkPlanReminders error:');
     }
   },
 
@@ -143,9 +144,9 @@ export const notificationTriggerService = {
         });
       }
 
-      console.log(`⏰ [Triggers] checkExpiryAlerts: ${userExpirations.size} users notified`);
+      logger.info(`⏰ [Triggers] checkExpiryAlerts: ${userExpirations.size} users notified`);
     } catch (error) {
-      console.error('❌ [Triggers] checkExpiryAlerts error:', error);
+      logger.error({ err: error }, '❌ [Triggers] checkExpiryAlerts error:');
     }
   },
 
@@ -177,9 +178,9 @@ export const notificationTriggerService = {
         });
       }
 
-      console.log('📊 [Triggers] checkWeeklyDigest complete');
+      logger.info('📊 [Triggers] checkWeeklyDigest complete');
     } catch (error) {
-      console.error('❌ [Triggers] checkWeeklyDigest error:', error);
+      logger.error({ err: error }, '❌ [Triggers] checkWeeklyDigest error:');
     }
   },
 
@@ -208,9 +209,9 @@ export const notificationTriggerService = {
           await emailService.sendDay14TrialWarning(user.email, user.name || 'Chef');
         }
       }
-      console.log(`📬 [Triggers] checkTrialEnding: sent ${users.length} emails`);
+      logger.info(`📬 [Triggers] checkTrialEnding: sent ${users.length} emails`);
     } catch (error) {
-      console.error('❌ [Triggers] checkTrialEnding error:', error);
+      logger.error({ err: error }, '❌ [Triggers] checkTrialEnding error:');
     }
   },
 
@@ -239,9 +240,9 @@ export const notificationTriggerService = {
           await emailService.sendDay3Nudge(user.email, user.name || 'Chef');
         }
       }
-      console.log(`📬 [Triggers] checkDay3Nudge: sent ${users.length} emails`);
+      logger.info(`📬 [Triggers] checkDay3Nudge: sent ${users.length} emails`);
     } catch (error) {
-      console.error('❌ [Triggers] checkDay3Nudge error:', error);
+      logger.error({ err: error }, '❌ [Triggers] checkDay3Nudge error:');
     }
   },
 };

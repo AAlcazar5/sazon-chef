@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/kitchenProfile/kitchenProfileController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
@@ -17,7 +18,7 @@ export const kitchenProfileController = {
   // Get user's kitchen profile
   async getKitchenProfile(req: Request, res: Response) {
     try {
-      console.log('🏠 GET /api/kitchen-profile - METHOD CALLED');
+      logger.info('🏠 GET /api/kitchen-profile - METHOD CALLED');
       const userId = getUserId(req);
       
       // Get user's kitchen profile (we'll store this in user preferences for now)
@@ -47,7 +48,7 @@ export const kitchenProfileController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in getKitchenProfile:', error);
+      logger.error({ err: error }, '❌ Error in getKitchenProfile:');
       res.status(500).json({ 
         error: 'Failed to fetch kitchen profile',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -58,7 +59,7 @@ export const kitchenProfileController = {
   // Update user's kitchen profile
   async updateKitchenProfile(req: Request, res: Response) {
     try {
-      console.log('🏠 PUT /api/kitchen-profile - METHOD CALLED');
+      logger.info('🏠 PUT /api/kitchen-profile - METHOD CALLED');
       const userId = getUserId(req);
       
       const {
@@ -96,7 +97,7 @@ export const kitchenProfileController = {
         budget: budget || 'medium'
       };
       
-      console.log('✅ Kitchen profile updated successfully');
+      logger.info('✅ Kitchen profile updated successfully');
       
       res.json({
         message: 'Kitchen profile updated successfully',
@@ -104,7 +105,7 @@ export const kitchenProfileController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in updateKitchenProfile:', error);
+      logger.error({ err: error }, '❌ Error in updateKitchenProfile:');
       res.status(500).json({ 
         error: 'Failed to update kitchen profile',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -115,7 +116,7 @@ export const kitchenProfileController = {
   // Add ingredient to kitchen
   async addIngredient(req: Request, res: Response) {
     try {
-      console.log('🥕 POST /api/kitchen-profile/ingredients - METHOD CALLED');
+      logger.info('🥕 POST /api/kitchen-profile/ingredients - METHOD CALLED');
       const userId = getUserId(req);
       
       const {
@@ -142,7 +143,7 @@ export const kitchenProfileController = {
         available: true
       };
       
-      console.log(`✅ Added ingredient: ${ingredient}`);
+      logger.info(`✅ Added ingredient: ${ingredient}`);
       
       res.status(201).json({
         message: 'Ingredient added successfully',
@@ -150,7 +151,7 @@ export const kitchenProfileController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in addIngredient:', error);
+      logger.error({ err: error }, '❌ Error in addIngredient:');
       res.status(500).json({ 
         error: 'Failed to add ingredient',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -161,14 +162,14 @@ export const kitchenProfileController = {
   // Remove ingredient from kitchen
   async removeIngredient(req: Request, res: Response) {
     try {
-      console.log('🗑️ DELETE /api/kitchen-profile/ingredients/:ingredient - METHOD CALLED');
+      logger.info('🗑️ DELETE /api/kitchen-profile/ingredients/:ingredient - METHOD CALLED');
       const { ingredient } = req.params;
       const userId = getUserId(req);
       
       // For now, return success
       // TODO: Implement actual ingredient removal
       
-      console.log(`✅ Removed ingredient: ${ingredient}`);
+      logger.info(`✅ Removed ingredient: ${ingredient}`);
       
       res.json({
         message: 'Ingredient removed successfully',
@@ -176,7 +177,7 @@ export const kitchenProfileController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in removeIngredient:', error);
+      logger.error({ err: error }, '❌ Error in removeIngredient:');
       res.status(500).json({ 
         error: 'Failed to remove ingredient',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -187,7 +188,7 @@ export const kitchenProfileController = {
   // Get ingredient suggestions for a recipe
   async getIngredientSuggestions(req: Request, res: Response) {
     try {
-      console.log('💡 GET /api/kitchen-profile/suggestions/:recipeId - METHOD CALLED');
+      logger.info('💡 GET /api/kitchen-profile/suggestions/:recipeId - METHOD CALLED');
       const { recipeId } = req.params;
       const userId = getUserId(req);
       
@@ -230,7 +231,7 @@ export const kitchenProfileController = {
       // For now, return empty suggestions
       const suggestions: string[] = [];
       
-      console.log(`✅ Generated ingredient suggestions for recipe: ${recipe.title}`);
+      logger.info(`✅ Generated ingredient suggestions for recipe: ${recipe.title}`);
       
       res.json({
         recipeId,
@@ -239,7 +240,7 @@ export const kitchenProfileController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in getIngredientSuggestions:', error);
+      logger.error({ err: error }, '❌ Error in getIngredientSuggestions:');
       res.status(500).json({ 
         error: 'Failed to generate ingredient suggestions',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -250,7 +251,7 @@ export const kitchenProfileController = {
   // Get optimal recipes based on kitchen profile
   async getOptimalRecipes(req: Request, res: Response) {
     try {
-      console.log('🎯 GET /api/kitchen-profile/optimal-recipes - METHOD CALLED');
+      logger.info('🎯 GET /api/kitchen-profile/optimal-recipes - METHOD CALLED');
       const userId = getUserId(req);
       
       const {
@@ -306,7 +307,7 @@ export const kitchenProfileController = {
         .sort((a, b) => (a.cookTime || 0) - (b.cookTime || 0))
         .slice(0, parseInt(limit as string));
       
-      console.log(`✅ Found ${optimalRecipes.length} optimal recipes`);
+      logger.info(`✅ Found ${optimalRecipes.length} optimal recipes`);
       
       res.json({
         recipes: optimalRecipes,
@@ -315,7 +316,7 @@ export const kitchenProfileController = {
       });
       
     } catch (error) {
-      console.error('❌ Error in getOptimalRecipes:', error);
+      logger.error({ err: error }, '❌ Error in getOptimalRecipes:');
       res.status(500).json({ 
         error: 'Failed to get optimal recipes',
         details: error instanceof Error ? error.message : 'Unknown error'

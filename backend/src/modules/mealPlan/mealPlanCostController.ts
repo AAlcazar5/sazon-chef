@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/mealPlan/mealPlanCostController.ts
 // Cost optimization endpoints for meal plans
 
@@ -25,7 +26,7 @@ export const getMealPlanCostAnalysis = async (req: Request, res: Response) => {
 
     res.json(analysis);
   } catch (error: any) {
-    console.error('Error analyzing meal plan cost:', error);
+    logger.error({ err: error }, 'Error analyzing meal plan cost:');
     res.status(500).json({ error: 'Failed to analyze meal plan cost' });
   }
 };
@@ -52,7 +53,7 @@ export const optimizeMealPlan = async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (error: any) {
-    console.error('Error optimizing meal plan cost:', error);
+    logger.error({ err: error }, 'Error optimizing meal plan cost:');
     res.status(500).json({ error: 'Failed to optimize meal plan cost' });
   }
 };
@@ -75,7 +76,7 @@ export const getCheaperAlternatives = async (req: Request, res: Response) => {
 
     res.json({ alternatives });
   } catch (error: any) {
-    console.error('Error finding cheaper alternatives:', error);
+    logger.error({ err: error }, 'Error finding cheaper alternatives:');
     res.status(500).json({ error: 'Failed to find cheaper alternatives' });
   }
 };

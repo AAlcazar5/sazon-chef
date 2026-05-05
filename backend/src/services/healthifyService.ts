@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/healthifyService.ts
 import { AIProviderManager } from './aiProviders/AIProviderManager';
 import { GeneratedRecipe } from './aiRecipeService';
@@ -66,7 +67,7 @@ export class HealthifyService {
    */
   async healthifyRecipe(params: RecipeHealthifyParams): Promise<HealthifiedRecipe> {
     try {
-      console.log('💚 Healthifying recipe:', params.originalRecipe.title);
+      logger.info({ err: params.originalRecipe.title }, '💚 Healthifying recipe:');
 
       const prompt = this.buildHealthifyPrompt(params);
       const systemPrompt = this.getSystemPrompt();
@@ -84,10 +85,10 @@ export class HealthifyService {
       // Parse the healthified recipe and extract substitutions/improvements
       const healthified = this.parseHealthifiedRecipe(recipe as any, params.originalRecipe);
 
-      console.log('✅ Recipe healthified:', healthified.title);
+      logger.info({ err: healthified.title }, '✅ Recipe healthified:');
       return healthified;
     } catch (error: any) {
-      console.error('❌ Healthify Error:', error);
+      logger.error({ err: error }, '❌ Healthify Error:');
       throw new Error(`Failed to healthify recipe: ${error.message}`);
     }
   }

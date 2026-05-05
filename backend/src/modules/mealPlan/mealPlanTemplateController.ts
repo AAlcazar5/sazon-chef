@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { logger } from '../../utils/logger';
 
 // Get all templates (user's + system)
 export const getTemplates = async (req: Request, res: Response) => {
@@ -25,7 +26,7 @@ export const getTemplates = async (req: Request, res: Response) => {
 
     res.json(templates);
   } catch (error) {
-    console.error('Error getting templates:', error);
+    logger.error({ err: error }, 'Error getting templates:');
     res.status(500).json({ error: 'Failed to get templates' });
   }
 };
@@ -105,7 +106,7 @@ export const createTemplate = async (req: Request, res: Response) => {
 
     res.json({ message: 'Template created successfully', template });
   } catch (error) {
-    console.error('Error creating template:', error);
+    logger.error({ err: error }, 'Error creating template:');
     res.status(500).json({ error: 'Failed to create template' });
   }
 };
@@ -204,7 +205,7 @@ export const applyTemplate = async (req: Request, res: Response) => {
       mealPlan: updatedPlan,
     });
   } catch (error) {
-    console.error('Error applying template:', error);
+    logger.error({ err: error }, 'Error applying template:');
     res.status(500).json({ error: 'Failed to apply template' });
   }
 };
@@ -231,7 +232,7 @@ export const deleteTemplate = async (req: Request, res: Response) => {
 
     res.json({ message: 'Template deleted successfully' });
   } catch (error) {
-    console.error('Error deleting template:', error);
+    logger.error({ err: error }, 'Error deleting template:');
     res.status(500).json({ error: 'Failed to delete template' });
   }
 };

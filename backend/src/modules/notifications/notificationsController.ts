@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/notifications/notificationsController.ts
 // Push notification token registration and management
 
@@ -25,7 +26,7 @@ export const notificationsController = {
 
       res.json({ success: true, message: 'Push token registered' });
     } catch (error: any) {
-      console.error('❌ [Notifications] registerToken error:', error);
+      logger.error({ err: error }, '❌ [Notifications] registerToken error:');
       res.status(500).json({ error: 'Failed to register push token' });
     }
   },
@@ -49,7 +50,7 @@ export const notificationsController = {
 
       res.json({ success: true, message: 'Push token unregistered' });
     } catch (error: any) {
-      console.error('❌ [Notifications] unregisterToken error:', error);
+      logger.error({ err: error }, '❌ [Notifications] unregisterToken error:');
       res.status(500).json({ error: 'Failed to unregister push token' });
     }
   },

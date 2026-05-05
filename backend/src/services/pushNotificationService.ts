@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/pushNotificationService.ts
 // Push notification delivery via Expo Push API
 
@@ -23,7 +24,7 @@ export const pushNotificationService = {
   async sendToUser(userId: string, notification: PushNotification): Promise<void> {
     // Check quiet hours before sending
     if (await this.isQuietHours(userId)) {
-      console.log(`🔕 [Push] Skipping notification for user ${userId} — quiet hours`);
+      logger.info(`🔕 [Push] Skipping notification for user ${userId} — quiet hours`);
       return;
     }
 
@@ -57,7 +58,7 @@ export const pushNotificationService = {
       try {
         await this.sendToUser(userId, notification);
       } catch (error) {
-        console.error(`❌ [Push] Failed to send to user ${userId}:`, error);
+        logger.error({ err: error }, `❌ [Push] Failed to send to user ${userId}:`);
       }
     }
   },
@@ -77,7 +78,7 @@ export const pushNotificationService = {
         for (let i = 0; i < tickets.length; i++) {
           const ticket = tickets[i];
           if (ticket.status === 'error') {
-            console.error(`❌ [Push] Ticket error:`, ticket.message);
+            logger.error({ err: ticket.message }, `❌ [Push] Ticket error:`);
 
             // Clean up invalid tokens
             if (ticket.details?.error === 'DeviceNotRegistered') {
@@ -87,7 +88,7 @@ export const pushNotificationService = {
           }
         }
       } catch (error) {
-        console.error('❌ [Push] Failed to send chunk:', error);
+        logger.error({ err: error }, '❌ [Push] Failed to send chunk:');
       }
     }
   },
@@ -139,9 +140,9 @@ export const pushNotificationService = {
   async cleanupInvalidToken(token: string): Promise<void> {
     try {
       await prisma.pushToken.deleteMany({ where: { token } });
-      console.log(`🧹 [Push] Cleaned up invalid token: ${token.substring(0, 20)}...`);
+      logger.info(`🧹 [Push] Cleaned up invalid token: ${token.substring(0, 20)}...`);
     } catch (error) {
-      console.error('❌ [Push] Failed to cleanup token:', error);
+      logger.error({ err: error }, '❌ [Push] Failed to cleanup token:');
     }
   },
 };

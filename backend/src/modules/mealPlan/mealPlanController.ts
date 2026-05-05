@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 import { aiRecipeService } from '../../services/aiRecipeService';
+import { logger } from '../../utils/logger';
 
 // Get daily meal suggestions
 export const getDailySuggestion = async (req: Request, res: Response) => {
@@ -97,7 +98,7 @@ export const getDailySuggestion = async (req: Request, res: Response) => {
       totalFat
     });
   } catch (error) {
-    console.error('Error getting daily suggestion:', error);
+    logger.error({ data: error }, 'Error getting daily suggestion:');
     res.status(500).json({ error: 'Failed to get daily suggestion' });
   }
 };
@@ -236,7 +237,7 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
       mealPrepPortions, // Available meal prep portions
     });
   } catch (error) {
-    console.error('Error getting weekly plan:', error);
+    logger.error({ data: error }, 'Error getting weekly plan:');
     res.status(500).json({ error: 'Failed to get weekly plan' });
   }
 };
@@ -382,13 +383,13 @@ export const generateMealPlan = async (req: Request, res: Response) => {
       planningMode,
     } = req.body;
 
-    console.log('🍽️ Generate Meal Plan:', { userId, days, mealsPerDay, maxTotalPrepTime, maxDailyBudget, planningMode });
+    logger.info({ userId, days, mealsPerDay, maxTotalPrepTime, maxDailyBudget, planningMode }, '🍽️ Generate Meal Plan:');
 
     const { userPrefs, baseMacros, physicalProfile, physProfileData, userFeedback } = await fetchUserPlanningContext(userId);
 
     // Adjust macros based on goal mode
     const adjustedMacros = adjustMacrosForGoalMode(baseMacros, planningMode, physicalProfile);
-    console.log('📊 Macro adjustment:', { planningMode, baseMacros, adjustedMacros });
+    logger.info({ planningMode, baseMacros, adjustedMacros }, '📊 Macro adjustment:');
 
     // Create meal plan
     const startDate = startDateStr ? new Date(startDateStr) : new Date();
@@ -422,7 +423,7 @@ export const generateMealPlan = async (req: Request, res: Response) => {
       const dateStr = currentDate.toISOString().split('T')[0];
       const dayCuisine = cuisines[dayIndex % cuisines.length];
 
-      console.log(`📅 Day ${dayIndex + 1}/${days} (${dateStr}) — cuisine: ${dayCuisine}`);
+      logger.info(`📅 Day ${dayIndex + 1}/${days} (${dateStr}) — cuisine: ${dayCuisine}`);
 
       try {
         // Generate daily meal plan via AI
@@ -495,9 +496,9 @@ export const generateMealPlan = async (req: Request, res: Response) => {
         }
 
         daysResult.push({ date: dateStr, meals: dayMeals });
-        console.log(`✅ Day ${dayIndex + 1} complete: ${Object.keys(dayMeals).length} meals`);
+        logger.info(`✅ Day ${dayIndex + 1} complete: ${Object.keys(dayMeals).length} meals`);
       } catch (dayError: any) {
-        console.error(`❌ Day ${dayIndex + 1} generation failed:`, dayError.message);
+        logger.error({ data: dayError.message }, `❌ Day ${dayIndex + 1} generation failed:`);
         daysResult.push({ date: dateStr, meals: {}, error: dayError.message });
       }
     }
@@ -515,7 +516,7 @@ export const generateMealPlan = async (req: Request, res: Response) => {
       totalNutrition,
     });
   } catch (error: any) {
-    console.error('Error generating meal plan:', error);
+    logger.error({ data: error }, 'Error generating meal plan:');
     res.status(500).json({ error: 'Failed to generate meal plan', details: error.message });
   }
 };
@@ -577,7 +578,7 @@ export const regenerateSingleDay = async (req: Request, res: Response) => {
 
     const mealsToGenerate = mealsPerDay || ['breakfast', 'lunch', 'dinner', 'snack'];
 
-    console.log(`🔄 Regenerating day ${date} in plan ${mealPlanId} — cuisine: ${dayCuisine}`);
+    logger.info(`🔄 Regenerating day ${date} in plan ${mealPlanId} — cuisine: ${dayCuisine}`);
 
     const generatedPlan = await aiRecipeService.generateDailyMealPlan(
       {
@@ -630,11 +631,11 @@ export const regenerateSingleDay = async (req: Request, res: Response) => {
       };
     }
 
-    console.log(`✅ Day ${date} regenerated: ${Object.keys(dayMeals).length} meals`);
+    logger.info(`✅ Day ${date} regenerated: ${Object.keys(dayMeals).length} meals`);
 
     res.json({ success: true, date, meals: dayMeals });
   } catch (error: any) {
-    console.error('Error regenerating day:', error);
+    logger.error({ data: error }, 'Error regenerating day:');
     res.status(500).json({ error: 'Failed to regenerate day', details: error.message });
   }
 };
@@ -650,7 +651,7 @@ export const getCookedRecipeIds = async (req: Request, res: Response) => {
     });
     res.json({ cookedRecipeIds: cooked.map(c => c.recipeId) });
   } catch (error) {
-    console.error('Error getting cooked recipe IDs:', error);
+    logger.error({ data: error }, 'Error getting cooked recipe IDs:');
     res.status(500).json({ error: 'Failed to get cooked recipe IDs' });
   }
 };
@@ -687,7 +688,7 @@ export const getMealHistory = async (req: Request, res: Response) => {
       totalMeals: mealHistory.length
     });
   } catch (error) {
-    console.error('Error getting meal history:', error);
+    logger.error({ data: error }, 'Error getting meal history:');
     res.status(500).json({ error: 'Failed to get meal history' });
   }
 };
@@ -742,7 +743,7 @@ export const addRecipeToMeal = async (req: Request, res: Response) => {
       meal
     });
   } catch (error) {
-    console.error('Error adding recipe to meal:', error);
+    logger.error({ data: error }, 'Error adding recipe to meal:');
     res.status(500).json({ error: 'Failed to add recipe to meal plan' });
   }
 };
@@ -812,7 +813,7 @@ export const quickLogMeal = async (req: Request, res: Response) => {
 
     res.json({ message: 'Meal logged successfully', meal });
   } catch (error) {
-    console.error('Error quick logging meal:', error);
+    logger.error({ data: error }, 'Error quick logging meal:');
     res.status(500).json({ error: 'Failed to log meal' });
   }
 };
@@ -820,11 +821,11 @@ export const quickLogMeal = async (req: Request, res: Response) => {
 // Update meal completion status
 export const updateMealCompletion = async (req: Request, res: Response) => {
   try {
-    console.log('🍽️ PUT /api/meal-plan/meals/:mealId/complete - Route hit');
+    logger.info('🍽️ PUT /api/meal-plan/meals/:mealId/complete - Route hit');
     const userId = getUserId(req);
     const { mealId } = req.params;
     const { isCompleted } = req.body;
-    console.log('🍽️ Meal ID:', mealId, 'isCompleted:', isCompleted);
+    logger.info({ mealId, isCompleted }, '🍽️ Meal ID');
 
     // Find the meal and verify it belongs to the user
     const meal = await prisma.meal.findFirst({
@@ -854,7 +855,7 @@ export const updateMealCompletion = async (req: Request, res: Response) => {
 
     res.json(updatedMeal);
   } catch (error) {
-    console.error('Error updating meal completion:', error);
+    logger.error({ data: error }, 'Error updating meal completion:');
     res.status(500).json({ error: 'Failed to update meal completion' });
   }
 };
@@ -891,7 +892,7 @@ export const updateMealNotes = async (req: Request, res: Response) => {
 
     res.json(updatedMeal);
   } catch (error) {
-    console.error('Error updating meal notes:', error);
+    logger.error({ data: error }, 'Error updating meal notes:');
     res.status(500).json({ error: 'Failed to update meal notes' });
   }
 };
@@ -1014,7 +1015,7 @@ export const getMealSwapSuggestions = async (req: Request, res: Response) => {
       suggestions
     });
   } catch (error) {
-    console.error('Error getting meal swap suggestions:', error);
+    logger.error({ data: error }, 'Error getting meal swap suggestions:');
     res.status(500).json({ error: 'Failed to get meal swap suggestions' });
   }
 };
@@ -1170,7 +1171,7 @@ export const getWeeklyNutritionSummary = async (req: Request, res: Response) => 
       } : null
     });
   } catch (error) {
-    console.error('Error getting weekly nutrition summary:', error);
+    logger.error({ data: error }, 'Error getting weekly nutrition summary:');
     res.status(500).json({ error: 'Failed to get weekly nutrition summary' });
   }
 };
@@ -1288,7 +1289,7 @@ export const getWeeklyBudget = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error getting weekly budget:', error);
+    logger.error({ data: error }, 'Error getting weekly budget:');
     return res.status(500).json({ error: 'Failed to get weekly budget' });
   }
 };

@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/aiRecipeService.ts
 import { prisma } from '@lib/prisma';
 import { imageService } from './imageService';
@@ -103,7 +104,7 @@ export class AIRecipeService {
 
   constructor() {
     this.providerManager = new AIProviderManager();
-    console.log('🤖 [AIRecipeService] Initialized with providers:', this.providerManager.getAvailableProviders());
+    logger.info({ data: this.providerManager.getAvailableProviders() }, '🤖 [AIRecipeService] Initialized with providers:');
   }
 
   /**
@@ -114,13 +115,13 @@ export class AIRecipeService {
     const MAX_RETRIES = 3;
     
     try {
-      console.log('🤖 AI Recipe Generation: Starting with params', {
+      logger.info({
         userId: params.userId,
         mealType: params.mealType,
         cuisineOverride: params.cuisineOverride,
         retryAttempt: retryCount,
         previousFailures: previousFailures.length,
-      });
+      }, '🤖 AI Recipe Generation: Starting with params');
 
       // Build prompt with feedback from previous failures
       let prompt = this.buildRecipePrompt(params);
@@ -139,7 +140,7 @@ export class AIRecipeService {
         maxTokens: 2000,
       });
       
-      console.log('✅ AI Recipe Generated:', recipe.title);
+      logger.info({ data: recipe.title }, '✅ AI Recipe Generated:');
       
       // Validate and normalize the recipe
       const validated = this.validateAndNormalizeRecipe(recipe);
@@ -156,7 +157,7 @@ export class AIRecipeService {
         // Safety check failed - retry if we haven't exceeded max retries
         const errorMessage = safetyError.message || String(safetyError);
         if (retryCount < MAX_RETRIES) {
-          console.warn(`⚠️  Safety check failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, errorMessage);
+          logger.warn({ data: errorMessage }, `⚠️  Safety check failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`);
           
           // Extract specific failure reasons and add to previous failures
           const newFailures = [...previousFailures];
@@ -178,18 +179,18 @@ export class AIRecipeService {
           }
           
           // Retry with updated context
-          console.log(`🔄 Retrying recipe generation (attempt ${retryCount + 2}/${MAX_RETRIES + 1}) with failure feedback...`);
+          logger.info(`🔄 Retrying recipe generation (attempt ${retryCount + 2}/${MAX_RETRIES + 1}) with failure feedback...`);
           return this.generateRecipe(params, retryCount + 1, newFailures);
         } else {
           // Max retries exceeded
-          console.error(`❌ Max retries (${MAX_RETRIES + 1}) exceeded for recipe generation`);
+          logger.error(`❌ Max retries (${MAX_RETRIES + 1}) exceeded for recipe generation`);
           throw new Error(`Failed to generate recipe after ${MAX_RETRIES + 1} attempts. Last error: ${errorMessage}`);
         }
       }
       
       return validated;
     } catch (error: any) {
-      console.error('❌ AI Recipe Generation Error:', error);
+      logger.error({ data: error }, '❌ AI Recipe Generation Error:');
       
       // Provider manager already handles quota errors, just preserve them
       if (error.code === 'insufficient_quota' || error.status === 429 || error.isQuotaError) {
@@ -203,7 +204,7 @@ export class AIRecipeService {
       // If this is a safety check error and we haven't retried yet, retry
       if (error.message && error.message.includes('Recipe failed safety checks') && retryCount < MAX_RETRIES) {
         const errorMessage = error.message;
-        console.warn(`⚠️  Safety check failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, errorMessage);
+        logger.warn({ data: errorMessage }, `⚠️  Safety check failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`);
         
         // Extract specific failure reasons
         const newFailures = [...previousFailures];
@@ -225,7 +226,7 @@ export class AIRecipeService {
         }
         
         // Retry with updated context
-        console.log(`🔄 Retrying recipe generation (attempt ${retryCount + 2}/${MAX_RETRIES + 1}) with failure feedback...`);
+        logger.info(`🔄 Retrying recipe generation (attempt ${retryCount + 2}/${MAX_RETRIES + 1}) with failure feedback...`);
         return this.generateRecipe(params, retryCount + 1, newFailures);
       }
       
@@ -309,8 +310,8 @@ Return JSON only.`;
     dessert?: GeneratedRecipe;
   }> {
     try {
-      console.log('🍽️ AI Daily Meal Plan: Generating for user', params.userId);
-      console.log('📋 Options:', options);
+      logger.info({ data: params.userId }, '🍽️ AI Daily Meal Plan: Generating for user');
+      logger.info({ data: options }, '📋 Options:');
 
       // Determine which meals to generate
       const mealsToGenerate = options?.mealsToGenerate || ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -347,7 +348,7 @@ Return JSON only.`;
         });
       }
 
-      console.log('📊 Meal distribution:', mealDistribution);
+      logger.info({ data: mealDistribution }, '📊 Meal distribution:');
 
     // Generate recipes SEQUENTIALLY to enforce variation
     // Each meal knows about the previous ones to avoid repetition
@@ -365,19 +366,19 @@ Return JSON only.`;
     // Track total prep time to keep under maxTotalPrepTime (default 60 minutes)
     const maxTotalPrepTime = options?.maxTotalPrepTime || 60;
     let totalPrepTime = 0;
-    console.log(`⏱️  Total prep time constraint: ${maxTotalPrepTime} minutes`);
+    logger.info(`⏱️  Total prep time constraint: ${maxTotalPrepTime} minutes`);
     
     // Track total budget to keep under maxDailyBudget if provided
     const maxDailyBudget = options?.maxDailyBudget;
     let totalBudget = 0;
     if (maxDailyBudget) {
-      console.log(`💰 Daily budget constraint: $${maxDailyBudget}`);
+      logger.info(`💰 Daily budget constraint: $${maxDailyBudget}`);
     }
 
     for (const mealType of mealsToGenerate) {
       const portion = mealDistribution[mealType] || (1 / mealsToGenerate.length);
       
-      console.log(`🔄 Generating ${mealType}... (previous meals: ${previousMeals.length})`);
+      logger.info(`🔄 Generating ${mealType}... (previous meals: ${previousMeals.length})`);
       
       // Retry logic for Claude JSON parsing issues
       let recipe: GeneratedRecipe | null = null;
@@ -393,7 +394,7 @@ Return JSON only.`;
             fat: Math.round(targetMacros.fat * portion),
           };
           
-          console.log(`📊 Target macros for ${mealType}:`, mealMacros);
+          logger.info({ data: mealMacros }, `📊 Target macros for ${mealType}:`);
           
           // Calculate remaining prep time for this meal
           const remainingPrepTime = maxTotalPrepTime - totalPrepTime;
@@ -406,11 +407,11 @@ Return JSON only.`;
             ? (remainingBudget || 0) / mealsRemaining 
             : undefined;
           
-          console.log(`⏱️  Prep time: ${totalPrepTime}/${maxTotalPrepTime} min used, ${remainingPrepTime} min remaining`);
-          console.log(`⏱️  Max cook time for ${mealType}: ${maxCookTimeForMeal} min (${mealsRemaining} meals remaining)`);
+          logger.info(`⏱️  Prep time: ${totalPrepTime}/${maxTotalPrepTime} min used, ${remainingPrepTime} min remaining`);
+          logger.info(`⏱️  Max cook time for ${mealType}: ${maxCookTimeForMeal} min (${mealsRemaining} meals remaining)`);
           if (maxDailyBudget) {
-            console.log(`💰 Budget: $${totalBudget.toFixed(2)}/$${maxDailyBudget.toFixed(2)} used, $${remainingBudget?.toFixed(2)} remaining`);
-            console.log(`💰 Avg budget per remaining meal: $${avgBudgetPerMeal?.toFixed(2)}`);
+            logger.info(`💰 Budget: $${totalBudget.toFixed(2)}/$${maxDailyBudget.toFixed(2)} used, $${remainingBudget?.toFixed(2)} remaining`);
+            logger.info(`💰 Avg budget per remaining meal: $${avgBudgetPerMeal?.toFixed(2)}`);
           }
           
           recipe = await this.generateRecipe({
@@ -429,7 +430,7 @@ Return JSON only.`;
           const isJsonError = error.message?.includes('JSON') || error.message?.includes('parse');
           
           if (isJsonError && attempts < maxAttempts) {
-            console.warn(`⚠️  [${mealType}] JSON parsing error (attempt ${attempts}/${maxAttempts}), retrying...`);
+            logger.warn(`⚠️  [${mealType}] JSON parsing error (attempt ${attempts}/${maxAttempts}), retrying...`);
             // Short delay before retry (500ms instead of exponential backoff for speed)
             await new Promise(resolve => setTimeout(resolve, 500));
           } else {
@@ -447,7 +448,7 @@ Return JSON only.`;
       
       // Update total prep time
       totalPrepTime += recipe.cookTime || 0;
-      console.log(`⏱️  Added ${recipe.cookTime} min, total prep time: ${totalPrepTime}/${maxTotalPrepTime} min`);
+      logger.info(`⏱️  Added ${recipe.cookTime} min, total prep time: ${totalPrepTime}/${maxTotalPrepTime} min`);
       
       // Note: Budget tracking would require cost estimation from ingredients
       // For now, we rely on AI prompt instructions to keep costs reasonable
@@ -460,15 +461,15 @@ Return JSON only.`;
         mainProtein: this.extractMainProtein(recipe),
       });
       
-      console.log(`✅ ${mealType} generated: ${recipe.title} (${recipe.cuisine}, ${recipe.cookTime} min)`);
+      logger.info(`✅ ${mealType} generated: ${recipe.title} (${recipe.cuisine}, ${recipe.cookTime} min)`);
     }
 
-      console.log('✅ AI Daily Meal Plan: Complete');
-      console.log('📦 Generated meals:', mealsToGenerate);
+      logger.info('✅ AI Daily Meal Plan: Complete');
+      logger.info({ data: mealsToGenerate }, '📦 Generated meals:');
 
       return result;
     } catch (error: any) {
-      console.error('❌ AI Daily Meal Plan Error:', error);
+      logger.error({ data: error }, '❌ AI Daily Meal Plan Error:');
       
       // Preserve quota errors from generateRecipe
       if (error.code === 'insufficient_quota' || error.status === 429) {
@@ -869,11 +870,11 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
     const calorieTolerance = recipe.calories * 0.15; // 15% tolerance
 
     if (calorieDifference > calorieTolerance && recipe.calories > 50) {
-      console.warn(`⚠️  Macro mismatch: Reported ${recipe.calories} cal, calculated ${Math.round(calculatedCalories)} cal`);
+      logger.warn(`⚠️  Macro mismatch: Reported ${recipe.calories} cal, calculated ${Math.round(calculatedCalories)} cal`);
       // Auto-correct calories if difference is significant
       if (calorieDifference > recipe.calories * 0.25) {
         recipe.calories = Math.round(calculatedCalories);
-        console.log(`✅ Auto-corrected calories to ${recipe.calories} based on macros`);
+        logger.info(`✅ Auto-corrected calories to ${recipe.calories} based on macros`);
       }
     }
 
@@ -1072,17 +1073,17 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
 
     // Log warnings and throw on errors
     if (warnings.length > 0) {
-      console.warn('⚠️  Recipe Safety Warnings:', warnings);
+      logger.warn({ data: warnings }, '⚠️  Recipe Safety Warnings:');
     }
 
     if (errors.length > 0) {
-      console.error('❌ Recipe Safety Errors:', errors);
+      logger.error({ data: errors }, '❌ Recipe Safety Errors:');
       throw new Error(`Recipe failed safety checks: ${errors.join('; ')}`);
     }
 
     // If we get here, recipe passed all safety checks
     if (warnings.length === 0) {
-      console.log('✅ Recipe passed all safety checks');
+      logger.info('✅ Recipe passed all safety checks');
     }
   }
 
@@ -1092,16 +1093,16 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
    */
   async saveGeneratedRecipe(recipe: GeneratedRecipe, userId: string | null) {
     try {
-      console.log('💾 Saving recipe...');
+      logger.info('💾 Saving recipe...');
       
       // OPTIMIZATION: Fetch image in parallel with recipe creation (don't wait)
-      console.log('🖼️  Fetching recipe image (parallel)...');
+      logger.info('🖼️  Fetching recipe image (parallel)...');
       const imagePromise = imageService.searchFoodImage({
         recipeName: recipe.title,
         cuisine: recipe.cuisine,
         mainIngredient: recipe.ingredients[0]?.name,
       }).catch(err => {
-        console.warn('⚠️  Image fetch failed, using fallback:', err.message);
+        logger.warn({ data: err.message }, '⚠️  Image fetch failed, using fallback:');
         return null;
       });
       
@@ -1134,10 +1135,10 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
         },
       });
 
-      console.log('✅ Recipe created:', savedRecipe.id);
+      logger.info({ data: savedRecipe.id }, '✅ Recipe created:');
 
       // OPTIMIZATION: Add instructions in parallel with image fetch
-      console.log('📝 Adding instructions (parallel)...');
+      logger.info('📝 Adding instructions (parallel)...');
       const instructionsData = recipe.instructions.map((inst) => ({
         recipeId: savedRecipe.id,
         step: inst.step,
@@ -1153,12 +1154,12 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
         imagePromise, // Wait for the image fetch we started earlier
       ]);
 
-      console.log('✅ Instructions added:', createdInstructions.length);
+      logger.info({ data: createdInstructions.length }, '✅ Instructions added:');
 
       // OPTIMIZATION: Update recipe with image data (if available)
       if (photoData) {
-        console.log('✅ Image URL obtained:', photoData.url);
-        console.log('📸 Photographer:', photoData.photographer.name);
+        logger.info({ data: photoData.url }, '✅ Image URL obtained:');
+        logger.info({ data: photoData.photographer.name }, '📸 Photographer:');
         
         await prisma.recipe.update({
           where: { id: savedRecipe.id },
@@ -1173,7 +1174,7 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
           },
         });
       } else {
-        console.log('⚠️  No image found, proceeding without image');
+        logger.info('⚠️  No image found, proceeding without image');
       }
 
       // Fetch the complete recipe with all relations
@@ -1185,10 +1186,10 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
         },
       });
 
-      console.log('💾 Saved AI recipe to database:', completeRecipe?.id);
+      logger.info({ data: completeRecipe?.id }, '💾 Saved AI recipe to database:');
       return completeRecipe!;
     } catch (error) {
-      console.error('❌ Error saving AI recipe:', error);
+      logger.error({ data: error }, '❌ Error saving AI recipe:');
       throw error;
     }
   }

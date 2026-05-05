@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/ingredientAvailability/ingredientAvailabilityController.ts
 // Ingredient availability endpoints
 
@@ -27,7 +28,7 @@ export const checkIngredient = async (req: Request, res: Response) => {
 
     res.json(availability);
   } catch (error: any) {
-    console.error('Error checking ingredient availability:', error);
+    logger.error({ err: error }, 'Error checking ingredient availability:');
     res.status(500).json({ error: 'Failed to check ingredient availability' });
   }
 };
@@ -54,7 +55,7 @@ export const analyzeRecipe = async (req: Request, res: Response) => {
 
     res.json(analysis);
   } catch (error: any) {
-    console.error('Error analyzing recipe availability:', error);
+    logger.error({ err: error }, 'Error analyzing recipe availability:');
     res.status(500).json({ error: 'Failed to analyze recipe availability' });
   }
 };
@@ -80,7 +81,7 @@ export const filterRecipes = async (req: Request, res: Response) => {
 
     res.json({ recipeIds: filteredIds });
   } catch (error: any) {
-    console.error('Error filtering recipes by availability:', error);
+    logger.error({ err: error }, 'Error filtering recipes by availability:');
     res.status(500).json({ error: 'Failed to filter recipes by availability' });
   }
 };

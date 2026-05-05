@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // Group 10Y Phase 6 (10Y-C): Sunday-9am weekly check-in job for Pro users.
 //
 // Builds a personalized weekly summary, asks one open question (Sonnet, with
@@ -238,9 +239,9 @@ export async function runOnce(now: Date): Promise<RunOnceResult> {
       }
     } catch (error) {
       // Per-user error must never poison the batch.
-      console.error(
-        `[coachWeeklyCheckinJob] user ${user.id} failed:`,
-        error,
+      logger.error(
+        { err: error, userId: user.id },
+        'coachWeeklyCheckinJob.user.failed',
       );
     }
   }

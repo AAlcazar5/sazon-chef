@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/search/searchController.ts
 import type { Request, Response } from 'express';
 import { parseSearchIntent } from './intentParser';
@@ -26,7 +27,7 @@ export const searchController = {
         originalQuery: query.trim(),
       });
     } catch (error: any) {
-      console.error('Natural language search error:', error);
+      logger.error({ err: error }, 'Natural language search error:');
       return res.status(500).json({ error: 'Failed to parse search query' });
     }
   },

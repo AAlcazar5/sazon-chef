@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/shoppingListShare/shoppingListShareController.ts
 // Group 10Q: share a shopping list via a deep-link token
 
@@ -148,7 +149,7 @@ export const shoppingListShareController = {
         case 'expired':
           return res.status(410).json({ error: 'Share link has expired' });
         case 'corrupt':
-          console.error('[shoppingListShare] usedBy column is corrupt for token', token);
+          logger.error({ err: token }, '[shoppingListShare] usedBy column is corrupt for token');
           return res.status(500).json({ error: 'Share link is in an invalid state' });
         case 'max_uses':
           return res.status(403).json({ error: 'Share link has reached maximum uses' });
@@ -159,7 +160,7 @@ export const shoppingListShareController = {
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[shoppingListShare] importShare failed:', msg);
+      logger.error({ err: msg }, '[shoppingListShare] importShare failed:');
       return res.status(500).json({ error: 'Could not import share link' });
     }
   },

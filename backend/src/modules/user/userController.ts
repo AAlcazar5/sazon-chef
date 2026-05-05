@@ -6,6 +6,7 @@ import { getUserId } from '@/utils/authHelper';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { logger } from '../../utils/logger';
 import {
   computeCookingStats,
   computeSkillProgress,
@@ -115,7 +116,7 @@ export const userController = {
       
       res.json(userData);
     } catch (error) {
-      console.error('Get profile error:', error);
+      logger.error({ err: error }, 'Get profile error:');
       res.status(500).json({ error: 'Failed to fetch user profile' });
     }
   },
@@ -170,7 +171,7 @@ export const userController = {
       
       res.json({ message: 'Profile updated successfully', user: userResponse });
     } catch (error) {
-      console.error('Update profile error:', error);
+      logger.error({ err: error }, 'Update profile error:');
       res.status(500).json({ error: 'Failed to update profile' });
     }
   },
@@ -214,7 +215,7 @@ export const userController = {
       
       res.json(preferences);
     } catch (error) {
-      console.error('Get preferences error:', error);
+      logger.error({ err: error }, 'Get preferences error:');
       res.status(500).json({ error: 'Failed to fetch user preferences' });
     }
   },
@@ -319,7 +320,7 @@ export const userController = {
       
       res.json({ message: 'Preferences updated successfully', preferences });
     } catch (error) {
-      console.error('Update preferences error:', error);
+      logger.error({ err: error }, 'Update preferences error:');
       res.status(500).json({ error: 'Failed to update preferences' });
     }
   },
@@ -351,7 +352,7 @@ export const userController = {
       
       res.json(macroGoals);
     } catch (error) {
-      console.error('Get macro goals error:', error);
+      logger.error({ err: error }, 'Get macro goals error:');
       res.status(500).json({ error: 'Failed to fetch macro goals' });
     }
   },
@@ -393,7 +394,7 @@ export const userController = {
       
       res.json({ message: 'Macro goals updated successfully', macroGoals });
     } catch (error) {
-      console.error('Update macro goals error:', error);
+      logger.error({ err: error }, 'Update macro goals error:');
       res.status(500).json({ error: 'Failed to update macro goals' });
     }
   },
@@ -439,7 +440,7 @@ export const userController = {
         weekendsOff: settings.weekendsOff,
       });
     } catch (error) {
-      console.error('Get notifications error:', error);
+      logger.error({ err: error }, 'Get notifications error:');
       res.status(500).json({ error: 'Failed to fetch notification settings' });
     }
   },
@@ -505,7 +506,7 @@ export const userController = {
         },
       });
     } catch (error) {
-      console.error('Update notifications error:', error);
+      logger.error({ err: error }, 'Update notifications error:');
       res.status(500).json({ error: 'Failed to update notification settings' });
     }
   },
@@ -541,7 +542,7 @@ export const userController = {
       
       res.json(mealHistory);
     } catch (error) {
-      console.error('Get meal history error:', error);
+      logger.error({ err: error }, 'Get meal history error:');
       res.status(500).json({ error: 'Failed to fetch meal history' });
     }
   },
@@ -562,7 +563,7 @@ export const userController = {
       
       res.json(profile);
     } catch (error) {
-      console.error('Get physical profile error:', error);
+      logger.error({ err: error }, 'Get physical profile error:');
       res.status(500).json({ error: 'Failed to fetch physical profile' });
     }
   },
@@ -653,7 +654,7 @@ export const userController = {
         profile
       });
     } catch (error) {
-      console.error('Upsert physical profile error:', error);
+      logger.error({ err: error }, 'Upsert physical profile error:');
       res.status(500).json({ error: 'Failed to save physical profile' });
     }
   },
@@ -691,7 +692,7 @@ export const userController = {
 
       res.json(recommendations);
     } catch (error) {
-      console.error('Calculate macros error:', error);
+      logger.error({ err: error }, 'Calculate macros error:');
       res.status(500).json({ error: 'Failed to calculate macros' });
     }
   },
@@ -754,7 +755,7 @@ export const userController = {
         }
       });
     } catch (error) {
-      console.error('Apply calculated macros error:', error);
+      logger.error({ err: error }, 'Apply calculated macros error:');
       res.status(500).json({ error: 'Failed to apply calculated macros' });
     }
   },
@@ -777,7 +778,7 @@ export const userController = {
       
       res.json({ preferredSuperfoods: preferences.preferredSuperfoods });
     } catch (error) {
-      console.error('Get preferred superfoods error:', error);
+      logger.error({ err: error }, 'Get preferred superfoods error:');
       res.status(500).json({ error: 'Failed to fetch preferred superfoods' });
     }
   },
@@ -829,7 +830,7 @@ export const userController = {
       
       res.json({ message: 'Superfood added successfully', superfood });
     } catch (error) {
-      console.error('Add preferred superfood error:', error);
+      logger.error({ err: error }, 'Add preferred superfood error:');
       res.status(500).json({ error: 'Failed to add preferred superfood' });
     }
   },
@@ -867,7 +868,7 @@ export const userController = {
       
       res.json({ message: 'Superfood removed successfully' });
     } catch (error) {
-      console.error('Remove preferred superfood error:', error);
+      logger.error({ err: error }, 'Remove preferred superfood error:');
       res.status(500).json({ error: 'Failed to remove preferred superfood' });
     }
   },
@@ -921,7 +922,7 @@ export const userController = {
         preferredSuperfoods: updated
       });
     } catch (error) {
-      console.error('Update preferred superfoods error:', error);
+      logger.error({ err: error }, 'Update preferred superfoods error:');
       res.status(500).json({ error: 'Failed to update preferred superfoods' });
     }
   },
@@ -947,7 +948,7 @@ export const userController = {
         profilePictureUrl,
       });
     } catch (error) {
-      console.error('Upload profile picture error:', error);
+      logger.error({ err: error }, 'Upload profile picture error:');
       res.status(500).json({ error: 'Failed to upload profile picture' });
     }
   },
@@ -976,7 +977,7 @@ export const userController = {
 
       res.json({ message: 'Profile picture removed successfully' });
     } catch (error) {
-      console.error('Delete profile picture error:', error);
+      logger.error({ err: error }, 'Delete profile picture error:');
       res.status(500).json({ error: 'Failed to remove profile picture' });
     }
   },
@@ -1005,7 +1006,7 @@ export const userController = {
       const stats = computeCookingStats(logs, new Date(), seeded);
       res.json({ ...stats, seededCuisines: seeded });
     } catch (error) {
-      console.error('Get cooking stats error:', error);
+      logger.error({ err: error }, 'Get cooking stats error:');
       res.status(500).json({ error: 'Failed to fetch cooking stats' });
     }
   },
@@ -1066,7 +1067,7 @@ export const userController = {
         cookingSkillLevel: prefs.cookingSkillLevel,
       });
     } catch (error) {
-      console.error('Seed cooking journey error:', error);
+      logger.error({ err: error }, 'Seed cooking journey error:');
       res.status(500).json({ error: 'Failed to seed cooking journey' });
     }
   },
@@ -1124,7 +1125,7 @@ export const userController = {
       });
       res.json(progress);
     } catch (error) {
-      console.error('Get skill progress error:', error);
+      logger.error({ err: error }, 'Get skill progress error:');
       res.status(500).json({ error: 'Failed to fetch skill progress' });
     }
   },
@@ -1149,7 +1150,7 @@ export const userController = {
 
       res.json({ cookingSkillLevel: preferences.cookingSkillLevel });
     } catch (error) {
-      console.error('Accept skill level-up error:', error);
+      logger.error({ err: error }, 'Accept skill level-up error:');
       res.status(500).json({ error: 'Failed to update skill level' });
     }
   },
@@ -1250,7 +1251,7 @@ export const userController = {
       );
       res.json(payload);
     } catch (error) {
-      console.error('Export data error:', error);
+      logger.error({ err: error }, 'Export data error:');
       res.status(500).json({ error: 'Failed to export account data' });
     }
   },
@@ -1313,7 +1314,7 @@ export const userController = {
 
       res.json({ success: true, deletedAt: new Date().toISOString() });
     } catch (error) {
-      console.error('Delete account error:', error);
+      logger.error({ err: error }, 'Delete account error:');
       res.status(500).json({ error: 'Failed to delete account' });
     }
   },

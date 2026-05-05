@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/shoppingList/shoppingAppController.ts
 // Controller for 3rd party shopping app integrations
 
@@ -18,7 +19,7 @@ export const shoppingAppController = {
       const integrations = await shoppingAppIntegrationService.getUserIntegrations(userId);
       res.json(integrations);
     } catch (error: any) {
-      console.error('Error getting shopping app integrations:', error);
+      logger.error({ err: error }, 'Error getting shopping app integrations:');
       res.status(500).json({ error: 'Failed to get shopping app integrations' });
     }
   },
@@ -32,7 +33,7 @@ export const shoppingAppController = {
       const apps = shoppingAppIntegrationService.getSupportedApps();
       res.json(apps);
     } catch (error: any) {
-      console.error('Error getting supported apps:', error);
+      logger.error({ err: error }, 'Error getting supported apps:');
       res.status(500).json({ error: 'Failed to get supported apps' });
     }
   },
@@ -58,7 +59,7 @@ export const shoppingAppController = {
 
       res.status(201).json(integration);
     } catch (error: any) {
-      console.error('Error connecting to shopping app:', error);
+      logger.error({ err: error }, 'Error connecting to shopping app:');
       res.status(500).json({ error: error.message || 'Failed to connect to shopping app' });
     }
   },
@@ -75,7 +76,7 @@ export const shoppingAppController = {
       await shoppingAppIntegrationService.disconnectApp(userId, appName);
       res.json({ message: `Disconnected from ${appName}` });
     } catch (error: any) {
-      console.error('Error disconnecting from shopping app:', error);
+      logger.error({ err: error }, 'Error disconnecting from shopping app:');
       res.status(500).json({ error: 'Failed to disconnect from shopping app' });
     }
   },
@@ -130,7 +131,7 @@ export const shoppingAppController = {
 
       res.json(result);
     } catch (error: any) {
-      console.error('Error syncing to external app:', error);
+      logger.error({ err: error }, 'Error syncing to external app:');
       res.status(500).json({ error: 'Failed to sync to external app' });
     }
   },
@@ -157,7 +158,7 @@ export const shoppingAppController = {
 
       res.json(result);
     } catch (error: any) {
-      console.error('Error syncing bidirectionally:', error);
+      logger.error({ err: error }, 'Error syncing bidirectionally:');
       res.status(500).json({ error: 'Failed to sync shopping list' });
     }
   },
@@ -184,7 +185,7 @@ export const shoppingAppController = {
 
       res.json(result);
     } catch (error: any) {
-      console.error('Error syncing recipe to shopping app:', error);
+      logger.error({ err: error }, 'Error syncing recipe to shopping app:');
       res.status(500).json({ error: 'Failed to sync recipe to shopping app' });
     }
   },

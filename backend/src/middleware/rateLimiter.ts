@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/middleware/rateLimiter.ts
 // Rate limiting middleware for API endpoints
 
@@ -10,7 +11,7 @@ const isDevelopment =
   process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
 
 if (isDevelopment) {
-  console.log('🔓 [RateLimiter] Development mode detected - rate limiting DISABLED');
+  logger.info('🔓 [RateLimiter] Development mode detected - rate limiting DISABLED');
 }
 
 /**

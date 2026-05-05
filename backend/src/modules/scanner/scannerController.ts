@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/scanner/scannerController.ts
 // Scanner API controller (Phase 6, Group 13)
 
@@ -29,7 +30,7 @@ export const scannerController = {
   async recognizeFood(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      console.log('📸 POST /api/scanner/recognize-food called');
+      logger.info('📸 POST /api/scanner/recognize-food called');
 
       if (!req.file) {
         return res.status(400).json({ error: 'No image file provided' });
@@ -42,14 +43,14 @@ export const scannerController = {
       // Recognize food and estimate calories
       const result = await foodRecognitionService.recognizeFoodFromPhoto(imageBase64, imageMimeType);
 
-      console.log('✅ Food recognized:', result.mealDescription, `(${result.totalEstimatedCalories} calories)`);
+      logger.info({ description: result.mealDescription, calories: result.totalEstimatedCalories }, '✅ Food recognized');
 
       res.json({
         success: true,
         result,
       });
     } catch (error: any) {
-      console.error('❌ Food recognition error:', error);
+      logger.error({ data: error }, '❌ Food recognition error:');
 
       const code = error instanceof FoodRecognitionError ? error.code : 'unknown';
       const status = code === 'not_food' ? 422
@@ -74,7 +75,7 @@ export const scannerController = {
       const userId = getUserId(req);
       const { barcode } = req.body;
 
-      console.log('📱 POST /api/scanner/scan-barcode called:', barcode);
+      logger.info({ data: barcode }, '📱 POST /api/scanner/scan-barcode called:');
 
       if (!barcode || typeof barcode !== 'string') {
         return res.status(400).json({ error: 'Barcode is required' });
@@ -90,14 +91,14 @@ export const scannerController = {
         });
       }
 
-      console.log('✅ Barcode scanned:', result.productName);
+      logger.info({ data: result.productName }, '✅ Barcode scanned:');
 
       res.json({
         success: true,
         result,
       });
     } catch (error: any) {
-      console.error('❌ Barcode scan error:', error);
+      logger.error({ data: error }, '❌ Barcode scan error:');
       res.status(500).json({
         error: 'Failed to scan barcode',
         message: error.message,

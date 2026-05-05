@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // OpenAI Provider Implementation
 import OpenAI from 'openai';
 import { AIProvider, RecipeGenerationRequest, AIProviderError } from './AIProvider';
@@ -47,23 +48,23 @@ export class OpenAIProvider extends AIProvider {
       }
 
       const recipe = JSON.parse(content) as GeneratedRecipe;
-      console.log(`✅ [OpenAI] Recipe generated: ${recipe.title}`);
+      logger.info(`✅ [OpenAI] Recipe generated: ${recipe.title}`);
       return recipe;
     } catch (error: any) {
-      console.log(`🔍 [OpenAI] Error caught, normalizing:`, {
+      logger.info({
         code: error.code,
         status: error.status,
         errorCode: error.error?.code,
         errorType: error.error?.type,
         message: error.message,
-      });
+      }, '🔍 [OpenAI] Error caught, normalizing');
       const normalized = this.normalizeError(error, 'generateRecipe');
-      console.log(`🔍 [OpenAI] Normalized error:`, {
+      logger.info({
         code: normalized.code,
         status: normalized.status,
         isQuotaError: normalized.isQuotaError,
         isRateLimitError: normalized.isRateLimitError,
-      });
+      }, '🔍 [OpenAI] Normalized error');
       throw normalized;
     }
   }

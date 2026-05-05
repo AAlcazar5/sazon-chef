@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/utils/encryption.ts
 // Encryption utility for data at rest
 
@@ -45,7 +46,7 @@ export function encrypt(text: string): string {
     // Return: salt:iv:tag:encryptedData
     return `${salt.toString('base64')}:${iv.toString('base64')}:${tag.toString('base64')}:${encrypted}`;
   } catch (error) {
-    console.error('Encryption error:', error);
+    logger.error({ err: error }, 'Encryption error:');
     throw new Error('Failed to encrypt data');
   }
 }
@@ -85,7 +86,7 @@ export function decrypt(encryptedText: string): string {
     
     return decrypted;
   } catch (error) {
-    console.error('Decryption error:', error);
+    logger.error({ err: error }, 'Decryption error:');
     throw new Error('Failed to decrypt data');
   }
 }

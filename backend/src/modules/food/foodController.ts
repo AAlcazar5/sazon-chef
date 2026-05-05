@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/food/foodController.ts
 // 10L: Branded Food & Restaurant Tracking — search, log, recent, frequent
 
@@ -107,7 +108,7 @@ export const searchFood = async (req: Request, res: Response) => {
 
     return await searchOpenFoodFacts(query, res);
   } catch (error: any) {
-    console.error('❌ Food search error:', error);
+    logger.error({ err: error }, '❌ Food search error:');
     res.status(500).json({ error: 'Failed to search food', message: error.message });
   }
 };
@@ -217,7 +218,7 @@ export const getRecentFoods = async (req: Request, res: Response) => {
 
     return res.json({ items });
   } catch (error: any) {
-    console.error('❌ Recent foods error:', error);
+    logger.error({ err: error }, '❌ Recent foods error:');
     res.status(500).json({ error: 'Failed to get recent foods' });
   }
 };
@@ -258,7 +259,7 @@ export const getFrequentFoods = async (req: Request, res: Response) => {
 
     return res.json({ items });
   } catch (error: any) {
-    console.error('❌ Frequent foods error:', error);
+    logger.error({ err: error }, '❌ Frequent foods error:');
     res.status(500).json({ error: 'Failed to get frequent foods' });
   }
 };
@@ -345,7 +346,7 @@ export const logFood = async (req: Request, res: Response) => {
 
     return res.json({ message: 'Food logged successfully', meal });
   } catch (error: any) {
-    console.error('❌ Log food error:', error);
+    logger.error({ err: error }, '❌ Log food error:');
     res.status(500).json({ error: 'Failed to log food' });
   }
 };
@@ -384,7 +385,7 @@ export const createUserFoodItem = async (req: Request, res: Response) => {
 
     return res.status(201).json({ foodItem });
   } catch (error: any) {
-    console.error('❌ Create food item error:', error);
+    logger.error({ err: error }, '❌ Create food item error:');
     res.status(500).json({ error: 'Failed to create food item' });
   }
 };

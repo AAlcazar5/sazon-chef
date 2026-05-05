@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/middleware/requirePremium.ts
 // Middleware that gates a route to premium (active or trialing) subscribers only.
 // Returns 402 with PREMIUM_REQUIRED error code for easy frontend detection.
@@ -39,7 +40,7 @@ export const requirePremium = async (
 
     next();
   } catch (err) {
-    console.error('requirePremium error:', err);
+    logger.error({ err: err }, 'requirePremium error:');
     return res.status(500).json({ error: 'Internal server error' });
   }
 };

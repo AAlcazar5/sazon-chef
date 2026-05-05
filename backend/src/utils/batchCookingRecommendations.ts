@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * Utility functions for generating batch cooking recommendations based on user preferences
  */
@@ -124,7 +125,7 @@ export async function generateBatchCookingRecommendations(
 
     return recommendations;
   } catch (error) {
-    console.error('Error generating batch cooking recommendations:', error);
+    logger.error({ err: error }, 'Error generating batch cooking recommendations:');
     return [];
   }
 }

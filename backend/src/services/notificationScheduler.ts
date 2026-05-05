@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/notificationScheduler.ts
 // Simple interval-based scheduler for notification triggers.
 // Runs hourly, dispatches condition-based triggers based on day/hour.
@@ -34,7 +35,7 @@ export function startNotificationScheduler(): void {
         try {
           await runCoachWeeklyCheckin(now);
         } catch (error) {
-          console.error('❌ [NotificationScheduler] coachWeeklyCheckin failed:', error);
+          logger.error({ err: error }, '❌ [NotificationScheduler] coachWeeklyCheckin failed:');
         }
       }
 
@@ -44,17 +45,17 @@ export function startNotificationScheduler(): void {
         await notificationTriggerService.checkDay3Nudge();
       }
     } catch (error) {
-      console.error('❌ [NotificationScheduler] Error:', error);
+      logger.error({ err: error }, '❌ [NotificationScheduler] Error:');
     }
   }, 60 * 60 * 1000); // 1 hour
 
-  console.log('📬 [NotificationScheduler] Started (hourly interval)');
+  logger.info('📬 [NotificationScheduler] Started (hourly interval)');
 }
 
 export function stopNotificationScheduler(): void {
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
-    console.log('📬 [NotificationScheduler] Stopped');
+    logger.info('📬 [NotificationScheduler] Stopped');
   }
 }

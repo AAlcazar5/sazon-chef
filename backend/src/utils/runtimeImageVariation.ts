@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * Runtime image variation utilities
  * Ensures unique images for paginated recipe results WITHOUT database updates
@@ -19,7 +20,7 @@ export function varyImageUrlsForPage<T extends { imageUrl?: string | null }>(
 ): T[] {
   // TEMPORARILY DISABLED: Return recipes unchanged to test if URL variation is breaking images
   // TODO: Re-enable after confirming images load without variation
-  console.log(`🖼️  Image variation: Processing ${recipes.length} recipes (DISABLED - returning unchanged)`);
+  logger.info(`🖼️  Image variation: Processing ${recipes.length} recipes (DISABLED - returning unchanged)`);
   return recipes.map((recipe) => {
     // Just ensure imageUrl is trimmed, but don't modify URLs
     if (recipe.imageUrl) {
@@ -50,7 +51,7 @@ export function varyImageUrlsForPage<T extends { imageUrl?: string | null }>(
     } catch (error) {
       // If URL is malformed, return recipe unchanged (don't break it)
       const recipeTitle = (recipe as any).title || 'Unknown';
-      console.warn(`⚠️  Malformed image URL for recipe "${recipeTitle}": ${recipe.imageUrl}`);
+      logger.warn(`⚠️  Malformed image URL for recipe "${recipeTitle}": ${recipe.imageUrl}`);
       // Return recipe with original imageUrl intact
       return {
         ...recipe,
@@ -178,15 +179,15 @@ export function logImageDuplicateStats<T extends { imageUrl?: string | null; tit
   const duplicates = detectDuplicateImages(recipes);
 
   if (duplicates.size === 0) {
-    console.log(`✅ Page ${pageNumber}: All ${recipes.length} recipes have unique images`);
+    logger.info(`✅ Page ${pageNumber}: All ${recipes.length} recipes have unique images`);
     return;
   }
 
-  console.log(`⚠️  Page ${pageNumber}: Found ${duplicates.size} duplicate image(s):`);
+  logger.info(`⚠️  Page ${pageNumber}: Found ${duplicates.size} duplicate image(s):`);
   duplicates.forEach((indices, url) => {
     const recipeNames = indices
       .map((i) => recipes[i]?.title || 'Unknown')
       .join(', ');
-    console.log(`   - ${url.substring(0, 50)}... used by: ${recipeNames}`);
+    logger.info(`   - ${url.substring(0, 50)}... used by: ${recipeNames}`);
   });
 }

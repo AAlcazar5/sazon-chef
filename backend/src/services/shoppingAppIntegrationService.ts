@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/shoppingAppIntegrationService.ts
 // Service for integrating with 3rd party shopping apps (Instacart, Walmart, Kroger, etc.)
 
@@ -151,7 +152,7 @@ export class ShoppingAppIntegrationService {
       const result = await this.syncItemsToApp(appName, integration, items, config);
       return result;
     } catch (error: any) {
-      console.error(`Error syncing items to ${appName}:`, error);
+      logger.error({ err: error }, `Error syncing items to ${appName}:`);
       return {
         success: false,
         message: `Failed to sync items to ${appName}: ${error.message}`,
@@ -176,8 +177,8 @@ export class ShoppingAppIntegrationService {
     // 3. Add items to the list
     // 4. Return success/failure
 
-    console.log(`🛒 Syncing ${items.length} items to ${config.appName}...`);
-    console.log('Items:', items.map(i => `${i.name} (${i.quantity})`).join(', '));
+    logger.info(`🛒 Syncing ${items.length} items to ${config.appName}...`);
+    logger.info({ items: items.map(i => `${i.name} (${i.quantity})`).join(', ') }, 'shoppingAppIntegration.items');
 
     // For now, return a mock success response
     // TODO: Implement actual API integration for each shopping app

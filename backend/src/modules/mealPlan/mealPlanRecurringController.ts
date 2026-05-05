@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { logger } from '../../utils/logger';
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -29,7 +30,7 @@ export const getRecurringMeals = async (req: Request, res: Response) => {
 
     res.json(rules);
   } catch (error) {
-    console.error('Error getting recurring meals:', error);
+    logger.error({ err: error }, 'Error getting recurring meals:');
     res.status(500).json({ error: 'Failed to get recurring meals' });
   }
 };
@@ -73,7 +74,7 @@ export const createRecurringMeal = async (req: Request, res: Response) => {
 
     res.json(rule);
   } catch (error) {
-    console.error('Error creating recurring meal:', error);
+    logger.error({ err: error }, 'Error creating recurring meal:');
     res.status(500).json({ error: 'Failed to create recurring meal' });
   }
 };
@@ -125,7 +126,7 @@ export const updateRecurringMeal = async (req: Request, res: Response) => {
 
     res.json(rule);
   } catch (error) {
-    console.error('Error updating recurring meal:', error);
+    logger.error({ err: error }, 'Error updating recurring meal:');
     res.status(500).json({ error: 'Failed to update recurring meal' });
   }
 };
@@ -148,7 +149,7 @@ export const deleteRecurringMeal = async (req: Request, res: Response) => {
 
     res.json({ message: 'Recurring meal deleted' });
   } catch (error) {
-    console.error('Error deleting recurring meal:', error);
+    logger.error({ err: error }, 'Error deleting recurring meal:');
     res.status(500).json({ error: 'Failed to delete recurring meal' });
   }
 };
@@ -249,7 +250,7 @@ export const applyRecurringMeals = async (req: Request, res: Response) => {
 
     res.json({ created });
   } catch (error) {
-    console.error('Error applying recurring meals:', error);
+    logger.error({ err: error }, 'Error applying recurring meals:');
     res.status(500).json({ error: 'Failed to apply recurring meals' });
   }
 };

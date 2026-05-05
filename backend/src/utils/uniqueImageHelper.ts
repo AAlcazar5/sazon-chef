@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * Helper utilities to ensure unique images for recipes
  * Particularly useful when fetching paginated results
@@ -55,7 +56,7 @@ export async function assignUniqueImagesToRecipes<T extends Recipe>(
         updatedRecipes.push(recipe);
       }
     } catch (error) {
-      console.error(`Failed to fetch image for recipe ${recipe.id}:`, error);
+      logger.error({ err: error }, `Failed to fetch image for recipe ${recipe.id}:`);
       // Keep original recipe if error occurs
       updatedRecipes.push(recipe);
     }
@@ -135,12 +136,12 @@ export async function refreshDuplicateImages<T extends Recipe>(
             unsplashAttributionText: photoData.attributionText,
             unsplashUrl: photoData.unsplashUrl,
           });
-          console.log(`✅ Refreshed duplicate image for: ${recipe.title}`);
+          logger.info(`✅ Refreshed duplicate image for: ${recipe.title}`);
         } else {
           updatedRecipes.push(recipe);
         }
       } catch (error) {
-        console.error(`Failed to refresh image for recipe ${recipe.id}:`, error);
+        logger.error({ err: error }, `Failed to refresh image for recipe ${recipe.id}:`);
         updatedRecipes.push(recipe);
       }
     } else {

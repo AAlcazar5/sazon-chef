@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/emailService.ts
 // Transactional email delivery via Resend
 
@@ -26,10 +27,10 @@ export const emailService = {
    */
   async send(options: { to: string; subject: string; html: string }): Promise<boolean> {
     if (!resend) {
-      console.log(`📧 [Email] (dev mode) To: ${options.to}`);
-      console.log(`📧 [Email] Subject: ${options.subject}`);
+      logger.info(`📧 [Email] (dev mode) To: ${options.to}`);
+      logger.info(`📧 [Email] Subject: ${options.subject}`);
       if (process.env.NODE_ENV === 'development') {
-        console.log(`📧 [Email] HTML length: ${options.html.length} chars`);
+        logger.info(`📧 [Email] HTML length: ${options.html.length} chars`);
       }
       return false;
     }
@@ -41,10 +42,10 @@ export const emailService = {
         subject: options.subject,
         html: options.html,
       });
-      console.log(`✅ [Email] Sent "${options.subject}" to ${options.to}`);
+      logger.info(`✅ [Email] Sent "${options.subject}" to ${options.to}`);
       return true;
     } catch (error) {
-      console.error(`❌ [Email] Failed to send to ${options.to}:`, error);
+      logger.error({ err: error }, `❌ [Email] Failed to send to ${options.to}:`);
       return false;
     }
   },

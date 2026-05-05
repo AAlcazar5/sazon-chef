@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/shoppingList/shoppingListGenerationController.ts
 // R1-2 stage B: extracted from shoppingListController.ts. Owns the
 // recipe-to-list and meal-plan-to-list generation flow plus the purchase
@@ -212,7 +213,7 @@ export const shoppingListGenerationController = {
         itemsAdded: items.length,
       });
     } catch (error: any) {
-      console.error('Error generating shopping list from recipes:', error);
+      logger.error({ err: error }, 'Error generating shopping list from recipes:');
       res.status(500).json({ error: 'Failed to generate shopping list from recipes' });
     }
   },
@@ -742,9 +743,9 @@ export const shoppingListGenerationController = {
       });
 
       // Fire-and-forget: notify user their shopping list is ready
-      notificationTriggerService.onShoppingListReady(userId, items.length).catch(console.error);
+      notificationTriggerService.onShoppingListReady(userId, items.length).catch((err: unknown) => logger.error({ err }, 'shoppingList.notify.failed'));
     } catch (error: any) {
-      console.error('Error generating shopping list from meal plan:', error);
+      logger.error({ err: error }, 'Error generating shopping list from meal plan:');
       res.status(500).json({ error: 'Failed to generate shopping list from meal plan' });
     }
   },
@@ -777,7 +778,7 @@ export const shoppingListGenerationController = {
 
       res.json(items);
     } catch (error: any) {
-      console.error('Error getting purchase history:', error);
+      logger.error({ err: error }, 'Error getting purchase history:');
       res.status(500).json({ error: 'Failed to get purchase history' });
     }
   },
@@ -803,7 +804,7 @@ export const shoppingListGenerationController = {
 
       res.json(items);
     } catch (error: any) {
-      console.error('Error getting recent purchases:', error);
+      logger.error({ err: error }, 'Error getting recent purchases:');
       res.status(500).json({ error: 'Failed to get recent purchases' });
     }
   },
@@ -832,7 +833,7 @@ export const shoppingListGenerationController = {
 
       res.json(updated);
     } catch (error: any) {
-      console.error('Error toggling purchase history favorite:', error);
+      logger.error({ err: error }, 'Error toggling purchase history favorite:');
       res.status(500).json({ error: 'Failed to toggle favorite' });
     }
   },
@@ -997,7 +998,7 @@ export const shoppingListGenerationController = {
 
       res.json({ items, totalCents });
     } catch (error: any) {
-      console.error('Error generating budget preview:', error);
+      logger.error({ err: error }, 'Error generating budget preview:');
       res.status(500).json({ error: 'Failed to generate budget preview' });
     }
   },

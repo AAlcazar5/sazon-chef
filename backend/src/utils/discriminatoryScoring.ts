@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/utils/discriminatoryScoring.ts
 
 export interface UserPreferences {
@@ -164,7 +165,7 @@ export async function getUserPreferencesForScoring(userId: string) {
       spiceLevel: preferences.spiceLevel,
     };
   } catch (error) {
-    console.error('Error fetching user preferences:', error);
+    logger.error({ err: error }, 'Error fetching user preferences:');
     return null;
   }
   // No $disconnect — using shared singleton Prisma client

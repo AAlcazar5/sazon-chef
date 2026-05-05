@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/costTracking/priceComparisonController.ts
 // Price comparison and savings suggestions endpoints
 
@@ -29,7 +30,7 @@ export const compareIngredient = async (req: Request, res: Response) => {
 
     res.json(comparison);
   } catch (error: any) {
-    console.error('Error comparing ingredient prices:', error);
+    logger.error({ err: error }, 'Error comparing ingredient prices:');
     res.status(500).json({ error: 'Failed to compare ingredient prices' });
   }
 };
@@ -51,7 +52,7 @@ export const getRecipeSavings = async (req: Request, res: Response) => {
 
     res.json(savings);
   } catch (error: any) {
-    console.error('Error finding recipe savings:', error);
+    logger.error({ err: error }, 'Error finding recipe savings:');
     res.status(500).json({ error: 'Failed to find recipe savings' });
   }
 };
@@ -73,7 +74,7 @@ export const compareMultiple = async (req: Request, res: Response) => {
 
     res.json({ comparisons });
   } catch (error: any) {
-    console.error('Error comparing multiple ingredients:', error);
+    logger.error({ err: error }, 'Error comparing multiple ingredients:');
     res.status(500).json({ error: 'Failed to compare ingredients' });
   }
 };
@@ -96,7 +97,7 @@ export const getBestStore = async (req: Request, res: Response) => {
     const { isLocationServicesEnabledFromRequest } = require('@/utils/privacyHelper');
     const locationServicesEnabled = isLocationServicesEnabledFromRequest(req);
     
-    console.log('🔒 Location services enabled:', locationServicesEnabled);
+    logger.info({ err: locationServicesEnabled }, '🔒 Location services enabled:');
 
     // Get user location from request or preferences (only if location services enabled)
     let userLocation = null;
@@ -125,7 +126,7 @@ export const getBestStore = async (req: Request, res: Response) => {
         }
       }
     } else {
-      console.log('🔒 Location services disabled - skipping location-based store recommendations');
+      logger.info('🔒 Location services disabled - skipping location-based store recommendations');
     }
 
     // Find nearby stores if location is available
@@ -149,7 +150,7 @@ export const getBestStore = async (req: Request, res: Response) => {
       nearbyStores: nearbyStores?.slice(0, 5), // Include top 5 nearby stores in response
     });
   } catch (error: any) {
-    console.error('Error finding best store:', error);
+    logger.error({ err: error }, 'Error finding best store:');
     res.status(500).json({ error: 'Failed to find best store' });
   }
 };

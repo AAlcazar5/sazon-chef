@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/auth/socialAuthController.ts
 // Social authentication controller for Google and Apple OAuth
 
@@ -210,7 +211,7 @@ export async function socialAuthCallback(req: SocialAuthRequest, res: Response) 
       token
     });
   } catch (error: any) {
-    console.error('Social auth error:', error);
+    logger.error({ err: error }, 'Social auth error:');
     res.status(500).json({
       error: 'Failed to authenticate',
       message: error.message
@@ -279,7 +280,7 @@ export async function linkSocialAccount(req: Request, res: Response) {
       user: updatedUser
     });
   } catch (error: any) {
-    console.error('Link social account error:', error);
+    logger.error({ err: error }, 'Link social account error:');
     res.status(500).json({
       error: 'Failed to link social account',
       message: error.message
@@ -344,7 +345,7 @@ export async function unlinkSocialAccount(req: Request, res: Response) {
       message: 'Social account unlinked successfully'
     });
   } catch (error: any) {
-    console.error('Unlink social account error:', error);
+    logger.error({ err: error }, 'Unlink social account error:');
     res.status(500).json({
       error: 'Failed to unlink social account',
       message: error.message

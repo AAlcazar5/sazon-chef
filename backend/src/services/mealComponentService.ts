@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/services/mealComponentService.ts
 // Group 10X Phase 1+2 — Build-a-Plate component listing, plate composition, and permutations.
 
@@ -198,7 +199,7 @@ export const saveComposedPlate = async (
 
   const savedComponentIds = params.components.map((c) => c.componentId);
   recordAffinityEvent({ type: 'plate_saved', userId: params.userId, componentIds: savedComponentIds }).catch(
-    (err) => console.warn('[affinity] plate_saved event failed (non-fatal):', err)
+    (err) => logger.warn({ err: err }, '[affinity] plate_saved event failed (non-fatal):')
   );
 
   if (!params.saveAsRecipe) {

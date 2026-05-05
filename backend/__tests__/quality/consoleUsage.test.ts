@@ -1,7 +1,8 @@
 // backend/__tests__/quality/consoleUsage.test.ts
-// ROADMAP 4.0 R7 — backend `console.*` cap. The full pino migration is a
-// mechanical sweep across 738 call sites; this test caps the count so it
-// shrinks monotonically as we replace each call.
+// ROADMAP 4.0 E8 — backend `console.*` is FORBIDDEN in `backend/src/**`.
+// The R7 cap (≤750) was the holding pattern; E8 completes the sweep — all
+// loggers route through pino (`src/utils/logger.ts`) so events get PII
+// redaction + structured fields. CI fails if any new `console.*` lands.
 
 import { execSync } from 'child_process';
 import path from 'path';
@@ -21,12 +22,9 @@ function consoleCallCount(): number {
   }
 }
 
-describe('Backend console.* cap (R7 baseline)', () => {
-  it('caps console.* calls in backend/src at the documented baseline (738)', () => {
+describe('Backend console.* (E8 — zero baseline)', () => {
+  it('forbids console.* in backend/src — use logger from utils/logger', () => {
     const count = consoleCallCount();
-    // R7 baseline at audit. Migration to pino is mechanical (738 calls).
-    // Cap at 750 to allow trivial new debug while ensuring downstream PRs
-    // can't blow it up.
-    expect(count).toBeLessThanOrEqual(750);
+    expect(count).toBe(0);
   });
 });

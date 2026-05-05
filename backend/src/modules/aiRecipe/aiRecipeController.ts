@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/aiRecipe/aiRecipeController.ts
 import { Request, Response } from 'express';
 import { aiRecipeService } from '../../services/aiRecipeService';
@@ -20,13 +21,13 @@ export class AIRecipeController {
       const userId = getUserId(req);
       const { cuisine, mealType, maxCookTime } = req.query;
 
-      console.log('⏱️  AI Recipe Generation: Request started at', new Date().toISOString());
-      console.log('🎯 Generate AI Recipe Request:', { userId, cuisine, mealType, maxCookTime });
+      logger.info({ data: new Date().toISOString() }, '⏱️  AI Recipe Generation: Request started at');
+      logger.info({ userId, cuisine, mealType, maxCookTime }, '🎯 Generate AI Recipe Request:');
 
       // Check if data sharing is enabled for recommendations
       const { isDataSharingEnabledFromRequest } = require('@/utils/privacyHelper');
       const dataSharingEnabled = isDataSharingEnabledFromRequest(req);
-      console.log('🔒 Data sharing enabled for AI recipe generation:', dataSharingEnabled);
+      logger.info({ data: dataSharingEnabled }, '🔒 Data sharing enabled for AI recipe generation:');
 
       // Fetch user data including feedback for AI learning (only if data sharing enabled)
       let preferences = null;
@@ -89,7 +90,7 @@ export class AIRecipeController {
             cookTime: f.recipe.cookTime,
           }));
       } else {
-        console.log('🔒 Data sharing disabled - generating generic AI recipe without personalization');
+        logger.info('🔒 Data sharing disabled - generating generic AI recipe without personalization');
       }
 
       // Check if recipe title is provided (for recipe form generation)
@@ -159,12 +160,12 @@ export class AIRecipeController {
       };
       const mealPortion = mealMacroDistribution[randomMealType as string] || 0.30;
 
-      console.log('🎲 Randomization:', {
+      logger.info({
         mealType: randomMealType,
         cuisine: randomCuisine,
         mealPortion: `${Math.round(mealPortion * 100)}%`,
         targetCalories: macroGoals ? Math.round(macroGoals.calories * mealPortion) : 'N/A',
-      });
+      }, '🎲 Randomization');
 
       // Generate recipe with AI
       const recipe = await aiRecipeService.generateRecipe({
@@ -212,7 +213,7 @@ export class AIRecipeController {
       const savedRecipe = await aiRecipeService.saveGeneratedRecipe(recipe, userId);
 
       const totalTime = Date.now() - startTime;
-      console.log(`⏱️  AI Recipe Generation: Completed in ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s)`);
+      logger.info(`⏱️  AI Recipe Generation: Completed in ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s)`);
 
       res.json({
         success: true,
@@ -239,7 +240,7 @@ export class AIRecipeController {
         },
       });
     } catch (error: any) {
-      console.error('❌ Generate AI Recipe Error:', error);
+      logger.error({ data: error }, '❌ Generate AI Recipe Error:');
       
       // Check if it's a quota/billing error from OpenAI
       const isQuotaError = error.code === 'insufficient_quota' || 
@@ -273,7 +274,7 @@ export class AIRecipeController {
       const userId = getUserId(req);
       const { meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat, maxTotalPrepTime, maxDailyBudget } = req.query;
 
-      console.log('🍽️ Generate AI Daily Plan Request:', { userId, meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat, maxTotalPrepTime, maxDailyBudget });
+      logger.info({ userId, meals, mealCount, cuisine, useRemainingMacros, remainingCalories, remainingProtein, remainingCarbs, remainingFat, maxTotalPrepTime, maxDailyBudget }, '🍽️ Generate AI Daily Plan Request:');
 
       // Fetch user data including feedback for AI learning
       const [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([
@@ -348,7 +349,7 @@ export class AIRecipeController {
           carbs: parseInt(remainingCarbs as string),
           fat: parseInt(remainingFat as string),
         };
-        console.log('📊 Using remaining macros from request:', remainingMacros);
+        logger.info({ data: remainingMacros }, '📊 Using remaining macros from request:');
       }
 
       // Build generation options
@@ -368,7 +369,7 @@ export class AIRecipeController {
       // Add max daily budget constraint if provided
       if (maxDailyBudget) {
         generationOptions.maxDailyBudget = parseFloat(maxDailyBudget as string);
-        console.log(`💰 Daily budget constraint: $${generationOptions.maxDailyBudget}`);
+        logger.info(`💰 Daily budget constraint: $${generationOptions.maxDailyBudget}`);
       }
 
       // Build user preferences with optional cuisine override
@@ -473,7 +474,7 @@ export class AIRecipeController {
         totalNutrition,
       });
     } catch (error: any) {
-      console.error('❌ Generate AI Daily Plan Error:', error);
+      logger.error({ data: error }, '❌ Generate AI Daily Plan Error:');
       
       // Check if it's a quota/billing error from OpenAI
       const isQuotaError = error.code === 'insufficient_quota' || 
@@ -502,7 +503,7 @@ export class AIRecipeController {
       const userId = getUserId(req);
       const { existingMeals } = req.body;
 
-      console.log('📊 Calculate Remaining Macros Request:', { userId, mealCount: existingMeals?.length });
+      logger.info({ userId, mealCount: existingMeals?.length }, '📊 Calculate Remaining Macros Request:');
 
       // Get user's macro goals
       const macroGoals = await prisma.macroGoals.findUnique({
@@ -553,7 +554,7 @@ export class AIRecipeController {
         remaining,
       });
     } catch (error: any) {
-      console.error('❌ Calculate Remaining Macros Error:', error);
+      logger.error({ data: error }, '❌ Calculate Remaining Macros Error:');
       res.status(500).json({
         success: false,
         error: 'Failed to calculate remaining macros',
@@ -610,7 +611,7 @@ export class AIRecipeController {
         })),
       });
     } catch (error: any) {
-      console.error('❌ Get AI Recipes Error:', error);
+      logger.error({ data: error }, '❌ Get AI Recipes Error:');
       res.status(500).json({
         success: false,
         error: 'Failed to fetch AI recipes',

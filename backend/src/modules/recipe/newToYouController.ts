@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/recipe/newToYouController.ts
 //
 // Group 11 Phase 5 — "New to you" feed + "Browse by Region" family ranking.
@@ -43,7 +44,7 @@ export const newToYouController = {
 
       res.json(feed);
     } catch (error: any) {
-      console.error('Error building new-to-you feed:', error);
+      logger.error({ err: error }, 'Error building new-to-you feed:');
       res.status(500).json({ error: 'Failed to build new-to-you feed' });
     }
   },
@@ -72,7 +73,7 @@ export const newToYouController = {
       const families = await buildBrowseByFamily(userId);
       res.json({ families });
     } catch (error: any) {
-      console.error('Error building browse-by-family:', error);
+      logger.error({ err: error }, 'Error building browse-by-family:');
       res.status(500).json({ error: 'Failed to build family browse' });
     }
   },

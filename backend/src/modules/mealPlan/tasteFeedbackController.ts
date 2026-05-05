@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/mealPlan/tasteFeedbackController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
@@ -84,7 +85,7 @@ export async function submitTasteFeedback(req: Request, res: Response) {
     res.json(updatedMeal);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error submitting taste feedback:', message);
+    logger.error({ err: message }, 'Error submitting taste feedback:');
     res.status(500).json({ error: 'Failed to submit taste feedback' });
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/mealPlan/mealPlanFindRecipesController.ts
 // POST /api/meal-plan/find-recipes — two-tier search (DB-first, AI fallback)
 
@@ -228,7 +229,7 @@ export const findRecipes = async (req: Request, res: Response) => {
 
     return res.json({ options: results, totalMatches, generatedCount });
   } catch (error) {
-    console.error('[findRecipes] error:', error);
+    logger.error({ err: error }, '[findRecipes] error:');
     return res.status(500).json({ error: 'Failed to find recipes' });
   }
 };

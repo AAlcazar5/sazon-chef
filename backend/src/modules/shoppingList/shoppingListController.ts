@@ -31,7 +31,7 @@ async function syncPantryForPurchase(userId: string, itemName: string, category:
       update: { category: category ?? existing?.category ?? null, source: 'shopping' },
     });
   } catch (error) {
-    console.error('[PANTRY_SYNC] Error auto-stocking pantry:', error);
+    logger.error({ err: error }, '[PANTRY_SYNC] Error auto-stocking pantry:');
   }
 }
 
@@ -50,7 +50,7 @@ async function unsyncPantryForPurchase(userId: string, itemName: string) {
       await prisma.pantryItem.delete({ where: { id: existing.id } });
     }
   } catch (error) {
-    console.error('[PANTRY_SYNC] Error unstocking pantry:', error);
+    logger.error({ err: error }, '[PANTRY_SYNC] Error unstocking pantry:');
   }
 }
 
@@ -83,7 +83,7 @@ async function recordPurchase(userId: string, itemName: string, quantity: string
       },
     });
   } catch (error) {
-    console.error('[PURCHASE_HISTORY] Error recording purchase:', error);
+    logger.error({ err: error }, '[PURCHASE_HISTORY] Error recording purchase:');
   }
 }
 
@@ -95,7 +95,7 @@ export const shoppingListController = {
   async getShoppingLists(req: Request, res: Response) {
     try {
       const userId = getUserId(req);
-      console.log(`[SHOPPING_LIST] GET /api/shopping-lists - User: ${userId}`);
+      logger.info(`[SHOPPING_LIST] GET /api/shopping-lists - User: ${userId}`);
 
       // Single query — include items to avoid N+1 (one query per list)
       const shoppingLists = await prisma.shoppingList.findMany({
@@ -220,7 +220,7 @@ export const shoppingListController = {
 
       res.status(201).json(shoppingList);
     } catch (error: any) {
-      console.error('Error creating shopping list:', error);
+      logger.error({ err: error }, 'Error creating shopping list:');
       res.status(500).json({ error: 'Failed to create shopping list' });
     }
   },
@@ -258,7 +258,7 @@ export const shoppingListController = {
 
       res.json(updated);
     } catch (error: any) {
-      console.error('Error updating shopping list:', error);
+      logger.error({ err: error }, 'Error updating shopping list:');
       res.status(500).json({ error: 'Failed to update shopping list' });
     }
   },
@@ -286,7 +286,7 @@ export const shoppingListController = {
 
       res.json({ message: 'Shopping list deleted successfully' });
     } catch (error: any) {
-      console.error('Error deleting shopping list:', error);
+      logger.error({ err: error }, 'Error deleting shopping list:');
       res.status(500).json({ error: 'Failed to delete shopping list' });
     }
   },
@@ -326,7 +326,7 @@ export const shoppingListController = {
 
       res.status(201).json(item);
     } catch (error: any) {
-      console.error('Error adding item to shopping list:', error);
+      logger.error({ err: error }, 'Error adding item to shopping list:');
       res.status(500).json({ error: 'Failed to add item to shopping list' });
     }
   },
@@ -378,7 +378,7 @@ export const shoppingListController = {
         itemId: item.id,
       });
     } catch (error: any) {
-      console.error('Error in voice-add:', error);
+      logger.error({ err: error }, 'Error in voice-add:');
       res.status(500).json({ error: 'Failed to process voice add' });
     }
   },
@@ -433,7 +433,7 @@ export const shoppingListController = {
 
       res.json(updated);
     } catch (error: any) {
-      console.error('Error updating shopping list item:', error);
+      logger.error({ err: error }, 'Error updating shopping list item:');
       res.status(500).json({ error: 'Failed to update shopping list item' });
     }
   },
@@ -449,10 +449,10 @@ export const shoppingListController = {
       const { listId } = req.params;
       const { updates } = req.body; // Array of { itemId, purchased, name, quantity, category, notes }
 
-      console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - User: ${userId} - Updates: ${updates?.length || 0} - Start: ${new Date().toISOString()}`);
+      logger.info(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - User: ${userId} - Updates: ${updates?.length || 0} - Start: ${new Date().toISOString()}`);
 
       if (!Array.isArray(updates) || updates.length === 0) {
-        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Invalid request: updates array empty or missing`);
+        logger.info(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Invalid request: updates array empty or missing`);
         return res.status(400).json({ error: 'Updates array is required and must not be empty' });
       }
 
@@ -461,7 +461,7 @@ export const shoppingListController = {
       });
 
       if (!shoppingList) {
-        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - List not found`);
+        logger.info(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - List not found`);
         return res.status(404).json({ error: 'Shopping list not found' });
       }
 
@@ -480,7 +480,7 @@ export const shoppingListController = {
       const missingItemIds = itemIds.filter(id => !existingItemIds.has(id));
 
       if (missingItemIds.length > 0) {
-        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Some items not found:`, missingItemIds);
+        logger.info({ err: missingItemIds }, `[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Some items not found:`);
         // Continue with items that exist, but log the missing ones
       }
 
@@ -508,7 +508,7 @@ export const shoppingListController = {
           } catch (error: any) {
             // Handle Prisma errors (e.g., P2025 - record not found)
             // This can happen if an item is deleted between validation and update (race condition)
-            console.log(`[SHOPPING_LIST] Failed to update item ${update.itemId}:`, error.code, error.message);
+            logger.info({ code: error.code, message: error.message }, `[SHOPPING_LIST] Failed to update item ${update.itemId}`);
             throw error; // Re-throw so Promise.allSettled can catch it
           }
         })
@@ -521,13 +521,15 @@ export const shoppingListController = {
 
       const failedUpdates = updateResults.filter(result => result.status === 'rejected');
       if (failedUpdates.length > 0) {
-        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - ${failedUpdates.length} items failed to update:`, 
-          failedUpdates.map((f: any) => f.reason?.message || f.reason));
+        logger.info(
+          { failedReasons: failedUpdates.map((f: any) => f.reason?.message || f.reason) },
+          `[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - ${failedUpdates.length} items failed to update`,
+        );
       }
 
       // If some items were missing, include that in the response
       if (missingItemIds.length > 0) {
-        console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Updated ${updatedItems.length} items, ${missingItemIds.length} items were missing`);
+        logger.info(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Updated ${updatedItems.length} items, ${missingItemIds.length} items were missing`);
       }
 
       // Record purchases for items newly marked as purchased and sync pantry
@@ -544,7 +546,7 @@ export const shoppingListController = {
       }
 
       const duration = Date.now() - startTime;
-      console.log(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Success - Duration: ${duration}ms - Updated: ${updatedItems.length} items, Missing: ${missingItemIds.length}, Failed: ${failedUpdates.length}`);
+      logger.info(`[SHOPPING_LIST] PUT /api/shopping-lists/${listId}/items/batch - Success - Duration: ${duration}ms - Updated: ${updatedItems.length} items, Missing: ${missingItemIds.length}, Failed: ${failedUpdates.length}`);
       
       // Return success response even if some items were missing or failed (partial success)
       res.json({ 
@@ -555,16 +557,16 @@ export const shoppingListController = {
       });
     } catch (error: any) {
       const duration = Date.now() - startTime;
-      console.error(`[SHOPPING_LIST] PUT /api/shopping-lists/${req.params.listId}/items/batch - ERROR after ${duration}ms:`, {
-        message: error.message,
-        code: error.code,
-        status: error.status,
-        stack: error.stack,
-        name: error.name,
-        isQuotaError: error.code === 'insufficient_quota' || error.status === 429,
-        isPrismaError: error.code?.startsWith('P'),
-        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
-      });
+      logger.error(
+        {
+          err: { message: error.message, code: error.code, status: error.status, stack: error.stack },
+          name: error.name,
+          isQuotaError: error.code === 'insufficient_quota' || error.status === 429,
+          isPrismaError: error.code?.startsWith('P'),
+          fullError: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+        },
+        `[SHOPPING_LIST] PUT /api/shopping-lists/${req.params.listId}/items/batch - ERROR after ${duration}ms`,
+      );
       
       // Never return 404 from batch endpoint - always return 500 with details
       // 404s should be handled internally as missing items
@@ -604,7 +606,7 @@ export const shoppingListController = {
 
       res.json({ message: 'Item deleted successfully' });
     } catch (error: any) {
-      console.error('Error deleting shopping list item:', error);
+      logger.error({ err: error }, 'Error deleting shopping list item:');
       res.status(500).json({ error: 'Failed to delete shopping list item' });
     }
   },
@@ -629,7 +631,7 @@ export const shoppingListController = {
       if (error.message && error.message.toLowerCase().includes('not found')) {
         return res.status(404).json({ error: 'Shopping list not found' });
       }
-      console.error('[SHOPPING_LIST] Error restoring list:', error);
+      logger.error({ err: error }, '[SHOPPING_LIST] Error restoring list:');
       res.status(500).json({ error: 'Unable to restore shopping list' });
     }
   },

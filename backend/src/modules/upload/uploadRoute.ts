@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 // backend/src/modules/upload/uploadRoute.ts
 // POST /api/upload/item-photo  — authenticated, returns { url }
 
@@ -37,7 +38,7 @@ router.post(
       const url = await uploadToCloudinary(req.file.buffer, 'sazon/shopping-items');
       res.json({ url });
     } catch (error: any) {
-      console.error('[UPLOAD] item-photo error:', error);
+      logger.error({ err: error }, '[UPLOAD] item-photo error:');
       res.status(500).json({ error: 'Upload failed' });
     }
   },

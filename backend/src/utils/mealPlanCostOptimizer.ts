@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 // backend/src/utils/mealPlanCostOptimizer.ts
 // Optimize meal plans based on cost and budget constraints
 
@@ -69,7 +70,7 @@ export async function analyzeMealPlanCost(
         mealCost = costResult.estimatedCost || 0;
       } catch (error) {
         // If cost calculation fails, estimate as 0
-        console.warn(`Failed to calculate cost for recipe ${meal.recipe.id}:`, error);
+        logger.warn({ err: error }, `Failed to calculate cost for recipe ${meal.recipe.id}:`);
       }
     } else if (meal.customCalories) {
       // Estimate cost for custom meals (rough estimate: $0.10 per 100 calories)
