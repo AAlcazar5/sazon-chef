@@ -32,6 +32,7 @@ import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoveryStrip';
 import NutritionStrip from '../../components/today/NutritionStrip';
+import FriendsFeedSection from '../../components/today/FriendsFeedSection';
 import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import SazonQuipCard from '../../components/today/SazonQuipCard';
@@ -971,6 +972,15 @@ export default function HomeScreen() {
 
         {/* ROADMAP 4.0 D14 — today's nutrient roll-up (top-6 with DV%) */}
         <NutritionStrip snapshot={dailyNutrition} />
+
+        {/* ROADMAP 4.0 F1 — Friends feed (hidden when no follows / no shares) */}
+        <FriendsFeedSection
+          onSelect={(item) => {
+            if (item.shareSlug) {
+              router.push(`/shared-plate/${item.shareSlug}` as never);
+            }
+          }}
+        />
 
         {/* ROADMAP 4.0 F9 — Cohort social proof (hides on cold start) */}
         <CohortSocialProofPill />

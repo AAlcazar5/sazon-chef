@@ -112,6 +112,10 @@ model User {
   // Stored as String? because SQLite has no native Json type.
   discoveryMilestones     String?
 
+  // ROADMAP 4.0 F1: social graph for "Cook a friend's plate" feed
+  follows                 UserFollow[] @relation("FollowerRelation")
+  followers               UserFollow[] @relation("FollowingRelation")
+
   @@map("users")
 }
 
@@ -1812,4 +1816,23 @@ model DailyNutrientSnapshot {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("daily_nutrient_snapshots")
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// ROADMAP 4.0 F1 — "Cook a friend's plate" social graph.
+// Follow is one-directional; unique on (followerId, followingId).
+// ──────────────────────────────────────────────────────────────────────────
+
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("FollowerRelation", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("FollowingRelation", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("user_follows")
 }
