@@ -34,6 +34,7 @@ import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoverySt
 import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
+import CohortSocialProofPill from '../../components/today/CohortSocialProofPill';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
 import { useHomeFilterRowChips } from '../../hooks/useFilterRowChips';
 import { FOOD_INTEL_TIPS } from '../../lib/foodIntelTips';
@@ -950,6 +951,9 @@ export default function HomeScreen() {
             // ROADMAP 4.0 A1-b — expand to today + yesterday view (placeholder route)
           }}
         />
+
+        {/* ROADMAP 4.0 F9 — Cohort social proof (hides on cold start) */}
+        <CohortSocialProofPill />
 
         {/* ROADMAP 4.0 F6 — Seasonal awareness card (one peak ingredient/day) */}
         <SeasonalProduceCard />

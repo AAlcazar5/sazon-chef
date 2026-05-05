@@ -1889,6 +1889,20 @@ export const drinkPairingApi = {
     ),
 };
 
+// ─── Cohort social proof (F9) ────────────────────────────────────────────────
+
+export interface CohortSocialProofPayload {
+  proof: {
+    cuisine: string;
+    uniqueUsers: number;
+    copy: string;
+  } | null;
+}
+
+export const cohortSocialProofApi = {
+  get: () => apiClient.get<CohortSocialProofPayload>('/cohort-social-proof'),
+};
+
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
 
 export const stripeApi = {
