@@ -11,6 +11,7 @@ import {
   BackHandler,
   StyleSheet,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -42,7 +43,11 @@ import { HapticPatterns } from '../constants/Haptics';
 import { useColorScheme } from 'nativewind';
 
 // ─── Step configuration ─────────────────────────────────────────────────
-const TOTAL_STEPS = 4;
+// ROADMAP 4.0 A5 — onboarding rewrite. Steps 0–1 (welcome + diet) and the
+// final build-first-plate kept; goal-phase step replaced with a lifestyle
+// multi-select (A5-a) and 6 new optional questions inserted between (A5-b–g).
+// Every question is skippable (A5-h) — the engine degrades gracefully.
+const TOTAL_STEPS = 10;
 
 type StepTheme = {
   // Background gradient (top → bottom)
@@ -56,39 +61,46 @@ type StepTheme = {
   circleGradientDark: readonly [string, string];
 };
 
+const PEACH_THEME: StepTheme = {
+  gradient: ['#FFE3CC', '#FFF3E0', '#FFFFFF'],
+  gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
+  circleBg: '#FFD9B8',
+  circleRing: '#FFEAD6',
+  circleGradientDark: HeroPlatesDark.orange.bg,
+};
+const SAGE_THEME: StepTheme = {
+  gradient: ['#C8E6C9', '#E8F5E9', '#FFFFFF'],
+  gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
+  circleBg: '#B7DFB9',
+  circleRing: '#D8EDD9',
+  circleGradientDark: HeroPlatesDark.green.bg,
+};
+const LAVENDER_THEME: StepTheme = {
+  gradient: ['#E1BEE7', '#F3E5F5', '#FFFFFF'],
+  gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
+  circleBg: '#D9B6E1',
+  circleRing: '#EAD7EE',
+  circleGradientDark: HeroPlatesDark.lavender.bg,
+};
+const GOLDEN_THEME: StepTheme = {
+  gradient: ['#FFE08A', '#FFF8E1', '#FFFFFF'],
+  gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
+  circleBg: '#FFD86B',
+  circleRing: '#FFEFC1',
+  circleGradientDark: HeroPlatesDark.orange.bg,
+};
+
 const STEP_THEMES: readonly StepTheme[] = [
-  // 0: Welcome — peach (light) / terracotta (dark)
-  {
-    gradient: ['#FFE3CC', '#FFF3E0', '#FFFFFF'],
-    gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
-    circleBg: '#FFD9B8',
-    circleRing: '#FFEAD6',
-    circleGradientDark: HeroPlatesDark.orange.bg,
-  },
-  // 1: Diet — sage (light) / forest (dark)
-  {
-    gradient: ['#C8E6C9', '#E8F5E9', '#FFFFFF'],
-    gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
-    circleBg: '#B7DFB9',
-    circleRing: '#D8EDD9',
-    circleGradientDark: HeroPlatesDark.green.bg,
-  },
-  // 2: Goal — lavender (light) / plum (dark)
-  {
-    gradient: ['#E1BEE7', '#F3E5F5', '#FFFFFF'],
-    gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
-    circleBg: '#D9B6E1',
-    circleRing: '#EAD7EE',
-    circleGradientDark: HeroPlatesDark.lavender.bg,
-  },
-  // 3: Build your first plate — golden (light) / amber (dark)
-  {
-    gradient: ['#FFE08A', '#FFF8E1', '#FFFFFF'],
-    gradientDark: ['#1A1410', '#1A1410', '#1A1410'],
-    circleBg: '#FFD86B',
-    circleRing: '#FFEFC1',
-    circleGradientDark: HeroPlatesDark.orange.bg,
-  },
+  PEACH_THEME,    // 0 Welcome
+  SAGE_THEME,     // 1 Diet
+  LAVENDER_THEME, // 2 Lifestyle (A5-a)
+  PEACH_THEME,    // 3 Favorite meal (A5-b)
+  SAGE_THEME,     // 4 Cuisine clusters (A5-c)
+  LAVENDER_THEME, // 5 Nutrition density (A5-d)
+  PEACH_THEME,    // 6 Pantry top-5 (A5-e)
+  SAGE_THEME,     // 7 Equipment (A5-f)
+  LAVENDER_THEME, // 8 Cook for whom (A5-g)
+  GOLDEN_THEME,   // 9 Build first plate
 ];
 
 const DIETARY_OPTIONS = [
@@ -100,16 +112,64 @@ const DIETARY_OPTIONS = [
   { id: 'keto', name: 'Keto' },
 ];
 
-const GOAL_OPTIONS = [
-  { id: 'lose_weight', label: 'Lose weight' },
-  { id: 'maintain', label: 'Maintain' },
-  { id: 'gain_muscle', label: 'Build muscle' },
-  { id: 'just_eat_better', label: 'Just eat better' },
+// ROADMAP 4.0 A5-a — affective lifestyle multi-select replaces cut/bulk/maintain.
+const LIFESTYLE_OPTIONS = [
+  { id: 'try_new_cuisines', label: 'Try new cuisines' },
+  { id: 'eat_seasonally', label: 'Eat seasonally' },
+  { id: 'avoid_processed', label: 'Avoid processed food' },
+  { id: 'balance_health_pleasure', label: 'Balance health & pleasure' },
+  { id: 'specific_health_goals', label: 'Specific health goals' },
+];
+
+// ROADMAP 4.0 A5-c — cuisine cluster picker, multi-select.
+const CUISINE_CLUSTERS = [
+  { id: 'mediterranean', label: 'Mediterranean' },
+  { id: 'latin_american', label: 'Latin American' },
+  { id: 'asian', label: 'Asian' },
+  { id: 'african', label: 'African' },
+  { id: 'middle_eastern', label: 'Middle Eastern' },
+  { id: 'european', label: 'European' },
+  { id: 'caribbean', label: 'Caribbean' },
+  { id: 'south_asian', label: 'South Asian' },
+];
+
+// ROADMAP 4.0 A5-d — nutrition density single-select.
+const NUTRITION_DENSITY_OPTIONS = [
+  { id: 'minimal', label: 'Just food' },
+  { id: 'macros', label: 'Macros' },
+  { id: 'macros_micros', label: 'Macros & micros' },
+  { id: 'power_user', label: 'Power user' },
+];
+
+// ROADMAP 4.0 A5-f — equipment chips, multi-select.
+const EQUIPMENT_OPTIONS = [
+  { id: 'ninja_creami', label: 'Ninja Creami' },
+  { id: 'air_fryer', label: 'Air fryer' },
+  { id: 'instant_pot', label: 'Instant Pot' },
+  { id: 'sous_vide', label: 'Sous vide' },
+  { id: 'dutch_oven', label: 'Dutch oven' },
+  { id: 'cast_iron', label: 'Cast iron' },
+  { id: 'grill', label: 'Grill' },
+  { id: 'smoker', label: 'Smoker' },
+];
+
+// ROADMAP 4.0 A5-g — cook-for single-select.
+const COOK_FOR_OPTIONS = [
+  { id: 'self', label: 'Just me' },
+  { id: 'partner', label: 'Partner' },
+  { id: 'family', label: 'Family' },
 ];
 
 interface OnboardingData {
   dietaryRestrictions: string[];
-  fitnessGoal: string;
+  // ROADMAP 4.0 A5 — new fields below
+  lifestyle: string[];
+  firstFavoriteMealText: string;
+  cuisineClusters: string[];
+  nutritionUIDensity: string;
+  pantryTopFive: string[];
+  kitchenEquipment: string[];
+  cookFor: string;
 }
 
 export default function OnboardingScreen() {
@@ -122,8 +182,15 @@ export default function OnboardingScreen() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [data, setData] = useState<OnboardingData>({
     dietaryRestrictions: [],
-    fitnessGoal: '',
+    lifestyle: [],
+    firstFavoriteMealText: '',
+    cuisineClusters: [],
+    nutritionUIDensity: '',
+    pantryTopFive: [],
+    kitchenEquipment: [],
+    cookFor: '',
   });
+  const [pantryInput, setPantryInput] = useState('');
 
   // Hardware/gesture back → previous step instead of leaving the flow
   useEffect(() => {
@@ -166,12 +233,16 @@ export default function OnboardingScreen() {
     transform: [{ scale: slideScale.value }],
   }));
 
+  // ROADMAP 4.0 A5 — last question step is index 8 (cook-for); step 9 is build-first-plate.
+  // Persist after the last question, then animate into the build-first-plate hand-off.
+  const LAST_QUESTION_STEP = TOTAL_STEPS - 2;
+
   const nextStep = async () => {
-    if (currentStep === 2) {
+    if (currentStep === LAST_QUESTION_STEP) {
       const ok = await persistPreferences();
       if (!ok) return;
-      animateToStep(3);
-      setCurrentStep(3);
+      animateToStep(currentStep + 1);
+      setCurrentStep(currentStep + 1);
       return;
     }
     if (currentStep < TOTAL_STEPS - 1) {
@@ -206,10 +277,18 @@ export default function OnboardingScreen() {
         cookTimePreference: 30,
         spiceLevel: 'medium',
       };
-      if (data.fitnessGoal) prefsPayload.fitnessGoal = data.fitnessGoal;
+      // ROADMAP 4.0 A5 — persist all the new optional onboarding fields.
+      if (data.lifestyle.length > 0) prefsPayload.lifestyle = data.lifestyle;
+      if (data.firstFavoriteMealText.trim().length > 0) {
+        prefsPayload.firstFavoriteMealText = data.firstFavoriteMealText.trim();
+      }
+      if (data.cuisineClusters.length > 0) prefsPayload.likedCuisineClusters = data.cuisineClusters;
+      if (data.nutritionUIDensity) prefsPayload.nutritionUIDensity = data.nutritionUIDensity;
+      if (data.pantryTopFive.length > 0) prefsPayload.pantryTopFive = data.pantryTopFive;
+      if (data.kitchenEquipment.length > 0) prefsPayload.kitchenEquipment = data.kitchenEquipment;
+      if (data.cookFor) prefsPayload.cookFor = data.cookFor;
 
       await userApi.updatePreferences(prefsPayload);
-      if (data.fitnessGoal) await AsyncStorage.setItem('onboarding_goal', data.fitnessGoal);
       await AsyncStorage.setItem('onboarding_complete', 'true');
       HapticPatterns.success();
       return true;
@@ -220,6 +299,30 @@ export default function OnboardingScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const toggleMulti = (field: 'lifestyle' | 'cuisineClusters' | 'kitchenEquipment') => (id: string) => {
+    setData(prev => ({
+      ...prev,
+      [field]: prev[field].includes(id)
+        ? prev[field].filter(v => v !== id)
+        : [...prev[field], id],
+    }));
+  };
+
+  const addPantryChip = () => {
+    const trimmed = pantryInput.trim();
+    if (!trimmed || data.pantryTopFive.length >= 5) return;
+    if (data.pantryTopFive.includes(trimmed)) {
+      setPantryInput('');
+      return;
+    }
+    setData(prev => ({ ...prev, pantryTopFive: [...prev.pantryTopFive, trimmed] }));
+    setPantryInput('');
+  };
+
+  const removePantryChip = (item: string) => {
+    setData(prev => ({ ...prev, pantryTopFive: prev.pantryTopFive.filter(v => v !== item) }));
   };
 
   const handleBuildFirstPlate = () => {
@@ -283,7 +386,7 @@ export default function OnboardingScreen() {
             stepIndex={1}
             theme={STEP_THEMES[1]}
             isDark={isDark}
-            eyebrow="Step 1 of 4"
+            eyebrow={`Step 1 of ${TOTAL_STEPS - 1}`}
             mascotExpression="thinking"
             titleLead="Any foods "
             titleAccent="to avoid"
@@ -302,36 +405,256 @@ export default function OnboardingScreen() {
             />
           </EditorialStep>
         );
+      // ROADMAP 4.0 A5-a — affective lifestyle multi-select replaces goal step.
       case 2:
         return (
           <EditorialStep
             stepIndex={2}
             theme={STEP_THEMES[2]}
             isDark={isDark}
-            eyebrow="Step 2 of 4"
+            eyebrow={`Step 2 of ${TOTAL_STEPS - 1}`}
             mascotExpression="chef-kiss"
-            titleLead="What's your "
-            titleAccent="goal"
+            titleLead="How would you describe how you "
+            titleAccent="want to eat"
             terminator="?"
-            subtitle="We'll tune portions and macro targets to match."
+            subtitle="Pick all that fit. We'll tune everything to match."
           >
             <OptionGrid
               columns={2}
               isDark={isDark}
-              options={GOAL_OPTIONS.map(o => ({
+              options={LIFESTYLE_OPTIONS.map(o => ({
                 id: o.id,
                 label: o.label,
-                selected: data.fitnessGoal === o.id,
+                selected: data.lifestyle.includes(o.id),
               }))}
-              onSelect={(id) => setData(prev => ({ ...prev, fitnessGoal: id }))}
+              onSelect={toggleMulti('lifestyle')}
             />
           </EditorialStep>
         );
+      // ROADMAP 4.0 A5-b — free-text favorite meal.
       case 3:
         return (
           <EditorialStep
             stepIndex={3}
             theme={STEP_THEMES[3]}
+            isDark={isDark}
+            eyebrow={`Step 3 of ${TOTAL_STEPS - 1}`}
+            mascotExpression="thinking"
+            titleLead="Tell me about a meal you "
+            titleAccent="love"
+            terminator="."
+            subtitle="One sentence is plenty. Anything you can describe, Sazon can learn from."
+          >
+            <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+              <TextInput
+                value={data.firstFavoriteMealText}
+                onChangeText={(t: string) => setData(prev => ({ ...prev, firstFavoriteMealText: t }))}
+                placeholder="My grandmother's chicken with saffron rice…"
+                placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+                multiline
+                numberOfLines={3}
+                accessibilityLabel="Favorite meal description"
+                style={{
+                  borderRadius: 16,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  minHeight: 90,
+                  fontSize: 15,
+                  fontFamily: 'PlusJakartaSans_400Regular',
+                  backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                  color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                  textAlignVertical: 'top',
+                }}
+              />
+            </View>
+          </EditorialStep>
+        );
+      // ROADMAP 4.0 A5-c — cuisine cluster picker, multi-select.
+      case 4:
+        return (
+          <EditorialStep
+            stepIndex={4}
+            theme={STEP_THEMES[4]}
+            isDark={isDark}
+            eyebrow={`Step 4 of ${TOTAL_STEPS - 1}`}
+            mascotExpression="excited"
+            titleLead="Where in the world do you want to "
+            titleAccent="eat from"
+            terminator="?"
+            subtitle="Pick the regions you want more of. We'll start there."
+          >
+            <OptionGrid
+              columns={2}
+              isDark={isDark}
+              options={CUISINE_CLUSTERS.map(o => ({
+                id: o.id,
+                label: o.label,
+                selected: data.cuisineClusters.includes(o.id),
+              }))}
+              onSelect={toggleMulti('cuisineClusters')}
+            />
+          </EditorialStep>
+        );
+      // ROADMAP 4.0 A5-d — nutrition density single-select.
+      case 5:
+        return (
+          <EditorialStep
+            stepIndex={5}
+            theme={STEP_THEMES[5]}
+            isDark={isDark}
+            eyebrow={`Step 5 of ${TOTAL_STEPS - 1}`}
+            mascotExpression="thinking"
+            titleLead="How interested are you in "
+            titleAccent="nutrition data"
+            terminator="?"
+            subtitle="We'll match the density of nutrition info to how you like to read it."
+          >
+            <OptionGrid
+              columns={2}
+              isDark={isDark}
+              options={NUTRITION_DENSITY_OPTIONS.map(o => ({
+                id: o.id,
+                label: o.label,
+                selected: data.nutritionUIDensity === o.id,
+              }))}
+              onSelect={(id) => setData(prev => ({ ...prev, nutritionUIDensity: id }))}
+            />
+          </EditorialStep>
+        );
+      // ROADMAP 4.0 A5-e — pantry top-5, free-form chips.
+      case 6:
+        return (
+          <EditorialStep
+            stepIndex={6}
+            theme={STEP_THEMES[6]}
+            isDark={isDark}
+            eyebrow={`Step 6 of ${TOTAL_STEPS - 1}`}
+            mascotExpression="thinking"
+            titleLead="What's always in your "
+            titleAccent="pantry"
+            terminator="?"
+            subtitle="Top 5 ingredients you keep on hand. Type one and tap Add."
+          >
+            <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  value={pantryInput}
+                  onChangeText={setPantryInput}
+                  placeholder="Olive oil"
+                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+                  onSubmitEditing={addPantryChip}
+                  accessibilityLabel="Pantry item input"
+                  style={{
+                    flex: 1,
+                    borderRadius: 100,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    fontSize: 15,
+                    fontFamily: 'PlusJakartaSans_400Regular',
+                    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                    color: isDark ? DarkColors.text.primary : Colors.text.primary,
+                  }}
+                />
+                <HapticTouchableOpacity
+                  onPress={addPantryChip}
+                  accessibilityLabel="Add pantry item"
+                  accessibilityRole="button"
+                  style={{
+                    paddingHorizontal: 18,
+                    paddingVertical: 10,
+                    borderRadius: 100,
+                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
+                    Add
+                  </Text>
+                </HapticTouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                {data.pantryTopFive.map(item => (
+                  <HapticTouchableOpacity
+                    key={item}
+                    onPress={() => removePantryChip(item)}
+                    accessibilityLabel={`Remove ${item}`}
+                    accessibilityRole="button"
+                    style={{
+                      flexDirection: 'row', alignItems: 'center',
+                      paddingHorizontal: 12, paddingVertical: 6, gap: 6,
+                      borderRadius: 100,
+                      backgroundColor: isDark ? '#374151' : '#F3F4F6',
+                    }}
+                  >
+                    <Text style={{ color: isDark ? '#D1D5DB' : '#374151', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>
+                      {item}
+                    </Text>
+                    <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: 14 }}>×</Text>
+                  </HapticTouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </EditorialStep>
+        );
+      // ROADMAP 4.0 A5-f — equipment multi-select.
+      case 7:
+        return (
+          <EditorialStep
+            stepIndex={7}
+            theme={STEP_THEMES[7]}
+            isDark={isDark}
+            eyebrow={`Step 7 of ${TOTAL_STEPS - 1}`}
+            mascotExpression="excited"
+            titleLead="What "
+            titleAccent="equipment"
+            titleTail=" do you have"
+            terminator="?"
+            subtitle="Helps us suggest recipes that actually fit your kitchen."
+          >
+            <OptionGrid
+              columns={2}
+              isDark={isDark}
+              options={EQUIPMENT_OPTIONS.map(o => ({
+                id: o.id,
+                label: o.label,
+                selected: data.kitchenEquipment.includes(o.id),
+              }))}
+              onSelect={toggleMulti('kitchenEquipment')}
+            />
+          </EditorialStep>
+        );
+      // ROADMAP 4.0 A5-g — cook-for single-select.
+      case 8:
+        return (
+          <EditorialStep
+            stepIndex={8}
+            theme={STEP_THEMES[8]}
+            isDark={isDark}
+            eyebrow={`Step 8 of ${TOTAL_STEPS - 1}`}
+            mascotExpression="chef-kiss"
+            titleLead="Who do you "
+            titleAccent="cook for"
+            terminator="?"
+            subtitle="We'll set portions and pantry defaults to match."
+          >
+            <OptionGrid
+              columns={3}
+              isDark={isDark}
+              options={COOK_FOR_OPTIONS.map(o => ({
+                id: o.id,
+                label: o.label,
+                selected: data.cookFor === o.id,
+              }))}
+              onSelect={(id) => setData(prev => ({ ...prev, cookFor: id }))}
+            />
+          </EditorialStep>
+        );
+      // ROADMAP 4.0 A5 — final step: build first plate.
+      case 9:
+        return (
+          <EditorialStep
+            stepIndex={9}
+            theme={STEP_THEMES[9]}
             isDark={isDark}
             eyebrow="One more thing"
             mascotExpression="excited"
@@ -406,7 +729,7 @@ export default function OnboardingScreen() {
 
         {/* Dark editorial CTA pill + ghost back on steps 1-2 */}
         <View style={styles.ctaWrap}>
-          {currentStep === 3 ? (
+          {currentStep === TOTAL_STEPS - 1 ? (
             <>
               <BrandButton
                 label="Build my first plate"
@@ -463,7 +786,7 @@ export default function OnboardingScreen() {
             </HapticTouchableOpacity>
           )}
 
-          {currentStep > 0 && currentStep !== 3 && (
+          {currentStep > 0 && currentStep !== TOTAL_STEPS - 1 && (
             <HapticTouchableOpacity
               onPress={prevStep}
               disabled={saving}
@@ -520,10 +843,16 @@ interface EditorialStepProps {
 // 1: Diet → green, curious wobble + question marks
 // 2: Goal → purple, celebrating with hearts
 const STEP_SAZON: readonly { variant: SazonVariant; motion: SazonMotion; fx: SazonFx[] }[] = [
-  { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },
-  { variant: 'red', motion: 'wobble', fx: ['question'] },
-  { variant: 'orange', motion: 'celebrate', fx: ['hearts'] },
-  { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },
+  { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },         // 0 Welcome
+  { variant: 'red', motion: 'wobble', fx: ['question'] },            // 1 Diet
+  { variant: 'orange', motion: 'celebrate', fx: ['hearts'] },        // 2 Lifestyle (A5-a)
+  { variant: 'red', motion: 'wobble', fx: ['question'] },            // 3 Favorite meal (A5-b)
+  { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },         // 4 Cuisine clusters (A5-c)
+  { variant: 'red', motion: 'wobble', fx: ['question'] },            // 5 Nutrition density (A5-d)
+  { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },         // 6 Pantry top-5 (A5-e)
+  { variant: 'orange', motion: 'celebrate', fx: ['hearts'] },        // 7 Equipment (A5-f)
+  { variant: 'red', motion: 'wobble', fx: ['question'] },            // 8 Cook for (A5-g)
+  { variant: 'orange', motion: 'bounce', fx: ['sparkles'] },         // 9 Build first plate
 ];
 
 function EditorialStep({
