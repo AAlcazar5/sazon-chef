@@ -111,8 +111,10 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
         <View style={styles.hero}>
           {onClose && (
             <HapticTouchableOpacity
+              testID="paywall-close"
               style={styles.closeButton}
               onPress={onClose}
+              accessibilityRole="button"
               accessibilityLabel="Close paywall"
             >
               <Text style={styles.closeX}>×</Text>
@@ -134,6 +136,9 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
           >
             <Text style={styles.heroTitle}>Sazon Premium</Text>
             <Text style={styles.heroSubtitle}>Your personal chef — unlocked</Text>
+            <Text testID="paywall-trust-line" style={styles.trustLine}>
+              Cancel anytime. No spam.
+            </Text>
           </MotiView>
         </View>
 
@@ -365,6 +370,13 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     color: 'rgba(255,255,255,0.65)',
     textAlign: 'center',
+  },
+  trustLine: {
+    fontSize: FontSize.xs,
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+    marginTop: 8,
+    letterSpacing: 0.2,
   },
   trialBadgeContainer: {
     marginHorizontal: 24,

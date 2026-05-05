@@ -5,6 +5,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
 import CelebrationOverlay from './CelebrationOverlay';
+import { analytics } from '../../utils/analytics';
 
 const PREMIUM_BENEFITS = [
   { emoji: '♾️', text: 'Unlimited recipes unlocked' },
@@ -25,9 +26,20 @@ export default function PremiumCelebration({ visible, onDismiss }: PremiumCelebr
       translateX: new Animated.Value(-20),
     }))
   ).current;
+  const hasFiredPeakRef = useRef(false);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      hasFiredPeakRef.current = false;
+      return;
+    }
+
+    if (!hasFiredPeakRef.current) {
+      hasFiredPeakRef.current = true;
+      analytics.track('peak_subscribe_success', { source: 'paywall' }).catch(() => {
+        // best-effort
+      });
+    }
 
     // Reset
     benefitAnims.forEach((a) => {
