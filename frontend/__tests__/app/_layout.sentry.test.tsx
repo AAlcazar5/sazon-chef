@@ -71,12 +71,12 @@ describe('Sentry frontend init', () => {
 
   it('errorLogger.logError forwards thrown error to Sentry', async () => {
     const err = new Error('render failed');
-    await logError(err, {
-      screen: 'TestScreen',
-      action: 'render',
-      severity: ErrorSeverity.HIGH,
-      category: ErrorCategory.UI,
-    });
+    await logError(
+      err,
+      { screen: 'TestScreen', action: 'render' },
+      ErrorSeverity.HIGH,
+      ErrorCategory.UI,
+    );
     expect(mockCaptureException).toHaveBeenCalledWith(err);
   });
 });
