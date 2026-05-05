@@ -24,6 +24,25 @@ const TITLE_ROTATION = [
   EditorialColors.pastelTitle.golden,
   EditorialColors.pastelTitle.blush,
 ];
+
+// Dark-mode rotations — opaque jewel tones (not the 12% rgba PastelDark tints,
+// which would render as washed-out white over the dark screen base).
+const PASTEL_ROTATION_DARK = [
+  '#3A2A1F', // peach → dark terracotta
+  '#1F3A2E', // sage → forest
+  '#2A2A3A', // lavender → plum
+  '#1F2F3A', // sky → midnight blue
+  '#3A3018', // golden → dark amber
+  '#3A1F28', // blush → wine
+];
+const TITLE_ROTATION_DARK = [
+  '#FFD4A6', // peach ink
+  '#A8DDA9', // sage ink
+  '#D9B6E1', // lavender ink
+  '#A8C7E5', // sky ink
+  '#FFE08A', // golden ink
+  '#F4A4BC', // blush ink
+];
 import type { SuggestedRecipe } from '../../types';
 import type { RecipeSection, UserFeedback } from '../../utils/recipeUtils';
 import type { PaginationInfo } from '../../hooks/useRecipePagination';
@@ -110,6 +129,10 @@ function RecipeSectionsGrid({
 }: RecipeSectionsGridProps) {
   const filtered = sections.filter(s => s.key !== 'perfect-match' && s.key !== 'meal-prep' && s.key !== 'macro-optimized');
   if (filtered.length === 0) return null;
+  // Theme-aware card rotations — light pastels in light mode read as
+  // washed-out white in dark mode, so swap to opaque jewel tones at runtime.
+  const cardBgRotation = isDark ? PASTEL_ROTATION_DARK : PASTEL_ROTATION;
+  const cardTitleRotation = isDark ? TITLE_ROTATION_DARK : TITLE_ROTATION;
 
   return (
     <View className="px-4">
@@ -211,8 +234,8 @@ function RecipeSectionsGrid({
                         <View key={recipe.id} style={{ width: 280, marginRight: 12 }}>
                           <EditorialRecipeCard
                             recipe={recipe}
-                            bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
-                            titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
+                            bg={cardBgRotation[i % cardBgRotation.length]}
+                            titleColor={cardTitleRotation[i % cardTitleRotation.length]}
                             feedback={feedback}
                             isFeedbackLoading={feedbackLoading === recipe.id}
                             onPress={onRecipePress}
@@ -292,8 +315,8 @@ function RecipeSectionsGrid({
                         <View key={recipe.id} style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.lg }}>
                           <EditorialRecipeCard
                             recipe={recipe}
-                            bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
-                            titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
+                            bg={cardBgRotation[i % cardBgRotation.length]}
+                            titleColor={cardTitleRotation[i % cardTitleRotation.length]}
                             feedback={feedback}
                             isFeedbackLoading={feedbackLoading === recipe.id}
                             onPress={onRecipePress}
@@ -328,8 +351,8 @@ function RecipeSectionsGrid({
                           >
                             <EditorialRecipeCard
                               recipe={recipe}
-                              bg={PASTEL_ROTATION[index % PASTEL_ROTATION.length]}
-                              titleColor={TITLE_ROTATION[index % TITLE_ROTATION.length]}
+                              bg={cardBgRotation[index % cardBgRotation.length]}
+                              titleColor={cardTitleRotation[index % cardTitleRotation.length]}
                               feedback={feedback}
                               isFeedbackLoading={feedbackLoading === recipe.id}
                               onPress={onRecipePress}
