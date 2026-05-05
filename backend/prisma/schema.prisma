@@ -1489,3 +1489,31 @@ model AdaptiveNotificationLog {
   @@index([template, sentAt])
   @@map("adaptive_notification_logs")
 }
+
+// C6 — Adaptive nutrition coverage snapshot.
+// Weekly aggregate of macro + micro adherence + gap signals. Drives the
+// "more variety" / "more fiber" invitations on Today + Weekly Recap.
+// Power-user mode also includes a macroAdjustment field with the suggested
+// daily target delta (the MacroFactor pattern, opt-in).
+model NutritionCoverageSnapshot {
+  id                  String   @id @default(cuid())
+  userId              String
+  period              Int      // window size in days (typically 14)
+  asOfDate            DateTime
+  // Macro adherence (% of daily target hit, averaged over the window).
+  caloriesAdherence   Float    @default(0)
+  proteinAdherence    Float    @default(0)
+  fiberAdherence      Float    @default(0)
+  // JSON-string array of gap labels we detected in the window
+  // ("fiber", "iron", "magnesium", "variety", "consistency").
+  gaps                String   @default("[]")
+  // Optional power-user macro adjustment suggestion. JSON shape:
+  // {calories?: number, protein?: number, reason: string} where the deltas
+  // are the new daily target minus the old. null when not applicable.
+  macroAdjustment     String?
+  computedAt          DateTime @default(now())
+
+  @@unique([userId, period, asOfDate])
+  @@index([userId, asOfDate])
+  @@map("nutrition_coverage_snapshots")
+}
