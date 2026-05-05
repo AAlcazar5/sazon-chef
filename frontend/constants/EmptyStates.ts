@@ -396,6 +396,60 @@ export const GenericEmptyStates = {
 } as const;
 
 /**
+ * Empty states for the Pantry surface
+ * ROADMAP 4.0 J6 — illustrated mini-stories for the empty states.
+ */
+export const PantryEmptyStates = {
+  /** Pantry has no items yet — Sazon with flashlight, "the cupboard is bare" */
+  empty: {
+    title: 'The cupboard is bare.',
+    description: "Let's stock it. Scan a receipt, snap a fridge shelf, or add a few favorites by hand.",
+    actionLabel: 'Add to pantry',
+    useMascot: true,
+    mascotExpression: 'curious' as LogoMascotExpression,
+    mascotSize: 'large' as const,
+    pastelTint: Pastel.sage,
+    pastelTintDark: PastelDark.sage,
+  },
+} as const;
+
+/**
+ * Empty states for Build-a-Plate history
+ * ROADMAP 4.0 J6 — illustrated mini-stories for the empty states.
+ */
+export const PlateHistoryEmptyStates = {
+  /** No plates built yet — invite the user to assemble their first */
+  empty: {
+    title: 'No plates built yet.',
+    description: 'Build your first plate and we\'ll start learning what you actually want to eat.',
+    actionLabel: 'Build a plate',
+    useMascot: true,
+    mascotExpression: 'excited' as LogoMascotExpression,
+    mascotSize: 'large' as const,
+    pastelTint: Pastel.peach,
+    pastelTintDark: PastelDark.peach,
+  },
+} as const;
+
+/**
+ * Empty states for the Sazon (Coach) thread
+ * ROADMAP 4.0 J6 — illustrated mini-stories for the empty states.
+ */
+export const SazonThreadEmptyStates = {
+  /** Sazon thread has no messages — invitation to start a conversation */
+  empty: {
+    title: 'Ask me anything.',
+    description: 'Stuck on dinner? Want a Persian-leaning Tuesday? I can run with whatever you bring.',
+    actionLabel: 'Start a thread',
+    useMascot: true,
+    mascotExpression: 'happy' as LogoMascotExpression,
+    mascotSize: 'large' as const,
+    pastelTint: Pastel.lavender,
+    pastelTintDark: PastelDark.lavender,
+  },
+} as const;
+
+/**
  * All empty states combined for easy access
  */
 export const EmptyStates = {
@@ -406,6 +460,9 @@ export const EmptyStates = {
   profile: ProfileEmptyStates,
   search: SearchEmptyStates,
   generic: GenericEmptyStates,
+  pantry: PantryEmptyStates,
+  plateHistory: PlateHistoryEmptyStates,
+  sazonThread: SazonThreadEmptyStates,
 } as const;
 
 // Type exports
@@ -416,3 +473,6 @@ export type ShoppingListEmptyStateKey = keyof typeof ShoppingListEmptyStates;
 export type ProfileEmptyStateKey = keyof typeof ProfileEmptyStates;
 export type SearchEmptyStateKey = keyof typeof SearchEmptyStates;
 export type GenericEmptyStateKey = keyof typeof GenericEmptyStates;
+export type PantryEmptyStateKey = keyof typeof PantryEmptyStates;
+export type PlateHistoryEmptyStateKey = keyof typeof PlateHistoryEmptyStates;
+export type SazonThreadEmptyStateKey = keyof typeof SazonThreadEmptyStates;
