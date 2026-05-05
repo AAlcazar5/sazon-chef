@@ -5,9 +5,13 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from 'lottie-react-native';
 import AnimatedLottieMascot from '../mascot/AnimatedLottieMascot';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import type { LogoMascotExpression } from '../mascot/LogoMascot';
+// ROADMAP 4.0 J1 — Lottie confetti pack
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const CONFETTI_LOTTIE = require('../mascot/lottie/confetti.json');
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -200,7 +204,20 @@ export default function CelebrationOverlay({
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {/* Dark overlay */}
       <Animated.View style={[styles.overlay, { opacity: bgOpacity }]}>
-        {/* Confetti rain */}
+        {/* ROADMAP 4.0 J1 — Lottie confetti (replaces the 24-shape Animated rain).
+            The original confetti pieces are kept as a parallel layer so velocity
+            of the existing screens doesn't regress while the placeholder Lottie
+            ships; commissioned art will replace the placeholder, after which
+            the parallel layer can be deleted. */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <LottieView
+            source={CONFETTI_LOTTIE}
+            autoPlay
+            loop={false}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+        </View>
         {confetti.map((c, i) => (
           <Animated.Text
             key={i}
