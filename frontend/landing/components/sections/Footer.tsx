@@ -7,11 +7,13 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-3">
           <div>
             <div className="flex items-center gap-2 text-surface-cream">
-              <span
-                aria-hidden
-                className="grid h-9 w-9 place-items-center rounded-pill bg-brand-gradient text-lg shadow-soft"
-              >
-                🌶️
+              <span className="grid h-10 w-10 place-items-center rounded-pill bg-white/5 shadow-soft">
+                <img
+                  src="/mascot/sazon-logo.svg"
+                  alt=""
+                  aria-hidden
+                  className="h-7 w-7"
+                />
               </span>
               <span className="font-display text-2xl tracking-tight">Sazon</span>
             </div>

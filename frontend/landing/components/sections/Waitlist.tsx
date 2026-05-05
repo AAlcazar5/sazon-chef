@@ -88,9 +88,18 @@ export function Waitlist() {
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className="rounded-sheet bg-surface-cream p-10 text-center shadow-lift"
           >
-            <div className="mx-auto mb-6 grid h-20 w-20 place-items-center rounded-pill bg-brand-gradient text-4xl shadow-soft">
-              👨‍🍳
-            </div>
+            <motion.div
+              initial={{ rotate: -8, scale: 0.9 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 14 }}
+              className="mx-auto mb-6 grid h-24 w-24 place-items-center rounded-pill bg-pastel-peach shadow-soft"
+            >
+              <img
+                src="/mascot/sazon-logo.svg"
+                alt="Sazon mascot welcoming you"
+                className="h-16 w-16"
+              />
+            </motion.div>
             <h2 className="font-display text-4xl tracking-tight text-surface-ink">
               Welcome.
             </h2>

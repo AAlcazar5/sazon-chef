@@ -43,11 +43,13 @@ export function Hero() {
 
       <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 pt-6 md:px-10 md:pt-8">
         <a href="#top" className="flex items-center gap-2 text-white">
-          <span
-            aria-hidden
-            className="grid h-9 w-9 place-items-center rounded-pill bg-brand-gradient text-lg shadow-soft"
-          >
-            🌶️
+          <span className="grid h-10 w-10 place-items-center rounded-pill bg-white/10 shadow-soft glass">
+            <img
+              src="/mascot/sazon-logo.svg"
+              alt=""
+              aria-hidden
+              className="h-7 w-7"
+            />
           </span>
           <span className="font-display text-2xl tracking-tight">Sazon</span>
         </a>
