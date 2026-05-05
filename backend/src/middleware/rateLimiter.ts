@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 // Rate limiting middleware for API endpoints
 
 import type { Request } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 // Check if we're in development mode. Test env (NODE_ENV=test, set by Jest)
 // also disables limits so test suites that fire many requests don't hit 429.
@@ -96,7 +96,7 @@ export const coachMessageLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: Request) => req.user?.id || req.ip || 'anonymous',
+  keyGenerator: (req: Request) => req.user?.id || ipKeyGenerator(req.ip ?? '') || 'anonymous',
   skip: () => isDevelopment,
 });
 
