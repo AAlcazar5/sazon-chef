@@ -59,6 +59,7 @@ import WeeklyRecapCard from '../../components/kitchen/WeeklyRecapCard';
 import KitchenModeBar, { type KitchenMode } from '../../components/kitchen/KitchenModeBar';
 import KitchenDiscoverView from '../../components/kitchen/KitchenDiscoverView';
 import KitchenJourneyView from '../../components/kitchen/KitchenJourneyView';
+import KitchenStoriesView from '../../components/kitchen/KitchenStoriesView';
 import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 
 // Client-side predicate mirroring smartCollectionsService.recipeMatchesSmartCollection
@@ -1824,18 +1825,11 @@ export default function CookbookScreen() {
         </View>
       )}
 
-      {/* ROADMAP 4.0 A3-a — Stories view (filled in A3-d) */}
+      {/* ROADMAP 4.0 A3-d — Stories view */}
       {viewMode === 'stories' && (
-        <ScrollView
-          testID="kitchen-view-stories"
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
-          showsVerticalScrollIndicator={false}
-        >
-          <WeeklyRecapCard />
-          <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', paddingTop: 24 }}>
-            Past recaps — coming together in A3-d.
-          </Text>
-        </ScrollView>
+        <View testID="kitchen-view-stories" style={{ flex: 1 }}>
+          <KitchenStoriesView isDark={isDark} />
+        </View>
       )}
 
       {/* Bulk Action Bar (multi-select mode) */}
