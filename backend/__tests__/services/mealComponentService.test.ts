@@ -8,7 +8,7 @@ import {
   generatePermutations,
   getPlateFromPantry,
 } from '../../src/services/mealComponentService';
-import { MEAL_COMPONENT_SEED, SEED_SLOT_COUNTS } from '../../src/services/mealComponentSeedData';
+import { MEAL_COMPONENT_SEED, SEED_SLOT_COUNTS, GLAZED_BITE_STYLE_TAG } from '../../src/services/mealComponentSeedData';
 import { prisma } from '../../src/lib/prisma';
 
 const mockPrisma = prisma as any;
@@ -757,25 +757,25 @@ describe('mealComponentService.generatePermutations — affinity weighting (Phas
 });
 
 describe('seed integrity', () => {
-  it('contains the spec-mandated component counts (25 / 15 / 50 / 25 / 10 = 125)', () => {
-    expect(SEED_SLOT_COUNTS.protein).toBe(25);
+  it('contains the documented component counts (31 / 15 / 50 / 25 / 10 = 131)', () => {
+    expect(SEED_SLOT_COUNTS.protein).toBe(31);
     expect(SEED_SLOT_COUNTS.base).toBe(15);
     expect(SEED_SLOT_COUNTS.vegetable).toBe(50);
     expect(SEED_SLOT_COUNTS.sauce).toBe(25);
     expect(SEED_SLOT_COUNTS.garnish).toBe(10);
   });
 
-  it('seed array contains 125 components matching slot counts', () => {
+  it('seed array matches slot counts (131 total)', () => {
     const counts: Record<string, number> = {};
     for (const c of MEAL_COMPONENT_SEED) {
       counts[c.slot] = (counts[c.slot] || 0) + 1;
     }
-    expect(counts.protein).toBe(25);
+    expect(counts.protein).toBe(31);
     expect(counts.base).toBe(15);
     expect(counts.vegetable).toBe(50);
     expect(counts.sauce).toBe(25);
     expect(counts.garnish).toBe(10);
-    expect(MEAL_COMPONENT_SEED.length).toBe(125);
+    expect(MEAL_COMPONENT_SEED.length).toBe(131);
   });
 
   it('every seed row has stable id + parseable JSON tag arrays', () => {
@@ -787,5 +787,60 @@ describe('seed integrity', () => {
       expect(JSON.parse(c.pantryIngredientNames).length).toBeGreaterThan(0);
       expect(c.caloriesPerPortion).toBeGreaterThan(0);
     }
+  });
+
+  describe('glazed protein bites family', () => {
+    const glazed = MEAL_COMPONENT_SEED.filter(c =>
+      JSON.parse(c.cuisineTags).includes(GLAZED_BITE_STYLE_TAG),
+    );
+
+    it('seeds all six initial protein-bite variants (salmon, chicken, tofu, shrimp, tempeh, pork)', () => {
+      const ids = glazed.map(c => c.id);
+      expect(ids).toEqual(
+        expect.arrayContaining([
+          'p_salmon_bites_asian_glaze',
+          'p_chicken_bites_asian_glaze',
+          'p_tofu_bites_asian_glaze',
+          'p_shrimp_bites_asian_glaze',
+          'p_tempeh_bites_asian_glaze',
+          'p_pork_tenderloin_bites_asian_glaze',
+        ]),
+      );
+      expect(glazed).toHaveLength(6);
+    });
+
+    it('every glazed-bite is in the protein slot and is high-protein', () => {
+      for (const c of glazed) {
+        expect(c.slot).toBe('protein');
+        expect(c.proteinG).toBeGreaterThanOrEqual(20);
+        expect(JSON.parse(c.dietaryTags)).toContain('high_protein');
+      }
+    });
+
+    it('every glazed-bite carries the soy + sesame + honey marinade trio in pantry names', () => {
+      for (const c of glazed) {
+        const ingredients = JSON.parse(c.pantryIngredientNames) as string[];
+        expect(ingredients).toContain('soy sauce');
+        expect(ingredients).toContain('honey');
+        expect(ingredients).toContain('sesame oil');
+      }
+    });
+
+    it('covers omnivore + pescatarian + vegan diets so the plate builder always has a swap', () => {
+      const dietBuckets = new Set<string>();
+      for (const c of glazed) {
+        const dietary = JSON.parse(c.dietaryTags) as string[];
+        if (dietary.includes('vegan')) dietBuckets.add('vegan');
+        else if (dietary.includes('pescatarian')) dietBuckets.add('pescatarian');
+        else dietBuckets.add('omnivore');
+      }
+      expect(dietBuckets.has('vegan')).toBe(true);
+      expect(dietBuckets.has('pescatarian')).toBe(true);
+      expect(dietBuckets.has('omnivore')).toBe(true);
+    });
+
+    it('exports a stable style tag literal', () => {
+      expect(GLAZED_BITE_STYLE_TAG).toBe('glazed_bite');
+    });
   });
 });

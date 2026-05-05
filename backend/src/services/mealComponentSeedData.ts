@@ -24,12 +24,21 @@ export interface MealComponentSeed {
 }
 
 export const SEED_SLOT_COUNTS = {
-  protein: 25,
+  protein: 31,
   base: 15,
   vegetable: 50,
   sauce: 25,
   garnish: 10,
 } as const;
+
+/**
+ * Style tag for the "glazed protein bites" family — soy + honey + sesame +
+ * rice vinegar marinade on cubed protein, finished in toaster oven or
+ * skillet. The plate builder treats components carrying this tag as
+ * interchangeable variants. Tier D recipe-DB generation should produce
+ * additional recipes in this style (see ROADMAP_4.0.md tier D notes).
+ */
+export const GLAZED_BITE_STYLE_TAG = 'glazed_bite';
 
 const tags = (...t: string[]) => JSON.stringify(t);
 const ing = (...names: string[]) => JSON.stringify(names);
@@ -61,6 +70,18 @@ const PROTEINS: MealComponentSeed[] = [
   { id: 'p_paneer', slot: 'protein', name: 'Paneer', description: 'Indian fresh cheese, cubed.', defaultPortionGrams: 120, caloriesPerPortion: 320, proteinG: 22, carbsG: 4, fatG: 25, fiberG: 0, estimatedCostPerPortion: 3, cuisineTags: tags('Indian'), dietaryTags: tags('vegetarian', 'gluten_free', 'high_protein'), cookMethodHint: 'pan_sear', cookTimeMinutes: 8, equipmentNeeded: eq('stovetop_burner'), pantryIngredientNames: ing('paneer', 'oil', 'turmeric'), imageUrl: null },
   { id: 'p_halloumi', slot: 'protein', name: 'Grilled Halloumi', description: 'Salty squeak cheese.', defaultPortionGrams: 100, caloriesPerPortion: 320, proteinG: 22, carbsG: 2, fatG: 25, fiberG: 0, estimatedCostPerPortion: 4, cuisineTags: tags('Mediterranean', 'Middle Eastern'), dietaryTags: tags('vegetarian', 'gluten_free', 'high_protein'), cookMethodHint: 'grill', cookTimeMinutes: 6, equipmentNeeded: eq('stovetop_burner'), pantryIngredientNames: ing('halloumi', 'olive oil'), imageUrl: null },
   { id: 'p_edamame', slot: 'protein', name: 'Steamed Edamame', description: 'Salted soybeans.', defaultPortionGrams: 150, caloriesPerPortion: 180, proteinG: 17, carbsG: 14, fatG: 8, fiberG: 8, estimatedCostPerPortion: 2, cuisineTags: tags('Japanese', 'Asian'), dietaryTags: tags('vegan', 'vegetarian', 'gluten_free', 'high_protein', 'high_fiber'), cookMethodHint: 'simmer', cookTimeMinutes: 8, equipmentNeeded: eq('stovetop_burner'), pantryIngredientNames: ing('edamame', 'salt'), imageUrl: null },
+
+  // ── Glazed protein bites — soy + honey + sesame + rice vinegar family.
+  // Cubed protein (1-1.5"), short marinade, toaster-oven or skillet finish.
+  // All carry the 'glazed_bite' style tag; the plate builder treats them
+  // as interchangeable variants. Macros are per 150g cooked portion (the
+  // plate builder's default protein portion); marinade calories included.
+  { id: 'p_salmon_bites_asian_glaze', slot: 'protein', name: 'Salmon Bites (Asian Glaze)', description: 'Cubed salmon in soy-honey-sesame glaze; toaster-oven 12-15 min.', defaultPortionGrams: 150, caloriesPerPortion: 385, proteinG: 33, carbsG: 8, fatG: 23, fiberG: 0, estimatedCostPerPortion: 5.5, cuisineTags: tags('Asian', 'Japanese', GLAZED_BITE_STYLE_TAG), dietaryTags: tags('gluten_free_swap', 'high_protein', 'pescatarian'), cookMethodHint: 'roast', cookTimeMinutes: 15, equipmentNeeded: eq('toaster_oven', 'oven'), pantryIngredientNames: ing('salmon', 'soy sauce', 'honey', 'sesame oil', 'rice vinegar', 'garlic', 'ginger', 'sesame seeds'), imageUrl: null },
+  { id: 'p_chicken_bites_asian_glaze', slot: 'protein', name: 'Chicken Bites (Asian Glaze)', description: 'Cubed chicken breast in soy-honey-sesame glaze; toaster-oven 18-22 min or skillet.', defaultPortionGrams: 150, caloriesPerPortion: 270, proteinG: 33, carbsG: 12, fatG: 6, fiberG: 0, estimatedCostPerPortion: 3.2, cuisineTags: tags('Asian', GLAZED_BITE_STYLE_TAG), dietaryTags: tags('gluten_free_swap', 'high_protein', 'low_fat'), cookMethodHint: 'roast', cookTimeMinutes: 20, equipmentNeeded: eq('toaster_oven', 'oven', 'stovetop_burner'), pantryIngredientNames: ing('chicken breast', 'soy sauce', 'honey', 'sesame oil', 'rice vinegar', 'cornstarch', 'garlic', 'ginger', 'sesame seeds'), imageUrl: null },
+  { id: 'p_tofu_bites_asian_glaze', slot: 'protein', name: 'Tofu Bites (Asian Glaze)', description: 'Pressed extra-firm tofu cubes in soy-honey-sesame glaze; toaster-oven 18-20 min.', defaultPortionGrams: 150, caloriesPerPortion: 250, proteinG: 22, carbsG: 14, fatG: 12, fiberG: 1, estimatedCostPerPortion: 1.8, cuisineTags: tags('Asian', GLAZED_BITE_STYLE_TAG), dietaryTags: tags('vegan', 'vegetarian', 'gluten_free_swap', 'high_protein'), cookMethodHint: 'roast', cookTimeMinutes: 20, equipmentNeeded: eq('toaster_oven', 'oven'), pantryIngredientNames: ing('extra-firm tofu', 'soy sauce', 'honey', 'sesame oil', 'rice vinegar', 'cornstarch', 'garlic', 'ginger'), imageUrl: null },
+  { id: 'p_shrimp_bites_asian_glaze', slot: 'protein', name: 'Shrimp Bites (Asian Glaze)', description: 'Peeled shrimp tossed in soy-honey-sesame glaze; skillet 4-5 min.', defaultPortionGrams: 150, caloriesPerPortion: 220, proteinG: 30, carbsG: 10, fatG: 5, fiberG: 0, estimatedCostPerPortion: 5, cuisineTags: tags('Asian', 'Japanese', GLAZED_BITE_STYLE_TAG), dietaryTags: tags('gluten_free_swap', 'high_protein', 'low_fat', 'pescatarian'), cookMethodHint: 'pan_sear', cookTimeMinutes: 5, equipmentNeeded: eq('stovetop_burner'), pantryIngredientNames: ing('shrimp', 'soy sauce', 'honey', 'sesame oil', 'rice vinegar', 'garlic', 'ginger'), imageUrl: null },
+  { id: 'p_tempeh_bites_asian_glaze', slot: 'protein', name: 'Tempeh Bites (Asian Glaze)', description: 'Cubed tempeh in soy-honey-sesame glaze; toaster-oven 20 min.', defaultPortionGrams: 150, caloriesPerPortion: 320, proteinG: 28, carbsG: 18, fatG: 14, fiberG: 6, estimatedCostPerPortion: 2.5, cuisineTags: tags('Asian', 'Indonesian', GLAZED_BITE_STYLE_TAG), dietaryTags: tags('vegan', 'vegetarian', 'gluten_free_swap', 'high_protein', 'high_fiber'), cookMethodHint: 'roast', cookTimeMinutes: 20, equipmentNeeded: eq('toaster_oven', 'oven'), pantryIngredientNames: ing('tempeh', 'soy sauce', 'honey', 'sesame oil', 'rice vinegar', 'garlic', 'ginger'), imageUrl: null },
+  { id: 'p_pork_tenderloin_bites_asian_glaze', slot: 'protein', name: 'Pork Tenderloin Bites (Asian Glaze)', description: 'Cubed pork tenderloin in soy-honey-sesame glaze; skillet 6-8 min.', defaultPortionGrams: 150, caloriesPerPortion: 295, proteinG: 35, carbsG: 11, fatG: 10, fiberG: 0, estimatedCostPerPortion: 4.5, cuisineTags: tags('Asian', 'American', GLAZED_BITE_STYLE_TAG), dietaryTags: tags('gluten_free_swap', 'high_protein'), cookMethodHint: 'pan_sear', cookTimeMinutes: 8, equipmentNeeded: eq('stovetop_burner'), pantryIngredientNames: ing('pork tenderloin', 'soy sauce', 'honey', 'sesame oil', 'rice vinegar', 'cornstarch', 'garlic', 'ginger'), imageUrl: null },
 ];
 
 const BASES: MealComponentSeed[] = [
