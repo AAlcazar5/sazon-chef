@@ -93,6 +93,9 @@ model User {
   // ROADMAP 4.0 E9: Health platform integration (HealthKit / Health Connect)
   healthIntegration       HealthIntegration?
 
+  // ROADMAP 4.0 D13: per-day nutrient roll-ups
+  dailyNutrientSnapshots  DailyNutrientSnapshot[]
+
   // Group 8: Revenue Optimization
   cancellationSurveys     CancellationSurvey[]
 
@@ -345,6 +348,9 @@ model Recipe {
   @@index([cuisine])
   @@index([mealType])
   @@index([cookTime])
+  // ROADMAP 4.0 D13 — back-relation for the lazy nutrient aggregate.
+  nutrientAggregate RecipeNutrientAggregate?
+
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
   @@index([isUserCreated, cuisine, mealType])
@@ -1688,4 +1694,116 @@ model IngredientFDCMapping {
 
   @@index([fdcId])
   @@map("ingredient_fdc_mappings")
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// ROADMAP 4.0 D13 — Recipe + daily nutrient aggregation.
+//
+// RecipeNutrientAggregate: per-recipe per-serving roll-up across the
+// recipe's ingredients (lazy-cached, invalidated on recipe edit).
+//
+// DailyNutrientSnapshot: per-user per-date sum across that day's
+// CookingLog entries. Recomputed on cook-log write or daily refresh.
+//
+// Both tables mirror the IngredientNutrient column shape so the discovery
+// UI (D14) can read aggregates with a single row-level query.
+// ──────────────────────────────────────────────────────────────────────────
+
+model RecipeNutrientAggregate {
+  id           String   @id @default(cuid())
+  recipeId     String   @unique
+  recipe       Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  servings     Int      @default(1)
+
+  // Per-serving aggregates — same units / shape as IngredientNutrient
+  calories     Float?
+  protein      Float?
+  carbs        Float?
+  fat          Float?
+  fiber        Float?
+  sugar        Float?
+  addedSugar   Float?
+  saturatedFat Float?
+  monoFat      Float?
+  polyFat      Float?
+  transFat     Float?
+  cholesterol  Float?
+  sodium       Float?
+  potassium    Float?
+  calcium      Float?
+  iron         Float?
+  magnesium    Float?
+  zinc         Float?
+  phosphorus   Float?
+  selenium     Float?
+  vitA         Float?
+  vitC         Float?
+  vitD         Float?
+  vitE         Float?
+  vitK         Float?
+  thiamin      Float?
+  riboflavin   Float?
+  niacin       Float?
+  b6           Float?
+  b12          Float?
+  folate       Float?
+  omega3       Float?
+  omega6       Float?
+
+  // Coverage = fraction of ingredients we successfully resolved to FDC.
+  // Lets the UI decide whether to surface "approximate" disclaimers.
+  ingredientCoverage Float @default(0)
+
+  computedAt   DateTime @default(now())
+  invalidated  Boolean  @default(false)
+
+  @@map("recipe_nutrient_aggregates")
+}
+
+model DailyNutrientSnapshot {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String   // ISO 'YYYY-MM-DD' — SQLite-friendly, timezone-stable
+
+  calories     Float?
+  protein      Float?
+  carbs        Float?
+  fat          Float?
+  fiber        Float?
+  sugar        Float?
+  addedSugar   Float?
+  saturatedFat Float?
+  monoFat      Float?
+  polyFat      Float?
+  transFat     Float?
+  cholesterol  Float?
+  sodium       Float?
+  potassium    Float?
+  calcium      Float?
+  iron         Float?
+  magnesium    Float?
+  zinc         Float?
+  phosphorus   Float?
+  selenium     Float?
+  vitA         Float?
+  vitC         Float?
+  vitD         Float?
+  vitE         Float?
+  vitK         Float?
+  thiamin      Float?
+  riboflavin   Float?
+  niacin       Float?
+  b6           Float?
+  b12          Float?
+  folate       Float?
+  omega3       Float?
+  omega6       Float?
+
+  mealCount    Int      @default(0)
+  computedAt   DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("daily_nutrient_snapshots")
 }
