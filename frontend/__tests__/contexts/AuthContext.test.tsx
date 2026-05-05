@@ -1,6 +1,11 @@
 // frontend/__tests__/contexts/AuthContext.test.tsx
 // Tests for AuthContext authentication flows
 
+// jest.setup.js globally mocks AuthContext so screen tests don't need an
+// AuthProvider in the tree. This file tests the real AuthContext module —
+// undo the global mock for this file only.
+jest.unmock('../../contexts/AuthContext');
+
 // Mock dependencies BEFORE imports
 jest.mock('../../lib/api', () => ({
   api: {
