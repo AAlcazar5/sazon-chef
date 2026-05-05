@@ -45,6 +45,9 @@ export default function KitchenModeBar({ activeMode, onChange }: KitchenModeBarP
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
+      // flexGrow:0 prevents the ScrollView from claiming extra vertical space
+      // — without it, the bar leaves a tall gap above the FilterRow.
+      style={styles.scroll}
       testID="kitchen-mode-bar"
     >
       {KITCHEN_MODES.map((mode) => {
@@ -79,6 +82,9 @@ export default function KitchenModeBar({ activeMode, onChange }: KitchenModeBarP
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flexGrow: 0,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
