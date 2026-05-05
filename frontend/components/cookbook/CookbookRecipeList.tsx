@@ -240,7 +240,7 @@ function CookbookRecipeList({
   if (recipes.length === 0) {
     return (
       <View className={`${displayMode === 'grid' ? 'w-full' : ''} py-8 items-center`}>
-        <AnimatedEmptyState config={CookbookEmptyStates.noSearchResults} />
+        <AnimatedEmptyState config={CookbookEmptyStates.noSearchResults} title="" />
       </View>
     );
   }

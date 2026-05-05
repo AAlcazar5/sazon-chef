@@ -260,7 +260,7 @@ export default function HomeScreen() {
     if (resetPage) {
       setCurrentPage(0);
     }
-    setUserFeedback(prev => ({ ...prev, ...result.feedback }));
+    setUserFeedback({ ...userFeedback, ...result.feedback });
     setInitialRecipesLoaded(true);
   }, []);
 

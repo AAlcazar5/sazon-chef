@@ -50,7 +50,8 @@ export function useAffinityExamples(): AffinityExamples {
     (async () => {
       try {
         const res = await recipeApi.getBrowseByFamily();
-        const families = ((res?.data?.families ?? res?.families) as FamilyEntry[]) ?? [];
+        const data = (res as unknown as { data?: { families?: FamilyEntry[] }; families?: FamilyEntry[] });
+        const families = (data?.data?.families ?? data?.families ?? []) as FamilyEntry[];
 
         // Top cuisines: most-cooked from highest-affinity families, in
         // descending family-affinity order. We pull from exploredCuisines

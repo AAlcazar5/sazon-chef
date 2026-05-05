@@ -3,7 +3,7 @@
 // Every journey is a full render-tree integration test (RTL + jest-expo).
 // No Detox / Playwright — the project has neither wired up.
 
-import type { CoachConversation, CoachMemory, CoachMessage } from '../../../lib/api';
+import type { CoachConversation, CoachMemory, CoachMessage } from '../../lib/api';
 
 // ─── Conversation factories ────────────────────────────────────────────────
 
@@ -21,9 +21,13 @@ export function makeConversation(overrides?: Partial<CoachConversation>): CoachC
 export function makeMemory(overrides?: Partial<CoachMemory>): CoachMemory {
   return {
     id: 'mem_1',
+    userId: 'user_1',
     kind: 'preference',
     content: 'Prefers spicy food',
     confidence: 0.9,
+    sourceConversationId: null,
+    sourceMessageId: null,
+    createdAt: '2026-05-03T00:00:00Z',
     updatedAt: '2026-05-03T00:00:00Z',
     ...overrides,
   };

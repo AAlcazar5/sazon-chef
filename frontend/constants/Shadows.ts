@@ -36,14 +36,20 @@ export const Shadows = {
 // ─── Editorial Shadows (10V-B) ───────────────────────────────────────────────
 // v2 design system — tinted shadows with custom colors
 
+// Both ios + android branches have to satisfy the same shape so
+// Platform.select() can pick between them without TS complaining about
+// elevation-only Android. Each branch carries the union of all keys; the
+// platform that doesn't use a key just leaves it at zero.
+interface EditorialShadowBranch {
+  shadowColor?: string;
+  shadowOffset?: { width: number; height: number };
+  shadowOpacity?: number;
+  shadowRadius?: number;
+  elevation?: number;
+}
 interface EditorialShadowSet {
-  ios: {
-    shadowColor: string;
-    shadowOffset: { width: number; height: number };
-    shadowOpacity: number;
-    shadowRadius: number;
-  };
-  android: { elevation: number };
+  ios: EditorialShadowBranch;
+  android: EditorialShadowBranch;
 }
 
 function editorialShadow(

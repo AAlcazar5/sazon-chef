@@ -96,7 +96,7 @@ export default function SplashScreen({ onFinish, duration = 2000 }: SplashScreen
   return (
     <Animated.View style={[styles.fill, { opacity: crossFadeOut }]} testID="splash-screen">
       <LinearGradient
-        colors={gradientColors as unknown as string[]}
+        colors={gradientColors as unknown as readonly [string, string]}
         style={styles.fill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

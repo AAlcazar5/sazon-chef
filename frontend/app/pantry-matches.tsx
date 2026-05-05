@@ -114,7 +114,7 @@ export default function PantryMatchesScreen() {
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
             <AnimatedEmptyState
               useMascot
-              mascotExpression="confused"
+              mascotExpression="thinking"
               mascotSize="medium"
               title="Something Went Wrong"
               description="Couldn't load matches — try again in a sec."
