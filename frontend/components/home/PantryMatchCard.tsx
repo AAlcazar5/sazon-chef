@@ -8,8 +8,9 @@
 // Hides itself when pantry is empty so the home feed isn't cluttered.
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
@@ -85,7 +86,7 @@ function PantryMatchCard({ onPress }: PantryMatchCardProps) {
   if (state.phase === 'loading') {
     return (
       <View style={containerStyle} testID="pantry-match-card-loading">
-        <ActivityIndicator color={textSecondary} />
+        <AnimatedActivityIndicator color={textSecondary} />
       </View>
     );
   }

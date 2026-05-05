@@ -73,8 +73,8 @@ export default function Button({
   // Variant styles
   const variantStyles = {
     primary: 'bg-transparent', // Uses LinearGradient overlay
-    secondary: 'bg-gray-500 dark:bg-gray-600 border border-gray-500 dark:border-gray-600',
-    outline: 'bg-transparent border border-gray-300 dark:border-gray-600',
+    secondary: 'bg-gray-500 dark:bg-gray-600 ',
+    outline: 'bg-transparent ',
     danger: 'bg-transparent', // Uses LinearGradient overlay
     accent: 'bg-red-600 dark:bg-red-400 border border-red-600 dark:border-red-500', // Red accent variant
     rainbow: 'bg-transparent' // Rainbow gradient variant - uses GradientBorder wrapper

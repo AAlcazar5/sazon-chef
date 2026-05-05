@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   errorDetails: {
     width: '100%',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     marginBottom: 24,
     maxHeight: 300,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },

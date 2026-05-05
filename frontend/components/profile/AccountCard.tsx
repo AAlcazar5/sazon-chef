@@ -99,7 +99,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
 
   return (
     <>
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 " style={Shadows.MD}>
         <View className="flex-row items-center mb-3">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedDark }}>
             <Icon name={Icons.ACCOUNT_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} accessibilityLabel="Account" />
@@ -186,7 +186,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete="off"
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+                className=" rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
               />
             </View>
 
@@ -200,7 +200,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete="off"
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+                className=" rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
               />
             </View>
 
@@ -214,7 +214,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete="off"
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+                className=" rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
               />
             </View>
 
@@ -222,7 +222,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
               <HapticTouchableOpacity
                 onPress={() => { setShowPasswordModal(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }}
                 disabled={changingPassword}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+                className="flex-1 py-3 px-4  rounded-lg"
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>
@@ -265,7 +265,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
               placeholderTextColor="#9CA3AF"
               autoCapitalize="characters"
               autoComplete="off"
-              className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 mb-4"
+              className=" rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 mb-4"
               editable={!deletingAccount}
             />
 
@@ -273,7 +273,7 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
               <HapticTouchableOpacity
                 onPress={() => { if (!deletingAccount) { setShowDeleteAccountModal(false); setDeleteAccountConfirmText(''); } }}
                 disabled={deletingAccount}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+                className="flex-1 py-3 px-4  rounded-lg"
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>

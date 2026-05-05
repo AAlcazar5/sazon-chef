@@ -827,7 +827,7 @@ export default function CookingScreen() {
               onPress={() => setShowNoteInput((s) => !s)}
               hapticStyle="light"
               accessibilityLabel="Add note"
-              className="flex-row items-center justify-center py-2.5 px-3 rounded-xl border border-gray-700"
+              className="flex-row items-center justify-center py-2.5 px-3 rounded-xl "
             >
               <Ionicons name="document-text-outline" size={16} color="#FBBF24" />
               <Text className="text-amber-400 font-semibold text-xs ml-1.5">Note</Text>
@@ -866,7 +866,7 @@ export default function CookingScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               hapticStyle="light"
-              className="flex-1 flex-row items-center justify-center py-2.5 rounded-xl border border-gray-700"
+              className="flex-1 flex-row items-center justify-center py-2.5 rounded-xl "
             >
               <Ionicons
                 name={showIngredients ? 'list' : 'list-outline'}
@@ -1016,7 +1016,7 @@ export default function CookingScreen() {
                 onPress={goPrev}
                 hapticStyle="light"
                 disabled={currentStep === 0}
-                className="flex-1 flex-row items-center justify-center py-3.5 rounded-xl border border-gray-700"
+                className="flex-1 flex-row items-center justify-center py-3.5 rounded-xl "
                 style={{ opacity: currentStep === 0 ? 0.3 : 1 }}
               >
                 <Ionicons name="chevron-back" size={20} color="#9CA3AF" />

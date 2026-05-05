@@ -253,19 +253,19 @@ export default function RecurringMealModal({
             <View className="flex-row mb-4" style={{ gap: 8 }}>
               <HapticTouchableOpacity
                 onPress={selectWeekdays}
-                className="flex-1 py-1.5 rounded-full items-center border border-gray-200 dark:border-gray-600"
+                className="flex-1 py-1.5 rounded-full items-center "
               >
                 <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">Weekdays</Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={selectWeekends}
-                className="flex-1 py-1.5 rounded-full items-center border border-gray-200 dark:border-gray-600"
+                className="flex-1 py-1.5 rounded-full items-center "
               >
                 <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">Weekends</Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={selectEveryDay}
-                className="flex-1 py-1.5 rounded-full items-center border border-gray-200 dark:border-gray-600"
+                className="flex-1 py-1.5 rounded-full items-center "
               >
                 <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">Every Day</Text>
               </HapticTouchableOpacity>

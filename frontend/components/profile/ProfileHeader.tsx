@@ -310,7 +310,7 @@ export default function ProfileHeader({
                 placeholderTextColor="#9CA3AF"
                 autoCapitalize="words"
                 autoComplete="name"
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+                className=" rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
               />
             </View>
 
@@ -321,7 +321,7 @@ export default function ProfileHeader({
                   setEditingName('');
                 }}
                 disabled={updatingName}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+                className="flex-1 py-3 px-4  rounded-lg"
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>

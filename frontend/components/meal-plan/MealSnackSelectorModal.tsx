@@ -250,7 +250,7 @@ function MealSnackSelectorModal({
             </View>
             <HapticTouchableOpacity
               onPress={() => setMaxWeeklyBudget(null)}
-              className="mt-2 py-2 px-4 rounded-lg border border-gray-300 dark:border-gray-600"
+              className="mt-2 py-2 px-4 rounded-lg "
             >
               <Text className="text-center text-sm text-gray-600 dark:text-gray-400">
                 No Budget Limit
@@ -262,7 +262,7 @@ function MealSnackSelectorModal({
           <View className="flex-row space-x-3">
             <HapticTouchableOpacity
               onPress={onClose}
-              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+              className="flex-1 py-3 px-4  rounded-lg"
             >
               <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
             </HapticTouchableOpacity>

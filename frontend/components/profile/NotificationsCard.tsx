@@ -71,7 +71,7 @@ function WheelPicker({
       height: totalHeight,
       width: pickerWidth,
       overflow: 'hidden',
-      borderRadius: 8,
+      borderRadius: 12,
       backgroundColor: isDarkMode ? DarkColors.surface : Colors.surface,
       borderWidth: 1,
       borderColor: isDarkMode ? DarkColors.border.medium : Colors.border.medium,
@@ -203,7 +203,7 @@ export default function NotificationsCard({
 
   return (
     <>
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 " style={Shadows.MD}>
         <View className="flex-row items-center mb-3">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenDark }}>
             <Icon name={Icons.NOTIFICATIONS_OUTLINE} size={IconSizes.MD} color={isDark ? DarkColors.tertiaryGreen : '#FFFFFF'} accessibilityLabel="Notifications" />
@@ -490,7 +490,7 @@ export default function NotificationsCard({
                       onChangeText={handleManualTimeInput}
                       placeholder="8:00 AM"
                       placeholderTextColor="#9CA3AF"
-                      className="text-2xl font-bold text-center bg-white dark:bg-gray-800 rounded-lg px-4 py-2 border border-gray-300 dark:border-gray-600 w-full"
+                      className="text-2xl font-bold text-center bg-white dark:bg-gray-800 rounded-lg px-4 py-2  w-full"
                       style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
                       keyboardType="default"
                     />
@@ -557,7 +557,7 @@ export default function NotificationsCard({
             <View className="mt-4">
               <HapticTouchableOpacity
                 onPress={resetModal}
-                className="py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+                className="py-3 px-4  rounded-lg"
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Done</Text>
               </HapticTouchableOpacity>

@@ -179,7 +179,7 @@ export default function DuplicateModal({
           >
             {/* Section 1: Copy Last Week */}
             <View
-              className="mb-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700"
+              className="mb-4 p-4 rounded-xl "
               style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}
             >
               <View className="flex-row items-center mb-2">
@@ -205,7 +205,7 @@ export default function DuplicateModal({
 
             {/* Section 2: Copy a Day */}
             <View
-              className="mb-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700"
+              className="mb-4 p-4 rounded-xl "
               style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}
             >
               <View className="flex-row items-center mb-2">
@@ -302,7 +302,7 @@ export default function DuplicateModal({
 
             {/* Section 3: Same Meal All Week */}
             <View
-              className="p-4 rounded-xl border border-gray-200 dark:border-gray-700"
+              className="p-4 rounded-xl "
               style={{ backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }}
             >
               <View className="flex-row items-center mb-2">

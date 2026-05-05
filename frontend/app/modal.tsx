@@ -2551,7 +2551,7 @@ export default function RecipeModal() {
             
             <HapticTouchableOpacity 
               onPress={() => setShowHealthifyModal(false)}
-          className="border border-gray-300 py-3 px-6 rounded-lg items-center"
+          className=" py-3 px-6 rounded-lg items-center"
         >
               <Text className="text-gray-700 dark:text-gray-300 font-semibold text-lg">Close</Text>
             </HapticTouchableOpacity>

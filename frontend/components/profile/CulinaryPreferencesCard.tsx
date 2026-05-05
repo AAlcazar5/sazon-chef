@@ -29,7 +29,7 @@ export default function CulinaryPreferencesCard({ profile, preferences }: Culina
   const prefs = profile?.preferences || preferences;
 
   return (
-    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
+    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 " style={Shadows.MD}>
       <View className="flex-row justify-between items-center mb-3">
         <View className="flex-row items-center">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.primaryLight}33` : Colors.primaryDark }}>

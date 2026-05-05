@@ -3,9 +3,10 @@
 // Step 1: count, Step 2: presets, Step 3: macro sliders, Step 4: meal type + cuisine
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Modal, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import MacroSlider from '../ui/MacroSlider';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -480,7 +481,7 @@ export default function MealRequestModal({
                   }}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#FFF" />
+                    <AnimatedActivityIndicator color="#FFF" />
                   ) : (
                     <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#FFFFFF' }}>
                       Find {count === 1 ? 'a Meal' : `${count} Meals`}

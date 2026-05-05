@@ -60,7 +60,7 @@ export default function ProfileCompletionCard({ profileCompletion }: ProfileComp
 
   if (profileCompletion.percentage >= 100) {
     return (
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 " style={Shadows.MD}>
         <View className="items-center py-2">
           <Text className="text-3xl mb-2">🏆</Text>
           <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">Profile Complete!</Text>
@@ -82,7 +82,7 @@ export default function ProfileCompletionCard({ profileCompletion }: ProfileComp
   });
 
   return (
-    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
+    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 " style={Shadows.MD}>
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center flex-1">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenDark }}>

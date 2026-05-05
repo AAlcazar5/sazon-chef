@@ -80,7 +80,7 @@ export default function MergeListsModal({
               value={state.mergeName}
               onChangeText={(text) => dispatch({ type: 'UPDATE', payload: { mergeName: text } })}
               placeholder="e.g., Weekly Shopping, Grocery Run"
-              className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 dark:bg-gray-700"
+              className=" rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 dark:bg-gray-700"
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -90,7 +90,7 @@ export default function MergeListsModal({
           <HapticTouchableOpacity
             onPress={() => dispatch({ type: 'RESET_MERGE' })}
             disabled={state.mergingLists}
-            className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+            className="flex-1 py-3 px-4  rounded-lg"
           >
             <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
           </HapticTouchableOpacity>

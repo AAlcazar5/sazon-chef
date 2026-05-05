@@ -6,8 +6,9 @@
 // genuinely different. Silent when no ideas are found.
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Modal, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, ScrollView } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors, Pastel, PastelDark, Accent } from '../../constants/Colors';
@@ -130,7 +131,7 @@ function LeftoverIdeasSheet({
 
           {loading ? (
             <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-              <ActivityIndicator color={Accent.peach} />
+              <AnimatedActivityIndicator color={Accent.peach} />
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false}>

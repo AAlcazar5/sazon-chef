@@ -107,7 +107,7 @@ const AnimatedHourHeader = ({
               left: 0,
               right: 0,
               bottom: 0,
-              borderRadius: 8,
+              borderRadius: 12,
               backgroundColor: isDark ? `${Colors.primary}20` : `${Colors.primary}15`,
               alignItems: 'center',
               justifyContent: 'center',

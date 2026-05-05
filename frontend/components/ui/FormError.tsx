@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   // Summary error box
   summaryContainer: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
   },

@@ -731,7 +731,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
                       backgroundColor: grade === 'A' ? '#22c55e' : grade === 'B' ? '#84cc16' : 'rgba(255,255,255,0.3)',
                       paddingHorizontal: 6,
                       paddingVertical: 1,
-                      borderRadius: 8,
+                      borderRadius: 12,
                     }}
                   >
                     <Text style={{ color: '#fff', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>

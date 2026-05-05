@@ -84,7 +84,7 @@ function MealNotesModal({
                         HapticPatterns.buttonPress();
                         onInsertTemplate(template.text);
                       }}
-                      className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                      className="px-3 py-2 rounded-lg "
                       style={{ backgroundColor: isDark ? DarkColors.card : Colors.surface }}
                     >
                       <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
@@ -104,7 +104,7 @@ function MealNotesModal({
                 placeholder="Add notes about this meal... (e.g., taste, modifications, prep tips)"
                 placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
                 multiline
-                className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 text-gray-900 dark:text-gray-100"
+                className=" rounded-lg p-4 text-gray-900 dark:text-gray-100"
                 style={{
                   minHeight: 200,
                   maxHeight: 300,
@@ -143,7 +143,7 @@ function MealNotesModal({
               <View className="flex-row space-x-3">
                 <HapticTouchableOpacity
                   onPress={onClose}
-                  className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="flex-1 py-3 px-4  rounded-lg"
                 >
                   <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
                 </HapticTouchableOpacity>

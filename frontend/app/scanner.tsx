@@ -722,7 +722,7 @@ export default function ScannerScreen() {
                                   style={{
                                     paddingHorizontal: 14,
                                     paddingVertical: 6,
-                                    borderRadius: 8,
+                                    borderRadius: 12,
                                     backgroundColor: s === val ? MACRO_COLORS.calories.accent : 'transparent',
                                     marginHorizontal: 2,
                                   }}

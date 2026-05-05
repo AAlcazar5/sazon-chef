@@ -10,9 +10,9 @@ import {
   Alert,
   BackHandler,
   StyleSheet,
-  ActivityIndicator,
   TextInput,
 } from 'react-native';
+import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -793,7 +793,7 @@ export default function OnboardingScreen() {
               ]}
             >
               {saving ? (
-                <ActivityIndicator size="small" color={isDark ? DarkColors.text.inverse : '#FFFFFF'} />
+                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.text.inverse : '#FFFFFF'} />
               ) : (
                 <Text style={[styles.ctaLabel, { color: isDark ? DarkColors.text.inverse : '#FFFFFF' }]}>
                   {ctaLabel}

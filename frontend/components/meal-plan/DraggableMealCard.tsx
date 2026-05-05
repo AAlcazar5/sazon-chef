@@ -326,7 +326,7 @@ function DraggableMealCard({
       bottom: 0,
       backgroundColor: isDark ? DarkColors.tertiaryGreen : Colors.tertiaryGreen,
       opacity: bgOpacity,
-      borderRadius: 8,
+      borderRadius: 12,
     };
   });
 
@@ -340,7 +340,7 @@ function DraggableMealCard({
       bottom: 0,
       backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed,
       opacity: bgOpacity,
-      borderRadius: 8,
+      borderRadius: 12,
     };
   });
 
@@ -430,7 +430,7 @@ function DraggableMealCard({
             <View style={{
               alignSelf: 'flex-start',
               backgroundColor: isDark ? MEAL_TYPE_PILL[meal.mealType].tintDark : MEAL_TYPE_PILL[meal.mealType].tint,
-              borderRadius: 8,
+              borderRadius: 12,
               paddingHorizontal: 8,
               paddingVertical: 3,
               marginBottom: 6,

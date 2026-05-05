@@ -288,7 +288,7 @@ function RecipeSectionsGrid({
                               backgroundColor: isDark ? DarkColors.primary : Colors.primary,
                               paddingHorizontal: 20,
                               paddingVertical: 10,
-                              borderRadius: 8,
+                              borderRadius: 12,
                               opacity: refreshingQuickMeals ? 0.7 : 1,
                             }}
                           >

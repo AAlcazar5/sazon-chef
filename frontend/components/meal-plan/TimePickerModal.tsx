@@ -89,7 +89,7 @@ export default function TimePickerModal({
                 onChangeText={onManualTimeInput}
                 placeholder="2:30 PM"
                 placeholderTextColor="#9CA3AF"
-                className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center bg-white dark:bg-gray-800 rounded-lg px-4 py-2 border border-gray-300 dark:border-gray-600 w-full"
+                className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center bg-white dark:bg-gray-800 rounded-lg px-4 py-2  w-full"
                 keyboardType="default"
                 autoFocus={true}
               />
@@ -147,7 +147,7 @@ export default function TimePickerModal({
               HapticPatterns.buttonPress();
               onCancel();
             }}
-            className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+            className="flex-1 py-3 px-4  rounded-lg"
           >
             <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
           </HapticTouchableOpacity>

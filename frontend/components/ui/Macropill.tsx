@@ -100,7 +100,7 @@ export default function MacroPill({
       text: typeConfig[type].textColor
     },
     subtle: {
-      container: `bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600`,
+      container: `bg-gray-100 dark:bg-gray-700 `,
       text: 'text-gray-700 dark:text-gray-100'
     }
   };

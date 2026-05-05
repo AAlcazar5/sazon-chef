@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   unitToggle: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   unitToggleText: {
     fontSize: FontSize.xs,

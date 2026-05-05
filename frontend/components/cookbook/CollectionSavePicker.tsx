@@ -175,7 +175,7 @@ export default function CollectionSavePicker({
                   value={newCollectionName}
                   onChangeText={setNewCollectionName}
                   placeholder="New collection name"
-                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mr-2 dark:bg-gray-700 dark:text-gray-100"
+                  className="flex-1  rounded-lg px-3 py-2 mr-2 dark:bg-gray-700 dark:text-gray-100"
                   placeholderTextColor="#9CA3AF"
                   autoFocus
                   onSubmitEditing={handleCreateCollection}
