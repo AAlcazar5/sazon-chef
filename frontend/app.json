@@ -66,7 +66,15 @@
           "sounds": []
         }
       ],
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Sazon reads weight, body composition, activity, and sleep so today's plate is tuned to how you're actually moving and recovering.",
+          "NSHealthUpdateUsageDescription": "Sazon can log meals you've cooked back to Apple Health so calories and macros stay in sync."
+        }
+      ],
+      "react-native-health-connect"
     ],
     "experiments": {
       "typedRoutes": true,
