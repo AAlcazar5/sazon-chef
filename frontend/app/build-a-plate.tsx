@@ -46,6 +46,8 @@ import {
 import type { ComponentVariant } from '../components/build-a-plate';
 import { Pastel, Accent } from '../constants/Colors';
 import { useTheme } from '../contexts/ThemeContext';
+import PlateMenuExportButton from '../components/recipe/PlateMenuExportButton';
+import { composerToMenuPlate } from '../lib/buildAPlateExport';
 import { HapticPatterns } from '../constants/Haptics';
 
 const BEGINNER_TUTORIAL_KEY = 'beginner_tutorial_seen';
@@ -653,6 +655,27 @@ export default function BuildAPlateScreen() {
               testID="permutation-carousel"
             />
           )}
+
+          {/* ROADMAP 4.0 F5 — Export menu PDF (only when ≥1 slot is filled) */}
+          {composer.selectedSlotsCount > 0 && (() => {
+            const menuPlate = composerToMenuPlate({
+              plateId: 'composer-draft',
+              title: 'My plate',
+              selections: composer.selections as never,
+              totals: {
+                calories: composer.totals.calories,
+                protein: composer.totals.protein,
+                carbs: composer.totals.carbs,
+                fat: composer.totals.fat,
+              },
+            });
+            if (!menuPlate) return null;
+            return (
+              <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+                <PlateMenuExportButton plate={menuPlate} testID="build-a-plate-export-menu" />
+              </View>
+            );
+          })()}
 
           <View style={{ height: 180 }} />
         </ScrollView>
