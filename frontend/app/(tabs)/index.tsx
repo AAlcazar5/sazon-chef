@@ -898,6 +898,67 @@ export default function HomeScreen() {
         onFilterPress={handleFilterPress}
         activeFilterCount={activeFilters.length}
       />
+
+      {/* ROADMAP 4.0 — Filter row attached below the header (not scrollable) */}
+      <FilterRow
+        chips={DEFAULT_FILTER_CHIPS}
+        activeChipIds={[
+          ...(filters.maxCookTime === 30 ? ['quick'] : []),
+          ...(filters.difficulty.includes('Easy') ? ['easy'] : []),
+          ...(quickMacroFilters.highProtein ? ['high_protein'] : []),
+          ...(quickMacroFilters.lowCarb ? ['low_carb'] : []),
+          ...(quickMacroFilters.lowCalorie ? ['low_cal'] : []),
+          ...(mealPrepMode ? ['meal_prep'] : []),
+          ...(filters.dietaryRestrictions.includes('Budget-Friendly') ? ['budget'] : []),
+          ...(filters.dietaryRestrictions.includes('One-Pot') ? ['one_pot'] : []),
+          ...(filters.dietaryRestrictions.includes('High-Fiber') ? ['high_fiber'] : []),
+        ]}
+        activeAdvancedCount={activeFilters.length}
+        onAdvancedFilterPress={handleFilterPress}
+        onChipToggle={(chipId) => {
+          switch (chipId) {
+            case 'quick':
+              handleQuickFilter('maxCookTime', filters.maxCookTime === 30 ? null : 30);
+              break;
+            case 'easy': {
+              const isActive = filters.difficulty.includes('Easy');
+              handleQuickFilter(
+                'difficulty',
+                isActive ? filters.difficulty.filter(d => d !== 'Easy') : [...filters.difficulty, 'Easy'],
+              );
+              break;
+            }
+            case 'high_protein':
+              handleQuickMacroFilter('highProtein');
+              break;
+            case 'low_carb':
+              handleQuickMacroFilter('lowCarb');
+              break;
+            case 'low_cal':
+              handleQuickMacroFilter('lowCalorie');
+              break;
+            case 'meal_prep':
+              handleToggleMealPrepMode(!mealPrepMode);
+              break;
+            case 'budget':
+            case 'one_pot':
+            case 'high_fiber': {
+              const tag =
+                chipId === 'budget' ? 'Budget-Friendly' :
+                chipId === 'one_pot' ? 'One-Pot' : 'High-Fiber';
+              const isActive = filters.dietaryRestrictions.includes(tag);
+              handleQuickFilter(
+                'dietaryRestrictions',
+                isActive
+                  ? filters.dietaryRestrictions.filter(d => d !== tag)
+                  : [...filters.dietaryRestrictions, tag],
+              );
+              break;
+            }
+          }
+        }}
+      />
+
       {/* Main content area */}
       <ScrollView
         ref={mainScrollRef}
@@ -966,66 +1027,6 @@ export default function HomeScreen() {
 
         {/* Group 10X Phase 8 — Plate of the week editorial card */}
         <PlateOfWeekCard />
-
-        {/* ROADMAP 4.0 — Filter row (left: Filters button, right: scrollable chips) */}
-        <FilterRow
-          chips={DEFAULT_FILTER_CHIPS}
-          activeChipIds={[
-            ...(filters.maxCookTime === 30 ? ['quick'] : []),
-            ...(filters.difficulty.includes('Easy') ? ['easy'] : []),
-            ...(quickMacroFilters.highProtein ? ['high_protein'] : []),
-            ...(quickMacroFilters.lowCarb ? ['low_carb'] : []),
-            ...(quickMacroFilters.lowCalorie ? ['low_cal'] : []),
-            ...(mealPrepMode ? ['meal_prep'] : []),
-            ...(filters.dietaryRestrictions.includes('Budget-Friendly') ? ['budget'] : []),
-            ...(filters.dietaryRestrictions.includes('One-Pot') ? ['one_pot'] : []),
-            ...(filters.dietaryRestrictions.includes('High-Fiber') ? ['high_fiber'] : []),
-          ]}
-          activeAdvancedCount={activeFilters.length}
-          onAdvancedFilterPress={handleFilterPress}
-          onChipToggle={(chipId) => {
-            switch (chipId) {
-              case 'quick':
-                handleQuickFilter('maxCookTime', filters.maxCookTime === 30 ? null : 30);
-                break;
-              case 'easy': {
-                const isActive = filters.difficulty.includes('Easy');
-                handleQuickFilter(
-                  'difficulty',
-                  isActive ? filters.difficulty.filter(d => d !== 'Easy') : [...filters.difficulty, 'Easy'],
-                );
-                break;
-              }
-              case 'high_protein':
-                handleQuickMacroFilter('highProtein');
-                break;
-              case 'low_carb':
-                handleQuickMacroFilter('lowCarb');
-                break;
-              case 'low_cal':
-                handleQuickMacroFilter('lowCalorie');
-                break;
-              case 'meal_prep':
-                handleToggleMealPrepMode(!mealPrepMode);
-                break;
-              case 'budget':
-              case 'one_pot':
-              case 'high_fiber': {
-                const tag =
-                  chipId === 'budget' ? 'Budget-Friendly' :
-                  chipId === 'one_pot' ? 'One-Pot' : 'High-Fiber';
-                const isActive = filters.dietaryRestrictions.includes(tag);
-                handleQuickFilter(
-                  'dietaryRestrictions',
-                  isActive
-                    ? filters.dietaryRestrictions.filter(d => d !== tag)
-                    : [...filters.dietaryRestrictions, tag],
-                );
-                break;
-              }
-            }
-          }}
-        />
 
         {/* Contextual Recipe Sections (below editorial fold) */}
         <RecipeSectionsGrid
