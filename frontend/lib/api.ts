@@ -1839,6 +1839,24 @@ export const dailyCheckInApi = {
   list: (limit: number = 7) => apiClient.get(`/daily-check-in?limit=${limit}`),
 };
 
+// ─── ROADMAP 4.0 Tier C9 — Weekly recap card ───────────────────────────────
+
+export interface WeeklyRecapPayload {
+  userId: string;
+  weekStart: string;
+  weekEnd: string;
+  cookCount: number;
+  cuisineCount: number;
+  topCuisine: { cuisine: string; count: number } | null;
+  topIngredient: { name: string; count: number } | null;
+  topNutrient: { name: string; total: number; target: number; percentOfTarget: number } | null;
+  discovery: string | null;
+}
+
+export const weeklyRecapApi = {
+  fetchThisWeek: () => apiClient.get<WeeklyRecapPayload>('/recap/this-week'),
+};
+
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
 
 export const stripeApi = {

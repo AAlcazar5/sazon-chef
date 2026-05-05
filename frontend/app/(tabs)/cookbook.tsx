@@ -55,6 +55,7 @@ import {
   type CookbookFilters,
   type CollectionSortMode,
 } from '../../components/cookbook';
+import WeeklyRecapCard from '../../components/kitchen/WeeklyRecapCard';
 
 // Client-side predicate mirroring smartCollectionsService.recipeMatchesSmartCollection
 // r can be a SavedRecipe (has r.recipe) or a raw recipe object
@@ -1589,6 +1590,9 @@ export default function CookbookScreen() {
               cookCount={mostCookedRecipe.cookCount ?? 0}
             />
           )}
+
+          {/* ROADMAP 4.0 C9 — Weekly recap card (Kitchen → Stories tease) */}
+          {!selectedListId && <WeeklyRecapCard />}
 
           {/* Recently saved editorial rail */}
           {!selectedListId && recentlySavedRecipes.length > 0 && (
