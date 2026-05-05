@@ -1841,3 +1841,24 @@ model UserFollow {
   @@index([followingId])
   @@map("user_follows")
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Pre-launch waitlist (sazonchef.com landing page).
+// Captures email + 3 quick selects so day-1 taste_profile can be pre-seeded
+// at signup. See plans/launch-marketing.md for the spec.
+// ──────────────────────────────────────────────────────────────────────────
+
+model WaitlistSignup {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  topCuisine  String?
+  macroGoal   String?  // 'lighter' | 'strong_lean' | 'flavor_balanced' | 'discovery'
+  dietary     String   @default("[]") // JSON-encoded string array
+  source      String?  // utm_source / referrer for attribution
+  createdAt   DateTime @default(now())
+  invitedAt   DateTime?
+  convertedAt DateTime?
+
+  @@index([createdAt])
+  @@map("waitlist_signups")
+}
