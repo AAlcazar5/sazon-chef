@@ -1823,6 +1823,22 @@ export const surfaceEventApi = {
     apiClient.post('/telemetry/surface-events', { events }).catch(() => {}),
 };
 
+// ─── ROADMAP 4.0 Tier C7 — Daily check-in ──────────────────────────────────
+
+export interface DailyCheckInUpsertInput {
+  date: string;
+  nutritionSnapshot?: unknown;
+  reflectionText?: string;
+  hungerNow?: number;
+  energyAtLastMeal?: number;
+  satietyFromYesterday?: number;
+}
+
+export const dailyCheckInApi = {
+  upsert: (input: DailyCheckInUpsertInput) => apiClient.post('/daily-check-in', input),
+  list: (limit: number = 7) => apiClient.get(`/daily-check-in?limit=${limit}`),
+};
+
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
 
 export const stripeApi = {
