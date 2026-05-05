@@ -5,6 +5,7 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import ScreenGradient from '../components/ui/ScreenGradient';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import HealthDisclaimer from '../components/legal/HealthDisclaimer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -359,6 +360,11 @@ export default function EditPhysicalProfileScreen() {
             </View>
 
             {/* ── Target Weight ── */}
+            {!!targetWeightKg && (
+              <View style={{ marginBottom: 12 }}>
+                <HealthDisclaimer eventKey="weight_target_first_set" />
+              </View>
+            )}
             <View style={[styles.section, { backgroundColor: isDark ? PastelDark.sage : Pastel.sage }, Shadows.SM as any]}>
               <Text style={styles.sectionEmoji}>🎯</Text>
               <View style={styles.sectionHeaderLeft}>

@@ -23,6 +23,7 @@ import PlateMenuExportButton, {
   type PlateMenuPlate,
 } from '../../components/recipe/PlateMenuExportButton';
 import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
+import HealthDisclaimer from '../../components/legal/HealthDisclaimer';
 import { recipeApi } from '../../lib/api';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { Pastel, PastelDark, Accent } from '../../constants/Colors';
@@ -219,6 +220,12 @@ export default function RecipeIdScreen() {
         ) : null}
 
         <View style={styles.contentBlock}>
+          {recipe.source === 'ai-generated' && (
+            <View style={styles.healthDisclaimerWrap}>
+              <HealthDisclaimer eventKey="ai_recipe_first_view" />
+            </View>
+          )}
+
           {/* Title */}
           <View style={styles.titleRow}>
             <Text style={[styles.title, { color: titleColor }]} numberOfLines={3}>
@@ -375,6 +382,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     gap: 16,
+  },
+  healthDisclaimerWrap: {
+    marginBottom: 4,
   },
   titleRow: {
     flexDirection: 'row',

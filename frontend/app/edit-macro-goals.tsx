@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
+import HealthDisclaimer from '../components/legal/HealthDisclaimer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -299,6 +300,10 @@ export default function EditMacroGoalsScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={{ marginBottom: 12 }}>
+            <HealthDisclaimer eventKey="macro_goal_first_change" />
+          </View>
+
           {/* Section heading */}
           <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: sub, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>
             How do you want to eat?

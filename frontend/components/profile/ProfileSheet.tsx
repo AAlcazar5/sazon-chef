@@ -13,6 +13,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
+import LegalLinks from './LegalLinks';
 
 interface ProfileSheetProps {
   visible: boolean;
@@ -214,6 +215,10 @@ export default function ProfileSheet({
           onPress={onOpenFullProfile}
           isDark={isDark}
         />
+
+        <View style={styles.divider} />
+
+        <LegalLinks />
 
         <View style={styles.divider} />
 
