@@ -1012,7 +1012,11 @@ export default function HomeScreen() {
               isDark={isDark}
               userFeedback={userFeedback}
               feedbackLoading={feedbackLoading}
-              onRecipePress={handleRecipePress}
+              onRecipePress={(recipeId) => {
+                // ROADMAP 4.0 B3 — record tap on the New-to-You surface
+                surfaceTracker.track({ surface: 'new_to_you', action: 'tap', recipeId });
+                handleRecipePress(recipeId);
+              }}
               onRecipeLongPress={handleLongPress}
               onLike={handleLike}
               onDislike={handleShowDislikeSheet}
@@ -1022,6 +1026,12 @@ export default function HomeScreen() {
             <BrowseByFamilySection
               isDark={isDark}
               onFamilyPress={(entry: FamilyEntry) => {
+                // ROADMAP 4.0 B3 — record family-tap (cuisine adjacency signal)
+                surfaceTracker.track({
+                  surface: 'browse_by_family',
+                  action: 'tap',
+                  recipeId: null,
+                });
                 // Set the cuisine filter to this family's cuisines and scroll
                 // back to top so the user sees the filtered home feed.
                 applyFilters({ ...filters, cuisines: entry.cuisines });

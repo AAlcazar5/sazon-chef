@@ -56,6 +56,7 @@ import {
   type CollectionSortMode,
 } from '../../components/cookbook';
 import WeeklyRecapCard from '../../components/kitchen/WeeklyRecapCard';
+import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 
 // Client-side predicate mirroring smartCollectionsService.recipeMatchesSmartCollection
 // r can be a SavedRecipe (has r.recipe) or a raw recipe object
@@ -88,6 +89,8 @@ export default function CookbookScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
+  // ROADMAP 4.0 B3 — surface event tracking for Kitchen Discover surfaces
+  const surfaceTracker = useSurfaceTracking();
   const affinityExamples = useAffinityExamples();
   const affinityHint = formatAffinityHint(affinityExamples);
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
@@ -1352,6 +1355,8 @@ export default function CookbookScreen() {
                         previewImages={[]}
                         onPress={() => {
                           HapticPatterns.buttonPress();
+                          // ROADMAP 4.0 B3 — record smart-collection tap
+                          surfaceTracker.track({ surface: 'smart_collection', action: 'tap', recipeId: 'weather_today' });
                           router.push(`/smart-collection?id=weather_today&name=${encodeURIComponent(weatherCollection!.name)}` as any);
                         }}
                       />
@@ -1374,6 +1379,13 @@ export default function CookbookScreen() {
                           previewImages={previewImages}
                           onPress={() => {
                             HapticPatterns.buttonPress();
+                            // ROADMAP 4.0 B3 — record smart-collection tap
+                            const isCravingsTile = col.id === 'cravings_made_real';
+                            surfaceTracker.track({
+                              surface: isCravingsTile ? 'cravings_made_real' : 'smart_collection',
+                              action: 'tap',
+                              recipeId: col.id,
+                            });
                             router.push(`/smart-collection?id=${col.id}&name=${encodeURIComponent(col.name)}` as any);
                           }}
                         />

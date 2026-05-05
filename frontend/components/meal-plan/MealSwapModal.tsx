@@ -7,6 +7,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 
 interface MealSwapModalProps {
   /** Whether the modal is visible */
@@ -28,6 +29,7 @@ export default function MealSwapModal({
   isDark,
   onClose,
 }: MealSwapModalProps) {
+  const surfaceTracker = useSurfaceTracking();
   return (
     <Modal
       visible={visible}
@@ -61,6 +63,11 @@ export default function MealSwapModal({
                 <HapticTouchableOpacity
                   key={index}
                   onPress={() => {
+                    surfaceTracker.track({
+                      surface: 'week_swap',
+                      action: 'tap',
+                      recipeId: suggestion.recipe?.id ?? null,
+                    });
                     Alert.alert(
                       'Swap Meal',
                       `Replace "${selectedMealForSwap?.name}" with "${suggestion.recipe.title}"?`,
