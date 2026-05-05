@@ -2,22 +2,45 @@
 
 ## North Star
 
-Sazon is an **N=1 experience**. Every recommendation, screen, and copy choice is tailored to *this* specific user — their pantry, taste history, macros, allergies, schedule, leftovers, and mood today. Generic content is the failure mode.
+Sazon is **the lifestyle app for the eater who's past the spreadsheet.** Real food, made for *this* user, from everywhere — with everything they want to know about it.
+
+The user has graduated from optimization (cut/bulk/maintain) to **enjoyment + nourishment + cultural curiosity.** They cook 4+ nights/week and enjoy it. They want delicious whole-food meals from around the world. They track macros AND micros — not obsessively, but as a discovery surface. They read Bon Appétit, follow Ottolenghi. They're past the diet-app phase.
+
+**Read `plans/persona.md` before any product decision.** It's the loud, opinionated manifesto for who Sazon serves and who it doesn't.
 
 Three driving principles:
 
-1. **Hypersonalization** — no two users see the same thing. The home feed, Build-a-Plate slots, Cookbook ranking, recipe titles, even error copy all bend to who's looking. If a feature can be parameterized by user state, it must be.
-2. **Adaptive iteration** — every signal (cook, save, swap, rate, skip, scroll-past) refines the next recommendation. The app should feel smarter today than yesterday. Static templates and "popular recipes" feeds are the antipattern.
-3. **N=1 experience** — every product decision starts with "what would the right move be for *this* user *right now*?" If the answer is "show them the same thing as everyone else," reconsider the feature.
+1. **Hypersonalization** — no two users see the same thing. Today's hero, Build-a-Plate slots, Kitchen ranking, recipe titles, even error copy all bend to who's looking. If a feature can be parameterized by user state, it must be.
+2. **Adaptive iteration** — every signal (cook, save, swap, rate, skip, scroll-past, pre-cook check-in, post-cook nutrition view) refines the next recommendation. The app should feel smarter today than yesterday. Static templates and "popular recipes" feeds are the antipattern.
+3. **Discovery, not optimization** — present nutrition data as a curiosity surface ("today's plate hit 18 ingredients, top mineral was magnesium"), never as a verdict ("you're under your iron target"). Lifestyle voice, not personal trainer.
 
 **How existing systems serve N=1:**
 - **Build-a-Plate (10X)** — the flagship N=1 surface. Slots filled by *this user's* taste/pantry/macros/leftovers, not a static template.
-- **Liked recipes / Cookbook (10Q)** — training data, not storage. Every save, swap, and rating reshapes tomorrow's recommendations.
-- **Slot affinity, taste learning, cuisine adjacency, leftover continuity, skill tier** — the adaptation engine. They exist to serve N=1, not as standalone features.
-- **Pantry, macros, allergies** — *inputs* to a personalized model, not just filters.
-- **Sazon Coach (10Y)** — the conversational layer where the model can *use* everything it knows about this user.
+- **Kitchen tab — Saved + Collections + Discover + Journey + Stories** — training data + identity. Every save, swap, rating reshapes tomorrow's recommendations. Journey + Stories make the engine's work *visible*.
+- **Slot affinity, taste learning, cuisine adjacency, leftover continuity, skill tier** — the adaptation engine. Exists to serve N=1, not as standalone features.
+- **Pantry (state of Week), macros + micros, allergies** — *inputs* to a personalized model, not just filters.
+- **Sazon (Coach) tab** — the conversational layer where the model can *use* everything it knows about this user. Long-press any tab = open Sazon seeded with that tab's context.
 
 **When weighing tradeoffs:** prefer the option that increases personalization signal or reduces generic content. **When designing new features:** ask "how does this learn?" and "what does it know about *this* user that no other product does?" If a feature can't answer both, sharpen it before building.
+
+## Voice & Vocabulary (banned/preferred)
+
+**Banned vocabulary** (bodybuilder/macro-cult — does NOT belong in Sazon's user-facing copy):
+- "cut" / "bulk" / "maintain" (as goal phases the user picks)
+- "you're under/over your goal/target"
+- "macro-friendly" (the macros are incidental — say "real-ingredient" or "lightened" or just describe the food)
+- "Fast Food Makeovers" → use **"Cravings, Made Real"**
+- "Coach" (the trainer vibe) → use **"Sazon"** (the brand-as-friend)
+- "Cookbook" (recipes-only) → use **"Kitchen"** (the full space)
+
+**Preferred vocabulary** (lifestyle voice):
+- "How would you describe how you want to eat?" (not "what's your goal?")
+- "Today's plate hit 18 ingredients, top mineral was magnesium" (discovery)
+- "You haven't had Persian flavors in a week — fancy fesenjan?" (invitation)
+- "Real-ingredient version" / "made with whole foods" (not "macro-friendly")
+- "Eat the world. Live well." / "Past the spreadsheet." (anti-positioning taglines)
+
+See `plans/persona.md` voice section + `plans/ia-spec.md` tab-name rationale for the full vocabulary map.
 
 ## Role
 
@@ -37,7 +60,7 @@ Automatically switch role based on the file being modified — no explicit instr
 ## Ambiguity & Decision Boundaries
 - **Ambiguous request** → state interpretation, ask before touching scoring logic, Stripe, or the data model
 - **Confirm before:** Prisma schema changes, new API endpoints, removing features, modifying the 70/30 scoring algorithm, any migration
-- **Proceed without asking:** UI polish, bug fixes, tests, roadmap tasks already scoped in `ROADMAP_3.0.md`
+- **Proceed without asking:** UI polish, bug fixes, tests, roadmap tasks already scoped in `ROADMAP_4.0.md`
 
 ## TDD is the Default — No Exceptions
 
@@ -45,7 +68,7 @@ Automatically switch role based on the file being modified — no explicit instr
 
 ### When planning Roadmap sections (or any new feature)
 - **Every feature bullet MUST have a paired `**Test:**` line** describing what the test verifies. No bullet is "done" being planned until its test is written next to it.
-- For groups of related features, either inline `**Test:**` per bullet OR a dedicated `#### Tests` block at the end listing every file + case. Both patterns exist in `ROADMAP_3.0.md` — pick one and apply consistently within a section.
+- For groups of related features, either inline `**Test:**` per bullet OR a dedicated `#### Tests` block at the end listing every file + case. Both patterns exist in `ROADMAP_4.0.md` — pick one and apply consistently within a section.
 - Non-code sections (marketing, ops, launch) use `#### Verification & Metrics` instead of tests — define success criteria, metrics to track, and the measurement method.
 - If you write a roadmap entry with no testing guidance, you're not done. Stop and add it.
 
@@ -115,8 +138,8 @@ See `docs/COMMAND-AGENT-MAP.md` for slash command → agent mappings.
 5. **Earn peak moments** — cooking complete → Lottie + chef-kiss; errors → Sazon personality, not red banners
 6. **Copy = texting a friend** — "I'm allergic" not "strict restriction"
 
-### Roadmap (`ROADMAP_3.0.md`)
-The active roadmap lives in the project root. Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps.
+### Roadmap (`ROADMAP_4.0.md`)
+The active roadmap lives in the project root (gitignored, local-only). Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps. `plans/ROADMAP_3.0.md` is the **closed** completion record for everything shipped through Group 11 Phase 3 (sits next to `plans/ROADMAP_2.0.md` and `plans/ROADMAP_2.5.md`); pre-launch ops live in `plans/launch-marketing.md` + `plans/launch-checklist.md`.
 
 **Roadmap Hygiene — Non-Negotiable:**
 - Mark every `- [ ]` item as `- [x]` **immediately** when its implementation is complete — not at the end of a session, not in a batch later.
@@ -126,8 +149,12 @@ The active roadmap lives in the project root. Check it before starting any new f
 
 ### Plans (`plans/`)
 Check here before planning new features — prior architectural decisions may already be documented.
+- **[persona.md](plans/persona.md)** — *Read this before any product decision.* The loud, opinionated manifesto for who Sazon is for / who it isn't.
+- **[ia-spec.md](plans/ia-spec.md)** — *Read this before any Tier A IA work.* The 4-tab layout reference (Today / Week / Kitchen / Sazon + Profile sheet).
 - [build-a-plate.md](plans/build-a-plate.md) — Group 10X P0 spec (phases 1+2)
-- [backend-hardening.md](plans/backend-hardening.md) — Group 13 pre-launch security audit (C1/C2/H2/H5 + controller split + logger migration)
+- [backend-hardening.md](plans/backend-hardening.md) — pre-launch security audit (C1/C2/H2/H5 + controller split + logger migration)
+- [launch-marketing.md](plans/launch-marketing.md) — TikTok/Instagram, blog posts, Reddit, Discord, influencers, waitlist, beta, Product Hunt, launch playbook
+- [launch-checklist.md](plans/launch-checklist.md) — App Store Connect, Play Console, Ko-fi, Cloudflare/Upstash/UptimeRobot/staging/backups, Privacy/ToS hosting, ASO keywords
 - [5xUpgradeRoadmap.md](plans/5xUpgradeRoadmap.md) — local-only Pro 5x improvement queue (retired)
 - [tonight-tasks.md](plans/tonight-tasks.md) — overnight agent task queue (refill nightly)
 
@@ -185,7 +212,7 @@ Check here before planning new features — prior architectural decisions may al
 
 Run these before touching any code:
 1. `pm2 status` — confirm `sazon-backend-3001` is online
-2. Skim `ROADMAP_3.0.md` current group — confirm active task and any blockers
+2. Skim `ROADMAP_4.0.md` current tier — confirm active task and any blockers
 3. `cd backend && npm test -- --passWithNoTests 2>&1 | tail -5` — confirm coverage baseline ≥85% before starting
 
 ## Definition of Done
@@ -194,7 +221,7 @@ A feature is done when ALL of the following are true:
 - [ ] Tests written first (RED → GREEN); test file exists
 - [ ] `cd backend && npm test` passes, coverage ≥85%
 - [ ] `typescript-reviewer` + `code-reviewer` agents run and issues addressed
-- [ ] ROADMAP_3.0.md `[ ]` items checked `[x]` immediately
+- [ ] ROADMAP_4.0.md `[ ]` items checked `[x]` immediately
 - [ ] No banned patterns introduced (see Banned Patterns above)
 - [ ] Both iOS and Android considered for any UI change
 

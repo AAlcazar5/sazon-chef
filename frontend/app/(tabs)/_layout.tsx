@@ -361,7 +361,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Today',
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="home-outline" color={color} size={size} focused={focused} />
           ),
@@ -393,9 +393,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="cookbook"
+        name="cookbook" /* ROADMAP 4.0: visible label is "Kitchen"; route name kept for backwards compat */
         options={{
-          title: 'Cookbook',
+          title: 'Kitchen',
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="book-outline" color={color} size={size} focused={focused} />
           ),
@@ -404,37 +404,33 @@ export default function TabLayout() {
       <Tabs.Screen
         name="meal-plan"
         options={{
-          title: 'Meal Plan',
+          title: 'Week',
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="calendar-outline" color={color} size={size} focused={focused} badgeDot={mealPlanHasUncooked} badgeColor={colors.primary} />
           ),
         }}
       />
       <Tabs.Screen
-        name="coach"
+        name="coach" /* ROADMAP 4.0: visible label is "Sazon"; route name kept for backwards compat */
         options={{
-          title: 'Coach',
+          title: 'Sazon',
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="chatbubbles-outline" color={color} size={size} focused={focused} />
           ),
         }}
       />
+      {/* ROADMAP 4.0 A2-f — Shopping retired as a tab; route stays accessible via push. */}
       <Tabs.Screen
         name="shopping-list"
         options={{
-          title: 'Shopping',
-          tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="cart-outline" color={color} size={size} focused={focused} badgeCount={shoppingBadge} badgeColor={colors.primary} />
-          ),
+          href: null,
         }}
       />
+      {/* ROADMAP 4.0 A0-a — Profile retired as a tab; opens via avatar in FrostedHeader. */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="person-outline" color={color} size={size} focused={focused} />
-          ),
+          href: null,
         }}
       />
     </Tabs>

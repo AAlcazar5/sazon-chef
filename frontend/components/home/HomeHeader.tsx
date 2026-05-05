@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useColorScheme } from 'nativewind';
 import FrostedHeader from '../ui/FrostedHeader';
+import ProfileAvatarButton from '../profile/ProfileAvatarButton';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { LogoMascot } from '../mascot';
 import Sazon from '../mascot/Sazon';
@@ -113,6 +114,9 @@ export default function HomeHeader({
               )}
             </View>
           )}
+
+          {/* ROADMAP 4.0 A0-a — Profile avatar replaces the Profile tab */}
+          <ProfileAvatarButton size={32} />
         </View>
       </View>
     </FrostedHeader>
