@@ -127,6 +127,16 @@ model UserPreferences {
   // Group 10Y Phase 6: weekly check-in opt-in for Pro Coach
   weeklyCheckinOptIn  Boolean @default(false)
 
+  // ROADMAP 4.0 C5 — Sazon memory writeback to structured stack.
+  // Goal phase the user has declared: 'cut' | 'maintain' | 'bulk' | 'recomp'.
+  // Default null = lifestyle user with no specific phase. Coach voice never
+  // uses this phrase set in user-facing copy (see C11 voice rules).
+  goalPhase            String?
+  // JSON-stringified flag map of structured intents extracted from
+  // CoachMemory writeback ({cuisineVarietyBoost, proteinTargetNudge,
+  // fiberTargetNudge}). Drives prompt addenda + ranking nudges downstream.
+  structuredIntents    String?
+
   // Cost tracking & budget preferences (Phase 6, Group 13)
   maxRecipeCost      Float? // Maximum cost per recipe
   maxMealCost        Float? // Maximum cost per meal
