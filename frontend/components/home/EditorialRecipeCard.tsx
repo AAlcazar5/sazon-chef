@@ -52,6 +52,11 @@ export function EditorialRecipeCard({
   const macroRowBg = isDark ? 'rgba(245,239,230,0.08)' : 'rgba(255,255,255,0.55)';
   const actionBtnBg = isDark ? 'rgba(245,239,230,0.10)' : 'rgba(255,255,255,0.7)';
   const actionBtnActiveBg = isDark ? 'rgba(245,239,230,0.18)' : '#FFFFFF';
+  // Macro text colors are theme-aware so they stay legible against either pastel.
+  const macroValueColor = isDark ? '#F5EFE6' : '#374151';
+  const macroLabelColor = isDark ? 'rgba(245,239,230,0.6)' : '#9CA3AF';
+  const metaColor = isDark ? 'rgba(245,239,230,0.7)' : '#6B7280';
+  const descColor = isDark ? 'rgba(245,239,230,0.78)' : '#4B5563';
 
   const matchScore = recipe.score?.matchPercentage ?? 0;
   const cookTime = recipe.cookTime ?? 0;
@@ -90,8 +95,14 @@ export function EditorialRecipeCard({
             contentFit="cover"
           />
         ) : (
-          <View style={[styles.photo, styles.photoPlaceholder]}>
-            <Ionicons name="restaurant-outline" size={32} color="#9CA3AF" />
+          <View
+            style={[
+              styles.photo,
+              styles.photoPlaceholder,
+              { backgroundColor: isDark ? 'rgba(245,239,230,0.10)' : 'rgba(255,255,255,0.5)' },
+            ]}
+          >
+            <Ionicons name="restaurant-outline" size={32} color={isDark ? 'rgba(245,239,230,0.55)' : '#9CA3AF'} />
           </View>
         )}
       </View>
@@ -102,39 +113,39 @@ export function EditorialRecipeCard({
       </Text>
 
       {/* Meta strip: time · match */}
-      <Text style={styles.meta} numberOfLines={1}>
+      <Text style={[styles.meta, { color: metaColor }]} numberOfLines={1}>
         {cookTime} min · {matchScore}% match
       </Text>
 
       {/* Macro strip — calories + protein/carbs/fat/fiber */}
       <View style={[styles.macroRow, { backgroundColor: macroRowBg }]}>
         <View style={styles.macroCell}>
-          <Text style={styles.macroValue}>{calories}</Text>
-          <Text style={styles.macroLabel}>cal</Text>
+          <Text style={[styles.macroValue, { color: macroValueColor }]}>{calories}</Text>
+          <Text style={[styles.macroLabel, { color: macroLabelColor }]}>cal</Text>
         </View>
         <View style={styles.macroCell}>
           <Text style={[styles.macroValue, styles.macroProtein]}>{recipe.protein ?? 0}g</Text>
-          <Text style={styles.macroLabel}>pro</Text>
+          <Text style={[styles.macroLabel, { color: macroLabelColor }]}>pro</Text>
         </View>
         <View style={styles.macroCell}>
           <Text style={[styles.macroValue, styles.macroCarbs]}>{recipe.carbs ?? 0}g</Text>
-          <Text style={styles.macroLabel}>carb</Text>
+          <Text style={[styles.macroLabel, { color: macroLabelColor }]}>carb</Text>
         </View>
         <View style={styles.macroCell}>
           <Text style={[styles.macroValue, styles.macroFat]}>{recipe.fat ?? 0}g</Text>
-          <Text style={styles.macroLabel}>fat</Text>
+          <Text style={[styles.macroLabel, { color: macroLabelColor }]}>fat</Text>
         </View>
         {!!recipe.fiber && (
           <View style={styles.macroCell}>
             <Text style={[styles.macroValue, styles.macroFiber]}>{recipe.fiber}g</Text>
-            <Text style={styles.macroLabel}>fib</Text>
+            <Text style={[styles.macroLabel, { color: macroLabelColor }]}>fib</Text>
           </View>
         )}
       </View>
 
       {/* Description */}
       {showDescription && recipe.description ? (
-        <Text style={styles.description} numberOfLines={2}>
+        <Text style={[styles.description, { color: descColor }]} numberOfLines={2}>
           {recipe.description}
         </Text>
       ) : null}
@@ -216,9 +227,13 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: EditorialFontFamily.display.semibold,
     fontSize: 17,
+    lineHeight: 22,
     letterSpacing: -0.3,
     textAlign: 'center',
     marginBottom: 6,
+    // Reserve 2 lines of vertical space so 1-line titles don't make a shorter
+    // card than 2-line titles in the same horizontal carousel.
+    minHeight: 44,
   },
   meta: {
     fontFamily: EditorialFontFamily.body.medium,
