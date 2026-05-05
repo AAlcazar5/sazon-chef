@@ -1917,6 +1917,21 @@ export const quipsApi = {
   today: () => apiClient.get<SazonQuipPayload>('/quips/today'),
 };
 
+// ─── First-cook-of-cuisine stats (J2) ────────────────────────────────────────
+
+export interface FirstCookStatsPayload {
+  isFirstCook: boolean;
+  cuisinesCookedCount: number;
+  totalCuisinesAvailable: number;
+}
+
+export const firstCookStatsApi = {
+  get: (cuisine: string) =>
+    apiClient.get<FirstCookStatsPayload>(
+      `/first-cook-stats?cuisine=${encodeURIComponent(cuisine)}`,
+    ),
+};
+
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
 
 export const stripeApi = {

@@ -32,6 +32,7 @@ import { culturalPrimerRoutes } from '@modules/culturalPrimer/culturalPrimerRout
 import { drinkPairingRoutes } from '@modules/drinkPairing/drinkPairingRoutes';
 import { cohortSocialProofRoutes } from '@modules/cohortSocialProof/cohortSocialProofRoutes';
 import { quipsRoutes } from '@modules/quips/quipsRoutes';
+import { firstCookStatsRoutes } from '@modules/firstCookStats/firstCookStatsRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { authenticateToken } from '@modules/auth/authMiddleware';
@@ -40,6 +41,7 @@ import { notificationsRoutes } from '@modules/notifications/notificationsRoutes'
 import { stripeRoutes } from '@modules/stripe/stripeRoutes';
 import { revenuecatRoutes } from '@modules/revenuecat/revenuecatRoutes';
 import { nutritionRoutes } from '@modules/nutrition/nutritionRoutes';
+import { followsRoutes } from '@modules/follows/followsRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 import { prisma } from '@/lib/prisma';
 import { cacheService } from '@/utils/cacheService';
@@ -182,6 +184,8 @@ app.use('/api/drink-pairing', authenticateToken, drinkPairingRoutes);
 app.use('/api/cohort-social-proof', authenticateToken, cohortSocialProofRoutes);
 // ROADMAP 4.0 J7 — Sazon daily quip
 app.use('/api/quips', authenticateToken, quipsRoutes);
+// ROADMAP 4.0 J2 — first-cook-of-cuisine stats
+app.use('/api/first-cook-stats', authenticateToken, firstCookStatsRoutes);
 app.use('/api/health-metrics', authenticateToken, healthMetricsRoutes);
 app.use('/api/weight-goal', authenticateToken, weightGoalRoutes);
 app.use('/api/meal-plan', authenticateToken, mealPlanRoutes);
@@ -211,6 +215,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/webhooks/revenuecat', revenuecatRoutes);
 app.use('/api/nutrition', nutritionRoutes);
+app.use('/api/follows', followsRoutes);
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 
