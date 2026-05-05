@@ -9,7 +9,7 @@
 // access but are not part of the new top bar.
 
 import React from 'react';
-import { Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Accent, Colors, DarkColors } from '../../constants/Colors';
@@ -65,13 +65,14 @@ export default function KitchenModeBar({ activeMode, onChange }: KitchenModeBarP
             accessibilityLabel={`${mode.label} view mode`}
             accessibilityRole="button"
             testID={`kitchen-mode-${mode.id}${isActive ? '-active' : ''}`}
+            // Disable press scale — the bold-weight + underline state change
+            // IS the feedback. Scaling the tab on press visibly clipped the
+            // underline indicator under the hairline divider below.
+            scaleOnPress={false}
             onPress={() => {
               if (!isActive) onChange(mode.id);
             }}
-            style={[
-              styles.tab,
-              isActive && { borderBottomColor: accent },
-            ]}
+            style={styles.tab}
           >
             <Text
               style={[
@@ -86,6 +87,15 @@ export default function KitchenModeBar({ activeMode, onChange }: KitchenModeBarP
             >
               {mode.label}
             </Text>
+            {/* Underline rendered as a sibling view (not a borderBottom) so it
+                sits inside the bar's content box, not on the bottom edge where
+                the parent's hairline divider can paint over it. */}
+            <View
+              style={[
+                styles.underline,
+                { backgroundColor: isActive ? accent : 'transparent' },
+              ]}
+            />
           </HapticTouchableOpacity>
         );
       })}
@@ -107,14 +117,19 @@ const styles = StyleSheet.create({
   },
   tab: {
     alignSelf: 'flex-end',
+    alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 10,
-    // Reserved-height underline; active state colors it via inline style.
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    paddingTop: 10,
+    paddingBottom: 4,
+    gap: 6,
   },
   label: {
     fontSize: 14,
     letterSpacing: 0.2,
+  },
+  underline: {
+    alignSelf: 'stretch',
+    height: 2,
+    borderRadius: 1,
   },
 });
