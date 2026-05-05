@@ -168,10 +168,10 @@ describe('Onboarding (editorial revamp)', () => {
   });
 
   describe('Step 1 — Diet (sage editorial)', () => {
-    it('advances to diet step and shows "STEP 1 OF 4" eyebrow', async () => {
+    it('advances to diet step and shows "STEP 1 OF 9" eyebrow', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
-      expect(getByText('STEP 1 OF 4')).toBeTruthy();
+      expect(getByText('STEP 1 OF 9')).toBeTruthy();
     });
 
     it('renders editorial title ("Any foods" + "to avoid")', async () => {
@@ -212,39 +212,52 @@ describe('Onboarding (editorial revamp)', () => {
   });
 
   describe('Step 2 — Goal (lavender editorial)', () => {
-    it('advances to goal step and shows "STEP 2 OF 4" eyebrow', async () => {
+    it('advances to lifestyle step and shows "STEP 2 OF 9" eyebrow', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
-      expect(getByText('STEP 2 OF 4')).toBeTruthy();
+      expect(getByText('STEP 2 OF 9')).toBeTruthy();
     });
 
-    it('CTA shows "Continue" label (Goal is no longer the last step)', async () => {
+    it('CTA shows "Continue" label on the lifestyle step', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
       expect(getByText('Continue')).toBeTruthy();
     });
 
-    it('renders the 4 goal option cards', async () => {
+    it('renders the lifestyle multi-select options (A5-a)', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
       await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
-      expect(getByText('Lose weight')).toBeTruthy();
-      expect(getByText('Maintain')).toBeTruthy();
-      expect(getByText('Build muscle')).toBeTruthy();
-      expect(getByText('Just eat better')).toBeTruthy();
+      expect(getByText('Try new cuisines')).toBeTruthy();
+      expect(getByText('Eat seasonally')).toBeTruthy();
+      expect(getByText('Avoid processed food')).toBeTruthy();
+      expect(getByText('Balance health & pleasure')).toBeTruthy();
+      expect(getByText('Specific health goals')).toBeTruthy();
+    });
+
+    it('does NOT render the banned cut/bulk/maintain vocabulary anywhere on the lifestyle step', async () => {
+      const { queryByText, getByTestId } = render(<OnboardingScreen />);
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      // Banned in lifestyle voice; replaced by affective question.
+      expect(queryByText(/lose weight/i)).toBeNull();
+      expect(queryByText(/build muscle/i)).toBeNull();
+      // 'Maintain' alone is too generic; we just check the goal-step substrings.
     });
   });
 
-  describe('Step 3 — Build your first plate (Group 10X Phase 1)', () => {
+  describe('Final step — Build your first plate (Group 10X Phase 1)', () => {
+    // ROADMAP 4.0 A5 — build-first-plate is now step 9 (was step 3).
     const advanceTo = async (getByTestId: any) => {
-      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
-      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
-      await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      // 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 = 9 CTA presses.
+      for (let i = 0; i < 9; i++) {
+        await act(async () => { fireEvent.press(getByTestId('onboarding-cta')); });
+      }
     };
 
-    it('renders "ONE MORE THING" eyebrow on step 3', async () => {
+    it('renders "ONE MORE THING" eyebrow on the final step', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await advanceTo(getByTestId);
       expect(getByText('ONE MORE THING')).toBeTruthy();
