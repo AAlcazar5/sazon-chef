@@ -80,11 +80,11 @@ export default function CollectionCollageGrid({
     >
       {images.length === 1 ? (
         // Single image — fill
-        <Image source={{ uri: images[0] }} style={{ width: size, height: size }} contentFit="cover" />
+        <Image source={{ uri: images[0] }} style={{ width: size, height: size }} contentFit="cover" cachePolicy="memory-disk" />
       ) : images.length <= 3 ? (
         // 2-3 images: large left + small stack right
         <View style={[styles.row, { gap }]}>
-          <Image source={{ uri: images[0] }} style={{ width: largeSize, height: size }} contentFit="cover" />
+          <Image source={{ uri: images[0] }} style={{ width: largeSize, height: size }} contentFit="cover" cachePolicy="memory-disk" />
           <View style={[styles.col, { gap }]}>
             {images.slice(1).map((url, i) => (
               <Image
@@ -92,6 +92,7 @@ export default function CollectionCollageGrid({
                 source={{ uri: url }}
                 style={{ width: smallSize + gap, height: (size - gap * (images.length - 2)) / (images.length - 1) }}
                 contentFit="cover"
+                cachePolicy="memory-disk"
               />
             ))}
           </View>
@@ -99,11 +100,11 @@ export default function CollectionCollageGrid({
       ) : (
         // 4 images: 2x2 grid (top-left large variant)
         <View style={[styles.row, { gap }]}>
-          <Image source={{ uri: images[0] }} style={{ width: largeSize, height: size }} contentFit="cover" />
+          <Image source={{ uri: images[0] }} style={{ width: largeSize, height: size }} contentFit="cover" cachePolicy="memory-disk" />
           <View style={[styles.col, { gap }]}>
-            <Image source={{ uri: images[1] }} style={{ width: smallSize + gap, height: size / 3 - gap / 3 }} contentFit="cover" />
-            <Image source={{ uri: images[2] }} style={{ width: smallSize + gap, height: size / 3 - gap / 3 }} contentFit="cover" />
-            <Image source={{ uri: images[3] }} style={{ width: smallSize + gap, height: size / 3 - gap / 3 }} contentFit="cover" />
+            <Image source={{ uri: images[1] }} style={{ width: smallSize + gap, height: size / 3 - gap / 3 }} contentFit="cover" cachePolicy="memory-disk" />
+            <Image source={{ uri: images[2] }} style={{ width: smallSize + gap, height: size / 3 - gap / 3 }} contentFit="cover" cachePolicy="memory-disk" />
+            <Image source={{ uri: images[3] }} style={{ width: smallSize + gap, height: size / 3 - gap / 3 }} contentFit="cover" cachePolicy="memory-disk" />
           </View>
         </View>
       )}

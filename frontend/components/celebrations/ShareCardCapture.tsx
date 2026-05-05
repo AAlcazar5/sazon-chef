@@ -41,6 +41,7 @@ const ShareCardCapture = forwardRef<ViewShot, ShareCardCaptureProps>(
               source={{ uri: displayImage }}
               style={styles.heroImage}
               contentFit="cover"
+              cachePolicy="memory-disk"
             />
           ) : (
             <View style={[styles.heroImage, styles.placeholder]}>

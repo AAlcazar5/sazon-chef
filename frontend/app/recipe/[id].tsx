@@ -184,6 +184,7 @@ export default function RecipeIdScreen() {
               source={{ uri: recipe.imageUrl }}
               style={styles.heroImage}
               contentFit="cover"
+              cachePolicy="memory-disk"
               testID="recipe-hero-image"
             />
             <LinearGradient

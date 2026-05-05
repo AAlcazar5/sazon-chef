@@ -106,6 +106,7 @@ export function PlateHeroCard({
             source={{ uri: recipe.imageUrl }}
             style={styles.photoImage}
             contentFit="cover"
+            cachePolicy="memory-disk"
           />
         </View>
       </View>

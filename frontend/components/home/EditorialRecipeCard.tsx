@@ -93,6 +93,7 @@ export function EditorialRecipeCard({
             source={{ uri: recipe.imageUrl }}
             style={styles.photo}
             contentFit="cover"
+            cachePolicy="memory-disk"
           />
         ) : (
           <View

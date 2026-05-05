@@ -236,6 +236,7 @@ export default function CollectionEditModal({
                               source={{ uri: imgUrl }}
                               style={{ width: '100%', height: '100%' }}
                               contentFit="cover"
+                              cachePolicy="memory-disk"
                               transition={200}
                             />
                             {coverImageUrl === imgUrl && (
