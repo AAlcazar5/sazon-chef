@@ -2093,6 +2093,35 @@ export const nutrientGapApi = {
     apiClient.get<NutrientGapResponse>('/nutrient-gap/top'),
 };
 
+// ─── ROADMAP 4.0 D14 — Nutrition discovery ──────────────────────────────────
+
+export interface RecipeNutritionAggregate {
+  recipeId: string;
+  servings: number;
+  ingredientCoverage: number;
+  invalidated: boolean;
+  computedAt: string;
+  [nutrient: string]: number | string | boolean | null;
+}
+
+export interface DailyNutritionSnapshot {
+  userId: string;
+  date: string;
+  mealCount: number;
+  computedAt: string;
+  [nutrient: string]: number | string | null;
+}
+
+export const nutritionApi = {
+  fetchRecipe: (recipeId: string) =>
+    apiClient.get<{ aggregate: RecipeNutritionAggregate }>(`/nutrition/recipe/${recipeId}`),
+  fetchDaily: (date?: string) =>
+    apiClient.get<{ snapshot: DailyNutritionSnapshot }>(
+      '/nutrition/daily',
+      { params: date ? { date } : undefined },
+    ),
+};
+
 export interface ComposedPlateSaveResponse {
   plate: ComposedPlateResponse;
   recipe?: { id: string };
