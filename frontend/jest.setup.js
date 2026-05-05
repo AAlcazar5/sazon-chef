@@ -84,16 +84,26 @@ jest.mock('expo-web-browser', () => ({
 }));
 
 // Mock ThemeContext globally (used by Icon and many other components)
-jest.mock('./contexts/ThemeContext', () => ({
-  useTheme: jest.fn(() => ({
-    isDark: false,
-    themeMode: 'light',
-    colors: {},
-    setThemeMode: jest.fn(),
-    toggleTheme: jest.fn(),
-  })),
-  ThemeProvider: function MockThemeProvider(props) { return props.children; },
-}));
+jest.mock('./contexts/ThemeContext', () => {
+  const React = require('react');
+  // Real React context so test utilities can construct a Provider with a fake
+  // value; existing test files that consume `useTheme` still get the safe
+  // light-mode default below.
+  const ThemeContext = React.createContext(undefined);
+  return {
+    ThemeContext,
+    useTheme: jest.fn(() => ({
+      theme: 'light',
+      isDark: false,
+      themeMode: 'light',
+      systemColorScheme: 'light',
+      colors: {},
+      setThemeMode: jest.fn(),
+      toggleTheme: jest.fn(),
+    })),
+    ThemeProvider: function MockThemeProvider(props) { return props.children; },
+  };
+});
 
 // Mock lottie-react-native (native module not available in tests)
 jest.mock('lottie-react-native', () => {

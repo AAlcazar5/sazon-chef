@@ -24,7 +24,9 @@ interface AuthContextType {
   updateUser: (userData: Partial<User>) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Exported so test utilities can construct a Provider with a fake value
+// without going through the real AsyncStorage/auth flow.
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';

@@ -18,7 +18,9 @@ interface ThemeContextType {
   toggleTheme: () => Promise<void>;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+// Exported so test utilities can construct a Provider with a fake value
+// without re-implementing the storage + native-color-scheme wiring.
+export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = '@sazon_theme_mode';
 
