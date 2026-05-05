@@ -1605,3 +1605,87 @@ model DailyCheckIn {
   @@index([userId, date])
   @@map("daily_check_ins")
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// ROADMAP 4.0 D12 — USDA FoodData Central nutrition cache.
+//
+// IngredientNutrient stores the normalized per-100g profile for a single
+// FDC food item. IngredientFDCMapping caches "this ingredient name maps to
+// that FDC ID" so we look up FDC at most once per ingredient.
+//
+// The discovery surface (D14) reads the columned macros + 25 most-relevant
+// micros directly. The long tail of nutrients (~120 more, per FDC) lives
+// in `extras` as JSON for occasional access without bloating queries.
+// ──────────────────────────────────────────────────────────────────────────
+
+model IngredientNutrient {
+  id           String  @id @default(cuid())
+  fdcId        Int     @unique
+  description  String
+  category     String?
+  servingSize  Float   @default(100)
+  servingUnit  String  @default("g")
+
+  // Macros (per 100g, kcal/g — same units USDA uses)
+  calories     Float?
+  protein      Float?
+  carbs        Float?
+  fat          Float?
+  fiber        Float?
+  sugar        Float?
+  addedSugar   Float?
+  saturatedFat Float?
+  monoFat      Float?
+  polyFat      Float?
+  transFat     Float?
+  cholesterol  Float?
+
+  // Minerals (mg unless noted)
+  sodium       Float?
+  potassium    Float?
+  calcium      Float?
+  iron         Float?
+  magnesium    Float?
+  zinc         Float?
+  phosphorus   Float?
+  selenium     Float? // mcg
+
+  // Vitamins
+  vitA         Float? // mcg RAE
+  vitC         Float? // mg
+  vitD         Float? // mcg
+  vitE         Float? // mg
+  vitK         Float? // mcg
+  thiamin      Float? // B1, mg
+  riboflavin   Float? // B2, mg
+  niacin       Float? // B3, mg
+  b6           Float? // mg
+  b12          Float? // mcg
+  folate       Float? // mcg DFE
+
+  // Omegas (g)
+  omega3       Float?
+  omega6       Float?
+
+  // Long tail — JSON map of nutrient_id → { value, unit, name }
+  extras       String?
+
+  fetchedAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  mappings     IngredientFDCMapping[]
+
+  @@map("ingredient_nutrients")
+}
+
+model IngredientFDCMapping {
+  id             String   @id @default(cuid())
+  normalizedName String   @unique
+  fdcId          Int
+  ingredient     IngredientNutrient @relation(fields: [fdcId], references: [fdcId], onDelete: Cascade)
+  confidence     Float    @default(1.0)
+  createdAt      DateTime @default(now())
+
+  @@index([fdcId])
+  @@map("ingredient_fdc_mappings")
+}
