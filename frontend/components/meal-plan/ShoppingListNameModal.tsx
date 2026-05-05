@@ -43,7 +43,7 @@ export default function ShoppingListNameModal({
           onChangeText={onNameChange}
           placeholder="e.g., Weekly Groceries, Thanksgiving Shopping"
           placeholderTextColor="#9CA3AF"
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+          className=" rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
           autoFocus
           maxLength={100}
         />
@@ -51,7 +51,7 @@ export default function ShoppingListNameModal({
         <View className="flex-row space-x-3">
           <HapticTouchableOpacity
             onPress={onClose}
-            className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+            className="flex-1 py-3 px-4  rounded-lg"
           >
             <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">
               Cancel

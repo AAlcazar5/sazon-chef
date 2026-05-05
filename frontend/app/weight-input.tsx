@@ -160,7 +160,7 @@ export default function WeightInputScreen() {
                 onPress={() => setShowDatePicker(true)}
                 disabled={loading}
               >
-                <View className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 bg-white dark:bg-gray-800 flex-row items-center justify-between">
+                <View className=" rounded-lg px-3 py-3 bg-white dark:bg-gray-800 flex-row items-center justify-between">
                   <Text className="text-base text-gray-900 dark:text-gray-100">
                     {formatDate(date)}
                   </Text>
@@ -192,7 +192,7 @@ export default function WeightInputScreen() {
               <View className="flex-row items-center" style={{ gap: 8 }}>
                 <ShakeAnimation shake={shakeWeight}>
                   <TextInput
-                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="flex-1  rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     placeholder={`Enter weight in ${unit}`}
                     placeholderTextColor="#9CA3AF"
                     value={weight}
@@ -203,7 +203,7 @@ export default function WeightInputScreen() {
                 </ShakeAnimation>
 
                 {/* Unit Toggle */}
-                <View className="flex-row border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                <View className="flex-row  rounded-lg overflow-hidden">
                   <HapticTouchableOpacity
                     onPress={() => setUnit('lbs')}
                     disabled={loading}
@@ -235,7 +235,7 @@ export default function WeightInputScreen() {
                 Notes (Optional)
               </Text>
               <TextInput
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className=" rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 placeholder="Add notes (e.g., morning weigh-in, after workout)"
                 placeholderTextColor="#9CA3AF"
                 value={notes}

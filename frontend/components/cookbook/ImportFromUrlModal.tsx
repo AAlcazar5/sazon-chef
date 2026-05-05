@@ -338,7 +338,7 @@ export default function ImportFromUrlModal({
                         setPreview(null);
                       }}
                       hapticStyle="light"
-                      className="py-3 rounded-xl items-center border border-gray-200 dark:border-gray-700"
+                      className="py-3 rounded-xl items-center "
                     >
                       <Text className="text-gray-700 dark:text-gray-300 font-medium text-base">
                         Import Another

@@ -96,7 +96,7 @@ export default function HelpTooltip({
           >
             <Pressable
               onPress={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700"
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl "
             >
               {/* Header with Mascot */}
               <View className="flex-row items-center mb-4">

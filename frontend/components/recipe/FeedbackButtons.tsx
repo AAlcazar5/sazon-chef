@@ -86,7 +86,7 @@ function FeedbackButtons({
           mr-2
           ${feedback.disliked
             ? 'bg-red-600 dark:bg-red-400 border border-red-600 dark:border-red-500'
-            : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
+            : 'bg-gray-100 dark:bg-gray-700 '
           }
         `}
       >
@@ -107,7 +107,7 @@ function FeedbackButtons({
           rounded-full
           ${feedback.liked
             ? 'bg-green-500 dark:bg-green-600 border border-green-600 dark:border-green-700'
-            : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
+            : 'bg-gray-100 dark:bg-gray-700 '
           }
         `}
       >

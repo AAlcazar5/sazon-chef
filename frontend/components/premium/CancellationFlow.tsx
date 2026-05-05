@@ -145,7 +145,7 @@ function SurveyStep({
         <HapticTouchableOpacity
           key={r.value}
           testID={`reason-${r.value}`}
-          className="flex-row items-center justify-between px-4 py-4 mb-3 rounded-xl bg-surface dark:bg-card-dark border border-gray-200 dark:border-gray-700"
+          className="flex-row items-center justify-between px-4 py-4 mb-3 rounded-xl bg-surface dark:bg-card-dark "
           onPress={() => onSelect(r.value)}
           hapticStyle="light"
         >
@@ -243,7 +243,7 @@ function OfferStep({
             placeholderTextColor="#9CA3AF"
             multiline
             numberOfLines={4}
-            className="border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-gray-100 bg-surface dark:bg-card-dark mb-4 text-sm"
+            className=" rounded-xl px-4 py-3 text-gray-900 dark:text-gray-100 bg-surface dark:bg-card-dark mb-4 text-sm"
             style={{ minHeight: 96, textAlignVertical: 'top' }}
           />
         </>
@@ -251,7 +251,7 @@ function OfferStep({
 
       <HapticTouchableOpacity
         testID="skip-offer-button"
-        className="w-full py-4 rounded-2xl items-center mb-3 border border-gray-200 dark:border-gray-700"
+        className="w-full py-4 rounded-2xl items-center mb-3 "
         onPress={onSkipOffer}
         hapticStyle="light"
       >

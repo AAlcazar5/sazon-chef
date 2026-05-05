@@ -114,7 +114,7 @@ export default function TemplatePickerModal({
                 return (
                   <View
                     key={template.id}
-                    className="mb-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700"
+                    className="mb-3 p-4 rounded-xl "
                     style={{
                       backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
                     }}

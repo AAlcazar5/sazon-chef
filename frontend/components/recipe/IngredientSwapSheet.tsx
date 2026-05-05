@@ -2,9 +2,10 @@
 // Bottom sheet showing macro-aware ingredient swap alternatives for 10E.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, ScrollView, TextInput } from 'react-native';
 import { MotiView } from 'moti';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import BottomSheet from '../ui/BottomSheet';
 import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
 import { recipeApi } from '../../lib/api';
@@ -224,7 +225,7 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
 
         {loading && (
           <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-            <ActivityIndicator color={isDark ? '#FFB74D' : '#EA580C'} />
+            <AnimatedActivityIndicator color={isDark ? '#FFB74D' : '#EA580C'} />
             <Text style={{ marginTop: 8, color: isDark ? DarkColors.text.secondary : Colors.text.secondary, fontSize: 13 }}>
               Finding alternatives…
             </Text>

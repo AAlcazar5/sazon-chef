@@ -13,12 +13,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  ActivityIndicator,
   ActionSheetIOS,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
+import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
 import AnimatedLogoMascot from '../../components/mascot/AnimatedLogoMascot';
 import {
@@ -376,8 +376,8 @@ export default function CoachScreen() {
             >
               {stream.isStreaming ? (
                 // TODO: Design system has no spinner that fits a 40x40 button —
-                // keep ActivityIndicator until a ProgressDot/inline mascot lands.
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                // R6 banned-pattern sweep — Sazon-themed indicator.
+                <AnimatedActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
               )}

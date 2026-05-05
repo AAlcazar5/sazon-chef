@@ -3,7 +3,8 @@
 // Replaces ad-hoc gradient + HapticTouchableOpacity combos across the app.
 
 import { useEffect } from 'react';
-import { StyleSheet, Text, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, ViewStyle, TextStyle } from 'react-native';
+import AnimatedActivityIndicator from './AnimatedActivityIndicator';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -206,7 +207,7 @@ export default function BrandButton({
           style={pillStyle}
         >
           {loading ? (
-            <ActivityIndicator color={config.textColor} size="small" />
+            <AnimatedActivityIndicator color={config.textColor} size="small" />
           ) : (
             <>
               {emoji && <Text style={[styles.emoji, { fontSize: sizeConfig.iconSize }]}>{emoji}</Text>}

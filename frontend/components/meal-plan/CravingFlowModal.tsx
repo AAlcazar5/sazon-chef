@@ -11,8 +11,9 @@
 // payload so the parent can slot the meal / save to cookbook / route to search.
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, Modal, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TextInput, ScrollView } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors, Pastel, PastelDark, Accent } from '../../constants/Colors';
@@ -196,7 +197,7 @@ function CravingFlowModal({
 
             {state.phase === 'loading' && (
               <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-                <ActivityIndicator size="large" color={Accent.peach} />
+                <AnimatedActivityIndicator size="large" color={Accent.peach} />
                 <Text style={{ marginTop: 12, color: textSecondary }}>Thinking about your craving…</Text>
               </View>
             )}

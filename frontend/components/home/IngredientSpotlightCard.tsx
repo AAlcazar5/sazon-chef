@@ -67,7 +67,7 @@ export default function IngredientSpotlightCard({ onSearch }: IngredientSpotligh
               <View
                 style={{
                   backgroundColor: isDark ? '#065F46' : '#D1FAE5',
-                  borderRadius: 8,
+                  borderRadius: 12,
                   paddingHorizontal: 8,
                   paddingVertical: 3,
                 }}
@@ -81,7 +81,7 @@ export default function IngredientSpotlightCard({ onSearch }: IngredientSpotligh
               <View
                 style={{
                   backgroundColor: isDark ? '#1E3A5F' : '#DBEAFE',
-                  borderRadius: 8,
+                  borderRadius: 12,
                   paddingHorizontal: 8,
                   paddingVertical: 3,
                 }}

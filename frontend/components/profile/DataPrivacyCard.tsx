@@ -63,7 +63,7 @@ export default function DataPrivacyCard({
 
   return (
     <>
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
+      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 " style={Shadows.MD}>
         <View className="flex-row items-center mb-3">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.secondaryRedLight}33` : Colors.secondaryRedDark }}>
             <Text className="text-xl">🔒</Text>
@@ -292,7 +292,7 @@ export default function DataPrivacyCard({
               <HapticTouchableOpacity
                 onPress={() => { if (!clearingHistory) { setShowClearHistoryModal(false); setClearOptions({ mealHistory: false, shoppingLists: false }); } }}
                 disabled={clearingHistory}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+                className="flex-1 py-3 px-4  rounded-lg"
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>
@@ -362,7 +362,7 @@ export default function DataPrivacyCard({
               <HapticTouchableOpacity
                 onPress={() => setShowExportFormatModal(false)}
                 disabled={exportingData}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+                className="flex-1 py-3 px-4  rounded-lg"
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>

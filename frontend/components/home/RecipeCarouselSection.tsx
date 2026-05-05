@@ -290,7 +290,7 @@ function RecipeCarouselSection({
                     backgroundColor: isDark ? DarkColors.primary : Colors.primary,
                     paddingHorizontal: 20,
                     paddingVertical: 10,
-                    borderRadius: 8,
+                    borderRadius: 12,
                     opacity: refreshing ? 0.7 : 1,
                   }}
                 >

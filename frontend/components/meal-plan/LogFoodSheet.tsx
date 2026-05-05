@@ -10,10 +10,10 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Image,
   Animated,
 } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -268,7 +268,7 @@ export default function LogFoodSheet({
           returnKeyType="search"
           accessibilityLabel="Search food"
         />
-        {loading && <ActivityIndicator size="small" />}
+        {loading && <AnimatedActivityIndicator size="small" />}
       </View>
 
       {/* Results or recent/frequent */}

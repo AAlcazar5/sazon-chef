@@ -59,7 +59,7 @@ export default function SaveTemplateModal({
             onChangeText={setName}
             placeholder='e.g., "My Cutting Week", "Family Favorites"'
             placeholderTextColor="#9CA3AF"
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+            className=" rounded-lg px-4 py-3 mb-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
             autoFocus={true}
             maxLength={100}
           />
@@ -72,7 +72,7 @@ export default function SaveTemplateModal({
             onChangeText={setDescription}
             placeholder="A short note about this template..."
             placeholderTextColor="#9CA3AF"
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+            className=" rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
             multiline={true}
             numberOfLines={2}
             maxLength={200}
@@ -82,7 +82,7 @@ export default function SaveTemplateModal({
           <View className="flex-row" style={{ gap: 12 }}>
             <HapticTouchableOpacity
               onPress={handleClose}
-              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg"
+              className="flex-1 py-3 px-4  rounded-lg"
             >
               <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
             </HapticTouchableOpacity>

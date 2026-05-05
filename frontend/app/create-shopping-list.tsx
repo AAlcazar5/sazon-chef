@@ -296,7 +296,7 @@ export default function CreateShoppingListScreen() {
                   value={newItemName}
                   onChangeText={setNewItemName}
                   onSubmitEditing={handleAddItem}
-                  style={{ flex: 1, backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 11, fontSize: 16, color: labelColor }}
+                  style={{ flex: 1, backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 16, color: labelColor }}
                   returnKeyType="done"
                 />
                 <TextInput
@@ -305,13 +305,13 @@ export default function CreateShoppingListScreen() {
                   value={newItemQuantity}
                   onChangeText={setNewItemQuantity}
                   onSubmitEditing={handleAddItem}
-                  style={{ width: 60, backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 11, fontSize: 16, color: labelColor, textAlign: 'center' }}
+                  style={{ width: 60, backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 11, fontSize: 16, color: labelColor, textAlign: 'center' }}
                   returnKeyType="done"
                 />
                 <HapticTouchableOpacity
                   onPress={handleAddItem}
                   disabled={!newItemName.trim()}
-                  style={{ padding: 11, borderRadius: 8, backgroundColor: primaryColor, opacity: newItemName.trim() ? 1 : 0.45 }}
+                  style={{ padding: 11, borderRadius: 12, backgroundColor: primaryColor, opacity: newItemName.trim() ? 1 : 0.45 }}
                 >
                   <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Add item" />
                 </HapticTouchableOpacity>

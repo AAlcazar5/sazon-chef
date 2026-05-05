@@ -177,7 +177,7 @@ export default function MoodSelector({
         {selectedMood && (
           <HapticTouchableOpacity
             onPress={handleClearMood}
-            className="mt-2 py-3 rounded-xl border border-gray-300 dark:border-gray-600"
+            className="mt-2 py-3 rounded-xl "
           >
             <Text className="text-center text-gray-600 dark:text-gray-300 font-medium">
               Clear Mood Filter

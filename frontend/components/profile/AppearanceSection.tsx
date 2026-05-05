@@ -30,7 +30,7 @@ export default function AppearanceSection() {
   };
 
   return (
-    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 border border-gray-100 dark:border-gray-700" style={Shadows.MD}>
+    <View className="bg-white dark:bg-gray-800 rounded-xl p-4 m-4 " style={Shadows.MD}>
       <HapticTouchableOpacity
         onPress={toggleSection}
         className="flex-row items-center justify-between mb-3"
