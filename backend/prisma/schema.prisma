@@ -339,6 +339,11 @@ model Recipe {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ROADMAP 4.0 F3 — appliance categories. JSON-stringified array of
+  // appliance keys (e.g. ["ninja_creami","air_fryer"]). Tagged via the
+  // heuristic in applianceTaggerService and surfaced as filter chips.
+  appliances String?
+
   // Relationships
   feedback          RecipeFeedback[]
   savedRecipes      SavedRecipe[]
