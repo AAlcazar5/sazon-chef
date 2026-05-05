@@ -76,7 +76,12 @@ export function EditorialHomeLayout({
                 id: displayedHero.id,
                 title: displayedHero.title,
                 imageUrl: displayedHero.imageUrl,
-                eyebrow: `Featured · ${displayedHero.score?.matchPercentage || 0}% match`,
+                /* ROADMAP 4.0 A1-a — cuisine-led eyebrow, lifestyle voice */
+                eyebrow: (() => {
+                  const cuisine = (displayedHero as { cuisine?: string }).cuisine?.toString().toUpperCase() || 'TONIGHT';
+                  const matchPct = displayedHero.score?.matchPercentage;
+                  return matchPct ? `${cuisine} · ${matchPct}% MATCH` : cuisine;
+                })(),
                 cookTime: displayedHero.cookTime,
                 calories: displayedHero.calories,
               }}
