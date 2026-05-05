@@ -456,6 +456,26 @@ export default function MealPlanScreen() {
     }).length;
   }, [pantryItems]);
 
+  // ROADMAP 4.0 J12 — pantry care framing. Pick the soonest-expiring item
+  // (within 3 days). When set, the strip swaps to invitation copy ("Your
+  // cilantro wants to be in something tonight.") with a one-tap "Use it" CTA.
+  const soonestExpiringName = useMemo(() => {
+    const now = Date.now();
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    const candidates = pantryItems
+      .map((it) => {
+        if (!it.expiresAt) return null;
+        const t = new Date(it.expiresAt).getTime();
+        if (!Number.isFinite(t)) return null;
+        const delta = t - now;
+        if (delta <= 0 || delta > threeDaysMs) return null;
+        return { name: it.name, ts: t };
+      })
+      .filter((x): x is { name: string; ts: number } => x !== null)
+      .sort((a, b) => a.ts - b.ts);
+    return candidates[0]?.name ?? '';
+  }, [pantryItems]);
+
   const handleOpenPantrySheet = useCallback(() => setShowPantrySheet(true), []);
   const handleClosePantrySheet = useCallback(() => setShowPantrySheet(false), []);
 
@@ -1021,11 +1041,16 @@ export default function MealPlanScreen() {
               onPress={handleOpenWeeklyStories}
             />
 
-            {/* ROADMAP 4.0 A2-c — pantry inline strip */}
+            {/* ROADMAP 4.0 A2-c — pantry inline strip
+                ROADMAP 4.0 J12 — care framing when an item expires within 3 days */}
             <PantryInlineStrip
               itemCount={pantryItems.length}
               expiringSoonCount={pantryExpiringCount}
+              soonestExpiringName={soonestExpiringName}
               onPress={handleOpenPantrySheet}
+              onUseExpiring={(name) =>
+                router.push(`/(tabs)/?ingredient=${encodeURIComponent(name)}` as any)
+              }
             />
           </View>
         </ScrollView>
