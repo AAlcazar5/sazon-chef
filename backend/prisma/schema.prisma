@@ -1348,3 +1348,32 @@ model FoodItem {
   @@index([name])
   @@map("food_items")
 }
+
+// ─── ROADMAP 4.0 Tier B — Personalization Loop Closure ────────────────────────
+// B1 — Per-user signal coverage telemetry.
+// Daily snapshot of how much personalization signal a user has generated over
+// a rolling window. Drives "low-signal user" interventions and the cohort
+// distance metric (B2).
+// `period` is the window size in days (7 | 30 | 90). `computedAt` is when the
+// snapshot was taken; the snapshot covers (computedAt - period, computedAt].
+model UserSignalSnapshot {
+  id                       String   @id @default(cuid())
+  userId                   String
+  period                   Int      // window size in days (7 | 30 | 90)
+  cooks                    Int      @default(0)
+  ratings                  Int      @default(0)
+  swaps                    Int      @default(0)
+  utterances               Int      @default(0)
+  leftoverDecisions        Int      @default(0)
+  photoUploads             Int      @default(0)
+  tasteFeedback            Int      @default(0)
+  cravingSearches          Int      @default(0)
+  preCookCheckIns          Int      @default(0)
+  postCookNutritionViews   Int      @default(0)
+  totalSignals             Int      @default(0)
+  computedAt               DateTime @default(now())
+
+  @@unique([userId, period, computedAt])
+  @@index([userId, computedAt])
+  @@map("user_signal_snapshots")
+}
