@@ -23,7 +23,9 @@ import {
   BudgetToggle,
   CostPill,
   TechniqueChallengeBanner,
+  HarmonyReveal,
   type MacroFitState,
+  type HarmonySignal,
 } from '../components/build-a-plate';
 import useDailyPlateSeed from '../hooks/useDailyPlateSeed';
 import useBuildAPlate, { SLOT_ORDER, REQUIRED_SLOTS } from '../hooks/useBuildAPlate';
@@ -411,6 +413,30 @@ export default function BuildAPlateScreen() {
     [showGarnish, composer.selections.garnish, requiredSlotsForTier],
   );
 
+  // ROADMAP 4.0 J3 — harmony signal for the reveal card. Only shows when the
+  // plate is fully composed AND macro-fitting AND diverse on at least one axis
+  // (cuisines / textures / colors). Currently we only have cuisineTags +
+  // cookMethodHint as inputs; texture/color tags would need a backend pass.
+  const harmonySignal = useMemo<HarmonySignal>(() => {
+    const filledSelections = requiredSlotsForTier
+      .map((slot) => composer.selections[slot])
+      .filter((c): c is MealComponent => Boolean(c));
+    const slotsFilledCount = filledSelections.length;
+    const cuisines = filledSelections.flatMap((c) => c.cuisineTags ?? []);
+    const textures: string[] = filledSelections
+      .map((c) => c.cookMethodHint)
+      .filter((h): h is NonNullable<typeof h> => Boolean(h));
+    const colors: string[] = [];
+    return {
+      slotsFilled: slotsFilledCount,
+      totalSlots: requiredSlotsForTier.length,
+      macroFit: macroFitState === 'fit' ? 1.0 : 0.0,
+      cuisines,
+      textures,
+      colors,
+    };
+  }, [composer.selections, requiredSlotsForTier, macroFitState]);
+
   const hasMissing = composer.totals.pantryCoveragePercent < 100 && composer.selectedSlotsCount > 0;
   // Budget-mode sort: cheapest-first when toggle is on.
   const pickerComponents = useMemo(() => {
@@ -534,6 +560,9 @@ export default function BuildAPlateScreen() {
           showsVerticalScrollIndicator={false}
           testID="build-a-plate-scroll"
         >
+          {/* ROADMAP 4.0 J3 — harmony reveal: earned peak when 4/4 + macroFit + diversity */}
+          <HarmonyReveal signal={harmonySignal} onSaveCombo={handleSave} />
+
           {plateId && subsCount > 0 && !subsBannerDismissed && (
             <SubstitutionBanner
               substitutionsCount={subsCount}
