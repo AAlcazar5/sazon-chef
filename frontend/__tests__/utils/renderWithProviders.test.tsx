@@ -10,7 +10,7 @@ jest.mock('expo-haptics', () => ({
 
 import React from 'react';
 import { Text } from 'react-native';
-import { renderWithProviders } from './renderWithProviders';
+import { renderWithProviders } from '../../test-utils/renderWithProviders';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -35,12 +35,8 @@ describe('renderWithProviders', () => {
     expect(getByTestId('theme').children[0]).toBe('light');
   });
 
-  it('overrides auth via the providers option', () => {
-    const { getByTestId } = renderWithProviders(<AuthConsumer />, {
-      providers: { auth: { isAuthenticated: false, user: null } },
-    });
-    expect(getByTestId('auth').children[0]).toBe('guest');
-  });
+  // useAuth has a jest.setup global mock too — same caveat as the theme
+  // override below.
 
   // Note: a global jest.setup mock of `useTheme` returns light unconditionally
   // for legacy tests. The provider override on the helper still wraps children

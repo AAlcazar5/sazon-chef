@@ -105,6 +105,36 @@ jest.mock('./contexts/ThemeContext', () => {
   };
 });
 
+// Mock ProfileAvatarButton globally — it uses BottomSheetModal which
+// requires a provider higher in the tree. Render nothing.
+jest.mock('./components/profile/ProfileAvatarButton', () => ({
+  __esModule: true,
+  default: function MockProfileAvatarButton() { return null; },
+}));
+
+// Mock AuthContext globally — tests don't need a real AuthProvider in the
+// tree just because some component renders a ProfileAvatarButton or other
+// auth-aware widget.
+jest.mock('./contexts/AuthContext', () => {
+  const React = require('react');
+  const AuthContext = React.createContext(undefined);
+  return {
+    AuthContext,
+    useAuth: jest.fn(() => ({
+      user: { id: 'test-user-id', email: 'test@sazon.local', name: 'Test User' },
+      token: 'test-token',
+      isLoading: false,
+      isAuthenticated: true,
+      login: jest.fn(),
+      register: jest.fn(),
+      socialLogin: jest.fn(),
+      logout: jest.fn(),
+      updateUser: jest.fn(),
+    })),
+    AuthProvider: function MockAuthProvider(props) { return props.children; },
+  };
+});
+
 // Mock lottie-react-native (native module not available in tests)
 jest.mock('lottie-react-native', () => {
   const { forwardRef } = require('react');
