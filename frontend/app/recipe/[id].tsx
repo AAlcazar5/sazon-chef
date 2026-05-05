@@ -25,6 +25,7 @@ import PlateMenuExportButton, {
 import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
 import HealthDisclaimer from '../../components/legal/HealthDisclaimer';
 import NutritionCard, { type NutritionAggregate } from '../../components/recipe/NutritionCard';
+import CookingStepRow from '../../components/cooking/CookingStepRow';
 import { recipeApi, nutritionApi } from '../../lib/api';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { Pastel, PastelDark, Accent } from '../../constants/Colors';
@@ -85,6 +86,16 @@ export default function RecipeIdScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [variationsVisible, setVariationsVisible] = useState(false);
   const [nutrition, setNutrition] = useState<NutritionAggregate | null>(null);
+  // ROADMAP 4.0 J10 — local check-off state for the step list (per-screen, not persisted)
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const toggleStep = useCallback((stepIndex: number) => {
+    setCompletedSteps((prev) => {
+      const next = new Set(prev);
+      if (next.has(stepIndex)) next.delete(stepIndex);
+      else next.add(stepIndex);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -317,15 +328,15 @@ export default function RecipeIdScreen() {
               <Text style={[EditorialTypography.eyebrow, { color: subtitleColor }]}>
                 HOW TO COOK
               </Text>
+              {/* ROADMAP 4.0 J10 — sage-flash tappable step rows */}
               {recipe.instructions.map((item, i) => (
-                <View key={i} style={styles.instructionRow}>
-                  <Text style={[styles.instructionNum, { color: Accent.sage }]}>
-                    {String(i + 1).padStart(2, '0')}
-                  </Text>
-                  <Text style={[styles.instructionText, { color: bodyColor }]}>
-                    {getInstructionText(item)}
-                  </Text>
-                </View>
+                <CookingStepRow
+                  key={i}
+                  stepNumber={i + 1}
+                  text={getInstructionText(item)}
+                  completed={completedSteps.has(i)}
+                  onToggle={() => toggleStep(i)}
+                />
               ))}
             </View>
           )}
