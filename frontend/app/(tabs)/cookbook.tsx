@@ -1186,20 +1186,7 @@ export default function CookbookScreen() {
         cacheAge={cacheAge}
       />
 
-      {/* ROADMAP 4.0 A3-a — Kitchen 5-pill view-mode bar */}
-      <KitchenModeBar
-        activeMode={
-          viewMode === 'liked' || viewMode === 'disliked'
-            ? 'saved'
-            : (viewMode as KitchenMode)
-        }
-        onChange={(mode) => {
-          setViewMode(mode);
-          setNeedsRefresh(true);
-        }}
-      />
-
-      {/* ROADMAP 4.0 — Filter row attached below the header (saved view only) */}
+      {/* ROADMAP 4.0 — Filter row sits directly under the header (saved view only) */}
       {viewMode === 'saved' && (
         <FilterRow
           chips={DEFAULT_FILTER_CHIPS.filter(c => c.id !== 'low_carb' && c.id !== 'high_fiber')}
@@ -1245,6 +1232,19 @@ export default function CookbookScreen() {
           }}
         />
       )}
+
+      {/* ROADMAP 4.0 A3-a — Kitchen 5-pill view-mode bar (below the filter row) */}
+      <KitchenModeBar
+        activeMode={
+          viewMode === 'liked' || viewMode === 'disliked'
+            ? 'saved'
+            : (viewMode as KitchenMode)
+        }
+        onChange={(mode) => {
+          setViewMode(mode);
+          setNeedsRefresh(true);
+        }}
+      />
 
       {/* Cookbook Filter Modal */}
       <CookbookFilterModal
