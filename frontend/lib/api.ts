@@ -1793,6 +1793,36 @@ export const notificationsApi = {
     apiClient.delete('/notifications/unregister-token', { data: { token } }),
 };
 
+// ─── ROADMAP 4.0 Tier B3 — Surface event sink ────────────────────────────────
+
+export type SurfaceName =
+  | 'today_hero'
+  | 'week_swap'
+  | 'kitchen_discover'
+  | 'sazon_tool'
+  | 'smart_collection'
+  | 'cravings_made_real'
+  | 'new_to_you'
+  | 'browse_by_family'
+  | 'other';
+
+export type SurfaceAction = 'impression' | 'tap' | 'cook' | 'rate';
+
+export interface SurfaceEventInput {
+  surface: SurfaceName;
+  action: SurfaceAction;
+  recipeId?: string | null;
+  variant?: string | null;
+}
+
+export const surfaceEventApi = {
+  /** Best-effort fire-and-forget. Errors silently ignored — telemetry never blocks UX. */
+  record: (event: SurfaceEventInput) =>
+    apiClient.post('/telemetry/surface-events', event).catch(() => {}),
+  recordBatch: (events: SurfaceEventInput[]) =>
+    apiClient.post('/telemetry/surface-events', { events }).catch(() => {}),
+};
+
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
 
 export const stripeApi = {
