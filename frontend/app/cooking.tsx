@@ -26,7 +26,8 @@ import ViewShot from 'react-native-view-shot';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import Icon from '../components/ui/Icon';
 import { Icons, IconSizes } from '../constants/Icons';
-import { recipeApi } from '../lib/api';
+import { recipeApi, culturalPrimerApi, type CulturalPrimerPayload } from '../lib/api';
+import CulturalPrimerModal from '../components/recipe/CulturalPrimerModal';
 import { extractTimers } from '../utils/timerExtraction';
 import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingModeTimers';
 import IngredientChecklist from '../components/recipe/IngredientChecklist';
@@ -120,6 +121,8 @@ export default function CookingScreen() {
   const [showTasteSurvey, setShowTasteSurvey] = useState(false);
   const [showConsumeSheet, setShowConsumeSheet] = useState(false);
   const [showLeftoverSheet, setShowLeftoverSheet] = useState(false);
+  // ROADMAP 4.0 C10 — first-cook cultural primer modal
+  const [culturalPrimer, setCulturalPrimer] = useState<CulturalPrimerPayload['primer']>(null);
 
   // Voice mode state
   const [voiceMode, setVoiceMode] = useState(false);
@@ -339,6 +342,20 @@ export default function CookingScreen() {
         recordCoffeeBannerShown();
       }
     }).catch(() => {});
+
+    // ROADMAP 4.0 C10 — first-cook cultural primer (silent if not first cook
+    // OR cuisine has no primer in the library)
+    if (recipe.cuisine) {
+      culturalPrimerApi
+        .check(recipe.cuisine)
+        .then((res) => {
+          const payload = res.data as CulturalPrimerPayload | undefined;
+          if (payload?.shouldShow && payload.primer) {
+            setCulturalPrimer(payload.primer);
+          }
+        })
+        .catch(() => {});
+    }
   }
 
   // --- Quick Note Save ---
@@ -575,6 +592,13 @@ export default function CookingScreen() {
         <CoffeeBanner
           visible={showCoffeeBanner}
           onDismiss={() => setShowCoffeeBanner(false)}
+        />
+
+        {/* ROADMAP 4.0 C10 — first-cook cultural primer */}
+        <CulturalPrimerModal
+          visible={culturalPrimer !== null}
+          primer={culturalPrimer}
+          onDismiss={() => setCulturalPrimer(null)}
         />
       </View>
     );
