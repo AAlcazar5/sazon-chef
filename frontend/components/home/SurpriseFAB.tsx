@@ -17,7 +17,7 @@ export function SurpriseFAB({ onPress }: SurpriseFABProps) {
   });
 
   const handlePress = () => {
-    triggerHaptic(ImpactStyle.MEDIUM);
+    triggerHaptic('impact', ImpactStyle.medium);
     onPress();
   };
 

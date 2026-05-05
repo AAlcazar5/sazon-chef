@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   reasonText: {
     flex: 1,
     fontSize: 12,
-    fontFamily: EditorialFontFamily.serif,
+    fontFamily: EditorialFontFamily.body.bold,
     fontStyle: 'italic',
   },
 });

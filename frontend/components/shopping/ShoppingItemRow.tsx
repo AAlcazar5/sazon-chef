@@ -20,7 +20,7 @@ interface ShoppingItemRowProps {
 
 export function ShoppingItemRow({ item, onToggle, showDivider }: ShoppingItemRowProps) {
   const handlePress = () => {
-    triggerHaptic(ImpactStyle.LIGHT);
+    triggerHaptic('impact', ImpactStyle.light);
     onToggle();
   };
 

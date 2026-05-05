@@ -135,7 +135,7 @@ export default function ArchiveView({ lists, onRestore }: ArchiveViewProps) {
 
   const handleRestore = useCallback(
     async (listId: string) => {
-      triggerHaptic(HapticPatterns.MEDIUM_IMPACT);
+      HapticPatterns.buttonPress();
       try {
         await shoppingListApi.restoreList(listId);
         onRestore(listId);
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.input ?? 12,
-    fontSize: FontSize.body,
+    fontSize: FontSize.base,
   },
   searchBarLight: {
     backgroundColor: '#F0EDE8',
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   rowName: {
-    fontSize: FontSize.body,
+    fontSize: FontSize.base,
     fontWeight: '600',
   },
   textLight: {
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   metaText: {
-    fontSize: FontSize.caption,
+    fontSize: FontSize.xs,
   },
   metaTextLight: {
     color: '#6B7280',
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   },
   metaDot: {
     color: '#9CA3AF',
-    fontSize: FontSize.caption,
+    fontSize: FontSize.xs,
   },
   olderBucket: {
     marginTop: Spacing.md,
@@ -323,10 +323,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   olderTitle: {
-    fontSize: FontSize.subheading,
+    fontSize: FontSize.lg,
     fontWeight: '700',
   },
   olderMeta: {
-    fontSize: FontSize.caption,
+    fontSize: FontSize.xs,
   },
 });

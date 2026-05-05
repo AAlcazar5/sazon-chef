@@ -32,7 +32,7 @@ export function EditorialCard({ recipe, bg, titleColor, saved, onToggleSave, onP
   });
 
   const handleSave = () => {
-    triggerHaptic(ImpactStyle.LIGHT);
+    triggerHaptic('impact', ImpactStyle.light);
     onToggleSave();
   };
 

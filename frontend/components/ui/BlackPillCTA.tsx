@@ -30,7 +30,7 @@ export function BlackPillCTA({ label, icon, onPress, disabled, testID, ...props 
 
   const handlePress = () => {
     if (disabled) return;
-    triggerHaptic(ImpactStyle.MEDIUM);
+    triggerHaptic('impact', ImpactStyle.medium);
     onPress();
   };
 

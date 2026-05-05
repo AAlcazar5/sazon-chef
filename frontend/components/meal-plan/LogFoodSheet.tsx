@@ -170,8 +170,8 @@ export default function LogFoodSheet({
 
   const bg = isDark ? DarkColors.background : '#FAF7F4';
   const cardBg = isDark ? DarkColors.card : '#FFFFFF';
-  const textPrimary = isDark ? DarkColors.text : Colors.text;
-  const textSecondary = isDark ? DarkColors.textSecondary : Colors.textSecondary;
+  const textPrimary = isDark ? DarkColors.text.primary : Colors.text.primary;
+  const textSecondary = isDark ? DarkColors.text.secondary : Colors.text.secondary;
 
   const renderFoodRow = (food: FoodItem) => (
     <HapticTouchableOpacity
