@@ -37,6 +37,7 @@ import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import SazonQuipCard from '../../components/today/SazonQuipCard';
 import FirstOfDayNote from '../../components/home/FirstOfDayNote';
+import SundayPolaroidCard from '../../components/today/SundayPolaroidCard';
 import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
 import CohortSocialProofPill from '../../components/today/CohortSocialProofPill';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
@@ -81,7 +82,7 @@ import { useDarkFeed } from '../../hooks/useDarkFeed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubscription } from '../../hooks/useSubscription';
 import PremiumUpsellCard from '../../components/premium/PremiumUpsellCard';
-import { searchApi, nutritionApi, cookingHistoryStatsApi, type DailyNutritionSnapshot } from '../../lib/api';
+import { searchApi, nutritionApi, cookingHistoryStatsApi, weeklyRecapApi, type DailyNutritionSnapshot, type WeeklyRecapPayload } from '../../lib/api';
 
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
@@ -144,6 +145,31 @@ export default function HomeScreen() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // ROADMAP 4.0 J4 — Sunday Polaroid drop. Fetch C9 weekly recap; map onto the
+  // SundayRecap shape (topCuisine, topMineral, discovery). The card itself
+  // gates on local Sunday + dismissed-this-week, so we always fetch.
+  const [weeklyRecap, setWeeklyRecap] = useState<WeeklyRecapPayload | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await weeklyRecapApi.fetchThisWeek();
+        if (!cancelled) setWeeklyRecap((res?.data ?? null) as WeeklyRecapPayload | null);
+      } catch {
+        if (!cancelled) setWeeklyRecap(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const sundayRecap = useMemo(() => {
+    if (!weeklyRecap) return null;
+    const topCuisine = weeklyRecap.topCuisine?.cuisine ?? '';
+    const topMineral = weeklyRecap.topNutrient?.name ?? '';
+    const discovery = weeklyRecap.discovery ?? '';
+    if (!topCuisine && !topMineral && !discovery) return null;
+    return { topCuisine, topMineral, discovery };
+  }, [weeklyRecap]);
 
   // Recipe Roulette state
   const [showRouletteModal, setShowRouletteModal] = useState(false);
@@ -975,6 +1001,9 @@ export default function HomeScreen() {
       >
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
+
+        {/* ROADMAP 4.0 J4 — Sunday Polaroid drop (renders only on local Sunday) */}
+        {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}
 
         {/* ROADMAP 4.0 J11 — first-of-day greeting note (renders once per local date) */}
         <FirstOfDayNote lastCookCuisine={lastCookCuisine} />
