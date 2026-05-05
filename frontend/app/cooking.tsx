@@ -30,6 +30,7 @@ import { recipeApi, culturalPrimerApi, firstCookStatsApi, discoveryMilestonesApi
 import CulturalPrimerModal from '../components/recipe/CulturalPrimerModal';
 import FirstCuisineStamp from '../components/celebrations/FirstCuisineStamp';
 import DiscoveryMilestoneInline from '../components/celebrations/DiscoveryMilestoneInline';
+import PostCookRating from '../components/cooking/PostCookRating';
 import { matchAppliancesMilestoneFromList } from '../utils/discoveryMilestoneKeys';
 import { extractTimers } from '../utils/timerExtraction';
 import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingModeTimers';
@@ -537,6 +538,17 @@ export default function CookingScreen() {
 
           {/* ROADMAP 4.0 J5 — single-fire discovery milestone (photo / appliance) */}
           <DiscoveryMilestoneInline milestoneKey={discoveryMilestone} />
+
+          {/* ROADMAP 4.0 J9 — post-cook 5-star bloom; submits taste feedback if mealId resolved */}
+          <PostCookRating
+            onSubmit={({ stars }) => {
+              if (resolvedMealId) {
+                mealPlanApi
+                  .submitTasteFeedback(resolvedMealId, { tasteRating: stars, flavorTags: [] })
+                  .catch(() => undefined);
+              }
+            }}
+          />
 
           {/* Photo + Share row */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 12 }}>
