@@ -34,6 +34,7 @@ import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoverySt
 import NutritionStrip from '../../components/today/NutritionStrip';
 import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
+import SazonQuipCard from '../../components/today/SazonQuipCard';
 import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
 import CohortSocialProofPill from '../../components/today/CohortSocialProofPill';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
@@ -979,6 +980,9 @@ export default function HomeScreen() {
 
         {/* ROADMAP 4.0 A1-c — Today rotating discovery card */}
         <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
+
+        {/* ROADMAP 4.0 J7 — Sazon daily quip */}
+        <SazonQuipCard />
 
         {/* ROADMAP 4.0 — Daily check-in moved to Kitchen (above Recently Saved). */}
 
