@@ -45,9 +45,13 @@ export default function FilterRow({
   const inactiveChipBg = isDark ? '#374151' : '#F3F4F6';
   const activeChipBg = isDark ? DarkColors.primary : Colors.primary;
   const inactiveChipText = isDark ? '#D1D5DB' : '#374151';
+  // Solid background so the row reads as pinned beneath the header — without
+  // it, content scrolling underneath shows through the (transparent) row and
+  // makes the filter row feel like it's moving with the content.
+  const rowBg = isDark ? '#1A1410' : '#FAF7F4';
 
   return (
-    <View style={styles.row} testID="filter-row">
+    <View style={[styles.row, { backgroundColor: rowBg }]} testID="filter-row">
       {/* Left: Filters button */}
       <HapticTouchableOpacity
         accessibilityLabel="Open advanced filters"
