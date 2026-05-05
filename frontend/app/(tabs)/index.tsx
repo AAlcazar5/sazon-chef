@@ -47,6 +47,7 @@ import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 // PantryMatchCard removed — editorial v2 absorbs pantry info into subtitle
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
+import SurpriseRouletteOverlay from '../../components/home/SurpriseRouletteOverlay';
 import { SurpriseMeModal, type SurpriseFilters } from '../../components/home';
 import { Accelerometer } from 'expo-sensors';
 import {
@@ -175,6 +176,8 @@ export default function HomeScreen() {
   const [showRouletteModal, setShowRouletteModal] = useState(false);
   const [rouletteRecipes, setRouletteRecipes] = useState<SuggestedRecipe[]>([]);
   const [rouletteLoading, setRouletteLoading] = useState(false);
+  // ROADMAP 4.0 J8 — 2-second roulette spin reveal before settling on a recipe
+  const [rouletteSpinSettled, setRouletteSpinSettled] = useState(false);
   const [showSurpriseModal, setShowSurpriseModal] = useState(false);
   const lastSurpriseFiltersRef = useRef<SurpriseFilters>({});
 
@@ -829,7 +832,9 @@ export default function HomeScreen() {
     lastSurpriseFiltersRef.current = surpriseFilters;
     setShowSurpriseModal(false);
     setRouletteLoading(true);
+    setRouletteSpinSettled(false); // ROADMAP 4.0 J8 — start spinning
     setShowRouletteModal(true);
+    const startedAt = Date.now();
 
     try {
       const fetchParams: any = {
@@ -857,6 +862,10 @@ export default function HomeScreen() {
       setRouletteRecipes([]);
     } finally {
       setRouletteLoading(false);
+      // ROADMAP 4.0 J8 — guarantee minimum 2s of anticipation before settling
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, 2000 - elapsed);
+      setTimeout(() => setRouletteSpinSettled(true), remaining);
     }
   }, [filters.cuisines, filters.dietaryRestrictions, fetchRecipes, showToast]);
 
@@ -1254,7 +1263,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
         presentationStyle="fullScreen"
         onRequestClose={handleCloseRoulette}
       >
-        {rouletteLoading ? (
+        {(rouletteLoading || !rouletteSpinSettled) ? (
           <View
             style={{
               flex: 1,
@@ -1263,12 +1272,16 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
               backgroundColor: isDark ? DarkColors.background : '#F2F2F7',
             }}
           >
-            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Loading recipes...
-            </Text>
-            <Text className="text-sm text-gray-500 dark:text-gray-400">
-              Get ready to swipe!
-            </Text>
+            {/* ROADMAP 4.0 J8 — 2s roulette spin overlay; settles on the first picked recipe */}
+            <SurpriseRouletteOverlay
+              visible
+              chosenRecipe={{
+                id: rouletteRecipes[0]?.id ?? '',
+                title: rouletteRecipes[0]?.title ?? '',
+                imageUrl: rouletteRecipes[0]?.imageUrl ?? null,
+              }}
+              onSettle={() => undefined}
+            />
           </View>
         ) : rouletteRecipes.length > 0 ? (
           <RecipeRoulette
