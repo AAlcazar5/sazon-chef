@@ -10,6 +10,8 @@ scripts/
 .opencode/
 /tests/
 /docs/
+/claude-design
+/scripts
 
 # Dependencies
 node_modules/
@@ -26,6 +28,12 @@ ROADMAP_4.0.md
 .claude/
 .cursor/
 .cursorrules
+
+# Self-improvement engine — operational data, not source (Tier M)
+.context/
+
+# Phased coverage artifacts
+backend/coverage-phase*/
 
 # Shell scripts (local dev helpers)
 cleanup.sh

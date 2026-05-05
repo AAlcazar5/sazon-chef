@@ -1933,6 +1933,34 @@ export const firstCookStatsApi = {
     ),
 };
 
+// ─── Cook-complete signals (J14 + J16) ───────────────────────────────────────
+
+export type CookCompleteIntensity = 'big' | 'medium' | 'quiet';
+
+export interface CookCompleteSignalsPayload {
+  intensity: CookCompleteIntensity;
+  recapInsight: string | null;
+}
+
+export interface CookCompleteSignalsQuery {
+  cuisine?: string;
+  recipeId?: string;
+  rating?: number;
+}
+
+export const cookCompleteSignalsApi = {
+  get: (q: CookCompleteSignalsQuery) => {
+    const params = new URLSearchParams();
+    if (q.cuisine) params.set('cuisine', q.cuisine);
+    if (q.recipeId) params.set('recipeId', q.recipeId);
+    if (typeof q.rating === 'number') params.set('rating', String(q.rating));
+    const qs = params.toString();
+    return apiClient.get<CookCompleteSignalsPayload>(
+      `/cook-complete-signals${qs ? `?${qs}` : ''}`,
+    );
+  },
+};
+
 // ─── Discovery milestones (J5) ───────────────────────────────────────────────
 
 export interface MarkMilestonePayload {
