@@ -26,7 +26,8 @@ import { ShoppingListLoadingStates } from '../../constants/LoadingStates';
 import { useShoppingList, useActiveList, categorizeItem, AISLE_ORDER, DEFAULT_AISLE_ORDER, AISLE_EMOJI } from '../../hooks/useShoppingList';
 import { ShoppingListItem as ShoppingListItemType } from '../../types';
 import { HapticChoreography } from '../../utils/hapticChoreography';
-import { mealPlanApi } from '../../lib/api';
+import { mealPlanApi, userApi } from '../../lib/api';
+import { requestStoreReview } from '../../lib/storeReview';
 import { useBudget } from '../../hooks/useBudget';
 import ContinuityCTA from '../../components/ui/ContinuityCTA';
 import { CelebrationOverlay } from '../../components/celebrations';
@@ -196,6 +197,14 @@ export default function ShoppingListScreen() {
           if (next?.recipe?.title) setTonightsMeal(next.recipe.title);
         }
       }).catch(() => {});
+      // E5: prompt for store review on the highest-satisfaction state.
+      // Uses cooking-history bucket for copy + 30-day cooldown internally.
+      userApi.getCookingStats()
+        .then((res: any) => {
+          const cookCount = res?.data?.recipesCookedAllTime ?? 0;
+          return requestStoreReview({ cookCount });
+        })
+        .catch(() => {});
     },
     onRefresh: handleRefresh,
   });
