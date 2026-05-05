@@ -1875,6 +1875,20 @@ export const culturalPrimerApi = {
     ),
 };
 
+// ─── Drink pairing (F8) ──────────────────────────────────────────────────────
+
+export interface DrinkPairingPayload {
+  /** 2 or 3 lifestyle-voiced pairing suggestions in display order. */
+  suggestions: string[];
+}
+
+export const drinkPairingApi = {
+  get: (cuisine: string) =>
+    apiClient.get<DrinkPairingPayload>(
+      `/drink-pairing?cuisine=${encodeURIComponent(cuisine)}`,
+    ),
+};
+
 // ─── Stripe / Subscriptions (Group 7) ────────────────────────────────────────
 
 export const stripeApi = {

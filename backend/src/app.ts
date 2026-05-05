@@ -29,6 +29,7 @@ import { surfaceEventRoutes } from '@modules/telemetry/surfaceEventRoutes';
 import { dailyCheckInRoutes } from '@modules/dailyCheckIn/dailyCheckInRoutes';
 import { weeklyRecapRoutes } from '@modules/recap/weeklyRecapRoutes';
 import { culturalPrimerRoutes } from '@modules/culturalPrimer/culturalPrimerRoutes';
+import { drinkPairingRoutes } from '@modules/drinkPairing/drinkPairingRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { authenticateToken } from '@modules/auth/authMiddleware';
@@ -171,6 +172,8 @@ app.use('/api/daily-check-in', authenticateToken, dailyCheckInRoutes);
 app.use('/api/recap', authenticateToken, weeklyRecapRoutes);
 // ROADMAP 4.0 C10 — cultural primer (first-cook detection + primer content)
 app.use('/api/cultural-primer', authenticateToken, culturalPrimerRoutes);
+// ROADMAP 4.0 F8 — drink pairing footer
+app.use('/api/drink-pairing', authenticateToken, drinkPairingRoutes);
 app.use('/api/health-metrics', authenticateToken, healthMetricsRoutes);
 app.use('/api/weight-goal', authenticateToken, weightGoalRoutes);
 app.use('/api/meal-plan', authenticateToken, mealPlanRoutes);
