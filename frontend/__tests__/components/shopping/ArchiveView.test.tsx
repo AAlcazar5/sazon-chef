@@ -106,15 +106,15 @@ jest.mock('../../../lib/api', () => ({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeArchivedList(overrides: Record<string, unknown> = {}) {
-  const base = {
+function makeArchivedList(overrides: Partial<ArchivedList> = {}): ArchivedList {
+  const base: ArchivedList = {
     id: 'list-1',
     name: 'Produce run',
     archivedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3d ago
     tier: 'archived',
     items: [
-      { id: 'i1', name: 'Apple', purchased: false },
-      { id: 'i2', name: 'Banana', purchased: true },
+      { id: 'i1', name: 'Apple' },
+      { id: 'i2', name: 'Banana' },
     ],
     summaryStats: null,
     ...overrides,
@@ -122,7 +122,7 @@ function makeArchivedList(overrides: Record<string, unknown> = {}) {
   return base;
 }
 
-function makeOlderList(overrides: Record<string, unknown> = {}) {
+function makeOlderList(overrides: Partial<ArchivedList> = {}): ArchivedList {
   return makeArchivedList({
     id: 'list-old',
     name: 'Old pantry run',
@@ -135,7 +135,7 @@ function makeOlderList(overrides: Record<string, unknown> = {}) {
 
 // ── Import component under test AFTER mocks ───────────────────────────────────
 
-import ArchiveView from '../../../components/shopping/ArchiveView';
+import ArchiveView, { type ArchivedList } from '../../../components/shopping/ArchiveView';
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -172,9 +172,9 @@ describe('ArchiveView', () => {
       id: 'list-1',
       name: 'Groceries',
       items: [
-        { id: 'i1', name: 'a', purchased: false },
-        { id: 'i2', name: 'b', purchased: false },
-        { id: 'i3', name: 'c', purchased: false },
+        { id: 'i1', name: 'a' },
+        { id: 'i2', name: 'b' },
+        { id: 'i3', name: 'c' },
       ],
     });
     const { getByText } = render(<ArchiveView lists={[list]} onRestore={jest.fn()} />);

@@ -107,9 +107,9 @@ describe('IngredientSwapSheet', () => {
   });
 
   it('calls onClose when close button is pressed', async () => {
-    const { getByAccessibilityLabel } = render(<IngredientSwapSheet {...baseProps} />);
+    const { getByLabelText } = render(<IngredientSwapSheet {...baseProps} />);
     await waitFor(() => {});
-    fireEvent.press(getByAccessibilityLabel('Close swap sheet'));
+    fireEvent.press(getByLabelText('Close swap sheet'));
     expect(baseProps.onClose).toHaveBeenCalled();
   });
 
