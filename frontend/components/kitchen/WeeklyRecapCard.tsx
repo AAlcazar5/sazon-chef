@@ -5,9 +5,12 @@
 // ingredient, and discovery moment. Lives in Kitchen → Stories. Lifestyle
 // voice — celebrate the variety, never scold the gaps.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ViewShot from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
@@ -19,6 +22,23 @@ export default function WeeklyRecapCard() {
   const [recap, setRecap] = useState<WeeklyRecapPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
+  const shareCardRef = useRef<ViewShot>(null);
+
+  const handleShare = async () => {
+    try {
+      const capture = shareCardRef.current?.capture;
+      if (!capture) return;
+      const uri = await capture();
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Share your week',
+        });
+      }
+    } catch {
+      // Best-effort — sharing failures should never crash the card
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -55,8 +75,13 @@ export default function WeeklyRecapCard() {
       testID="weekly-recap-card"
       accessibilityLabel={`Weekly recap — ${recap.cookCount} cooks across ${recap.cuisineCount} cuisines this week`}
       accessibilityRole="summary"
-      style={[styles.card, { backgroundColor: cardBg }]}
+      style={styles.cardWrapper}
     >
+      <ViewShot
+        ref={shareCardRef}
+        options={{ format: 'png', quality: 0.95 }}
+        style={[styles.card, { backgroundColor: cardBg }]}
+      >
       <View style={styles.headerRow}>
         <Text style={[styles.eyebrow, { color: accent }]}>THIS WEEK · WRAPPED</Text>
         <Ionicons name="sparkles" size={14} color={accent} />
@@ -121,18 +146,50 @@ export default function WeeklyRecapCard() {
           </Text>
         </View>
       )}
+      </ViewShot>
+
+      {!isQuiet && (
+        <HapticTouchableOpacity
+          onPress={handleShare}
+          accessibilityLabel="Share recap"
+          accessibilityRole="button"
+          hapticStyle="light"
+          style={[styles.shareButton, { borderColor: accent }]}
+        >
+          <Ionicons name="share-outline" size={14} color={accent} />
+          <Text style={[styles.shareButtonText, { color: accent }]}>Share</Text>
+        </HapticTouchableOpacity>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  cardWrapper: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+  },
   card: {
     paddingHorizontal: 18,
     paddingVertical: 16,
     borderRadius: 20,
-    marginHorizontal: 16,
-    marginVertical: 8,
     gap: 10,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 100,
+    borderWidth: 1,
+  },
+  shareButtonText: {
+    fontFamily: EditorialFontFamily.body.semibold,
+    fontSize: 12,
+    letterSpacing: 0.4,
   },
   headerRow: {
     flexDirection: 'row',
