@@ -36,6 +36,7 @@ import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoverySt
 import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import { FOOD_INTEL_TIPS } from '../../lib/foodIntelTips';
+import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 // PantryMatchCard removed — editorial v2 absorbs pantry info into subtitle
 import RecipeRoulette from '../../components/recipe/RecipeRoulette';
@@ -640,9 +641,30 @@ export default function HomeScreen() {
       filters.maxCookTime, filters.difficulty, mealPrepMode, selectedMood, timeAwareMode,
       quickMacroFilters, getMacroFilterParams, homeFeed.refetch, RECIPES_PER_PAGE]);
 
+  // ROADMAP 4.0 B3 — surface event tracking
+  const surfaceTracker = useSurfaceTracking();
+
+  // Record impression for the Today hero whenever the displayed recipe changes.
+  useEffect(() => {
+    if (recipeOfTheDay?.id) {
+      surfaceTracker.track({
+        surface: 'today_hero',
+        action: 'impression',
+        recipeId: recipeOfTheDay.id,
+      });
+    }
+  }, [recipeOfTheDay?.id, surfaceTracker]);
+
   const handleRecipePress = useCallback((recipeId: string) => {
     // Track recipe view for "Continue Cooking" section (using extracted hook)
     addRecentlyViewed(recipeId);
+
+    // ROADMAP 4.0 B3 — record tap on Today hero surface
+    surfaceTracker.track({
+      surface: 'today_hero',
+      action: 'tap',
+      recipeId,
+    });
 
     // 10D-ii: Log craving search event (fire-and-forget)
     if (isCravingSearch && cravingQuery) {
