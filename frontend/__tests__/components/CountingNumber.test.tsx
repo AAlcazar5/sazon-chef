@@ -11,7 +11,7 @@ const mockIsReduceMotionEnabled = jest.fn(() => Promise.resolve(false));
 const mockAddEventListener = jest.fn(() => ({ remove: jest.fn() }));
 
 jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockImplementation(mockIsReduceMotionEnabled);
-jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(mockAddEventListener);
+jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(mockAddEventListener as never);
 
 describe('AnimatedStatCounter / CountingNumber', () => {
   beforeEach(() => {

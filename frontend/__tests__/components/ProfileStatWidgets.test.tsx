@@ -44,7 +44,7 @@ jest.mock('expo-haptics', () => ({
 
 // Mock AccessibilityInfo
 jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockImplementation(() => Promise.resolve(false));
-jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(() => ({ remove: jest.fn() }));
+jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation((() => ({ remove: jest.fn() })) as never);
 
 describe('ProfileStatWidgets', () => {
   it('renders the widget grid with correct data', () => {

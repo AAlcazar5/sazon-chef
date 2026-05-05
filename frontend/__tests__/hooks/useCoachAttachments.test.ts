@@ -3,12 +3,20 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useCoachAttachments, MAX_COACH_ATTACHMENTS } from '../../hooks/useCoachAttachments';
 
+interface FakePicker {
+  requestCameraPermissionsAsync: jest.Mock;
+  requestMediaLibraryPermissionsAsync: jest.Mock;
+  launchCameraAsync: jest.Mock;
+  launchImageLibraryAsync: jest.Mock;
+  MediaTypeOptions: { Images: 'Images' };
+}
+
 function makePicker(overrides?: {
   cameraStatus?: 'granted' | 'denied';
   libraryStatus?: 'granted' | 'denied';
   cameraResult?: { canceled: boolean; assets?: Array<{ uri: string; base64?: string }> };
   libraryResult?: { canceled: boolean; assets?: Array<{ uri: string; base64?: string }> };
-}) {
+}): FakePicker {
   const cameraStatus = overrides?.cameraStatus ?? 'granted';
   const libraryStatus = overrides?.libraryStatus ?? 'granted';
   return {
@@ -26,20 +34,20 @@ function makePicker(overrides?: {
         assets: [{ uri: 'file://lib.png', base64: 'BBBB' }],
       },
     ),
-    MediaTypeOptions: { Images: 'Images' as const },
-  } as never;
+    MediaTypeOptions: { Images: 'Images' },
+  };
 }
 
 describe('useCoachAttachments', () => {
   it('starts empty with canAdd=true', () => {
-    const { result } = renderHook(() => useCoachAttachments(makePicker()));
+    const { result } = renderHook(() => useCoachAttachments(makePicker() as never));
     expect(result.current.attachments).toEqual([]);
     expect(result.current.canAdd).toBe(true);
   });
 
   it('adds via pickFromCamera and infers image/jpeg', async () => {
     const picker = makePicker();
-    const { result } = renderHook(() => useCoachAttachments(picker));
+    const { result } = renderHook(() => useCoachAttachments(picker as never));
     await act(async () => {
       await result.current.pickFromCamera();
     });
@@ -50,7 +58,7 @@ describe('useCoachAttachments', () => {
 
   it('adds via pickFromLibrary and infers image/png from .png suffix', async () => {
     const picker = makePicker();
-    const { result } = renderHook(() => useCoachAttachments(picker));
+    const { result } = renderHook(() => useCoachAttachments(picker as never));
     await act(async () => {
       await result.current.pickFromLibrary();
     });
@@ -60,7 +68,7 @@ describe('useCoachAttachments', () => {
 
   it('does not add when permission is denied', async () => {
     const picker = makePicker({ cameraStatus: 'denied' });
-    const { result } = renderHook(() => useCoachAttachments(picker));
+    const { result } = renderHook(() => useCoachAttachments(picker as never));
     await act(async () => {
       await result.current.pickFromCamera();
     });
@@ -69,7 +77,7 @@ describe('useCoachAttachments', () => {
 
   it('does not add when picker is canceled', async () => {
     const picker = makePicker({ libraryResult: { canceled: true } });
-    const { result } = renderHook(() => useCoachAttachments(picker));
+    const { result } = renderHook(() => useCoachAttachments(picker as never));
     await act(async () => {
       await result.current.pickFromLibrary();
     });
@@ -78,7 +86,7 @@ describe('useCoachAttachments', () => {
 
   it('caps at MAX_COACH_ATTACHMENTS (4)', async () => {
     const picker = makePicker();
-    const { result } = renderHook(() => useCoachAttachments(picker));
+    const { result } = renderHook(() => useCoachAttachments(picker as never));
     for (let i = 0; i < MAX_COACH_ATTACHMENTS; i += 1) {
       await act(async () => {
         await result.current.pickFromCamera();
@@ -98,7 +106,7 @@ describe('useCoachAttachments', () => {
 
   it('removes by id', async () => {
     const picker = makePicker();
-    const { result } = renderHook(() => useCoachAttachments(picker));
+    const { result } = renderHook(() => useCoachAttachments(picker as never));
     await act(async () => {
       await result.current.pickFromCamera();
     });
@@ -116,7 +124,7 @@ describe('useCoachAttachments', () => {
 
   it('clear empties the queue', async () => {
     const picker = makePicker();
-    const { result } = renderHook(() => useCoachAttachments(picker));
+    const { result } = renderHook(() => useCoachAttachments(picker as never));
     await act(async () => {
       await result.current.pickFromCamera();
     });
