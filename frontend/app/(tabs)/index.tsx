@@ -29,8 +29,6 @@ import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
-import { NewToYouSection } from '../../components/home/NewToYouSection';
-import { BrowseByFamilySection, type FamilyEntry } from '../../components/home/BrowseByFamilySection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoveryStrip';
 import QuickActionRow from '../../components/today/QuickActionRow';
@@ -1004,40 +1002,10 @@ export default function HomeScreen() {
           darkFeed={darkFeed}
         />
 
-        {/* Personalized Sections - Moved to bottom after Recipes for You */}
+        {/* ROADMAP 4.0 A1-f — NewToYou + BrowseByFamily relocated to Kitchen → Discover.
+            Premium upsell card stays on Today as a contextual nudge. */}
         {user?.id && (
           <>
-            {/* Group 11 Phase 5 — adaptive cuisine surfaces */}
-            <NewToYouSection
-              isDark={isDark}
-              userFeedback={userFeedback}
-              feedbackLoading={feedbackLoading}
-              onRecipePress={(recipeId) => {
-                // ROADMAP 4.0 B3 — record tap on the New-to-You surface
-                surfaceTracker.track({ surface: 'new_to_you', action: 'tap', recipeId });
-                handleRecipePress(recipeId);
-              }}
-              onRecipeLongPress={handleLongPress}
-              onLike={handleLike}
-              onDislike={handleShowDislikeSheet}
-              onSave={handleSave}
-            />
-
-            <BrowseByFamilySection
-              isDark={isDark}
-              onFamilyPress={(entry: FamilyEntry) => {
-                // ROADMAP 4.0 B3 — record family-tap (cuisine adjacency signal)
-                surfaceTracker.track({
-                  surface: 'browse_by_family',
-                  action: 'tap',
-                  recipeId: null,
-                });
-                // Set the cuisine filter to this family's cuisines and scroll
-                // back to top so the user sees the filtered home feed.
-                applyFilters({ ...filters, cuisines: entry.cuisines });
-              }}
-            />
-
             {/* Premium upsell card — only for free-tier users */}
             {!subscription.isPremium && <PremiumUpsellCard testID="home-upsell-card" />}
 
