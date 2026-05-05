@@ -143,7 +143,9 @@ describe('buildSystemPrompt', () => {
   it('embeds the user profile snapshot JSON inside a delimited section', () => {
     const snap = buildProfileSnapshot(baseInput);
     const prompt = buildSystemPrompt(snap);
-    expect(prompt).toContain('Sazon Coach');
+    // ROADMAP 4.0 C11 — branded as "Sazon" (the friend), not "Sazon Coach" (the trainer).
+    expect(prompt).toContain('You are Sazon');
+    expect(prompt).not.toContain('Sazon Coach');
     expect(prompt).toContain('<user_profile>');
     expect(prompt).toContain('</user_profile>');
     expect(prompt).toContain('"goalPhase":"cut"');
