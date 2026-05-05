@@ -58,6 +58,7 @@ import {
 import WeeklyRecapCard from '../../components/kitchen/WeeklyRecapCard';
 import KitchenModeBar, { type KitchenMode } from '../../components/kitchen/KitchenModeBar';
 import KitchenDiscoverView from '../../components/kitchen/KitchenDiscoverView';
+import KitchenJourneyView from '../../components/kitchen/KitchenJourneyView';
 import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 
 // Client-side predicate mirroring smartCollectionsService.recipeMatchesSmartCollection
@@ -1816,17 +1817,11 @@ export default function CookbookScreen() {
         </View>
       )}
 
-      {/* ROADMAP 4.0 A3-a — Journey view (filled in A3-c/A3-e) */}
+      {/* ROADMAP 4.0 A3-c — Journey view */}
       {viewMode === 'journey' && (
-        <ScrollView
-          testID="kitchen-view-journey"
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom }}
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', paddingTop: 24 }}>
-            Journey view — coming together in A3-c.
-          </Text>
-        </ScrollView>
+        <View testID="kitchen-view-journey" style={{ flex: 1 }}>
+          <KitchenJourneyView isDark={isDark} />
+        </View>
       )}
 
       {/* ROADMAP 4.0 A3-a — Stories view (filled in A3-d) */}
