@@ -35,6 +35,7 @@ import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoveryStrip';
 import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
+import DailyCheckIn from '../../components/today/DailyCheckIn';
 import { FOOD_INTEL_TIPS } from '../../lib/foodIntelTips';
 import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
@@ -932,6 +933,9 @@ export default function HomeScreen() {
 
         {/* ROADMAP 4.0 A1-c — Today rotating discovery card */}
         <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
+
+        {/* ROADMAP 4.0 C7 — Daily check-in (visible by default; user can skip) */}
+        <DailyCheckIn visible={true} onClose={() => { /* TODO: dismiss flag in AsyncStorage */ }} />
 
         {/* ROADMAP 4.0 A1-d — Today quick-action chip row */}
         <QuickActionRow

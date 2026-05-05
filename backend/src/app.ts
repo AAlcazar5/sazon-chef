@@ -26,6 +26,7 @@ import { kitchenIQRoutes } from '@modules/kitchenIQ/kitchenIQRoutes';
 import { coachRoutes } from '@modules/coach/coachRoutes';
 import { affinityRoutes } from '@modules/affinity/affinityRoutes';
 import { surfaceEventRoutes } from '@modules/telemetry/surfaceEventRoutes';
+import { dailyCheckInRoutes } from '@modules/dailyCheckIn/dailyCheckInRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
 import { authRoutes } from '@modules/auth/authRoutes';
 import { authenticateToken } from '@modules/auth/authMiddleware';
@@ -162,6 +163,8 @@ app.use('/api/coach', authenticateToken, coachRoutes);
 app.use('/api/user/affinity', affinityRoutes);
 // ROADMAP 4.0 B3 — surface event sink (impression/tap/cook/rate per surface)
 app.use('/api/telemetry/surface-events', authenticateToken, surfaceEventRoutes);
+// ROADMAP 4.0 C7 — daily check-in
+app.use('/api/daily-check-in', authenticateToken, dailyCheckInRoutes);
 app.use('/api/health-metrics', authenticateToken, healthMetricsRoutes);
 app.use('/api/weight-goal', authenticateToken, weightGoalRoutes);
 app.use('/api/meal-plan', authenticateToken, mealPlanRoutes);
