@@ -26,8 +26,9 @@ import ViewShot from 'react-native-view-shot';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import Icon from '../components/ui/Icon';
 import { Icons, IconSizes } from '../constants/Icons';
-import { recipeApi, culturalPrimerApi, type CulturalPrimerPayload } from '../lib/api';
+import { recipeApi, culturalPrimerApi, firstCookStatsApi, type CulturalPrimerPayload, type FirstCookStatsPayload } from '../lib/api';
 import CulturalPrimerModal from '../components/recipe/CulturalPrimerModal';
+import FirstCuisineStamp from '../components/celebrations/FirstCuisineStamp';
 import { extractTimers } from '../utils/timerExtraction';
 import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingModeTimers';
 import IngredientChecklist from '../components/recipe/IngredientChecklist';
@@ -123,6 +124,7 @@ export default function CookingScreen() {
   const [showLeftoverSheet, setShowLeftoverSheet] = useState(false);
   // ROADMAP 4.0 C10 — first-cook cultural primer modal
   const [culturalPrimer, setCulturalPrimer] = useState<CulturalPrimerPayload['primer']>(null);
+  const [firstCookStats, setFirstCookStats] = useState<FirstCookStatsPayload | null>(null);
 
   // Voice mode state
   const [voiceMode, setVoiceMode] = useState(false);
@@ -355,6 +357,17 @@ export default function CookingScreen() {
           }
         })
         .catch(() => {});
+
+      // ROADMAP 4.0 J2 — first-cook-of-cuisine passport stamp inside the celebration overlay
+      firstCookStatsApi
+        .get(recipe.cuisine)
+        .then((res) => {
+          const payload = (res.data ?? res) as FirstCookStatsPayload | undefined;
+          if (payload?.isFirstCook) {
+            setFirstCookStats(payload);
+          }
+        })
+        .catch(() => {});
     }
   }
 
@@ -483,6 +496,17 @@ export default function CookingScreen() {
             onPress: () => router.back(),
           } : undefined}
         >
+          {/* ROADMAP 4.0 J2 — first-cook-of-cuisine passport stamp */}
+          {firstCookStats && recipe.cuisine && (
+            <FirstCuisineStamp
+              isFirstCook={firstCookStats.isFirstCook}
+              cuisine={recipe.cuisine}
+              cuisinesCookedCount={firstCookStats.cuisinesCookedCount}
+              totalCuisinesAvailable={firstCookStats.totalCuisinesAvailable}
+              onPress={() => router.push('/(tabs)/cookbook?view=journey' as any)}
+            />
+          )}
+
           {/* Photo + Share row */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 12 }}>
             {/* Add a photo of your dish */}
