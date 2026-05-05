@@ -36,6 +36,7 @@ import MacroRingGrid from '../components/ui/MacroRingGrid';
 import { getIngredientEmoji } from '../constants/IngredientEmoji';
 import CookingStepsTimeline from '../components/recipe/CookingStepsTimeline';
 import VisualIngredientList from '../components/recipe/VisualIngredientList';
+import DrinkPairingFooter from '../components/recipe/DrinkPairingFooter';
 import MacroPillsRow from '../components/recipe/MacroPillsRow';
 import RecipeNotesModal from '../components/cookbook/RecipeNotesModal';
 import IngredientSwapSheet from '../components/recipe/IngredientSwapSheet';
@@ -1642,6 +1643,9 @@ export default function RecipeModal() {
               />
             )}
           </View>
+
+          {/* ROADMAP 4.0 F8 — Drinks-well-with pairing footer */}
+          <DrinkPairingFooter cuisine={recipe.cuisine} />
 
           {/* 10E: Make It Exciting — Flavor Boosters */}
           <View className="mb-6">
