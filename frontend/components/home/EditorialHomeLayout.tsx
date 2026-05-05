@@ -52,7 +52,8 @@ export function EditorialHomeLayout({
     if (!recipePool || recipePool.length === 0) return heroRecipe;
     const wanted = activeCategory.toLowerCase();
     const match = recipePool.find(
-      (r) => (r.mealType || '').toLowerCase() === wanted.replace(/s$/, '')
+      (r) => (((r as unknown as { mealType?: string }).mealType ?? '')).toLowerCase()
+        === wanted.replace(/s$/, ''),
     );
     return match || heroRecipe;
   }, [activeCategory, recipePool, heroRecipe]);

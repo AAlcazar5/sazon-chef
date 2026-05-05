@@ -52,8 +52,8 @@ export function useRecipeSearch(options: UseRecipeSearchOptions): UseRecipeSearc
   const [cravingQuery, setCravingQuery] = useState<string>('');
   const [isCravingSearch, setIsCravingSearch] = useState(false);
   // Track last processed params to prevent effect re-fire loops
-  const lastProcessedSearch = useRef<string | undefined>();
-  const lastProcessedCraving = useRef<string | undefined>();
+  const lastProcessedSearch = useRef<string | undefined>(undefined);
+  const lastProcessedCraving = useRef<string | undefined>(undefined);
 
   // Handle regular search triggered via URL params
   useEffect(() => {

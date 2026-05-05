@@ -72,7 +72,7 @@ export function BrowseByFamilySection({
   if (loading) {
     return (
       <View accessibilityLabel="Loading browse-by-family">
-        <HomeLoadingState />
+        <HomeLoadingState viewMode="grid" />
       </View>
     );
   }
@@ -93,7 +93,7 @@ export function BrowseByFamilySection({
         subtitle="Ordered by what you cook most"
         isDark={isDark}
         isCollapsed={false}
-        onToggleCollapse={() => {}}
+        onToggle={() => {}}
       />
 
       <ScrollView

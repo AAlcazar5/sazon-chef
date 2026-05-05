@@ -69,7 +69,12 @@ export function useWeatherSmartCollection(): UseWeatherSmartCollectionResult {
         if (!coords || cancelled) return;
 
         const res = await recipeApi.getWeatherSmartCollection(coords.latitude, coords.longitude);
-        const data: WeatherCollectionData = res?.data?.collection ?? res?.collection;
+        const wrapper = res as unknown as {
+          data?: { collection?: WeatherCollectionData };
+          collection?: WeatherCollectionData;
+        };
+        const data: WeatherCollectionData | undefined =
+          wrapper?.data?.collection ?? wrapper?.collection;
         if (!data || cancelled) return;
 
         // Override icon with condition-specific emoji

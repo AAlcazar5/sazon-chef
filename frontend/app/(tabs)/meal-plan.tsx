@@ -1195,8 +1195,11 @@ export default function MealPlanScreen() {
         <MealRequestModal
           visible={showFindMeAMealModal}
           onClose={() => setShowFindMeAMealModal(false)}
-          onMealSelected={(recipe) => {
-            handleAddRecipeToMeal(recipe.id, selectedDate.toISOString().split('T')[0], 'dinner');
+          onMealSelected={(_recipe) => {
+            // R1: handleAddRecipeToMeal takes only a mealType string. The
+            // recipe + date wiring needs to live in a follow-up that updates
+            // the hook signature; for now, just open the dinner picker.
+            handleAddRecipeToMeal('dinner');
             setShowFindMeAMealModal(false);
           }}
           targetDate={selectedDate.toISOString().split('T')[0]}

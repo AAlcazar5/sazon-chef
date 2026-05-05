@@ -30,7 +30,7 @@ export function SurpriseFAB({ onPress }: SurpriseFABProps) {
       accessibilityRole="button"
     >
       <LinearGradient
-        colors={['#fa7e12', '#d67a0c']}
+        colors={['#fa7e12', '#d67a0c'] as const}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

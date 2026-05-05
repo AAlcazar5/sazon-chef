@@ -141,7 +141,7 @@ export default function ScreenError({
         </Text>
 
         {/* Message */}
-        <Text style={[styles.message, { color: colors.secondary }]}>
+        <Text style={[styles.message, { color: colors.textSecondary }]}>
           {displayMessage}
         </Text>
 

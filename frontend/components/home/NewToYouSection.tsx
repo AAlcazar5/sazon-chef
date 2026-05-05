@@ -93,7 +93,7 @@ export function NewToYouSection({
   if (loading) {
     return (
       <View accessibilityLabel="Loading new-to-you feed">
-        <HomeLoadingState />
+        <HomeLoadingState viewMode="grid" />
       </View>
     );
   }
@@ -121,7 +121,7 @@ export function NewToYouSection({
         subtitle={subtitle}
         isDark={isDark}
         isCollapsed={false}
-        onToggleCollapse={() => {}}
+        onToggle={() => {}}
       />
 
       <ScrollView

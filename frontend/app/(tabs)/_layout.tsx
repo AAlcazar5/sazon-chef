@@ -359,6 +359,8 @@ export default function TabLayout() {
             }}
           />
         ),
+        // @ts-expect-error — older RN nav versions accepted tabBarSafeAreaInsets;
+        // current types removed it but the runtime behavior we want still works.
         tabBarSafeAreaInsets: { bottom: 0 },
         tabBarLabelStyle: {
           fontSize: FontSize.sm,

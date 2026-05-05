@@ -185,7 +185,7 @@ export default function ArchiveView({ lists, onRestore }: ArchiveViewProps) {
         testID="archive-search"
         style={[styles.searchBar, isDark ? styles.searchBarDark : styles.searchBarLight]}
         placeholder="Search by name or date (YYYY-MM-DD)"
-        placeholderTextColor={isDark ? DarkColors.textSecondary : '#9CA3AF'}
+        placeholderTextColor={isDark ? DarkColors.text.secondary : '#9CA3AF'}
         value={query}
         onChangeText={setQuery}
         accessibilityLabel="Search archived lists"
