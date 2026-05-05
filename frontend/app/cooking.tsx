@@ -26,11 +26,15 @@ import ViewShot from 'react-native-view-shot';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import Icon from '../components/ui/Icon';
 import { Icons, IconSizes } from '../constants/Icons';
-import { recipeApi, culturalPrimerApi, firstCookStatsApi, discoveryMilestonesApi, type CulturalPrimerPayload, type FirstCookStatsPayload } from '../lib/api';
+import { recipeApi, culturalPrimerApi, firstCookStatsApi, discoveryMilestonesApi, cookCompleteSignalsApi, type CulturalPrimerPayload, type FirstCookStatsPayload, type CookCompleteSignalsPayload } from '../lib/api';
 import CulturalPrimerModal from '../components/recipe/CulturalPrimerModal';
 import FirstCuisineStamp from '../components/celebrations/FirstCuisineStamp';
 import DiscoveryMilestoneInline from '../components/celebrations/DiscoveryMilestoneInline';
 import PostCookRating from '../components/cooking/PostCookRating';
+import CookCompleteCelebration from '../components/cooking/CookCompleteCelebration';
+import CookRecapLine from '../components/cooking/CookRecapLine';
+import DailyPlateShareCard from '../components/celebrations/DailyPlateShareCard';
+import { deriveTopMinerals, deriveIngredientCount } from '../utils/cookCompleteDerivations';
 import { matchAppliancesMilestoneFromList } from '../utils/discoveryMilestoneKeys';
 import { extractTimers } from '../utils/timerExtraction';
 import CookingModeTimers, { CookingTimer } from '../components/recipe/CookingModeTimers';
@@ -132,6 +136,8 @@ export default function CookingScreen() {
   const [firstCookStats, setFirstCookStats] = useState<FirstCookStatsPayload | null>(null);
   // ROADMAP 4.0 J5 — discovery milestone celebration (single-fire)
   const [discoveryMilestone, setDiscoveryMilestone] = useState<string | null>(null);
+  // ROADMAP 4.0 J14 + J16 — cook-complete signals (intensity tier + recap insight)
+  const [cookCompleteSignals, setCookCompleteSignals] = useState<CookCompleteSignalsPayload | null>(null);
 
   // Voice mode state
   const [voiceMode, setVoiceMode] = useState(false);
@@ -397,6 +403,15 @@ export default function CookingScreen() {
           }
         })
         .catch(() => {});
+
+      // ROADMAP 4.0 J14 + J16 — cook-complete signals (intensity tier + recap insight)
+      cookCompleteSignalsApi
+        .get({ cuisine: recipe.cuisine, recipeId: recipe.id })
+        .then((res) => {
+          const payload = (res.data ?? res) as CookCompleteSignalsPayload | undefined;
+          if (payload) setCookCompleteSignals(payload);
+        })
+        .catch(() => {});
     }
   }
 
@@ -525,6 +540,18 @@ export default function CookingScreen() {
             onPress: () => router.back(),
           } : undefined}
         >
+          {/* ROADMAP 4.0 J16 — auto-generated cook recap line (above all celebrations).
+              Pulled from cookCompleteSignals; renders nothing when null. */}
+          <CookRecapLine insight={cookCompleteSignals?.recapInsight ?? null} />
+
+          {/* ROADMAP 4.0 J14 — variable-reward cook-complete intensity tier.
+              Defaults to 'quiet' until signals load to keep the celebration
+              calm rather than blanking out. */}
+          <CookCompleteCelebration
+            tier={cookCompleteSignals?.intensity ?? 'quiet'}
+            recipeTitle={recipe.title}
+          />
+
           {/* ROADMAP 4.0 J2 — first-cook-of-cuisine passport stamp */}
           {firstCookStats && recipe.cuisine && (
             <FirstCuisineStamp
@@ -616,6 +643,16 @@ export default function CookingScreen() {
               <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Share</Text>
             </HapticTouchableOpacity>
           </View>
+
+          {/* ROADMAP 4.0 J15 — share-able discovery rings card. Anonymous-by-default
+              (no first-name passed) for v1; identity toggle on the card flips state
+              locally. v1 sources from the current recipe — full "today's plate"
+              aggregation lands when the daily-plate roll-up endpoint exists. */}
+          <DailyPlateShareCard
+            ingredientCount={deriveIngredientCount(recipe)}
+            topMinerals={deriveTopMinerals(recipe)}
+            dishNames={[recipe.title]}
+          />
 
           {/* Off-screen share card for capture */}
           <ShareCardCapture

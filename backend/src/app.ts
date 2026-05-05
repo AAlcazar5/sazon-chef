@@ -33,6 +33,7 @@ import { drinkPairingRoutes } from '@modules/drinkPairing/drinkPairingRoutes';
 import { cohortSocialProofRoutes } from '@modules/cohortSocialProof/cohortSocialProofRoutes';
 import { quipsRoutes } from '@modules/quips/quipsRoutes';
 import { firstCookStatsRoutes } from '@modules/firstCookStats/firstCookStatsRoutes';
+import { cookCompleteSignalsRoutes } from '@modules/cookCompleteSignals/cookCompleteSignalsRoutes';
 import { discoveryMilestonesRoutes } from '@modules/discoveryMilestones/discoveryMilestonesRoutes';
 import { cookingHistoryStatsRoutes } from '@modules/cookingHistoryStats/cookingHistoryStatsRoutes';
 import uploadRoutes from '@modules/upload/uploadRoute';
@@ -190,6 +191,8 @@ app.use('/api/cohort-social-proof', authenticateToken, cohortSocialProofRoutes);
 app.use('/api/quips', authenticateToken, quipsRoutes);
 // ROADMAP 4.0 J2 — first-cook-of-cuisine stats
 app.use('/api/first-cook-stats', authenticateToken, firstCookStatsRoutes);
+// ROADMAP 4.0 J14 + J16 — combined cook-complete signals (intensity + recap insight)
+app.use('/api/cook-complete-signals', authenticateToken, cookCompleteSignalsRoutes);
 // ROADMAP 4.0 J5 — discovery milestones
 app.use('/api/discovery-milestones', authenticateToken, discoveryMilestonesRoutes);
 // ROADMAP 4.0 J11 — cooking history stats (most-recent cook for Today greeting)
