@@ -81,18 +81,22 @@ export default function KitchenModeBar({ activeMode, onChange }: KitchenModeBarP
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
   },
   pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    // alignSelf prevents Android from stretching pills to fill the cross-axis
+    // before content lays out (was: pills appeared full-width on initial mount).
+    alignSelf: 'flex-start',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: 100,
   },
   label: {
     fontFamily: EditorialFontFamily.body.semibold,
-    fontSize: 13,
+    fontSize: 12,
     letterSpacing: 0.2,
   },
 });

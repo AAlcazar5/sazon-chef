@@ -368,7 +368,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Today',
+          title: 'Home',
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="home-outline" color={color} size={size} focused={focused} />
           ),
@@ -407,7 +407,7 @@ export default function TabLayout() {
                   }
                 }}
                 delayLongPress={LONG_PRESS_VOICE_MS}
-                accessibilityLabel={focused ? 'Today tab, selected' : 'Today tab'}
+                accessibilityLabel={focused ? 'Home tab, selected' : 'Home tab'}
                 accessibilityHint="Long press for voice; hold longer to ask Sazon"
                 accessibilityRole="button"
                 style={style as any}

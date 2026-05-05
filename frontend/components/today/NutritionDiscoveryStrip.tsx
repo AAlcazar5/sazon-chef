@@ -80,8 +80,10 @@ const styles = StyleSheet.create({
   strip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    // Card dimensions normalized to match Today/Kitchen standard:
+    // padHoriz 18, padVert 16, borderRadius 20, marginHoriz 16.
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     borderRadius: 20,
     marginHorizontal: 16,
     marginVertical: 8,
