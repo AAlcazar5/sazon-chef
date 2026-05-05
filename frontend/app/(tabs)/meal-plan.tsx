@@ -710,10 +710,12 @@ export default function MealPlanScreen() {
       <ScreenGradient><View style={{ flex: 1 }}>
         {loading ? (
           <>
+            {/* Skeleton header matches the loaded MealPlanHeader title ("This week")
+                so there's no flash of "Meal Plan" copy before content arrives. */}
             <FrostedHeader paddingBottom={16} withTopInset>
               <View style={{ paddingHorizontal: 20 }}>
                 <Text style={{ fontFamily: EditorialFontFamily.display.bold, fontSize: 48, lineHeight: 50, letterSpacing: -1.6, color: isDark ? DarkColors.text.primary : '#111827' }} accessibilityRole="header">
-                  Meal <Text style={{ fontFamily: EditorialFontFamily.displayItalic.bold, fontStyle: 'italic', fontSize: 48, letterSpacing: -1.6, color: isDark ? DarkColors.text.primary : '#111827' }}>Plan</Text>
+                  This <Text style={{ fontFamily: EditorialFontFamily.displayItalic.bold, fontStyle: 'italic', fontSize: 48, letterSpacing: -1.6, color: isDark ? DarkColors.text.primary : '#111827' }}>week</Text>
                 </Text>
               </View>
             </FrostedHeader>
