@@ -14,6 +14,7 @@ import { Pastel, PastelDark, Colors, DarkColors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Shadows } from '../../constants/Shadows';
 import { BorderRadius } from '../../constants/Spacing';
+import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 
 interface ToolRecipe {
   id: string;
@@ -143,6 +144,8 @@ export default function ToolCallCard({ name, result }: ToolCallCardProps) {
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  // ROADMAP 4.0 B3 — record taps from inline tool-call recipe cards
+  const surfaceTracker = useSurfaceTracking();
   const text = isDark ? DarkColors.text.primary : Colors.text.primary;
   const subText = isDark ? DarkColors.text.secondary : Colors.text.secondary;
   const surface = isDark ? PastelDark.sage : Pastel.sage;
@@ -163,7 +166,10 @@ export default function ToolCallCard({ name, result }: ToolCallCardProps) {
               key={r.id}
               accessibilityLabel={`Recipe ${r.title}`}
               accessibilityRole="button"
-              onPress={() => router.push(`/recipe/${r.id}` as never)}
+              onPress={() => {
+                surfaceTracker.track({ surface: 'sazon_tool', action: 'tap', recipeId: r.id });
+                router.push(`/recipe/${r.id}` as never);
+              }}
               style={[styles.card, Shadows.SM as object, { backgroundColor: surface }]}
             >
               <Text style={[styles.title, { color: text }]} numberOfLines={2}>
