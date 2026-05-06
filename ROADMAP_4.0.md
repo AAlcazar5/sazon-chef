@@ -531,8 +531,8 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
 > **Build only after Tier A/B/C loose ends are tied** (current 4-tab IA + adaptation engine must be stable; Tonight piggybacks on existing scoring + Build-a-Plate permutations).
 
 ### T0: Branch + feature flag scaffolding
-- [ ] **T0.1: Create `tonight-mode` branch** off `main`. Land `SAZON_TONIGHT_MODE` env flag (backend) + `tonightMode` user preference column (`User.tonightModeEnabled Boolean @default(false)`). Profile sheet toggle gated on the env flag. When user pref is on AND env flag is on, root layout redirects to `/tonight` instead of `(tabs)`.
-  - **Test:** `backend/__tests__/services/featureFlagService.tonight.test.ts` — env-off blocks toggle from saving; env-on persists pref; pref off → no redirect. `frontend/__tests__/app/_layout.tonight.test.tsx` — toggle on + flag on routes to `/tonight`; either off → 4-tab IA.
+- [x] **T0.1: Create `tonight-mode` branch** ✅ — branch `tier-t/tonight-mode`. Added Prisma cols `User.tonightModeEnabled` + `User.tonightModePromptedAt`. Service `backend/src/services/featureFlagService.ts` reads `SAZON_TONIGHT_MODE === '1'` at call-time. Route `PUT /api/user/tonight-mode` (mounted via `userTonightModeRoutes`) returns 403 when flag off, 200 when on. Root layout redirects to `/tonight` when both AsyncStorage `tonight_mode_flag_on` + `tonight_mode_pref_enabled` are `'1'`.
+  - [x] **Test:** `backend/__tests__/services/featureFlagService.tonight.test.ts` (6 tests) + `backend/__tests__/routes/userTonightMode.test.ts` (4 tests) + `frontend/__tests__/app/_layout.tonight.test.tsx` (4 tests) all green.
 
 ### T1: Proposal endpoint + copy generator
 - [ ] **T1.1: `POST /api/tonight/proposal`** — single-recipe response from existing scoring (`scoreRecipeForUser`) gated by pantry coverage ≥70%, time-of-day, day-of-week, last-cooked window. Returns `{ recipe, slot: 'dinner'|'lunch'|'breakfast', context: { pantryHits, expiringSoon, lastCooked, timeOfDay }, copyLine }`.
