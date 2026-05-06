@@ -16,6 +16,11 @@ import {
   UserContext,
 } from '../../services/recommender/recommenderService';
 import { consumeBudget } from '../../services/recommender/recommenderRateLimitService';
+import { recordProposal } from '../../services/recommender/recommenderEventService';
+import {
+  recordOutcome,
+  OutcomeKind,
+} from '../../services/recommender/recommenderEventOutcomeService';
 
 const CONFIDENCE_THRESHOLD = 0.6;
 const TOP_K = 25;
@@ -138,14 +143,26 @@ export const tonightController = {
         (a, b) => b.retrievalScore - a.retrievalScore,
       )[0];
       logger.info({ userId }, 'TB2.3 daily budget exceeded; degraded fallback');
-      return res.status(200).json({
+      const fallback = {
         recipeId: top.id,
         confidence: 0.5,
         reason: 'Best match from your recent cooking pattern.',
         runnerUpIds: [],
-        source: 'retrieval_fallback',
+        source: 'retrieval_fallback' as const,
         degraded: 'daily_budget',
+      };
+      const eventId = await recordProposal({
+        userId,
+        asOf: now,
+        contextSnapshot: { degraded: 'daily_budget' },
+        candidateIds: candidates.map((c) => c.id),
+        pickedRecipeId: top.id,
+        runnerUpIds: [],
+        confidence: fallback.confidence,
+        copyLine: fallback.reason,
+        source: 'retrieval_fallback',
       });
+      return res.status(200).json({ ...fallback, eventId });
     }
 
     const userContext = await buildUserContext(userId, now);
@@ -163,9 +180,54 @@ export const tonightController = {
     }
 
     if (!pick) {
+      // Still log the proposal so weekly accuracy reports include
+      // low-confidence falls.
+      await recordProposal({
+        userId,
+        asOf: now,
+        contextSnapshot: userContext,
+        candidateIds: candidates.map((c) => c.id),
+        pickedRecipeId: null,
+        runnerUpIds: [],
+        confidence: 0,
+        copyLine: '',
+        source: 'llm',
+      });
       return res.status(503).json({ reason: 'low_confidence' });
     }
 
-    return res.status(200).json(pick);
+    const eventId = await recordProposal({
+      userId,
+      asOf: now,
+      contextSnapshot: userContext,
+      candidateIds: candidates.map((c) => c.id),
+      pickedRecipeId: pick.recipeId,
+      runnerUpIds: pick.runnerUpIds,
+      confidence: pick.confidence,
+      copyLine: pick.reason,
+      source: pick.source,
+    });
+
+    return res.status(200).json({ ...pick, eventId });
+  },
+
+  // POST /api/tonight/outcome — durable backfill of T4.1 analytics events.
+  async outcome(req: Request, res: Response) {
+    let userId: string;
+    try {
+      userId = getUserId(req);
+    } catch {
+      return res.status(401).json({ reason: 'unauthenticated' });
+    }
+    const eventId = typeof req.body?.eventId === 'string' ? req.body.eventId : '';
+    const outcome = req.body?.outcome as OutcomeKind | undefined;
+    const latencyMs = Number(req.body?.latencyMs ?? 0);
+    if (!eventId || !outcome) {
+      return res.status(400).json({ error: 'eventId and outcome required' });
+    }
+    const ok = await recordOutcome({ eventId, outcome, latencyMs });
+    if (!ok) return res.status(404).json({ error: 'event_not_found' });
+    logger.info({ userId, eventId, outcome }, 'TB3.2 outcome recorded');
+    return res.status(204).end();
   },
 };

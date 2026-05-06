@@ -38,6 +38,7 @@
     "recommender:ingest": "ts-node -r tsconfig-paths/register scripts/recommender/ingestFoodCom.ts",
     "recommender:align": "ts-node -r tsconfig-paths/register scripts/recommender/alignCatalog.ts",
     "recommender:refresh": "ts-node -r tsconfig-paths/register scripts/recommender/quarterlyRefresh.ts",
+    "recommender:weekly": "ts-node -r tsconfig-paths/register scripts/recommender/weeklyReport.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
