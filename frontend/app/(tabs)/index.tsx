@@ -30,9 +30,7 @@ import NoResultsState from '../../components/home/NoResultsState';
 import SoftFilterPill from '../../components/home/SoftFilterPill';
 import HeroRationaleRibbon from '../../components/home/HeroRationaleRibbon';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
-import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
-import NutritionDiscoveryStrip from '../../components/today/NutritionDiscoveryStrip';
 import NutritionStrip from '../../components/today/NutritionStrip';
 import FriendsFeedSection from '../../components/today/FriendsFeedSection';
 import QuickActionRow from '../../components/today/QuickActionRow';
@@ -1142,15 +1140,12 @@ export default function HomeScreen() {
 
         {/* Featured recipe (Today's hero) — sits directly under the Coach card
             so the user lands on a cookable plate, not on supplementary widgets. */}
+        {/* HX1.4 — macro widgets hidden until real D14 data + macro goals
+            are wired. Fake placeholder values were misleading users. */}
         <EditorialHomeLayout
           heroRecipe={recipeOfTheDay}
           recipePool={recipesData ?? undefined}
           savedIds={savedRecipeIds}
-          calories={{ consumed: 1420, goal: 1800 }}
-          protein={{ consumed: 98, goal: 120 }}
-          carbs={{ consumed: 165, goal: 220 }}
-          fat={{ consumed: 52, goal: 70 }}
-          fiber={{ consumed: 22, goal: 30 }}
           onRecipePress={handleRecipePress}
           onToggleSave={handleSave}
         />
@@ -1163,21 +1158,14 @@ export default function HomeScreen() {
         {/* ROADMAP 4.0 J4 — Sunday Polaroid drop (renders only on local Sunday) */}
         {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}
 
-        {/* ROADMAP 4.0 J11 — first-of-day greeting note (renders once per local date) */}
+        {/* ROADMAP 4.0 J11 — first-of-day greeting note (renders once per local date)
+            HX1.3 — sole greeting moment per visit (EditorialGreeting deferred). */}
         <FirstOfDayNote lastCookCuisine={lastCookCuisine} />
 
-        {/* ROADMAP 4.0 A1-b — Nutrition discovery strip (yesterday's plate at a glance) */}
-        <NutritionDiscoveryStrip
-          cuisineCount={0}
-          ingredientCount={0}
-          colorCount={0}
-          topMineral={null}
-          onPress={() => {
-            // ROADMAP 4.0 A1-b — expand to today + yesterday view (placeholder route)
-          }}
-        />
-
-        {/* ROADMAP 4.0 D14 — today's nutrient roll-up (top-6 with DV%) */}
+        {/* ROADMAP 4.0 D14 — today's nutrient roll-up (top-6 with DV%).
+            HX1.2 — collapsed two nutrition strips into one; the placeholder
+            NutritionDiscoveryStrip with hardcoded zeros is gone. The
+            yesterday-summary header line lands when D-tier wires it. */}
         <NutritionStrip snapshot={dailyNutrition} />
 
         {/* ROADMAP 4.0 F1 — Friends feed (hidden when no follows / no shares) */}
@@ -1201,6 +1189,12 @@ export default function HomeScreen() {
           onBuildAPlate={handleQuickActionBuildAPlate}
           onFindMeAMeal={handleQuickActionFindMeAMeal}
         />
+
+        {/* ROADMAP 4.0 HX3.1 — discovery surfaces lifted above the recipe
+            grid (previously dead-zone below-fold). Both are small,
+            horizontally compact, and earn an above-fold slot. */}
+        <SeasonalProduceCard />
+        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
 
         {/* Group 10X Phase 6 — Stretch last night card */}
         <StretchHomeCard />
@@ -1244,47 +1238,15 @@ export default function HomeScreen() {
           darkFeed={darkFeed}
         />
 
-        {/* ROADMAP 4.0 F6 — Seasonal awareness card (one peak ingredient/day).
-            Moved below the recipe grid: still useful, just not first-sight. */}
-        <SeasonalProduceCard />
-
-        {/* ROADMAP 4.0 A1-c — Today rotating discovery card (rotates pairing,
-            superfood, technique tips). Below the fold for the same reason. */}
-        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
-
         {/* ROADMAP 4.0 A1-f — NewToYou + BrowseByFamily relocated to Kitchen → Discover.
-            Premium upsell card stays on Today as a contextual nudge. */}
+            Premium upsell card stays on Today as a contextual nudge.
+            HX1.1 — duplicate "Great for Meal Prep" carousel removed; the
+            section already renders inside RecipeSectionsGrid above when
+            mealPrepMode is active. */}
         {user?.id && (
           <>
             {/* Premium upsell card — only for free-tier users */}
             {!subscription.isPremium && <PremiumUpsellCard testID="home-upsell-card" />}
-
-            {/* Great for Meal Prep Section */}
-            {(() => {
-              const mealPrepSection = recipeSections.find(s => s.key === 'meal-prep');
-              if (!mealPrepSection && !loading) return null;
-
-              return (
-                <RecipeCarouselSection
-                  title={mealPrepSection?.title || 'Great for Meal Prep'}
-                  emoji={mealPrepSection?.emoji || '🥗'}
-                  recipes={mealPrepSection?.recipes || []}
-                  isLoading={loading}
-                  isCollapsed={collapsedSections['meal-prep']}
-                  onToggleCollapse={() => toggleSection('meal-prep')}
-                  isDark={isDark}
-                  userFeedback={userFeedback}
-                  feedbackLoading={feedbackLoading}
-                  onRecipePress={handleRecipePress}
-                  onRecipeLongPress={handleLongPress}
-                  onLike={handleLike}
-                  onDislike={handleShowDislikeSheet}
-                  onSave={handleSave}
-                  autoScroll
-                />
-              );
-            })()}
-
           </>
         )}
 

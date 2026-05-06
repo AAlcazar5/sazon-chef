@@ -19,15 +19,23 @@ function getDefaultCategoryForHour(hour: number): string {
   return 'Dessert';
 }
 
+interface MacroPair {
+  consumed: number;
+  goal: number;
+}
+
 interface EditorialHomeLayoutProps {
   heroRecipe: SuggestedRecipe | null;
   recipePool?: SuggestedRecipe[];
   savedIds: Set<string>;
-  calories: { consumed: number; goal: number };
-  protein: { consumed: number; goal: number };
-  carbs: { consumed: number; goal: number };
-  fat: { consumed: number; goal: number };
-  fiber: { consumed: number; goal: number };
+  /** ROADMAP 4.0 HX1.4 — macro widgets render only when all five are
+   *  provided. Pass `undefined` (instead of fake placeholders) when no
+   *  D14 snapshot is available so the page never ships fake numbers. */
+  calories?: MacroPair;
+  protein?: MacroPair;
+  carbs?: MacroPair;
+  fat?: MacroPair;
+  fiber?: MacroPair;
   onRecipePress: (id: string) => void;
   onToggleSave: (id: string) => void;
 }
@@ -105,14 +113,18 @@ export function EditorialHomeLayout({
       {/* Group 10S Surface 4 — Kitchen IQ promo for the most recent unlock */}
       <KitchenIQPromoCard />
 
-      {/* Macro widget row */}
-      <EditorialMacroWidgets
-        calories={calories}
-        protein={protein}
-        carbs={carbs}
-        fat={fat}
-        fiber={fiber}
-      />
+      {/* Macro widget row — HX1.4: renders only when real macro data is
+          wired. Hardcoded placeholders are gone; the grid hides cleanly
+          on cold-start (no D14 snapshot) instead of shipping fake numbers. */}
+      {calories && protein && carbs && fat && fiber && (
+        <EditorialMacroWidgets
+          calories={calories}
+          protein={protein}
+          carbs={carbs}
+          fat={fat}
+          fiber={fiber}
+        />
+      )}
 
     </>
   );

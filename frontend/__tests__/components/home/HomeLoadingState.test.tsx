@@ -73,4 +73,18 @@ describe('HomeLoadingState (FX1.2 body-only)', () => {
     const { getAllByTestId } = renderWithProviders(<HomeLoadingState viewMode="grid" />);
     expect(getAllByTestId('recipe-skeleton').length).toBeGreaterThan(0);
   });
+
+  // HX6.1 — body matches the post-FX1 layout (hero featured + grid).
+  it('HX6.1 — renders both featured (hero) and grid skeletons in the body', () => {
+    const { getAllByTestId } = renderWithProviders(<HomeLoadingState viewMode="grid" />);
+    // RecipeCardSkeleton is mocked → at minimum the featured + 6 grid cells
+    // render as skeletons; total ≥ 7.
+    expect(getAllByTestId('recipe-skeleton').length).toBeGreaterThanOrEqual(7);
+  });
+
+  it('HX6.1 — list view renders the list-style skeleton instead of the grid', () => {
+    const { getAllByTestId } = renderWithProviders(<HomeLoadingState viewMode="list" />);
+    // featured (1) + list rows (3) = 4 skeletons.
+    expect(getAllByTestId('recipe-skeleton').length).toBe(4);
+  });
 });
