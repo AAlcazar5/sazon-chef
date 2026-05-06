@@ -1,8 +1,11 @@
 // Group 10Y-A: Coach service tier routing + Anthropic dispatch.
+// Tier S (ROADMAP 4.0): tiered model routing — Haiku 4.5 for free, Sonnet 4.6
+// for premium chat, Opus 4.7 for premium deep-plan intents only.
 
 import Anthropic from '@anthropic-ai/sdk';
 
 export type CoachTier = 'free' | 'premium';
+export type CoachIntent = 'chat' | 'deep_plan';
 
 interface CoachTierUserShape {
   subscriptionTier?: string | null;
@@ -24,27 +27,51 @@ export function resolveCoachTier(
 }
 
 export const COACH_MODELS = {
-  free: 'claude-sonnet-4-6',
-  premium: 'claude-opus-4-7',
+  free: 'claude-haiku-4-5-20251001',
+  premium: 'claude-sonnet-4-6',
+  premiumDeepPlan: 'claude-opus-4-7',
 } as const;
 
 const MAX_TOKENS_FREE = 4096;
-const MAX_TOKENS_PREMIUM = 24000;
-const PREMIUM_THINKING_BUDGET = 16000;
+const MAX_TOKENS_PREMIUM = 16000;
+const MAX_TOKENS_PREMIUM_DEEP = 24000;
+const PREMIUM_THINKING_BUDGET = 8000;
+const PREMIUM_DEEP_THINKING_BUDGET = 16000;
 
 type ThinkingBudget =
   | { type: 'disabled' }
   | { type: 'enabled'; budget_tokens: number };
 
 export function selectModel(tier: CoachTier): string {
-  return COACH_MODELS[tier];
+  return tier === 'premium' ? COACH_MODELS.premium : COACH_MODELS.free;
 }
 
-export function selectThinkingBudget(tier: CoachTier): ThinkingBudget {
-  if (tier === 'premium') {
-    return { type: 'enabled', budget_tokens: PREMIUM_THINKING_BUDGET };
-  }
-  return { type: 'disabled' };
+export function selectModelForIntent(
+  tier: CoachTier,
+  intent: CoachIntent,
+): string {
+  if (tier === 'free') return COACH_MODELS.free;
+  if (intent === 'deep_plan') return COACH_MODELS.premiumDeepPlan;
+  return COACH_MODELS.premium;
+}
+
+export function selectThinkingBudget(
+  tier: CoachTier,
+  intent: CoachIntent = 'chat',
+): ThinkingBudget {
+  if (tier !== 'premium') return { type: 'disabled' };
+  return {
+    type: 'enabled',
+    budget_tokens:
+      intent === 'deep_plan'
+        ? PREMIUM_DEEP_THINKING_BUDGET
+        : PREMIUM_THINKING_BUDGET,
+  };
+}
+
+function maxTokensFor(tier: CoachTier, intent: CoachIntent): number {
+  if (tier === 'free') return MAX_TOKENS_FREE;
+  return intent === 'deep_plan' ? MAX_TOKENS_PREMIUM_DEEP : MAX_TOKENS_PREMIUM;
 }
 
 export interface BuildCoachParamsInput {
@@ -55,16 +82,18 @@ export interface BuildCoachParamsInput {
   // array forms on MessageParam.content — pass through unchanged.
   messages: Anthropic.MessageParam[];
   tools?: Anthropic.Tool[];
+  intent?: CoachIntent;
+  modelOverride?: string;
 }
 
 export function buildAnthropicCreateParams(
   input: BuildCoachParamsInput,
 ): Anthropic.MessageCreateParamsStreaming {
-  const { tier, systemPrompt, messages, tools } = input;
+  const { tier, systemPrompt, messages, tools, intent = 'chat', modelOverride } = input;
   const params: Anthropic.MessageCreateParamsStreaming = {
-    model: selectModel(tier),
-    max_tokens: tier === 'premium' ? MAX_TOKENS_PREMIUM : MAX_TOKENS_FREE,
-    thinking: selectThinkingBudget(tier),
+    model: modelOverride ?? selectModelForIntent(tier, intent),
+    max_tokens: maxTokensFor(tier, intent),
+    thinking: selectThinkingBudget(tier, intent),
     system: [
       {
         type: 'text',

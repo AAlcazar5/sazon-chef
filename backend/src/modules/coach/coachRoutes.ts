@@ -16,7 +16,9 @@ import {
   COACH_MODELS,
   getAnthropicClient,
   resolveCoachTier,
+  type CoachIntent,
 } from '@/services/coachService';
+import { classifyCoachIntent } from '@/services/coachIntentClassifier';
 import {
   getMedicalDeflectionText,
   sanitizeUserContent,
@@ -473,18 +475,26 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
     memories: memoriesForPrompt.length > 0 ? memoriesForPrompt : undefined,
   });
 
-  // Phase 8: Pro cost ceiling. If a Pro user has crossed today's budget on
-  // either input or output tokens, downgrade their model to Sonnet for this
-  // turn and emit a one-time soft notice via SSE.
+  // Tier S: classify the user's message intent for routing between Sonnet
+  // (chat) and Opus (deep_plan). Free tier ignores intent — always Haiku.
+  const intent: CoachIntent = classifyCoachIntent(sanitizedMessage);
+
+  // Phase 8 + Tier S S7: Pro cost ceiling. Per-user daily token budget; when
+  // crossed we downgrade the model for this turn and emit a one-time notice.
   let effectiveTier = tier;
+  let modelOverride: string | undefined;
   let costNotice: string | null = null;
   if (tier === 'premium') {
+    const defaultModel =
+      intent === 'deep_plan' ? COACH_MODELS.premiumDeepPlan : COACH_MODELS.premium;
     const budgetCheck = await selectModelWithBudget({
       userId,
-      defaultModel: COACH_MODELS.premium,
+      defaultModel,
+      tier,
     });
     if (budgetCheck.overBudget) {
       effectiveTier = 'free';
+      modelOverride = COACH_MODELS.free;
       costNotice = budgetCheck.notice;
       emitAnalytics('coach_cost_ceiling', {
         userId,
@@ -532,6 +542,8 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         systemPrompt,
         messages: conversationMessages,
         tools: coachToolDefinitions,
+        intent,
+        modelOverride,
       });
       const stream = anthropic.messages.stream(params);
 

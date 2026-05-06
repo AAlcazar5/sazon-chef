@@ -28,7 +28,8 @@ coachContextRoutes.get('/context', async (req: Request, res: Response) => {
     prisma.leftoverInventory.findMany({
       where: { userId, expiresAt: { lte: expiringCutoff } },
       orderBy: { expiresAt: 'asc' },
-    }),
+      include: { component: { select: { name: true } } } as any,
+    }) as any,
     prisma.macroGoals.findUnique({ where: { userId } }),
     prisma.meal.findMany({
       where: { date: { gte: startOfTodayUTC() }, mealPlan: { userId } },
@@ -90,14 +91,27 @@ coachContextRoutes.get('/context', async (req: Request, res: Response) => {
     if (adj.length > 0) topAdjacentCuisine = adj[0].cuisine;
   }
 
+  type LeftoverWithName = {
+    id: string;
+    componentId: string;
+    slot: string;
+    portionsRemaining: number;
+    expiresAt: Date;
+    component?: { name: string } | null;
+  };
+  const typed = leftovers as LeftoverWithName[];
+
   res.status(200).json({
-    pantryExpiringSoon: leftovers.map((l) => l.componentId),
-    leftoverInventory: leftovers.map((l) => ({
+    pantryExpiringSoon: typed
+      .map((l) => l.component?.name)
+      .filter((n): n is string => typeof n === 'string' && n.length > 0),
+    leftoverInventory: typed.map((l) => ({
       id: l.id,
       componentId: l.componentId,
       slot: l.slot,
       portionsRemaining: l.portionsRemaining,
       expiresAt: l.expiresAt.toISOString(),
+      name: l.component?.name ?? null,
     })),
     remainingMacros,
     topAdjacentCuisine,

@@ -2832,6 +2832,8 @@ interface CoachApi {
 }
 
 export interface CoachContextResponse {
+  // Tier S S5: ingredient names (resolved server-side from componentId), used
+  // for chip copy like "I have leftover spinach — bridge it forward".
   pantryExpiringSoon: string[];
   leftoverInventory: Array<{
     id: string;
@@ -2839,6 +2841,7 @@ export interface CoachContextResponse {
     slot: string;
     portionsRemaining: number;
     expiresAt: string;
+    name?: string | null;
   }>;
   remainingMacros: { calories: number; protein: number; carbs: number; fat: number } | null;
   topAdjacentCuisine: string | null;

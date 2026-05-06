@@ -48,6 +48,7 @@ import { Shadows } from '../../constants/Shadows';
 import { useFoodIntelUserState } from '../../hooks/useFoodIntelUserState';
 import { useSubscription } from '../../hooks/useSubscription';
 import { deriveCoachFlags } from '../../lib/coachClient';
+import { classifyCoachIntent } from '../../lib/coachIntentClassifier';
 
 type CoachView = 'list' | 'conversation';
 
@@ -68,10 +69,9 @@ export default function CoachScreen() {
   const isDark = theme === 'dark';
   const userState = useFoodIntelUserState();
   const { subscription } = useSubscription();
-  const flags = useMemo(
-    () => deriveCoachFlags({ tier: subscription.tier, isPremium: subscription.isPremium }),
-    [subscription.tier, subscription.isPremium],
-  );
+  // composerText is declared below; the header label uses it via
+  // currentIntent (also declared below) — flags depends on both. Hoist
+  // declarations so the JSX can read flags consistently.
   // 10Y entry-points: contextual deep-links pass conversationId + optional
   // seedMessage so we can jump directly into an active conversation.
   const params = useLocalSearchParams<{ conversationId?: string; seedMessage?: string }>();
@@ -80,6 +80,21 @@ export default function CoachScreen() {
   const [conversations, setConversations] = useState<CoachConversation[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [composerText, setComposerText] = useState('');
+  // ROADMAP 4.0 S1.3 — classify the composer text live so the header
+  // label reflects the model the next send would route to. Free tier
+  // never escalates regardless.
+  const currentIntent = useMemo(
+    () => classifyCoachIntent(composerText),
+    [composerText],
+  );
+  const flags = useMemo(
+    () =>
+      deriveCoachFlags(
+        { tier: subscription.tier, isPremium: subscription.isPremium },
+        currentIntent,
+      ),
+    [subscription.tier, subscription.isPremium, currentIntent],
+  );
   const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [pantryConfirm, setPantryConfirm] = useState<CoachIdentifiedIngredient[] | null>(null);
   const [activeTitle, setActiveTitle] = useState<string>('Sazon');
@@ -120,6 +135,13 @@ export default function CoachScreen() {
     setComposerText(seed ?? '');
     setActiveTitle('Sazon');
     setView('conversation');
+    // ROADMAP 4.0 S0.1 — auto-send when a seed is provided so chip-driven
+    // entries fire the round trip immediately instead of stranding the
+    // user at a pre-filled composer.
+    const trimmed = seed?.trim();
+    if (trimmed && trimmed.length > 0) {
+      void stream.sendMessage(trimmed);
+    }
   }, [stream]);
 
   const openExisting = useCallback(async (id: string) => {
@@ -161,8 +183,13 @@ export default function CoachScreen() {
   }, [params.conversationId, params.seedMessage, stream]);
 
   const onSelectChip = useCallback((value: string) => {
+    // ROADMAP 4.0 S0.1 — chip taps auto-send. Composer still receives the
+    // text so the user sees what they "said," and the round trip fires
+    // immediately. No-op while the stream is busy to avoid double-send.
     setComposerText(value);
-  }, []);
+    if (stream.isStreaming) return;
+    void stream.sendMessage(value);
+  }, [stream]);
 
   const onSend = useCallback(async () => {
     const value = composerText.trim();

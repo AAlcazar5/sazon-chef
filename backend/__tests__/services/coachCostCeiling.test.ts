@@ -57,7 +57,7 @@ describe('getDailyTokenUsage', () => {
 });
 
 describe('selectModelWithBudget', () => {
-  it('Pro at 95% input usage → keeps Opus, no notice', async () => {
+  it('Pro at 95% input usage → keeps premium model, no notice', async () => {
     mockAggregate.mockResolvedValue({
       _sum: {
         promptTokens: Math.floor(dailyTokenBudget.input * 0.95),
@@ -74,7 +74,7 @@ describe('selectModelWithBudget', () => {
     expect(result.overBudget).toBe(false);
   });
 
-  it('Pro at 105% input usage → downgrades to Sonnet, returns notice', async () => {
+  it('Pro at 105% input usage → downgrades to free model, returns notice', async () => {
     mockAggregate.mockResolvedValue({
       _sum: {
         promptTokens: Math.floor(dailyTokenBudget.input * 1.05),
@@ -91,7 +91,7 @@ describe('selectModelWithBudget', () => {
     expect(result.overBudget).toBe(true);
   });
 
-  it('Pro at 105% output usage → downgrades to Sonnet, returns notice', async () => {
+  it('Pro at 105% output usage → downgrades to free model, returns notice', async () => {
     mockAggregate.mockResolvedValue({
       _sum: {
         promptTokens: 0,
@@ -122,5 +122,58 @@ describe('selectModelWithBudget', () => {
     });
     expect(result.overBudget).toBe(true);
     expect(result.model).toBe(COACH_MODELS.free);
+  });
+});
+
+// Tier S S7: per-tier daily budget (free much smaller than premium).
+describe('selectModelWithBudget — tier-aware budgets (S7)', () => {
+  it('free user under 25k input → keeps Haiku, no notice', async () => {
+    mockAggregate.mockResolvedValue({
+      _sum: { promptTokens: 20_000, cacheReadTokens: 0, completionTokens: 5_000 },
+    });
+    const result = await selectModelWithBudget({
+      userId: 'user-free',
+      defaultModel: COACH_MODELS.free,
+      tier: 'free',
+    });
+    expect(result.overBudget).toBe(false);
+    expect(result.model).toBe(COACH_MODELS.free);
+    expect(result.budget.input).toBe(25_000);
+  });
+
+  it('free user over 25k input → over budget (paywall surfaced upstream)', async () => {
+    mockAggregate.mockResolvedValue({
+      _sum: { promptTokens: 26_000, cacheReadTokens: 0, completionTokens: 0 },
+    });
+    const result = await selectModelWithBudget({
+      userId: 'user-free',
+      defaultModel: COACH_MODELS.free,
+      tier: 'free',
+    });
+    expect(result.overBudget).toBe(true);
+  });
+
+  it('premium tier still uses 500k input budget', async () => {
+    mockAggregate.mockResolvedValue({
+      _sum: { promptTokens: 200_000, cacheReadTokens: 0, completionTokens: 0 },
+    });
+    const result = await selectModelWithBudget({
+      userId: 'user-pro',
+      defaultModel: COACH_MODELS.premium,
+      tier: 'premium',
+    });
+    expect(result.overBudget).toBe(false);
+    expect(result.budget.input).toBe(500_000);
+  });
+
+  it('omitted tier defaults to premium budget (back-compat)', async () => {
+    mockAggregate.mockResolvedValue({
+      _sum: { promptTokens: 200_000, cacheReadTokens: 0, completionTokens: 0 },
+    });
+    const result = await selectModelWithBudget({
+      userId: 'user-pro',
+      defaultModel: COACH_MODELS.premium,
+    });
+    expect(result.budget.input).toBe(500_000);
   });
 });
