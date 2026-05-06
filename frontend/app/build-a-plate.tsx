@@ -24,6 +24,7 @@ import {
   CostPill,
   TechniqueChallengeBanner,
   HarmonyReveal,
+  FewSmallThingsMode,
   type MacroFitState,
   type HarmonySignal,
 } from '../components/build-a-plate';
@@ -106,6 +107,11 @@ export default function BuildAPlateScreen() {
   const weeklyPlates = useRecent7DayPlates();
   const [macroFitState, setMacroFitState] = useState<MacroFitState>('idle');
   const [budgetMode, setBudgetMode] = useState<boolean>(false);
+  // ROADMAP 4.0 J17.2 — "A few small things" archetype toggle. When active,
+  // surfaces 4–6 small slots instead of the standard 3-slot composition.
+  // Surfaced as a STYLE — izakaya / mezze / banchan / antipasti — never a
+  // health pitch.
+  const [fewSmallThingsActive, setFewSmallThingsActive] = useState<boolean>(false);
   const [leftoversBySlot, setLeftoversBySlot] = useState<Partial<Record<MealComponentSlot, LeftoverInventoryItem[]>>>({});
   const [variantsByComponent, setVariantsByComponent] = useState<Record<string, ComponentVariant[]>>({});
   // Track which componentIds we've already fetched variants for, without
@@ -552,6 +558,11 @@ export default function BuildAPlateScreen() {
             active={budgetMode}
             onToggle={handleBudgetToggle}
             testID="budget-toggle"
+          />
+          <FewSmallThingsMode
+            active={fewSmallThingsActive}
+            slotCount={fewSmallThingsActive ? 5 : 3}
+            onToggle={() => setFewSmallThingsActive((prev) => !prev)}
           />
         </View>
 
