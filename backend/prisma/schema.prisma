@@ -369,9 +369,17 @@ model Recipe {
   // ROADMAP 4.0 D2 — back-relation for the quality scorecard.
   qualityScoreEntry RecipeQualityScore?
 
+  // ROADMAP 4.0 D3 — canonical cuisine taxonomy. Original `cuisine`
+  // string is preserved (reversibility); these two are written by the
+  // migration script and used by D5 coverage reporting.
+  canonicalCuisine String?
+  subCuisine       String?
+
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
   @@index([isUserCreated, cuisine, mealType])
+  @@index([canonicalCuisine])
+  @@index([canonicalCuisine, subCuisine])
   @@index([createdAt])
   @@map("recipes")
 }
