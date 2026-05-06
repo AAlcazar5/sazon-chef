@@ -540,8 +540,8 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
   - [x] **Test:** `backend/__tests__/services/tonightCopyService.test.ts` (6 tests) — all four context shapes, banned-vocab lint, determinism, truncation.
 
 ### T2: Tonight screen
-- [ ] **T2.1: `frontend/app/tonight.tsx`** — full-bleed hero image, copy line over gradient, single CTA "Cook this." Long-press anywhere → slot-swap sheet (reuse `useBuildAPlatePermutations` to surface 3 alternatives for the dominant slot). Subtle "More" affordance bottom-right opens the existing 4-tab IA as a modal stack for users who want to escape.
-  - **Test:** `frontend/__tests__/app/tonight.test.tsx` — renders proposal copy + image + CTA; long-press fires haptic + opens swap sheet; CTA navigates to existing cook flow with the proposed recipe id; "More" affordance opens tabs stack; loading + error states use Sazon mascot, no `ActivityIndicator`.
+- [x] **T2.1: `frontend/app/tonight.tsx`** ✅ — full-bleed hero with copy line on gradient, "Cook this." pill CTA, "More" affordance opens `(tabs)`. Long-press hero opens `<TonightSwapSheet />`. Loading uses `LoadingState` with `thinking` mascot (no `ActivityIndicator`). Errors use Sazon-voice copy ("Sazon is thinking — let's try again in a moment."). Emits `tonight_proposal_shown / accepted / swapped / escaped` analytics with `proposalLatencyMs` + `pantryCoveragePct`.
+  - [x] **Test:** `frontend/__tests__/app/tonight.test.tsx` (5 tests) — renders copy + CTA, CTA navigates to cook flow, long-press opens swap sheet, More opens tabs, error state uses Sazon copy.
 - [x] **T2.2: Slot-swap sheet** ✅ — `frontend/components/tonight/TonightSwapSheet.tsx`. Three alternative cards over dim backdrop, `BorderRadius.card` (20), `BorderRadius.sheet` (28) on the sheet itself, `HapticTouchableOpacity` with `pressedScale: 0.97`. Backdrop press dismisses.
   - [x] **Test:** `frontend/__tests__/components/tonight/TonightSwapSheet.test.tsx` (6 tests) — renders, tap → `onSwap`, haptic on tap, backdrop dismisses, a11y labels, hidden when `visible={false}`.
 
