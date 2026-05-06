@@ -10,6 +10,7 @@ import { View, Text, Modal, Pressable } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { logHomeSurfaceEvent } from '../../lib/homeSurfaceEvents';
 
 export interface HeroRationale {
   primaryReason: string;
@@ -38,7 +39,10 @@ export default function HeroRationaleRibbon({ rationale }: HeroRationaleRibbonPr
         testID="hero-rationale-ribbon"
         accessibilityRole="button"
         accessibilityLabel={`Why today's hero: ${rationale.primaryReason}. Tap for more.`}
-        onPress={() => setExpanded(true)}
+        onPress={() => {
+          setExpanded(true);
+          logHomeSurfaceEvent({ surface: 'hero_rationale_ribbon', eventType: 'expand' });
+        }}
         style={{ paddingHorizontal: 16, paddingVertical: 6 }}
       >
         <Text

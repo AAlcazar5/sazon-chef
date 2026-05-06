@@ -26,6 +26,7 @@ import { kitchenIQRoutes } from '@modules/kitchenIQ/kitchenIQRoutes';
 import { coachRoutes } from '@modules/coach/coachRoutes';
 import { affinityRoutes } from '@modules/affinity/affinityRoutes';
 import { surfaceEventRoutes } from '@modules/telemetry/surfaceEventRoutes';
+import { homeSurfaceEventRoutes } from '@modules/telemetry/homeSurfaceEventRoutes';
 import { dailyCheckInRoutes } from '@modules/dailyCheckIn/dailyCheckInRoutes';
 import { weeklyRecapRoutes } from '@modules/recap/weeklyRecapRoutes';
 import { culturalPrimerRoutes } from '@modules/culturalPrimer/culturalPrimerRoutes';
@@ -178,6 +179,8 @@ app.use('/api/coach', authenticateToken, coachRoutes);
 app.use('/api/user/affinity', affinityRoutes);
 // ROADMAP 4.0 B3 — surface event sink (impression/tap/cook/rate per surface)
 app.use('/api/telemetry/surface-events', authenticateToken, surfaceEventRoutes);
+// ROADMAP 4.0 HX7.1 — home-surface event sink (hero re-rolls / discovery card taps / etc.)
+app.use('/api/telemetry/home-surface-events', authenticateToken, homeSurfaceEventRoutes);
 // ROADMAP 4.0 C7 — daily check-in
 app.use('/api/daily-check-in', authenticateToken, dailyCheckInRoutes);
 // ROADMAP 4.0 C9 — weekly recap card

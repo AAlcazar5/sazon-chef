@@ -12,6 +12,10 @@ jest.mock('../../../components/ui/HapticTouchableOpacity', () => {
   };
 });
 
+jest.mock('../../../lib/homeSurfaceEvents', () => ({
+  logHomeSurfaceEvent: jest.fn(),
+}));
+
 describe('HeroRationaleRibbon (HX0.2)', () => {
   it('renders nothing when rationale is null', () => {
     const { queryByTestId } = renderWithProviders(<HeroRationaleRibbon rationale={null} />);
