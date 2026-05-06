@@ -833,6 +833,21 @@ export const recipeApi = {
     return apiClient.post('/recipes/filter-yields', filters);
   },
 
+  // ROADMAP 4.0 HX2.1 — hero re-roll (next-ranked candidate).
+  heroReroll: (rank: number) => {
+    return apiClient.post<{
+      rank: number;
+      recipe: {
+        id: string;
+        title: string;
+        imageUrl: string | null;
+        cuisine: string | null;
+        cookTime: number | null;
+      } | null;
+      exhausted: boolean;
+    }>('/recipes/hero/reroll', { rank });
+  },
+
   // ROADMAP 4.0 HX5.1 — next-5 candidates past the visible cut.
   getAlmostMadeIt: (cutoff: number, tail: number = 5) => {
     return apiClient.get<{

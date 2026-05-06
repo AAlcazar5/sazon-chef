@@ -30,6 +30,9 @@ import NoResultsState from '../../components/home/NoResultsState';
 import SoftFilterPill from '../../components/home/SoftFilterPill';
 import HeroRationaleRibbon from '../../components/home/HeroRationaleRibbon';
 import AlmostMadeItSheet from '../../components/home/AlmostMadeItSheet';
+import HeroRerollPill, { type HeroRerollRecipe } from '../../components/home/HeroRerollPill';
+import FirstCuisineBadge from '../../components/home/FirstCuisineBadge';
+import { useReasoningPeekGate } from '../../hooks/useReasoningPeekGate';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import NutritionStrip from '../../components/today/NutritionStrip';
@@ -468,9 +471,20 @@ export default function HomeScreen() {
   // Recipe of the Day — pulled directly from home feed so it always reflects current filters.
   // Bypasses the useRecipeOfTheDay intermediate state to prevent stale values after refetch.
   // When a craving search is active, promote the top craving result as the hero recipe.
-  const recipeOfTheDay = isCravingSearch && suggestedRecipes.length > 0
+  // ROADMAP 4.0 HX2.1 — re-rolled hero overrides the home-feed pick until the
+  // user navigates away or filters change.
+  const [rerolledHero, setRerolledHero] = useState<HeroRerollRecipe | null>(null);
+  const baseRecipeOfTheDay = isCravingSearch && suggestedRecipes.length > 0
     ? suggestedRecipes[0]
     : homeFeed.recipeOfTheDay;
+  const recipeOfTheDay = rerolledHero
+    ? ({
+        ...rerolledHero,
+        // Synthesize the SuggestedRecipe shape — keep the rerolled fields,
+        // null out the score so the UI doesn't show a stale match%.
+        score: { matchPercentage: 0 },
+      } as any)
+    : baseRecipeOfTheDay;
   const loadingRecipeOfTheDay = homeFeed.loading && !homeFeed.recipeOfTheDay;
 
   // Use consolidated home feed data instead of separate useApi('/recipes/suggested')
@@ -642,6 +656,9 @@ export default function HomeScreen() {
     handleQuickMacroFilter,
     handleToggleMealPrepMode,
   });
+
+  // ROADMAP 4.0 HX2.4 — once-per-session reasoning peek gate.
+  const reasoningPeek = useReasoningPeekGate();
 
   // ROADMAP 4.0 FX3.4 — chip ranking by user toggle frequency.
   const { rankedChips, recordChipToggle } = useFilterChipRanking(DEFAULT_FILTER_CHIPS);
@@ -1151,10 +1168,28 @@ export default function HomeScreen() {
           onToggleSave={handleSave}
         />
 
-        {/* ROADMAP 4.0 HX0.2 — "Why today's hero" rationale ribbon.
-            Renders nothing when the backend declined to generate one
-            (cold-start / no strong signals). */}
-        <HeroRationaleRibbon rationale={(recipeOfTheDay as any)?.rationale ?? null} />
+        {/* ROADMAP 4.0 HX2.2 — first-cuisine badge (renders only when this
+            cuisine is one the user has never cooked). */}
+        <FirstCuisineBadge
+          cuisine={(recipeOfTheDay as any)?.cuisine ?? null}
+          onTap={(cuisine) => router.push(`/cultural-primer/${encodeURIComponent(cuisine)}` as never)}
+        />
+
+        {/* ROADMAP 4.0 HX0.2 + HX2.4 — rationale ribbon with the once-per-
+            session "tap to peek" pulse dot. */}
+        <HeroRationaleRibbon
+          rationale={(recipeOfTheDay as any)?.rationale ?? null}
+          peekHint={reasoningPeek.showPeek}
+          onPeekDismiss={reasoningPeek.dismissPeek}
+        />
+
+        {/* ROADMAP 4.0 HX2.1 — hero re-roll pill (3 rerolls → SurpriseMeModal). */}
+        {recipeOfTheDay && (
+          <HeroRerollPill
+            onReroll={(recipe) => setRerolledHero(recipe)}
+            onExhausted={() => setShowSurpriseModal(true)}
+          />
+        )}
 
         {/* ROADMAP 4.0 J4 — Sunday Polaroid drop (renders only on local Sunday) */}
         {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}

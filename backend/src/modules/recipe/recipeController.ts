@@ -4673,6 +4673,24 @@ export const recipeController = {
     }
   },
 
+  // ROADMAP 4.0 HX2.1 — POST /api/recipes/hero/reroll
+  // Returns the next-ranked candidate at `rank` from the same retrieval call.
+  // Caller passes rank=2 for the first re-roll, 3 for the second, 4 for the
+  // third; rank 5+ flips `exhausted: true` so the UI falls through to
+  // SurpriseMeModal.
+  async heroReroll(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const rank = Math.max(1, parseInt(req.body?.rank as string) || 2);
+      const { getHeroReroll } = require('@/services/heroRerollService');
+      const result = await getHeroReroll({ userId, rank });
+      res.json(result);
+    } catch (error: any) {
+      logger.error({ data: error }, '❌ Error in heroReroll:');
+      res.status(500).json({ error: 'Failed to reroll hero', details: error.message });
+    }
+  },
+
   // ROADMAP 4.0 HX5.1 — GET /api/recipes/home/almost-made-it
   // Returns the next-5 candidates that ranked just below the visible cut,
   // each with `marginVsCut` (smaller = closer). Frames ranker provenance

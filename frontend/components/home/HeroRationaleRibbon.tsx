@@ -20,9 +20,20 @@ export interface HeroRationale {
 
 export interface HeroRationaleRibbonProps {
   rationale: HeroRationale | null | undefined;
+  /** ROADMAP 4.0 HX2.4 — when true, render the once-per-session pulse dot
+   *  next to the ribbon. Caller is responsible for clearing the flag once
+   *  the user has opened the sheet. */
+  peekHint?: boolean;
+  /** ROADMAP 4.0 HX2.4 — fired the first time the user opens the sheet
+   *  while peekHint is true. Caller persists the dismissed state. */
+  onPeekDismiss?: () => void;
 }
 
-export default function HeroRationaleRibbon({ rationale }: HeroRationaleRibbonProps) {
+export default function HeroRationaleRibbon({
+  rationale,
+  peekHint = false,
+  onPeekDismiss,
+}: HeroRationaleRibbonProps) {
   const [expanded, setExpanded] = useState(false);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -41,13 +52,31 @@ export default function HeroRationaleRibbon({ rationale }: HeroRationaleRibbonPr
         accessibilityLabel={`Why today's hero: ${rationale.primaryReason}. Tap for more.`}
         onPress={() => {
           setExpanded(true);
+          if (peekHint) {
+            onPeekDismiss?.();
+            logHomeSurfaceEvent({ surface: 'sazon_reasoning_peek', eventType: 'tap' });
+          }
           logHomeSurfaceEvent({ surface: 'hero_rationale_ribbon', eventType: 'expand' });
         }}
-        style={{ paddingHorizontal: 16, paddingVertical: 6 }}
+        style={{ paddingHorizontal: 16, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' }}
       >
+        {peekHint && (
+          <View
+            testID="hero-rationale-peek-dot"
+            accessibilityLabel="New: tap to peek at why this was picked"
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: '#F59E0B',
+              marginRight: 8,
+            }}
+          />
+        )}
         <Text
           numberOfLines={2}
           style={{
+            flex: 1,
             color: subtle,
             fontStyle: 'italic',
             fontSize: 13,

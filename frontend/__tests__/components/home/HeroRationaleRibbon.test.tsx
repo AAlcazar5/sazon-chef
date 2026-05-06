@@ -58,4 +58,38 @@ describe('HeroRationaleRibbon (HX0.2)', () => {
     expect(getByTestId('hero-rationale-secondary-1')).toBeTruthy();
     expect(getByTestId('hero-rationale-secondary-2')).toBeTruthy();
   });
+
+  // ── HX2.4 — peek hint ────────────────────────────────────────────────────
+
+  it('HX2.4 — does not render the peek dot when peekHint is false', () => {
+    const { queryByTestId } = renderWithProviders(
+      <HeroRationaleRibbon
+        rationale={{ primaryReason: 'p', secondaryReasons: [] }}
+      />,
+    );
+    expect(queryByTestId('hero-rationale-peek-dot')).toBeNull();
+  });
+
+  it('HX2.4 — renders the pulse dot when peekHint is true', () => {
+    const { getByTestId } = renderWithProviders(
+      <HeroRationaleRibbon
+        rationale={{ primaryReason: 'p', secondaryReasons: [] }}
+        peekHint
+      />,
+    );
+    expect(getByTestId('hero-rationale-peek-dot')).toBeTruthy();
+  });
+
+  it('HX2.4 — fires onPeekDismiss the first time the user expands the ribbon', () => {
+    const onPeekDismiss = jest.fn();
+    const { getByTestId } = renderWithProviders(
+      <HeroRationaleRibbon
+        rationale={{ primaryReason: 'p', secondaryReasons: [] }}
+        peekHint
+        onPeekDismiss={onPeekDismiss}
+      />,
+    );
+    fireEvent.press(getByTestId('hero-rationale-ribbon'));
+    expect(onPeekDismiss).toHaveBeenCalledTimes(1);
+  });
 });
