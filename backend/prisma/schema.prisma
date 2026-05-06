@@ -1314,6 +1314,10 @@ model ComposedPlate {
   totalCost             Float?
   pantryCoveragePercent Float
   recipeId              String?
+  // ROADMAP 4.0 J17.2 — plate archetype (few_small_things | standard | null).
+  // Discovery framing: "A few small things" surfaced as a STYLE, never a
+  // health pitch. Null on legacy plates created before the field existed.
+  archetype             String?
   createdAt             DateTime @default(now())
 
   // Phase 8: social
