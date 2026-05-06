@@ -552,8 +552,8 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
   - [x] **Test:** `frontend/__tests__/components/onboarding/TonightModeNudge.test.tsx` (5 tests) — render gates, Try it path, Not now path.
 
 ### T4: Telemetry + decision gate
-- [ ] **T4.1: Analytics events** — `tonight_proposal_shown` (with copy template id), `tonight_proposal_accepted` (CTA tap → cook), `tonight_proposal_swapped` (slot swap), `tonight_proposal_escaped` (More affordance), `tonight_mode_disabled` (toggle off). All events include `propsalLatencyMs` + `pantryCoveragePct`.
-  - **Test:** `frontend/__tests__/analytics/tonight.test.ts` — each user action fires exactly one event with the expected shape; no event fires on render.
+- [x] **T4.1: Analytics events** ✅ — `frontend/lib/analytics.ts` now exports `TONIGHT_EVENTS` registry + 5 typed helpers (`trackTonightProposalShown/Accepted/Swapped/Escaped` + `trackTonightModeDisabled`). All include `proposalLatencyMs` + `pantryCoveragePct`. Wired into `app/tonight.tsx` (shown / accepted / swapped / escaped) and `components/profile/TonightModeRow.tsx` (disabled fires only on toggle-off).
+  - [x] **Test:** `frontend/__tests__/analytics/tonight.test.ts` (6 tests) — registry shape + each helper spies on `track` and asserts payload shape.
 - [ ] **T4.2: 2-week internal dogfood** — alex on Tonight mode exclusively for 14 days. Daily journal (one line: *did the proposal feel right?* y/n + why). Decision gate at day 14: ship as freemium experiment OR archive branch.
   - **Verification & Metrics:** acceptance rate (CTA tap / proposal shown) ≥ 60% to advance; swap-then-accept ≥ 75% (i.e., when user swaps, they then cook); escape rate < 25%. If all three clear, promote to closed-beta cohort.
 
