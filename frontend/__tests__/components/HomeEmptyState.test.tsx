@@ -25,6 +25,17 @@ jest.mock('../../components/ui/HapticTouchableOpacity', () => {
   };
 });
 
+jest.mock('../../components/ui/GradientButton', () => {
+  const { TouchableOpacity, Text } = require('react-native');
+  return function MockGradientButton({ label, onPress }: any) {
+    return (
+      <TouchableOpacity onPress={onPress}>
+        <Text>{label}</Text>
+      </TouchableOpacity>
+    );
+  };
+});
+
 jest.mock('../../constants/Haptics', () => ({
   HapticPatterns: { buttonPressPrimary: jest.fn() },
 }));
@@ -54,22 +65,27 @@ const defaultProps = {
 describe('HomeEmptyState', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('renders a mascot element', () => {
+  it('renders the body mascot element (no header mascot — FX1.2)', () => {
     const { getAllByTestId } = render(<HomeEmptyState {...defaultProps} />);
-    // Both AnimatedLogoMascot (header) and LogoMascot (body) render
-    expect(getAllByTestId(/mascot-/).length).toBeGreaterThanOrEqual(1);
+    // FX1.2: only the body LogoMascot renders; the inner Sazon Chef header is gone.
+    expect(getAllByTestId(/mascot-/).length).toBe(1);
   });
 
-  it('renders the "curious" mascot expression with no filters', () => {
-    const { getAllByTestId } = render(<HomeEmptyState {...defaultProps} />);
-    expect(getAllByTestId('mascot-curious').length).toBeGreaterThanOrEqual(1);
+  it('renders the "curious" body mascot expression with no filters', () => {
+    const { getByTestId } = render(<HomeEmptyState {...defaultProps} />);
+    expect(getByTestId('mascot-curious')).toBeTruthy();
   });
 
-  it('renders "thinking" mascot when mealPrepMode is true', () => {
-    const { getAllByTestId } = render(
+  it('renders "thinking" body mascot when mealPrepMode is true', () => {
+    const { getByTestId } = render(
       <HomeEmptyState {...defaultProps} mealPrepMode={true} />
     );
-    expect(getAllByTestId('mascot-thinking').length).toBeGreaterThanOrEqual(1);
+    expect(getByTestId('mascot-thinking')).toBeTruthy();
+  });
+
+  it('does not render an inner "Sazon Chef" header (FX1.2)', () => {
+    const { queryByText } = render(<HomeEmptyState {...defaultProps} />);
+    expect(queryByText(/^Sazon Chef$/)).toBeNull();
   });
 
   it('renders "No recipes available" when no filters or search', () => {

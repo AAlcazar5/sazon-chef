@@ -84,7 +84,7 @@ describe('useHomeFilterRowChips', () => {
     expect(handleToggleMealPrepMode).toHaveBeenCalledWith(true);
   });
 
-  it('routes dietary chips (budget/one_pot/high_fiber) to handleQuickFilter(dietaryRestrictions)', () => {
+  it('routes dietary chips (budget/one_pot/high_fiber) to handleQuickFilter(dietaryRestrictions) in string form (FX2.2)', () => {
     const handleQuickFilter = jest.fn();
     const { result } = renderHook(() =>
       useHomeFilterRowChips({
@@ -97,7 +97,46 @@ describe('useHomeFilterRowChips', () => {
       }),
     );
     act(() => result.current.onChipToggle('budget'));
-    expect(handleQuickFilter).toHaveBeenCalledWith('dietaryRestrictions', ['Budget-Friendly']);
+    // FX2.2 — pass string form so handleQuickFilter's ref-aware toggle path
+    // computes against the latest snapshot instead of a stale closure.
+    expect(handleQuickFilter).toHaveBeenCalledWith('dietaryRestrictions', 'Budget-Friendly');
+  });
+
+  it('routes the easy chip to handleQuickFilter(difficulty) in string form (FX2.2)', () => {
+    const handleQuickFilter = jest.fn();
+    const { result } = renderHook(() =>
+      useHomeFilterRowChips({
+        filters: baseHomeFilters,
+        quickMacroFilters: { highProtein: false, lowCarb: false, lowCalorie: false },
+        mealPrepMode: false,
+        handleQuickFilter,
+        handleQuickMacroFilter: jest.fn(),
+        handleToggleMealPrepMode: jest.fn(),
+      }),
+    );
+    act(() => result.current.onChipToggle('easy'));
+    expect(handleQuickFilter).toHaveBeenCalledWith('difficulty', 'Easy');
+  });
+
+  it('two synchronous chip taps both reach handleQuickFilter (FX2.2 race)', () => {
+    const handleQuickFilter = jest.fn();
+    const handleQuickMacroFilter = jest.fn();
+    const { result } = renderHook(() =>
+      useHomeFilterRowChips({
+        filters: baseHomeFilters,
+        quickMacroFilters: { highProtein: false, lowCarb: false, lowCalorie: false },
+        mealPrepMode: false,
+        handleQuickFilter,
+        handleQuickMacroFilter,
+        handleToggleMealPrepMode: jest.fn(),
+      }),
+    );
+    act(() => {
+      result.current.onChipToggle('easy');
+      result.current.onChipToggle('high_protein');
+    });
+    expect(handleQuickFilter).toHaveBeenCalledWith('difficulty', 'Easy');
+    expect(handleQuickMacroFilter).toHaveBeenCalledWith('highProtein');
   });
 });
 

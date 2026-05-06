@@ -1,10 +1,12 @@
 // frontend/components/home/HomeEmptyState.tsx
-// Contextual empty state with suggestions for home screen
+// ROADMAP 4.0 FX1.2 — body-only contextual empty state.
+//
+// The persistent home chrome (HomeHeader + FilterRow) lives in app/(tabs)/index.tsx
+// and renders above this body in all states so the user can always reach a chip
+// to deselect a filter that produced zero results.
 
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { AnimatedLogoMascot } from '../mascot';
 import { LogoMascot } from '../mascot';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton from '../ui/GradientButton';
@@ -108,19 +110,8 @@ function HomeEmptyState({
   const emptyStateExpression = mealPrepMode ? 'thinking' : (hasActiveFilters ? 'thinking' : 'curious');
 
   return (
-    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 ">
-        <View className="flex-row items-center">
-          <AnimatedLogoMascot
-            expression={emptyStateExpression}
-            size="xsmall"
-            animationType="idle"
-          />
-          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2 }} accessibilityRole="header">Sazon Chef</Text>
-        </View>
-      </View>
-      <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="flex-1 items-center justify-center p-8">
+    <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }}>
+      <View className="flex-1 items-center justify-center p-8">
           <LogoMascot
             expression={emptyStateExpression}
             size="large"
@@ -197,8 +188,7 @@ function HomeEmptyState({
             )}
           </View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 

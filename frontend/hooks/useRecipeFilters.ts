@@ -1,13 +1,15 @@
 // frontend/hooks/useRecipeFilters.ts
 // Hook for managing recipe filter state and persistence
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, type MutableRefObject } from 'react';
 import { filterStorage, type FilterState } from '../lib/filterStorage';
 import { getActiveFilterLabels } from '../utils/filterUtils';
 
 export interface UseRecipeFiltersReturn {
   /** Current filter state */
   filters: FilterState;
+  /** ROADMAP 4.0 FX2.1 — always-current ref for ref-aware consumers (race-safe). */
+  filtersRef: MutableRefObject<FilterState>;
   /** Active filter labels for display */
   activeFilters: string[];
   /** Whether filters have been loaded from storage */
@@ -35,10 +37,22 @@ export interface UseRecipeFiltersReturn {
  * Handles filter state, modal visibility, and AsyncStorage persistence
  */
 export function useRecipeFilters(): UseRecipeFiltersReturn {
-  const [filters, setFilters] = useState<FilterState>(filterStorage.getDefaultFilters());
+  const [filters, setFiltersInternal] = useState<FilterState>(filterStorage.getDefaultFilters());
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
+
+  // ROADMAP 4.0 FX2.1 — keep a ref mirror of `filters` updated synchronously on
+  // every state write, so race-prone consumers (handleQuickFilter, chip
+  // toggles, saveFilters) read the latest snapshot even when fired twice in
+  // the same tick. A useEffect mirror would lag a render and re-introduce the
+  // race; the imperative update inside `setFilters` keeps it current.
+  const filtersRef = useRef<FilterState>(filters);
+
+  const setFilters = useCallback((next: FilterState) => {
+    filtersRef.current = next;
+    setFiltersInternal(next);
+  }, []);
 
   // Load saved filters on mount
   useEffect(() => {
@@ -57,7 +71,7 @@ export function useRecipeFilters(): UseRecipeFiltersReturn {
       }
     };
     loadSavedFilters();
-  }, []);
+  }, [setFilters]);
 
   // Open filter modal
   const openFilterModal = useCallback(() => {
@@ -70,53 +84,57 @@ export function useRecipeFilters(): UseRecipeFiltersReturn {
   }, []);
 
   // Handle filter changes
+  // ROADMAP 4.0 FX2.1 — read from ref so synchronous repeats stack instead of
+  // racing against a stale closure.
   const handleFilterChange = useCallback((
     type: keyof FilterState,
     value: string | number | null | string[]
   ) => {
-    setFilters(prev => {
-      const newFilters = { ...prev };
+    const prev = filtersRef.current;
+    const newFilters = { ...prev };
 
-      if (type === 'maxCookTime') {
-        newFilters.maxCookTime = value as number | null;
+    if (type === 'maxCookTime') {
+      newFilters.maxCookTime = value as number | null;
+    } else {
+      const arrayType = type as 'cuisines' | 'dietaryRestrictions' | 'difficulty';
+
+      if (Array.isArray(value)) {
+        newFilters[arrayType] = value;
       } else {
-        const arrayType = type as 'cuisines' | 'dietaryRestrictions' | 'difficulty';
+        const currentArray = newFilters[arrayType];
+        const valueStr = value as string;
 
-        // If value is already an array, use it directly
-        if (Array.isArray(value)) {
-          newFilters[arrayType] = value;
+        if (currentArray.includes(valueStr)) {
+          newFilters[arrayType] = currentArray.filter(item => item !== valueStr);
         } else {
-          const currentArray = newFilters[arrayType];
-          const valueStr = value as string;
-
-          if (currentArray.includes(valueStr)) {
-            newFilters[arrayType] = currentArray.filter(item => item !== valueStr);
-          } else {
-            newFilters[arrayType] = [...currentArray, valueStr];
-          }
+          newFilters[arrayType] = [...currentArray, valueStr];
         }
       }
+    }
 
-      return newFilters;
-    });
-  }, []);
+    setFilters(newFilters);
+  }, [setFilters]);
 
   // Update active filters display
+  // ROADMAP 4.0 FX2.1 — derive labels from the current ref so two synchronous
+  // chip taps both contribute to the displayed badge instead of racing.
   const updateActiveFilters = useCallback(() => {
-    const labels = getActiveFilterLabels(filters);
+    const labels = getActiveFilterLabels(filtersRef.current);
     setActiveFilters(labels);
-  }, [filters]);
+  }, []);
 
   // Save filters to storage
+  // ROADMAP 4.0 FX2.1 — read via ref so two synchronous chip taps both persist
+  // (instead of the second clobbering the first via stale closure).
   const saveFilters = useCallback(async () => {
     try {
-      await filterStorage.saveFilters(filters);
+      await filterStorage.saveFilters(filtersRef.current);
       console.log('💾 Filters saved to storage');
     } catch (error) {
       console.error('❌ Error saving filters:', error);
       throw error;
     }
-  }, [filters]);
+  }, []);
 
   // Clear all filters
   const resetFilters = useCallback(async () => {
@@ -131,10 +149,11 @@ export function useRecipeFilters(): UseRecipeFiltersReturn {
       console.error('❌ Error clearing filters from storage:', error);
       throw error;
     }
-  }, []);
+  }, [setFilters]);
 
   return {
     filters,
+    filtersRef,
     activeFilters,
     filtersLoaded,
     showFilterModal,

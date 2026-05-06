@@ -297,7 +297,7 @@ export default function HomeScreen() {
 
   // Filter state - using extracted hook
   const filterHook = useRecipeFilters();
-  const { filters, activeFilters, filtersLoaded, showFilterModal } = filterHook;
+  const { filters, filtersRef, activeFilters, filtersLoaded, showFilterModal } = filterHook;
   const { setFilters, openFilterModal, closeFilterModal, handleFilterChange, updateActiveFilters, saveFilters, resetFilters } = filterHook;
 
   // Random recipe generation - using extracted hook
@@ -520,6 +520,7 @@ export default function HomeScreen() {
   // Filter actions (quick-toggle, modal-apply, clear-all) - using extracted hook
   const { handleQuickFilter, applyFilters, clearFilters } = useFilterActions({
     filters,
+    filtersRef,
     setFilters,
     saveFilters,
     updateActiveFilters,
@@ -920,56 +921,19 @@ export default function HomeScreen() {
     return ids;
   }, [userFeedback]);
 
-  // Loading state with skeleton loaders
+  // ROADMAP 4.0 FX1.1 — single body-state discriminator.
+  // The persistent header + filter row render unconditionally below; this
+  // chooses which body to slot under the chrome. Loading/error/empty/no-results
+  // render below the chrome (not as full-screen replacements) so the user can
+  // always reach a chip to deselect a filter that produced zero results.
+  type BodyState = 'loading' | 'error' | 'no-results' | 'empty' | 'content';
+  let bodyState: BodyState = 'content';
   if ((loading || initialLoading) && suggestedRecipes.length === 0) {
-    return <HomeLoadingState viewMode={viewMode} />;
-  }
-
-  // Error state
-  if (error && suggestedRecipes.length === 0) {
-    return <HomeErrorState error={error as string} errorCode={errorCode} failureClass={errorFailureClass} onRetry={refetch} />;
-  }
-
-  // Empty state — smart no-results when searching, generic otherwise
-  if (suggestedRecipes.length === 0 && !loading && !loadingFromFilters && !initialLoading) {
-    if (searchQuery.trim() || cravingQuery.trim()) {
-      return (
-        <NoResultsState
-          searchQuery={isCravingSearch ? `craving: ${cravingQuery}` : searchQuery}
-          suggestions={isCravingSearch ? [] : homeFeed.searchSuggestions}
-          hasActiveFilters={activeFilters.length > 0}
-          onSelectSuggestion={(query) => {
-            handleSearchChange(query);
-          }}
-          onClearFilters={() => {
-            clearFilters();
-            setMealPrepMode(false);
-          }}
-          onClearSearch={() => {
-            clearSearch();
-            refetch();
-          }}
-        />
-      );
-    }
-    return (
-      <HomeEmptyState
-        filters={filters}
-        activeFilters={activeFilters}
-        mealPrepMode={mealPrepMode}
-        searchQuery={searchQuery}
-        onClearFilters={() => {
-          clearFilters();
-          setMealPrepMode(false);
-        }}
-        onDisableMealPrep={() => handleToggleMealPrepMode(false)}
-        onClearSearch={() => {
-          clearSearch();
-          refetch();
-        }}
-        onRefresh={refetch}
-      />
-    );
+    bodyState = 'loading';
+  } else if (error && suggestedRecipes.length === 0) {
+    bodyState = 'error';
+  } else if (suggestedRecipes.length === 0 && !loading && !loadingFromFilters && !initialLoading) {
+    bodyState = (searchQuery.trim() || cravingQuery.trim()) ? 'no-results' : 'empty';
   }
 
   return (
@@ -990,7 +954,58 @@ export default function HomeScreen() {
         onChipToggle={homeFilterChipState.onChipToggle}
       />
 
-      {/* Main content area */}
+      {/* ROADMAP 4.0 FX1.1 — body-only state branches; chrome above stays visible */}
+      {bodyState === 'loading' && <HomeLoadingState viewMode={viewMode} />}
+
+      {bodyState === 'error' && (
+        <HomeErrorState
+          error={error as string}
+          errorCode={errorCode}
+          failureClass={errorFailureClass}
+          onRetry={refetch}
+        />
+      )}
+
+      {bodyState === 'no-results' && (
+        <NoResultsState
+          searchQuery={isCravingSearch ? `craving: ${cravingQuery}` : searchQuery}
+          suggestions={isCravingSearch ? [] : homeFeed.searchSuggestions}
+          hasActiveFilters={activeFilters.length > 0}
+          onSelectSuggestion={(query) => {
+            handleSearchChange(query);
+          }}
+          onClearFilters={() => {
+            clearFilters();
+            setMealPrepMode(false);
+          }}
+          onClearSearch={() => {
+            clearSearch();
+            refetch();
+          }}
+        />
+      )}
+
+      {bodyState === 'empty' && (
+        <HomeEmptyState
+          filters={filters}
+          activeFilters={activeFilters}
+          mealPrepMode={mealPrepMode}
+          searchQuery={searchQuery}
+          onClearFilters={() => {
+            clearFilters();
+            setMealPrepMode(false);
+          }}
+          onDisableMealPrep={() => handleToggleMealPrepMode(false)}
+          onClearSearch={() => {
+            clearSearch();
+            refetch();
+          }}
+          onRefresh={refetch}
+        />
+      )}
+
+      {bodyState === 'content' && (
+      /* Main content area */
       <ScrollView
         ref={mainScrollRef}
         style={{ flex: 1 }}
@@ -1167,6 +1182,7 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+      )}
 
       {/* Filter Modal */}
       <FilterModal

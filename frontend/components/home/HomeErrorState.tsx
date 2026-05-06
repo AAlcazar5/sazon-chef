@@ -1,12 +1,14 @@
 // frontend/components/home/HomeErrorState.tsx
-// Error state with contextual messaging and retry for home screen
+// ROADMAP 4.0 FX1.2 — body-only error state.
+//
+// The persistent home chrome (HomeHeader + FilterRow) lives above this body
+// in app/(tabs)/index.tsx; this component renders ONLY the error body so the
+// user can still reach the filter row to deselect filters that may have caused
+// a zero-result fetch.
 
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { AnimatedLogoMascot } from '../mascot';
 import { LogoMascot } from '../mascot';
-import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton from '../ui/GradientButton';
 import { HapticPatterns } from '../../constants/Haptics';
 
@@ -91,59 +93,44 @@ function HomeErrorState({ error, errorCode, failureClass, onRetry }: HomeErrorSt
   const errorInfo = getErrorInfo();
 
   return (
-    <SafeAreaView className="flex-1 bg-surface dark:bg-surface-dark" edges={['top']}>
-      <View className="bg-white dark:bg-gray-800 px-4 pt-4 pb-4 ">
-        <View className="flex-row items-center">
-          <AnimatedLogoMascot
-            expression="supportive"
-            size="xsmall"
-            animationType="idle"
+    <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }}>
+      <View className="flex-1 items-center justify-center p-8">
+        <LogoMascot expression="supportive" size="large" />
+        <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-6 text-center">
+          {errorInfo.title}
+        </Text>
+        <Text className="text-gray-600 dark:text-gray-300 text-center mt-3 text-base leading-6 max-w-sm">
+          {errorInfo.message}
+        </Text>
+
+        <View className="mt-6 w-full max-w-sm">
+          <Text className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center">
+            💡 What you can try:
+          </Text>
+          <View className="space-y-2">
+            {errorInfo.suggestions.map((suggestion, index) => (
+              <View key={index} className="flex-row items-start bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+                <Text className="text-gray-500 dark:text-gray-400 mr-2">•</Text>
+                <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                  {suggestion}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View className="mt-8 w-full max-w-sm">
+          <GradientButton
+            label="Try Again"
+            onPress={() => {
+              onRetry();
+              HapticPatterns.buttonPressPrimary();
+            }}
+            icon="refresh"
           />
-          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2 }} accessibilityRole="header">Sazon Chef</Text>
         </View>
       </View>
-      <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="flex-1 items-center justify-center p-8">
-          <LogoMascot
-            expression="supportive"
-            size="large"
-          />
-          <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-6 text-center">
-            {errorInfo.title}
-          </Text>
-          <Text className="text-gray-600 dark:text-gray-300 text-center mt-3 text-base leading-6 max-w-sm">
-            {errorInfo.message}
-          </Text>
-
-          <View className="mt-6 w-full max-w-sm">
-            <Text className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center">
-              💡 What you can try:
-            </Text>
-            <View className="space-y-2">
-              {errorInfo.suggestions.map((suggestion, index) => (
-                <View key={index} className="flex-row items-start bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-                  <Text className="text-gray-500 dark:text-gray-400 mr-2">•</Text>
-                  <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                    {suggestion}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View className="mt-8 w-full max-w-sm">
-            <GradientButton
-              label="Try Again"
-              onPress={() => {
-                onRetry();
-                HapticPatterns.buttonPressPrimary();
-              }}
-              icon="refresh"
-            />
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 

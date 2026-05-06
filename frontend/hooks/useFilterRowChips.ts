@@ -74,22 +74,19 @@ export function useHomeFilterRowChips(
     mealPrepMode,
   ]);
 
+  // ROADMAP 4.0 FX2.2 — drop closure-based array pre-computation for `easy`
+  // and dietary chips; pass the string form so handleQuickFilter's ref-aware
+  // toggle path computes against the latest snapshot. Two rapid taps on
+  // different chips no longer race.
   const onChipToggle = useCallback(
     (chipId: string) => {
       switch (chipId) {
         case 'quick':
           handleQuickFilter('maxCookTime', filters.maxCookTime === 30 ? null : 30);
           return;
-        case 'easy': {
-          const isActive = filters.difficulty.includes('Easy');
-          handleQuickFilter(
-            'difficulty',
-            isActive
-              ? filters.difficulty.filter((d) => d !== 'Easy')
-              : [...filters.difficulty, 'Easy'],
-          );
+        case 'easy':
+          handleQuickFilter('difficulty', 'Easy');
           return;
-        }
         case 'high_protein':
           handleQuickMacroFilter('highProtein');
           return;
@@ -105,19 +102,11 @@ export function useHomeFilterRowChips(
       }
       const tag = DIETARY_TAG_BY_CHIP_ID[chipId];
       if (tag) {
-        const isActive = filters.dietaryRestrictions.includes(tag);
-        handleQuickFilter(
-          'dietaryRestrictions',
-          isActive
-            ? filters.dietaryRestrictions.filter((d) => d !== tag)
-            : [...filters.dietaryRestrictions, tag],
-        );
+        handleQuickFilter('dietaryRestrictions', tag);
       }
     },
     [
       filters.maxCookTime,
-      filters.difficulty,
-      filters.dietaryRestrictions,
       mealPrepMode,
       handleQuickFilter,
       handleQuickMacroFilter,

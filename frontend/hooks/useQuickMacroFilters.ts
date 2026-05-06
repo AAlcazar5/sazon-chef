@@ -1,7 +1,7 @@
 // frontend/hooks/useQuickMacroFilters.ts
 // Manages quick macro filter state (highProtein, lowCarb, lowCalorie) and the associated fetch on toggle
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { FilterState } from '../lib/filterStorage';
 import { type RecipeFetchResult, type RecipeFetchParams } from './useRecipeFetcher';
 import { HapticPatterns } from '../constants/Haptics';
@@ -49,18 +49,28 @@ export function useQuickMacroFilters(options: UseQuickMacroFiltersOptions): UseQ
     setPaginationLoading,
   } = options;
 
-  const [quickMacroFilters, setQuickMacroFilters] = useState<MacroFilterState>({
+  const [quickMacroFilters, setQuickMacroFiltersInternal] = useState<MacroFilterState>({
     highProtein: false,
     lowCarb: false,
     lowCalorie: false,
   });
 
-  const getMacroFilterParams = useCallback(() => buildMacroParams(quickMacroFilters), [quickMacroFilters]);
+  // ROADMAP 4.0 FX2.3 — ref mirror updated synchronously inside the setter so
+  // two rapid taps on different macro chips both stick instead of the second
+  // clobbering the first via stale closure read.
+  const quickMacroFiltersRef = useRef<MacroFilterState>(quickMacroFilters);
+  const setQuickMacroFilters = useCallback((next: MacroFilterState) => {
+    quickMacroFiltersRef.current = next;
+    setQuickMacroFiltersInternal(next);
+  }, []);
+
+  const getMacroFilterParams = useCallback(() => buildMacroParams(quickMacroFiltersRef.current), []);
 
   const handleQuickMacroFilter = useCallback(async (filterType: 'highProtein' | 'lowCarb' | 'lowCalorie') => {
+    const current = quickMacroFiltersRef.current;
     const newMacroFilters = {
-      ...quickMacroFilters,
-      [filterType]: !quickMacroFilters[filterType],
+      ...current,
+      [filterType]: !current[filterType],
     };
     setQuickMacroFilters(newMacroFilters);
     HapticPatterns.buttonPress();
@@ -83,7 +93,7 @@ export function useQuickMacroFilters(options: UseQuickMacroFiltersOptions): UseQ
       applyFetchResult(result);
     }
     setPaginationLoading(false);
-  }, [quickMacroFilters, filters, mealPrepMode, searchQuery, recipesPerPage, timeAwareMode, fetchRecipes, applyFetchResult, setPaginationLoading]);
+  }, [setQuickMacroFilters, filters, mealPrepMode, searchQuery, recipesPerPage, timeAwareMode, fetchRecipes, applyFetchResult, setPaginationLoading]);
 
   return {
     quickMacroFilters,

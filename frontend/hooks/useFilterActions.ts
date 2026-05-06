@@ -2,13 +2,17 @@
 // Manages the three filter-application flows: quick-toggle, modal-apply, and clear-all.
 // Each builds filter params, calls fetchRecipes, and applies the result.
 
-import { useCallback } from 'react';
+import { useCallback, type MutableRefObject } from 'react';
 import { Alert } from 'react-native';
 import type { FilterState } from '../lib/filterStorage';
 import { type RecipeFetchResult, type RecipeFetchParams } from './useRecipeFetcher';
 
 interface UseFilterActionsOptions {
   filters: FilterState;
+  /** ROADMAP 4.0 FX2.1 — current-snapshot ref from useRecipeFilters; required
+   *  so two synchronous chip taps each see the latest state instead of a
+   *  stale useCallback closure. */
+  filtersRef: MutableRefObject<FilterState>;
   setFilters: (filters: FilterState) => void;
   saveFilters: () => Promise<void>;
   updateActiveFilters: () => void;
@@ -35,6 +39,7 @@ interface UseFilterActionsReturn {
 export function useFilterActions(options: UseFilterActionsOptions): UseFilterActionsReturn {
   const {
     filters,
+    filtersRef,
     setFilters,
     saveFilters,
     updateActiveFilters,
@@ -53,7 +58,12 @@ export function useFilterActions(options: UseFilterActionsOptions): UseFilterAct
   } = options;
 
   const handleQuickFilter = useCallback(async (type: keyof FilterState, value: string | number | null | string[]) => {
-    const newFilters = { ...filters };
+    // ROADMAP 4.0 FX2.1 — read latest snapshot via ref so two synchronous chip
+    // taps both stick. Previously read `filters` from closure; the second tap
+    // computed against the same stale snapshot and `setFilters` clobbered the
+    // first.
+    const current = filtersRef.current;
+    const newFilters = { ...current };
 
     if (type === 'maxCookTime') {
       newFilters.maxCookTime = value as number | null;
@@ -103,7 +113,7 @@ export function useFilterActions(options: UseFilterActionsOptions): UseFilterAct
       console.log(`✅ Filter applied: Received ${result.recipes.length} recipes, total: ${result.total}`);
     }
     setPaginationLoading(false);
-  }, [filters, setFilters, saveFilters, updateActiveFilters, isCravingSearch, onRerunCravingSearch, mealPrepMode, searchQuery, recipesPerPage, getMacroFilterParams, timeAwareMode, fetchRecipes, applyFetchResult, setPaginationLoading]);
+  }, [filtersRef, setFilters, saveFilters, updateActiveFilters, isCravingSearch, onRerunCravingSearch, mealPrepMode, searchQuery, recipesPerPage, getMacroFilterParams, timeAwareMode, fetchRecipes, applyFetchResult, setPaginationLoading]);
 
   const applyFilters = useCallback(async () => {
     updateActiveFilters();

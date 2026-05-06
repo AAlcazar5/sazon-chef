@@ -1,12 +1,13 @@
 // frontend/components/home/HomeLoadingState.tsx
-// Loading state with skeleton loaders for home screen
+// ROADMAP 4.0 FX1.2 — body-only loading state.
+//
+// The persistent home chrome (HomeHeader + FilterRow) lives in app/(tabs)/index.tsx
+// and stays visible across all states. This component renders ONLY the body —
+// hero skeleton + suggestions skeleton — to slot under the chrome.
 
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
-import { AnimatedLogoMascot } from '../mascot';
+import { View, ScrollView } from 'react-native';
 import RecipeCardSkeleton from '../recipe/RecipeCardSkeleton';
-import FrostedHeader from '../ui/FrostedHeader';
-import ScreenGradient from '../ui/ScreenGradient';
 import { Spacing } from '../../constants/Spacing';
 
 interface HomeLoadingStateProps {
@@ -15,69 +16,39 @@ interface HomeLoadingStateProps {
 
 function HomeLoadingState({ viewMode }: HomeLoadingStateProps) {
   return (
-    <ScreenGradient>
-      <View style={{ flex: 1 }}>
-        <FrostedHeader paddingBottom={12} withTopInset>
-          <View className="flex-row items-center justify-between" style={{ height: 36 }}>
-            <View className="flex-row items-center flex-1">
-              <AnimatedLogoMascot
-                expression="happy"
-                size="xsmall"
-                animationType="pulse"
-              />
-              <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ marginLeft: -2 }} accessibilityRole="header">Sazon Chef</Text>
-            </View>
-            {/* View Mode Toggle Skeleton */}
-            <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <View className="w-10 h-8 rounded bg-gray-200 dark:bg-gray-600" />
-              <View className="w-10 h-8 rounded bg-gray-200 dark:bg-gray-600 ml-1" />
-            </View>
+    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
+      {/* Featured Recipe Skeleton */}
+      <View className="px-4 mb-4" style={{ marginTop: Spacing.xl }}>
+        <View className="flex-row items-center justify-between mb-4">
+          <View>
+            <View className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
+            <View className="h-3 w-32 rounded bg-gray-200 dark:bg-gray-700" />
           </View>
-        </FrostedHeader>
-        {/* Quick Filter Chips Skeleton */}
-        <View className="px-4 py-3">
-          <View className="flex-row" style={{ gap: 8 }}>
+          <View className="h-9 w-20 rounded-lg bg-gray-200 dark:bg-gray-700" />
+        </View>
+        <RecipeCardSkeleton variant="featured" />
+      </View>
+
+      {/* More Suggestions Skeleton */}
+      <View className="px-4">
+        <View className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-700 mb-4" />
+        {viewMode === 'grid' ? (
+          <View className="flex-row flex-wrap" style={{ marginHorizontal: -Spacing.sm }}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <View key={i} className="h-9 w-20 rounded-full bg-gray-200 dark:bg-gray-700" />
+              <View key={i} style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.md }}>
+                <RecipeCardSkeleton variant="grid" />
+              </View>
             ))}
           </View>
-        </View>
-
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: Spacing['3xl'] }}>
-        {/* Featured Recipe Skeleton */}
-        <View className="px-4 mb-4" style={{ marginTop: Spacing.xl }}>
-          <View className="flex-row items-center justify-between mb-4">
-            <View>
-              <View className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
-              <View className="h-3 w-32 rounded bg-gray-200 dark:bg-gray-700" />
-            </View>
-            <View className="h-9 w-20 rounded-lg bg-gray-200 dark:bg-gray-700" />
-          </View>
-          <RecipeCardSkeleton variant="featured" />
-        </View>
-
-        {/* More Suggestions Skeleton */}
-        <View className="px-4">
-          <View className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-700 mb-4" />
-          {viewMode === 'grid' ? (
-            <View className="flex-row flex-wrap" style={{ marginHorizontal: -Spacing.sm }}>
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <View key={i} style={{ width: '50%', paddingHorizontal: Spacing.sm, marginBottom: Spacing.md }}>
-                  <RecipeCardSkeleton variant="grid" />
-                </View>
-              ))}
-            </View>
-          ) : (
-            <>
-              {[1, 2, 3].map((i) => (
-                <RecipeCardSkeleton key={i} variant="list" />
-              ))}
-            </>
-          )}
-        </View>
-        </ScrollView>
+        ) : (
+          <>
+            {[1, 2, 3].map((i) => (
+              <RecipeCardSkeleton key={i} variant="list" />
+            ))}
+          </>
+        )}
       </View>
-    </ScreenGradient>
+    </ScrollView>
   );
 }
 
