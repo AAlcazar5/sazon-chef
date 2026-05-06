@@ -1,19 +1,18 @@
 // frontend/components/today/QuickActionRow.tsx
 // ROADMAP 4.0 Tier A1-d — Today quick-action chip row.
-//
-// 4 chips for the most-used Today actions: Voice / Snap / Build-a-plate / Find-me-a-meal.
-// MRU-sorted (most-recently-used floats left). Persists order to AsyncStorage.
+// HX4.1 — chip order now reflects per-user tap frequency (cold-start: default
+// order; chips with zero taps in 30 days hidden; visible set ≥ 3).
+// HX7.1 — every chip tap is logged via homeSurfaceEvent.
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, View, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { ScrollView, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
-
-const STORAGE_KEY = 'today.quick-actions.mru';
+import { useQuickActionRanking } from '../../hooks/useQuickActionRanking';
+import { logHomeSurfaceEvent } from '../../lib/homeSurfaceEvents';
 
 type ActionId = 'voice' | 'snap' | 'build-a-plate' | 'find-me-a-meal';
 
@@ -49,31 +48,11 @@ export default function QuickActionRow({
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const [order, setOrder] = useState<ActionId[]>(ACTIONS.map((a) => a.id));
-
-  // Hydrate MRU order from storage on mount.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (cancelled || !raw) return;
-        const parsed = JSON.parse(raw) as unknown;
-        if (!Array.isArray(parsed)) return;
-        const valid = parsed.filter((id): id is ActionId =>
-          ACTIONS.some((a) => a.id === id)
-        );
-        // Append any missing ids in default order so a partial list still renders all chips.
-        const missing = ACTIONS.map((a) => a.id).filter((id) => !valid.includes(id));
-        setOrder([...valid, ...missing]);
-      } catch {
-        // ignore — fall through to default order
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // HX4.1 — frequency-ranked chip order (cold-start = default).
+  const { rankedActions: sortedActions, recordTap } = useQuickActionRanking<ActionDef>(
+    ACTIONS,
+    (a) => a.id,
+  );
 
   const handlerFor = useCallback(
     (id: ActionId): (() => void) => {
@@ -94,20 +73,16 @@ export default function QuickActionRow({
   const handleChipPress = useCallback(
     (id: ActionId) => {
       handlerFor(id)();
-      setOrder((prev) => {
-        const next = [id, ...prev.filter((x) => x !== id)];
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {
-          // ignore — best-effort persistence
-        });
-        return next;
+      void recordTap(id);
+      // HX7.1 — log to homeSurfaceEvent (chip id rides as metadata).
+      logHomeSurfaceEvent({
+        surface: 'quick_action_chip',
+        eventType: 'tap',
+        metadata: { actionId: id },
       });
     },
-    [handlerFor]
+    [handlerFor, recordTap]
   );
-
-  const sortedActions: ActionDef[] = order
-    .map((id) => ACTIONS.find((a) => a.id === id))
-    .filter((a): a is ActionDef => Boolean(a));
 
   return (
     <ScrollView
