@@ -32,6 +32,7 @@ import { culturalPrimerRoutes } from '@modules/culturalPrimer/culturalPrimerRout
 import { drinkPairingRoutes } from '@modules/drinkPairing/drinkPairingRoutes';
 import { cohortSocialProofRoutes } from '@modules/cohortSocialProof/cohortSocialProofRoutes';
 import { quipsRoutes } from '@modules/quips/quipsRoutes';
+import { tonightRoutes } from '@modules/tonight/tonightRoutes';
 import { firstCookStatsRoutes } from '@modules/firstCookStats/firstCookStatsRoutes';
 import { cookCompleteSignalsRoutes } from '@modules/cookCompleteSignals/cookCompleteSignalsRoutes';
 import { discoveryMilestonesRoutes } from '@modules/discoveryMilestones/discoveryMilestonesRoutes';
@@ -189,6 +190,8 @@ app.use('/api/drink-pairing', authenticateToken, drinkPairingRoutes);
 app.use('/api/cohort-social-proof', authenticateToken, cohortSocialProofRoutes);
 // ROADMAP 4.0 J7 — Sazon daily quip
 app.use('/api/quips', authenticateToken, quipsRoutes);
+// ROADMAP 4.0 TB2.2 — Tonight LLM proposal endpoint
+app.use('/api/tonight', authenticateToken, tonightRoutes);
 // ROADMAP 4.0 J2 — first-cook-of-cuisine stats
 app.use('/api/first-cook-stats', authenticateToken, firstCookStatsRoutes);
 // ROADMAP 4.0 J14 + J16 — combined cook-complete signals (intensity + recap insight)
