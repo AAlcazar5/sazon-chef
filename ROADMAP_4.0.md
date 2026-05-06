@@ -630,10 +630,9 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
 
 > **Goal:** stress-test the pipeline against personas we don't have real users for yet. **Synthetic data does NOT enter training** — it's only a test harness.
 
-- [ ] **TB4.1: Persona generator** — `scripts/recommender/generateSyntheticPersonas.ts` produces 100 deterministic personas (seed-based) covering Sazon's target distribution (varied cuisines, dietaries, skill levels, household sizes, cook frequencies). Each persona has `taste vector seed + behavioral rules`.
-  - **Test:** `backend/__tests__/scripts/syntheticPersonas.test.ts` — generator deterministic on seed; covers expected distribution (asserts e.g., ≥10% have allergies, ≥20% are weeknight-cookers); no two personas identical.
-- [ ] **TB4.2: End-to-end pipeline regression test** — for each of the 100 personas, run TB1.2 → TB2.1 with fixed clock + mocked LLM (canned responses). Snapshot the output. Any future change to retrieval or ranking that shifts >5 personas' picks fails CI until investigated.
-  - **Test:** `backend/__tests__/recommender/syntheticRegression.test.ts` — snapshot file checked into repo; runs in <30s; snapshot drift surfaces a diff in PR review.
+- [x] **TB4.1: Persona generator** ✅ — `scripts/recommender/generateSyntheticPersonas.ts`. Per-persona Mulberry32 RNG seeded by `seed*1009 + i + 1` so output is deterministic and resilient to count changes. 100 personas by default; covers cuisine prefs, allergies, dietary, skill, household size, cook-frequency distribution; emits a 64-dim `tasteSeed` vector (consumable directly as TB1's context vector for the regression test).
+  - **Test:** `backend/__tests__/scripts/syntheticPersonas.test.ts` ✅ 6/6 — count, determinism, seed-divergence, distribution gates (≥10% allergies, ≥20% weeknight cookers), uniqueness, 64-dim finite tasteSeed.
+- [x] **TB4.2: End-to-end pipeline regression test** ✅ — `backend/__tests__/recommender/syntheticRegression.test.ts`. Runs `retrieveCandidates → rankWithLLM` (canned LLM that picks the top-retrieval candidate) for all 100 personas against a 24-recipe synthetic catalog. Asserts <30s wall time and freezes the picks via `toMatchSnapshot('synthetic-100-picks')` — any retrieval/ranker change that shifts the snapshot fails CI until investigated.
 
 ### TB5: Distill to specialized model (deferred — gated on data volume)
 
