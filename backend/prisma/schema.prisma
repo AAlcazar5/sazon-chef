@@ -119,6 +119,10 @@ model User {
   // ROADMAP 4.0 TB3.1 — back-relation for recommender events.
   recommenderEvents       RecommenderEvent[]
 
+  // ROADMAP 4.0 T0.1 — Tonight Mode opt-in (gated by SAZON_TONIGHT_MODE env flag).
+  tonightModeEnabled      Boolean   @default(false)
+  tonightModePromptedAt   DateTime?
+
   @@map("users")
 }
 
