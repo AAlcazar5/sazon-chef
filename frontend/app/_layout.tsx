@@ -88,6 +88,7 @@ function RootLayoutNav() {
     const inAuth = segments[0] === 'login' || segments[0] === 'register';
     const inOnboarding = segments[0] === 'onboarding';
     const inTabs = segments[0] === '(tabs)';
+    const inTonight = segments[0] === 'tonight';
 
     console.log('[Layout] Navigation logic:', { isAuthenticated, isOnboardingComplete, inAuth, inOnboarding, inTabs });
 
@@ -97,6 +98,22 @@ function RootLayoutNav() {
       console.log('[Layout] Redirecting to login');
       router.replace('/login');
       return;
+    }
+
+    // ROADMAP 4.0 T0.1 — Tonight Mode redirect.
+    // When the env flag is on AND the user has opted in, send authenticated
+    // users to /tonight instead of (tabs). Skip if already on /tonight.
+    if (isAuthenticated && !inAuth && !inOnboarding && !inTonight) {
+      (async () => {
+        const flagOn = (await AsyncStorage.getItem('tonight_mode_flag_on')) === '1';
+        const prefOn = (await AsyncStorage.getItem('tonight_mode_pref_enabled')) === '1';
+        if (flagOn && prefOn) {
+          console.log('[Layout] Redirecting to tonight mode');
+          router.replace('/tonight');
+        }
+      })().catch(() => {});
+      // Don't early-return — fall through so tabs/auth routing still applies
+      // when the gate is off. /tonight redirect happens async if both flags set.
     }
 
     if (isAuthenticated && inAuth) {
