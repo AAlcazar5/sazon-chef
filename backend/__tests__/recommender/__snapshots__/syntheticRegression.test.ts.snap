@@ -1,0 +1,406 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`synthetic pipeline regression (TB4.2) runs end-to-end on 100 personas in <30s and snapshots picks: synthetic-100-picks 1`] = `
+[
+  {
+    "persona": "synthetic-000",
+    "recipe": "r10",
+  },
+  {
+    "persona": "synthetic-001",
+    "recipe": "r11",
+  },
+  {
+    "persona": "synthetic-002",
+    "recipe": "r09",
+  },
+  {
+    "persona": "synthetic-003",
+    "recipe": "r03",
+  },
+  {
+    "persona": "synthetic-004",
+    "recipe": "r14",
+  },
+  {
+    "persona": "synthetic-005",
+    "recipe": "r02",
+  },
+  {
+    "persona": "synthetic-006",
+    "recipe": "r08",
+  },
+  {
+    "persona": "synthetic-007",
+    "recipe": "r12",
+  },
+  {
+    "persona": "synthetic-008",
+    "recipe": "r18",
+  },
+  {
+    "persona": "synthetic-009",
+    "recipe": "r05",
+  },
+  {
+    "persona": "synthetic-010",
+    "recipe": "r12",
+  },
+  {
+    "persona": "synthetic-011",
+    "recipe": "r14",
+  },
+  {
+    "persona": "synthetic-012",
+    "recipe": "r19",
+  },
+  {
+    "persona": "synthetic-013",
+    "recipe": "r07",
+  },
+  {
+    "persona": "synthetic-014",
+    "recipe": "r06",
+  },
+  {
+    "persona": "synthetic-015",
+    "recipe": "r04",
+  },
+  {
+    "persona": "synthetic-016",
+    "recipe": "r10",
+  },
+  {
+    "persona": "synthetic-017",
+    "recipe": "r00",
+  },
+  {
+    "persona": "synthetic-018",
+    "recipe": "r02",
+  },
+  {
+    "persona": "synthetic-019",
+    "recipe": "r08",
+  },
+  {
+    "persona": "synthetic-020",
+    "recipe": "r12",
+  },
+  {
+    "persona": "synthetic-021",
+    "recipe": "r14",
+  },
+  {
+    "persona": "synthetic-022",
+    "recipe": "r00",
+  },
+  {
+    "persona": "synthetic-023",
+    "recipe": "r09",
+  },
+  {
+    "persona": "synthetic-024",
+    "recipe": "r15",
+  },
+  {
+    "persona": "synthetic-025",
+    "recipe": "r05",
+  },
+  {
+    "persona": "synthetic-026",
+    "recipe": "r05",
+  },
+  {
+    "persona": "synthetic-027",
+    "recipe": "r00",
+  },
+  {
+    "persona": "synthetic-028",
+    "recipe": "r05",
+  },
+  {
+    "persona": "synthetic-029",
+    "recipe": "r17",
+  },
+  {
+    "persona": "synthetic-030",
+    "recipe": "r13",
+  },
+  {
+    "persona": "synthetic-031",
+    "recipe": "r07",
+  },
+  {
+    "persona": "synthetic-032",
+    "recipe": "r05",
+  },
+  {
+    "persona": "synthetic-033",
+    "recipe": "r18",
+  },
+  {
+    "persona": "synthetic-034",
+    "recipe": "r01",
+  },
+  {
+    "persona": "synthetic-035",
+    "recipe": "r07",
+  },
+  {
+    "persona": "synthetic-036",
+    "recipe": "r14",
+  },
+  {
+    "persona": "synthetic-037",
+    "recipe": "r16",
+  },
+  {
+    "persona": "synthetic-038",
+    "recipe": "r14",
+  },
+  {
+    "persona": "synthetic-039",
+    "recipe": "r03",
+  },
+  {
+    "persona": "synthetic-040",
+    "recipe": "r10",
+  },
+  {
+    "persona": "synthetic-041",
+    "recipe": "r15",
+  },
+  {
+    "persona": "synthetic-042",
+    "recipe": "r09",
+  },
+  {
+    "persona": "synthetic-043",
+    "recipe": "r23",
+  },
+  {
+    "persona": "synthetic-044",
+    "recipe": "r16",
+  },
+  {
+    "persona": "synthetic-045",
+    "recipe": "r17",
+  },
+  {
+    "persona": "synthetic-046",
+    "recipe": "r20",
+  },
+  {
+    "persona": "synthetic-047",
+    "recipe": "r09",
+  },
+  {
+    "persona": "synthetic-048",
+    "recipe": "r16",
+  },
+  {
+    "persona": "synthetic-049",
+    "recipe": "r20",
+  },
+  {
+    "persona": "synthetic-050",
+    "recipe": "r13",
+  },
+  {
+    "persona": "synthetic-051",
+    "recipe": "r17",
+  },
+  {
+    "persona": "synthetic-052",
+    "recipe": "r06",
+  },
+  {
+    "persona": "synthetic-053",
+    "recipe": "r08",
+  },
+  {
+    "persona": "synthetic-054",
+    "recipe": "r14",
+  },
+  {
+    "persona": "synthetic-055",
+    "recipe": "r07",
+  },
+  {
+    "persona": "synthetic-056",
+    "recipe": "r10",
+  },
+  {
+    "persona": "synthetic-057",
+    "recipe": "r21",
+  },
+  {
+    "persona": "synthetic-058",
+    "recipe": "r02",
+  },
+  {
+    "persona": "synthetic-059",
+    "recipe": "r15",
+  },
+  {
+    "persona": "synthetic-060",
+    "recipe": "r08",
+  },
+  {
+    "persona": "synthetic-061",
+    "recipe": "r02",
+  },
+  {
+    "persona": "synthetic-062",
+    "recipe": "r21",
+  },
+  {
+    "persona": "synthetic-063",
+    "recipe": "r06",
+  },
+  {
+    "persona": "synthetic-064",
+    "recipe": "r07",
+  },
+  {
+    "persona": "synthetic-065",
+    "recipe": "r14",
+  },
+  {
+    "persona": "synthetic-066",
+    "recipe": "r07",
+  },
+  {
+    "persona": "synthetic-067",
+    "recipe": "r23",
+  },
+  {
+    "persona": "synthetic-068",
+    "recipe": "r16",
+  },
+  {
+    "persona": "synthetic-069",
+    "recipe": "r18",
+  },
+  {
+    "persona": "synthetic-070",
+    "recipe": "r16",
+  },
+  {
+    "persona": "synthetic-071",
+    "recipe": "r06",
+  },
+  {
+    "persona": "synthetic-072",
+    "recipe": "r01",
+  },
+  {
+    "persona": "synthetic-073",
+    "recipe": "r23",
+  },
+  {
+    "persona": "synthetic-074",
+    "recipe": "r00",
+  },
+  {
+    "persona": "synthetic-075",
+    "recipe": "r12",
+  },
+  {
+    "persona": "synthetic-076",
+    "recipe": "r16",
+  },
+  {
+    "persona": "synthetic-077",
+    "recipe": "r02",
+  },
+  {
+    "persona": "synthetic-078",
+    "recipe": "r15",
+  },
+  {
+    "persona": "synthetic-079",
+    "recipe": "r19",
+  },
+  {
+    "persona": "synthetic-080",
+    "recipe": "r13",
+  },
+  {
+    "persona": "synthetic-081",
+    "recipe": "r10",
+  },
+  {
+    "persona": "synthetic-082",
+    "recipe": "r15",
+  },
+  {
+    "persona": "synthetic-083",
+    "recipe": "r15",
+  },
+  {
+    "persona": "synthetic-084",
+    "recipe": "r09",
+  },
+  {
+    "persona": "synthetic-085",
+    "recipe": "r16",
+  },
+  {
+    "persona": "synthetic-086",
+    "recipe": "r10",
+  },
+  {
+    "persona": "synthetic-087",
+    "recipe": "r12",
+  },
+  {
+    "persona": "synthetic-088",
+    "recipe": "r23",
+  },
+  {
+    "persona": "synthetic-089",
+    "recipe": "r22",
+  },
+  {
+    "persona": "synthetic-090",
+    "recipe": "r19",
+  },
+  {
+    "persona": "synthetic-091",
+    "recipe": "r18",
+  },
+  {
+    "persona": "synthetic-092",
+    "recipe": "r00",
+  },
+  {
+    "persona": "synthetic-093",
+    "recipe": "r22",
+  },
+  {
+    "persona": "synthetic-094",
+    "recipe": "r09",
+  },
+  {
+    "persona": "synthetic-095",
+    "recipe": "r08",
+  },
+  {
+    "persona": "synthetic-096",
+    "recipe": "r14",
+  },
+  {
+    "persona": "synthetic-097",
+    "recipe": "r07",
+  },
+  {
+    "persona": "synthetic-098",
+    "recipe": "r17",
+  },
+  {
+    "persona": "synthetic-099",
+    "recipe": "r04",
+  },
+]
+`;
