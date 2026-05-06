@@ -1010,7 +1010,11 @@ export default function HomeScreen() {
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
 
-        {/* Featured recipe (Today's hero) — sits directly under the filters
+        {/* 10Y entry-point: Ask Sazon Coach card sits directly under the
+            filters as the primary "ask anything" affordance. */}
+        <AskSazonHomeCard />
+
+        {/* Featured recipe (Today's hero) — sits directly under the Coach card
             so the user lands on a cookable plate, not on supplementary widgets. */}
         <EditorialHomeLayout
           heroRecipe={recipeOfTheDay}
@@ -1066,9 +1070,6 @@ export default function HomeScreen() {
           onBuildAPlate={handleQuickActionBuildAPlate}
           onFindMeAMeal={handleQuickActionFindMeAMeal}
         />
-
-        {/* 10Y entry-point: contextual Ask Sazon Coach card above the recipe grid */}
-        <AskSazonHomeCard />
 
         {/* Group 10X Phase 6 — Stretch last night card */}
         <StretchHomeCard />
