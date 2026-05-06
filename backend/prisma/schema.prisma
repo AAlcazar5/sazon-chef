@@ -380,11 +380,18 @@ model Recipe {
   rebuildRequired  Boolean   @default(false)
   deletionLog      RecipeDeletion?
 
+  // ROADMAP 4.0 D11 — cultural authenticity tier.
+  // 'authentic' | 'adapted' | 'inspired' | null. Surfaceability gated
+  // by authenticityGateService — adapted/inspired require ≥1 authentic
+  // peer in the same canonical×archetype slot.
+  authenticityTier String?
+
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
   @@index([isUserCreated, cuisine, mealType])
   @@index([canonicalCuisine])
   @@index([canonicalCuisine, subCuisine])
+  @@index([canonicalCuisine, authenticityTier])
   @@index([createdAt])
   @@map("recipes")
 }
