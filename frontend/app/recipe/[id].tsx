@@ -16,13 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import BrandButton from '../../components/ui/BrandButton';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import PlateVariationsSheet from '../../components/recipe/PlateVariationsSheet';
-import PlateMenuExportButton, {
+import {
+  exportPlateMenuPdf,
   type PlateMenuPlate,
 } from '../../components/recipe/PlateMenuExportButton';
 import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
+import RecipeDetailActionMenu from '../../components/recipe/RecipeDetailActionMenu';
 import HealthDisclaimer from '../../components/legal/HealthDisclaimer';
 import NutritionCard, { type NutritionAggregate } from '../../components/recipe/NutritionCard';
 import BeveragePairingSlot from '../../components/recipe/BeveragePairingSlot';
@@ -238,18 +239,8 @@ export default function RecipeIdScreen() {
             >
               <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
             </HapticTouchableOpacity>
-            {isComposed && (
-              <View style={styles.editTopBtn}>
-                <BrandButton
-                  label="Edit composition"
-                  variant="sage"
-                  size="compact"
-                  onPress={handleEditComposition}
-                  accessibilityLabel="Edit this plate's composition"
-                  testID="recipe-edit-composition-top"
-                />
-              </View>
-            )}
+            {/* RD1.2 — top-right "Edit composition" pill collapsed into
+                the action menu (rendered inline below the Coach pill). */}
           </View>
         ) : null}
 
@@ -295,25 +286,25 @@ export default function RecipeIdScreen() {
             </View>
           )}
 
-          {/* 10Y entry-point: lead actions with the Coach pill */}
-          <AskCoachAboutRecipePill recipeTitle={recipe.title} />
-
-          {/* Vary this plate button — only for composed plates */}
-          {isComposed && (
-            <BrandButton
-              label="Vary this plate"
-              variant="lavender"
-              onPress={handleOpenVariations}
-              accessibilityLabel="See variations of this plate"
-              testID="recipe-vary-this-plate"
-              style={styles.varyBtn}
+          {/* RD1.2 — primary CTA stays the Coach pill; secondary actions
+              collapse into a single ellipsis trigger. Removes the stacked
+              Vary / Edit / Export buttons that were diluting the lead. */}
+          <View style={styles.leadActionsRow}>
+            <View style={{ flex: 1 }}>
+              <AskCoachAboutRecipePill recipeTitle={recipe.title} />
+            </View>
+            <RecipeDetailActionMenu
+              isComposed={isComposed}
+              canExportMenu={isComposed && !!menuPlate}
+              onEditComposition={isComposed ? handleEditComposition : undefined}
+              onVaryThisPlate={isComposed ? handleOpenVariations : undefined}
+              onExportMenu={
+                isComposed && menuPlate
+                  ? () => { void exportPlateMenuPdf(menuPlate); }
+                  : undefined
+              }
             />
-          )}
-
-          {/* Export as menu PDF — only for composed plates (Phase 9) */}
-          {isComposed && menuPlate && (
-            <PlateMenuExportButton plate={menuPlate} testID="recipe-export-menu" />
-          )}
+          </View>
 
           {/* Macros line */}
           {recipe.calories ? (
@@ -417,11 +408,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editTopBtn: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 52 : 20,
-    right: 16,
-  },
   contentBlock: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -466,8 +452,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 0.1,
   },
-  varyBtn: {
-    alignSelf: 'flex-start',
+  leadActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
   },
   macros: {
     fontFamily: EditorialFontFamily.body.regular,

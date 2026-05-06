@@ -49,6 +49,31 @@ interface PlateMenuExportButtonProps {
   testID?: string;
 }
 
+/**
+ * ROADMAP 4.0 RD1.2 — imperative export so the recipe-detail action menu can
+ * trigger PDF export without re-rendering a full button. Returns true on a
+ * successful export, false on cancellation / failure (caller stays silent).
+ */
+export async function exportPlateMenuPdf(plate: PlateMenuPlate): Promise<boolean> {
+  try {
+    const html = buildMenuHtml(plate);
+    const result = await Print.printToFileAsync({ html });
+    const uri = result?.uri;
+    if (!uri) return false;
+    const sharingAvailable = await Sharing.isAvailableAsync();
+    if (sharingAvailable) {
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Share your plate menu',
+        UTI: 'com.adobe.pdf',
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ─── HTML template ────────────────────────────────────────────────────────────
 
 const escapeHtml = (s: string): string =>
@@ -236,24 +261,8 @@ export default function PlateMenuExportButton({ plate, testID = 'plate-menu-expo
     if (busy) return;
     setBusy(true);
     try {
-      const html = buildMenuHtml(plate);
-      const result = await Print.printToFileAsync({ html });
-      const uri = result?.uri;
-      if (!uri) {
-        if (isMounted.current) setBusy(false);
-        return;
-      }
-
-      const sharingAvailable = await Sharing.isAvailableAsync();
-      if (sharingAvailable) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Share your plate menu',
-          UTI: 'com.adobe.pdf',
-        });
-      }
-
-      if (!isMounted.current) return;
+      const ok = await exportPlateMenuPdf(plate);
+      if (!isMounted.current || !ok) return;
       setShowToast(true);
       if (toastTimer.current) clearTimeout(toastTimer.current);
       toastTimer.current = setTimeout(() => {
