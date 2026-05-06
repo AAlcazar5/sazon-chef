@@ -4673,6 +4673,37 @@ export const recipeController = {
     }
   },
 
+  // ROADMAP 4.0 RD2.2 — GET /api/recipes/:id/similar
+  // Anchor-recipe similarity. Loads user allergens + dietary + recent cooks
+  // and feeds them as hard filters to retrieveSimilar.
+  async getSimilarRecipes(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const anchorRecipeId = req.params.id;
+      const k = Math.min(12, Math.max(1, parseInt(req.query.k as string) || 8));
+
+      // Pull user filter signals; missing prefs are not an error.
+      const userPrefs = (await prisma.userPreferences.findFirst({
+        where: { userId },
+        include: { dietaryRestrictions: true, bannedIngredients: true },
+      })) as any;
+      const allergens = (userPrefs?.bannedIngredients ?? []).map((i: any) => i.name);
+      const dietaryTags = (userPrefs?.dietaryRestrictions ?? []).map((d: any) => d.name);
+
+      const { retrieveSimilar } = require('@/services/recommender/retrieveSimilar');
+      const recipes = await retrieveSimilar({
+        anchorRecipeId,
+        userId,
+        k,
+        hardFilters: { allergens, dietaryTags },
+      });
+      res.json({ recipes });
+    } catch (error: any) {
+      logger.error({ data: error }, '❌ Error in getSimilarRecipes:');
+      res.status(500).json({ error: 'Failed to fetch similar recipes', details: error.message });
+    }
+  },
+
   // ROADMAP 4.0 HX2.1 — POST /api/recipes/hero/reroll
   // Returns the next-ranked candidate at `rank` from the same retrieval call.
   // Caller passes rank=2 for the first re-roll, 3 for the second, 4 for the

@@ -833,6 +833,20 @@ export const recipeApi = {
     return apiClient.post('/recipes/filter-yields', filters);
   },
 
+  // ROADMAP 4.0 RD2.2 — anchor-recipe similarity ("More like this").
+  getSimilarRecipes: (id: string, k: number = 8) => {
+    return apiClient.get<{
+      recipes: Array<{
+        id: string;
+        title: string;
+        cuisine: string | null;
+        cookTime: number | null;
+        imageUrl: string | null;
+        score: number;
+      }>;
+    }>(`/recipes/${id}/similar`, { params: { k } });
+  },
+
   // ROADMAP 4.0 HX2.1 — hero re-roll (next-ranked candidate).
   heroReroll: (rank: number) => {
     return apiClient.post<{

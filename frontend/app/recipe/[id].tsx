@@ -24,6 +24,7 @@ import {
 } from '../../components/recipe/PlateMenuExportButton';
 import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
 import RecipeDetailActionMenu from '../../components/recipe/RecipeDetailActionMenu';
+import MoreLikeThisRow from '../../components/recipe/MoreLikeThisRow';
 import HealthDisclaimer from '../../components/legal/HealthDisclaimer';
 import NutritionCard, { type NutritionAggregate } from '../../components/recipe/NutritionCard';
 import BeveragePairingSlot from '../../components/recipe/BeveragePairingSlot';
@@ -322,6 +323,11 @@ export default function RecipeIdScreen() {
             pairings={getBeveragePairings(recipe.cuisine)}
             onSelect={() => { /* future: persist as plate-level pairing */ }}
           />
+
+          {/* ROADMAP 4.0 RD2.3 — "More like this" anchored to this recipe's
+              embedding (NOT the user's context — that's the home feed's job).
+              Hides silently when no neighbors. */}
+          <MoreLikeThisRow recipeId={recipe.id} />
 
           {/* Instructions */}
           {recipe.instructions && recipe.instructions.length > 0 && (

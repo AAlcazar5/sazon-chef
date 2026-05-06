@@ -112,6 +112,7 @@ router.put('/:id/saved-meta', recipeController.updateSavedMeta);
 router.post('/:id/view', recipeController.recordView);
 router.post('/:id/cook', recipeController.recordCook);
 router.get('/:id/cooking-history', recipeController.getCookingHistory);
+router.get('/:id/similar', recipeController.getSimilarRecipes); // RD2.2 — anchor-recipe similarity
 router.get('/:id', recipeController.getRecipe);
 
 export const recipeRoutes = router;
