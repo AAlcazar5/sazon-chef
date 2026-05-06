@@ -35,7 +35,6 @@ import NutritionStrip from '../../components/today/NutritionStrip';
 import FriendsFeedSection from '../../components/today/FriendsFeedSection';
 import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
-import SazonQuipCard from '../../components/today/SazonQuipCard';
 import FirstOfDayNote from '../../components/home/FirstOfDayNote';
 import SundayPolaroidCard from '../../components/today/SundayPolaroidCard';
 import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
@@ -1011,6 +1010,21 @@ export default function HomeScreen() {
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
 
+        {/* Featured recipe (Today's hero) — sits directly under the filters
+            so the user lands on a cookable plate, not on supplementary widgets. */}
+        <EditorialHomeLayout
+          heroRecipe={recipeOfTheDay}
+          recipePool={recipesData ?? undefined}
+          savedIds={savedRecipeIds}
+          calories={{ consumed: 1420, goal: 1800 }}
+          protein={{ consumed: 98, goal: 120 }}
+          carbs={{ consumed: 165, goal: 220 }}
+          fat={{ consumed: 52, goal: 70 }}
+          fiber={{ consumed: 22, goal: 30 }}
+          onRecipePress={handleRecipePress}
+          onToggleSave={handleSave}
+        />
+
         {/* ROADMAP 4.0 J4 — Sunday Polaroid drop (renders only on local Sunday) */}
         {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}
 
@@ -1043,15 +1057,6 @@ export default function HomeScreen() {
         {/* ROADMAP 4.0 F9 — Cohort social proof (hides on cold start) */}
         <CohortSocialProofPill />
 
-        {/* ROADMAP 4.0 F6 — Seasonal awareness card (one peak ingredient/day) */}
-        <SeasonalProduceCard />
-
-        {/* ROADMAP 4.0 A1-c — Today rotating discovery card */}
-        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
-
-        {/* ROADMAP 4.0 J7 — Sazon daily quip */}
-        <SazonQuipCard />
-
         {/* ROADMAP 4.0 — Daily check-in moved to Kitchen (above Recently Saved). */}
 
         {/* ROADMAP 4.0 A1-d — Today quick-action chip row */}
@@ -1064,20 +1069,6 @@ export default function HomeScreen() {
 
         {/* 10Y entry-point: contextual Ask Sazon Coach card above the recipe grid */}
         <AskSazonHomeCard />
-
-        {/* Editorial v2 layout */}
-        <EditorialHomeLayout
-          heroRecipe={recipeOfTheDay}
-          recipePool={recipesData ?? undefined}
-          savedIds={savedRecipeIds}
-          calories={{ consumed: 1420, goal: 1800 }}
-          protein={{ consumed: 98, goal: 120 }}
-          carbs={{ consumed: 165, goal: 220 }}
-          fat={{ consumed: 52, goal: 70 }}
-          fiber={{ consumed: 22, goal: 30 }}
-          onRecipePress={handleRecipePress}
-          onToggleSave={handleSave}
-        />
 
         {/* Group 10X Phase 6 — Stretch last night card */}
         <StretchHomeCard />
@@ -1120,6 +1111,14 @@ export default function HomeScreen() {
           onNextPage={handleNextPage}
           darkFeed={darkFeed}
         />
+
+        {/* ROADMAP 4.0 F6 — Seasonal awareness card (one peak ingredient/day).
+            Moved below the recipe grid: still useful, just not first-sight. */}
+        <SeasonalProduceCard />
+
+        {/* ROADMAP 4.0 A1-c — Today rotating discovery card (rotates pairing,
+            superfood, technique tips). Below the fold for the same reason. */}
+        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
 
         {/* ROADMAP 4.0 A1-f — NewToYou + BrowseByFamily relocated to Kitchen → Discover.
             Premium upsell card stays on Today as a contextual nudge. */}
