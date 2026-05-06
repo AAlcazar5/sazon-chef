@@ -542,8 +542,8 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
 ### T2: Tonight screen
 - [ ] **T2.1: `frontend/app/tonight.tsx`** — full-bleed hero image, copy line over gradient, single CTA "Cook this." Long-press anywhere → slot-swap sheet (reuse `useBuildAPlatePermutations` to surface 3 alternatives for the dominant slot). Subtle "More" affordance bottom-right opens the existing 4-tab IA as a modal stack for users who want to escape.
   - **Test:** `frontend/__tests__/app/tonight.test.tsx` — renders proposal copy + image + CTA; long-press fires haptic + opens swap sheet; CTA navigates to existing cook flow with the proposed recipe id; "More" affordance opens tabs stack; loading + error states use Sazon mascot, no `ActivityIndicator`.
-- [ ] **T2.2: Slot-swap sheet** — `<TonightSwapSheet />` renders 3 alternatives from permutations endpoint, each tappable to re-propose. Spring-in, dim backdrop, dismissable.
-  - **Test:** `frontend/__tests__/components/tonight/TonightSwapSheet.test.tsx` — renders 3 cards; tap fires `onSwap(recipeId)`; haptic on tap; backdrop press dismisses; a11y labels present.
+- [x] **T2.2: Slot-swap sheet** ✅ — `frontend/components/tonight/TonightSwapSheet.tsx`. Three alternative cards over dim backdrop, `BorderRadius.card` (20), `BorderRadius.sheet` (28) on the sheet itself, `HapticTouchableOpacity` with `pressedScale: 0.97`. Backdrop press dismisses.
+  - [x] **Test:** `frontend/__tests__/components/tonight/TonightSwapSheet.test.tsx` (6 tests) — renders, tap → `onSwap`, haptic on tap, backdrop dismisses, a11y labels, hidden when `visible={false}`.
 
 ### T3: Profile toggle + onboarding nudge
 - [ ] **T3.1: Profile sheet "Tonight mode" row** — toggle with one-line description "*Sazon picks dinner. Tap More if you want to browse.*" Persists `User.tonightModeEnabled`. Hidden when `SAZON_TONIGHT_MODE` env flag off.
