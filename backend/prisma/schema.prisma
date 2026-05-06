@@ -375,6 +375,11 @@ model Recipe {
   canonicalCuisine String?
   subCuisine       String?
 
+  // ROADMAP 4.0 D7 — soft delete + back-relation to audit log.
+  deletedAt        DateTime?
+  rebuildRequired  Boolean   @default(false)
+  deletionLog      RecipeDeletion?
+
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
   @@index([isUserCreated, cuisine, mealType])
@@ -1858,6 +1863,28 @@ model UserFollow {
 // Captures email + 3 quick selects so day-1 taste_profile can be pre-seeded
 // at signup. See plans/launch-marketing.md for the spec.
 // ──────────────────────────────────────────────────────────────────────────
+
+// ──────────────────────────────────────────────────────────────────────────
+// ROADMAP 4.0 D7 — Recipe deletion audit log.
+// One row per soft delete; preserved for 30 days (hardDeleteAfter) so
+// triage decisions are reversible until then. `reasonCodes` is JSON.
+// ──────────────────────────────────────────────────────────────────────────
+
+model RecipeDeletion {
+  id               String   @id @default(cuid())
+  recipeId         String   @unique
+  recipe           Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  composite        Float
+  suggestedAction  String   // 'delete_candidate' | 'rebuild_required'
+  reasonCodes      String   @default("[]") // JSON array of FailureReason codes
+  isOnlyInstance   Boolean  @default(false)
+  softDeletedAt    DateTime @default(now())
+  hardDeleteAfter  DateTime
+
+  @@index([softDeletedAt])
+  @@index([hardDeleteAfter])
+  @@map("recipe_deletions")
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // ROADMAP 4.0 D2 — Recipe quality scorecard.
