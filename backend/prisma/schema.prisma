@@ -386,6 +386,14 @@ model Recipe {
   // peer in the same canonical×archetype slot.
   authenticityTier String?
 
+  // ROADMAP 4.0 TB0 — 64-dim Food.com / fallback content embedding.
+  // Stored as raw bytes (Float32Array, 64 × 4 = 256 bytes). Written by
+  // alignCatalog.ts (TB0.3); consumed by retrieveCandidates (TB1.2) and
+  // dedupeScorer (D2.5).
+  embedding         Bytes?
+  embeddingSource   String?  // 'foodcom' | 'openai' | null
+  embeddingUpdatedAt DateTime?
+
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
   @@index([isUserCreated, cuisine, mealType])
