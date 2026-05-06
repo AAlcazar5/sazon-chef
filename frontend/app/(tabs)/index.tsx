@@ -29,6 +29,7 @@ import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
 import SoftFilterPill from '../../components/home/SoftFilterPill';
 import HeroRationaleRibbon from '../../components/home/HeroRationaleRibbon';
+import AlmostMadeItSheet from '../../components/home/AlmostMadeItSheet';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
 import NutritionStrip from '../../components/today/NutritionStrip';
@@ -1250,13 +1251,14 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* Show recipe count when there's only one page */}
+        {/* ROADMAP 4.0 HX5.1 — almost-made-it sheet replaces the utilitarian
+            recipe-count footer with ranker provenance + invitation. */}
         {totalRecipes > 0 && !paginationInfo.hasMultiplePages && (
-          <View className="px-4 py-4">
-            <Text className="text-center text-sm text-gray-500 dark:text-gray-400">
-              Showing all {totalRecipes} recipes
-            </Text>
-          </View>
+          <AlmostMadeItSheet
+            cutCount={totalRecipes}
+            cutoff={Math.max(totalRecipes, RECIPES_PER_PAGE)}
+            onSelect={(id) => router.push(`../modal?id=${id}` as never)}
+          />
         )}
       </ScrollView>
       )}

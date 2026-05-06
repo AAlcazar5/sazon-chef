@@ -832,6 +832,21 @@ export const recipeApi = {
   }) => {
     return apiClient.post('/recipes/filter-yields', filters);
   },
+
+  // ROADMAP 4.0 HX5.1 — next-5 candidates past the visible cut.
+  getAlmostMadeIt: (cutoff: number, tail: number = 5) => {
+    return apiClient.get<{
+      rows: Array<{
+        id: string;
+        title: string;
+        imageUrl: string | null;
+        cuisine: string | null;
+        cookTime: number | null;
+        marginVsCut: number;
+      }>;
+      cutCount: number;
+    }>('/recipes/home/almost-made-it', { params: { cutoff, tail } });
+  },
 };
 // Collections API
 export const collectionsApi = {

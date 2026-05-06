@@ -4673,6 +4673,24 @@ export const recipeController = {
     }
   },
 
+  // ROADMAP 4.0 HX5.1 — GET /api/recipes/home/almost-made-it
+  // Returns the next-5 candidates that ranked just below the visible cut,
+  // each with `marginVsCut` (smaller = closer). Frames ranker provenance
+  // for the user without exposing score jargon.
+  async getAlmostMadeIt(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const cutoff = Math.max(1, parseInt(req.query.cutoff as string) || 10);
+      const tail = Math.min(10, Math.max(1, parseInt(req.query.tail as string) || 5));
+      const { getAlmostMadeItRows } = require('@/services/almostMadeItService');
+      const result = await getAlmostMadeItRows({ userId, cutoff, tail });
+      res.json(result);
+    } catch (error: any) {
+      logger.error({ data: error }, '❌ Error in getAlmostMadeIt:');
+      res.status(500).json({ error: 'Failed to fetch almost-made-it candidates', details: error.message });
+    }
+  },
+
   // ROADMAP 4.0 FX3.2 — POST /api/recipes/filter-yields
   // Returns per-filter yield deltas so the UI can render
   // "Remove [Quick] — gains 47 recipes" rows in HomeEmptyState.

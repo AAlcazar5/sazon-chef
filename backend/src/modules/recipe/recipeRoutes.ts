@@ -24,6 +24,7 @@ router.get('/suggested', recipeController.getSuggestedRecipes);
 router.get('/random', recipeController.getRandomRecipe);
 router.get('/home-feed', recipeController.getHomeFeed); // Consolidated home page data
 router.post('/filter-yields', recipeController.getFilterYields); // FX3.2 — per-filter yield deltas for "Relax this filter" rows
+router.get('/home/almost-made-it', recipeController.getAlmostMadeIt); // HX5.1 — next-5 candidates past the cut
 router.get('/recipe-of-the-day', recipeController.getRecipeOfTheDay); // Home Page 2.0
 router.get('/new-to-you', newToYouController.getNewToYou); // 11.5: personalized adjacency feed
 router.get('/browse-by-family', newToYouController.getBrowseByFamily); // 11.5: cuisine-family ranking by user affinity
