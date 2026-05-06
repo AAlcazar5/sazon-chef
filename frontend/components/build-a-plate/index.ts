@@ -19,3 +19,4 @@ export { default as RainbowHint, RAINBOW_HINT_KEY, shouldShowRainbowHint } from 
 export { default as BudgetToggle, CostPill, sortByCost } from './BudgetToggle';
 export { default as TechniqueChallengeBanner, isoWeekKey, techniqueDismissalKey } from './TechniqueChallengeBanner';
 export { default as HarmonyReveal, type HarmonySignal } from './HarmonyReveal';
+export { default as FewSmallThingsMode } from './FewSmallThingsMode';

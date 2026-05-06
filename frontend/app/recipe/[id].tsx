@@ -25,6 +25,8 @@ import PlateMenuExportButton, {
 import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
 import HealthDisclaimer from '../../components/legal/HealthDisclaimer';
 import NutritionCard, { type NutritionAggregate } from '../../components/recipe/NutritionCard';
+import BeveragePairingSlot from '../../components/recipe/BeveragePairingSlot';
+import { getBeveragePairings } from '../../constants/BeveragePairings';
 import CookingStepRow from '../../components/cooking/CookingStepRow';
 import { recipeApi, nutritionApi } from '../../lib/api';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
@@ -40,6 +42,7 @@ interface RecipeData {
   title: string;
   imageUrl?: string;
   source?: string;
+  cuisine?: string;
   ingredients?: Array<string | { id: string; text: string; order: number }>;
   instructions?: Array<string | { id: string; text: string; step: number }>;
   cookTime?: number;
@@ -321,6 +324,13 @@ export default function RecipeIdScreen() {
 
           {/* D14: discovery-mode nutrient breakdown */}
           <NutritionCard recipeId={recipe.id} aggregate={nutrition} />
+
+          {/* J17.3: beverage pairing slot — first-class "with…" surface */}
+          <BeveragePairingSlot
+            cuisine={recipe.cuisine ?? ''}
+            pairings={getBeveragePairings(recipe.cuisine)}
+            onSelect={() => { /* future: persist as plate-level pairing */ }}
+          />
 
           {/* Instructions */}
           {recipe.instructions && recipe.instructions.length > 0 && (
