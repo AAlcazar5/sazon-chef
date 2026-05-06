@@ -3,6 +3,7 @@ import { userController, uploadProfilePictureMiddleware } from './userController
 import { authenticateToken } from '../auth/authMiddleware';
 import { userPresetController } from './userPresetController';
 import { userPreferencesRoutes } from './userPreferencesRoutes';
+import { tonightModeRouter } from './userTonightModeRoutes';
 
 const router = Router();
 
@@ -11,6 +12,9 @@ router.use(authenticateToken);
 
 // Group 10Y Phase 6: weekly check-in opt-in toggle (Pro-gated when enabling).
 router.use(userPreferencesRoutes);
+
+// ROADMAP 4.0 T0.1: Tonight Mode toggle (gated by SAZON_TONIGHT_MODE env flag).
+router.use(tonightModeRouter);
 
 // User profile routes
 router.get('/profile', userController.getProfile);
