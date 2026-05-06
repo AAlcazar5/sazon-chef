@@ -22,7 +22,12 @@ import LoadingState from '../components/ui/LoadingState';
 import ScreenGradient from '../components/ui/ScreenGradient';
 import TonightSwapSheet from '../components/tonight/TonightSwapSheet';
 import { apiClient } from '../lib/api';
-import { track } from '../lib/analytics';
+import {
+  trackTonightProposalShown,
+  trackTonightProposalAccepted,
+  trackTonightProposalSwapped,
+  trackTonightProposalEscaped,
+} from '../lib/analytics';
 import { BorderRadius, Spacing } from '../constants/Spacing';
 import type { Recipe } from '../types';
 
@@ -52,7 +57,7 @@ export default function TonightScreen() {
         const data = res?.data as TonightProposal;
         setProposal(data);
         const latency = Date.now() - requestStartedAt.current;
-        track('tonight_proposal_shown' as any, {
+        trackTonightProposalShown({
           proposalLatencyMs: latency,
           pantryCoveragePct: data?.context?.pantryCoveragePct ?? null,
           recipeId: data?.recipe?.id ?? null,
@@ -69,7 +74,7 @@ export default function TonightScreen() {
 
   const onCookThis = () => {
     if (!proposal) return;
-    track('tonight_proposal_accepted' as any, {
+    trackTonightProposalAccepted({
       proposalLatencyMs: Date.now() - requestStartedAt.current,
       pantryCoveragePct: proposal.context?.pantryCoveragePct ?? null,
       recipeId: proposal.recipe.id,
@@ -78,7 +83,7 @@ export default function TonightScreen() {
   };
 
   const onSwap = (recipeId: string) => {
-    track('tonight_proposal_swapped' as any, {
+    trackTonightProposalSwapped({
       proposalLatencyMs: Date.now() - requestStartedAt.current,
       pantryCoveragePct: proposal?.context?.pantryCoveragePct ?? null,
       fromRecipeId: proposal?.recipe.id ?? null,
@@ -89,7 +94,7 @@ export default function TonightScreen() {
   };
 
   const onMore = () => {
-    track('tonight_proposal_escaped' as any, {
+    trackTonightProposalEscaped({
       proposalLatencyMs: Date.now() - requestStartedAt.current,
       pantryCoveragePct: proposal?.context?.pantryCoveragePct ?? null,
     });

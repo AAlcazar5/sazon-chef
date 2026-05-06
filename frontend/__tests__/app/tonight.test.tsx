@@ -51,6 +51,18 @@ jest.mock('../../components/ui/ScreenGradient', () => {
 
 jest.mock('../../lib/analytics', () => ({
   track: jest.fn(),
+  trackTonightProposalShown: jest.fn(),
+  trackTonightProposalAccepted: jest.fn(),
+  trackTonightProposalSwapped: jest.fn(),
+  trackTonightProposalEscaped: jest.fn(),
+  trackTonightModeDisabled: jest.fn(),
+  TONIGHT_EVENTS: {
+    shown: 'tonight_proposal_shown',
+    accepted: 'tonight_proposal_accepted',
+    swapped: 'tonight_proposal_swapped',
+    escaped: 'tonight_proposal_escaped',
+    disabled: 'tonight_mode_disabled',
+  },
 }));
 
 import React from 'react';

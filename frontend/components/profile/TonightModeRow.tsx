@@ -10,6 +10,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { apiClient } from '../../lib/api';
+import { trackTonightModeDisabled } from '../../lib/analytics';
 import { BorderRadius, Spacing } from '../../constants/Spacing';
 
 interface TonightModeRowProps {
@@ -32,6 +33,10 @@ export default function TonightModeRow({ flagOn, initialEnabled }: TonightModeRo
     await AsyncStorage.setItem(STORAGE_KEY, next ? '1' : '0');
     try {
       await apiClient.put('/user/tonight-mode', { enabled: next });
+      if (!next) {
+        // Going off → emit tonight_mode_disabled.
+        trackTonightModeDisabled();
+      }
     } catch {
       // Roll back.
       setEnabled(!next);
