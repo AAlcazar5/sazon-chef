@@ -546,8 +546,8 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
   - [x] **Test:** `frontend/__tests__/components/tonight/TonightSwapSheet.test.tsx` (6 tests) — renders, tap → `onSwap`, haptic on tap, backdrop dismisses, a11y labels, hidden when `visible={false}`.
 
 ### T3: Profile toggle + onboarding nudge
-- [ ] **T3.1: Profile sheet "Tonight mode" row** — toggle with one-line description "*Sazon picks dinner. Tap More if you want to browse.*" Persists `User.tonightModeEnabled`. Hidden when `SAZON_TONIGHT_MODE` env flag off.
-  - **Test:** `frontend/__tests__/components/profile/TonightModeRow.test.tsx` — renders when flag on; hidden when off; toggle calls API + updates local state optimistically; rolls back on API failure.
+- [x] **T3.1: Profile sheet "Tonight mode" row** ✅ — `frontend/components/profile/TonightModeRow.tsx`. Renders when `flagOn` prop true; hidden otherwise. Calls `PUT /user/tonight-mode` and mirrors the bit into AsyncStorage `tonight_mode_pref_enabled` so `_layout` redirect can read it on next launch. Optimistic update with rollback on API failure (Sazon-voice soft message, not "Error").
+  - [x] **Test:** `frontend/__tests__/components/profile/TonightModeRow.test.tsx` (4 tests) — render/hide based on flag, optimistic write, rollback on failure.
 - [ ] **T3.2: One-time nudge for existing users** — after the toggle ships, show a one-shot full-screen card on next app open: *"Want Sazon to just pick dinner?"* with Try it / Not now. Tapped state stored in `User.tonightModePromptedAt`.
   - **Test:** `frontend/__tests__/components/onboarding/TonightModeNudge.test.tsx` — renders once; respects `tonightModePromptedAt`; "Try it" enables pref + routes to `/tonight`; "Not now" sets timestamp.
 
