@@ -535,8 +535,7 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
   - [x] **Test:** `backend/__tests__/services/featureFlagService.tonight.test.ts` (6 tests) + `backend/__tests__/routes/userTonightMode.test.ts` (4 tests) + `frontend/__tests__/app/_layout.tonight.test.tsx` (4 tests) all green.
 
 ### T1: Proposal endpoint + copy generator
-- [ ] **T1.1: `POST /api/tonight/proposal`** — single-recipe response from existing scoring (`scoreRecipeForUser`) gated by pantry coverage ≥70%, time-of-day, day-of-week, last-cooked window. Returns `{ recipe, slot: 'dinner'|'lunch'|'breakfast', context: { pantryHits, expiringSoon, lastCooked, timeOfDay }, copyLine }`.
-  - **Test:** `backend/__tests__/routes/tonightRoutes.test.ts` — returns one recipe matching pantry + time-of-day; honors allergies/banned cuisines; deterministic given fixed clock + seed; 401 without auth; 503 if no candidate clears 70% pantry threshold.
+- [x] **T1.1: `POST /api/tonight/proposal`** ✅ — **superseded by TB2.2** which shipped the LLM-ranker version of the proposal endpoint at the same path. Test coverage for the route lives in `backend/__tests__/routes/tonightRoutes.llm.test.ts` (the originally-planned `tonightRoutes.test.ts` was rolled into the LLM variant). No additional work needed.
 - [ ] **T1.2: `tonightCopyService.generateCopyLine(context)`** — deterministic templates per context shape (expiring ingredient, day-of-week, weather-cold, last-cuisine-gap). Output ≤120 chars, lifestyle-voice (banned-vocab linted). Examples: *"Tuesday, 7pm, your chicken thighs are ready and lemons are on the edge — fesenjan in 24."* / *"Cold night. You haven't had Korean in 11 days. Doenjang jjigae, 22 minutes."*
   - **Test:** `backend/__tests__/services/tonightCopyService.test.ts` — every context shape produces a line; banned-vocab lint zero hits ("cut/bulk/maintain/crush/under your"); ≤120 chars; deterministic for a fixed input.
 
