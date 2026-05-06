@@ -984,6 +984,17 @@ export const recipeController = {
       const { performNutritionalAnalysis } = require('@/utils/nutritionalAnalysis');
       const nutritionalAnalysis = performNutritionalAnalysis(recipe);
 
+      // ROADMAP 4.0 J18.1 — attach sibling variants ("same dish, different
+      // technique"). Best-effort: a fetch failure must never block the
+      // recipe-detail response.
+      let variants: unknown[] = [];
+      try {
+        const { getVariantsFor } = await import('@/services/recipeVariantService');
+        variants = await getVariantsFor(recipe.id);
+      } catch (err) {
+        logger.warn({ data: err }, '[recipe-detail] variant fetch failed (non-fatal):');
+      }
+
       logger.info({ data: recipe.title }, '✅ Recipe found:');
       res.json({
         ...recipe,
@@ -997,7 +1008,8 @@ export const recipeController = {
           nutritionalDensityScore: nutritionalAnalysis.nutritionalDensityScore,
           keyNutrients: nutritionalAnalysis.keyNutrients,
           nutrientGaps: nutritionalAnalysis.nutrientGaps,
-        }
+        },
+        variants,
       });
     } catch (error: any) {
       logger.error({ data: error }, '❌ Get recipe error:');

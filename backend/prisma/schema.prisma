@@ -410,6 +410,10 @@ model Recipe {
   recommenderEvents      RecommenderEvent[]      @relation("PickedRecipe")
   recommenderRunnerUps   RecommenderRunnerUp[]
 
+  // ROADMAP 4.0 J18.1 — recipe variants as siblings.
+  variantsAsSource       RecipeVariant[]         @relation("RecipeVariantSource")
+  variantsAsSibling      RecipeVariant[]         @relation("RecipeVariantSibling")
+
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
   @@index([isUserCreated, cuisine, mealType])
@@ -1310,6 +1314,26 @@ model LeftoverInventory {
   @@map("leftover_inventory")
 }
 
+// ROADMAP 4.0 J18.1 — Recipe variants as siblings, not replacements.
+// A directional join between two recipes: `recipe` is the source, `sibling`
+// is a related variant ("same dish, different technique"). The `tag` is one
+// of: weeknight | sunday | campfire | lighter — validated in code via
+// `RECIPE_VARIANT_TAGS`. Other tags are rejected by the service layer.
+model RecipeVariant {
+  id              String   @id @default(cuid())
+  recipeId        String
+  recipe          Recipe   @relation("RecipeVariantSource", fields: [recipeId], references: [id], onDelete: Cascade)
+  siblingRecipeId String
+  sibling         Recipe   @relation("RecipeVariantSibling", fields: [siblingRecipeId], references: [id], onDelete: Cascade)
+  tag             String
+  techniqueLine   String?
+  createdAt       DateTime @default(now())
+
+  @@unique([recipeId, siblingRecipeId, tag])
+  @@index([recipeId])
+  @@map("recipe_variants")
+}
+
 model ComposedPlate {
   id                    String   @id @default(cuid())
   userId                String
@@ -1323,6 +1347,10 @@ model ComposedPlate {
   totalCost             Float?
   pantryCoveragePercent Float
   recipeId              String?
+  // ROADMAP 4.0 J17.2 — plate archetype (few_small_things | standard | null).
+  // Discovery framing: "A few small things" surfaced as a STYLE, never a
+  // health pitch. Null on legacy plates created before the field existed.
+  archetype             String?
   createdAt             DateTime @default(now())
 
   // Phase 8: social
