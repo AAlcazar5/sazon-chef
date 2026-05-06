@@ -1,11 +1,28 @@
 // frontend/hooks/useRecipeFetcher.ts
-// Custom hook for centralized recipe fetching with consistent response handling
+// Custom hook for centralized recipe fetching with consistent response handling.
+//
+// Network-failure resilience: transient transport errors (timeout,
+// server_unreachable) are retried with exponential backoff before bubbling
+// up. 'offline' and 'canceled' classes are NOT retried — those need user
+// action / are expected.
 
 import { useCallback, useRef } from 'react';
 import { recipeApi } from '../lib/api';
 import { HapticPatterns } from '../constants/Haptics';
 import { deduplicateRecipes, initializeFeedbackState, type UserFeedback } from '../utils/recipeUtils';
 import type { SuggestedRecipe } from '../types';
+
+const RETRY_ATTEMPTS = 2;
+const RETRY_BASE_DELAY_MS = 600;
+const RETRYABLE_FAILURE_CLASSES = new Set(['timeout', 'server_unreachable', 'unknown_transport']);
+
+function shouldRetry(error: { failureClass?: string }): boolean {
+  return !!error?.failureClass && RETRYABLE_FAILURE_CLASSES.has(error.failureClass);
+}
+
+function delayMs(attempt: number): number {
+  return RETRY_BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * 200;
+}
 
 export interface RecipeFetchParams {
   page?: number;
@@ -114,7 +131,27 @@ export function useRecipeFetcher(options?: UseRecipeFetcherOptions): UseRecipeFe
 
       console.log('📄 Fetching recipes with params:', apiParams);
 
-      const response = await recipeApi.getAllRecipes(apiParams);
+      // Retry transient transport failures with exponential backoff.
+      // 'offline' and 'canceled' fall through immediately — those need
+      // user action or are expected.
+      let response;
+      let lastError: any = null;
+      for (let attempt = 0; attempt <= RETRY_ATTEMPTS; attempt += 1) {
+        try {
+          response = await recipeApi.getAllRecipes(apiParams);
+          lastError = null;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          if (!shouldRetry(err) || attempt === RETRY_ATTEMPTS) throw err;
+          const ms = delayMs(attempt);
+          console.warn(
+            `⏳ Recipe fetch failed (${err.failureClass}/${err.axiosCode}) on attempt ${attempt + 1}/${RETRY_ATTEMPTS + 1}, retrying in ${Math.round(ms)}ms`,
+          );
+          await new Promise(resolve => setTimeout(resolve, ms));
+        }
+      }
+      if (!response) throw lastError;
       const responseData = response.data;
 
       // Parse response - handle both paginated format and legacy array format
@@ -151,12 +188,21 @@ export function useRecipeFetcher(options?: UseRecipeFetcherOptions): UseRecipeFe
       onSuccess?.(result);
       return result;
     } catch (error: any) {
-      // Ignore abort errors
-      if (error.name === 'AbortError') {
+      // Ignore abort errors (component unmount, AbortController.abort()).
+      if (error.name === 'AbortError' || error?.failureClass === 'canceled' || error?.code === 'CANCELED') {
         return null;
       }
 
-      console.error('❌ Error fetching recipes:', error?.message || error);
+      // Structured log so we can pinpoint failures in Sentry / dev console.
+      // Includes failure class + axios code + URL + method when available.
+      const diag = [
+        error?.failureClass && `class=${error.failureClass}`,
+        error?.axiosCode && `axios=${error.axiosCode}`,
+        error?.code && `code=${error.code}`,
+        error?.method && error?.url && `${error.method} ${error.url}`,
+      ].filter(Boolean).join(' ');
+      console.error(`❌ Recipe fetch failed${diag ? ` [${diag}]` : ''}: ${error?.message ?? error}`);
+
       HapticPatterns.error();
       onError?.(error);
       return null;
