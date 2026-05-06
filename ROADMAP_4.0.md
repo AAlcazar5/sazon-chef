@@ -394,10 +394,9 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
 
 #### Tier M-sourced additions (Self-Improvement Engine — first manual synthesis pass, 2026-05-05)
 
-> The four items below (J13–J16) were proposed by the Phase M0 manual synthesis pass — see `.context/proposals/2026-05-05.md` and `.context/decisions/accepted/`. Each draws from the inspiration feed (Spotify Wrapped, Duolingo variable rewards, Apple Fitness rings, Strava auto-recap). All persona-fit 5/5; all extend existing infra rather than build new datastores. J13 is calendar-anchored — work begins September.
-
-- [ ] **J13: Sazon Wrapped — yearly retrospective ritual** — Last Sunday of December, deliver a one-shot "Sazon Wrapped" surface as a gift, not a feature. Five swipeable cards composed against the user's year of cooking: top 5 cuisines, total ingredients tasted, longest cuisine streak, micros highlights, "the dish you'd never made before this year." Each card is share-as-image with Sazon mascot signature. Reuses Tier C9 weekly-recap data + Tier J5 milestone data + existing `ShareCardCapture` — no new datastore, only new surface composition. Available to free + paid users; Wrapped is the brand's December gift. Calendar-anchored: build September 2026 → soft-launch internal mid-November → public reveal December 28. Spotify Wrapped is the persona-resonant analog (`competitor-design-ideas.md`).
-  - **Test:** `frontend/__tests__/components/today/SazonWrappedSurface.test.tsx` (NEW) — surface renders only when (a) local date in Dec 28–31 window, (b) user has ≥1 cooked recipe in the year, (c) not yet seen this year-key (`@sazon/wrapped/year_seen`); five card slots populate from fixture year-data; share button calls `Sharing.shareAsync` with captured image per card; auto-hides after Jan 2; never re-fires within the same year-key. Backend: `backend/__tests__/services/yearlyRecapService.test.ts` (NEW) — aggregates a year of cooked recipes into the five-card payload; handles users with sparse data (≤5 cooks → graceful "your first year cooking with Sazon" framing).
+> The items below (J14–J16) were proposed by the Phase M0 manual synthesis pass — see `.context/proposals/2026-05-05.md` and `.context/decisions/accepted/`. Each draws from the inspiration feed (Spotify Wrapped, Duolingo variable rewards, Apple Fitness rings, Strava auto-recap). All persona-fit 5/5; all extend existing infra rather than build new datastores.
+>
+> **J13 (Sazon Wrapped)** moved to **Tier 🔒 Gated** — calendar-anchored to Dec 28.
 
 - [x] **J14: Variable-reward cook-complete tiers** ✅ — `cookCompleteIntensityResolver.ts` shipped — three intensity tiers (`big | medium | quiet`) resolved off `userId`, `cuisine`, `recipeId`, optional `rating`, `asOfDate`. Tier rules: **big** if `isFirstCookOfCuisine` (extends J2) OR `isFirstCookOfSavedRecipe` (recipe in `savedRecipe` AND zero prior `cookingLog` rows); **medium** if `rating ≥ 4` (high-rating beats same-week — a deliberate 4★+ on a familiar dish is still celebrated); **quiet** otherwise (same-cuisine-this-week explicit + safe default). ISO-week boundary computed in `isoWeekStart()` (UTC Monday 00:00). Frontend `<CookCompleteCelebration tier recipeTitle />` shipped — tier-keyed pastel backgrounds (sage / peach / golden), per-tier haptic intensity (light → medium → success), distinct `testID`s per tier (`-big`, `-medium`, `-quiet`, `-sparkle`, `-checkmark`, `-share-prompt`), accessibility label announces both tier and recipe title. Share prompt in big tier is intentionally non-interactive (`accessibilityRole="text"`) — actual share affordance lives in `<DailyPlateShareCard />` (J15) rendered alongside; this avoids dead-button UX. **Wired:** `GET /api/cook-complete-signals?cuisine=X&recipeId=Y[&rating=Z]` (combined J14 + J16 endpoint, mounted under `authenticateToken`) calls `resolveCookCompleteIntensity` + `computeCookRecapInsight` in parallel and returns `{ intensity, recapInsight }`. `cooking.tsx` fires `cookCompleteSignalsApi.get()` post-cook alongside `firstCookStatsApi.get()` and renders `<CookCompleteCelebration tier={signals?.intensity ?? 'quiet'} recipeTitle={recipe.title} />` inside the celebration overlay above the FirstCuisineStamp; defaults to quiet while signals load to keep the celebration calm rather than blanking out.
   - **Test:** `backend/__tests__/services/cookCompleteIntensityResolver.test.ts` ✅ 8/8 — first-cuisine returns `big`; same-cuisine-same-week returns `quiet`; saved-recipe-first-cook returns `big`; rating ≥4 with no novelty returns `medium`; missing-userId returns `quiet` (safe default); empty-cuisine + low-rating returns `quiet`; empty-cuisine + rating ≥4 returns `medium`; rating below threshold + no novelty returns `quiet`. `frontend/__tests__/components/cooking/CookCompleteCelebration.tier.test.tsx` ✅ 8/8 — big tier renders hero + share-prompt; medium tier renders sparkle + wink, no share-prompt; quiet tier renders checkmark only (no sparkle, no share-prompt) + fires single light haptic on mount; per-tier accessibility labels announce the celebration kind; banned-vocab regression (no track / goal / macro / crush / optimize / cut/bulk).
@@ -554,14 +553,7 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
 ### T4: Telemetry + decision gate
 - [x] **T4.1: Analytics events** ✅ — `frontend/lib/analytics.ts` now exports `TONIGHT_EVENTS` registry + 5 typed helpers (`trackTonightProposalShown/Accepted/Swapped/Escaped` + `trackTonightModeDisabled`). All include `proposalLatencyMs` + `pantryCoveragePct`. Wired into `app/tonight.tsx` (shown / accepted / swapped / escaped) and `components/profile/TonightModeRow.tsx` (disabled fires only on toggle-off).
   - [x] **Test:** `frontend/__tests__/analytics/tonight.test.ts` (6 tests) — registry shape + each helper spies on `track` and asserts payload shape.
-- [ ] **T4.2: 2-week internal dogfood** — alex on Tonight mode exclusively for 14 days. Daily journal (one line: *did the proposal feel right?* y/n + why). Decision gate at day 14: ship as freemium experiment OR archive branch.
-  - **Verification & Metrics:** acceptance rate (CTA tap / proposal shown) ≥ 60% to advance; swap-then-accept ≥ 75% (i.e., when user swaps, they then cook); escape rate < 25%. If all three clear, promote to closed-beta cohort.
-
-### T5: Freemium gating (only after T4 passes)
-- [ ] **T5.1: Free tier = Tonight only** — when `User.subscriptionStatus !== 'active'`, hide the "More" affordance and gate the full 4-tab IA behind paywall. Membership unlocks Today/Week/Kitchen/Sazon. Update `subscriptionTierService` feature matrix to add `fullIA: { free: false, premium: true }`.
-  - **Test:** `backend/__tests__/services/subscriptionTierService.test.ts` (extend) — free user: `hasFeatureAccess('fullIA') === false`; active member: `true`. `frontend/__tests__/app/tonight.gating.test.tsx` — free user sees no More affordance; member sees it; tapping it as free opens paywall instead of tabs.
-- [ ] **T5.2: Paywall copy rewrite for the new framing** — hero: *"Sazon picks dinner. Membership lets you plan the week, build your library, and chat with Sazon anytime."* Trust line unchanged.
-  - **Test:** `frontend/__tests__/components/paywall/PaywallScreen.tonight.test.tsx` — new hero copy renders; banned-vocab lint clean; trust line still pre-CTA.
+> **T4.2 + T5 (freemium gating)** moved to **Tier 🔒 Gated**. T4.2 is a 14-day dogfood metric gate; T5.1/T5.2 are gated on T4.2 outcome.
 
 ---
 
@@ -633,14 +625,7 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
   - **Test:** `backend/__tests__/scripts/syntheticPersonas.test.ts` ✅ 6/6 — count, determinism, seed-divergence, distribution gates (≥10% allergies, ≥20% weeknight cookers), uniqueness, 64-dim finite tasteSeed.
 - [x] **TB4.2: End-to-end pipeline regression test** ✅ — `backend/__tests__/recommender/syntheticRegression.test.ts`. Runs `retrieveCandidates → rankWithLLM` (canned LLM that picks the top-retrieval candidate) for all 100 personas against a 24-recipe synthetic catalog. Asserts <30s wall time and freezes the picks via `toMatchSnapshot('synthetic-100-picks')` — any retrieval/ranker change that shifts the snapshot fails CI until investigated.
 
-### TB5: Distill to specialized model (deferred — gated on data volume)
-
-> **Trigger:** ≥50k `RecommenderEvent` rows with outcomes. Not before. Speculative work prior to that threshold is wasted; the data we'd train on doesn't exist yet.
-
-- [ ] **TB5.1: Train two-tower user × recipe model on real interactions** — replaces TB2's LLM ranker for the high-volume default case. LLM stays as the reasoning layer for copy line generation + edge cases (low confidence, cold-start users with <10 cooks).
-  - **Test:** offline holdout — model's top-1 accuracy on held-out 20% of `RecommenderEvent` rows ≥ LLM ranker's accuracy. If not, ship as ensemble (LLM tiebreaks low-confidence specialized-model picks).
-- [ ] **TB5.2: Cost rollover** — after specialized model proves out, LLM call rate drops from 100% of proposals to ~20% (only low-confidence + edge cases). Token cost expected to fall ~80%.
-  - **Verification & Metrics:** track cost/proposal week-over-week post-rollout; assert ≥70% reduction within 30 days; if not, the specialized model is leaking to LLM fallback too often — investigate before claiming win.
+> **TB5 (specialized-model distillation)** moved to **Tier 🔒 Gated** — fires only at ≥50k `RecommenderEvent` rows.
 
 ### Tier T-bis — sequencing & dependencies
 
@@ -677,6 +662,48 @@ TB0 (item embeddings)  ─────┐
 - [ ] Tier C remaining incomplete items (adaptation engine drives "what to propose")
 - [ ] Tier D recipe DB at ≥1500 recipes (Tonight is unforgiving with a sparse catalog; one bad proposal kills trust)
 - [ ] Tier J peak-moment items needed for the proposal-acceptance moment to feel like a screenshot
+
+---
+
+## 🔒 Tier Gated — externally-blocked work (do not surface in incomplete-tier reports)
+
+> **What this tier is.** Work that *cannot start now* because it depends on an external trigger we don't control: a calendar date, a downstream-tier outcome, or a data-volume threshold. These are not active backlog. They are not blockers on launch. They appear here so they aren't forgotten, but they are intentionally hidden from "what's left" / "incomplete tier" reports — surfacing them as open work creates phantom backlog and noise.
+>
+> **Each item below carries a `> **Gate:**` line stating the trigger.** When a gate fires, the item moves back to its origin tier and joins active work. Until then, no engineering effort is spent — speculative work prior to a gate firing is wasted (training data we don't have, dogfood metrics we haven't measured, calendar moments that haven't arrived).
+>
+> **Excluded from incomplete-tier reports** by convention.
+
+### J13: Sazon Wrapped — yearly retrospective ritual *(was Tier J)*
+
+> **Gate:** calendar — build begins **September 2026**, soft-launch internal **mid-November 2026**, public reveal **December 28**. Wrapped is the brand's December gift; building earlier serves no one.
+
+- [ ] **J13: Sazon Wrapped — yearly retrospective ritual** — Last Sunday of December, deliver a one-shot "Sazon Wrapped" surface as a gift, not a feature. Five swipeable cards composed against the user's year of cooking: top 5 cuisines, total ingredients tasted, longest cuisine streak, micros highlights, "the dish you'd never made before this year." Each card is share-as-image with Sazon mascot signature. Reuses Tier C9 weekly-recap data + Tier J5 milestone data + existing `ShareCardCapture` — no new datastore, only new surface composition. Available to free + paid users. Spotify Wrapped is the persona-resonant analog (`competitor-design-ideas.md`).
+  - **Test:** `frontend/__tests__/components/today/SazonWrappedSurface.test.tsx` (NEW) — surface renders only when (a) local date in Dec 28–31 window, (b) user has ≥1 cooked recipe in the year, (c) not yet seen this year-key (`@sazon/wrapped/year_seen`); five card slots populate from fixture year-data; share button calls `Sharing.shareAsync` with captured image per card; auto-hides after Jan 2; never re-fires within the same year-key. Backend: `backend/__tests__/services/yearlyRecapService.test.ts` (NEW) — aggregates a year of cooked recipes into the five-card payload; handles users with sparse data (≤5 cooks → graceful "your first year cooking with Sazon" framing).
+
+### T4.2: 2-week internal Tonight Mode dogfood *(was Tier T)*
+
+> **Gate:** **14 days of user-driven dogfood journaling** with metric thresholds: acceptance rate (CTA tap / proposal shown) ≥60%, swap-then-accept ≥75%, escape rate <25%. Cannot be unblocked by code — requires the founder cooking on Tonight Mode exclusively for two weeks and writing a daily one-line journal entry. Decision at day 14 promotes T5 to active work or archives the `tonight-mode` branch.
+
+- [ ] **T4.2: 2-week internal dogfood** — alex on Tonight mode exclusively for 14 days. Daily journal (one line: *did the proposal feel right?* y/n + why). Decision gate at day 14: ship as freemium experiment OR archive branch.
+  - **Verification & Metrics:** acceptance rate (CTA tap / proposal shown) ≥ 60% to advance; swap-then-accept ≥ 75% (i.e., when user swaps, they then cook); escape rate < 25%. If all three clear, promote to closed-beta cohort.
+
+### T5: Freemium gating *(was Tier T)*
+
+> **Gate:** **T4.2 metrics pass.** Building paywall logic before the dogfood validates the Tonight Mode hypothesis is wasted work — if T4.2 archives the branch, T5 dies with it. Both items below fire only after T4.2's day-14 decision is "promote."
+
+- [ ] **T5.1: Free tier = Tonight only** — when `User.subscriptionStatus !== 'active'`, hide the "More" affordance and gate the full 4-tab IA behind paywall. Membership unlocks Today/Week/Kitchen/Sazon. Update `subscriptionTierService` feature matrix to add `fullIA: { free: false, premium: true }`.
+  - **Test:** `backend/__tests__/services/subscriptionTierService.test.ts` (extend) — free user: `hasFeatureAccess('fullIA') === false`; active member: `true`. `frontend/__tests__/app/tonight.gating.test.tsx` — free user sees no More affordance; member sees it; tapping it as free opens paywall instead of tabs.
+- [ ] **T5.2: Paywall copy rewrite for the new framing** — hero: *"Sazon picks dinner. Membership lets you plan the week, build your library, and chat with Sazon anytime."* Trust line unchanged.
+  - **Test:** `frontend/__tests__/components/paywall/PaywallScreen.tonight.test.tsx` — new hero copy renders; banned-vocab lint clean; trust line still pre-CTA.
+
+### TB5: Distill recommender to specialized model *(was Tier T-bis)*
+
+> **Gate:** **≥50,000 `RecommenderEvent` rows with outcomes.** Below that threshold the training set is too sparse and noisy — any specialized model would overfit. The LLM ranker (TB2) handles the cold-start period; this tier fires only when real interaction volume justifies distillation.
+
+- [ ] **TB5.1: Train two-tower user × recipe model on real interactions** — replaces TB2's LLM ranker for the high-volume default case. LLM stays as the reasoning layer for copy line generation + edge cases (low confidence, cold-start users with <10 cooks).
+  - **Test:** offline holdout — model's top-1 accuracy on held-out 20% of `RecommenderEvent` rows ≥ LLM ranker's accuracy. If not, ship as ensemble (LLM tiebreaks low-confidence specialized-model picks).
+- [ ] **TB5.2: Cost rollover** — after specialized model proves out, LLM call rate drops from 100% of proposals to ~20% (only low-confidence + edge cases). Token cost expected to fall ~80%.
+  - **Verification & Metrics:** track cost/proposal week-over-week post-rollout; assert ≥70% reduction within 30 days; if not, the specialized model is leaking to LLM fallback too often — investigate before claiming win.
 
 ---
 
