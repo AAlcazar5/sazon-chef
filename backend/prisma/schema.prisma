@@ -347,6 +347,11 @@ model Recipe {
   // heuristic in applianceTaggerService and surfaced as filter chips.
   appliances String?
 
+  // ROADMAP 4.0 D12 — free-text recipe tags. JSON-stringified array of
+  // tag keys (e.g. ["cravings_made_real","glazed_bite"]). Used by smart
+  // collections (Cravings Made Real, Glazed Protein Bites family).
+  tagsJson String?
+
   // Relationships
   feedback          RecipeFeedback[]
   savedRecipes      SavedRecipe[]
