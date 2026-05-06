@@ -28,6 +28,7 @@ import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
 import SoftFilterPill from '../../components/home/SoftFilterPill';
+import HeroRationaleRibbon from '../../components/home/HeroRationaleRibbon';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
@@ -1153,6 +1154,11 @@ export default function HomeScreen() {
           onRecipePress={handleRecipePress}
           onToggleSave={handleSave}
         />
+
+        {/* ROADMAP 4.0 HX0.2 — "Why today's hero" rationale ribbon.
+            Renders nothing when the backend declined to generate one
+            (cold-start / no strong signals). */}
+        <HeroRationaleRibbon rationale={(recipeOfTheDay as any)?.rationale ?? null} />
 
         {/* ROADMAP 4.0 J4 — Sunday Polaroid drop (renders only on local Sunday) */}
         {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}

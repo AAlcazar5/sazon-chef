@@ -4293,8 +4293,11 @@ export const recipeController = {
       // getHomeFeed previously skipped the TB1.3 retrieval narrowing while
       // getRecipes ran it, leading to grid drift on filter change. Both paths
       // now share the same retrieval+ranker.
+      // HX0.1 — capture the ranked recipe ids so Recipe of the Day can pick
+      // the top-ranked candidate (instead of date-modulo).
       let homeFeedSoftFilterMode = false;
       let homeFeedNarrowedBy: string[] = [];
+      let homeFeedRankedRecipeIds: string[] | null = null;
       try {
         const { resolveRetrievalCandidates } = require('@/services/recommender/homeFeedRetrievalAdapter');
         const retrieval = await resolveRetrievalCandidates({
@@ -4314,6 +4317,7 @@ export const recipeController = {
           where.id = { in: retrieval.recipeIds };
           homeFeedSoftFilterMode = !!retrieval.softFilterMode;
           homeFeedNarrowedBy = retrieval.narrowedBy ?? [];
+          homeFeedRankedRecipeIds = retrieval.recipeIds;
         }
       } catch (err) {
         logger.warn({ err }, 'FX3.5 home-feed retrieval adapter threw; falling back');
@@ -4551,19 +4555,50 @@ export const recipeController = {
         .filter((r: any) => r.score?.matchPercentage >= 85)
         .slice(0, 5);
 
-      // 8. Recipe of the Day (date-seeded selection)
+      // 8. Recipe of the Day — ROADMAP 4.0 HX0.1 + HX0.2.
+      // The T-bis ranker picks the hero from the candidate pool; date-modulo
+      // survives only as a cold-start fallback. `rotdSource` ships in the
+      // response so the UI can label provenance. The rationale builder
+      // composes a lifestyle one-liner + 2-3 supporting signals for the
+      // "Why today's hero" ribbon.
       let recipeOfTheDay = null;
+      let rotdSource: 'ranker' | 'fallback' = 'fallback';
       if (rotdCandidates.length > 0) {
-        const selectedIndex = dateSeed % rotdCandidates.length;
-        const rotdRaw = rotdCandidates[selectedIndex];
-        const healthGrade = (() => { try { return calculateHealthGrade(rotdRaw); } catch { return { grade: 'B', score: 70 }; } })();
-        const rotdScored = scoreRecipe(rotdRaw);
-        recipeOfTheDay = {
-          ...rotdScored,
-          healthGrade: healthGrade?.grade || rotdScored?.score?.healthGrade || 'B',
-          isRecipeOfTheDay: true,
-          selectedDate: today.toISOString().split('T')[0],
-        };
+        const { selectRecipeOfTheDay } = require('@/services/recipeOfTheDayService');
+        const picked = selectRecipeOfTheDay({
+          candidates: rotdCandidates,
+          rankedRecipeIds: homeFeedRankedRecipeIds,
+          dateSeed,
+        });
+        if (picked.recipe) {
+          rotdSource = picked.source;
+          const rotdRaw: any = picked.recipe;
+          const healthGrade = (() => { try { return calculateHealthGrade(rotdRaw); } catch { return { grade: 'B', score: 70 }; } })();
+          const rotdScored = scoreRecipe(rotdRaw);
+
+          // HX0.2 — build the rationale from currently-available signals.
+          // Pantry coverage, nutrient gap, cuisine novelty, cuisine cadence,
+          // and friend-cooks land cross-tier (IG / D14 / F1); for now we
+          // compose what we have. The builder returns null gracefully when
+          // no signal is strong enough.
+          const { buildHeroRationale } = require('@/services/heroRationaleBuilder');
+          const preferredCookTime = (userPreferences as any)?.cookTimePreference ?? null;
+          const rationale = buildHeroRationale({
+            cookTime: rotdRaw.cookTime ?? null,
+            preferredCookTime,
+            proteinPerServing: rotdRaw.protein ?? null,
+            cuisineLabel: rotdRaw.cuisine ?? null,
+          });
+
+          recipeOfTheDay = {
+            ...rotdScored,
+            healthGrade: healthGrade?.grade || rotdScored?.score?.healthGrade || 'B',
+            isRecipeOfTheDay: true,
+            rotdSource,
+            rationale,
+            selectedDate: today.toISOString().split('T')[0],
+          };
+        }
       }
 
       // 9. Format liked recipes
@@ -4612,6 +4647,10 @@ export const recipeController = {
         // FX3.1 + FX3.5 — surface retrieval flags for the soft-filter pill.
         softFilterMode: homeFeedSoftFilterMode,
         narrowedBy: homeFeedNarrowedBy,
+        // HX0.1 — telemetry: did the ranker pick the hero, or did we fall
+        // back to date-modulo? Used by the UI to label provenance + by
+        // analytics to track ranker hit-rate.
+        rotdSource,
         pagination: {
           page,
           limit,

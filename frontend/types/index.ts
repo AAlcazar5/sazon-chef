@@ -139,8 +139,25 @@ export interface Recipe {
   recommendationReason?: string;
 }
 
+export interface HeroRationale {
+  /** Lifestyle one-liner ≤ 90 chars. */
+  primaryReason: string;
+  /** Up to 3 supporting bullets. */
+  secondaryReasons: string[];
+  /** Structured signal tags so the UI can render iconography. */
+  signals?: string[];
+}
+
 export interface SuggestedRecipe extends Recipe {
   score: RecipeScore;
+  /** ROADMAP 4.0 HX0.1 — true when this recipe is the hero pick. */
+  isRecipeOfTheDay?: boolean;
+  /** ROADMAP 4.0 HX0.1 — provenance: 'ranker' = picked by T-bis,
+   *  'fallback' = date-modulo cold-start. */
+  rotdSource?: 'ranker' | 'fallback';
+  /** ROADMAP 4.0 HX0.2 — "Why today's hero" rationale. Null when no
+   *  signal is strong enough (cold-start). */
+  rationale?: HeroRationale | null;
 }
 
 export interface SavedRecipe extends Recipe {
