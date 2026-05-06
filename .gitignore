@@ -298,6 +298,10 @@ cython_debug/
 backend/.env
 backend/prisma/dev.db
 
+# ROADMAP 4.0 TB0 — local-only Food.com training artifacts
+backend/data/foodcom/
+backend/data/recommender/
+
 # Personal roadmap and documentation (for development use only)
 *.md
 !README.md
