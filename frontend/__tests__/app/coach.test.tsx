@@ -17,7 +17,31 @@ jest.mock('../../lib/api', () => ({
     getConversation: jest.fn(),
     createConversation: jest.fn(),
     streamMessage: jest.fn(),
+    getCoachContext: jest.fn().mockRejectedValue(new Error('skip')),
   },
+}));
+
+jest.mock('../../hooks/useVoiceInput', () => ({
+  useVoiceInput: () => ({
+    isListening: false,
+    transcript: '',
+    error: null,
+    permissionDenied: false,
+    start: jest.fn(),
+    stop: jest.fn(),
+    clear: jest.fn(),
+  }),
+}));
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue(null),
+  setItem: jest.fn().mockResolvedValue(undefined),
+  removeItem: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('expo-speech', () => ({
+  speak: jest.fn(),
+  stop: jest.fn(),
 }));
 
 jest.mock('../../components/ui/HapticTouchableOpacity', () => {
@@ -80,16 +104,23 @@ describe('CoachScreen', () => {
 
   it('renders quick-start chips by default', async () => {
     const { findByText } = render(<CoachScreen />);
-    expect(await findByText("Try a cuisine I haven't yet")).toBeTruthy();
+    expect(await findByText("Plan tonight's dinner")).toBeTruthy();
   });
 
-  it('seeds the composer when a chip is tapped', async () => {
-    const { findByText, getByPlaceholderText } = render(<CoachScreen />);
-    const chip = await findByText("Try a cuisine I haven't yet");
+  it('auto-sends the chip message (Tier S S0.1 — no longer just seeds composer)', async () => {
+    const api = require('../../lib/api').coachApi;
+    api.createConversation.mockResolvedValue({ id: 'c-new', title: '' });
+    api.streamMessage.mockReturnValue((async function* () { /* empty */ })());
+
+    const { findByText } = render(<CoachScreen />);
+    const chip = await findByText("Plan tonight's dinner");
     fireEvent.press(chip);
+
     await waitFor(() => {
-      const composer = getByPlaceholderText(/Tell me what you're hungry for/i) as any;
-      expect(composer.props.value).toBe("Try a cuisine I haven't yet");
+      expect(api.createConversation).toHaveBeenCalledWith("Plan tonight's dinner");
+    });
+    await waitFor(() => {
+      expect(api.streamMessage).toHaveBeenCalledTimes(1);
     });
   });
 });

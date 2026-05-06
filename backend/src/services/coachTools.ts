@@ -21,6 +21,8 @@ export type CoachToolName =
   | 'get_pantry'
   | 'get_today_remaining_macros'
   | 'find_recipes'
+  | 'find_recipes_smart'
+  | 'propose_tonight'
   | 'compose_plate'
   | 'log_meal';
 
@@ -29,6 +31,8 @@ const READ_TOOL_NAMES: ReadonlySet<CoachToolName> = new Set([
   'get_pantry',
   'get_today_remaining_macros',
   'find_recipes',
+  'find_recipes_smart',
+  'propose_tonight',
 ]);
 
 const WRITE_TOOL_NAMES: ReadonlySet<CoachToolName> = new Set([
@@ -94,6 +98,30 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
             "Optional household member id. When set, ranking uses *this* member's slot affinity instead of the account holder's — kid plate adapts to *this* kid.",
         },
       },
+    },
+  },
+  {
+    name: 'find_recipes_smart',
+    description:
+      "Tier S S4.1: PERSONALIZED RETRIEVAL via the new TB1 embeddings pipeline. Returns up to 5 recipe candidates ranked by cosine similarity to the user's cooking-history context vector + hard filters (allergens, dietary). Use when the user asks 'what should I eat' / 'find me something' / 'try a new dish' — preferred over `find_recipes` when no specific cuisine or constraint is given. Returns `{ error: 'retrieval_unavailable' }` when the embedding store is cold-start or the user has no cook history.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        maxCookTime: { type: 'number', description: 'Optional cook-time cap in minutes.' },
+        minPantryCoverage: {
+          type: 'number',
+          description: 'Optional 0..1 minimum fraction of recipe ingredients the user already has.',
+        },
+      },
+    },
+  },
+  {
+    name: 'propose_tonight',
+    description:
+      "Tier S S4.2: PRIMARY 'what should I eat tonight' tool. Calls the same retrieval + LLM-ranker pipeline that powers /api/tonight/proposal so Sazon's recommendation matches the home-feed hero. Returns `{ recipeId, title, copyLine, eventId }`. The eventId is a RecommenderEvent that lets us log accept/swap outcomes via S4.3. Returns `{ error: 'cold_start' | 'low_confidence' | 'ranker_unavailable' }` when the pipeline declines.",
+    input_schema: {
+      type: 'object',
+      properties: {},
     },
   },
   {
@@ -403,6 +431,208 @@ async function runFindRecipes(
     memberAffinityNames,
   );
   return { recipes: ranked.slice(0, 8), filteredForAllergens };
+}
+
+// ─── Tier S S4.1: find_recipes_smart via TB1 retrieval ──────────────────
+async function runFindRecipesSmart(
+  userId: string,
+  input: { maxCookTime?: number; minPantryCoverage?: number },
+): Promise<unknown> {
+  // Lazy import to avoid Prisma init in unit tests that mock coachTools.
+  const { resolveRetrievalCandidates } = await import(
+    './recommender/homeFeedRetrievalAdapter'
+  );
+
+  const allergens = await loadUserAllergens(userId);
+  let result;
+  try {
+    result = await resolveRetrievalCandidates({
+      userId,
+      enabled: true,
+      k: 12,
+      hardFilters: {
+        allergens,
+        dietaryTags: [],
+        maxCookTime: typeof input.maxCookTime === 'number' ? input.maxCookTime : null,
+        pantryItems: [],
+        minPantryCoverage:
+          typeof input.minPantryCoverage === 'number' ? input.minPantryCoverage : 0,
+      },
+    });
+  } catch {
+    return { error: 'retrieval_unavailable' };
+  }
+  if (!result || result.recipeIds.length === 0) {
+    return { error: 'retrieval_unavailable' };
+  }
+
+  const recipes = (await prisma.recipe.findMany({
+    where: { id: { in: result.recipeIds } },
+    select: {
+      id: true,
+      title: true,
+      cuisine: true,
+      cookTime: true,
+      calories: true,
+      protein: true,
+      imageUrl: true,
+    } as any,
+  } as any)) as unknown as Array<{
+    id: string;
+    title: string;
+    cuisine: string;
+    cookTime: number;
+    calories: number;
+    protein: number;
+    imageUrl: string | null;
+  }>;
+
+  const scoreById = new Map(
+    result.recipeIds.map((id, i) => [id, result.scores[i] ?? 0]),
+  );
+  const ranked = recipes
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      cuisine: r.cuisine,
+      cookTime: r.cookTime,
+      calories: r.calories,
+      protein: r.protein,
+      imageUrl: r.imageUrl ?? null,
+      retrievalScore: Number((scoreById.get(r.id) ?? 0).toFixed(3)),
+    }))
+    .sort((a, b) => b.retrievalScore - a.retrievalScore)
+    .slice(0, 5);
+
+  return { recipes: ranked, source: 'tb1_retrieval' };
+}
+
+// ─── Tier S S4.2: propose_tonight via TB2 ranker ────────────────────────
+async function runProposeTonight(userId: string): Promise<unknown> {
+  const { resolveRetrievalCandidates } = await import(
+    './recommender/homeFeedRetrievalAdapter'
+  );
+  const { rankWithLLM } = await import('./recommender/recommenderService');
+  const { recordProposal } = await import(
+    './recommender/recommenderEventService'
+  );
+
+  type RC = import('./recommender/recommenderService').RankCandidate;
+  type UC = import('./recommender/recommenderService').UserContext;
+
+  const now = new Date();
+  let retrieval;
+  try {
+    retrieval = await resolveRetrievalCandidates({
+      userId,
+      enabled: true,
+      k: 25,
+    });
+  } catch {
+    return { error: 'ranker_unavailable' };
+  }
+  if (!retrieval || retrieval.recipeIds.length === 0) {
+    return { error: 'cold_start' };
+  }
+
+  const recipes = (await prisma.recipe.findMany({
+    where: { id: { in: retrieval.recipeIds } },
+    select: { id: true, title: true, cuisine: true, cookTime: true } as any,
+  } as any)) as Array<{
+    id: string;
+    title: string;
+    cuisine: string;
+    cookTime: number;
+  }>;
+  const scoreById = new Map(
+    retrieval.recipeIds.map((id, i) => [id, retrieval.scores[i] ?? 0]),
+  );
+  const candidates: RC[] = recipes.map((r) => ({
+    id: r.id,
+    title: r.title,
+    cuisine: r.cuisine,
+    cookTime: r.cookTime,
+    retrievalScore: scoreById.get(r.id) ?? 0,
+  }));
+  if (candidates.length === 0) return { error: 'cold_start' };
+
+  const userContext: UC = {
+    tasteSummary: 'lifestyle eater, varied cuisines',
+    lastCooks: [],
+    dietary: [],
+    pantrySummary: '',
+    timeOfDay: 'evening',
+    dayOfWeek: 'today',
+    daysSinceCook: 0,
+    expiringItems: [],
+  };
+
+  let pick;
+  try {
+    pick = await rankWithLLM({
+      userContext,
+      candidates,
+      confidenceThreshold: 0.6,
+    });
+  } catch {
+    return { error: 'ranker_unavailable' };
+  }
+  if (!pick) return { error: 'low_confidence' };
+
+  const eventId = await recordProposal({
+    userId,
+    asOf: now,
+    contextSnapshot: { surface: 'coach' },
+    candidateIds: candidates.map((c) => c.id),
+    pickedRecipeId: pick.recipeId,
+    runnerUpIds: pick.runnerUpIds,
+    confidence: pick.confidence,
+    copyLine: pick.reason,
+    source: pick.source,
+  });
+
+  const picked = recipes.find((r) => r.id === pick.recipeId);
+  return {
+    recipeId: pick.recipeId,
+    title: picked?.title ?? '',
+    cuisine: picked?.cuisine ?? '',
+    copyLine: pick.reason,
+    confidence: pick.confidence,
+    eventId,
+  };
+}
+
+// ─── Tier S S4.3: write RecommenderEvent outcome on accepted recipe ─────
+// When the user logs/saves a recipe Sazon proposed in this conversation,
+// we mark the proposal as `accepted` so the data flywheel learns from coach
+// turns the same way it learns from /api/tonight outcomes.
+async function recordCoachAcceptOutcome(
+  userId: string,
+  recipeId: string,
+): Promise<void> {
+  try {
+    const { recordOutcome } = await import(
+      './recommender/recommenderEventOutcomeService'
+    );
+    // Find the most-recent uncompleted proposal that picked this recipe in
+    // the last 60 minutes (a coach turn that landed on this recipe).
+    const sinceMs = 60 * 60 * 1000;
+    const cutoff = new Date(Date.now() - sinceMs);
+    const event = await (prisma as any).recommenderEvent.findFirst({
+      where: {
+        userId,
+        pickedRecipeId: recipeId,
+        createdAt: { gte: cutoff },
+        outcome: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (!event?.id) return;
+    await recordOutcome({ eventId: event.id, outcome: 'accepted', latencyMs: 0 });
+  } catch {
+    // Never let event logging break the user-facing reply.
+  }
 }
 
 async function loadMemberAffinityComponentNames(
@@ -844,6 +1074,12 @@ async function runLogMeal(
     },
   });
 
+  // Tier S S4.3: if Sazon proposed this recipe in the last hour (via
+  // propose_tonight), mark that proposal's outcome as `accepted`. Closes the
+  // TB3 data-flywheel loop for coach-driven cooks. Fire-and-forget; never
+  // surface an error to the user.
+  void recordCoachAcceptOutcome(userId, recipe.id);
+
   const servings = input.servings;
   return {
     id: (mh as { id: string }).id,
@@ -900,6 +1136,13 @@ async function dispatchTool(
           maxCalories?: number;
         },
       );
+    case 'find_recipes_smart':
+      return runFindRecipesSmart(
+        userId,
+        (input ?? {}) as { maxCookTime?: number; minPantryCoverage?: number },
+      );
+    case 'propose_tonight':
+      return runProposeTonight(userId);
     case 'search_cookbook':
       return runSearchCookbook(userId, (input ?? {}) as { query: string });
     case 'compose_plate':

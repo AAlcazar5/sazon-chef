@@ -101,15 +101,19 @@ beforeEach(() => {
 });
 
 describe('coachToolDefinitions', () => {
-  it('exposes the 6 tools (4 read + 2 write)', () => {
-    expect(coachToolDefinitions).toHaveLength(6);
+  it('exposes the 8 tools (6 read + 2 write) — Tier S adds find_recipes_smart + propose_tonight', () => {
+    expect(coachToolDefinitions).toHaveLength(8);
     const names = coachToolDefinitions.map((t) => t.name).sort();
+    expect(names).toContain('find_recipes_smart');
+    expect(names).toContain('propose_tonight');
     expect(names).toEqual([
       'compose_plate',
       'find_recipes',
+      'find_recipes_smart',
       'get_pantry',
       'get_today_remaining_macros',
       'log_meal',
+      'propose_tonight',
       'search_cookbook',
     ]);
   });

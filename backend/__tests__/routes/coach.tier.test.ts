@@ -193,7 +193,7 @@ describe('POST /api/coach/message — attachments paywall (Phase 4)', () => {
 });
 
 describe('POST /api/coach/message — mid-conversation tier downgrade', () => {
-  it('uses Sonnet for the next message when a previously-premium conversation has past_due status', async () => {
+  it('uses the free-tier model (Haiku) for the next message when a previously-premium conversation has past_due status', async () => {
     mockUserFindUnique.mockResolvedValue({
       id: 'user-was-pro',
       subscriptionTier: 'premium',
@@ -214,7 +214,7 @@ describe('POST /api/coach/message — mid-conversation tier downgrade', () => {
 
     expect(mockStream).toHaveBeenCalled();
     const params = mockStream.mock.calls[0][0];
-    expect(String(params.model)).toMatch(/sonnet/);
+    expect(String(params.model)).toMatch(/haiku/);
   });
 });
 

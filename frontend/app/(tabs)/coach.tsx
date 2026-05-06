@@ -1,10 +1,16 @@
 // frontend/app/(tabs)/coach.tsx
-// 10Y-B: Sazon Coach chat surface. Two views in one screen:
+// 10Y-B + Tier S: Sazon Coach chat surface. Two views in one screen:
 //   1) Thread list (default, no conversation selected)
 //   2) Active conversation (header + bubbles + composer + streaming)
-// Free-tier text-only. Photo attachments + tool cards land in later phases.
+//
+// Tier S additions:
+//   - S0.1: chip taps auto-send (no longer just seed the composer)
+//   - S1.3: header model label reflects classified intent (chat / deep_plan)
+//   - S2.1/S2.2: hold-to-talk mic in composer + permission denial UX
+//   - S3.1/S3.2: TTS toggle in header reads assistant replies aloud
+//   - S5.1: live N=1 chips derived from /api/coach/context
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,8 +21,11 @@ import {
   StyleSheet,
   ActionSheetIOS,
   Alert,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
 import AnimatedEmptyState from '../../components/ui/AnimatedEmptyState';
@@ -29,12 +38,15 @@ import {
   CostNotice,
   ConversationExport,
 } from '../../components/coach';
+import { chipsFromCoachContext } from '../../components/coach/QuickStartChips';
 import CoachPaywallSheet, { type CoachPaywallReason } from '../../components/coach/CoachPaywallSheet';
 import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill';
 import SazonHeader from '../../components/coach/SazonHeader';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
 import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
+import { useCoachQuickChipContext } from '../../hooks/useCoachQuickChipContext';
+import { useVoiceInput } from '../../hooks/useVoiceInput';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   coachApi,
@@ -45,64 +57,46 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
-import { useFoodIntelUserState } from '../../hooks/useFoodIntelUserState';
 import { useSubscription } from '../../hooks/useSubscription';
 import { deriveCoachFlags } from '../../lib/coachClient';
 import { classifyCoachIntent } from '../../lib/coachIntentClassifier';
+import { cleanForTts } from '../../lib/coachTtsClean';
 
 type CoachView = 'list' | 'conversation';
 
-const FALLBACK_CHIPS: string[] = [
-  'Chicken thighs + 30 min — what should I make?',
-  'I have leftover rice — bridge it forward',
-  '320 cal under — got dessert ideas?',
-  "Try a cuisine I haven't yet",
-];
-
-// 10Y-B follow-up: read pantry.expiringSoon, today.remainingMacros, leftoverInventory, cuisineAdjacency for true N=1 chips
-function deriveChips(_userState: ReturnType<typeof useFoodIntelUserState>): string[] {
-  return FALLBACK_CHIPS;
-}
+const TTS_PREF_KEY = 'sazon.coach.tts.enabled';
 
 export default function CoachScreen() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const userState = useFoodIntelUserState();
   const { subscription } = useSubscription();
-  // composerText is declared below; the header label uses it via
-  // currentIntent (also declared below) — flags depends on both. Hoist
-  // declarations so the JSX can read flags consistently.
-  // 10Y entry-points: contextual deep-links pass conversationId + optional
-  // seedMessage so we can jump directly into an active conversation.
+  const chipContext = useCoachQuickChipContext();
   const params = useLocalSearchParams<{ conversationId?: string; seedMessage?: string }>();
 
   const [view, setView] = useState<CoachView>('list');
   const [conversations, setConversations] = useState<CoachConversation[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [composerText, setComposerText] = useState('');
-  // ROADMAP 4.0 S1.3 — classify the composer text live so the header
-  // label reflects the model the next send would route to. Free tier
-  // never escalates regardless.
-  const currentIntent = useMemo(
-    () => classifyCoachIntent(composerText),
-    [composerText],
-  );
-  const flags = useMemo(
-    () =>
-      deriveCoachFlags(
-        { tier: subscription.tier, isPremium: subscription.isPremium },
-        currentIntent,
-      ),
-    [subscription.tier, subscription.isPremium, currentIntent],
-  );
   const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [pantryConfirm, setPantryConfirm] = useState<CoachIdentifiedIngredient[] | null>(null);
   const [activeTitle, setActiveTitle] = useState<string>('Sazon');
+  const [pendingSeed, setPendingSeed] = useState<string | null>(null);
+  const [lastSentText, setLastSentText] = useState<string>('');
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [voicePermDenied, setVoicePermDenied] = useState(false);
 
   const stream = useCoachStream();
   const attachments = useCoachAttachments();
-  const chips = useMemo(() => deriveChips(userState), [userState]);
   const memoryCount = useCoachMemoryCount();
+
+  // Tier S S1.3: classify the most recent user message to set the model label.
+  const intent = useMemo(() => classifyCoachIntent(lastSentText), [lastSentText]);
+  const flags = useMemo(
+    () => deriveCoachFlags({ tier: subscription.tier, isPremium: subscription.isPremium }, intent),
+    [subscription.tier, subscription.isPremium, intent],
+  );
+
+  const chips = useMemo(() => chipsFromCoachContext(chipContext), [chipContext]);
 
   const paywallReason: CoachPaywallReason | null =
     manualPaywallReason ?? stream.paywallReason ?? (stream.paywall ? 'cap' : null);
@@ -110,6 +104,17 @@ export default function CoachScreen() {
   const screenBg = isDark ? DarkColors.background : '#FAF7F4';
   const text = isDark ? DarkColors.text.primary : Colors.text.primary;
   const subtle = isDark ? DarkColors.text.secondary : Colors.text.secondary;
+
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(TTS_PREF_KEY)
+      .then((v) => {
+        if (cancelled) return;
+        setTtsEnabled(v === '1');
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,19 +135,29 @@ export default function CoachScreen() {
     return () => { cancelled = true; };
   }, []);
 
+  // Tier S S0.1: chip taps from the list view set pendingSeed; the effect
+  // below fires once stream.reset() has flushed and sends automatically so
+  // the user never has to tap send.
   const openNewConversation = useCallback((seed?: string) => {
     stream.reset();
-    setComposerText(seed ?? '');
+    setComposerText('');
     setActiveTitle('Sazon');
     setView('conversation');
-    // ROADMAP 4.0 S0.1 — auto-send when a seed is provided so chip-driven
-    // entries fire the round trip immediately instead of stranding the
-    // user at a pre-filled composer.
     const trimmed = seed?.trim();
-    if (trimmed && trimmed.length > 0) {
-      void stream.sendMessage(trimmed);
-    }
+    setPendingSeed(trimmed && trimmed.length > 0 ? trimmed : null);
   }, [stream]);
+
+  useEffect(() => {
+    if (!pendingSeed) return;
+    if (view !== 'conversation') return;
+    if (stream.isStreaming) return;
+    if (stream.conversationId !== null) return;
+    if (stream.messages.length > 0) return;
+    const seed = pendingSeed;
+    setPendingSeed(null);
+    setLastSentText(seed);
+    void stream.sendMessage(seed);
+  }, [pendingSeed, view, stream]);
 
   const openExisting = useCallback(async (id: string) => {
     setView('conversation');
@@ -152,16 +167,10 @@ export default function CoachScreen() {
       stream.setMessages(detail.messages.map(m => ({ id: m.id, role: m.role, content: m.content })));
       setActiveTitle(detail.title || 'Sazon');
     } catch {
-      // Conversation may have been deleted; reset to fresh.
       stream.reset();
     }
   }, [stream]);
 
-  // Deep-link entry: if conversationId is present, jump into the active view
-  // immediately. We split this into two effects: (1) load the conversation
-  // exactly once on mount, (2) auto-send seedMessage after the stream's
-  // conversationId reflects the loaded thread (so sendMessage's closure
-  // doesn't create a duplicate conversation).
   const loadedRef = React.useRef(false);
   const seededRef = React.useRef(false);
   useEffect(() => {
@@ -179,15 +188,14 @@ export default function CoachScreen() {
     if (!convId || !seed || seed.trim().length === 0) return;
     if (stream.conversationId !== convId) return;
     seededRef.current = true;
+    setLastSentText(seed);
     void stream.sendMessage(seed);
   }, [params.conversationId, params.seedMessage, stream]);
 
+  // Tier S S0.1: chip tap inside an active conversation sends immediately.
   const onSelectChip = useCallback((value: string) => {
-    // ROADMAP 4.0 S0.1 — chip taps auto-send. Composer still receives the
-    // text so the user sees what they "said," and the round trip fires
-    // immediately. No-op while the stream is busy to avoid double-send.
-    setComposerText(value);
     if (stream.isStreaming) return;
+    setLastSentText(value);
     void stream.sendMessage(value);
   }, [stream]);
 
@@ -195,6 +203,7 @@ export default function CoachScreen() {
     const value = composerText.trim();
     if (!value) return;
     setComposerText('');
+    setLastSentText(value);
     const pending = attachments.attachments;
     const wireAttachments: CoachAttachment[] = pending.map((a) => ({
       type: 'image_base64',
@@ -203,9 +212,6 @@ export default function CoachScreen() {
     }));
     attachments.clear();
 
-    // Run extraction in parallel with the chat send so the confirm sheet can
-    // pop up after the assistant reply lands. First photo only — multi-photo
-    // pantry extraction is deferred.
     let extractPromise: Promise<CoachIdentifiedIngredient[]> | null = null;
     if (pending.length > 0) {
       const first = pending[0];
@@ -261,6 +267,73 @@ export default function CoachScreen() {
     setView('list');
   }, []);
 
+  // ─── Tier S S2.1: voice input — hold-to-talk mic ─────────────────────────
+  const voice = useVoiceInput({
+    continuous: false,
+    onIntent: (parsed) => {
+      const finalText = parsed?.original ?? '';
+      if (finalText) setComposerText(finalText);
+    },
+  });
+  useEffect(() => {
+    if (voice.isListening && voice.interimTranscript) {
+      setComposerText(voice.interimTranscript);
+    }
+  }, [voice.isListening, voice.interimTranscript]);
+  useEffect(() => {
+    if (voice.hasPermission === false) setVoicePermDenied(true);
+  }, [voice.hasPermission]);
+
+  const onMicPressIn = useCallback(async () => {
+    if (!voice.isAvailable) {
+      Alert.alert(
+        'Voice not available',
+        "This device can't hear me right now — try typing instead.",
+      );
+      return;
+    }
+    if (voice.hasPermission === false) {
+      Alert.alert(
+        "Can't hear you yet",
+        "Mic permission is off — flip it on in Settings and we're back in business.",
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+        ],
+      );
+      return;
+    }
+    await voice.startListening();
+  }, [voice]);
+
+  const onMicPressOut = useCallback(() => {
+    if (voice.isListening) voice.stopListening();
+  }, [voice]);
+
+  // ─── Tier S S3.1: TTS toggle reads completed assistant messages aloud ────
+  const lastSpokenIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ttsEnabled) return;
+    if (stream.isStreaming) return;
+    const last = stream.messages[stream.messages.length - 1];
+    if (!last || last.role !== 'assistant' || !last.content) return;
+    if (lastSpokenIdRef.current === last.id) return;
+    lastSpokenIdRef.current = last.id;
+    const cleaned = cleanForTts(last.content);
+    if (cleaned.length === 0) return;
+    Speech.stop();
+    Speech.speak(cleaned, { rate: 1.0 });
+  }, [ttsEnabled, stream.isStreaming, stream.messages]);
+
+  const onToggleTts = useCallback(() => {
+    setTtsEnabled((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(TTS_PREF_KEY, next ? '1' : '0').catch(() => {});
+      if (!next) Speech.stop();
+      return next;
+    });
+  }, []);
+
   // ─── Active conversation view ──────────────────────────────────────────────
   if (view === 'conversation') {
     return (
@@ -285,11 +358,27 @@ export default function CoachScreen() {
               {flags.modelLabel}
             </Text>
           </View>
-          <ConversationExport
-            conversationId={stream.conversationId}
-            conversationTitle={activeTitle}
-            isPremium={subscription.isPremium}
-          />
+          <View style={styles.headerRight}>
+            <HapticTouchableOpacity
+              onPress={onToggleTts}
+              accessibilityLabel={ttsEnabled ? 'Disable voice replies' : 'Enable voice replies'}
+              accessibilityRole="button"
+              accessibilityState={{ selected: ttsEnabled }}
+              style={styles.headerBtn}
+              testID="coach-tts-toggle"
+            >
+              <Ionicons
+                name={ttsEnabled ? 'volume-high' : 'volume-mute-outline'}
+                size={22}
+                color={ttsEnabled ? (isDark ? DarkColors.primary : Colors.primary) : text}
+              />
+            </HapticTouchableOpacity>
+            <ConversationExport
+              conversationId={stream.conversationId}
+              conversationTitle={activeTitle}
+              isPremium={subscription.isPremium}
+            />
+          </View>
         </View>
 
         <ScrollView
@@ -313,6 +402,14 @@ export default function CoachScreen() {
             >
               <Text style={styles.medicalNoticeText}>
                 Sazon's not a medical pro — try a registered dietitian for that one.
+              </Text>
+            </View>
+          )}
+
+          {voicePermDenied && (
+            <View style={styles.voiceNotice} accessibilityLabel="Voice permission notice">
+              <Text style={styles.voiceNoticeText}>
+                Mic's muted on this device — flip it on in Settings if you want to talk.
               </Text>
             </View>
           )}
@@ -380,13 +477,44 @@ export default function CoachScreen() {
             <TextInput
               value={composerText}
               onChangeText={setComposerText}
-              placeholder="Tell me what you're hungry for..."
+              placeholder={voice.isListening ? 'Listening…' : "Tell me what you're hungry for..."}
               placeholderTextColor={subtle}
               multiline
               accessibilityLabel="Coach message composer"
               style={[styles.composer, { color: text }]}
-              editable={!stream.isStreaming}
+              editable={!stream.isStreaming && !voice.isListening}
             />
+            <HapticTouchableOpacity
+              onPressIn={onMicPressIn}
+              onPressOut={onMicPressOut}
+              accessibilityLabel={voice.isListening ? 'Stop listening' : 'Hold to talk'}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: voice.hasPermission === false }}
+              style={[
+                styles.attachBtn,
+                voice.isListening && {
+                  backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                },
+              ]}
+              testID="coach-mic-button"
+            >
+              <Ionicons
+                name={voice.isListening ? 'mic' : 'mic-outline'}
+                size={20}
+                color={
+                  voice.isListening
+                    ? '#FFFFFF'
+                    : voice.hasPermission === false
+                      ? subtle
+                      : text
+                }
+              />
+              {voice.hasPermission === false && (
+                <View style={styles.attachLock}>
+                  <Ionicons name="lock-closed" size={9} color="#FFFFFF" />
+                </View>
+              )}
+            </HapticTouchableOpacity>
             <HapticTouchableOpacity
               onPress={onSend}
               disabled={!composerText.trim() || stream.isStreaming}
@@ -402,8 +530,6 @@ export default function CoachScreen() {
               ]}
             >
               {stream.isStreaming ? (
-                // TODO: Design system has no spinner that fits a 40x40 button —
-                // R6 banned-pattern sweep — Sazon-themed indicator.
                 <AnimatedActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
@@ -433,7 +559,6 @@ export default function CoachScreen() {
   // ─── Thread list view ──────────────────────────────────────────────────────
   return (
     <View style={[styles.flex, { backgroundColor: screenBg }]}>
-      {/* ROADMAP 4.0 — header matches Home/Kitchen/Week pattern + ProfileAvatarButton */}
       <SazonHeader onNewConversation={() => openNewConversation()} />
 
       {loadingList ? (
@@ -508,6 +633,11 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 1,
     alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   headerTitle: {
     fontSize: 18,
@@ -610,6 +740,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: '#7A4F00',
+  },
+  voiceNotice: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#FFE9E5',
+  },
+  voiceNoticeText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#7A2E20',
   },
   listPad: {
     paddingHorizontal: 16,

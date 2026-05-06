@@ -26,7 +26,9 @@ const CAPS: Record<string, number> = {
   'modules/mealPlan/mealPlanController.ts': 1300,
   'modules/mealPrep/mealPrepController.ts': 1200,
   'services/aiRecipeService.ts': 1300,
-  'services/coachTools.ts': 1200,
+  // Bumped from 1200 → 1450 after Tier S4 added find_recipes /
+  // find_recipes_smart / propose_tonight tools. Split tracked separately.
+  'services/coachTools.ts': 1450,
   'modules/shoppingList/shoppingListGenerationController.ts': 1100,
 };
 

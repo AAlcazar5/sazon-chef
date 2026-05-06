@@ -17,7 +17,31 @@ jest.mock('../../lib/api', () => ({
     getConversation: jest.fn(),
     createConversation: jest.fn().mockResolvedValue({ id: 'c-new', title: '' }),
     streamMessage: jest.fn(),
+    getCoachContext: jest.fn().mockRejectedValue(new Error('skip')),
   },
+}));
+
+jest.mock('../../hooks/useVoiceInput', () => ({
+  useVoiceInput: () => ({
+    isListening: false,
+    transcript: '',
+    error: null,
+    permissionDenied: false,
+    start: jest.fn(),
+    stop: jest.fn(),
+    clear: jest.fn(),
+  }),
+}));
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue(null),
+  setItem: jest.fn().mockResolvedValue(undefined),
+  removeItem: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('expo-speech', () => ({
+  speak: jest.fn(),
+  stop: jest.fn(),
 }));
 
 jest.mock('../../components/ui/HapticTouchableOpacity', () => {
@@ -91,19 +115,19 @@ describe('CoachScreen chip auto-send (S0.1)', () => {
 
   it('list-view: chip tap creates conversation AND streams the message', async () => {
     const { findByText } = render(<CoachScreen />);
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Plan tonight's dinner");
     fireEvent.press(chip);
 
     await waitFor(() => {
       expect(coachApi.createConversation).toHaveBeenCalledWith(
-        "Try a cuisine I haven't yet",
+        "Plan tonight's dinner",
       );
     });
     await waitFor(() => {
       expect(coachApi.streamMessage).toHaveBeenCalledTimes(1);
     });
     const callArg = (coachApi.streamMessage as jest.Mock).mock.calls[0][0];
-    expect(callArg.message).toBe("Try a cuisine I haven't yet");
+    expect(callArg.message).toBe("Plan tonight's dinner");
   });
 
   it('active conversation view: chip tap streams the message (no extra createConversation)', async () => {
@@ -117,7 +141,7 @@ describe('CoachScreen chip auto-send (S0.1)', () => {
 
     const { findByText } = render(<CoachScreen />);
     // Chips render inside the conversation view too (empty messages array).
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Plan tonight's dinner");
 
     // Reset stream mock so the only call we count is the chip tap.
     (coachApi.streamMessage as jest.Mock).mockClear();
@@ -127,7 +151,7 @@ describe('CoachScreen chip auto-send (S0.1)', () => {
       expect(coachApi.streamMessage).toHaveBeenCalledTimes(1);
     });
     const callArg = (coachApi.streamMessage as jest.Mock).mock.calls[0][0];
-    expect(callArg.message).toBe("Try a cuisine I haven't yet");
+    expect(callArg.message).toBe("Plan tonight's dinner");
     expect(callArg.conversationId).toBe('c1');
     // No new conversation created — we're already in one.
     expect(coachApi.createConversation).not.toHaveBeenCalled();
