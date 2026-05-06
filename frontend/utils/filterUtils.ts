@@ -146,6 +146,33 @@ export function countActiveFilters(filters: FilterState): number {
 }
 
 /**
+ * ROADMAP 4.0 FX4.2 — total active filter count for the FilterRow badge.
+ *
+ * `activeFilters: string[]` (from useRecipeFilters) only covers
+ * cuisines / dietary / cookTime / difficulty. The FilterRow badge needs to
+ * reflect ALL active toggles so a user with `highProtein: true` +
+ * `mealPrepMode: true` doesn't see a misleading `0`.
+ */
+export interface AllFilterToggles {
+  filters: FilterState;
+  quickMacroFilters?: { highProtein: boolean; lowCarb: boolean; lowCalorie: boolean };
+  mealPrepMode?: boolean;
+  mood?: string | null | undefined;
+}
+
+export function countAllActiveFilters(input: AllFilterToggles): number {
+  let count = countActiveFilters(input.filters);
+  if (input.quickMacroFilters) {
+    if (input.quickMacroFilters.highProtein) count++;
+    if (input.quickMacroFilters.lowCarb) count++;
+    if (input.quickMacroFilters.lowCalorie) count++;
+  }
+  if (input.mealPrepMode) count++;
+  if (input.mood) count++;
+  return count;
+}
+
+/**
  * Quick filter definitions
  */
 export const QUICK_FILTER_DEFINITIONS = {

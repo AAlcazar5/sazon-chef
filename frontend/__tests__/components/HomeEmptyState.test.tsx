@@ -179,4 +179,52 @@ describe('HomeEmptyState', () => {
     );
     expect(getByText('Disable Meal Prep Mode')).toBeTruthy();
   });
+
+  // ── FX3.2 — Relax this filter yield rows ─────────────────────────────────
+
+  it('renders no yield rows when yields prop is absent', () => {
+    const { queryByTestId } = render(<HomeEmptyState {...defaultProps} />);
+    expect(queryByTestId('filter-yield-rows')).toBeNull();
+  });
+
+  it('renders top-2 yield rows when yields prop is provided (FX3.2)', () => {
+    const onClearFilter = jest.fn();
+    const yields = [
+      { filterId: 'quick', label: 'Quick', remainingIfRemoved: 47 },
+      { filterId: 'highProtein', label: 'High-Protein', remainingIfRemoved: 23 },
+      { filterId: 'cuisines', label: 'Cuisines', remainingIfRemoved: 5 },
+    ];
+    const { getByTestId, queryByTestId } = render(
+      <HomeEmptyState
+        {...defaultProps}
+        activeFilters={['Quick', 'High-Protein']}
+        filters={{ ...emptyFilters, maxCookTime: 30 }}
+        yields={yields}
+        onClearFilter={onClearFilter}
+      />
+    );
+    expect(getByTestId('filter-yield-rows')).toBeTruthy();
+    expect(getByTestId('filter-yield-row-quick')).toBeTruthy();
+    expect(getByTestId('filter-yield-row-highProtein')).toBeTruthy();
+    // Third row clipped — only top 2 render.
+    expect(queryByTestId('filter-yield-row-cuisines')).toBeNull();
+  });
+
+  it('calls onClearFilter(filterId) when a yield row is tapped (FX3.2)', () => {
+    const onClearFilter = jest.fn();
+    const yields = [
+      { filterId: 'quick', label: 'Quick', remainingIfRemoved: 47 },
+    ];
+    const { getByTestId } = render(
+      <HomeEmptyState
+        {...defaultProps}
+        activeFilters={['Quick']}
+        filters={{ ...emptyFilters, maxCookTime: 30 }}
+        yields={yields}
+        onClearFilter={onClearFilter}
+      />
+    );
+    fireEvent.press(getByTestId('filter-yield-row-quick'));
+    expect(onClearFilter).toHaveBeenCalledWith('quick');
+  });
 });

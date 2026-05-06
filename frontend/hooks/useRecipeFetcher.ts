@@ -46,6 +46,13 @@ export interface RecipeFetchResult {
   recipes: SuggestedRecipe[];
   total: number;
   feedback: Record<string, UserFeedback>;
+  /** ROADMAP 4.0 FX3.1 — true when the backend returned the unfiltered top-K
+   *  because the post-filter set was sparse. UI should render the
+   *  "showing closest matches" pill above the grid. */
+  softFilterMode?: boolean;
+  /** ROADMAP 4.0 FX3.1 — names of the filter categories that narrowed the
+   *  results. Used in the pill copy. */
+  narrowedBy?: string[];
 }
 
 export interface UseRecipeFetcherOptions {
@@ -157,11 +164,15 @@ export function useRecipeFetcher(options?: UseRecipeFetcherOptions): UseRecipeFe
       // Parse response - handle both paginated format and legacy array format
       let recipes: SuggestedRecipe[];
       let total: number;
+      let softFilterMode: boolean | undefined;
+      let narrowedBy: string[] | undefined;
 
       if (responseData && responseData.recipes && responseData.pagination) {
-        // New paginated format: { recipes: [], pagination: { total, page, limit } }
+        // New paginated format: { recipes: [], pagination: { total, page, limit }, softFilterMode?, narrowedBy? }
         recipes = responseData.recipes;
         total = responseData.pagination.total;
+        softFilterMode = responseData.softFilterMode;
+        narrowedBy = responseData.narrowedBy;
         console.log(`📄 Received ${recipes.length} recipes (paginated format), total: ${total}`);
       } else if (Array.isArray(responseData)) {
         // Legacy array format: Recipe[]
@@ -183,6 +194,8 @@ export function useRecipeFetcher(options?: UseRecipeFetcherOptions): UseRecipeFe
         recipes: deduplicated,
         total,
         feedback,
+        softFilterMode,
+        narrowedBy,
       };
 
       onSuccess?.(result);

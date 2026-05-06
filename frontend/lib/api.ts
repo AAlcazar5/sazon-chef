@@ -818,6 +818,20 @@ export const recipeApi = {
   getCookingHistory: (id: string) => {
     return apiClient.get(`/recipes/${id}/cooking-history`);
   },
+
+  // ROADMAP 4.0 FX3.2 — per-filter yield deltas for "Relax this filter" rows.
+  getFilterYields: (filters: {
+    cuisines?: string[];
+    dietaryRestrictions?: string[];
+    maxCookTime?: number | null;
+    difficulty?: string[];
+    highProtein?: boolean;
+    lowCarb?: boolean;
+    lowCalorie?: boolean;
+    mealPrepMode?: boolean;
+  }) => {
+    return apiClient.post('/recipes/filter-yields', filters);
+  },
 };
 // Collections API
 export const collectionsApi = {

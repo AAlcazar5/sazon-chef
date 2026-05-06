@@ -27,6 +27,7 @@ import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
+import SoftFilterPill from '../../components/home/SoftFilterPill';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import RecipeCarouselSection from '../../components/home/RecipeCarouselSection';
 import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
@@ -41,6 +42,8 @@ import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
 import CohortSocialProofPill from '../../components/today/CohortSocialProofPill';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
 import { useHomeFilterRowChips } from '../../hooks/useFilterRowChips';
+import { useFilterChipRanking } from '../../hooks/useFilterChipRanking';
+import { countAllActiveFilters } from '../../utils/filterUtils';
 import { FOOD_INTEL_TIPS } from '../../lib/foodIntelTips';
 import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
@@ -82,7 +85,7 @@ import { useDarkFeed } from '../../hooks/useDarkFeed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubscription } from '../../hooks/useSubscription';
 import PremiumUpsellCard from '../../components/premium/PremiumUpsellCard';
-import { searchApi, nutritionApi, cookingHistoryStatsApi, weeklyRecapApi, type DailyNutritionSnapshot, type WeeklyRecapPayload } from '../../lib/api';
+import { searchApi, nutritionApi, cookingHistoryStatsApi, weeklyRecapApi, recipeApi, type DailyNutritionSnapshot, type WeeklyRecapPayload } from '../../lib/api';
 
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
@@ -317,6 +320,20 @@ export default function HomeScreen() {
   // Centralized recipe fetcher - using extracted hook
   const { fetchRecipes } = useRecipeFetcher();
 
+  // ROADMAP 4.0 FX3.1 — last-fetched soft-filter state. Auto-cleared whenever
+  // the user changes filters (so the pill doesn't linger after the user has
+  // already adjusted their filters in response).
+  const [softFilterMode, setSoftFilterMode] = useState(false);
+  const [softFilterNarrowedBy, setSoftFilterNarrowedBy] = useState<string[]>([]);
+
+  // ROADMAP 4.0 FX3.2 — per-filter yield rows (populated only when the empty
+  // body state renders + filters are active).
+  const [filterYields, setFilterYields] = useState<Array<{
+    filterId: string;
+    label: string;
+    remainingIfRemoved: number;
+  }>>([]);
+
   // Helper to apply fetch results to state
   const applyFetchResult = useCallback((result: RecipeFetchResult, options?: { resetPage?: boolean }) => {
     const { resetPage = true } = options || {};
@@ -327,6 +344,8 @@ export default function HomeScreen() {
     }
     setUserFeedback({ ...userFeedback, ...result.feedback });
     setInitialRecipesLoaded(true);
+    setSoftFilterMode(!!result.softFilterMode);
+    setSoftFilterNarrowedBy(result.narrowedBy ?? []);
   }, []);
 
   // Collections state for save to collection - using extracted hook
@@ -623,6 +642,22 @@ export default function HomeScreen() {
     handleQuickMacroFilter,
     handleToggleMealPrepMode,
   });
+
+  // ROADMAP 4.0 FX3.4 — chip ranking by user toggle frequency.
+  const { rankedChips, recordChipToggle } = useFilterChipRanking(DEFAULT_FILTER_CHIPS);
+  const onRankedChipToggle = useCallback((chipId: string) => {
+    homeFilterChipState.onChipToggle(chipId);
+    void recordChipToggle(chipId);
+    // FX3.1 — clear the soft-filter pill once the user has reacted by
+    // toggling a chip; the next fetch will re-set it if still applicable.
+    setSoftFilterMode(false);
+  }, [homeFilterChipState, recordChipToggle]);
+
+  // FX3.1 — pill tap scrolls to the FilterRow (which is anchored just below
+  // the header). Scroll-to-top reveals it in all states.
+  const onSoftFilterPillPress = useCallback(() => {
+    mainScrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
 
   // IMPORTANT:
   // We intentionally do NOT overwrite filtered/paginated results with `/recipes/suggested`.
@@ -921,6 +956,68 @@ export default function HomeScreen() {
     return ids;
   }, [userFeedback]);
 
+  // ROADMAP 4.0 FX3.2 — fetch yields when the empty body would render with
+  // active filters. Cancellable; auto-clears when the empty state goes away.
+  useEffect(() => {
+    const isEmptyWithFilters =
+      suggestedRecipes.length === 0 &&
+      !loading && !loadingFromFilters && !initialLoading &&
+      !error &&
+      (activeFilters.length > 0 || mealPrepMode ||
+        quickMacroFilters.highProtein || quickMacroFilters.lowCarb || quickMacroFilters.lowCalorie) &&
+      !searchQuery.trim() && !cravingQuery.trim();
+
+    if (!isEmptyWithFilters) {
+      if (filterYields.length > 0) setFilterYields([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await recipeApi.getFilterYields({
+          cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+          dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+          maxCookTime: filters.maxCookTime,
+          difficulty: filters.difficulty.length > 0 ? filters.difficulty : undefined,
+          highProtein: quickMacroFilters.highProtein,
+          lowCarb: quickMacroFilters.lowCarb,
+          lowCalorie: quickMacroFilters.lowCalorie,
+          mealPrepMode,
+        });
+        if (!cancelled) {
+          const payload = (res?.data ?? res) as { yields?: Array<{ filterId: string; label: string; remainingIfRemoved: number }> };
+          setFilterYields(payload?.yields ?? []);
+        }
+      } catch {
+        if (!cancelled) setFilterYields([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [suggestedRecipes.length, loading, loadingFromFilters, initialLoading, error,
+      activeFilters.length, mealPrepMode, quickMacroFilters, searchQuery, cravingQuery,
+      filters.cuisines, filters.dietaryRestrictions, filters.maxCookTime, filters.difficulty]);
+
+  // FX3.2 — single-clear handler. Each filterId maps to its source state.
+  const handleClearFilterById = useCallback((filterId: string) => {
+    if (filterId === 'cuisines') {
+      handleQuickFilter('cuisines', []);
+    } else if (filterId === 'dietary') {
+      handleQuickFilter('dietaryRestrictions', []);
+    } else if (filterId === 'quick') {
+      handleQuickFilter('maxCookTime', null);
+    } else if (filterId === 'difficulty') {
+      handleQuickFilter('difficulty', []);
+    } else if (filterId === 'highProtein' && quickMacroFilters.highProtein) {
+      handleQuickMacroFilter('highProtein');
+    } else if (filterId === 'lowCarb' && quickMacroFilters.lowCarb) {
+      handleQuickMacroFilter('lowCarb');
+    } else if (filterId === 'lowCalorie' && quickMacroFilters.lowCalorie) {
+      handleQuickMacroFilter('lowCalorie');
+    } else if (filterId === 'mealPrep') {
+      handleToggleMealPrepMode(false);
+    }
+  }, [handleQuickFilter, handleQuickMacroFilter, handleToggleMealPrepMode, quickMacroFilters]);
+
   // ROADMAP 4.0 FX1.1 — single body-state discriminator.
   // The persistent header + filter row render unconditionally below; this
   // chooses which body to slot under the chrome. Loading/error/empty/no-results
@@ -942,16 +1039,17 @@ export default function HomeScreen() {
       <HomeHeader
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
         onFilterPress={handleFilterPress}
-        activeFilterCount={activeFilters.length}
+        activeFilterCount={countAllActiveFilters({ filters, quickMacroFilters, mealPrepMode, mood: selectedMood?.id })}
       />
 
       {/* ROADMAP 4.0 — Filter row attached below the header (not scrollable) */}
+      {/* FX4.2 — badge counts all toggles (cuisines + dietary + cookTime + difficulty + macros + mealPrep + mood). */}
       <FilterRow
-        chips={DEFAULT_FILTER_CHIPS}
+        chips={rankedChips}
         activeChipIds={homeFilterChipState.activeChipIds}
-        activeAdvancedCount={activeFilters.length}
+        activeAdvancedCount={countAllActiveFilters({ filters, quickMacroFilters, mealPrepMode, mood: selectedMood?.id })}
         onAdvancedFilterPress={handleFilterPress}
-        onChipToggle={homeFilterChipState.onChipToggle}
+        onChipToggle={onRankedChipToggle}
       />
 
       {/* ROADMAP 4.0 FX1.1 — body-only state branches; chrome above stays visible */}
@@ -1001,6 +1099,8 @@ export default function HomeScreen() {
             refetch();
           }}
           onRefresh={refetch}
+          yields={filterYields}
+          onClearFilter={handleClearFilterById}
         />
       )}
 
@@ -1025,6 +1125,15 @@ export default function HomeScreen() {
       >
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
+
+        {/* ROADMAP 4.0 FX3.1 — soft-filter fallback pill. Renders above the
+            content when the backend fell back to the unfiltered top-K
+            because the post-filter set was sparse. */}
+        <SoftFilterPill
+          softFilterMode={softFilterMode}
+          narrowedBy={softFilterNarrowedBy}
+          onPress={onSoftFilterPillPress}
+        />
 
         {/* 10Y entry-point: Ask Sazon Coach card sits directly under the
             filters as the primary "ask anything" affordance. */}

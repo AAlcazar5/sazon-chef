@@ -47,6 +47,9 @@ interface HomeFeedData {
   popularSearches: PopularSearch[];
   searchSuggestions: string[];
   pagination: HomeFeedPagination | null;
+  /** FX3.1 + FX3.5 — soft-filter fallback flag, mirrored from /api/recipes. */
+  softFilterMode: boolean;
+  narrowedBy: string[];
 }
 
 type FailureClass = 'offline' | 'timeout' | 'server_unreachable' | 'canceled' | 'unknown_transport';
@@ -76,6 +79,8 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
     popularSearches: [],
     searchSuggestions: [],
     pagination: null,
+    softFilterMode: false,
+    narrowedBy: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +130,8 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
         popularSearches: responseData.popularSearches || [],
         searchSuggestions: responseData.searchSuggestions || [],
         pagination: responseData.pagination || null,
+        softFilterMode: !!responseData.softFilterMode,
+        narrowedBy: responseData.narrowedBy || [],
       };
 
       setData(feedData);

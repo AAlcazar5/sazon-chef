@@ -19,6 +19,13 @@ interface FilterState {
   difficulty: string[];
 }
 
+// ROADMAP 4.0 FX3.2 — yield rows from POST /api/recipes/filter-yields.
+export interface FilterYieldRow {
+  filterId: string;
+  label: string;
+  remainingIfRemoved: number;
+}
+
 interface HomeEmptyStateProps {
   filters: FilterState;
   activeFilters: string[];
@@ -28,6 +35,12 @@ interface HomeEmptyStateProps {
   onDisableMealPrep: () => void;
   onClearSearch: () => void;
   onRefresh: () => void;
+  /** FX3.2 — top-N relax suggestions returned by the backend. When present
+   *  and non-empty, the component renders tappable rows above the static
+   *  "Clear All Filters" CTA. */
+  yields?: FilterYieldRow[];
+  /** FX3.2 — single-clear handler invoked when the user taps a yield row. */
+  onClearFilter?: (filterId: string) => void;
 }
 
 function HomeEmptyState({
@@ -39,6 +52,8 @@ function HomeEmptyState({
   onDisableMealPrep,
   onClearSearch,
   onRefresh,
+  yields,
+  onClearFilter,
 }: HomeEmptyStateProps) {
   const hasActiveFilters = activeFilters.length > 0 || mealPrepMode;
   const hasCuisineFilters = filters.cuisines.length > 0;
@@ -122,6 +137,36 @@ function HomeEmptyState({
           <Text className="text-gray-600 dark:text-gray-300 text-center mt-3 text-base leading-6 max-w-sm">
             {emptyStateDescription}
           </Text>
+
+          {/* ROADMAP 4.0 FX3.2 — "Relax this filter" yield rows.
+              Renders above the static suggestions when the backend has
+              returned per-filter yields. Each row single-clears the named
+              filter via `onClearFilter`. */}
+          {yields && yields.length > 0 && onClearFilter && (
+            <View className="mt-6 w-full max-w-sm" testID="filter-yield-rows">
+              <Text className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center">
+                Loosen your filters?
+              </Text>
+              {yields.slice(0, 2).map((row) => (
+                <HapticTouchableOpacity
+                  key={row.filterId}
+                  testID={`filter-yield-row-${row.filterId}`}
+                  onPress={() => {
+                    onClearFilter(row.filterId);
+                    HapticPatterns.buttonPressPrimary();
+                  }}
+                  className="flex-row items-center justify-between bg-gray-100 dark:bg-gray-800 rounded-lg p-3 mb-2"
+                >
+                  <Text className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    Remove {row.label}
+                  </Text>
+                  <Text className="text-xs text-gray-500 dark:text-gray-400">
+                    gains {row.remainingIfRemoved} recipe{row.remainingIfRemoved === 1 ? '' : 's'}
+                  </Text>
+                </HapticTouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Suggestions */}
           {suggestions.length > 0 && (

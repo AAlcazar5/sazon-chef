@@ -5,6 +5,7 @@ import {
   getActiveFilterLabels,
   hasActiveFilters,
   countActiveFilters,
+  countAllActiveFilters,
   getQuickFilterParams,
 } from '../../utils/filterUtils';
 import type { FilterState } from '../../lib/filterStorage';
@@ -163,6 +164,52 @@ describe('filterUtils', () => {
         maxCookTime: 30,
         difficulty: ['Easy'],
       })).toBe(4);
+    });
+  });
+
+  // ── countAllActiveFilters (FX4.2) ───────────────────────────────────
+
+  describe('countAllActiveFilters (FX4.2)', () => {
+    it('returns 0 when nothing is active', () => {
+      expect(countAllActiveFilters({ filters: defaultFilters })).toBe(0);
+    });
+
+    it('counts macros, mealPrep, and mood on top of base filters', () => {
+      expect(
+        countAllActiveFilters({
+          filters: defaultFilters,
+          quickMacroFilters: { highProtein: true, lowCarb: false, lowCalorie: false },
+          mealPrepMode: true,
+          mood: 'cozy',
+        }),
+      ).toBe(3);
+    });
+
+    it('does not double-count when only base filters are active', () => {
+      expect(
+        countAllActiveFilters({
+          filters: { cuisines: ['Italian'], dietaryRestrictions: [], maxCookTime: null, difficulty: [] },
+          quickMacroFilters: { highProtein: false, lowCarb: false, lowCalorie: false },
+          mealPrepMode: false,
+          mood: null,
+        }),
+      ).toBe(1);
+    });
+
+    it('combines all categories', () => {
+      expect(
+        countAllActiveFilters({
+          filters: {
+            cuisines: ['Italian', 'Thai'],
+            dietaryRestrictions: ['Vegan'],
+            maxCookTime: 30,
+            difficulty: ['Easy'],
+          },
+          quickMacroFilters: { highProtein: true, lowCarb: true, lowCalorie: false },
+          mealPrepMode: true,
+          mood: 'cozy',
+        }),
+      ).toBe(8);
     });
   });
 

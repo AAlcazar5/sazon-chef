@@ -532,18 +532,32 @@ export const recipeController = {
       };
       
       // ROADMAP 4.0 TB1.3 — optional retrieval candidate selection.
-      // When RECOMMENDER_RETRIEVAL=1 and the user has cook history, narrow
-      // the candidate set to the top-50 by cosine similarity to the user
-      // context vector. Existing 70/30 scorer below still re-ranks. On
-      // any failure / cold-start the adapter returns null and we fall
-      // through to the rule-based path unchanged.
+      // FX3.1 — adapter now returns softFilterMode + narrowedBy when the
+      // post-filter set is sparse; we pass those flags through the response
+      // so the UI can render the "your filters narrowed results" pill.
+      let softFilterMode = false;
+      let narrowedBy: string[] = [];
       try {
         const { resolveRetrievalCandidates } = require('@/services/recommender/homeFeedRetrievalAdapter');
-        const retrieval = await resolveRetrievalCandidates({ userId });
+        const retrieval = await resolveRetrievalCandidates({
+          userId,
+          appliedFilters: {
+            cuisines: cuisines || undefined,
+            dietary: dietaryRestrictions || undefined,
+            maxCookTime: maxCookTime ? Number(maxCookTime) : undefined,
+            difficulty: difficulty || undefined,
+            mealPrepMode: mealPrepMode === 'true' || undefined,
+            highProtein: minProtein ? true : undefined,
+            lowCarb: maxCarbs ? true : undefined,
+            lowCalorie: maxCalories ? true : undefined,
+          },
+        });
         if (retrieval && retrieval.recipeIds.length > 0) {
           where.id = { in: retrieval.recipeIds };
+          softFilterMode = !!retrieval.softFilterMode;
+          narrowedBy = retrieval.narrowedBy ?? [];
           logger.info(
-            { count: retrieval.recipeIds.length },
+            { count: retrieval.recipeIds.length, softFilterMode },
             '🧠 TB1.3 retrieval narrowed candidates',
           );
         }
@@ -752,6 +766,10 @@ export const recipeController = {
 
       res.json({
         recipes: recipesWithVariedImages,
+        // FX3.1 — surface soft-filter fallback flag so the UI can render the
+        // "showing closest matches — your filters narrowed results" pill.
+        softFilterMode,
+        narrowedBy,
         pagination: {
           page,
           limit,
@@ -4271,6 +4289,36 @@ export const recipeController = {
       }
       if (andConditions.length > 0) where.AND = andConditions;
 
+      // ROADMAP 4.0 FX3.5 — retrieval parity with getRecipes.
+      // getHomeFeed previously skipped the TB1.3 retrieval narrowing while
+      // getRecipes ran it, leading to grid drift on filter change. Both paths
+      // now share the same retrieval+ranker.
+      let homeFeedSoftFilterMode = false;
+      let homeFeedNarrowedBy: string[] = [];
+      try {
+        const { resolveRetrievalCandidates } = require('@/services/recommender/homeFeedRetrievalAdapter');
+        const retrieval = await resolveRetrievalCandidates({
+          userId,
+          appliedFilters: {
+            cuisines: cuisines || undefined,
+            dietary: dietaryRestrictions || undefined,
+            maxCookTime: maxCookTime ? Number(maxCookTime) : undefined,
+            difficulty: difficulty || undefined,
+            mealPrepMode: mealPrepMode === 'true' || undefined,
+            highProtein: minProtein ? true : undefined,
+            lowCarb: maxCarbs ? true : undefined,
+            lowCalorie: maxCalories ? true : undefined,
+          },
+        });
+        if (retrieval && retrieval.recipeIds.length > 0) {
+          where.id = { in: retrieval.recipeIds };
+          homeFeedSoftFilterMode = !!retrieval.softFilterMode;
+          homeFeedNarrowedBy = retrieval.narrowedBy ?? [];
+        }
+      } catch (err) {
+        logger.warn({ err }, 'FX3.5 home-feed retrieval adapter threw; falling back');
+      }
+
       // Quick meals where clause (same base filters but cookTime <= 30)
       const quickMealsWhere: any = { ...where, cookTime: { lte: 30 } };
       // Remove any conflicting cookTime from andConditions
@@ -4561,6 +4609,9 @@ export const recipeController = {
         likedRecipes,
         popularSearches,
         ...(searchSuggestions.length > 0 && { searchSuggestions }),
+        // FX3.1 + FX3.5 — surface retrieval flags for the soft-filter pill.
+        softFilterMode: homeFeedSoftFilterMode,
+        narrowedBy: homeFeedNarrowedBy,
         pagination: {
           page,
           limit,
@@ -4580,6 +4631,30 @@ export const recipeController = {
     } catch (error: any) {
       logger.error({ data: error }, '❌ Error in getHomeFeed:');
       res.status(500).json({ error: 'Failed to fetch home feed', details: error.message });
+    }
+  },
+
+  // ROADMAP 4.0 FX3.2 — POST /api/recipes/filter-yields
+  // Returns per-filter yield deltas so the UI can render
+  // "Remove [Quick] — gains 47 recipes" rows in HomeEmptyState.
+  async getFilterYields(req: Request, res: Response) {
+    try {
+      const { computeFilterYields } = require('@/services/filterYieldService');
+      const body = req.body ?? {};
+      const result = await computeFilterYields({
+        cuisines: Array.isArray(body.cuisines) ? body.cuisines : undefined,
+        dietaryRestrictions: Array.isArray(body.dietaryRestrictions) ? body.dietaryRestrictions : undefined,
+        maxCookTime: typeof body.maxCookTime === 'number' ? body.maxCookTime : null,
+        difficulty: Array.isArray(body.difficulty) ? body.difficulty : undefined,
+        highProtein: !!body.highProtein,
+        lowCarb: !!body.lowCarb,
+        lowCalorie: !!body.lowCalorie,
+        mealPrepMode: !!body.mealPrepMode,
+      });
+      res.json(result);
+    } catch (error: any) {
+      logger.error({ data: error }, '❌ Error in getFilterYields:');
+      res.status(500).json({ error: 'Failed to compute filter yields', details: error.message });
     }
   },
 
