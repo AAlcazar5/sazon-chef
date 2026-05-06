@@ -5,3 +5,4 @@ import { tonightController } from './tonightController';
 
 export const tonightRoutes = Router();
 tonightRoutes.post('/proposal', tonightController.proposal);
+tonightRoutes.post('/outcome', tonightController.outcome);

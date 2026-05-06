@@ -19,6 +19,20 @@ module.exports = {
     // catalog alignment. Runs at 03:00 on the 1st of every month;
     // schedule re-evaluated post-launch (move to quarterly once stable).
     // Trigger manually: `pm2 trigger recommender-refresh`.
+    // ROADMAP 4.0 TB3.3 — weekly accuracy report. Mondays 09:00 UTC.
+    {
+      name: 'recommender-weekly',
+      cwd: './backend',
+      script: 'node_modules/.bin/ts-node',
+      args: '-r tsconfig-paths/register scripts/recommender/weeklyReport.ts',
+      autorestart: false,
+      cron_restart: '0 9 * * 1',
+      watch: false,
+      env: { NODE_ENV: 'production' },
+      error_file: '../logs/pm2-recommender-error.log',
+      out_file: '../logs/pm2-recommender-out.log',
+      time: true,
+    },
     {
       name: 'recommender-refresh',
       cwd: './backend',

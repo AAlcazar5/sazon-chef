@@ -116,6 +116,9 @@ model User {
   follows                 UserFollow[] @relation("FollowerRelation")
   followers               UserFollow[] @relation("FollowingRelation")
 
+  // ROADMAP 4.0 TB3.1 — back-relation for recommender events.
+  recommenderEvents       RecommenderEvent[]
+
   @@map("users")
 }
 
@@ -393,6 +396,10 @@ model Recipe {
   embedding         Bytes?
   embeddingSource   String?  // 'foodcom' | 'openai' | null
   embeddingUpdatedAt DateTime?
+
+  // ROADMAP 4.0 TB3.1 — back-relations for recommender event logging.
+  recommenderEvents      RecommenderEvent[]      @relation("PickedRecipe")
+  recommenderRunnerUps   RecommenderRunnerUp[]
 
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
@@ -1941,4 +1948,57 @@ model WaitlistSignup {
 
   @@index([createdAt])
   @@map("waitlist_signups")
+}
+
+// ROADMAP 4.0 TB3.1 — recommender proposal logging.
+// Every Tonight proposal writes one RecommenderEvent. Outcomes
+// (accepted / swapped / escaped / abandoned) backfill via
+// RecommenderEventOutcome from the analytics event handler.
+model RecommenderEvent {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asOf            DateTime
+  contextSnapshot String   // JSON-stringified user context at proposal time
+  candidateIds    String   // JSON-stringified string[]
+  pickedRecipeId  String?
+  pickedRecipe    Recipe?  @relation("PickedRecipe", fields: [pickedRecipeId], references: [id], onDelete: SetNull)
+  confidence      Float
+  copyLine        String   // The reason / copy line returned to client
+  source          String   // 'llm' | 'retrieval_fallback'
+  createdAt       DateTime @default(now())
+
+  outcome     RecommenderEventOutcome?
+  runnerUps   RecommenderRunnerUp[]
+
+  @@index([userId, createdAt])
+  @@index([pickedRecipeId])
+  @@map("recommender_events")
+}
+
+model RecommenderRunnerUp {
+  id        String           @id @default(cuid())
+  eventId   String
+  event     RecommenderEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipeId  String
+  recipe    Recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  rank      Int
+
+  @@unique([eventId, rank])
+  @@index([eventId])
+  @@map("recommender_runner_ups")
+}
+
+// ROADMAP 4.0 TB3.2 — outcome backfill written when the user
+// accepts / swaps / escapes / abandons. Idempotent on duplicate event id.
+model RecommenderEventOutcome {
+  id        String           @id @default(cuid())
+  eventId   String           @unique
+  event     RecommenderEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  outcome   String           // 'accepted' | 'swapped' | 'escaped' | 'abandoned'
+  latencyMs Int
+  createdAt DateTime         @default(now())
+
+  @@index([outcome])
+  @@map("recommender_event_outcomes")
 }
