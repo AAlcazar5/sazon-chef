@@ -1904,20 +1904,6 @@ export const cohortSocialProofApi = {
   get: () => apiClient.get<CohortSocialProofPayload>('/cohort-social-proof'),
 };
 
-// ─── Sazon daily quip (J7) ───────────────────────────────────────────────────
-
-export interface SazonQuipPayload {
-  quip: {
-    id: string;
-    text: string;
-    category: 'proverb' | 'observation' | 'personality';
-  };
-}
-
-export const quipsApi = {
-  today: () => apiClient.get<SazonQuipPayload>('/quips/today'),
-};
-
 // ─── First-cook-of-cuisine stats (J2) ────────────────────────────────────────
 
 export interface FirstCookStatsPayload {
