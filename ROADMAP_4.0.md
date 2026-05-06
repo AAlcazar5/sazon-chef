@@ -548,8 +548,8 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
 ### T3: Profile toggle + onboarding nudge
 - [x] **T3.1: Profile sheet "Tonight mode" row** ✅ — `frontend/components/profile/TonightModeRow.tsx`. Renders when `flagOn` prop true; hidden otherwise. Calls `PUT /user/tonight-mode` and mirrors the bit into AsyncStorage `tonight_mode_pref_enabled` so `_layout` redirect can read it on next launch. Optimistic update with rollback on API failure (Sazon-voice soft message, not "Error").
   - [x] **Test:** `frontend/__tests__/components/profile/TonightModeRow.test.tsx` (4 tests) — render/hide based on flag, optimistic write, rollback on failure.
-- [ ] **T3.2: One-time nudge for existing users** — after the toggle ships, show a one-shot full-screen card on next app open: *"Want Sazon to just pick dinner?"* with Try it / Not now. Tapped state stored in `User.tonightModePromptedAt`.
-  - **Test:** `frontend/__tests__/components/onboarding/TonightModeNudge.test.tsx` — renders once; respects `tonightModePromptedAt`; "Try it" enables pref + routes to `/tonight`; "Not now" sets timestamp.
+- [x] **T3.2: One-time nudge for existing users** ✅ — `frontend/components/onboarding/TonightModeNudge.tsx`. Hidden when `flagOn === false` or `promptedAt` is set. "Try it" → `PUT /user/tonight-mode { enabled: true, dismissPrompt: true }` + `router.replace('/tonight')`. "Not now" → same endpoint with `enabled: false, dismissPrompt: true` (server stamps `tonightModePromptedAt`).
+  - [x] **Test:** `frontend/__tests__/components/onboarding/TonightModeNudge.test.tsx` (5 tests) — render gates, Try it path, Not now path.
 
 ### T4: Telemetry + decision gate
 - [ ] **T4.1: Analytics events** — `tonight_proposal_shown` (with copy template id), `tonight_proposal_accepted` (CTA tap → cook), `tonight_proposal_swapped` (slot swap), `tonight_proposal_escaped` (More affordance), `tonight_mode_disabled` (toggle off). All events include `propsalLatencyMs` + `pantryCoveragePct`.
