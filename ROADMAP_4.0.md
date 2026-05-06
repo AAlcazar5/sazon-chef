@@ -536,8 +536,8 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
 
 ### T1: Proposal endpoint + copy generator
 - [x] **T1.1: `POST /api/tonight/proposal`** ✅ — **superseded by TB2.2** which shipped the LLM-ranker version of the proposal endpoint at the same path. Test coverage for the route lives in `backend/__tests__/routes/tonightRoutes.llm.test.ts` (the originally-planned `tonightRoutes.test.ts` was rolled into the LLM variant). No additional work needed.
-- [ ] **T1.2: `tonightCopyService.generateCopyLine(context)`** — deterministic templates per context shape (expiring ingredient, day-of-week, weather-cold, last-cuisine-gap). Output ≤120 chars, lifestyle-voice (banned-vocab linted). Examples: *"Tuesday, 7pm, your chicken thighs are ready and lemons are on the edge — fesenjan in 24."* / *"Cold night. You haven't had Korean in 11 days. Doenjang jjigae, 22 minutes."*
-  - **Test:** `backend/__tests__/services/tonightCopyService.test.ts` — every context shape produces a line; banned-vocab lint zero hits ("cut/bulk/maintain/crush/under your"); ≤120 chars; deterministic for a fixed input.
+- [x] **T1.2: `tonightCopyService.generateCopyLine(context)`** ✅ — `backend/src/services/recommender/tonightCopyService.ts` produces deterministic single-line copy per context shape (expiring ingredient → cuisine gap + cold night → cuisine gap → day-of-week fallback). 120-char hard cap with word-boundary truncation. Banned-vocab clean.
+  - [x] **Test:** `backend/__tests__/services/tonightCopyService.test.ts` (6 tests) — all four context shapes, banned-vocab lint, determinism, truncation.
 
 ### T2: Tonight screen
 - [ ] **T2.1: `frontend/app/tonight.tsx`** — full-bleed hero image, copy line over gradient, single CTA "Cook this." Long-press anywhere → slot-swap sheet (reuse `useBuildAPlatePermutations` to surface 3 alternatives for the dominant slot). Subtle "More" affordance bottom-right opens the existing 4-tab IA as a modal stack for users who want to escape.
