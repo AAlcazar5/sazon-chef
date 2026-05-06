@@ -366,6 +366,9 @@ model Recipe {
   // ROADMAP 4.0 D13 — back-relation for the lazy nutrient aggregate.
   nutrientAggregate RecipeNutrientAggregate?
 
+  // ROADMAP 4.0 D2 — back-relation for the quality scorecard.
+  qualityScoreEntry RecipeQualityScore?
+
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
   @@index([isUserCreated, cuisine, mealType])
@@ -1847,6 +1850,33 @@ model UserFollow {
 // Captures email + 3 quick selects so day-1 taste_profile can be pre-seeded
 // at signup. See plans/launch-marketing.md for the spec.
 // ──────────────────────────────────────────────────────────────────────────
+
+// ──────────────────────────────────────────────────────────────────────────
+// ROADMAP 4.0 D2 — Recipe quality scorecard.
+// Composite (0-100) + 6 axis scores (each 0-5, nullable) + JSON failure
+// reasons. One row per recipe; idempotent upsert via `recipeId @unique`.
+// Engagement signals deliberately excluded — content-only scoring protects
+// breadth (see ROADMAP_4.0.md Tier D preamble).
+// ──────────────────────────────────────────────────────────────────────────
+
+model RecipeQualityScore {
+  id             String   @id @default(cuid())
+  recipeId       String   @unique
+  recipe         Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  composite      Float
+  imageScore     Float?
+  structureScore Float?
+  nutritionScore Float?
+  voiceScore     Float?
+  dedupeScore    Float?
+  safetyScore    Float?
+  failureReasons String   @default("[]") // JSON-encoded {axis, code, detail}[]
+  scoredAt       DateTime @default(now())
+
+  @@index([composite])
+  @@index([scoredAt])
+  @@map("recipe_quality_scores")
+}
 
 model WaitlistSignup {
   id          String   @id @default(cuid())
