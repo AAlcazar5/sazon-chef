@@ -531,9 +531,29 @@ export const recipeController = {
         enhancedWeight: 0.10,
       };
       
+      // ROADMAP 4.0 TB1.3 — optional retrieval candidate selection.
+      // When RECOMMENDER_RETRIEVAL=1 and the user has cook history, narrow
+      // the candidate set to the top-50 by cosine similarity to the user
+      // context vector. Existing 70/30 scorer below still re-ranks. On
+      // any failure / cold-start the adapter returns null and we fall
+      // through to the rule-based path unchanged.
+      try {
+        const { resolveRetrievalCandidates } = require('@/services/recommender/homeFeedRetrievalAdapter');
+        const retrieval = await resolveRetrievalCandidates({ userId });
+        if (retrieval && retrieval.recipeIds.length > 0) {
+          where.id = { in: retrieval.recipeIds };
+          logger.info(
+            { count: retrieval.recipeIds.length },
+            '🧠 TB1.3 retrieval narrowed candidates',
+          );
+        }
+      } catch (err) {
+        logger.warn({ err }, 'TB1.3 retrieval adapter threw; falling back');
+      }
+
       // Get total count
       const total = await prisma.recipe.count({ where });
-      
+
       // Fetch matching recipes for scoring (capped at 300 candidates), then paginate after sorting
       const allRawRecipes = await prisma.recipe.findMany({
         where,
