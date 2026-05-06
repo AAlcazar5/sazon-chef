@@ -477,8 +477,7 @@ Five view modes across the top: **Saved · Collections · Discover · Journey ·
 - [x] **R13: ROADMAP_4.0 hygiene baseline** — make a daily/weekly cron that runs the audit greps from R1/R3/R4/R6/R8 and posts a delta to a `.context/refactor-baseline.json` file. Lets us regress-detect drift even when no refactor is actively running.
   - **Test:** `node scripts/refactor-baseline.js` (NEW) writes the JSON; `__tests__/quality/baselineSnapshot.test.ts` ensures the script runs without throwing.
 
-- [ ] **R14: Retire rule-based 70/30 scorer once TB stabilizes** — gated on TB2.2 (LLM ranker live in `/api/tonight/proposal`) AND ≥30 days of TB3 logging showing the new pipeline outperforms or matches the old scorer on home-feed acceptance rate. Scope: (a) demote `backend/src/utils/scoring/*` from primary ranker to *fallback only*; called when TB2 returns ranker_unavailable or low_confidence. (b) Move all home-feed candidate selection in `useRecipeFetcher` from rule-based → TB1 retrieval + TB2 rerank. (c) Delete unused intermediate scoring helpers that no callers reference after the demotion. (d) Document the fallback contract — what TB returns when it fails, what the rule-based fallback does, when each fires.
-  - **Test:** `backend/__tests__/services/scoringFallback.test.ts` (NEW) — when TB2 returns `low_confidence`, the rule-based scorer fires and returns a non-null pick; when TB2 returns 200, rule-based scorer is never invoked (assert via spy); when TB2 throws, rule-based fires and the error is logged but not propagated. Existing rule-based scorer tests stay green.
+> **R14 (rule-based scorer retirement)** moved to **Tier 🔒 Gated** — fires after ≥30 days of TB3 production logging confirm the new pipeline matches/beats the old scorer.
 
 ---
 
@@ -657,11 +656,11 @@ TB0 (item embeddings)  ─────┐
 
 > *Tie these up before branching, per the user's instruction "let's tie up some loose ends first."*
 
-- [ ] Tier A remaining incomplete items (IA Foundation must be stable since Tonight reuses its routes for the "More" escape hatch)
-- [ ] Tier B remaining incomplete items (personalization signals feed the proposal)
-- [ ] Tier C remaining incomplete items (adaptation engine drives "what to propose")
-- [ ] Tier D recipe DB at ≥1500 recipes (Tonight is unforgiving with a sparse catalog; one bad proposal kills trust)
-- [ ] Tier J peak-moment items needed for the proposal-acceptance moment to feel like a screenshot
+- [x] Tier A remaining incomplete items ✅ — Tier A 36/36 complete; T0 shipped against a stable IA.
+- [x] Tier B remaining incomplete items ✅ — Tier B 5/5 complete; personalization signals feed Tonight's proposal.
+- [x] Tier C remaining incomplete items ✅ — Tier C 13/13 complete; adaptation engine drives the proposal ranking.
+- [ ] Tier D recipe DB at ≥1500 recipes — **status: 1375 / 1500** as of 2026-05-06 (post-D12/D13/D14/J18.3 seed runs). Remaining 125 recipes are content backlog, not engineering work; lifts as additional seed runs or AI-assisted batches land.
+- [x] Tier J peak-moment items ✅ — Tier J 17/17 complete (J2 first-cuisine stamp, J3 harmony reveal, J4 Sunday Polaroid all shipped); proposal-acceptance moment can feel like a screenshot.
 
 ---
 
@@ -695,6 +694,13 @@ TB0 (item embeddings)  ─────┐
   - **Test:** `backend/__tests__/services/subscriptionTierService.test.ts` (extend) — free user: `hasFeatureAccess('fullIA') === false`; active member: `true`. `frontend/__tests__/app/tonight.gating.test.tsx` — free user sees no More affordance; member sees it; tapping it as free opens paywall instead of tabs.
 - [ ] **T5.2: Paywall copy rewrite for the new framing** — hero: *"Sazon picks dinner. Membership lets you plan the week, build your library, and chat with Sazon anytime."* Trust line unchanged.
   - **Test:** `frontend/__tests__/components/paywall/PaywallScreen.tonight.test.tsx` — new hero copy renders; banned-vocab lint clean; trust line still pre-CTA.
+
+### R14: Retire rule-based 70/30 scorer *(was Tier R)*
+
+> **Gate:** TB2.2 live in `/api/tonight/proposal` (✓ shipped 2026-05-06) **AND ≥30 days of TB3 production logging** showing the new pipeline matches/beats the rule-based scorer on home-feed acceptance rate. Currently TB3 just shipped — the metric window starts now and gate fires no earlier than ~2026-06-05.
+
+- [ ] **R14: Retire rule-based 70/30 scorer once TB stabilizes** — gated on TB2.2 (LLM ranker live in `/api/tonight/proposal`) AND ≥30 days of TB3 logging showing the new pipeline outperforms or matches the old scorer on home-feed acceptance rate. Scope: (a) demote `backend/src/utils/scoring/*` from primary ranker to *fallback only*; called when TB2 returns ranker_unavailable or low_confidence. (b) Move all home-feed candidate selection in `useRecipeFetcher` from rule-based → TB1 retrieval + TB2 rerank. (c) Delete unused intermediate scoring helpers that no callers reference after the demotion. (d) Document the fallback contract — what TB returns when it fails, what the rule-based fallback does, when each fires.
+  - **Test:** `backend/__tests__/services/scoringFallback.test.ts` (NEW) — when TB2 returns `low_confidence`, the rule-based scorer fires and returns a non-null pick; when TB2 returns 200, rule-based scorer is never invoked (assert via spy); when TB2 throws, rule-based fires and the error is logged but not propagated. Existing rule-based scorer tests stay green.
 
 ### TB5: Distill recommender to specialized model *(was Tier T-bis)*
 
