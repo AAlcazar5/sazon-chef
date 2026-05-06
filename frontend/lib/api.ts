@@ -12,6 +12,66 @@ interface ApiError {
   message: string;
   code?: string;
   details?: any;
+  /** Machine-readable failure class — set on network/transport failures so
+   *  callers can branch on "offline" vs "timeout" vs "server unreachable". */
+  failureClass?: NetworkFailureClass;
+  /** Original axios error code (ECONNABORTED, ERR_NETWORK, …) preserved for
+   *  Sentry / log breadcrumbs even after the message is humanized. */
+  axiosCode?: string;
+  /** Endpoint URL — for diagnostics / Sentry correlation. */
+  url?: string;
+  /** HTTP method — for diagnostics. */
+  method?: string;
+}
+
+export type NetworkFailureClass =
+  | 'offline'           // No network connectivity (or DNS unreachable)
+  | 'timeout'           // Server didn't respond within axios.timeout
+  | 'server_unreachable'// Server actively refused (ECONNREFUSED) or TLS failure
+  | 'canceled'          // AbortController.abort() — silent expected cancel
+  | 'unknown_transport';// `error.request` present but code didn't match above
+
+/**
+ * Pure classifier — given an axios error's `code` / `message` / `name`,
+ * returns the failure class, machine-readable code, and human-readable
+ * message. Extracted from the response interceptor so it's directly
+ * unit-testable without spinning up axios.
+ */
+export function classifyNetworkFailure(args: {
+  axiosCode?: string;
+  message?: string;
+  name?: string;
+}): { failureClass: NetworkFailureClass; code: string; message: string } {
+  const { axiosCode, message, name } = args;
+  if (axiosCode === 'ECONNABORTED' || axiosCode === 'ETIMEDOUT' || /timeout/i.test(message ?? '')) {
+    return {
+      failureClass: 'timeout',
+      code: 'TIMEOUT',
+      message: "The server is taking longer than expected. Give it a moment and try again.",
+    };
+  }
+  if (axiosCode === 'ERR_CANCELED' || name === 'CanceledError') {
+    return { failureClass: 'canceled', code: 'CANCELED', message: 'Request canceled.' };
+  }
+  if (axiosCode === 'ECONNREFUSED' || axiosCode === 'EHOSTUNREACH' || axiosCode === 'ECONNRESET') {
+    return {
+      failureClass: 'server_unreachable',
+      code: 'SERVER_UNREACHABLE',
+      message: "We can't reach the kitchen right now. We're on it — try again in a moment.",
+    };
+  }
+  if (axiosCode === 'ERR_NETWORK' || axiosCode === 'ENETUNREACH' || axiosCode === 'ENOTFOUND') {
+    return {
+      failureClass: 'offline',
+      code: 'OFFLINE',
+      message: "You're offline. Reconnect and we'll pick up where you left off.",
+    };
+  }
+  return {
+    failureClass: 'unknown_transport',
+    code: 'NETWORK_ERROR',
+    message: 'Unable to reach the server. Please try again.',
+  };
 }
 
 // Create axios instance with default configuration
@@ -327,9 +387,30 @@ api.interceptors.response.use(
         apiError.message = 'Rate limit exceeded. Please try again later.';
       }
     } else if (error.request) {
-      // Request was made but no response received
-      apiError.message = 'Unable to connect to server. Please check your internet connection.';
-      apiError.code = 'NETWORK_ERROR';
+      // Request was made but no response received. Pure-function classifier
+      // — see `classifyNetworkFailure` above + tests in
+      // __tests__/lib/apiErrorClassifier.test.ts.
+      const axiosCode: string | undefined = (error as { code?: string }).code;
+      const classified = classifyNetworkFailure({
+        axiosCode,
+        message: error.message,
+        name: error.name,
+      });
+      apiError.message = classified.message;
+      apiError.code = classified.code;
+      apiError.failureClass = classified.failureClass;
+      apiError.axiosCode = axiosCode;
+      apiError.url = error.config?.url ?? '<unknown>';
+      apiError.method = (error.config?.method ?? 'GET').toUpperCase();
+
+      // Structured log for Sentry / pinpointing — never for cancels
+      // (those are expected when components unmount mid-flight).
+      if (classified.failureClass !== 'canceled' && __DEV__) {
+        console.warn(
+          `🌐 Network failure (${classified.failureClass}) on ${apiError.method} ${apiError.url}` +
+          (axiosCode ? ` [${axiosCode}]` : ''),
+        );
+      }
     } else {
       // Something else happened
       apiError.message = error.message;

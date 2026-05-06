@@ -130,8 +130,21 @@ export function useRecipeDataManager(options: UseRecipeDataManagerOptions): UseR
       }
       return result;
     } catch (error: any) {
-      console.error('❌ Error fetching recipes:', error);
-      Alert.alert('Error', 'Failed to load recipes. Please try again.');
+      // Cancellation is expected; never alert.
+      if (error?.failureClass === 'canceled' || error?.code === 'CANCELED') {
+        return null;
+      }
+      const diag = [
+        error?.failureClass && `class=${error.failureClass}`,
+        error?.axiosCode && `axios=${error.axiosCode}`,
+        error?.method && error?.url && `${error.method} ${error.url}`,
+      ].filter(Boolean).join(' ');
+      console.error(`❌ Recipe fetch failed${diag ? ` [${diag}]` : ''}: ${error?.message ?? error}`);
+
+      // Failure-class-aware copy so the user knows what to do.
+      const title = error?.failureClass === 'offline' ? "You're offline" : 'Something hiccuped';
+      const body = error?.message ?? 'Failed to load recipes. Please try again.';
+      Alert.alert(title, body);
       return null;
     } finally {
       setLoading(false);

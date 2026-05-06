@@ -459,6 +459,7 @@ export default function HomeScreen() {
   const loading = homeFeed.loading;
   const error = homeFeed.error;
   const errorCode = homeFeed.errorCode;
+  const errorFailureClass = homeFeed.failureClass;
   const refetch = homeFeed.refetch;
 
   // Quick macro filters (highProtein, lowCarb, lowCalorie) - using extracted hook
@@ -926,7 +927,7 @@ export default function HomeScreen() {
 
   // Error state
   if (error && suggestedRecipes.length === 0) {
-    return <HomeErrorState error={error as string} errorCode={errorCode} onRetry={refetch} />;
+    return <HomeErrorState error={error as string} errorCode={errorCode} failureClass={errorFailureClass} onRetry={refetch} />;
   }
 
   // Empty state — smart no-results when searching, generic otherwise

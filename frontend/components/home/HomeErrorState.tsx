@@ -13,53 +13,78 @@ import { HapticPatterns } from '../../constants/Haptics';
 interface HomeErrorStateProps {
   error: string;
   errorCode?: string | null;
+  /** Optional structured failure class from lib/api.ts. When set, drives
+   *  the title + suggestions; otherwise we fall back to string heuristics. */
+  failureClass?: 'offline' | 'timeout' | 'server_unreachable' | 'canceled' | 'unknown_transport' | null;
   onRetry: () => void;
 }
 
-function HomeErrorState({ error, errorCode, onRetry }: HomeErrorStateProps) {
-  // Determine error type and message
+function HomeErrorState({ error, errorCode, failureClass, onRetry }: HomeErrorStateProps) {
+  // Failure-class-aware copy first; legacy string-match heuristics second.
   const getErrorInfo = () => {
-    if (errorCode === 'NETWORK_ERROR' || error.includes('network') || error.includes('Network') || error.includes('fetch') || error.includes('connect')) {
+    if (failureClass === 'offline' || errorCode === 'OFFLINE') {
       return {
-        title: "Connection Problem",
+        title: "You're offline",
+        message: "Reconnect and we'll pick up where you left off.",
+        suggestions: [
+          "Check your Wi-Fi or mobile data",
+          "Toggle airplane mode off if it's on",
+          "We'll auto-retry once you're back online",
+        ],
+      };
+    }
+    if (failureClass === 'timeout' || errorCode === 'TIMEOUT' || errorCode === 'TIMEOUT_ERROR' || /timeout/i.test(error)) {
+      return {
+        title: "The kitchen is slow tonight",
+        message: "The server's taking longer than usual. We've already retried twice.",
+        suggestions: [
+          "Give it a moment, then try again",
+          "Strong signal helps — Wi-Fi over cellular if you can",
+          "Restart the app if this keeps happening",
+        ],
+      };
+    }
+    if (failureClass === 'server_unreachable' || errorCode === 'SERVER_UNREACHABLE') {
+      return {
+        title: "We can't reach the kitchen",
+        message: "Our servers are temporarily unreachable.",
+        suggestions: [
+          "This is usually a quick blip on our end",
+          "Try again in a moment",
+          "If it persists, we're already on it",
+        ],
+      };
+    }
+    if (errorCode === 'NETWORK_ERROR' || /network|connect|fetch/i.test(error)) {
+      return {
+        title: "Connection problem",
         message: "We couldn't reach our servers. Please check your internet connection and try again.",
         suggestions: [
           "Check your Wi-Fi or mobile data connection",
           "Make sure you're connected to the internet",
-          "Try again in a moment"
-        ]
-      };
-    }
-    if (errorCode === 'TIMEOUT_ERROR' || error.includes('timeout') || error.includes('Timeout')) {
-      return {
-        title: "Request Timed Out",
-        message: "The request took too long to complete.",
-        suggestions: [
-          "Check your internet connection speed",
           "Try again in a moment",
-          "Restart the app if the problem persists"
-        ]
+        ],
       };
     }
-    if (error.includes('500') || error.includes('server')) {
+    if (/500|server/i.test(error)) {
       return {
-        title: "Server Error",
+        title: "Server error",
         message: "Our servers are experiencing some issues.",
         suggestions: [
           "This is usually temporary",
           "Try again in a few moments",
-          "We're working on fixing this"
-        ]
+          "We're working on fixing this",
+        ],
       };
     }
     return {
-      title: "Oops! Something went wrong",
+      title: "Something hiccuped",
       message: "We couldn't load recipes right now.",
       suggestions: [
         "Pull down to refresh",
         "Check your internet connection",
-        "Try again in a moment"
-      ]
+        "Try again in a moment",
+      ],
     };
   };
 

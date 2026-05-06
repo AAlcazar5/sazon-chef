@@ -49,12 +49,22 @@ interface HomeFeedData {
   pagination: HomeFeedPagination | null;
 }
 
+type FailureClass = 'offline' | 'timeout' | 'server_unreachable' | 'canceled' | 'unknown_transport';
+
 interface UseHomeFeedReturn extends HomeFeedData {
   loading: boolean;
   error: string | null;
   errorCode: string | null;
+  /** Structured network-failure class from lib/api.ts (when applicable). */
+  failureClass: FailureClass | null;
   refetch: (params?: HomeFeedParams) => Promise<HomeFeedData | null>;
 }
+
+const RETRYABLE_FAILURE_CLASSES: ReadonlySet<FailureClass> = new Set([
+  'timeout', 'server_unreachable', 'unknown_transport',
+]);
+const RETRY_ATTEMPTS = 2;
+const RETRY_BASE_DELAY_MS = 600;
 
 export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
   const [data, setData] = useState<HomeFeedData>({
@@ -70,6 +80,7 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [failureClass, setFailureClass] = useState<FailureClass | null>(null);
 
   // Track if initial fetch has happened
   const hasFetched = useRef(false);
@@ -79,8 +90,30 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
       setLoading(true);
       setError(null);
       setErrorCode(null);
+      setFailureClass(null);
 
-      const response = await recipeApi.getHomeFeed(fetchParams || params);
+      // Retry transient transport failures (timeout / server_unreachable)
+      // with exponential backoff. 'offline' and 'canceled' fall through.
+      let response;
+      let lastErr: any = null;
+      for (let attempt = 0; attempt <= RETRY_ATTEMPTS; attempt += 1) {
+        try {
+          response = await recipeApi.getHomeFeed(fetchParams || params);
+          lastErr = null;
+          break;
+        } catch (err: any) {
+          lastErr = err;
+          const cls = err?.failureClass as FailureClass | undefined;
+          const retryable = !!cls && RETRYABLE_FAILURE_CLASSES.has(cls);
+          if (!retryable || attempt === RETRY_ATTEMPTS) throw err;
+          const ms = RETRY_BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * 200;
+          console.warn(
+            `⏳ Home feed fetch failed (${cls}/${err.axiosCode}) on attempt ${attempt + 1}/${RETRY_ATTEMPTS + 1}, retrying in ${Math.round(ms)}ms`,
+          );
+          await new Promise(resolve => setTimeout(resolve, ms));
+        }
+      }
+      if (!response) throw lastErr;
       const responseData = response.data;
 
       const feedData: HomeFeedData = {
@@ -107,14 +140,25 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
 
       return feedData;
     } catch (err: any) {
-      const isNetworkError = err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network') || err?.message?.includes('connect');
-      if (isNetworkError) {
-        console.log('📡 Home feed unavailable — no network connection');
+      // Cancellations are expected — never log, never set error state.
+      if (err?.failureClass === 'canceled' || err?.code === 'CANCELED') {
+        return null;
+      }
+      const cls: FailureClass | null = err?.failureClass ?? null;
+      const diag = [
+        cls && `class=${cls}`,
+        err?.axiosCode && `axios=${err.axiosCode}`,
+        err?.code && `code=${err.code}`,
+        err?.method && err?.url && `${err.method} ${err.url}`,
+      ].filter(Boolean).join(' ');
+      if (cls === 'offline') {
+        console.log(`📡 Home feed unavailable — offline${diag ? ` [${diag}]` : ''}`);
       } else {
-        console.error('❌ Error fetching home feed:', err);
+        console.error(`❌ Home feed fetch failed${diag ? ` [${diag}]` : ''}: ${err?.message ?? err}`);
       }
       setError(err?.message || 'Failed to fetch home feed');
       setErrorCode(err?.code || null);
+      setFailureClass(cls);
       return null;
     } finally {
       setLoading(false);
@@ -137,6 +181,7 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
     loading,
     error,
     errorCode,
+    failureClass,
     refetch: fetchHomeFeed,
   };
 }
