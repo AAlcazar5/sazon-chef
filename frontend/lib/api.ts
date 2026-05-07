@@ -318,20 +318,25 @@ api.interceptors.response.use(
           console.warn(
             `⚠️  Auto-logout triggered by ${statusCode} on ${error.config?.method?.toUpperCase()} ${error.config?.url}`
           );
-          const doLogout = logoutCallback;
-          Alert.alert(
-            'Session Expired',
-            'Your session has expired. Please log in again.',
-            [{
-              text: 'OK',
-              onPress: () => {
-                doLogout().catch(() => {
-                  // Logout errors are non-fatal — navigation will still redirect to login
-                });
-              },
-            }],
-            { cancelable: false }
-          );
+          // Dedupe the alert — concurrent 401s otherwise stack alerts.
+          if (!sessionExpiredAlertActive) {
+            sessionExpiredAlertActive = true;
+            const doLogout = logoutCallback;
+            Alert.alert(
+              'Session Expired',
+              'Your session has expired. Please log in again.',
+              [{
+                text: 'OK',
+                onPress: () => {
+                  sessionExpiredAlertActive = false;
+                  doLogout().catch(() => {
+                    // Logout errors are non-fatal — navigation will still redirect to login
+                  });
+                },
+              }],
+              { cancelable: false, onDismiss: () => { sessionExpiredAlertActive = false; } }
+            );
+          }
         }
       }
 
@@ -426,12 +431,22 @@ api.interceptors.response.use(
 // For now, we'll use a module-level variable that gets updated by AuthContext
 let currentAuthToken: string | null = null;
 let logoutCallback: (() => Promise<void>) | null = null;
+// Module-level guard: ensures only ONE "Session Expired" alert is visible
+// at any time. Concurrent 401s (e.g., 3 background cleanup POSTs all firing
+// at app boot before auth) otherwise stack 3 alerts on top of each other,
+// each waiting for an OK tap before the next dismisses.
+let sessionExpiredAlertActive = false;
 
 export function setAuthToken(token: string | null) {
   currentAuthToken = token;
   // Clear cached privacy settings when token changes (login/logout)
   if (!token) {
     cachedPrivacySettings = null;
+  }
+  // A new login resets the alert guard so a future legitimate session-expired
+  // event can fire its alert.
+  if (token) {
+    sessionExpiredAlertActive = false;
   }
 }
 
