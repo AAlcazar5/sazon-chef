@@ -1909,6 +1909,23 @@ export const ingredientEventApi = {
     apiClient.post<{ persisted: number }>('/ingredient-events/swap', input),
 };
 
+// ROADMAP 4.0 IG8.2 — "Try this ingredient" weekly cultural discovery.
+export interface DiscoverySuggestion {
+  ingredient: string;
+  cuisine: string;
+  primerTitle: string | null;
+  primerBody: string | null;
+  recipeId: string | null;
+  recipeTitle: string | null;
+}
+
+export const ingredientDiscoveryApi = {
+  weekly: () =>
+    apiClient.get<{ suggestion: DiscoverySuggestion | null }>(
+      '/ingredient-discovery/weekly',
+    ),
+};
+
 // ROADMAP 4.0 IG10.1 — Pantry IQ editorial card.
 export interface PantryIQResponse {
   iq: {
