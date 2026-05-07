@@ -26,6 +26,7 @@ import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipeP
 import RecipeDetailActionMenu from '../../components/recipe/RecipeDetailActionMenu';
 import MoreLikeThisRow from '../../components/recipe/MoreLikeThisRow';
 import RecipeVariantChipRow, { type RecipeVariantEntry } from '../../components/recipe/RecipeVariantChipRow';
+import LeftoverBridgeCard from '../../components/recipe/LeftoverBridgeCard';
 import HealthDisclaimer from '../../components/legal/HealthDisclaimer';
 import NutritionCard, { type NutritionAggregate } from '../../components/recipe/NutritionCard';
 import BeveragePairingSlot from '../../components/recipe/BeveragePairingSlot';
@@ -252,6 +253,11 @@ export default function RecipeIdScreen() {
               <HealthDisclaimer eventKey="ai_recipe_first_view" />
             </View>
           )}
+
+          {/* ROADMAP 4.0 RD4.2 — leftover bridge nudge ("your X wants
+              to be in something tonight"). Mounted at top of contentBlock
+              so an expiring leftover is the first thing seen. */}
+          <LeftoverBridgeCard />
 
           {/* ROADMAP 4.0 RD3.1 — variant chips above the title (same dish,
               different technique). Hides silently when no variants. */}

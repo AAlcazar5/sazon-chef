@@ -113,6 +113,7 @@ router.post('/:id/view', recipeController.recordView);
 router.post('/:id/cook', recipeController.recordCook);
 router.get('/:id/cooking-history', recipeController.getCookingHistory);
 router.get('/:id/similar', recipeController.getSimilarRecipes); // RD2.2 — anchor-recipe similarity
+router.get('/leftover-bridge', recipeController.getLeftoverBridge); // RD4.1 — leftover-bridge nudge
 router.get('/:id', recipeController.getRecipe);
 
 export const recipeRoutes = router;

@@ -833,6 +833,23 @@ export const recipeApi = {
     return apiClient.post('/recipes/filter-yields', filters);
   },
 
+  // ROADMAP 4.0 RD4.1 — leftover-bridge nudge ("your X wants to be in something tonight").
+  getLeftoverBridge: (k: number = 3) => {
+    return apiClient.get<{
+      rows: Array<{
+        leftoverIngredient: string;
+        expiringIn: number;
+        recipes: Array<{
+          id: string;
+          title: string;
+          cuisine: string | null;
+          cookTime: number | null;
+          imageUrl: string | null;
+        }>;
+      }>;
+    }>('/recipes/leftover-bridge', { params: { k } });
+  },
+
   // ROADMAP 4.0 RD2.2 — anchor-recipe similarity ("More like this").
   getSimilarRecipes: (id: string, k: number = 8) => {
     return apiClient.get<{

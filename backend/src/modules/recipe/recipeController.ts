@@ -4673,6 +4673,23 @@ export const recipeController = {
     }
   },
 
+  // ROADMAP 4.0 RD4.1 — GET /api/recipes/leftover-bridge
+  // Returns leftover-anchored recipe rows so the detail screen (and
+  // future Today / Week surfaces) can nudge "your X wants to be in
+  // something tonight."
+  async getLeftoverBridge(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const k = Math.min(5, Math.max(1, parseInt(req.query.k as string) || 3));
+      const { bridgeFromLeftover } = require('@/services/recommender/bridgeFromLeftover');
+      const rows = await bridgeFromLeftover({ userId, k });
+      res.json({ rows });
+    } catch (error: any) {
+      logger.error({ data: error }, '❌ Error in getLeftoverBridge:');
+      res.status(500).json({ error: 'Failed to fetch leftover bridge', details: error.message });
+    }
+  },
+
   // ROADMAP 4.0 RD2.2 — GET /api/recipes/:id/similar
   // Anchor-recipe similarity. Loads user allergens + dietary + recent cooks
   // and feeds them as hard filters to retrieveSimilar.
