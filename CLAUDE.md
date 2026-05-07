@@ -139,6 +139,9 @@ See `docs/COMMAND-AGENT-MAP.md` for slash command → agent mappings.
 5. **Earn peak moments** — cooking complete → Lottie + chef-kiss; errors → Sazon personality, not red banners
 6. **Copy = texting a friend** — "I'm allergic" not "strict restriction"
 
+### Design tokens (`frontend/constants/tokens.ts`, `frontend/docs/TOKENS.md`)
+**Single source of truth for color, type, radius, shadow, and motion.** Generated reference doc at `frontend/docs/TOKENS.md` (regenerate with `npm run build:tokens`). Lock decisions live in `frontend/docs/design-decisions/`. Banned-pattern lint at `frontend/scripts/banned-patterns.ts`.
+
 ### Roadmap (`ROADMAP_4.0.md`)
 The active roadmap lives in the project root (gitignored, local-only). Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps. `plans/plan-archives/ROADMAP_3.0.md` is the **closed** completion record for everything shipped through Group 11 Phase 3 (sits next to `plans/plan-archives/ROADMAP_2.0.md` and `plans/plan-archives/ROADMAP_2.5.md`); pre-launch ops live in `plans/launch-marketing.md` + `plans/launch-checklist.md`. Other historical specs (REDESIGN_ROADMAP, ML/optimization post-mortems, recipe-DB architecture, meal-plan refactor, UNIQUE_IMAGES) live in `plans/plan-archives/` — read for historical context only.
 

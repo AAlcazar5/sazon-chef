@@ -54,6 +54,37 @@ export const Hairline = colorTokens.Hairline as { readonly light: HairlineBranch
 type SemanticBranch = { readonly success: string; readonly warning: string; readonly error: string; readonly info: string };
 export const Semantic = colorTokens.Semantic as { readonly light: SemanticBranch; readonly dark: SemanticBranch };
 
+// ─── Semantic surfaces (DS3.2) ───────────────────────────────────────────
+type SurfaceSemanticEntry = { readonly bg: string; readonly border: string; readonly ink: string };
+type SurfaceSemanticBranch = { readonly success: SurfaceSemanticEntry; readonly warning: SurfaceSemanticEntry; readonly error: SurfaceSemanticEntry; readonly info: SurfaceSemanticEntry };
+export const SurfaceSemantic = colorTokens.SurfaceSemantic as { readonly light: SurfaceSemanticBranch; readonly dark: SurfaceSemanticBranch };
+
+// ─── Chart palette (DS3.1) ───────────────────────────────────────────────
+type ChartBranch = { readonly series: readonly string[] };
+export const Chart = colorTokens.Chart as { readonly light: ChartBranch; readonly dark: ChartBranch };
+
+// ─── Frost (DS3.3) ───────────────────────────────────────────────────────
+export const Frost = colorTokens.Frost as {
+  readonly intensity: number;
+  readonly bg: { readonly light: string; readonly dark: string };
+  readonly border: { readonly light: string; readonly dark: string };
+};
+
+// ─── Skeleton (DS3.4) ────────────────────────────────────────────────────
+export const Skeleton = colorTokens.Skeleton as {
+  readonly bg: { readonly light: string; readonly dark: string };
+  readonly shimmer: { readonly light: string; readonly dark: string };
+  readonly durationMs: number;
+  readonly easing: 'linear';
+};
+
+// ─── ImageState (DS3.5) ──────────────────────────────────────────────────
+export const ImageState = colorTokens.ImageState as {
+  readonly placeholder: { readonly bg: { readonly light: string; readonly dark: string } };
+  readonly fallback: { readonly mascot: string };
+  readonly error: { readonly bg: { readonly light: string; readonly dark: string }; readonly mascot: string };
+};
+
 // ─── Spacing — 4px base, generous Apple/Headspace breathing room ─────────
 export const Space = {
   '1': 4,
@@ -233,42 +264,52 @@ export const Type = {
     lineHeight: 32 * 1.15,
     letterSpacing: -0.6,
   } as TextStyle,
+  // DS2.5 — Fraunces stylistic-set ss01 (alternate g) enabled on display sizes
+  // for the Clay-inspired editorial flourish. Body kept on default glyphs for
+  // readability. See docs/design-decisions/DS2.5-opentype-features.md.
   displayMd: {
     fontFamily: 'Fraunces_600SemiBold',
     fontSize: 44,
     lineHeight: 44 * 1.05,
     letterSpacing: -0.9,
+    fontVariant: ['ss01'],
   } as TextStyle,
   displayLg: {
     fontFamily: 'Fraunces_700Bold',
     fontSize: 56,
     lineHeight: 56 * 1.05,
     letterSpacing: -1.4,
+    fontVariant: ['ss01'],
   } as TextStyle,
   display: {
     fontFamily: 'Fraunces_700Bold',
     fontSize: 80,
     lineHeight: 80 * 1.0,
     letterSpacing: -2.4,
+    fontVariant: ['ss01'],
   } as TextStyle,
-  // Stat numbers
+  // Stat numbers — DS5.4 — tabular figures so column-aligned numbers don't
+  // shimmy. `123` and `222` render at the same width.
   stat: {
     fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 24,
     lineHeight: 24 * 1.1,
     letterSpacing: -0.4,
+    fontVariant: ['tabular-nums'],
   } as TextStyle,
   statDisplay: {
     fontFamily: 'Fraunces_600SemiBold',
     fontSize: 40,
     lineHeight: 40 * 1.0,
     letterSpacing: -0.8,
+    fontVariant: ['tabular-nums'],
   } as TextStyle,
   statHero: {
     fontFamily: 'Fraunces_600SemiBold',
     fontSize: 56,
     lineHeight: 56 * 1.0,
     letterSpacing: -1.2,
+    fontVariant: ['tabular-nums'],
   } as TextStyle,
 } as const;
 
@@ -306,6 +347,49 @@ export const Motion = {
   press: {
     scale: 0.97,
     duration: 100,
+  },
+  // ─── DS6 — choreography patterns ──────────────────────────────────────
+  // Each entry codifies a multi-step interaction so engineers don't
+  // hand-compose ad-hoc transitions. See docs/design-decisions/DS6-motion.md.
+  modal: {
+    enter: {
+      opacity: { from: 0, to: 1, duration: 200, easing: 'ease-out' as const },
+      scale: { from: 0.96, to: 1.0, spring: { damping: 18, stiffness: 220 } },
+    },
+    exit: {
+      opacity: { from: 1, to: 0, duration: 150, easing: 'ease-in' as const },
+      // Note: no scale on exit — feels lighter, less theatrical.
+    },
+  },
+  bottomSheet: {
+    drag: {
+      rubberBandBeyondOpen: true,
+      dismissThresholdPct: 0.3, // release ≥30% of travel to dismiss
+      flickVelocityPxPerS: 1500, // > this velocity always dismisses
+      dismissDurationMs: 250,
+    },
+  },
+  listReorder: {
+    // HX2.1 hero re-roll, FX3.1 filter change — bouncy spring communicates
+    // "Sazon re-thought this for you."
+    spring: { damping: 14, stiffness: 200 },
+  },
+  pageTransition: {
+    // Override Expo Router default (right-to-left iOS, fade Android) with a
+    // unified slide so iOS + Android feel like one product.
+    animation: 'slide_from_right' as const,
+    durationMs: 300,
+  },
+} as const;
+
+// ─── Card density (DS4.5) ────────────────────────────────────────────────
+// Three densities for different surfaces. `feed` is the default; `hero` for
+// editorial above-the-fold cards; `inline` for chips and compact lists.
+export const Card = {
+  density: {
+    feed: { padding: 16, gap: 12 },
+    hero: { padding: 24, gap: 16 },
+    inline: { padding: 12, gap: 8 },
   },
 } as const;
 

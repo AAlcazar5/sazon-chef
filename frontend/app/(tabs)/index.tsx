@@ -1051,11 +1051,11 @@ export default function HomeScreen() {
     bodyState = (searchQuery.trim() || cravingQuery.trim()) ? 'no-results' : 'empty';
   }
 
-  // design.md §2.1 — sharp B&W canvas (Uber discipline). Pastel cards
-  // and coral CTAs are the performers on this stage. Warm cream is now
-  // opt-in via Canvas.warmLight for editorial moments only.
+  // DS2.2 — Today is the editorial / hero / "personal magazine cover" tab,
+  // so it uses canvas-warm by default. Other tabs (cookbook / meal-plan /
+  // coach) use plain Canvas.light. See docs/design-decisions/DS2.2-canvas-warm.md.
   return (
-    <View style={{ flex: 1, backgroundColor: isDark ? Canvas.dark : Canvas.light }}>
+    <View style={{ flex: 1, backgroundColor: isDark ? Canvas.warmDark : Canvas.warmLight }}>
     <View style={{ flex: 1 }}>
       <HomeHeader
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}

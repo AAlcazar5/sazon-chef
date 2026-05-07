@@ -50,14 +50,14 @@
 | `light.blush` | `#FCE4EC` |
 | `light.orange` | `#FFF0E5` |
 | `light.red` | `#FFF0EE` |
-| `dark.sage` | `rgba(129,199,132,0.12)` |
-| `dark.golden` | `rgba(255,213,79,0.12)` |
-| `dark.lavender` | `rgba(206,147,216,0.12)` |
-| `dark.peach` | `rgba(255,183,77,0.12)` |
-| `dark.sky` | `rgba(100,181,246,0.12)` |
-| `dark.blush` | `rgba(240,98,146,0.12)` |
-| `dark.orange` | `rgba(255,139,65,0.12)` |
-| `dark.red` | `rgba(239,68,68,0.12)` |
+| `dark.sage` | `#212921` |
+| `dark.golden` | `#302B1B` |
+| `dark.lavender` | `#2A232C` |
+| `dark.peach` | `#30281B` |
+| `dark.sky` | `#1E272F` |
+| `dark.blush` | `#2E1D23` |
+| `dark.orange` | `#302219` |
+| `dark.red` | `#2E1A1A` |
 
 ## AccentTokens
 
@@ -109,6 +109,35 @@
 | `dark.error` | `#F87171` |
 | `dark.info` | `#60A5FA` |
 
+## SurfaceSemantic
+
+| Token | Value |
+|-------|-------|
+| `light.success.bg` | `#D1FAE5` |
+| `light.success.border` | `#34D399` |
+| `light.success.ink` | `#065F46` |
+| `light.warning.bg` | `#FEF3C7` |
+| `light.warning.border` | `#F59E0B` |
+| `light.warning.ink` | `#78350F` |
+| `light.error.bg` | `#FEE2E2` |
+| `light.error.border` | `#EF4444` |
+| `light.error.ink` | `#7F1D1D` |
+| `light.info.bg` | `#DBEAFE` |
+| `light.info.border` | `#3B82F6` |
+| `light.info.ink` | `#1E3A8A` |
+| `dark.success.bg` | `#0E3A2C` |
+| `dark.success.border` | `#34D399` |
+| `dark.success.ink` | `#A7F3D0` |
+| `dark.warning.bg` | `#3D2B0E` |
+| `dark.warning.border` | `#FBBF24` |
+| `dark.warning.ink` | `#FDE68A` |
+| `dark.error.bg` | `#3D1A1A` |
+| `dark.error.border` | `#F87171` |
+| `dark.error.ink` | `#FECACA` |
+| `dark.info.bg` | `#1A2D4A` |
+| `dark.info.border` | `#60A5FA` |
+| `dark.info.ink` | `#BFDBFE` |
+
 ## Backdrop
 
 | Token | Value |
@@ -126,3 +155,56 @@
 | `darkColor` | `#E07A40` |
 | `depth` | `4` |
 | `pressTranslate` | `4` |
+
+## Chart
+
+| Token | Value |
+|-------|-------|
+| `light.series.0` | `#E07A40` |
+| `light.series.1` | `#3A8FB7` |
+| `light.series.2` | `#7AAE5C` |
+| `light.series.3` | `#C75D8F` |
+| `light.series.4` | `#9C6BC9` |
+| `light.series.5` | `#D6A22E` |
+| `light.series.6` | `#5A8A7C` |
+| `light.series.7` | `#B85C42` |
+| `dark.series.0` | `#FF9559` |
+| `dark.series.1` | `#5BB0D8` |
+| `dark.series.2` | `#A1CC85` |
+| `dark.series.3` | `#E68AAE` |
+| `dark.series.4` | `#BB95E0` |
+| `dark.series.5` | `#F0C055` |
+| `dark.series.6` | `#85B4A6` |
+| `dark.series.7` | `#D88A75` |
+
+## Frost
+
+| Token | Value |
+|-------|-------|
+| `intensity` | `40` |
+| `bg.light` | `rgba(255,255,255,0.64)` |
+| `bg.dark` | `rgba(20,20,20,0.72)` |
+| `border.light` | `rgba(10,10,10,0.06)` |
+| `border.dark` | `rgba(255,255,255,0.08)` |
+
+## Skeleton
+
+| Token | Value |
+|-------|-------|
+| `bg.light` | `#EAE6E1` |
+| `bg.dark` | `#1F1A17` |
+| `shimmer.light` | `#F5F2EE` |
+| `shimmer.dark` | `#2A231F` |
+| `durationMs` | `1500` |
+| `easing` | `linear` |
+
+## ImageState
+
+| Token | Value |
+|-------|-------|
+| `placeholder.bg.light` | `#EAE6E1` |
+| `placeholder.bg.dark` | `#1F1A17` |
+| `fallback.mascot` | `curious` |
+| `error.bg.light` | `#FFF0EE` |
+| `error.bg.dark` | `#2E1A1A` |
+| `error.mascot` | `thinking` |

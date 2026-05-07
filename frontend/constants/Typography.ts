@@ -1,7 +1,7 @@
 // Typography constants for Sazon Chef app
 // Consistent typography scale for all text elements
 
-import { TextStyle, Platform } from 'react-native';
+import { TextStyle } from 'react-native';
 import {
   Fraunces_300Light,
   Fraunces_400Regular,
@@ -25,16 +25,23 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 
 /**
- * Font family definitions
- * System fonts for now; DM Sans can be added later via expo-font.
+ * Font family definitions.
+ *
+ * DS2.4 — Plus Jakarta everywhere, no Platform.select fallbacks. Brand voice
+ * (consistency) wins over native-feel (Material 3 / iOS system font) for a
+ * lifestyle app. See docs/design-decisions/DS2.4-font-decision.md.
+ *
+ * Until Plus Jakarta is loaded via `useFonts(...)`, RN falls back to the
+ * platform default — no special handling needed.
  */
 export const FontFamily = {
-  regular: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
-  medium: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
-  semibold: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
-  bold: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
-  extrabold: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
-  system: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
+  regular: 'PlusJakartaSans_400Regular',
+  medium: 'PlusJakartaSans_500Medium',
+  semibold: 'PlusJakartaSans_600SemiBold',
+  bold: 'PlusJakartaSans_700Bold',
+  extrabold: 'PlusJakartaSans_800ExtraBold',
+  /** @deprecated Use FontFamily.regular. Retained as a brand-consistent alias. */
+  system: 'PlusJakartaSans_400Regular',
 } as const;
 
 /**

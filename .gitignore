@@ -22,7 +22,8 @@ yarn-error.log*
 logs
 ROADMAP_3.0.md
 ROADMAP_4.0.md
-.github
+/.github/*
+!/.github/pull_request_template.md
 /inspo
 
 # Editor / AI tool config
@@ -312,6 +313,8 @@ backend/data/recommender/
 !CLAUDE.md
 !AGENTS.md
 !frontend/docs/TOKENS.md
+!frontend/docs/design-decisions/*.md
+!.github/pull_request_template.md
 plans/
 
 # Security documentation

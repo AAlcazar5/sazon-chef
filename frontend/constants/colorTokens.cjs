@@ -36,15 +36,20 @@ const PastelTokens = {
     orange: '#FFF0E5',
     red: '#FFF0EE',
   },
+  // DS2.1 — solid muted-jewel wins over 12% rgba.
+  // Each value is the rgba-over-#141414 composite of the previous version, so
+  // visual rendering on the default dark surface is byte-identical, but the
+  // token no longer depends on transparency stacking (which goes muddy on
+  // surface-raised / cards-on-cards). See docs/design-decisions/DS2.1.md.
   dark: {
-    sage: 'rgba(129,199,132,0.12)',
-    golden: 'rgba(255,213,79,0.12)',
-    lavender: 'rgba(206,147,216,0.12)',
-    peach: 'rgba(255,183,77,0.12)',
-    sky: 'rgba(100,181,246,0.12)',
-    blush: 'rgba(240,98,146,0.12)',
-    orange: 'rgba(255,139,65,0.12)',
-    red: 'rgba(239,68,68,0.12)',
+    sage: '#212921',
+    golden: '#302B1B',
+    lavender: '#2A232C',
+    peach: '#30281B',
+    sky: '#1E272F',
+    blush: '#2E1D23',
+    orange: '#302219',
+    red: '#2E1A1A',
   },
 };
 
@@ -86,6 +91,100 @@ const PeakShadow = {
   pressTranslate: 4,
 };
 
+// ─── DS3.1 — Chart palette (OkLCh-spaced, 8-series rotation) ─────────────
+// Curated to be perceptually distinguishable (ΔE > 12 between adjacent
+// pairs). Distinct from the Pastel performers, which are tied to macro
+// meaning (sage→protein, blush→sugar) — Chart series have no semantic load.
+const Chart = {
+  light: {
+    series: [
+      '#E07A40', // 0 deep coral (warm)
+      '#3A8FB7', // 1 muted teal-blue
+      '#7AAE5C', // 2 olive green
+      '#C75D8F', // 3 dusty rose
+      '#9C6BC9', // 4 muted violet
+      '#D6A22E', // 5 amber gold
+      '#5A8A7C', // 6 sage teal
+      '#B85C42', // 7 brick red
+    ],
+  },
+  dark: {
+    series: [
+      '#FF9559', // 0 brand coral (brightened for dark)
+      '#5BB0D8', // 1 brighter teal
+      '#A1CC85', // 2 brighter olive
+      '#E68AAE', // 3 brighter rose
+      '#BB95E0', // 4 brighter violet
+      '#F0C055', // 5 brighter amber
+      '#85B4A6', // 6 brighter sage
+      '#D88A75', // 7 brighter brick
+    ],
+  },
+};
+
+// ─── DS3.2 — Semantic surface tokens (bg / border / ink per level) ───────
+const SurfaceSemantic = {
+  light: {
+    success: { bg: '#D1FAE5', border: '#34D399', ink: '#065F46' },
+    warning: { bg: '#FEF3C7', border: '#F59E0B', ink: '#78350F' },
+    error: { bg: '#FEE2E2', border: '#EF4444', ink: '#7F1D1D' },
+    info: { bg: '#DBEAFE', border: '#3B82F6', ink: '#1E3A8A' },
+  },
+  dark: {
+    success: { bg: '#0E3A2C', border: '#34D399', ink: '#A7F3D0' },
+    warning: { bg: '#3D2B0E', border: '#FBBF24', ink: '#FDE68A' },
+    error: { bg: '#3D1A1A', border: '#F87171', ink: '#FECACA' },
+    info: { bg: '#1A2D4A', border: '#60A5FA', ink: '#BFDBFE' },
+  },
+};
+
+// ─── DS3.3 — Frosted-glass token (codifies FrostedCard) ──────────────────
+const Frost = {
+  intensity: 40,
+  bg: {
+    light: 'rgba(255,255,255,0.64)',
+    dark: 'rgba(20,20,20,0.72)',
+  },
+  border: {
+    light: 'rgba(10,10,10,0.06)', // mirrors Hairline.light.hairline
+    dark: 'rgba(255,255,255,0.08)', // mirrors Hairline.dark.hairline
+  },
+};
+
+// ─── DS3.4 — Skeleton / shimmer tokens ───────────────────────────────────
+const Skeleton = {
+  bg: {
+    light: '#EAE6E1', // warm beige idle
+    dark: '#1F1A17', // warm cocoa idle
+  },
+  shimmer: {
+    light: '#F5F2EE', // warm cream highlight
+    dark: '#2A231F', // brighter cocoa highlight
+  },
+  durationMs: 1500,
+  easing: 'linear',
+};
+
+// ─── DS3.5 — Image-loading state tokens ──────────────────────────────────
+const ImageState = {
+  placeholder: {
+    bg: {
+      light: '#EAE6E1', // warm-gray for blur-up
+      dark: '#1F1A17',
+    },
+  },
+  fallback: {
+    mascot: 'curious', // src=undefined → curious mascot card
+  },
+  error: {
+    bg: {
+      light: '#FFF0EE', // pastel.red
+      dark: '#2E1A1A', // pastel-dark red (DS2.1)
+    },
+    mascot: 'thinking',
+  },
+};
+
 module.exports = {
   Canvas,
   Surface,
@@ -95,6 +194,11 @@ module.exports = {
   Ink,
   Hairline,
   Semantic,
+  SurfaceSemantic,
   Backdrop,
   PeakShadow,
+  Chart,
+  Frost,
+  Skeleton,
+  ImageState,
 };
