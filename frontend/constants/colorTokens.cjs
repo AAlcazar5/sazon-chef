@@ -84,11 +84,17 @@ const Backdrop = {
   heavyDark: 'rgba(0,0,0,0.85)',
 };
 
+// DS2.3 — depth locked at 6px. The peak-moment shadow is the Duolingo-
+// spirited "press" visual that distinguishes a *designed peak* (cooking
+// complete, save to kitchen) from a chrome interaction (cancel, dismiss).
+// 4px reads as iOS-native press; 6px reads as joy peak — and Sazon's
+// brand voice (DS2.4) is "lifestyle / personality > native feel". See
+// docs/design-decisions/DS2.3-peak-depth.md for the rationale.
 const PeakShadow = {
   lightColor: '#d67a0c',
   darkColor: '#E07A40',
-  depth: 4,
-  pressTranslate: 4,
+  depth: 6,
+  pressTranslate: 6,
 };
 
 // ─── DS3.1 — Chart palette (OkLCh-spaced, 8-series rotation) ─────────────
