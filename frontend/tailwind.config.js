@@ -3,6 +3,11 @@
 // Synthesized design tokens — see frontend/design.md for philosophy.
 // Lead: Airbnb. Layered: Duolingo (joy), Apple (typography/elevation), Uber (canvas).
 // Additive: existing constants/* tokens remain valid.
+//
+// Color tokens are sourced from constants/colorTokens.cjs — single source of
+// truth shared with constants/tokens.ts (DS0.1).
+
+const t = require('./constants/colorTokens.cjs');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -14,83 +19,83 @@ module.exports = {
       colors: {
         // ─── Canvas (sharp B&W stage) ──────────────────────────────────────
         canvas: {
-          DEFAULT: '#FFFFFF',
-          dark: '#0A0A0A',
-          warm: '#FAF7F4',
-          'warm-dark': '#1A1410',
+          DEFAULT: t.Canvas.light,
+          dark: t.Canvas.dark,
+          warm: t.Canvas.warmLight,
+          'warm-dark': t.Canvas.warmDark,
         },
         // ─── Surfaces ──────────────────────────────────────────────────────
         surface: {
-          DEFAULT: '#FFFFFF',
-          dark: '#141414',
-          tint: '#F8F8F8',
-          'tint-dark': '#1A1A1A',
-          raised: '#FFFFFF',
-          'raised-dark': '#1F1F1F',
-          overlay: '#FFFFFF',
-          'overlay-dark': '#2A2A2A',
+          DEFAULT: t.Surface.light.base,
+          dark: t.Surface.dark.base,
+          tint: t.Surface.light.tint,
+          'tint-dark': t.Surface.dark.tint,
+          raised: t.Surface.light.raised,
+          'raised-dark': t.Surface.dark.raised,
+          overlay: t.Surface.light.overlay,
+          'overlay-dark': t.Surface.dark.overlay,
         },
 
         // ─── Brand (single coral accent) ──────────────────────────────────
         brand: {
-          DEFAULT: '#fa7e12',
-          dark: '#FF9559',
-          deep: '#d67a0c',
-          'deep-dark': '#E07A40',
-          soft: '#FFF0E5',
-          'soft-dark': 'rgba(255,149,89,0.14)',
-          ink: '#FFFFFF',
-          'ink-dark': '#1A1410',
+          DEFAULT: t.Brand.light.base,
+          dark: t.Brand.dark.base,
+          deep: t.Brand.light.deep,
+          'deep-dark': t.Brand.dark.deep,
+          soft: t.Brand.light.soft,
+          'soft-dark': t.Brand.dark.soft,
+          ink: t.Brand.light.ink,
+          'ink-dark': t.Brand.dark.ink,
         },
 
         // ─── Pastel performers (light tints) ───────────────────────────────
         pastel: {
-          sage: '#E8F5E9',
-          golden: '#FFF8E1',
-          lavender: '#F3E5F5',
-          peach: '#FFF3E0',
-          sky: '#E3F2FD',
-          blush: '#FCE4EC',
-          orange: '#FFF0E5',
-          red: '#FFF0EE',
+          sage: t.PastelTokens.light.sage,
+          golden: t.PastelTokens.light.golden,
+          lavender: t.PastelTokens.light.lavender,
+          peach: t.PastelTokens.light.peach,
+          sky: t.PastelTokens.light.sky,
+          blush: t.PastelTokens.light.blush,
+          orange: t.PastelTokens.light.orange,
+          red: t.PastelTokens.light.red,
         },
 
         // ─── Pastel accents (vivid for rings, dots, charts) ────────────────
         accent: {
-          sage: '#81C784',
-          golden: '#FFD54F',
-          lavender: '#CE93D8',
-          peach: '#FFB74D',
-          sky: '#64B5F6',
-          blush: '#F06292',
+          sage: t.AccentTokens.sage,
+          golden: t.AccentTokens.golden,
+          lavender: t.AccentTokens.lavender,
+          peach: t.AccentTokens.peach,
+          sky: t.AccentTokens.sky,
+          blush: t.AccentTokens.blush,
         },
 
         // ─── Ink (text scale) ──────────────────────────────────────────────
         ink: {
-          DEFAULT: '#0A0A0A',
-          primary: '#0A0A0A',
-          'primary-dark': '#F5F5F5',
-          secondary: '#525252',
-          'secondary-dark': '#A8A8A8',
-          tertiary: '#8A8A8A',
-          'tertiary-dark': '#6B6B6B',
-          inverse: '#FFFFFF',
-          'inverse-dark': '#0A0A0A',
-          warm: '#1d1d1f',
-          'warm-dark': '#F5EFE6',
+          DEFAULT: t.Ink.light.primary,
+          primary: t.Ink.light.primary,
+          'primary-dark': t.Ink.dark.primary,
+          secondary: t.Ink.light.secondary,
+          'secondary-dark': t.Ink.dark.secondary,
+          tertiary: t.Ink.light.tertiary,
+          'tertiary-dark': t.Ink.dark.tertiary,
+          inverse: t.Ink.light.inverse,
+          'inverse-dark': t.Ink.dark.inverse,
+          warm: t.Ink.light.warm,
+          'warm-dark': t.Ink.dark.warm,
         },
 
         // ─── Hairline borders (last resort, never decorative) ──────────────
         hairline: {
-          DEFAULT: 'rgba(10,10,10,0.06)',
-          dark: 'rgba(255,255,255,0.08)',
-          soft: 'rgba(10,10,10,0.10)',
-          'soft-dark': 'rgba(255,255,255,0.14)',
-          strong: 'rgba(10,10,10,0.18)',
-          'strong-dark': 'rgba(255,255,255,0.24)',
+          DEFAULT: t.Hairline.light.hairline,
+          dark: t.Hairline.dark.hairline,
+          soft: t.Hairline.light.soft,
+          'soft-dark': t.Hairline.dark.soft,
+          strong: t.Hairline.light.strong,
+          'strong-dark': t.Hairline.dark.strong,
         },
 
-        // ─── Legacy aliases preserved ──────────────────────────────────────
+        // ─── Legacy aliases preserved (pre-DS0 consumers) ──────────────────
         'surface-dark': '#0F0F0F',
         'surface-tint-dark': '#1C1C1E',
         'card-dark': '#1C1C1E',
@@ -150,8 +155,8 @@ module.exports = {
         lg: '0 0 0 1px rgba(0,0,0,0.02), 0 4px 12px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.10)',
         xl: '0 0 0 1px rgba(0,0,0,0.02), 0 8px 24px rgba(0,0,0,0.12), 0 24px 48px rgba(0,0,0,0.14)',
         // Peak-moment shadow — Duolingo-spirited, only for designed peaks.
-        peak: '0 4px 0 0 #d67a0c',
-        'peak-deep': '0 6px 0 0 #d67a0c',
+        peak: `0 ${t.PeakShadow.depth}px 0 0 ${t.PeakShadow.lightColor}`,
+        'peak-deep': `0 6px 0 0 ${t.PeakShadow.lightColor}`,
         // Dark-mode color-shift surrogate (inset glow)
         'inset-glow': 'inset 0 1px 0 rgba(255,255,255,0.04)',
       },

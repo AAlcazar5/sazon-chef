@@ -1,17 +1,18 @@
 # Sazon Chef - Root .gitignore
 
 # ECC (Everything Claude Code) tooling - managed locally, not committed
-# Update by re-running the ECC installer
-agents/
-commands/
-skills/
-hooks/
-scripts/
-.opencode/
+# Update by re-running the ECC installer.
+# Root-anchored so they don't shadow legitimate sibling dirs like
+# frontend/scripts/, frontend/hooks/, frontend/__tests__/scripts/, etc.
+/agents/
+/commands/
+/skills/
+/hooks/
+/scripts/
+/.opencode/
 /tests/
 /docs/
 /claude-design
-/scripts
 
 # Dependencies
 node_modules/
@@ -310,6 +311,7 @@ backend/data/recommender/
 !README.md
 !CLAUDE.md
 !AGENTS.md
+!frontend/docs/TOKENS.md
 plans/
 
 # Security documentation

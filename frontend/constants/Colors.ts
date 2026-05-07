@@ -111,12 +111,23 @@ interface ColorPalette {
   };
 }
 
+/**
+ * @deprecated Prefer `Brand`, `Canvas`, `Surface`, `Ink`, `Semantic` from
+ *   `constants/tokens` (DS0.5). This object remains valid for legacy callers
+ *   and for domain colors that have no token equivalent (e.g. `secondaryRed`,
+ *   `tertiaryGreen`, `macros.*`). Touch-it-migrate-it: when you edit a file
+ *   that imports `Colors.primary` or similar overlapping keys for
+ *   non-data-mapping use, switch that file to the equivalent token.
+ */
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const _t = require('./colorTokens.cjs');
+
 // Light theme color palette
 export const Colors: ColorPalette = {
   // Primary colors (Orange theme - Sazon means seasoning/flavor)
-  primary: '#fa7e12', // New brand orange
-  primaryLight: '#ffb464', // Lighter variant for backgrounds/highlights
-  primaryDark: '#d67a0c', // Darker variant for emphasis
+  primary: _t.Brand.light.base, // sourced from tokens.Brand.light.base
+  primaryLight: '#ffb464', // Lighter variant for backgrounds/highlights (no direct token equiv)
+  primaryDark: _t.Brand.light.deep, // sourced from tokens.Brand.light.deep
   
   // Secondary colors
   secondary: '#6B7280', // gray-500
@@ -130,27 +141,27 @@ export const Colors: ColorPalette = {
   accent: '#8B5CF6', // violet-500
   accentSecondary: '#e42614', // New habanero red - for habanero variants and brand accents
   
-  // Semantic colors
-  success: '#10B981', // emerald-500
-  warning: '#F59E0B', // amber-500
-  error: '#EF4444', // red-500
-  info: '#3B82F6', // blue-500
-  
-  // Neutral colors
-  background: '#FFFFFF',
-  surface: '#FAF7F4', // warm cream (was #F9FAFB gray-50)
+  // Semantic colors — sourced from tokens.Semantic.light.*
+  success: _t.Semantic.light.success,
+  warning: _t.Semantic.light.warning,
+  error: _t.Semantic.light.error,
+  info: _t.Semantic.light.info,
+
+  // Neutral colors — sourced from tokens.Canvas.* / Surface.light.*
+  background: _t.Canvas.light,
+  surface: _t.Canvas.warmLight, // warm cream (was #F9FAFB gray-50)
   surfaceTint: '#F5F0EB', // warm beige for grouped sections / input fills
   card: '#FFFFFF', // card surfaces
   cardRaised: '#FFFFFF', // elevated cards
   cardOverlay: '#FFFFFF', // overlay surfaces
   
   text: {
-    primary: '#111827', // gray-900
+    primary: '#111827', // gray-900 (legacy — Ink.light.primary is #0A0A0A; preserved for AA contrast on existing surfaces)
     secondary: '#6B7280', // gray-500
     tertiary: '#9CA3AF', // gray-400
-    inverse: '#FFFFFF'
+    inverse: _t.Ink.light.inverse,
   },
-  
+
   // Border colors
   border: {
     light: '#E5E7EB', // gray-200
@@ -183,14 +194,18 @@ export const Colors: ColorPalette = {
   }
 };
 
+/**
+ * @deprecated Prefer `Brand`, `Canvas`, `Surface`, `Ink`, `Semantic` (dark branch)
+ *   from `constants/tokens` (DS0.5). Same migration policy as `Colors`.
+ */
 // Dark theme color palette — "cookbook by candlelight"
 // Warm cocoa scaffold, jewel-tone plates, ivory ink, brightened coral.
 // Source: claude-design/sazon-chef-darkmode/COLORS.md
 export const DarkColors: ColorPalette = {
   // Primary colors — coral brightened for AA contrast on cocoa scaffold
-  primary: '#FF9559', // brightened brand coral (light uses #fa7e12)
-  primaryLight: '#FFB489', // softer coral for tints / hover
-  primaryDark: '#E07A40', // pressed / emphasis
+  primary: _t.Brand.dark.base,
+  primaryLight: '#FFB489', // softer coral for tints / hover (no direct token equiv)
+  primaryDark: _t.Brand.dark.deep,
 
   // Secondary colors
   secondary: '#B8A99A', // warm taupe (was gray-400)
@@ -204,14 +219,14 @@ export const DarkColors: ColorPalette = {
   accent: '#A78BFA', // violet-400 (lighter for dark mode)
   accentSecondary: '#f87171', // Lighter red for dark mode - for habanero variants and brand accents
 
-  // Semantic colors (brighter for dark mode visibility)
-  success: '#34D399', // emerald-400
-  warning: '#FBBF24', // amber-400
-  error: '#F87171', // red-400
-  info: '#60A5FA', // blue-400
+  // Semantic colors (brighter for dark mode visibility) — sourced from tokens.Semantic.dark.*
+  success: _t.Semantic.dark.success,
+  warning: _t.Semantic.dark.warning,
+  error: _t.Semantic.dark.error,
+  info: _t.Semantic.dark.info,
 
   // Neutral surfaces — warm cocoa scaffold
-  background: '#1A1410', // scaffold (warm cocoa-black)
+  background: _t.Canvas.warmDark, // scaffold (warm cocoa-black)
   surface: '#1A1410', // base surface matches scaffold
   surfaceTint: '#352923', // surfaceMuted — chips, dividers, day rail tiles
   card: '#2A201B', // raised cards, top bar fill (surface)
@@ -219,10 +234,10 @@ export const DarkColors: ColorPalette = {
   cardOverlay: '#3F3128', // top-level overlay surfaces
 
   text: {
-    primary: '#F5EFE6', // ink — warm ivory, never pure white
-    secondary: '#B8A99A', // inkMuted — warm taupe
-    tertiary: '#7A6A5C', // inkSoft — eyebrows / labels
-    inverse: '#1A1410' // text on accent / on ivory surfaces
+    primary: _t.Ink.dark.warm, // warm ivory, never pure white (Ink.dark.warm = #F5EFE6)
+    secondary: '#B8A99A', // inkMuted — warm taupe (legacy)
+    tertiary: '#7A6A5C', // inkSoft — eyebrows / labels (legacy)
+    inverse: _t.Canvas.warmDark, // text on accent / on ivory surfaces
   },
 
   // Border colors — hairline ivory at low opacity

@@ -7,127 +7,52 @@
 // Use these tokens in StyleSheet, Animated, and any RN style object that can't reach Tailwind.
 
 import { Platform, TextStyle } from 'react-native';
+// Color tokens are sourced from a single CJS file so tailwind.config.js
+// (CommonJS, no TS loader) and tokens.ts share one definition. See DS0.1.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const colorTokens = require('./colorTokens.cjs');
 
 // ─── Canvas (sharp B&W stage) ────────────────────────────────────────────
-export const Canvas = {
-  light: '#FFFFFF',
-  dark: '#0A0A0A',
-  warmLight: '#FAF7F4', // editorial / hero opt-in
-  warmDark: '#1A1410',
-} as const;
+export const Canvas = colorTokens.Canvas as {
+  readonly light: string;
+  readonly dark: string;
+  readonly warmLight: string;
+  readonly warmDark: string;
+};
 
 // ─── Surfaces ────────────────────────────────────────────────────────────
-export const Surface = {
-  light: {
-    base: '#FFFFFF',
-    raised: '#FFFFFF',
-    overlay: '#FFFFFF',
-    tint: '#F8F8F8',
-  },
-  dark: {
-    base: '#141414',
-    raised: '#1F1F1F',
-    overlay: '#2A2A2A',
-    tint: '#1A1A1A',
-  },
-} as const;
+export const Surface = colorTokens.Surface as {
+  readonly light: { readonly base: string; readonly raised: string; readonly overlay: string; readonly tint: string };
+  readonly dark: { readonly base: string; readonly raised: string; readonly overlay: string; readonly tint: string };
+};
 
 // ─── Brand (single coral accent) ─────────────────────────────────────────
-export const Brand = {
-  light: {
-    base: '#fa7e12',
-    deep: '#d67a0c',
-    soft: '#FFF0E5',
-    ink: '#FFFFFF',
-  },
-  dark: {
-    base: '#FF9559',
-    deep: '#E07A40',
-    soft: 'rgba(255,149,89,0.14)',
-    ink: '#1A1410',
-  },
-} as const;
+export const Brand = colorTokens.Brand as {
+  readonly light: { readonly base: string; readonly deep: string; readonly soft: string; readonly ink: string };
+  readonly dark: { readonly base: string; readonly deep: string; readonly soft: string; readonly ink: string };
+};
 
 // ─── Pastel performers ───────────────────────────────────────────────────
-export const PastelTokens = {
-  light: {
-    sage: '#E8F5E9',
-    golden: '#FFF8E1',
-    lavender: '#F3E5F5',
-    peach: '#FFF3E0',
-    sky: '#E3F2FD',
-    blush: '#FCE4EC',
-    orange: '#FFF0E5',
-    red: '#FFF0EE',
-  },
-  dark: {
-    sage: 'rgba(129,199,132,0.12)',
-    golden: 'rgba(255,213,79,0.12)',
-    lavender: 'rgba(206,147,216,0.12)',
-    peach: 'rgba(255,183,77,0.12)',
-    sky: 'rgba(100,181,246,0.12)',
-    blush: 'rgba(240,98,146,0.12)',
-    orange: 'rgba(255,139,65,0.12)',
-    red: 'rgba(239,68,68,0.12)',
-  },
-} as const;
+type PastelKey = 'sage' | 'golden' | 'lavender' | 'peach' | 'sky' | 'blush' | 'orange' | 'red';
+export const PastelTokens = colorTokens.PastelTokens as {
+  readonly light: Readonly<Record<PastelKey, string>>;
+  readonly dark: Readonly<Record<PastelKey, string>>;
+};
 
-export const AccentTokens = {
-  sage: '#81C784',
-  golden: '#FFD54F',
-  lavender: '#CE93D8',
-  peach: '#FFB74D',
-  sky: '#64B5F6',
-  blush: '#F06292',
-} as const;
+type AccentKey = 'sage' | 'golden' | 'lavender' | 'peach' | 'sky' | 'blush';
+export const AccentTokens = colorTokens.AccentTokens as Readonly<Record<AccentKey, string>>;
 
 // ─── Ink (text scale) ────────────────────────────────────────────────────
-export const Ink = {
-  light: {
-    primary: '#0A0A0A',
-    secondary: '#525252',
-    tertiary: '#8A8A8A',
-    inverse: '#FFFFFF',
-    warm: '#1d1d1f',
-  },
-  dark: {
-    primary: '#F5F5F5',
-    secondary: '#A8A8A8',
-    tertiary: '#6B6B6B',
-    inverse: '#0A0A0A',
-    warm: '#F5EFE6',
-  },
-} as const;
+type InkBranch = { readonly primary: string; readonly secondary: string; readonly tertiary: string; readonly inverse: string; readonly warm: string };
+export const Ink = colorTokens.Ink as { readonly light: InkBranch; readonly dark: InkBranch };
 
 // ─── Hairline borders (last resort, never decorative) ────────────────────
-export const Hairline = {
-  light: {
-    hairline: 'rgba(10,10,10,0.06)',
-    soft: 'rgba(10,10,10,0.10)',
-    strong: 'rgba(10,10,10,0.18)',
-  },
-  dark: {
-    hairline: 'rgba(255,255,255,0.08)',
-    soft: 'rgba(255,255,255,0.14)',
-    strong: 'rgba(255,255,255,0.24)',
-  },
-} as const;
+type HairlineBranch = { readonly hairline: string; readonly soft: string; readonly strong: string };
+export const Hairline = colorTokens.Hairline as { readonly light: HairlineBranch; readonly dark: HairlineBranch };
 
 // ─── Semantic ────────────────────────────────────────────────────────────
-export const Semantic = {
-  light: {
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    info: '#3B82F6',
-  },
-  dark: {
-    success: '#34D399',
-    warning: '#FBBF24',
-    error: '#F87171',
-    info: '#60A5FA',
-  },
-} as const;
+type SemanticBranch = { readonly success: string; readonly warning: string; readonly error: string; readonly info: string };
+export const Semantic = colorTokens.Semantic as { readonly light: SemanticBranch; readonly dark: SemanticBranch };
 
 // ─── Spacing — 4px base, generous Apple/Headspace breathing room ─────────
 export const Space = {
@@ -216,24 +141,24 @@ export const Elevation = {
   // that has an absolutely-positioned 4px-tall colored element behind the button.
   // Provide the depth + color tokens here for the wrapper component to consume.
   peak: {
-    depth: 4,
-    color: '#d67a0c',
-    pressTranslate: 4,
+    depth: colorTokens.PeakShadow.depth,
+    color: colorTokens.PeakShadow.lightColor,
+    pressTranslate: colorTokens.PeakShadow.pressTranslate,
   },
   peakDark: {
-    depth: 4,
-    color: '#E07A40',
-    pressTranslate: 4,
+    depth: colorTokens.PeakShadow.depth,
+    color: colorTokens.PeakShadow.darkColor,
+    pressTranslate: colorTokens.PeakShadow.pressTranslate,
   },
 } as const;
 
 // ─── Backdrop overlays ───────────────────────────────────────────────────
-export const Backdrop = {
-  light: 'rgba(0,0,0,0.4)',
-  heavy: 'rgba(0,0,0,0.7)',
-  lightDark: 'rgba(0,0,0,0.6)',
-  heavyDark: 'rgba(0,0,0,0.85)',
-} as const;
+export const Backdrop = colorTokens.Backdrop as {
+  readonly light: string;
+  readonly heavy: string;
+  readonly lightDark: string;
+  readonly heavyDark: string;
+};
 
 // ─── Typography ──────────────────────────────────────────────────────────
 // Apple-style negative letter-spacing curve. Family follows existing

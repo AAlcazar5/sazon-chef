@@ -11,7 +11,9 @@
     "lint": "expo lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "build:tokens": "node scripts/buildTokens.cjs",
+    "build:tokens:check": "node scripts/buildTokens.cjs --check"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
