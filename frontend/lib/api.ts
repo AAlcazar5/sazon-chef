@@ -2853,9 +2853,14 @@ interface CoachStreamRawError {
   paywall?: CoachPaywallInfo;
 }
 
-// SSE stream → async iterator of typed events. Uses raw fetch because axios in
-// React Native does not expose ReadableStream bodies. Throws CoachStreamError
-// on 402 / network failure.
+// SSE stream → async iterator of typed events. Uses `expo/fetch` (not RN's
+// built-in `fetch`) because RN's fetch returns `response.body = null`,
+// which prevents reading streamed SSE chunks. `expo/fetch` exposes a real
+// ReadableStream on iOS + Android. Throws CoachStreamError on 4xx / network
+// failure.
+//
+// We intentionally only import `expo/fetch` lazily inside the function so
+// jest unit tests (which mock `lib/api`) don't have to mock the import.
 async function* streamCoachMessage(params: {
   conversationId: string;
   message: string;
@@ -2864,7 +2869,9 @@ async function* streamCoachMessage(params: {
 }): AsyncIterableIterator<CoachStreamEvent> {
   const url = `${getBaseURL()}/coach/message`;
   const token = getAuthToken();
-  const response = await fetch(url, {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { fetch: streamingFetch } = require('expo/fetch') as typeof import('expo/fetch');
+  const response = await streamingFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -2878,7 +2885,8 @@ async function* streamCoachMessage(params: {
         ? { attachments: params.attachments }
         : {}),
     }),
-    signal: params.signal,
+    // expo/fetch supports AbortSignal via the same options shape.
+    ...(params.signal ? { signal: params.signal } : {}),
   });
 
   if (response.status === 400) {
