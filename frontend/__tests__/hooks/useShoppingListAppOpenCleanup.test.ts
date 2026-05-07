@@ -72,6 +72,33 @@ describe('useShoppingListAppOpenCleanup', () => {
     expect(mockTierArchived).toHaveBeenCalledTimes(1);
   });
 
+  it('does NOT fire any cleanup API when isAuthenticated=false (avoids 401 storm at app boot)', async () => {
+    // Override the global useAuth mock for this test only.
+    const auth = require('../../contexts/AuthContext');
+    (auth.useAuth as jest.Mock).mockReturnValueOnce({
+      user: null,
+      token: null,
+      isLoading: false,
+      isAuthenticated: false,
+      login: jest.fn(),
+      register: jest.fn(),
+      socialLogin: jest.fn(),
+      logout: jest.fn(),
+      updateUser: jest.fn(),
+    });
+    mockGetItem.mockResolvedValue(null);
+
+    renderHook(() => useShoppingListAppOpenCleanup());
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(mockCleanupOrphans).not.toHaveBeenCalled();
+    expect(mockAutoArchiveStale).not.toHaveBeenCalled();
+    expect(mockTierArchived).not.toHaveBeenCalled();
+  });
+
   it('calls all three APIs in parallel (Promise.all pattern)', async () => {
     mockGetItem.mockResolvedValue(null);
 

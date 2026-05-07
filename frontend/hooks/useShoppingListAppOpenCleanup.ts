@@ -10,12 +10,14 @@ import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { shoppingListApi } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const CLEANUP_KEY = 'lastShoppingListCleanup';
 const MS_24H = 24 * 60 * 60 * 1000;
 
 export function useShoppingListAppOpenCleanup(): void {
   const { showToast } = useToast();
+  const { isAuthenticated } = useAuth();
   const hasRun = useRef(false);
   // Hold the latest showToast in a ref so the once-only effect uses the
   // current callback even if ToastContext remounts.
@@ -23,6 +25,10 @@ export function useShoppingListAppOpenCleanup(): void {
   showToastRef.current = showToast;
 
   useEffect(() => {
+    // Only fire when the user is actually authenticated. Without this gate
+    // the cleanup POSTs trigger 401s at app boot before the token is loaded,
+    // which trigger the "Session Expired" alert + auto-logout (a storm).
+    if (!isAuthenticated) return;
     if (hasRun.current) return;
     hasRun.current = true;
 
@@ -60,5 +66,5 @@ export function useShoppingListAppOpenCleanup(): void {
     run().catch(() => {
       // Silent — cleanup is best-effort; failures must not surface to users
     });
-  }, []);
+  }, [isAuthenticated]);
 }
