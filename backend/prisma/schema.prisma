@@ -184,6 +184,21 @@ model UserPreferences {
   longitude           Float? // GPS longitude
   useLocationServices Boolean? @default(false) // Whether to use GPS location
 
+  // ROADMAP 4.0 N8.2 — central privacy opt-out for cross-user data flows.
+  // Controls IG1.1 cross-user co-purchase aggregation, HX2.3 cohort overlay
+  // (friend names), F1 friends feed visibility. Default opt-IN with a
+  // k-anonymity ≥ 30 floor for aggregations; opt-out hides all three.
+  privacyShareOptIn Boolean? @default(true)
+
+  // ROADMAP 4.0 N5.2 — onboarding parity (engine signals captured at signup).
+  // Each field maps to a downstream ranker input that previously cold-started
+  // at zero. All optional; never block onboarding completion.
+  cookFrequency        String? // 'rare' | 'occasional' | 'frequent' | 'daily' — seeds skill-tier + macro distribution prior
+  notificationWindow   String? // 'morning' | 'evening' — seeds C12 cook-hour window
+  socialOptIn          Boolean? @default(false) // 'happy to see friends here?' — seeds F1 + HX2.3 social opt-in
+  pantryLeaningCuisines String? // JSON-stringified array, e.g. '["Mediterranean","Asian"]' — seeds IG10.1 cold-start
+  leftoverAccept       Boolean? @default(true) // 'ok with leftovers?' — seeds WK2.1 carry-over default
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
