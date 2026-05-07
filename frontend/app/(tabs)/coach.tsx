@@ -73,7 +73,10 @@ export default function CoachScreen() {
   const chipContext = useCoachQuickChipContext();
   const params = useLocalSearchParams<{ conversationId?: string; seedMessage?: string }>();
 
-  const [view, setView] = useState<CoachView>('list');
+  // ROADMAP 4.0 S15.1 — composer-first landing. Default to the conversation
+  // view so tapping the Sazon tab shows the text input immediately. The
+  // history list is a side surface accessed via the header history icon.
+  const [view, setView] = useState<CoachView>('conversation');
   const [conversations, setConversations] = useState<CoachConversation[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [composerText, setComposerText] = useState('');
@@ -344,11 +347,12 @@ export default function CoachScreen() {
         <View style={[styles.header, { backgroundColor: screenBg }]}>
           <HapticTouchableOpacity
             onPress={onBack}
-            accessibilityLabel="Back to coach conversations"
+            accessibilityLabel="View conversation history"
             accessibilityRole="button"
             style={styles.headerBtn}
+            testID="coach-history-button"
           >
-            <Ionicons name="chevron-back" size={24} color={text} />
+            <Ionicons name="time-outline" size={24} color={text} />
           </HapticTouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: text }]} numberOfLines={1}>
@@ -415,7 +419,8 @@ export default function CoachScreen() {
           )}
 
           {stream.messages.length === 0 && (
-            <View style={styles.intro}>
+            <View testID="mascot" style={styles.intro}>
+              <AnimatedLogoMascot expression="curious" size="medium" />
               <Text style={[styles.introText, { color: subtle }]}>
                 Tell me what you're hungry for — I know your pantry, macros, and taste.
               </Text>

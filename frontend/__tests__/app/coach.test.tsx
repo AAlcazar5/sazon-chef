@@ -107,6 +107,22 @@ describe('CoachScreen', () => {
     expect(await findByText("Plan tonight's dinner")).toBeTruthy();
   });
 
+  // ROADMAP 4.0 S15.1 — composer must be visible on first tab open. Prior
+  // default landed on the thread-list view, which hid the TextInput until
+  // the user tapped a CTA. This test pins the composer-first landing.
+  it('S15.1: composer is visible on first load (no prior conversations)', async () => {
+    const { findByPlaceholderText } = render(<CoachScreen />);
+    expect(
+      await findByPlaceholderText(/Tell me what you're hungry for/i),
+    ).toBeTruthy();
+  });
+
+  it('S15.1: history button replaces back-chevron in conversation header', async () => {
+    const { findByTestId } = render(<CoachScreen />);
+    const btn = await findByTestId('coach-history-button');
+    expect(btn.props.accessibilityLabel).toMatch(/history/i);
+  });
+
   it('auto-sends the chip message (Tier S S0.1 — no longer just seeds composer)', async () => {
     const api = require('../../lib/api').coachApi;
     api.createConversation.mockResolvedValue({ id: 'c-new', title: '' });
