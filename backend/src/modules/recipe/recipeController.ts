@@ -7,7 +7,7 @@ import { getIngredientSwaps } from '@/services/ingredientSwapService';
 import { flavorBoostService } from '@/services/flavorBoostService';
 import { substitutionService } from '@/services/substitutionService';
 import { importRecipeFromUrl as importFromUrl, RecipeImportError } from '@/services/recipeImportService';
-import { getUserId } from '@/utils/authHelper';
+import { getUserId, isAuthenticated } from '@/utils/authHelper';
 import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
 import { varyImageUrlsForPage } from '@/utils/runtimeImageVariation';
 import { recommendationCache } from '@/utils/recommendationCache';
@@ -289,6 +289,7 @@ export const recipeController = {
       const maxCookTime = req.query.maxCookTime as string;
       const difficulty = req.query.difficulty as string;
       const mealPrepMode = req.query.mealPrepMode as string;
+      const dietaryRestrictions = req.query.dietaryRestrictions as string | string[] | undefined;
 
       // Quick macro filters (Home Page 2.0)
       const minProtein = req.query.minProtein as string;
@@ -1014,12 +1015,16 @@ export const recipeController = {
       }
 
       // ROADMAP 4.0 RD6.1 — discovery insight one-liner.
+      // Authenticated only — insight is personalized; skip silently otherwise.
       let discoveryInsight: { line: string; rule: string } | null = null;
-      try {
-        const { compute } = await import('@/services/recipeDiscoveryInsightService');
-        discoveryInsight = await compute({ userId, recipeId: recipe.id });
-      } catch (err) {
-        logger.warn({ data: err }, '[recipe-detail] discovery-insight compute failed (non-fatal):');
+      if (isAuthenticated(req)) {
+        try {
+          const userId = getUserId(req);
+          const { compute } = await import('@/services/recipeDiscoveryInsightService');
+          discoveryInsight = await compute({ userId, recipeId: recipe.id });
+        } catch (err) {
+          logger.warn({ data: err }, '[recipe-detail] discovery-insight compute failed (non-fatal):');
+        }
       }
 
       logger.info({ data: recipe.title }, '✅ Recipe found:');
@@ -3824,194 +3829,6 @@ export const recipeController = {
     } catch (error: any) {
       logger.error({ data: error }, '❌ Error in getRelatedRecipes:');
       res.status(500).json({ error: 'Failed to fetch related recipes' });
-    }
-  },
-
-  // Get similar recipes ("You might like")
-  async getSimilarRecipes(req: Request, res: Response) {
-    try {
-      const recipeId = req.params.id;
-      const userId = getUserId(req);
-      const limit = parseInt(req.query.limit as string) || 5;
-      const mealPrepMode = req.query.mealPrepMode as string;
-
-      logger.info(`🔍 GET /api/recipes/${recipeId}/similar - METHOD CALLED (mealPrepMode: ${mealPrepMode})`);
-
-      // Get the target recipe
-      const targetRecipe = await prisma.recipe.findUnique({
-        where: { id: recipeId },
-        include: {
-          ingredients: { orderBy: { order: 'asc' } },
-        }
-      });
-
-      if (!targetRecipe) {
-        return res.status(404).json({ error: 'Recipe not found' });
-      }
-
-      // Get user preferences for personalized recommendations
-      const userPreferences = await prisma.userPreferences.findFirst({
-        where: { userId },
-        include: {
-          likedCuisines: true,
-          dietaryRestrictions: true,
-          bannedIngredients: true,
-          preferredSuperfoods: true,
-        }
-      });
-
-      // Macro goals are used to compute the same match % shown on the Home screen
-      const macroGoals = await prisma.macroGoals.findFirst({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      // Build where clause for candidate recipes
-      const whereClause: any = {
-        isUserCreated: false,
-        id: { not: recipeId }
-      };
-
-      // Filter by meal prep mode if enabled
-      if (mealPrepMode === 'true' || mealPrepMode === '1') {
-        whereClause.mealPrepScore = { gte: 60 };
-        logger.info('🍱 Filtering similar recipes for meal prep mode (min score: 60/100)');
-      }
-
-      // Fetch candidate recipes (exclude the target recipe and user-created recipes)
-      const candidateRecipes = await prisma.recipe.findMany({
-        where: whereClause,
-        take: 200, // Get a good pool to find similarities
-        include: {
-          ingredients: { orderBy: { order: 'asc' } },
-        }
-      });
-
-      // Use similarity utility to find similar recipes
-      const { findSimilarRecipes } = require('../../utils/recipeSimilarity');
-      
-      const similarRecipes = findSimilarRecipes(
-        {
-          id: targetRecipe.id,
-          title: targetRecipe.title,
-          description: targetRecipe.description,
-          cuisine: targetRecipe.cuisine,
-          cookTime: targetRecipe.cookTime,
-          calories: targetRecipe.calories,
-          protein: targetRecipe.protein,
-          carbs: targetRecipe.carbs,
-          fat: targetRecipe.fat,
-          servings: targetRecipe.servings,
-          ingredients: targetRecipe.ingredients,
-        },
-        candidateRecipes.map(r => ({
-          id: r.id,
-          title: r.title,
-          description: r.description,
-          cuisine: r.cuisine,
-          cookTime: r.cookTime,
-          calories: r.calories,
-          protein: r.protein,
-          carbs: r.carbs,
-          fat: r.fat,
-          servings: r.servings,
-          ingredients: r.ingredients,
-        })),
-        {
-          limit,
-          minScore: 0.2,
-          // Adjust weights based on user preferences
-          weights: {
-            cuisine: userPreferences?.likedCuisines.length ? 0.30 : 0.25,
-            ingredients: 0.30,
-            nutrition: 0.20,
-            cookTime: 0.10,
-            semantic: 0.15,
-          }
-        }
-      );
-
-      // Fetch full recipe data for similar recipes
-      const similarRecipeIds = similarRecipes.map((s: { recipeId: string }) => s.recipeId);
-      const similarRecipesFull = await prisma.recipe.findMany({
-        where: {
-          id: { in: similarRecipeIds }
-        },
-        include: {
-          ingredients: { orderBy: { order: 'asc' } },
-          instructions: { orderBy: { step: 'asc' } }
-        }
-      });
-
-      // Import health grade calculator
-      const { calculateHealthGrade } = require('@/utils/healthGrade');
-
-      // Sort by similarity score
-      const sortedSimilar = similarRecipesFull
-        .map(recipe => {
-          const similarity = similarRecipes.find((s: { recipeId: string }) => s.recipeId === recipe.id);
-
-          // Calculate health grade for badge display
-          let healthGrade: string | undefined;
-          try {
-            const healthResult = calculateHealthGrade(recipe);
-            healthGrade = healthResult?.grade;
-          } catch (e) {
-            healthGrade = undefined;
-          }
-
-          // Attach user match score (drives the "% match" badge in the UI)
-          // Keep this lightweight: base scoring only (no behavioral/temporal enrichment here).
-          let score: {
-            total: number;
-            matchPercentage: number;
-            macroScore?: number;
-            tasteScore?: number;
-            healthGrade?: string;
-          } | undefined;
-
-          try {
-            // Import scoring function lazily to match existing controller patterns
-            const { calculateRecipeScore } = require('@/utils/scoring');
-            const baseScore = calculateRecipeScore(recipe, userPreferences, macroGoals, 0, 0);
-
-            const total = Math.round(Math.min(100, Math.max(0, baseScore.total ?? 50)));
-            const matchPercentage = Math.round(
-              Math.min(100, Math.max(0, baseScore.matchPercentage ?? total))
-            );
-
-            score = {
-              total,
-              matchPercentage,
-              macroScore: baseScore.macroScore,
-              tasteScore: baseScore.tasteScore,
-              healthGrade,
-            };
-          } catch (e: any) {
-            // Log scoring error for debugging
-            logger.warn({ data: e.message }, `⚠️ Score calculation failed for similar recipe ${recipe.id}:`);
-            score = undefined;
-          }
-
-          return {
-            ...recipe,
-            similarityScore: similarity?.score || 0,
-            similarityFactors: similarity?.factors,
-            healthGrade,
-            ...(score ? { score } : {}),
-          };
-        })
-        .sort((a, b) => b.similarityScore - a.similarityScore);
-
-      logger.info(`✅ Returning ${sortedSimilar.length} similar recipes`);
-
-      // Apply runtime image variation for unique images
-      const recipesWithVariedImages = varyImageUrlsForPage(sortedSimilar, 0);
-
-      res.json(recipesWithVariedImages);
-    } catch (error: any) {
-      logger.error({ data: error }, '❌ Error in getSimilarRecipes:');
-      res.status(500).json({ error: 'Failed to fetch similar recipes', details: error.message });
     }
   },
 
