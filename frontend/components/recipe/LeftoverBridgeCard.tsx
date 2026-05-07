@@ -31,6 +31,8 @@ interface BridgeRow {
     cookTime: number | null;
     imageUrl: string | null;
   }>;
+  /** N3.2 — server-provided lifestyle headline. Falls back to legacy template if absent. */
+  prompt?: string;
 }
 
 export default function LeftoverBridgeCard({ enabled = true }: LeftoverBridgeCardProps) {
@@ -67,7 +69,10 @@ export default function LeftoverBridgeCard({ enabled = true }: LeftoverBridgeCar
   if (!row) return null;
 
   // Lifestyle voice — invitation, never expiry-shame.
-  const headline = `Your ${row.leftoverIngredient} wants to be in something tonight.`;
+  // N3.2: prefer server-provided prompt (sazonVoiceService); legacy template fallback.
+  const headline =
+    row.prompt ??
+    `Your ${row.leftoverIngredient} wants to be in something tonight.`;
 
   return (
     <View testID="leftover-bridge-card" style={[styles.card, { backgroundColor: bg }]}>

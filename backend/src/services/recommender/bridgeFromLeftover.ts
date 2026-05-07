@@ -7,11 +7,13 @@
 // cooked in the last 7 days. Returns empty when the user has no
 // leftovers or no overlap.
 //
-// Voice contract: lifestyle invitation, never expiry-shame. The COPY for
-// the surface lives in `<LeftoverBridgeCard>` (RD4.2); this service just
-// picks recipes.
+// Voice contract: lifestyle invitation, never expiry-shame. As of N3.2, the
+// surface copy is generated server-side via `sazonVoiceService.expiringPrompt`
+// and returned on each row as `prompt`. The frontend `<LeftoverBridgeCard>`
+// renders the prompt verbatim instead of constructing prose inline.
 
 import { prisma } from '../../lib/prisma';
+import { expiringPrompt } from '../sazonVoiceService';
 
 export interface BridgeRecipe {
   id: string;
@@ -27,6 +29,8 @@ export interface BridgeRow {
   /** Days until expiry (0 = today). Floor of the diff. */
   expiringIn: number;
   recipes: BridgeRecipe[];
+  /** Pre-formatted lifestyle-voice headline. N3.2 routing. */
+  prompt: string;
 }
 
 export interface BridgeFromLeftoverArgs {
@@ -137,6 +141,10 @@ export async function bridgeFromLeftover(
       leftoverIngredient: ingredient,
       expiringIn: daysFromNow(leftover.expiresAt, now),
       recipes: matches,
+      prompt: expiringPrompt({
+        ingredientName: ingredient,
+        source: 'leftover',
+      }),
     });
   }
 

@@ -11,11 +11,11 @@
 // Returns null when no rule fires. Banned vocabulary stays out: no
 // "should" / "deficient" / "low in" — discovery, not verdict.
 //
-// Cross-tier dovetail (N3.2): final prose routes through `sazonVoiceService`
-// once that service lands. Until then, inline templates enforce the same
-// rules at compile time.
+// Cross-tier dovetail (N3.2): prose now routes through `sazonVoiceService`
+// — this file collects signals; the voice service formats + enforces voice.
 
 import { prisma } from '../lib/prisma';
+import { discoveryInsight as voiceDiscoveryInsight } from './sazonVoiceService';
 
 export type DiscoveryInsightRule =
   | 'first_with_ingredient'
@@ -35,23 +35,8 @@ export interface DiscoveryInsightArgs {
   asOf?: Date;
 }
 
-const PRIMARY_MAX = 90;
 const CADENCE_DAYS = 21;
 const MICRO_STANDOUT_MULTIPLE = 1.5;
-
-const BANNED = [
-  /\byou should\b/i,
-  /\bdeficient\b/i,
-  /\blow in\b/i,
-  /\byou need\b/i,
-  /\bfailing\b/i,
-];
-
-function clean(line: string): string {
-  let out = line;
-  for (const re of BANNED) out = out.replace(re, '').replace(/\s+/g, ' ').trim();
-  return out.length > PRIMARY_MAX ? out.slice(0, PRIMARY_MAX - 1).trim() + '…' : out;
-}
 
 function daysApart(a: Date, b: Date): number {
   return Math.floor((a.getTime() - b.getTime()) / (24 * 60 * 60 * 1000));
@@ -161,10 +146,11 @@ export async function compute(args: DiscoveryInsightArgs): Promise<DiscoveryInsi
   if (cookedIngredients.size > 0 && anchor.ingredients.length > 0) {
     const newOne = findFirstNewIngredient(anchor.ingredients, cookedIngredients);
     if (newOne) {
-      return {
-        line: clean(`First time you'd cook with ${newOne}.`),
+      const line = voiceDiscoveryInsight({
         rule: 'first_with_ingredient',
-      };
+        ingredient: newOne,
+      });
+      if (line) return { line, rule: 'first_with_ingredient' };
     }
   }
 
@@ -172,10 +158,12 @@ export async function compute(args: DiscoveryInsightArgs): Promise<DiscoveryInsi
   if (anchor.cuisine && typeof anchor.iron === 'number' && anchor.iron > 0) {
     const avg = await userAvgIronForCuisine(args.userId, anchor.cuisine, asOf);
     if (avg != null && anchor.iron >= avg * MICRO_STANDOUT_MULTIPLE) {
-      return {
-        line: clean(`High in iron compared to your usual ${anchor.cuisine}.`),
+      const line = voiceDiscoveryInsight({
         rule: 'micro_standout',
-      };
+        micronutrient: 'iron',
+        cuisine: anchor.cuisine,
+      });
+      if (line) return { line, rule: 'micro_standout' };
     }
   }
 
@@ -187,10 +175,12 @@ export async function compute(args: DiscoveryInsightArgs): Promise<DiscoveryInsi
       if (days >= CADENCE_DAYS) {
         const weeks = Math.floor(days / 7);
         const cadenceText = weeks >= 4 ? `${Math.floor(weeks / 4)} months` : `${weeks} weeks`;
-        return {
-          line: clean(`First ${anchor.cuisine} dish in ${cadenceText}.`),
+        const line = voiceDiscoveryInsight({
           rule: 'cuisine_cadence',
-        };
+          cuisine: anchor.cuisine,
+          cadenceText,
+        });
+        if (line) return { line, rule: 'cuisine_cadence' };
       }
     }
   }
