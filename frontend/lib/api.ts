@@ -1898,6 +1898,17 @@ export const scannerApi = {
   },
 };
 
+// ROADMAP 4.0 IG6.1 — Ingredient event API (swap learning loop).
+export const ingredientEventApi = {
+  /** Record a swap-tap. Backend writes both swappedOut + swappedIn rows. */
+  recordSwap: (input: {
+    originalName: string;
+    swapTargetName: string;
+    recipeId?: string;
+  }) =>
+    apiClient.post<{ persisted: number }>('/ingredient-events/swap', input),
+};
+
 // Pantry API
 export const pantryApi = {
   getAll: () => apiClient.get('/pantry'),

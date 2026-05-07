@@ -8,7 +8,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import BottomSheet from '../ui/BottomSheet';
 import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
-import { recipeApi } from '../../lib/api';
+import { recipeApi, ingredientEventApi } from '../../lib/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,6 +33,8 @@ interface Props {
   onSelectSwap: (swap: IngredientSwap) => void;
   /** Called when user taps "I don't have this" — triggers AI conversational flow */
   onDontHaveThis?: (ingredientText: string) => void;
+  /** ROADMAP 4.0 IG6.1 — recipeId is logged with the swap event for traceability. */
+  recipeId?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -158,7 +160,26 @@ function ManualEntry({ isDark, onConfirm }: { isDark: boolean; onConfirm: (value
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function IngredientSwapSheet({ visible, ingredient, isDark, onClose, onSelectSwap, onDontHaveThis }: Props) {
+export default function IngredientSwapSheet({ visible, ingredient, isDark, onClose, onSelectSwap, onDontHaveThis, recipeId }: Props) {
+  // IG6.1 — fire-and-forget swap-tap logger. Wrapper around onSelectSwap so
+  // tap consumers don't have to track the analytics call themselves.
+  const trackedSelectSwap = React.useCallback(
+    (swap: IngredientSwap) => {
+      if (ingredient && swap.alternative) {
+        ingredientEventApi
+          .recordSwap({
+            originalName: ingredient,
+            swapTargetName: swap.alternative,
+            recipeId,
+          })
+          .catch(() => {
+            // best-effort telemetry; never block the UI
+          });
+      }
+      onSelectSwap(swap);
+    },
+    [ingredient, recipeId, onSelectSwap],
+  );
   const [swaps, setSwaps] = useState<IngredientSwap[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState('');
@@ -260,7 +281,7 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
               transition={{ type: 'spring', delay: idx * 60, damping: 20, stiffness: 200 }}
             >
               <HapticTouchableOpacity
-                onPress={() => onSelectSwap(swap)}
+                onPress={() => trackedSelectSwap(swap)}
                 hapticStyle="medium"
                 pressedScale={0.97}
                 style={{
@@ -318,7 +339,7 @@ export default function IngredientSwapSheet({ visible, ingredient, isDark, onClo
 
         {/* Manual entry */}
         {!loading && (
-          <ManualEntry isDark={isDark} onConfirm={(value) => onSelectSwap({ alternative: value, macroDelta: {}, flavorNote: 'Custom swap' })} />
+          <ManualEntry isDark={isDark} onConfirm={(value) => trackedSelectSwap({ alternative: value, macroDelta: {}, flavorNote: 'Custom swap' })} />
         )}
 
         {/* "I don't have this" — triggers AI conversational substitution */}

@@ -21,6 +21,7 @@ import shoppingListShareRoutes from '@modules/shoppingListShare/shoppingListShar
 import costTrackingRoutes from '@modules/costTracking/costTrackingRoutes';
 import ingredientAvailabilityRoutes from '@modules/ingredientAvailability/ingredientAvailabilityRoutes';
 import ingredientPairsRoutes from '@modules/ingredientPairs/ingredientPairsRoutes';
+import ingredientEventsRoutes from '@modules/ingredientEvents/ingredientEventsRoutes';
 import pantryRoutes from '@modules/pantry/pantryRoutes';
 import { mealComponentRoutes, composedPlateRoutes, leftoverInventoryRoutes, sharedPlateRoutes, nutrientGapRoutes, householdRoutes } from '@modules/mealComponent/mealComponentRoutes';
 import { kitchenIQRoutes } from '@modules/kitchenIQ/kitchenIQRoutes';
@@ -221,6 +222,7 @@ app.use('/api/shopping-apps', authenticateToken, shoppingAppRoutes);
 app.use('/api/cost-tracking', authenticateToken, costTrackingRoutes);
 app.use('/api/ingredient-availability', authenticateToken, ingredientAvailabilityRoutes);
 app.use('/api/ingredients', authenticateToken, ingredientPairsRoutes);
+app.use('/api/ingredient-events', authenticateToken, ingredientEventsRoutes);
 app.use('/api/pantry', authenticateToken, pantryRoutes);
 app.use('/api/meal-components', mealComponentRoutes);
 app.use('/api/composed-plates', composedPlateRoutes);
