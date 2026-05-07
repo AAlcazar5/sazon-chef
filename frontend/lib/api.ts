@@ -1909,6 +1909,20 @@ export const ingredientEventApi = {
     apiClient.post<{ persisted: number }>('/ingredient-events/swap', input),
 };
 
+// ROADMAP 4.0 IG10.1 — Pantry IQ editorial card.
+export interface PantryIQResponse {
+  iq: {
+    topCuisine: { cuisine: string; cookCount: number; perWeek: number } | null;
+    mostUsed: { ingredientName: string; cookCount: number } | null;
+    underused: { ingredientName: string; daysSinceLastUse: number } | null;
+    totalCooksInWindow: number;
+  } | null;
+}
+
+export const pantryIQApi = {
+  get: () => apiClient.get<PantryIQResponse>('/pantry-iq'),
+};
+
 // Pantry API
 export const pantryApi = {
   getAll: () => apiClient.get('/pantry'),

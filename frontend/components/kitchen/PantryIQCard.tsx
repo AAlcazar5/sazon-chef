@@ -1,0 +1,96 @@
+// frontend/components/kitchen/PantryIQCard.tsx
+// ROADMAP 4.0 IG10.1 — "Pantry IQ" editorial card on Kitchen → Discover.
+//
+// Editorial card surfaced when the user has enough cook signal to back the
+// claims. "Your pantry leans Mediterranean — 4 cooks/week from this shelf."
+// "Most-used this month: lemon (8 cooks)." "Underused: chickpeas — last
+// cooked 23 days ago." Lifestyle voice; never punitive.
+//
+// Consumes the shared <EngineVisibilityCard> shell (N4.3) — same chrome as
+// WK14 Plan IQ + HX5 almost-made-it. Cold-start is enforced backend-side
+// (computePantryIQ returns null below MIN_COOK_COUNT = 5) AND can be gated
+// further via N2.1 coldStartCoordinator at the screen level.
+//
+// Tap "Underused" → recipe search filtered to that ingredient.
+
+import React, { useEffect, useState } from 'react';
+import { router } from 'expo-router';
+import EngineVisibilityCard, {
+  type EngineVisibilityRow,
+} from '../ui/EngineVisibilityCard';
+import { pantryIQApi, type PantryIQResponse } from '../../lib/api';
+
+export interface PantryIQCardProps {
+  /** When false, the card never fetches and never renders. */
+  enabled?: boolean;
+}
+
+export default function PantryIQCard({ enabled = true }: PantryIQCardProps) {
+  const [iq, setIq] = useState<PantryIQResponse['iq']>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIq(null);
+      return;
+    }
+    let cancelled = false;
+    pantryIQApi
+      .get()
+      .then((res) => {
+        if (cancelled) return;
+        const payload = (res?.data ?? res) as PantryIQResponse;
+        setIq(payload?.iq ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setIq(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  if (!iq) return null;
+  // Card hides if it has no rows to show — a user who has 5+ cooks but no
+  // dominant cuisine, no most-used (ties), and no underused inventory.
+  const rows: EngineVisibilityRow[] = [];
+
+  if (iq.topCuisine) {
+    rows.push({
+      label: 'Top cuisine',
+      value: `${iq.topCuisine.cuisine}`,
+      subValue: `${iq.topCuisine.perWeek}/wk over the last month`,
+    });
+  }
+  if (iq.mostUsed) {
+    rows.push({
+      label: 'Most-used',
+      value: iq.mostUsed.ingredientName,
+      subValue: `${iq.mostUsed.cookCount} cook${iq.mostUsed.cookCount === 1 ? '' : 's'} this month`,
+    });
+  }
+  if (iq.underused) {
+    rows.push({
+      label: 'Underused',
+      value: iq.underused.ingredientName,
+      subValue: `Last cooked ${iq.underused.daysSinceLastUse} days ago`,
+      onPress: () => {
+        router.push(
+          `/(tabs)?craving=${encodeURIComponent(iq.underused!.ingredientName)}` as never,
+        );
+      },
+      accessibilityHint: 'Find recipes that use this ingredient',
+    });
+  }
+
+  if (rows.length === 0) return null;
+
+  return (
+    <EngineVisibilityCard
+      testID="pantry-iq-card"
+      eyebrow="Pantry IQ"
+      title="Your kitchen, reading itself"
+      rows={rows}
+      variant="lavender"
+    />
+  );
+}
