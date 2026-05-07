@@ -1943,6 +1943,14 @@ export interface ActivationSurface {
 export const todayApi = {
   activation: () =>
     apiClient.get<{ surface: ActivationSurface | null }>('/today/activation'),
+  // ROADMAP 4.0 N2.2 — coverage tier for first-7-days surface coordination.
+  coverage: () =>
+    apiClient.get<{
+      tier: 'cold' | 'mid' | 'high';
+      recentCookCount: number;
+      lifetimeCookCount: number;
+      daysSinceSignup: number;
+    }>('/today/coverage'),
 };
 
 // ROADMAP 4.0 IG8.2 — "Try this ingredient" weekly cultural discovery.
