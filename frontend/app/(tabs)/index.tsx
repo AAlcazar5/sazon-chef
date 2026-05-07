@@ -15,6 +15,7 @@ import HelpTooltip from '../../components/ui/HelpTooltip';
 import { Spacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Canvas, Brand, Surface } from '../../constants/tokens';
 import { useAuth } from '../../contexts/AuthContext';
 import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
@@ -1050,8 +1051,11 @@ export default function HomeScreen() {
     bodyState = (searchQuery.trim() || cravingQuery.trim()) ? 'no-results' : 'empty';
   }
 
+  // design.md §2.1 — sharp B&W canvas (Uber discipline). Pastel cards
+  // and coral CTAs are the performers on this stage. Warm cream is now
+  // opt-in via Canvas.warmLight for editorial moments only.
   return (
-    <View style={{ flex: 1, backgroundColor: isDark ? DarkColors.background : '#FAF7F4' }}>
+    <View style={{ flex: 1, backgroundColor: isDark ? Canvas.dark : Canvas.light }}>
     <View style={{ flex: 1 }}>
       <HomeHeader
         onMascotPress={() => mainScrollRef.current?.scrollTo({ y: 0, animated: true })}
@@ -1400,7 +1404,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
               flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: isDark ? DarkColors.background : '#F2F2F7',
+              backgroundColor: isDark ? Canvas.dark : Canvas.light,
             }}
           >
             {/* ROADMAP 4.0 J8 — 2s roulette spin overlay; settles on the first picked recipe */}
@@ -1429,7 +1433,7 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
               flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: isDark ? DarkColors.background : '#F2F2F7',
+              backgroundColor: isDark ? Canvas.dark : Canvas.light,
               padding: 24,
             }}
           >
@@ -1439,14 +1443,17 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
             <Text className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
               We couldn't load any recipes for roulette right now.
             </Text>
+            {/* design.md §7.1 — primary CTA pill, single coral accent */}
             <HapticTouchableOpacity
               onPress={handleCloseRoulette}
-              className="px-6 py-3 rounded-xl"
               style={{
-                backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+                backgroundColor: isDark ? Brand.dark.base : Brand.light.base,
+                paddingHorizontal: 24,
+                paddingVertical: 14,
+                borderRadius: 9999,
               }}
             >
-              <Text className="text-white font-semibold text-base">Close</Text>
+              <Text style={{ color: isDark ? Brand.dark.ink : Brand.light.ink, fontWeight: '600', fontSize: 16, letterSpacing: 0.1 }}>Close</Text>
             </HapticTouchableOpacity>
           </View>
         )}

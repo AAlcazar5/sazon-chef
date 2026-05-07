@@ -1,3 +1,188 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Sazon Design Tokens — see design.md for the full philosophy + rationale.
+   Synthesis: Airbnb (lead) + Duolingo (joy) + Apple (typography/elevation)
+            + Uber (canvas discipline), bent for Sazon's pastel + B&W identity.
+   Additive: existing constants/ tokens remain valid; this layer extends them.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    /* Canvas — sharp white "gallery" stage */
+    --canvas: #FFFFFF;
+    --canvas-warm: #FAF7F4;
+    --surface: #FFFFFF;
+    --surface-raised: #FFFFFF;
+    --surface-overlay: #FFFFFF;
+    --surface-tint: #F8F8F8;
+
+    /* Brand — single coral accent */
+    --brand: #fa7e12;
+    --brand-deep: #d67a0c;
+    --brand-soft: #FFF0E5;
+    --brand-ink: #FFFFFF;
+
+    /* Pastel cards — performers on the stage */
+    --pastel-sage: #E8F5E9;
+    --pastel-golden: #FFF8E1;
+    --pastel-lavender: #F3E5F5;
+    --pastel-peach: #FFF3E0;
+    --pastel-sky: #E3F2FD;
+    --pastel-blush: #FCE4EC;
+    --pastel-orange: #FFF0E5;
+    --pastel-red: #FFF0EE;
+
+    /* Pastel accents — vivid versions for rings, dots, charts */
+    --accent-sage: #81C784;
+    --accent-golden: #FFD54F;
+    --accent-lavender: #CE93D8;
+    --accent-peach: #FFB74D;
+    --accent-sky: #64B5F6;
+    --accent-blush: #F06292;
+
+    /* Ink — text scale */
+    --ink-primary: #0A0A0A;
+    --ink-secondary: #525252;
+    --ink-tertiary: #8A8A8A;
+    --ink-inverse: #FFFFFF;
+    --ink-warm: #1d1d1f;
+
+    /* Borders — last resort, never decorative */
+    --border-hairline: rgba(10, 10, 10, 0.06);
+    --border-soft: rgba(10, 10, 10, 0.10);
+    --border-strong: rgba(10, 10, 10, 0.18);
+
+    /* Semantic */
+    --success: #10B981;
+    --warning: #F59E0B;
+    --error: #EF4444;
+    --info: #3B82F6;
+
+    /* Spacing scale — 4px base */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 28px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-14: 56px;
+    --space-16: 64px;
+    --space-20: 80px;
+    --space-24: 96px;
+    --space-30: 120px;
+    --space-36: 144px;
+    --space-48: 192px;
+
+    /* Layout constants */
+    --screen-px: 20px;
+    --card-px: 16px;
+    --card-px-hero: 24px;
+    --card-gap: 12px;
+    --section-gap: 48px;
+    --hero-gap: 80px;
+    --max-width: 1200px;
+
+    /* Border radius scale */
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-input: 14px;
+    --radius-lg: 16px;
+    --radius-card: 20px;
+    --radius-2xl: 24px;
+    --radius-sheet: 28px;
+    --radius-hero: 36px;
+    --radius-pill: 9999px;
+
+    /* Shadows — Airbnb-style layered subtle (light mode) */
+    --shadow-xs: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.08), 0 16px 32px rgba(0, 0, 0, 0.10);
+    --shadow-xl: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 8px 24px rgba(0, 0, 0, 0.12), 0 24px 48px rgba(0, 0, 0, 0.14);
+
+    /* Peak-moment shadow — Duolingo-spirited, sparing */
+    --shadow-peak: 0 4px 0 0 var(--brand-deep);
+    --shadow-peak-deep: 0 6px 0 0 var(--brand-deep);
+
+    /* Backdrop overlays */
+    --backdrop-light: rgba(0, 0, 0, 0.4);
+    --backdrop-heavy: rgba(0, 0, 0, 0.7);
+
+    /* Type scale — Apple-style negative letter-spacing curve */
+    --font-display: 'Fraunces', 'Times New Roman', serif;
+    --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+    /* Motion */
+    --duration-instant: 100ms;
+    --duration-quick: 200ms;
+    --duration-standard: 300ms;
+    --duration-modal: 450ms;
+    --duration-peak: 600ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  /* Dark mode — sharp near-black canvas, color-shift elevation */
+  .dark {
+    /* Canvas — sharp gallery-black stage */
+    --canvas: #0A0A0A;
+    --canvas-warm: #1A1410;
+    --surface: #141414;
+    --surface-raised: #1F1F1F;
+    --surface-overlay: #2A2A2A;
+    --surface-tint: #1A1A1A;
+
+    /* Brand — brightened for AA contrast on near-black */
+    --brand: #FF9559;
+    --brand-deep: #E07A40;
+    --brand-soft: rgba(255, 149, 89, 0.14);
+    --brand-ink: #1A1410;
+
+    /* Pastel cards — rgba overlays at 12% on dark surfaces */
+    --pastel-sage: rgba(129, 199, 132, 0.12);
+    --pastel-golden: rgba(255, 213, 79, 0.12);
+    --pastel-lavender: rgba(206, 147, 216, 0.12);
+    --pastel-peach: rgba(255, 183, 77, 0.12);
+    --pastel-sky: rgba(100, 181, 246, 0.12);
+    --pastel-blush: rgba(240, 98, 146, 0.12);
+    --pastel-orange: rgba(255, 139, 65, 0.12);
+    --pastel-red: rgba(239, 68, 68, 0.12);
+
+    /* Ink — warm ivory, never pure white */
+    --ink-primary: #F5F5F5;
+    --ink-secondary: #A8A8A8;
+    --ink-tertiary: #6B6B6B;
+    --ink-inverse: #0A0A0A;
+    --ink-warm: #F5EFE6;
+
+    /* Borders — hairline ivory at low opacity */
+    --border-hairline: rgba(255, 255, 255, 0.08);
+    --border-soft: rgba(255, 255, 255, 0.14);
+    --border-strong: rgba(255, 255, 255, 0.24);
+
+    /* Semantic — brighter for dark mode visibility */
+    --success: #34D399;
+    --warning: #FBBF24;
+    --error: #F87171;
+    --info: #60A5FA;
+
+    /* Shadows — color-shift elevation in dark mode, shadows nearly invisible */
+    --shadow-xs: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --shadow-sm: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 2px 4px rgba(0, 0, 0, 0.4);
+    --shadow-md: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px rgba(0, 0, 0, 0.6);
+    --shadow-xl: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 16px 40px rgba(0, 0, 0, 0.7);
+
+    /* Backdrop overlays */
+    --backdrop-light: rgba(0, 0, 0, 0.6);
+    --backdrop-heavy: rgba(0, 0, 0, 0.85);
+  }
+}

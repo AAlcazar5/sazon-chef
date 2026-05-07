@@ -35,6 +35,9 @@ ROADMAP_4.0.md
 # Phased coverage artifacts
 backend/coverage-phase*/
 
+# Generated coverage / analysis reports (e.g. backend/scripts/recipes/coverageReport.ts)
+reports/
+
 # Shell scripts (local dev helpers)
 cleanup.sh
 run-tests.sh
