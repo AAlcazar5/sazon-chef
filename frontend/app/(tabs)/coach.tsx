@@ -57,6 +57,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
+import { ComponentSpacing } from '../../constants/Spacing';
 import { useSubscription } from '../../hooks/useSubscription';
 import { deriveCoachFlags } from '../../lib/coachClient';
 import { classifyCoachIntent } from '../../lib/coachIntentClassifier';
@@ -697,11 +698,14 @@ const styles = StyleSheet.create({
   },
   composerBar: {
     paddingHorizontal: 12,
-    // ROADMAP 4.0 S15.2 — clear the global recipe search bar overlay
-    // (40px input + 32px paddingVertical = 72px) rendered by the tabs
-    // layout. Without this, the composer sits behind it.
-    paddingBottom: Platform.OS === 'ios' ? 96 : 84,
+    paddingBottom: 8,
     paddingTop: 8,
+    // ROADMAP 4.0 S15.2 — the tabs layout uses an absolutely-positioned
+    // tab bar + search-bar overlay that together occlude ~140px at the
+    // bottom of every screen. Use marginBottom (not paddingBottom) so the
+    // composer's background doesn't paint OVER the search bar — we just
+    // shift the whole bar up to sit cleanly above it.
+    marginBottom: ComponentSpacing.tabBar.scrollPaddingBottom + 8,
   },
   composerInner: {
     flexDirection: 'row',
