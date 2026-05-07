@@ -20,6 +20,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useColorScheme } from 'nativewind';
 import { Pastel, PastelDark, Colors, DarkColors } from '../../constants/Colors';
 import { recipeApi } from '../../lib/api';
+import { track } from '../../lib/analytics';
 
 export interface MoreLikeThisRowProps {
   /** Anchor recipe id. Carousel hides when null/empty. */
@@ -99,6 +100,12 @@ export default function MoreLikeThisRow({ recipeId, referrer = 'detail-similar' 
             accessibilityRole="button"
             accessibilityLabel={`${card.title}, ${card.cuisine ?? 'recipe'}`}
             onPress={() => {
+              // RD7.1 — telemetry: similar-tap with anchor + target + position.
+              track('recipe_detail_similar_tap', {
+                anchorRecipeId: recipeId ?? null,
+                targetRecipeId: card.id,
+                position: cards?.indexOf(card) ?? 0,
+              });
               router.push(
                 `/recipe/${encodeURIComponent(card.id)}?referrer=${encodeURIComponent(referrer)}` as never,
               );

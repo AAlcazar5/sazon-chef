@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useColorScheme } from 'nativewind';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
+import { track } from '../../lib/analytics';
 
 export type VariantTag = 'weeknight' | 'sunday' | 'campfire' | 'lighter';
 
@@ -67,6 +68,11 @@ export default function RecipeVariantChipRow({ variants }: RecipeVariantChipRowP
             accessibilityRole="button"
             accessibilityLabel={`${tag} variant: ${v.siblingRecipe.title}`}
             onPress={() => {
+              // RD7.1 — telemetry: variant-tap with tag + target.
+              track('recipe_detail_variant_tap', {
+                tag,
+                targetRecipeId: v.siblingRecipe.id,
+              });
               router.push(
                 `/recipe/${encodeURIComponent(v.siblingRecipe.id)}?referrer=detail-variant` as never,
               );

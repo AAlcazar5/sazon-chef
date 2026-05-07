@@ -12,7 +12,13 @@ type AnalyticsEvent =
   | 'tonight_proposal_accepted'
   | 'tonight_proposal_swapped'
   | 'tonight_proposal_escaped'
-  | 'tonight_mode_disabled';
+  | 'tonight_mode_disabled'
+  // ROADMAP 4.0 RD7.1 — recipe-detail recommender taps.
+  | 'recipe_detail_similar_tap'
+  | 'recipe_detail_variant_tap'
+  | 'recipe_detail_bridge_tap'
+  | 'recipe_detail_cookednext_tap'
+  | 'recipe_detail_menu_open';
 
 interface TrackPayload {
   [key: string]: string | number | boolean | null | undefined;

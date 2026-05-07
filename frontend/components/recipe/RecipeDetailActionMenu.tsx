@@ -13,6 +13,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useColorScheme } from 'nativewind';
 import { Pastel, PastelDark, Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
+import { track } from '../../lib/analytics';
 
 export interface RecipeDetailActionMenuProps {
   /** Whether this recipe is a user-composed plate. Hides composed-only rows. */
@@ -118,6 +119,9 @@ export default function RecipeDetailActionMenu({
         accessibilityLabel="More actions"
         onPress={() => {
           HapticPatterns.buttonPress();
+          // RD7.1 — telemetry: menu_open fires once per session per detail
+          // visit (component-level open flips false → true).
+          track('recipe_detail_menu_open');
           setOpen(true);
         }}
         style={[styles.trigger, { backgroundColor: triggerBg }]}

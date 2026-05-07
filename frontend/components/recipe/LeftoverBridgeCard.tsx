@@ -13,6 +13,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useColorScheme } from 'nativewind';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { recipeApi } from '../../lib/api';
+import { track } from '../../lib/analytics';
 
 export interface LeftoverBridgeCardProps {
   /** When false, the card never fetches and never renders. Useful for
@@ -83,6 +84,12 @@ export default function LeftoverBridgeCard({ enabled = true }: LeftoverBridgeCar
             accessibilityRole="button"
             accessibilityLabel={`${r.title} — uses ${row.leftoverIngredient}`}
             onPress={() => {
+              // RD7.1 — telemetry: bridge-tap with leftover + target.
+              track('recipe_detail_bridge_tap', {
+                leftoverIngredient: row.leftoverIngredient,
+                targetRecipeId: r.id,
+                expiringIn: row.expiringIn,
+              });
               router.push(
                 `/recipe/${encodeURIComponent(r.id)}?referrer=detail-bridge` as never,
               );
