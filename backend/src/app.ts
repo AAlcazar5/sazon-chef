@@ -24,6 +24,7 @@ import ingredientPairsRoutes from '@modules/ingredientPairs/ingredientPairsRoute
 import ingredientEventsRoutes from '@modules/ingredientEvents/ingredientEventsRoutes';
 import pantryIQRoutes from '@modules/pantryIQ/pantryIQRoutes';
 import ingredientDiscoveryRoutes from '@modules/ingredientDiscovery/ingredientDiscoveryRoutes';
+import todayRoutes from '@modules/today/todayRoutes';
 import pantryRoutes from '@modules/pantry/pantryRoutes';
 import { mealComponentRoutes, composedPlateRoutes, leftoverInventoryRoutes, sharedPlateRoutes, nutrientGapRoutes, householdRoutes } from '@modules/mealComponent/mealComponentRoutes';
 import { kitchenIQRoutes } from '@modules/kitchenIQ/kitchenIQRoutes';
@@ -227,6 +228,7 @@ app.use('/api/ingredients', authenticateToken, ingredientPairsRoutes);
 app.use('/api/ingredient-events', authenticateToken, ingredientEventsRoutes);
 app.use('/api/pantry-iq', authenticateToken, pantryIQRoutes);
 app.use('/api/ingredient-discovery', authenticateToken, ingredientDiscoveryRoutes);
+app.use('/api/today', authenticateToken, todayRoutes);
 app.use('/api/pantry', authenticateToken, pantryRoutes);
 app.use('/api/meal-components', mealComponentRoutes);
 app.use('/api/composed-plates', composedPlateRoutes);

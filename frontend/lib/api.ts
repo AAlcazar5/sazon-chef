@@ -1909,6 +1909,27 @@ export const ingredientEventApi = {
     apiClient.post<{ persisted: number }>('/ingredient-events/swap', input),
 };
 
+// ROADMAP 4.0 N12 — Activation cliff surface (Day-3 / Day-7).
+export interface ActivationStarterRecipe {
+  id: string;
+  title: string;
+  cuisine: string | null;
+  cookTime: number | null;
+  imageUrl: string | null;
+}
+export interface ActivationSurface {
+  phase: 'day-3' | 'day-7';
+  daysSinceSignup: number;
+  recipes: ActivationStarterRecipe[];
+  onboardingCuisines: string[];
+  headline: string;
+  body: string;
+}
+export const todayApi = {
+  activation: () =>
+    apiClient.get<{ surface: ActivationSurface | null }>('/today/activation'),
+};
+
 // ROADMAP 4.0 IG8.2 — "Try this ingredient" weekly cultural discovery.
 export interface DiscoverySuggestion {
   ingredient: string;
