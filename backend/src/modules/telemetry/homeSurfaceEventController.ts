@@ -41,7 +41,7 @@ const eventSchema = z.object({
   surface: z.enum(SURFACE_IDS as unknown as [string, ...string[]]),
   eventType: z.enum(EVENT_TYPES as unknown as [string, ...string[]]),
   position: z.number().int().min(0).max(1000).optional(),
-  metadata: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+  metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
   occurredAt: z.string().datetime().optional(),
 });
 
