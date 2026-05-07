@@ -18,7 +18,19 @@ import { router } from 'expo-router';
 import EngineVisibilityCard, {
   type EngineVisibilityRow,
 } from '../ui/EngineVisibilityCard';
+import CapabilityReveal from '../ui/CapabilityReveal';
+import { registerCapability } from '../../services/capabilityRegistry';
 import { pantryIQApi, type PantryIQResponse } from '../../lib/api';
+
+// ROADMAP 4.0 N6.2 — register the Pantry IQ capability at module load so
+// the reveal coordinator knows about it before the user reaches the surface.
+registerCapability({
+  featureKey: 'pantry-iq',
+  priority: 50,
+  copyShort: 'New: Pantry IQ',
+  copyLong:
+    'Sazon now reads your pantry — top cuisine lean, most-used, underused.',
+});
 
 export interface PantryIQCardProps {
   /** When false, the card never fetches and never renders. */
@@ -85,12 +97,14 @@ export default function PantryIQCard({ enabled = true }: PantryIQCardProps) {
   if (rows.length === 0) return null;
 
   return (
-    <EngineVisibilityCard
-      testID="pantry-iq-card"
-      eyebrow="Pantry IQ"
-      title="Your kitchen, reading itself"
-      rows={rows}
-      variant="lavender"
-    />
+    <CapabilityReveal featureKey="pantry-iq">
+      <EngineVisibilityCard
+        testID="pantry-iq-card"
+        eyebrow="Pantry IQ"
+        title="Your kitchen, reading itself"
+        rows={rows}
+        variant="lavender"
+      />
+    </CapabilityReveal>
   );
 }

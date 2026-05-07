@@ -14,9 +14,21 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import CapabilityReveal from '../ui/CapabilityReveal';
+import { registerCapability } from '../../services/capabilityRegistry';
 import { useColorScheme } from 'nativewind';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { pantryApi } from '../../lib/api';
+
+// ROADMAP 4.0 N6.2 — register at module load so the reveal coordinator
+// knows about the use-it-up capability the first time the strip mounts.
+registerCapability({
+  featureKey: 'use-it-up',
+  priority: 60,
+  copyShort: 'New: Tonight, use it up',
+  copyLong:
+    "Sazon now spots ingredients on the edge and suggests what to cook tonight.",
+});
 
 export interface UseItUpStripProps {
   /** When false, the strip never fetches and never renders. Cold-start gating. */
@@ -96,41 +108,43 @@ export default function UseItUpStrip({
   };
 
   return (
-    <View
-      testID="use-it-up-strip"
-      accessibilityRole="summary"
-      accessibilityLabel={`Items to use tonight: ${expiringNames.join(', ')}`}
-      style={[styles.card, { backgroundColor: bg }]}
-    >
-      <Text style={[styles.headline, { color: text }]} numberOfLines={2}>
-        {headline}
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.pillRow}
+    <CapabilityReveal featureKey="use-it-up">
+      <View
+        testID="use-it-up-strip"
+        accessibilityRole="summary"
+        accessibilityLabel={`Items to use tonight: ${expiringNames.join(', ')}`}
+        style={[styles.card, { backgroundColor: bg }]}
       >
-        {visible.map((it) => (
-          <HapticTouchableOpacity
-            key={it.id}
-            testID={`use-it-up-pill-${it.id}`}
-            accessibilityRole="button"
-            accessibilityLabel={`Cook with ${it.name}`}
-            onPress={handlePress}
-            style={[styles.pill, { borderColor: accent }]}
-          >
-            <Text style={[styles.pillTitle, { color: text }]} numberOfLines={1}>
-              {it.name}
-            </Text>
-            {it.category ? (
-              <Text style={[styles.pillSub, { color: subtle }]} numberOfLines={1}>
-                {it.category}
+        <Text style={[styles.headline, { color: text }]} numberOfLines={2}>
+          {headline}
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.pillRow}
+        >
+          {visible.map((it) => (
+            <HapticTouchableOpacity
+              key={it.id}
+              testID={`use-it-up-pill-${it.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Cook with ${it.name}`}
+              onPress={handlePress}
+              style={[styles.pill, { borderColor: accent }]}
+            >
+              <Text style={[styles.pillTitle, { color: text }]} numberOfLines={1}>
+                {it.name}
               </Text>
-            ) : null}
-          </HapticTouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
+              {it.category ? (
+                <Text style={[styles.pillSub, { color: subtle }]} numberOfLines={1}>
+                  {it.category}
+                </Text>
+              ) : null}
+            </HapticTouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </CapabilityReveal>
   );
 }
 

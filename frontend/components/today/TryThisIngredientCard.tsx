@@ -11,6 +11,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import CapabilityReveal from '../ui/CapabilityReveal';
+import { registerCapability } from '../../services/capabilityRegistry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'nativewind';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
@@ -18,6 +20,15 @@ import {
   ingredientDiscoveryApi,
   type DiscoverySuggestion,
 } from '../../lib/api';
+
+// ROADMAP 4.0 N6.2 — register at module load.
+registerCapability({
+  featureKey: 'try-this-ingredient',
+  priority: 40,
+  copyShort: 'New: Try this ingredient',
+  copyLong:
+    "Sazon now suggests one ingredient a week from a cuisine you haven't cooked from yet.",
+});
 
 const DISMISS_KEY = '@sazon/try_this_ingredient/last_dismissed_at';
 const DISMISS_DAYS = 7;
@@ -110,44 +121,46 @@ export default function TryThisIngredientCard({
   const body = suggestion.primerBody ?? `Want to try it?`;
 
   return (
-    <View
-      testID="try-this-ingredient-card"
-      accessibilityRole="summary"
-      accessibilityLabel={`Try this ingredient: ${suggestion.ingredient} from ${suggestion.cuisine} cuisine`}
-      style={[styles.card, { backgroundColor: bg }]}
-    >
-      <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: accent }]}>{cuisineLabel}</Text>
-        <HapticTouchableOpacity
-          testID="try-this-ingredient-dismiss"
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss for a week"
-          onPress={handleDismiss}
-          style={styles.dismissBtn}
-        >
-          <Text style={[styles.dismissText, { color: subtle }]}>×</Text>
-        </HapticTouchableOpacity>
+    <CapabilityReveal featureKey="try-this-ingredient">
+      <View
+        testID="try-this-ingredient-card"
+        accessibilityRole="summary"
+        accessibilityLabel={`Try this ingredient: ${suggestion.ingredient} from ${suggestion.cuisine} cuisine`}
+        style={[styles.card, { backgroundColor: bg }]}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.eyebrow, { color: accent }]}>{cuisineLabel}</Text>
+          <HapticTouchableOpacity
+            testID="try-this-ingredient-dismiss"
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss for a week"
+            onPress={handleDismiss}
+            style={styles.dismissBtn}
+          >
+            <Text style={[styles.dismissText, { color: subtle }]}>×</Text>
+          </HapticTouchableOpacity>
+        </View>
+        <Text style={[styles.headline, { color: text }]} numberOfLines={2}>
+          {headline}
+        </Text>
+        <Text style={[styles.body, { color: subtle }]} numberOfLines={3}>
+          {body}
+        </Text>
+        {suggestion.recipeId && suggestion.recipeTitle ? (
+          <HapticTouchableOpacity
+            testID="try-this-ingredient-recipe"
+            accessibilityRole="button"
+            accessibilityLabel={`Open recipe: ${suggestion.recipeTitle}`}
+            onPress={handleRecipeTap}
+            style={[styles.recipePill, { borderColor: accent }]}
+          >
+            <Text style={[styles.recipeLabel, { color: accent }]} numberOfLines={1}>
+              Try {suggestion.recipeTitle} →
+            </Text>
+          </HapticTouchableOpacity>
+        ) : null}
       </View>
-      <Text style={[styles.headline, { color: text }]} numberOfLines={2}>
-        {headline}
-      </Text>
-      <Text style={[styles.body, { color: subtle }]} numberOfLines={3}>
-        {body}
-      </Text>
-      {suggestion.recipeId && suggestion.recipeTitle ? (
-        <HapticTouchableOpacity
-          testID="try-this-ingredient-recipe"
-          accessibilityRole="button"
-          accessibilityLabel={`Open recipe: ${suggestion.recipeTitle}`}
-          onPress={handleRecipeTap}
-          style={[styles.recipePill, { borderColor: accent }]}
-        >
-          <Text style={[styles.recipeLabel, { color: accent }]} numberOfLines={1}>
-            Try {suggestion.recipeTitle} →
-          </Text>
-        </HapticTouchableOpacity>
-      ) : null}
-    </View>
+    </CapabilityReveal>
   );
 }
 
