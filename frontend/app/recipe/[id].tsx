@@ -27,6 +27,7 @@ import RecipeDetailActionMenu from '../../components/recipe/RecipeDetailActionMe
 import MoreLikeThisRow from '../../components/recipe/MoreLikeThisRow';
 import RecipeVariantChipRow, { type RecipeVariantEntry } from '../../components/recipe/RecipeVariantChipRow';
 import LeftoverBridgeCard from '../../components/recipe/LeftoverBridgeCard';
+import DiscoveryInsightLine, { type DiscoveryInsight } from '../../components/recipe/DiscoveryInsightLine';
 import HealthDisclaimer from '../../components/legal/HealthDisclaimer';
 import NutritionCard, { type NutritionAggregate } from '../../components/recipe/NutritionCard';
 import BeveragePairingSlot from '../../components/recipe/BeveragePairingSlot';
@@ -317,6 +318,9 @@ export default function RecipeIdScreen() {
               }
             />
           </View>
+
+          {/* ROADMAP 4.0 RD6.2 — discovery insight one-liner between title and macros. */}
+          <DiscoveryInsightLine insight={(recipe as any)?.discoveryInsight as DiscoveryInsight | null | undefined} />
 
           {/* Macros line */}
           {recipe.calories ? (

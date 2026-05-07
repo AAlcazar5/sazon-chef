@@ -1013,6 +1013,15 @@ export const recipeController = {
         logger.warn({ data: err }, '[recipe-detail] variant fetch failed (non-fatal):');
       }
 
+      // ROADMAP 4.0 RD6.1 — discovery insight one-liner.
+      let discoveryInsight: { line: string; rule: string } | null = null;
+      try {
+        const { compute } = await import('@/services/recipeDiscoveryInsightService');
+        discoveryInsight = await compute({ userId, recipeId: recipe.id });
+      } catch (err) {
+        logger.warn({ data: err }, '[recipe-detail] discovery-insight compute failed (non-fatal):');
+      }
+
       logger.info({ data: recipe.title }, '✅ Recipe found:');
       res.json({
         ...recipe,
@@ -1028,6 +1037,7 @@ export const recipeController = {
           nutrientGaps: nutritionalAnalysis.nutrientGaps,
         },
         variants,
+        discoveryInsight,
       });
     } catch (error: any) {
       logger.error({ data: error }, '❌ Get recipe error:');
