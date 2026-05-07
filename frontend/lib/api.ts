@@ -1906,6 +1906,21 @@ export const pantryApi = {
   removeItem: (id: string) => apiClient.delete(`/pantry/${id}`),
   removeByName: (name: string) => apiClient.delete(`/pantry/by-name/${encodeURIComponent(name)}`),
   consume: (ingredients: string[]) => apiClient.post<{ consumed: string[]; unmatched: string[] }>('/pantry/consume', { ingredients }),
+  // ROADMAP 4.0 IG4.3 — soon-to-expire pantry items for the use-it-up surface.
+  getExpiring: (withinDays: number = 3) =>
+    apiClient.get<{
+      items: Array<{
+        id: string;
+        name: string;
+        category: string | null;
+        quantity: number | null;
+        unit: string | null;
+        daysUntilExpiry: number;
+        expiresAt: string;
+        expirySource: 'column' | 'fallback';
+        prompt: string;
+      }>;
+    }>('/pantry/expiring', { params: { withinDays } }),
   // 10H: "What can I make right now?" pantry-based recipe matching
   pantryMatch: (params?: { minMatch?: number; maxMissing?: number; limit?: number }) =>
     apiClient.get<{
