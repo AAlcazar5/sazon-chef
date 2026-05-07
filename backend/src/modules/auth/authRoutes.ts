@@ -5,6 +5,7 @@ import { authenticateToken } from './authMiddleware';
 import { authLimiter } from '@/middleware/rateLimiter';
 import { validateRegistration, validateLogin } from '@/middleware/inputValidation';
 import { socialAuthCallback, linkSocialAccount, unlinkSocialAccount } from './socialAuthController';
+import { getWelcomeBack } from './welcomeBackController';
 
 const router = Router();
 
@@ -23,5 +24,8 @@ router.put('/password', authenticateToken, authController.changePassword);
 router.delete('/account', authenticateToken, authController.deleteAccount);
 router.post('/social/link', authenticateToken, linkSocialAccount);
 router.delete('/social/unlink', authenticateToken, unlinkSocialAccount);
+
+// ROADMAP 4.0 A7.4 — Welcome-back peak.
+router.get('/welcome-back', authenticateToken, getWelcomeBack);
 
 export const authRoutes = router;

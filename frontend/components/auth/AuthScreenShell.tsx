@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MotiView } from 'moti';
 import ScreenGradient from '../ui/ScreenGradient';
+import AnimatedAuthGradient from './AnimatedAuthGradient';
 import KeyboardAvoidingContainer from '../ui/KeyboardAvoidingContainer';
 import Sazon, {
   type SazonVariant,
@@ -62,6 +63,10 @@ export interface AuthScreenShellProps {
   serifHeadline?: boolean;
   /** Test id for the outer container. */
   testID?: string;
+  /** When true (default), wraps the gradient in `<AnimatedAuthGradient>`
+   *  for the A7.5 slow-pulse. Set false to render the static gradient
+   *  (e.g., when a parent surface already animates). */
+  animatedGradient?: boolean;
 }
 
 const HERO_MASCOT_SIZE = 120;
@@ -75,6 +80,7 @@ export default function AuthScreenShell({
   children,
   serifHeadline = true,
   testID,
+  animatedGradient = true,
 }: AuthScreenShellProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -84,8 +90,11 @@ export default function AuthScreenShell({
   const errorBg = isDark ? PastelDark.red : Pastel.red;
   const errorText = isDark ? '#F87171' : '#B91C1C';
 
+  const Gradient = animatedGradient ? AnimatedAuthGradient : ScreenGradient;
+  const gradientProps = animatedGradient ? {} : { variant: 'auth' as const };
+
   return (
-    <ScreenGradient variant="auth">
+    <Gradient {...gradientProps}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Success flash overlay — caller-controlled visibility */}
         {successFlash ? (
@@ -197,7 +206,7 @@ export default function AuthScreenShell({
           </ScrollView>
         </KeyboardAvoidingContainer>
       </SafeAreaView>
-    </ScreenGradient>
+    </Gradient>
   );
 }
 
