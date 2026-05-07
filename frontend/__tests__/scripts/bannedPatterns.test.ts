@@ -71,16 +71,34 @@ const X = <View style={{ borderRadius: 8 }} />;
     writeFixture(root, {
       'components/Bad.tsx': `
 import { TouchableOpacity, Pressable } from 'react-native';
-const A = <TouchableOpacity onPress={() => {}}>x</TouchableOpacity>;
-const B = <Pressable pressedScale={0.97} onPress={() => {}}>y</Pressable>;
-const C = <TouchableOpacity pressedScale={0.97}>z</TouchableOpacity>;
+const A = <TouchableOpacity accessibilityLabel="x" onPress={() => {}}>x</TouchableOpacity>;
+const B = <Pressable pressedScale={0.97} accessibilityLabel="y" onPress={() => {}}>y</Pressable>;
+const C = <TouchableOpacity pressedScale={0.97} accessibilityLabel="z">z</TouchableOpacity>;
       `.trim(),
     });
 
     const violations = scan(['components'], root);
     const press = violations.filter((v) => v.rule === 'touchable-without-press');
     expect(press).toHaveLength(1);
-    expect(press[0].excerpt).toContain('TouchableOpacity onPress');
+    expect(press[0].excerpt).toContain('TouchableOpacity accessibilityLabel');
+  });
+
+  it('DS1.5 — flags TouchableOpacity / Pressable without accessibilityLabel or accessibilityRole', () => {
+    writeFixture(root, {
+      'components/A11y.tsx': `
+import { TouchableOpacity, Pressable } from 'react-native';
+const NoLabel = <TouchableOpacity pressedScale={0.97} onPress={() => {}}>missing</TouchableOpacity>;
+const WithLabel = <TouchableOpacity pressedScale={0.97} accessibilityLabel="ok" onPress={() => {}}>ok</TouchableOpacity>;
+const WithRole = <TouchableOpacity pressedScale={0.97} accessibilityRole="button" onPress={() => {}}>ok</TouchableOpacity>;
+const HapticNoLabel = <HapticTouchableOpacity pressedScale={0.97}>tap</HapticTouchableOpacity>;
+      `.trim(),
+    });
+
+    const violations = scan(['components'], root);
+    const a11y = violations.filter((v) => v.rule === 'touchable-without-a11y-label');
+    expect(a11y).toHaveLength(2);
+    expect(a11y[0].excerpt).toContain('TouchableOpacity pressedScale');
+    expect(a11y[1].excerpt).toContain('HapticTouchableOpacity pressedScale');
   });
 
   it('flags files importing both Colors and tokens', () => {
@@ -104,7 +122,7 @@ export default Mixed;
     writeFixture(root, {
       'components/Good.tsx': `
 import { TouchableOpacity } from 'react-native';
-const A = <TouchableOpacity pressedScale={0.97} onPress={() => {}}>ok</TouchableOpacity>;
+const A = <TouchableOpacity pressedScale={0.97} accessibilityLabel="ok" onPress={() => {}}>ok</TouchableOpacity>;
       `.trim(),
     });
 

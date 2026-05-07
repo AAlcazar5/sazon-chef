@@ -213,6 +213,7 @@ Check here before planning new features — prior architectural decisions may al
 - Importing `Colors.primary` / `DarkColors.primary` etc. from `constants/Colors` for a non-data-mapping use — `MACRO_COLORS` and other domain enums in `Colors` are fine, but `Colors.primary` for a button background is not. Use `Brand.light.base` / `Brand.dark.base` from `constants/tokens` instead. **Touch-it-migrate-it (DS0.2):** if you edit a file that imports from `constants/Colors` for a non-data-mapping use, migrate that file's tokens to `constants/tokens` in the same diff. Prevents indefinite dual-source state.
 - Mixing `Colors.*` and `Brand.*` (or `DarkColors.*` and any `tokens` import) in the same file — pick one source per file; new code uses `tokens`.
 - Inline `'#fa7e12'` hex (or any brand-coral literal) outside `constants/colorTokens.cjs` / `constants/Colors.ts` / `constants/tokens.ts` — reference the token instead.
+- `<TouchableOpacity>` / `<Pressable>` / `<HapticTouchableOpacity>` without an `accessibilityLabel` or `accessibilityRole` — DS1.5. Every interactive surface must announce itself to screen readers.
 
 ### Reusable Components (use these, don't rebuild)
 | Component | Path | Use for |

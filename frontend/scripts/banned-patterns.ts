@@ -24,7 +24,12 @@ import * as path from 'path';
 export interface Violation {
   file: string;
   line: number;
-  rule: 'brand-coral-literal' | 'card-radius-8' | 'touchable-without-press' | 'mixed-colors-and-brand';
+  rule:
+    | 'brand-coral-literal'
+    | 'card-radius-8'
+    | 'touchable-without-press'
+    | 'mixed-colors-and-brand'
+    | 'touchable-without-a11y-label';
   excerpt: string;
 }
 
@@ -32,8 +37,10 @@ const TOKEN_FILE_RE = /constants\/(colorTokens\.cjs|Colors\.ts|DarkColors\.ts|to
 const BRAND_CORAL_RE = /#fa7e12/i;
 const RADIUS_8_RE = /borderRadius:\s*8(?!\d)/;
 const ROUNDED_LG_RE = /\brounded-lg\b/;
-const TOUCHABLE_OPEN_RE = /<(TouchableOpacity|Pressable)\b/;
+const TOUCHABLE_OPEN_RE = /<(TouchableOpacity|Pressable|HapticTouchableOpacity)\b/;
 const PRESSED_SCALE_RE = /pressedScale\s*[=:]/;
+const A11Y_LABEL_RE = /accessibilityLabel\s*[=:]/;
+const A11Y_ROLE_RE = /accessibilityRole\s*[=:]/;
 const COLORS_IMPORT_RE = /from\s+['"][./\w-]*constants\/(Colors|DarkColors)['"]/;
 const TOKENS_IMPORT_RE = /from\s+['"][./\w-]*constants\/tokens['"]/;
 
@@ -134,9 +141,8 @@ function scanFile(file: string, repoRoot: string): Violation[] {
       }
     }
 
-    // Rule 3 — touchable without pressedScale
+    // Rules 3 + 5 — touchable without pressedScale / a11y label
     if (TOUCHABLE_OPEN_RE.test(line)) {
-      // Look ahead up to 8 lines for the closing `>` and pressedScale.
       const window = lines.slice(i, Math.min(i + 8, lines.length)).join('\n');
       const close = window.indexOf('>');
       const inner = close >= 0 ? window.slice(0, close + 1) : window;
@@ -145,6 +151,15 @@ function scanFile(file: string, repoRoot: string): Violation[] {
           file: rel,
           line: i + 1,
           rule: 'touchable-without-press',
+          excerpt: line.trim(),
+        });
+      }
+      // DS1.5 — every interactive must carry accessibilityLabel OR accessibilityRole.
+      if (!A11Y_LABEL_RE.test(inner) && !A11Y_ROLE_RE.test(inner)) {
+        violations.push({
+          file: rel,
+          line: i + 1,
+          rule: 'touchable-without-a11y-label',
           excerpt: line.trim(),
         });
       }
