@@ -1,6 +1,10 @@
 // frontend/components/ui/BrandButton.tsx
 // The canonical gradient pill button — spring press, colored shadow glow, pastel variants.
 // Replaces ad-hoc gradient + HapticTouchableOpacity combos across the app.
+//
+// ROADMAP 4.0 DS7.2 — every variant gradient + shadow + ink color now sources
+// from constants/tokens (Brand, AccentTokens, PastelTokens, Semantic) so the
+// canonical brand coral propagates via colorTokens.cjs.
 
 import { useEffect } from 'react';
 import { StyleSheet, Text, ViewStyle, TextStyle } from 'react-native';
@@ -18,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { triggerHaptic, ImpactStyle } from '../../constants/Haptics';
+import { Brand, AccentTokens, Semantic, Radius, Type } from '../../constants/tokens';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -41,15 +46,20 @@ interface VariantConfig {
   textColor: string;
 }
 
+// DS7.2 — variant gradients are sourced from canonical tokens. The "brand"
+// variant uses Brand.light.base → Semantic.light.error (a warm coral→red
+// transition consistent with the existing visual). Pastel variants use
+// AccentTokens (vivid pastel) → a slightly darker hand-tuned end-stop.
+// Brand.light.ink (`#FFFFFF`) is the default text color on dark gradients.
 const VARIANT_CONFIG: Record<BrandButtonVariant, VariantConfig> = {
-  brand:    { gradient: ['#fa7e12', '#EF4444'], shadow: '#EF4444', textColor: '#FFFFFF' },
-  sage:     { gradient: ['#81C784', '#66BB6A'], shadow: '#66BB6A', textColor: '#FFFFFF' },
-  golden:   { gradient: ['#FFD54F', '#FFC107'], shadow: '#FFC107', textColor: '#2C1810' },
-  lavender: { gradient: ['#CE93D8', '#AB47BC'], shadow: '#AB47BC', textColor: '#FFFFFF' },
-  peach:    { gradient: ['#FFB74D', '#FF9800'], shadow: '#FF9800', textColor: '#FFFFFF' },
-  sky:      { gradient: ['#64B5F6', '#42A5F5'], shadow: '#42A5F5', textColor: '#FFFFFF' },
-  blush:    { gradient: ['#F06292', '#EC407A'], shadow: '#EC407A', textColor: '#FFFFFF' },
-  ghost:    { gradient: ['transparent', 'rgba(250,126,18,0.05)'], shadow: 'transparent', textColor: '#fa7e12' },
+  brand:    { gradient: [Brand.light.base, Semantic.light.error], shadow: Semantic.light.error, textColor: Brand.light.ink },
+  sage:     { gradient: [AccentTokens.sage, '#66BB6A'], shadow: '#66BB6A', textColor: Brand.light.ink },
+  golden:   { gradient: [AccentTokens.golden, '#FFC107'], shadow: '#FFC107', textColor: '#2C1810' },
+  lavender: { gradient: [AccentTokens.lavender, '#AB47BC'], shadow: '#AB47BC', textColor: Brand.light.ink },
+  peach:    { gradient: [AccentTokens.peach, '#FF9800'], shadow: '#FF9800', textColor: Brand.light.ink },
+  sky:      { gradient: [AccentTokens.sky, '#42A5F5'], shadow: '#42A5F5', textColor: Brand.light.ink },
+  blush:    { gradient: [AccentTokens.blush, '#EC407A'], shadow: '#EC407A', textColor: Brand.light.ink },
+  ghost:    { gradient: ['transparent', 'rgba(250,126,18,0.05)'], shadow: 'transparent', textColor: Brand.light.base },
 };
 
 // ─── Size definitions ───────────────────────────────────────────────────────────
@@ -177,12 +187,12 @@ export default function BrandButton({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 100,
+    borderRadius: Radius.pill,
   };
 
   const labelStyle: TextStyle = {
     color: config.textColor,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontFamily: Type.eyebrow.fontFamily, // PlusJakartaSans_800ExtraBold
     fontSize: sizeConfig.fontSize,
     letterSpacing: 0.2,
   };

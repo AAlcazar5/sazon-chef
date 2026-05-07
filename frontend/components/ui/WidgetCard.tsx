@@ -1,15 +1,16 @@
 // frontend/components/ui/WidgetCard.tsx
 // Reusable pastel-tinted stat card for macro display, profile stats, cooking stats, shopping progress.
 // Foundational building block for the colorful analytics system (9L).
+//
+// ROADMAP 4.0 DS7.4 — sourced from constants/tokens. Ink + accent + radius
+// all flow from the canonical tokens.
 
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import { Shadows } from '../../constants/Shadows';
-import { BorderRadius } from '../../constants/Spacing';
-import { Colors, DarkColors, Accent } from '../../constants/Colors';
-import { FontSize, FontWeight } from '../../constants/Typography';
+import { Ink, AccentTokens, Radius, Type } from '../../constants/tokens';
 
 interface TrendData {
   value: string;
@@ -55,8 +56,8 @@ export default function WidgetCard({
   const isDark = colorScheme === 'dark';
 
   const bgColor = isDark ? (tintDark || tint + '1F') : tint;
-  const textPrimary = isDark ? DarkColors.text.primary : Colors.text.primary;
-  const textSecondary = isDark ? DarkColors.text.secondary : Colors.text.secondary;
+  const textPrimary = isDark ? Ink.dark.warm : Ink.light.primary;
+  const textSecondary = isDark ? Ink.dark.secondary : Ink.light.secondary;
 
   const content = (
     <View
@@ -91,7 +92,7 @@ export default function WidgetCard({
             <Text
               style={[
                 styles.trendArrow,
-                { color: trend.direction === 'up' ? Accent.sage : Accent.blush },
+                { color: trend.direction === 'up' ? AccentTokens.sage : AccentTokens.blush },
               ]}
             >
               {trend.direction === 'up' ? '↑' : '↓'}
@@ -99,7 +100,7 @@ export default function WidgetCard({
             <Text
               style={[
                 styles.trendValue,
-                { color: trend.direction === 'up' ? Accent.sage : Accent.blush },
+                { color: trend.direction === 'up' ? AccentTokens.sage : AccentTokens.blush },
               ]}
             >
               {trend.value}
@@ -128,7 +129,7 @@ export default function WidgetCard({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: BorderRadius.card,
+    borderRadius: Radius.card,
     padding: 14,
     flex: 1,
     minHeight: 100,
@@ -143,16 +144,20 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   statValue: {
-    fontSize: FontSize['3xl'],
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    // DS7.4 — Type.stat carries tabular-nums (DS5.4) so column-aligned numbers
+    // don't shimmy. Stat-card displays are the canonical consumer.
+    fontSize: 30,
+    fontFamily: Type.stat.fontFamily, // PlusJakartaSans_700Bold
+    fontVariant: Type.stat.fontVariant, // ['tabular-nums']
+    letterSpacing: Type.stat.letterSpacing,
   },
   statUnit: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     fontFamily: 'PlusJakartaSans_500Medium',
     opacity: 0.5,
   },
   label: {
-    fontSize: FontSize.sm,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_500Medium',
     flex: 1,
   },
@@ -168,11 +173,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   trendArrow: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     fontFamily: 'PlusJakartaSans_700Bold',
   },
   trendValue: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });

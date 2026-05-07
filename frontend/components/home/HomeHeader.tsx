@@ -1,3 +1,6 @@
+// ROADMAP 4.0 DS7.3 — HomeHeader migrated to constants/tokens. Validates
+// DS2.2 (canvas-warm = Today only) at scale: this is the most-seen surface
+// and now sources every visual value from the canonical tokens.
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,9 +9,8 @@ import FrostedHeader from '../ui/FrostedHeader';
 import ProfileAvatarButton from '../profile/ProfileAvatarButton';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Sazon from '../mascot/Sazon';
-import { EditorialFontFamily } from '../../constants/Typography';
+import { Ink, AccentTokens, Brand, Radius, Space, Type } from '../../constants/tokens';
 import { HapticPatterns } from '../../constants/Haptics';
-import { DarkColors } from '../../constants/Colors';
 
 interface HomeHeaderProps {
   onMascotPress?: () => void;
@@ -25,7 +27,9 @@ export default function HomeHeader({
 }: HomeHeaderProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const titleColor = isDark ? DarkColors.text.primary : '#111827';
+  // DS7.3 — `Ink.dark.warm` is the warm ivory that pairs with `Canvas.warmDark`;
+  // light mode keeps the legacy gray-900 ink for AA contrast on warm cream.
+  const titleColor = isDark ? Ink.dark.warm : Ink.light.primary;
 
   return (
     <FrostedHeader paddingBottom={14} withTopInset>
@@ -45,10 +49,11 @@ export default function HomeHeader({
               onPress={() => { onSurpriseMe(); HapticPatterns.buttonPress(); }}
               accessibilityLabel="Surprise Me"
               accessibilityRole="button"
-              style={{ borderRadius: 100, overflow: 'hidden' }}
+              style={{ borderRadius: Radius.pill, overflow: 'hidden' }}
             >
               <LinearGradient
-                colors={['#A78BFA', '#7C3AED']}
+                // DS7.3 — Surprise Me pill: lavender accent → deeper purple end-stop.
+                colors={[AccentTokens.lavender, '#7C3AED']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.pill}
@@ -75,22 +80,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: Space['5'],
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Space['2'],
     flexShrink: 1,
   },
   title: {
-    fontFamily: EditorialFontFamily.display.bold,
+    // DS7.3 — Fraunces 700 (display.bold) at TITLE_SIZE.
+    fontFamily: 'Fraunces_700Bold',
     fontSize: TITLE_SIZE,
     lineHeight: TITLE_SIZE * 1.04,
     letterSpacing: -1.6,
   },
   titleAccent: {
-    fontFamily: EditorialFontFamily.displayItalic.bold,
+    fontFamily: 'Fraunces_700Bold_Italic',
     fontStyle: 'italic',
     fontSize: TITLE_SIZE,
     letterSpacing: -1.6,
@@ -98,14 +104,14 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Space['2'],
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 100,
+    paddingHorizontal: Space['4'] - 2, // 14
+    paddingVertical: Space['2'],
+    borderRadius: Radius.pill,
     gap: 6,
   },
   pillEmoji: {
@@ -114,6 +120,6 @@ const styles = StyleSheet.create({
   pillLabel: {
     fontSize: 13,
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#FFF',
+    color: Brand.light.ink,
   },
 });
