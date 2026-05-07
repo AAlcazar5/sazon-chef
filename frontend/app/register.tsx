@@ -1,13 +1,10 @@
 // frontend/app/register.tsx
-// 9N: Registration with brand gradient, FrostedCard form, mascot error/success states.
+// ROADMAP 4.0 A7.2 — Signup screen visual redesign.
+// Scaffold extracted to <AuthScreenShell> per A7.3. This file owns the
+// signup-specific form body + actions row + social row + footer link.
 
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,17 +12,14 @@ import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAu
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
-import ScreenGradient from '../components/ui/ScreenGradient';
+import AuthScreenShell from '../components/auth/AuthScreenShell';
 import FrostedCard from '../components/ui/FrostedCard';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import FormInput from '../components/ui/FormInput';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
-import LogoMascot from '../components/mascot/LogoMascot';
-import Sazon from '../components/mascot/Sazon';
-import { Colors, DarkColors, Pastel, PastelDark } from '../constants/Colors';
+import { Colors, DarkColors } from '../constants/Colors';
 import { Shadows } from '../constants/Shadows';
-import { FontSize, FontWeight } from '../constants/Typography';
+import { FontSize } from '../constants/Typography';
 
 interface FormErrors {
   name?: string;
@@ -159,84 +153,17 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScreenGradient variant="auth">
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Success mascot flash */}
-        {showSuccessMascot && (
-          <MotiView
-            from={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', damping: 12, stiffness: 300 }}
-            pointerEvents="none"
-            style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', zIndex: 99 }}
-          >
-            <Sazon variant="orange" motion="bounce" fx={['sparkles']} size={256} />
-          </MotiView>
-        )}
-
-        <KeyboardAvoidingContainer>
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20, paddingBottom: 40 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={{ width: '100%', maxWidth: 400, alignSelf: 'center' }}>
-              {/* Title */}
-              <MotiView
-                from={{ opacity: 0, translateY: 24 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'spring', delay: 0, damping: 20, stiffness: 180 }}
-              >
-                <Text style={{
-                  fontSize: FontSize['3xl'],
-                  fontFamily: 'PlusJakartaSans_800ExtraBold',
-                  color: isDark ? DarkColors.text.primary : Colors.primary,
-                  textAlign: 'center',
-                  marginBottom: 4,
-                }}>
-                  Create Account
-                </Text>
-                <Text style={{
-                  fontSize: FontSize.md,
-                  color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
-                  textAlign: 'center',
-                  marginBottom: 20,
-                }}>
-                  Sign up to get started
-                </Text>
-              </MotiView>
-
-              {/* Form-level error — mascot + pastel red tint */}
-              {errors.form && (
-                <MotiView
-                  from={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: 'spring', damping: 16, stiffness: 240 }}
-                >
-                  <View style={{
-                    backgroundColor: isDark ? PastelDark.red : Pastel.red,
-                    borderRadius: 16,
-                    padding: 14,
-                    marginBottom: 14,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    ...(Shadows.SM as any),
-                  }}>
-                    <Sazon variant="orange" motion="wobble" fx={['question']} size={24} />
-                    <Text style={{
-                      flex: 1,
-                      marginLeft: 10,
-                      fontSize: FontSize.sm,
-                      color: isDark ? '#F87171' : '#B91C1C',
-                      lineHeight: 18,
-                    }}>
-                      {errors.form}
-                    </Text>
-                  </View>
-                </MotiView>
-              )}
-
-              {/* Form fields — grouped in FrostedCard */}
+    <AuthScreenShell
+      headline="Let's set up your kitchen"
+      subhead="Sign up to get started"
+      formError={errors.form}
+      successFlash={
+        showSuccessMascot
+          ? { motion: 'bounce', fx: ['sparkles'] }
+          : undefined
+      }
+    >
+      {/* Form fields — grouped in FrostedCard */}
               <MotiView
                 from={{ opacity: 0, translateY: 18 }}
                 animate={{ opacity: 1, translateY: 0 }}
@@ -428,10 +355,6 @@ export default function RegisterScreen() {
                   </HapticTouchableOpacity>
                 </View>
               </MotiView>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingContainer>
-      </SafeAreaView>
-    </ScreenGradient>
+    </AuthScreenShell>
   );
 }

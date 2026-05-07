@@ -1,14 +1,11 @@
 // frontend/app/login.tsx
-// 9N: Auth screen with brand gradient, mascot bounce-in, FrostedCard form,
-// confused mascot on error, excited flash on success.
+// ROADMAP 4.0 A7.1 — Login screen visual redesign.
+// Scaffold (gradient + mascot card + headline + form-error block + success
+// flash) extracted to <AuthScreenShell> per A7.3. This file owns the form
+// body + actions row + social buttons + footer link.
 
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,18 +13,15 @@ import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAu
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
-import ScreenGradient from '../components/ui/ScreenGradient';
+import AuthScreenShell from '../components/auth/AuthScreenShell';
 import FrostedCard from '../components/ui/FrostedCard';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
-import LogoMascot from '../components/mascot/LogoMascot';
-import Sazon from '../components/mascot/Sazon';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 import FormInput from '../components/ui/FormInput';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
-import { Colors, DarkColors, Pastel, PastelDark } from '../constants/Colors';
+import { Colors, DarkColors } from '../constants/Colors';
 import { Shadows } from '../constants/Shadows';
-import { FontSize, FontWeight } from '../constants/Typography';
+import { FontSize } from '../constants/Typography';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -160,106 +154,22 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScreenGradient variant="auth">
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Success mascot flash — excited expression for 300ms */}
-        {showSuccessMascot && (
-          <MotiView
-            from={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', damping: 12, stiffness: 300 }}
-            pointerEvents="none"
-            style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', zIndex: 99 }}
-          >
-            <Sazon variant="orange" motion="wave" fx={['sparkles']} size={256} />
-          </MotiView>
-        )}
-
-        <KeyboardAvoidingContainer>
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={{ width: '100%', maxWidth: 400, alignSelf: 'center' }}>
-              {/* Mascot — bounce in on pastel card */}
-              <MotiView
-                from={{ opacity: 0, translateY: -20, scale: 0.7 }}
-                animate={{ opacity: 1, translateY: 0, scale: 1 }}
-                transition={{ type: 'spring', delay: 0, damping: 14, stiffness: 200 }}
-              >
-                <View style={{
-                  alignItems: 'center',
-                  marginBottom: 16,
-                  backgroundColor: isDark ? PastelDark.peach : Pastel.orange,
-                  borderRadius: 24,
-                  paddingVertical: 20,
-                  ...(Shadows.SM as any),
-                }}>
-                  <Sazon
-                    variant={errors.form ? 'red' : 'orange'}
-                    motion={errors.form ? 'wobble' : 'idle'}
-                    fx={errors.form ? ['question'] : []}
-                    size={96}
-                  />
-                </View>
-              </MotiView>
-
-              {/* Title + subtitle */}
-              <MotiView
-                from={{ opacity: 0, translateY: 20 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'spring', delay: 80, damping: 20, stiffness: 180 }}
-              >
-                <Text style={{
-                  fontSize: FontSize['3xl'],
-                  fontFamily: 'PlusJakartaSans_800ExtraBold',
-                  color: isDark ? DarkColors.text.primary : Colors.primary,
-                  textAlign: 'center',
-                  marginBottom: 4,
-                }}>
-                  Welcome Back
-                </Text>
-                <Text style={{
-                  fontSize: FontSize.md,
-                  color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
-                  textAlign: 'center',
-                  marginBottom: 20,
-                }}>
-                  Sign in to continue
-                </Text>
-              </MotiView>
-
-              {/* Form-level error — mascot confused + pastel red tint */}
-              {errors.form && (
-                <MotiView
-                  from={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: 'spring', damping: 16, stiffness: 240 }}
-                >
-                  <View style={{
-                    backgroundColor: isDark ? PastelDark.red : Pastel.red,
-                    borderRadius: 16,
-                    padding: 14,
-                    marginBottom: 14,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    ...(Shadows.SM as any),
-                  }}>
-                    <Sazon variant="orange" motion="wobble" fx={['question']} size={24} />
-                    <Text style={{
-                      flex: 1,
-                      marginLeft: 10,
-                      fontSize: FontSize.sm,
-                      color: isDark ? '#F87171' : '#B91C1C',
-                      lineHeight: 18,
-                    }}>
-                      {errors.form}
-                    </Text>
-                  </View>
-                </MotiView>
-              )}
-
-              {/* Form fields — grouped in FrostedCard */}
+    <AuthScreenShell
+      headline="Welcome back"
+      subhead="Sign in to continue"
+      mascot={{
+        variant: errors.form ? 'red' : 'orange',
+        motion: errors.form ? 'wobble' : 'idle',
+        fx: errors.form ? ['question'] : [],
+      }}
+      formError={errors.form}
+      successFlash={
+        showSuccessMascot
+          ? { motion: 'wave', fx: ['sparkles'] }
+          : undefined
+      }
+    >
+      {/* Form fields — grouped in FrostedCard */}
               <MotiView
                 from={{ opacity: 0, translateY: 16 }}
                 animate={{ opacity: 1, translateY: 0 }}
@@ -429,10 +339,6 @@ export default function LoginScreen() {
                   </HapticTouchableOpacity>
                 </View>
               </MotiView>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingContainer>
-      </SafeAreaView>
-    </ScreenGradient>
+    </AuthScreenShell>
   );
 }
