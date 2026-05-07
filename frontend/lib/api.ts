@@ -1913,6 +1913,20 @@ export const scannerApi = {
   },
 };
 
+// ROADMAP 4.0 IG2.2 / IG5.2 — Co-purchase pair suggestions.
+export interface IngredientPair {
+  ingredient: string;
+  coCount: number;
+  lastSeenAt: string;
+}
+export const ingredientPairsApi = {
+  /** GET /api/ingredients/pairs?with=<anchor>&k=<n> */
+  getPairs: (anchor: string, k = 5) =>
+    apiClient.get<{ pairs: IngredientPair[] }>('/ingredients/pairs', {
+      params: { with: anchor, k },
+    }),
+};
+
 // ROADMAP 4.0 IG6.1 — Ingredient event API (swap learning loop).
 export const ingredientEventApi = {
   /** Record a swap-tap. Backend writes both swappedOut + swappedIn rows. */

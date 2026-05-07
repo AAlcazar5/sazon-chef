@@ -17,6 +17,7 @@ import {
   upsertEmbedding,
   getMany,
 } from '../../src/services/recommender/ingredientEmbeddingStore';
+import { normalizeIngredientName } from '../../src/utils/ingredientNormalizer';
 
 const OPENAI_URL = 'https://api.openai.com/v1/embeddings';
 const OPENAI_MODEL = 'text-embedding-3-small';
@@ -24,11 +25,19 @@ const OPENAI_DIM = 1536;
 const TARGET_DIM = 384;
 const PROJECTION_SEED = 0x9e3779b9;
 
+type CandidateSource = 'fdc' | 'recipe_ingredients' | 'auto';
+type Provider = 'openai' | 'local';
+
+const LOCAL_MODEL = 'Xenova/all-MiniLM-L6-v2';
+const LOCAL_DIM = 384; // native dim, matches TARGET_DIM — no projection needed.
+
 interface CliOptions {
   batchSize: number;
   maxNames: number;
   dryRun: boolean;
   force: boolean;
+  source: CandidateSource;
+  provider: Provider;
 }
 
 function parseCli(argv: string[]): CliOptions {
@@ -37,6 +46,8 @@ function parseCli(argv: string[]): CliOptions {
     maxNames: Number.POSITIVE_INFINITY,
     dryRun: false,
     force: false,
+    source: 'auto',
+    provider: 'openai',
   };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
@@ -44,6 +55,15 @@ function parseCli(argv: string[]): CliOptions {
     else if (a === '--force') opts.force = true;
     else if (a === '--batch-size') opts.batchSize = Number.parseInt(argv[++i], 10);
     else if (a === '--max-names') opts.maxNames = Number.parseInt(argv[++i], 10);
+    else if (a === '--source') {
+      const v = argv[++i];
+      if (v === 'fdc' || v === 'recipe_ingredients' || v === 'auto') {
+        opts.source = v;
+      }
+    } else if (a === '--provider') {
+      const v = argv[++i];
+      if (v === 'openai' || v === 'local') opts.provider = v;
+    }
   }
   if (!Number.isFinite(opts.batchSize) || opts.batchSize <= 0) opts.batchSize = 100;
   return opts;
@@ -101,7 +121,7 @@ interface MappingRow {
   ingredient: { description: string | null } | null;
 }
 
-async function loadCandidateNames(): Promise<MappingRow[]> {
+async function loadCandidateNamesFromFDC(): Promise<MappingRow[]> {
   return (await (prisma as any).ingredientFDCMapping.findMany({
     select: {
       normalizedName: true,
@@ -110,7 +130,69 @@ async function loadCandidateNames(): Promise<MappingRow[]> {
   })) as MappingRow[];
 }
 
-async function embedBatch(
+/**
+ * Fallback source — distinct normalized names from `recipe_ingredients`.
+ * Used when `IngredientFDCMapping` is empty (FDC populates lazily on
+ * nutrient lookup, so a fresh DB has no mapping rows). No USDA description
+ * is available here; the embedding text is just the canonical name.
+ */
+// Strips quantity prefixes ("2 cups", "1/2 tsp", "3 large") and trailing
+// modifier clauses ("(minced)", ", chopped"). Same shape as
+// pantryMatchService.normalizeIngredient but kept inline so this script
+// stays single-file.
+const QUANTITY_PREFIX =
+  /^[\d./½¼¾⅓⅔⅛\s-]+\s*(?:cups?|tbsps?|tsps?|oz|ounces?|lbs?|pounds?|g|grams?|kg|ml|l|liters?|cloves?|heads?|cans?|medium|large|small|pieces?|slices?|stalks?|sprigs?|bunch(?:es)?|sticks?)?\s*(?:of\s+)?/i;
+
+function stripQuantityAndComments(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(QUANTITY_PREFIX, '')
+    .replace(/[,(].*$/, '')
+    .replace(/[^a-z\s-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function loadCandidateNamesFromRecipes(): Promise<MappingRow[]> {
+  const rows = (await (prisma as any).recipeIngredient.findMany({
+    select: { text: true },
+  })) as Array<{ text: string }>;
+  const seen = new Set<string>();
+  const out: MappingRow[] = [];
+  for (const r of rows) {
+    const stripped = stripQuantityAndComments(r.text);
+    if (!stripped) continue;
+    const norm = normalizeIngredientName(stripped);
+    if (!norm || norm.length < 2) continue;
+    if (seen.has(norm)) continue;
+    seen.add(norm);
+    out.push({ normalizedName: norm, ingredient: null });
+  }
+  return out;
+}
+
+async function loadCandidateNames(
+  source: CandidateSource,
+): Promise<{ rows: MappingRow[]; resolvedSource: CandidateSource }> {
+  if (source === 'fdc') {
+    return { rows: await loadCandidateNamesFromFDC(), resolvedSource: 'fdc' };
+  }
+  if (source === 'recipe_ingredients') {
+    return {
+      rows: await loadCandidateNamesFromRecipes(),
+      resolvedSource: 'recipe_ingredients',
+    };
+  }
+  // auto: prefer FDC; fall through to recipe_ingredients when FDC is empty.
+  const fdcRows = await loadCandidateNamesFromFDC();
+  if (fdcRows.length > 0) return { rows: fdcRows, resolvedSource: 'fdc' };
+  return {
+    rows: await loadCandidateNamesFromRecipes(),
+    resolvedSource: 'recipe_ingredients',
+  };
+}
+
+async function embedBatchOpenAI(
   texts: string[],
   apiKey: string,
 ): Promise<number[][]> {
@@ -134,6 +216,30 @@ async function embedBatch(
     .map((d) => d.embedding);
 }
 
+// Local embedding pipeline — Hugging Face transformers.js running in Node.
+// Lazy-loaded so OpenAI runs don't pay the import cost. The model
+// (`Xenova/all-MiniLM-L6-v2`) is 384-d native — same as TARGET_DIM, so no
+// random projection is applied.
+let cachedLocalPipeline: any | null = null;
+async function getLocalPipeline(): Promise<any> {
+  if (cachedLocalPipeline) return cachedLocalPipeline;
+  // dynamic import keeps OpenAI-only invocations from loading transformers.
+  const transformers = await import('@huggingface/transformers');
+  cachedLocalPipeline = await transformers.pipeline(
+    'feature-extraction',
+    LOCAL_MODEL,
+  );
+  return cachedLocalPipeline;
+}
+
+async function embedBatchLocal(texts: string[]): Promise<number[][]> {
+  const pipe = await getLocalPipeline();
+  const result = await pipe(texts, { pooling: 'mean', normalize: true });
+  // result is a Tensor with shape [N, 384]. tolist() returns nested arrays.
+  const arr = result.tolist() as number[][];
+  return arr;
+}
+
 function buildText(row: MappingRow): string {
   const desc = row.ingredient?.description?.trim();
   if (desc && desc.length > 0) {
@@ -145,23 +251,38 @@ function buildText(row: MappingRow): string {
 async function main(): Promise<void> {
   const opts = parseCli(process.argv);
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey && !opts.dryRun) {
+  if (opts.provider === 'openai' && !apiKey && !opts.dryRun) {
     logger.error(
-      'IG1: OPENAI_API_KEY not set. Add to backend/.env or run with --dry-run.',
+      'IG1: OPENAI_API_KEY not set. Add to backend/.env, run with --dry-run, or use --provider local.',
     );
     process.exit(1);
   }
 
   logger.info(
-    { batchSize: opts.batchSize, maxNames: opts.maxNames, dryRun: opts.dryRun, force: opts.force },
+    {
+      batchSize: opts.batchSize,
+      maxNames: opts.maxNames,
+      dryRun: opts.dryRun,
+      force: opts.force,
+      source: opts.source,
+      provider: opts.provider,
+    },
     'IG1: starting ingredient-embedding training run',
   );
 
-  const candidates = await loadCandidateNames();
+  const { rows: candidates, resolvedSource } = await loadCandidateNames(
+    opts.source,
+  );
   if (candidates.length === 0) {
-    logger.warn('IG1: no IngredientFDCMapping rows. Seed the table first.');
+    logger.warn(
+      'IG1: no candidate names found in either IngredientFDCMapping or recipe_ingredients. Seed the catalog first.',
+    );
     process.exit(0);
   }
+  logger.info(
+    { resolvedSource, candidateCount: candidates.length },
+    'IG1: candidate source resolved',
+  );
 
   const limited = candidates.slice(0, opts.maxNames);
   const targetNames = limited.map((c) => c.normalizedName);
@@ -190,17 +311,25 @@ async function main(): Promise<void> {
 
   let embedded = 0;
   let failed = 0;
+  const modelId =
+    opts.provider === 'local'
+      ? LOCAL_MODEL
+      : `${OPENAI_MODEL}+proj-${TARGET_DIM}`;
   for (let i = 0; i < toEmbed.length; i += opts.batchSize) {
     const batch = toEmbed.slice(i, i + opts.batchSize);
     const texts = batch.map(buildText);
     try {
-      const vectors = await embedBatch(texts, apiKey!);
+      const vectors =
+        opts.provider === 'local'
+          ? await embedBatchLocal(texts)
+          : await embedBatchOpenAI(texts, apiKey!);
       for (let j = 0; j < batch.length; j += 1) {
-        const projected = project(vectors[j]);
+        const vec =
+          opts.provider === 'local' ? vectors[j] : project(vectors[j]);
         await upsertEmbedding({
           name: batch[j].normalizedName,
-          embedding: projected,
-          model: `${OPENAI_MODEL}+proj-${TARGET_DIM}`,
+          embedding: vec,
+          model: modelId,
         });
         embedded += 1;
       }

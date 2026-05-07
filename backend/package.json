@@ -47,6 +47,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
     "@google/generative-ai": "^0.24.1",
+    "@huggingface/transformers": "^4.2.0",
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^10.40.0",
     "@types/multer": "^2.0.0",

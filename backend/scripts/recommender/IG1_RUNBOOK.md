@@ -35,42 +35,76 @@ Cost will scale linearly as the catalog grows. The script is idempotent —
 re-runs only embed names that aren't already in `IngredientEmbedding`, so
 incremental costs are bounded.
 
+## Providers
+
+The script supports two embedding backends. Pick one:
+
+| Provider              | `--provider` | Cost                     | Quality bar                              | Setup                            |
+|-----------------------|-------------|--------------------------|------------------------------------------|----------------------------------|
+| **OpenAI** (default)  | `openai`    | ~$0.0025 / 5,000 names   | Strong; 1536-d → 384-d random projection | `OPENAI_API_KEY` in `backend/.env` |
+| **Local (Hugging Face transformers.js)** | `local`     | $0 (one-time ~80MB model download) | Good; `Xenova/all-MiniLM-L6-v2` 384-d native | `npm i @huggingface/transformers` (already installed) |
+
+The local backend is the default fallback when OpenAI access isn't
+available — the IG1.1 launch run used it. Cosine magnitudes are tighter
+on bare ingredient names, but the cluster rank-order is still correct
+(see Validate section below).
+
+## Candidate sources
+
+The script reads canonical names from one of two sources, picked via
+`--source` (default `auto`):
+
+| `--source`            | Reads from                          | When to use                                  |
+|-----------------------|-------------------------------------|----------------------------------------------|
+| `fdc`                 | `IngredientFDCMapping`              | Once the FDC mapping is populated (lazy fill via nutrient lookups) |
+| `recipe_ingredients`  | distinct names from `RecipeIngredient` (after quantity/unit strip) | Fresh DB / before FDC populates |
+| `auto` (default)      | FDC if non-empty; else recipe_ingredients | Pretty much always              |
+
 ## Prerequisites
 
-1. **`OPENAI_API_KEY` set** in `backend/.env`:
-   ```bash
-   echo "OPENAI_API_KEY=sk-..." >> backend/.env
-   ```
+1. **One of the provider credentials above** (or `--provider local` and an
+   internet connection for the one-time model download).
 2. **Prisma client up-to-date** for `IngredientEmbedding` (already pushed
    via `npx prisma db push` when IG0.3 shipped):
    ```bash
    cd backend && npx prisma generate
    ```
-3. **`IngredientFDCMapping` table populated.** This is the canonical-name
-   anchor with USDA descriptions. Confirm with:
+3. **At least one candidate source has rows.** Confirm with:
    ```bash
-   sqlite3 backend/prisma/dev.db "SELECT COUNT(*) FROM ingredient_fdc_mapping;"
+   sqlite3 backend/prisma/dev.db \
+     "SELECT 'fdc', COUNT(*) FROM ingredient_fdc_mappings; \
+      SELECT 'recipe_ingredients', COUNT(*) FROM recipe_ingredients;"
    ```
-   Should return ≥ several hundred rows. If empty, see `backend/prisma/seed`
-   scripts (out of scope for this runbook).
+   At least one should return a non-zero count.
 
 ## Run it
 
+OpenAI:
 ```bash
 cd backend
 npx ts-node scripts/recommender/trainIngredientEmbeddings.ts \
-    --batch-size 100 \
-    --max-names 5000
+    --provider openai \
+    --batch-size 100
+```
+
+Local (no API key needed):
+```bash
+cd backend
+npx ts-node scripts/recommender/trainIngredientEmbeddings.ts \
+    --provider local \
+    --batch-size 64
 ```
 
 Flags:
-- `--batch-size N` — names per OpenAI request (default 100; max 2048 per the
-  API). Higher = fewer round trips, more memory.
+- `--provider {openai|local}` — pick the embedding backend (default `openai`).
+- `--source {fdc|recipe_ingredients|auto}` — pick the canonical-name source
+  (default `auto`).
+- `--batch-size N` — names per call. OpenAI cap is 2048; local provider has
+  no hard cap but 64–128 keeps memory steady.
 - `--max-names N` — cap total names processed (default ∞; useful for a dry
-  run with `--max-names 50` to verify the pipeline before committing the
-  full cost).
-- `--dry-run` — print what would be embedded without calling OpenAI or
-  writing to the DB.
+  run with `--max-names 50` to verify the pipeline first).
+- `--dry-run` — print what would be embedded without calling the provider
+  or writing to the DB.
 - `--force` — re-embed names that already have a row in `IngredientEmbedding`
   (default: skip).
 
@@ -100,19 +134,32 @@ for (const [name, row] of candidates) {
 "
 ```
 
-Expected output (cosine in [-1, 1], higher = more similar):
+Expected output depends on the provider — both are valid as long as the
+*cluster rank-order* is correct (herb siblings outrank unrelated items):
 
 ```
+# OpenAI text-embedding-3-small + 384-d projection
 rosemary → cosine 0.71
 oregano  → cosine 0.68
 sage     → cosine 0.65
-cinnamon → cosine 0.42  (still in "spice" cluster but distant)
-flour    → cosine 0.18  (totally different category)
+cinnamon → cosine 0.42
+flour    → cosine 0.18
+
+# Xenova/all-MiniLM-L6-v2 (local)
+rosemary → cosine 0.30
+oregano  → cosine 0.28
+sage     → cosine 0.22
+cinnamon → cosine 0.10
+flour    → cosine -0.02
 ```
 
-If the herb-cluster cosines are < 0.6, something's wrong with the
-projection or the descriptions. Re-run with `--dry-run` first to inspect
-the input strings.
+The smoke-test suite at `backend/__tests__/services/recommender/ingredientEmbeddings.smoke.test.ts`
+codifies this — it asserts rank-order rather than absolute cosine so
+both providers pass.
+
+The IG7.1 default cosine threshold (0.8) is calibrated for OpenAI; pass
+a lower override (≈ 0.4–0.5) when running with the local provider, or
+leave the default and let the binary fallback handle most of the matches.
 
 ## Roll forward to IG1.2
 
