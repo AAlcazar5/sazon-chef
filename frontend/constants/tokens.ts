@@ -272,6 +272,23 @@ export const Type = {
   } as TextStyle,
 } as const;
 
+// ─── Focus state (DS1.2) ─────────────────────────────────────────────────
+// Keyboard focus ring (web + tvOS); touch focus highlight (mobile press tint).
+// Consumers: BrandButton, FilterChip, Card (when interactive), Input, TabButton.
+export const Focus = {
+  ring: {
+    width: 2,
+    color: 'light' as 'light' | 'dark' | 'auto',
+    offset: 2,
+    radiusBeyond: 8,
+  },
+  highlight: {
+    // 4% brand-soft tint on press; 100ms enter, instant leave.
+    opacity: 0.04,
+    durationMs: 100,
+  },
+} as const;
+
 // ─── Motion ──────────────────────────────────────────────────────────────
 export const Motion = {
   duration: {
