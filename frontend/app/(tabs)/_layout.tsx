@@ -512,7 +512,10 @@ export default function TabLayout() {
     </Tabs>
       </View>
 
-      {/* Search Bar + Plus Button Above Tab Bar */}
+      {/* Search Bar + Plus Button Above Tab Bar.
+          ROADMAP 4.0 S15.2 — hide on the Sazon (coach) tab so the global
+          recipe search doesn't overlay the chat composer. The chat surface
+          owns its own input. */}
       <View
         style={{
           position: 'absolute',
@@ -523,7 +526,9 @@ export default function TabLayout() {
           paddingHorizontal: Spacing.lg,
           zIndex: 10,
           overflow: 'hidden',
+          display: pathname.includes('/coach') ? 'none' : 'flex',
         }}
+        pointerEvents={pathname.includes('/coach') ? 'none' : 'auto'}
       >
         <View
           style={{
