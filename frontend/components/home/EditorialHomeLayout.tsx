@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { EditorialMacroWidgets } from './EditorialMacroWidgets';
 import { VerticalCategoryRail } from '../ui/VerticalCategoryRail';
 import { PlateHeroCard } from '../ui/PlateHeroCard';
+import HeroCohortOverlay from './HeroCohortOverlay';
 import PantryPlateHeroCard from './PantryPlateHeroCard';
 import DidYouKnowCard from './DidYouKnowCard';
 import KitchenIQPromoCard from './KitchenIQPromoCard';
@@ -98,6 +99,9 @@ export function EditorialHomeLayout({
               saved={savedIds.has(displayedHero.id)}
               onToggleSave={() => onToggleSave(displayedHero.id)}
             />
+            {/* ROADMAP 4.0 HX2.3 — Friend cohort overlay. Hides silently when
+                <2 friends cooked or below privacy floor. */}
+            <HeroCohortOverlay recipeId={displayedHero.id} />
           </View>
         </View>
       )}

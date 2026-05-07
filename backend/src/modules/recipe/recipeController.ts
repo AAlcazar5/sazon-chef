@@ -4548,6 +4548,43 @@ export const recipeController = {
     }
   },
 
+  // ROADMAP 4.0 HX2.3 — GET /api/recipes/:id/friend-cohort
+  // Friends-who-cooked-this overlay for Today's hero. Wraps
+  // cohortInsightsService.getFriendCohort (N7.3) which honors N8.2 privacy.
+  async getFriendCohort(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const recipeId = req.params.id;
+      const windowDays = Math.min(
+        30,
+        Math.max(1, parseInt(req.query.windowDays as string) || 14),
+      );
+      const { getFriendCohort } = require('@/services/cohortInsightsService');
+      const result = await getFriendCohort({ userId, recipeId, windowDays });
+      res.json(result);
+    } catch (error: any) {
+      logger.error({ data: error }, '❌ Error in getFriendCohort:');
+      res.status(500).json({ error: 'Failed to fetch friend cohort', details: error.message });
+    }
+  },
+
+  // ROADMAP 4.0 RD5.1 — GET /api/recipes/:id/cooked-next
+  // "Cooked this and then…" cohort recommender. Wraps cohortInsightsService
+  // (N7.3) which honors N8.2 privacy + ≥30 anchor-cooker k-anonymity floor.
+  async getCookedNext(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const recipeId = req.params.id;
+      const k = Math.min(10, Math.max(1, parseInt(req.query.k as string) || 4));
+      const { cookedNext } = require('@/services/recommender/cookedNext');
+      const result = await cookedNext({ recipeId, userId, k });
+      res.json(result);
+    } catch (error: any) {
+      logger.error({ data: error }, '❌ Error in getCookedNext:');
+      res.status(500).json({ error: 'Failed to fetch cooked-next', details: error.message });
+    }
+  },
+
   // ROADMAP 4.0 HX2.1 — POST /api/recipes/hero/reroll
   // Returns the next-ranked candidate at `rank` from the same retrieval call.
   // Caller passes rank=2 for the first re-roll, 3 for the second, 4 for the

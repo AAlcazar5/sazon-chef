@@ -879,6 +879,35 @@ export const recipeApi = {
     }>(`/recipes/${id}/similar`, { params: { k } });
   },
 
+  // ROADMAP 4.0 HX2.3 — Friends-who-cooked-this overlay on hero.
+  getFriendCohort: (id: string, windowDays: number = 14) => {
+    return apiClient.get<{
+      members: Array<{
+        userId: string;
+        firstName: string;
+        cookedAt: string;
+      }>;
+      totalCount: number;
+      identityRedacted: boolean;
+    }>(`/recipes/${id}/friend-cohort`, { params: { windowDays } });
+  },
+
+  // ROADMAP 4.0 RD5.1 — "Cooked this and then…" cohort recommender.
+  getCookedNext: (id: string, k: number = 4) => {
+    return apiClient.get<{
+      recipes: Array<{
+        id: string;
+        title: string;
+        cuisine: string | null;
+        cookTime: number | null;
+        imageUrl: string | null;
+        cookCount: number;
+      }>;
+      privacyOptOut: boolean;
+      belowKAnonFloor: boolean;
+    }>(`/recipes/${id}/cooked-next`, { params: { k } });
+  },
+
   // ROADMAP 4.0 HX2.1 — hero re-roll (next-ranked candidate).
   heroReroll: (rank: number) => {
     return apiClient.post<{

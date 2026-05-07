@@ -25,6 +25,7 @@ import {
 import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
 import RecipeDetailActionMenu from '../../components/recipe/RecipeDetailActionMenu';
 import MoreLikeThisRow from '../../components/recipe/MoreLikeThisRow';
+import CookedNextRow from '../../components/recipe/CookedNextRow';
 import RecipeVariantChipRow, { type RecipeVariantEntry } from '../../components/recipe/RecipeVariantChipRow';
 import LeftoverBridgeCard from '../../components/recipe/LeftoverBridgeCard';
 import DiscoveryInsightLine, { type DiscoveryInsight } from '../../components/recipe/DiscoveryInsightLine';
@@ -343,6 +344,10 @@ export default function RecipeIdScreen() {
               embedding (NOT the user's context — that's the home feed's job).
               Hides silently when no neighbors. */}
           <MoreLikeThisRow recipeId={recipe.id} />
+
+          {/* ROADMAP 4.0 RD5.2 — "Cooked this and then…" cohort row. Hides
+              silently when below the privacy floor or no signal. */}
+          <CookedNextRow recipeId={recipe.id} />
 
           {/* Instructions */}
           {recipe.instructions && recipe.instructions.length > 0 && (
