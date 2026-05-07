@@ -1,5 +1,8 @@
 // frontend/components/today/NutritionStrip.tsx
 // ROADMAP 4.0 D14 — daily nutrient roll-up for the Today screen.
+// ROADMAP 4.0 DS7.1 — reference-implementation migration: every visual token
+// sources from constants/tokens (no Colors.* / DarkColors.* / Pastel.* /
+// PastelDark.* / Accent.* / EditorialFontFamily on this surface).
 //
 // Six pills horizontally scrolling. Tap any pill → opens the day's
 // full nutrition recap. Hidden when nutritionUIDensity === 'minimal'.
@@ -10,8 +13,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Colors, DarkColors, Pastel, PastelDark, Accent } from '../../constants/Colors';
-import { EditorialFontFamily } from '../../constants/Typography';
+import { PastelTokens, AccentTokens, Ink, Type, Radius, Space } from '../../constants/tokens';
 import {
   NUTRIENT_META,
   DAILY_TOP_NUTRIENTS,
@@ -50,7 +52,7 @@ export default function NutritionStrip({
         <Text
           style={[
             styles.emptyText,
-            { color: isDark ? DarkColors.text.tertiary : Colors.text.tertiary },
+            { color: isDark ? Ink.dark.tertiary : Ink.light.tertiary },
           ]}
         >
           Cook a meal — today's nutrition story starts here.
@@ -89,7 +91,7 @@ interface PillProps {
 function Pill({ nutrient, value, isDark, onPress }: PillProps) {
   const meta = NUTRIENT_META[nutrient];
   const pct = dvPercent(value, nutrient);
-  const tint = isDark ? PastelDark.sage : Pastel.sage;
+  const tint = isDark ? PastelTokens.dark.sage : PastelTokens.light.sage;
 
   return (
     <HapticTouchableOpacity
@@ -99,11 +101,11 @@ function Pill({ nutrient, value, isDark, onPress }: PillProps) {
       accessibilityLabel={`${meta.label}: ${formatNutrientValue(value, nutrient)}${pct ? `, ${pct}% daily value` : ''}`}
       style={[styles.pill, { backgroundColor: tint }]}
     >
-      <Text style={[styles.pillLabel, { color: Accent.sage }]}>{meta.label}</Text>
+      <Text style={[styles.pillLabel, { color: AccentTokens.sage }]}>{meta.label}</Text>
       <Text
         style={[
           styles.pillValue,
-          { color: isDark ? DarkColors.text.primary : Colors.text.primary },
+          { color: isDark ? Ink.dark.primary : Ink.light.primary },
         ]}
       >
         {formatNutrientValue(value, nutrient)}
@@ -112,7 +114,7 @@ function Pill({ nutrient, value, isDark, onPress }: PillProps) {
         <Text
           style={[
             styles.pillPercent,
-            { color: isDark ? DarkColors.text.secondary : Colors.text.secondary },
+            { color: isDark ? Ink.dark.secondary : Ink.light.secondary },
           ]}
         >
           {`${pct}% DV`}
@@ -122,41 +124,42 @@ function Pill({ nutrient, value, isDark, onPress }: PillProps) {
   );
 }
 
+// DS7.1 — every value below sources from constants/tokens.
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 20,
-    gap: 10,
-    paddingVertical: 4,
+    paddingHorizontal: Space['5'],
+    gap: Space['3'],
+    paddingVertical: Space['1'],
   },
   pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: Space['4'] - 2, // 14 keeps the original visual rhythm
+    paddingVertical: Space['3'] - 2, // 10
+    borderRadius: Radius.card,
     minWidth: 92,
   },
   pillLabel: {
-    fontFamily: EditorialFontFamily.body.semibold,
-    fontSize: 11,
+    fontFamily: Type.eyebrow.fontFamily,
+    fontSize: Type.eyebrow.fontSize,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginBottom: 2,
   },
   pillValue: {
-    fontFamily: EditorialFontFamily.display.medium,
+    fontFamily: Type.bodyLg.fontFamily,
     fontSize: 16,
     letterSpacing: -0.3,
   },
   pillPercent: {
-    fontFamily: EditorialFontFamily.body.regular,
+    fontFamily: Type.eyebrow.fontFamily,
     fontSize: 11,
     marginTop: 2,
   },
   emptyWrap: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: Space['5'],
+    paddingVertical: Space['3'],
   },
   emptyText: {
-    fontFamily: EditorialFontFamily.body.regular,
+    fontFamily: Type.label.fontFamily,
     fontSize: 13,
     fontStyle: 'italic',
   },
