@@ -119,6 +119,9 @@ model User {
   // ROADMAP 4.0 TB3.1 — back-relation for recommender events.
   recommenderEvents       RecommenderEvent[]
 
+  // ROADMAP 4.0 IG0.2 — back-relation for the ingredient event stream.
+  ingredientEvents        IngredientEvent[]
+
   // ROADMAP 4.0 T0.1 — Tonight Mode opt-in (gated by SAZON_TONIGHT_MODE env flag).
   tonightModeEnabled      Boolean   @default(false)
   tonightModePromptedAt   DateTime?
@@ -950,6 +953,14 @@ model PantryItem {
   source    String   @default("manual") // 'manual' | 'shopping' | 'cooking'
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // ROADMAP 4.0 IG0.1 — Pantry data model upgrade. All nullable so existing
+  // rows stay valid; depletion (IG3) + use-it-up (IG4) gate on these.
+  quantity          Float?
+  unit              String?  // 'g' | 'oz' | 'lb' | 'cup' | 'piece' | etc.
+  expiryHint        Int?     // days-from-purchase before going bad (heuristic)
+  lastConsumedAt    DateTime?
+  addedFromRecipeId String?
 
   @@unique([userId, name])
   @@index([userId])
@@ -2038,4 +2049,44 @@ model RecommenderEventOutcome {
 
   @@index([outcome])
   @@map("recommender_event_outcomes")
+}
+
+// ROADMAP 4.0 IG0.2 — Append-only ingredient event stream. Single source of
+// truth for pantry / shopping / cooking ingredient interactions. Powers
+// IG2 (co-purchase), IG3 (depletion cadence), IG6 (swap learning), IG9
+// (logging + counterfactual).
+model IngredientEvent {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredientName String   // canonical name; pre-normalize at write site
+  eventType      String   // addedToPantry | addedToShoppingList | purchased | consumed | expired | swappedIn | swappedOut | removedManually
+  quantity       Float?
+  unit           String?
+  recipeId       String?
+  swapTargetName String?  // for swappedIn/Out events: the partner ingredient name
+  occurredAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([userId, occurredAt])
+  @@index([userId, ingredientName, occurredAt])
+  @@index([userId, eventType, occurredAt])
+  @@map("ingredient_events")
+}
+
+// ROADMAP 4.0 IG0.3 — Ingredient embeddings. One row per canonical name
+// (pre-normalized via normalizeIngredientName). Mirrors RecipeEmbedding shape.
+// Powers IG1 (semantic similarity) + IG6 (learned swap fallback) + IG7
+// (semantic pantry match).
+model IngredientEmbedding {
+  id            String   @id @default(cuid())
+  canonicalName String   @unique
+  embedding     Bytes    // Float32Array serialized as bytes
+  model         String   // model id, e.g. 'text-embedding-3-small'
+  dimensions    Int
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  @@index([canonicalName])
+  @@map("ingredient_embeddings")
 }
