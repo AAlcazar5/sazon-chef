@@ -313,6 +313,7 @@ backend/data/recommender/
 !CLAUDE.md
 !AGENTS.md
 !frontend/docs/TOKENS.md
+!frontend/docs/CONTRAST.md
 !frontend/docs/design-decisions/*.md
 !.github/pull_request_template.md
 plans/

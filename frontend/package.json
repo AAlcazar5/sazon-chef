@@ -13,7 +13,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "build:tokens": "node scripts/buildTokens.cjs",
-    "build:tokens:check": "node scripts/buildTokens.cjs --check"
+    "build:tokens:check": "node scripts/buildTokens.cjs --check",
+    "build:contrast": "node scripts/buildContrastTable.cjs",
+    "build:contrast:check": "node scripts/buildContrastTable.cjs --check"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
