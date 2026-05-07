@@ -697,7 +697,10 @@ const styles = StyleSheet.create({
   },
   composerBar: {
     paddingHorizontal: 12,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+    // ROADMAP 4.0 S15.2 — clear the global recipe search bar overlay
+    // (40px input + 32px paddingVertical = 72px) rendered by the tabs
+    // layout. Without this, the composer sits behind it.
+    paddingBottom: Platform.OS === 'ios' ? 96 : 84,
     paddingTop: 8,
   },
   composerInner: {
