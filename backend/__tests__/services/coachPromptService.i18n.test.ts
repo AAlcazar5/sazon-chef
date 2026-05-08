@@ -208,3 +208,105 @@ describe('i18n PoC — regional Spanish (es-MX, es-AR, es-CO, es-ES, es-419)', (
     expect(unique.size).toBe(personas.length);
   });
 });
+
+// ─── Portuguese (pt, pt-BR, pt-PT) ─────────────────────────────────────────
+//
+// BR vs PT diverge meaningfully on vocab + verb conjugation. One base PT
+// persona (BR-leaning) + regional notes split — same shape as Spanish.
+// pt-AO intentionally NOT shipped: small market, distribution overhead
+// outweighs persona work; pt-PT fallback is acceptable for now.
+
+describe('i18n PoC — Portuguese persona (pt, pt-BR, pt-PT)', () => {
+  const snap = buildProfileSnapshot(baseInput);
+
+  it('locale=pt returns the Portuguese persona', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt' });
+    expect(stable).toContain('Você é a Sazon');
+    expect(stable).not.toContain('You are Sazon');
+    expect(stable).not.toContain('Eres Sazon');
+  });
+
+  it('Portuguese persona preserves the medical-deflection rule', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt' });
+    expect(stable.toLowerCase()).toMatch(/profissional médico|profissional de saúde/);
+  });
+
+  it('Portuguese persona preserves the allergen-honor rule', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt' });
+    expect(stable.toLowerCase()).toMatch(/alérgen/);
+  });
+
+  it('Portuguese persona preserves the prompt-injection guard', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt' });
+    expect(stable).toMatch(/<user_profile>|<tool_result>/);
+    expect(stable.toLowerCase()).toMatch(/dados|instruç/);
+  });
+
+  it('Portuguese persona keeps tool names in English (API identifiers)', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt' });
+    expect(stable).toMatch(/get_pantry|get_meal_plan|search_cookbook|find_recipes/);
+  });
+
+  it('pt-BR appends Brazilian vocab notes — geladeira, feijoada, "você"', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt-BR' });
+    expect(stable).toContain('Você é a Sazon');
+    expect(stable).toMatch(/Notas regionais/i);
+    expect(stable.toLowerCase()).toMatch(/brasil|brasileira/);
+    expect(stable.toLowerCase()).toMatch(/geladeira/);
+    expect(stable.toLowerCase()).toMatch(/feijoada|moqueca|pão de queijo/);
+    expect(stable).toMatch(/"você"/);
+  });
+
+  it('pt-PT appends European Portuguese notes — frigorífico, bacalhau, "tu"', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt-PT' });
+    expect(stable).toContain('Você é a Sazon'); // base persona is BR-leaning
+    expect(stable).toMatch(/Notas regionais/i);
+    expect(stable.toLowerCase()).toMatch(/portugal|portuguesa/);
+    expect(stable.toLowerCase()).toMatch(/frigorífico/);
+    expect(stable.toLowerCase()).toMatch(/bacalhau|francesinha|alheira/);
+    expect(stable).toMatch(/"tu"/);
+  });
+
+  it('pt-PT regional notes flag the verb-conjugation difference (enclitic forms)', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt-PT' });
+    // Sazon should see that PT uses "diz-me / pergunta-me / encontra-me"
+    expect(stable.toLowerCase()).toMatch(/diz-me|pergunta-me|encontra-me/);
+  });
+
+  it('unknown Portuguese region (e.g. pt-AO) falls back to base pt with NO regional notes', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'pt-AO' as never });
+    expect(stable).toContain('Você é a Sazon');
+    expect(stable).not.toMatch(/Notas regionais/i);
+  });
+
+  it('Portuguese persona is byte-stable across calls (cache HIT precondition)', () => {
+    for (const loc of ['pt', 'pt-BR', 'pt-PT'] as const) {
+      const a = buildSystemPromptParts(snap, { locale: loc }).stable;
+      const b = buildSystemPromptParts(snap, { locale: loc }).stable;
+      expect(a).toBe(b);
+    }
+  });
+
+  it('every persona (en/es/es-*/pt/pt-*) is byte-different from every other (cache key separation)', () => {
+    const personas = [
+      'en',
+      'es',
+      'es-MX',
+      'es-AR',
+      'es-CO',
+      'es-ES',
+      'es-419',
+      'pt',
+      'pt-BR',
+      'pt-PT',
+    ].map((l) => buildSystemPromptParts(snap, { locale: l as never }).stable);
+    const unique = new Set(personas);
+    expect(unique.size).toBe(personas.length);
+  });
+
+  it('dynamic block is locale-agnostic for Portuguese too', () => {
+    const en = buildSystemPromptParts(snap, { locale: 'en' }).dynamic;
+    const ptBR = buildSystemPromptParts(snap, { locale: 'pt-BR' }).dynamic;
+    expect(en).toBe(ptBR);
+  });
+});
