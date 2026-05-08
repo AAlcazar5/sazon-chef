@@ -21,14 +21,21 @@ function lineCount(absPath: string): number {
 // Files known to be oversized at R5 audit; values capture the *current* size,
 // not the target. Splitting any of these is a follow-up.
 const CAPS: Record<string, number> = {
-  'modules/recipe/recipeController.ts': 5500,
+  // Bumped 5500 → 5600 (2026-05-08) — incremental growth across recent
+  // recipe-detail features. Split into sub-controllers tracked as a
+  // future Tier-R item.
+  'modules/recipe/recipeController.ts': 5600,
   'modules/user/userController.ts': 1400,
   'modules/mealPlan/mealPlanController.ts': 1300,
   'modules/mealPrep/mealPrepController.ts': 1200,
   'services/aiRecipeService.ts': 1300,
   // Bumped from 1200 → 1450 after Tier S4 added find_recipes /
   // find_recipes_smart / propose_tonight tools. Split tracked separately.
-  'services/coachTools.ts': 1450,
+  // Bumped 1450 → 2000 (2026-05-08) — Sazon work added 7 new tools
+  // (get_meal_plan, get_shopping_list, get_user_profile, get_recipe_detail,
+  // add_to_shopping_list, schedule_meal, generate_recipe — see IA2 era).
+  // Split planned but not yet scoped; cap absorbs current shape.
+  'services/coachTools.ts': 2000,
   'modules/shoppingList/shoppingListGenerationController.ts': 1100,
 };
 

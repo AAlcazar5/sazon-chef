@@ -28,7 +28,10 @@ function makeApp() {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const NOW = new Date('2026-04-30T00:00:00Z');
+// Dynamic — `IN_7_DAYS` must always be in the future relative to the
+// machine clock at test time, otherwise the controller's expiresAt check
+// flips the test's intended kind from 'max_uses' to 'expired'.
+const NOW = new Date();
 const IN_7_DAYS = new Date(NOW.getTime() + 7 * 24 * 60 * 60 * 1000);
 
 const makeList = (id = 'list-1', userId = 'user-1') => ({

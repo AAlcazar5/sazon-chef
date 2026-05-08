@@ -237,6 +237,11 @@ jest.mock('../../../src/services/weatherService', () => ({
   getWeatherContext: jest.fn(),
 }));
 
+const mockRetrieveSimilar = jest.fn();
+jest.mock('../../../src/services/recommender/retrieveSimilar', () => ({
+  retrieveSimilar: (...args: unknown[]) => mockRetrieveSimilar(...args),
+}));
+
 jest.mock('../../../src/lib/prisma', () => ({
   prisma: {
     recipe: {
@@ -477,33 +482,51 @@ describe('getSavedRecipes — deep scoring loop', () => {
 });
 
 describe('getSimilarRecipes — full path', () => {
-  it('returns 404 when target recipe missing', async () => {
-    p.recipe.findUnique.mockResolvedValueOnce(null);
-    const req = buildReq({ params: { id: 'missing' } });
-    const res = buildRes();
-    await recipeController.getSimilarRecipes(req, res);
-    expect(res.status).toHaveBeenCalledWith(404);
+  // Controller delegates to retrieveSimilar() (post-T-bis pipeline). It
+  // no longer does its own findUnique/findMany — previous tests asserted
+  // the pre-refactor shape. These cases exercise the new contract.
+
+  beforeEach(() => {
+    mockRetrieveSimilar.mockReset();
   });
 
-  it('returns sorted similar recipes with similarityScore attached', async () => {
-    p.recipe.findUnique.mockResolvedValueOnce(buildSampleRecipe({ id: 'r1' }));
-    p.recipe.findMany
-      .mockResolvedValueOnce([buildSampleRecipe({ id: 'r2', title: 'Two' })])
-      .mockResolvedValueOnce([buildSampleRecipe({ id: 'r2', title: 'Two' })]);
+  it('returns 500 + error JSON when retrieveSimilar throws', async () => {
+    mockRetrieveSimilar.mockRejectedValue(new Error('boom'));
+    p.userPreferences.findFirst.mockResolvedValueOnce(null);
+    const req = buildReq({ params: { id: 'r1' } });
+    const res = buildRes();
+    await recipeController.getSimilarRecipes(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
+  it('returns 200 + recipes payload on success', async () => {
+    mockRetrieveSimilar.mockResolvedValue([
+      buildSampleRecipe({ id: 'r2', title: 'Two' }),
+    ]);
+    p.userPreferences.findFirst.mockResolvedValueOnce(null);
     const req = buildReq({ params: { id: 'r1' } });
     const res = buildRes();
     await recipeController.getSimilarRecipes(req, res);
     expect(res.json).toHaveBeenCalled();
+    const payload = res.json.mock.calls[0][0];
+    expect(Array.isArray(payload.recipes)).toBe(true);
   });
 
-  it('applies mealPrepMode filter when enabled', async () => {
-    p.recipe.findUnique.mockResolvedValueOnce(buildSampleRecipe({ id: 'r1' }));
-    p.recipe.findMany.mockResolvedValue([]);
-    const req = buildReq({ params: { id: 'r1' }, query: { mealPrepMode: 'true' } });
+  it('forwards user allergens + dietaryTags as hardFilters', async () => {
+    mockRetrieveSimilar.mockResolvedValue([]);
+    p.userPreferences.findFirst.mockResolvedValueOnce({
+      bannedIngredients: [{ name: 'peanut' }],
+      dietaryRestrictions: [{ name: 'gluten-free' }],
+    });
+    const req = buildReq({ params: { id: 'r1' } });
     const res = buildRes();
     await recipeController.getSimilarRecipes(req, res);
-    const where = p.recipe.findMany.mock.calls[0][0].where;
-    expect(where.mealPrepScore).toEqual({ gte: 60 });
+    expect(mockRetrieveSimilar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        anchorRecipeId: 'r1',
+        hardFilters: { allergens: ['peanut'], dietaryTags: ['gluten-free'] },
+      }),
+    );
   });
 });
 

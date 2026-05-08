@@ -7,6 +7,14 @@ module.exports = {
     '**/__tests__/**/*.ts',
     '**/?(*.)+(spec|test).ts'
   ],
+  // Exclude fixture/factory files inside __tests__/__fixtures__ — they're
+  // helpers consumed by real test files, not test suites themselves.
+  // Without this, Jest reports them as failing suites with 0 tests.
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/__tests__/__fixtures__/',
+    '/.claude/worktrees/',
+  ],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: 'tsconfig.json'
