@@ -21,12 +21,8 @@ interface ProfileSheetProps {
   displayName: string;
   isPremium: boolean;
   onOpenFullProfile: () => void;
-  onOpenMacros: () => void;
   onOpenJourney: () => void;
   onOpenMemory: () => void;
-  onOpenNotifications: () => void;
-  onOpenAppearance: () => void;
-  onOpenAccount: () => void;
   onSignOut: () => void;
 }
 
@@ -93,12 +89,8 @@ export default function ProfileSheet({
   displayName,
   isPremium,
   onOpenFullProfile,
-  onOpenMacros,
   onOpenJourney,
   onOpenMemory,
-  onOpenNotifications,
-  onOpenAppearance,
-  onOpenAccount,
   onSignOut,
 }: ProfileSheetProps) {
   const { theme } = useTheme();
@@ -162,14 +154,12 @@ export default function ProfileSheet({
         contentContainerStyle={styles.menu}
         showsVerticalScrollIndicator={false}
       >
-        <Row
-          testID="profile-sheet-row-macros"
-          icon="stats-chart-outline"
-          label="Macros + micros"
-          description="Goals & nutrition density"
-          onPress={onOpenMacros}
-          isDark={isDark}
-        />
+        {/* Tier A0-b cleanup: Macros, Notifications, Appearance, and
+            Account & privacy rows used to live here. All four routed to
+            /(tabs)/profile?focus=<thing> with a `?focus=` param the screen
+            never read — making them functional duplicates of "Open full
+            profile". Removed; their corresponding cards still live on the
+            full profile screen. */}
         <Row
           testID="profile-sheet-row-journey"
           icon="map-outline"
@@ -184,27 +174,6 @@ export default function ProfileSheet({
           label="Sazon memory"
           description={isPremium ? 'What I remember about you' : 'Sazon Membership feature'}
           onPress={onOpenMemory}
-          isDark={isDark}
-        />
-        <Row
-          testID="profile-sheet-row-notifications"
-          icon="notifications-outline"
-          label="Notifications"
-          onPress={onOpenNotifications}
-          isDark={isDark}
-        />
-        <Row
-          testID="profile-sheet-row-appearance"
-          icon="moon-outline"
-          label="Appearance"
-          onPress={onOpenAppearance}
-          isDark={isDark}
-        />
-        <Row
-          testID="profile-sheet-row-account"
-          icon="person-outline"
-          label="Account & privacy"
-          onPress={onOpenAccount}
           isDark={isDark}
         />
         <Row

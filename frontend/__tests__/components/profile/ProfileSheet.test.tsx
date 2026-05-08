@@ -29,12 +29,8 @@ const baseProps = {
   displayName: 'Alex',
   isPremium: false,
   onOpenFullProfile: jest.fn(),
-  onOpenMacros: jest.fn(),
   onOpenJourney: jest.fn(),
   onOpenMemory: jest.fn(),
-  onOpenNotifications: jest.fn(),
-  onOpenAppearance: jest.fn(),
-  onOpenAccount: jest.fn(),
   onSignOut: jest.fn(),
 };
 
@@ -59,40 +55,40 @@ describe('<ProfileSheet />', () => {
     expect(getByText(/Free/i)).toBeTruthy();
   });
 
-  it('renders all menu items', () => {
-    const { getByTestId } = render(<ProfileSheet {...baseProps} />);
-    expect(getByTestId('profile-sheet-row-macros')).toBeTruthy();
+  it('renders the three distinct menu rows (no duplicates)', () => {
+    // Tier A0-b cleanup: deleted four rows that all routed to the same
+    // /(tabs)/profile screen with a no-op `?focus=` param. Remaining rows
+    // each go somewhere distinct: Journey → Kitchen tab, Memory → coach-
+    // memory screen, Full profile → /(tabs)/profile.
+    const { getByTestId, queryByTestId } = render(<ProfileSheet {...baseProps} />);
     expect(getByTestId('profile-sheet-row-journey')).toBeTruthy();
     expect(getByTestId('profile-sheet-row-memory')).toBeTruthy();
-    expect(getByTestId('profile-sheet-row-notifications')).toBeTruthy();
-    expect(getByTestId('profile-sheet-row-appearance')).toBeTruthy();
-    expect(getByTestId('profile-sheet-row-account')).toBeTruthy();
     expect(getByTestId('profile-sheet-row-full-profile')).toBeTruthy();
+    // Removed rows must not regress.
+    expect(queryByTestId('profile-sheet-row-macros')).toBeNull();
+    expect(queryByTestId('profile-sheet-row-notifications')).toBeNull();
+    expect(queryByTestId('profile-sheet-row-appearance')).toBeNull();
+    expect(queryByTestId('profile-sheet-row-account')).toBeNull();
   });
 
-  it('routes "Open full profile" to onOpenFullProfile', () => {
-    const onOpenFullProfile = jest.fn();
-    const { getByTestId } = render(
-      <ProfileSheet {...baseProps} onOpenFullProfile={onOpenFullProfile} />
-    );
-    fireEvent.press(getByTestId('profile-sheet-row-full-profile'));
-    expect(onOpenFullProfile).toHaveBeenCalledTimes(1);
-  });
-
-  it('fires individual menu callbacks', () => {
-    const onOpenMacros = jest.fn();
+  it('fires the three remaining row callbacks', () => {
     const onOpenJourney = jest.fn();
+    const onOpenMemory = jest.fn();
+    const onOpenFullProfile = jest.fn();
     const { getByTestId } = render(
       <ProfileSheet
         {...baseProps}
-        onOpenMacros={onOpenMacros}
         onOpenJourney={onOpenJourney}
+        onOpenMemory={onOpenMemory}
+        onOpenFullProfile={onOpenFullProfile}
       />
     );
-    fireEvent.press(getByTestId('profile-sheet-row-macros'));
-    expect(onOpenMacros).toHaveBeenCalledTimes(1);
     fireEvent.press(getByTestId('profile-sheet-row-journey'));
     expect(onOpenJourney).toHaveBeenCalledTimes(1);
+    fireEvent.press(getByTestId('profile-sheet-row-memory'));
+    expect(onOpenMemory).toHaveBeenCalledTimes(1);
+    fireEvent.press(getByTestId('profile-sheet-row-full-profile'));
+    expect(onOpenFullProfile).toHaveBeenCalledTimes(1);
   });
 
   it('fires onSignOut when sign-out tapped', () => {
