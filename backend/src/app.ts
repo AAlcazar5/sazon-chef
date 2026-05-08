@@ -8,6 +8,7 @@ import { recipeRoutes } from '@modules/recipe/recipeRoutes';
 import { userRoutes } from '@modules/user/userRoutes';
 import { cityCuisineRouter } from '@modules/cityCuisine/cityCuisineRoutes';
 import { travelJournalRouter } from '@modules/travelJournal/travelJournalRoutes';
+import { diasporaOnboardingRouter } from '@modules/diasporaOnboarding/diasporaOnboardingRoutes';
 import { healthMetricsRoutes } from '@modules/healthMetrics/healthMetricsRoutes';
 import { weightGoalRoutes } from '@modules/weightGoal/weightGoalRoutes';
 import mealPlanRoutes from '@modules/mealPlan/mealPlanRoutes';
@@ -188,6 +189,8 @@ app.use('/api/user/affinity', affinityRoutes);
 app.use('/api/city-cuisine', authenticateToken, cityCuisineRouter);
 // ROADMAP 4.0 G2.3 — travel journal ("what I ate" log; private by default).
 app.use('/api/travel-journal', authenticateToken, travelJournalRouter);
+// ROADMAP 4.0 G1.1 — diaspora onboarding (heritage cuisine selection seeds affinity weights).
+app.use('/api/onboarding/diaspora', authenticateToken, diasporaOnboardingRouter);
 // ROADMAP 4.0 B3 — surface event sink (impression/tap/cook/rate per surface)
 app.use('/api/telemetry/surface-events', authenticateToken, surfaceEventRoutes);
 // ROADMAP 4.0 HX7.1 — home-surface event sink (hero re-rolls / discovery card taps / etc.)
