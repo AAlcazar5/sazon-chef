@@ -31,8 +31,16 @@ export type FeatureKey =
 
 /**
  * Rate limit applied to free users on Build-a-Plate. Premium has no cap.
+ *
+ * I3.1 (2026-05-08): raised 3 → 5/wk after the free-tier audit. Reasoning:
+ * 3/wk caps the user before they hit two complete weeks (= one cooking
+ * arc). 5/wk lets a typical 3-cook-nights-per-week user explore Build-a-
+ * Plate without hitting the cap before forming a habit. Above-cap usage
+ * still routes through the LLM layer's per-user cost telemetry (I3.3),
+ * so a runaway free user is caught at the variable-cost layer, not via
+ * a feature wall in the user's face. See backend/docs/pricing-philosophy.md.
  */
-export const FREE_BUILD_A_PLATE_WEEKLY_LIMIT = 3;
+export const FREE_BUILD_A_PLATE_WEEKLY_LIMIT = 5;
 
 /** Trial users get the same access as paid premium. */
 const ACTIVE_PAID_STATUSES: ReadonlySet<SubscriptionStatus> = new Set(['active', 'trialing']);
@@ -42,10 +50,18 @@ const ACTIVE_PAID_STATUSES: ReadonlySet<SubscriptionStatus> = new Set(['active',
  * Free is the wider list (Kitchen, full Build-a-Plate at the rate limit, all
  * core recipes); the keys below are the *premium-gated* ones, so any feature
  * not in this map is allowed for everyone.
+ *
+ * I3.1 (2026-05-08) — free-tier audit changes:
+ *   - `coachChat` MOVED OUT — Sazon coach is the brand. Gating it kills
+ *     the differentiator; rate-limit at the LLM layer instead (I3.3).
+ *   - `coachMemory` MOVED OUT — coach without memory is a stranger;
+ *     locking it behind a paywall is the MyFitnessPal "barcode-scan
+ *     locked" antipattern (#1 user complaint in App Store reviews).
+ *   - `coachPhotoAttach` STAYS — photo upload has real per-message
+ *     vision-token cost; premium covers it.
+ * See backend/docs/pricing-philosophy.md for the full audit.
  */
 const PREMIUM_ONLY_FEATURES: ReadonlySet<FeatureKey> = new Set<FeatureKey>([
-  'coachChat',
-  'coachMemory',
   'coachPhotoAttach',
   'adaptiveNutritionCoverage',
   'culturalPrimers',

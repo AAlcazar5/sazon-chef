@@ -24,41 +24,68 @@ beforeEach(() => {
 });
 
 describe('hasFeatureAccess (pure tier check)', () => {
-  const ALL_GATED: FeatureKey[] = [
-    'coachChat', 'coachMemory', 'coachPhotoAttach',
+  // I3.1 (2026-05-08) — coachChat + coachMemory MOVED OUT of premium-only.
+  // Sazon coach is free; cost-control happens at the LLM rate-limit layer.
+  const PREMIUM_ONLY: FeatureKey[] = [
+    'coachPhotoAttach',
     'adaptiveNutritionCoverage', 'culturalPrimers', 'voiceCooking',
     'adaptiveNotifications', 'fullNutritionView', 'buildAPlateUnlimited',
   ];
+  const ALWAYS_FREE: FeatureKey[] = ['coachChat', 'coachMemory'];
 
   describe('premium tier — active subscription', () => {
     const user = { subscriptionTier: 'premium', subscriptionStatus: 'active' };
-    it.each(ALL_GATED)('grants %s', feature => {
+    it.each(PREMIUM_ONLY)('grants %s', feature => {
+      expect(hasFeatureAccess(user, feature)).toBe(true);
+    });
+    it.each(ALWAYS_FREE)('also grants %s (free baseline)', feature => {
       expect(hasFeatureAccess(user, feature)).toBe(true);
     });
   });
 
   describe('premium tier — trialing subscription', () => {
     const user = { subscriptionTier: 'premium', subscriptionStatus: 'trialing' };
-    it.each(ALL_GATED)('grants %s during trial', feature => {
+    it.each(PREMIUM_ONLY)('grants %s during trial', feature => {
       expect(hasFeatureAccess(user, feature)).toBe(true);
     });
   });
 
   describe('premium tier — past_due / canceled', () => {
-    it('past_due blocks gated features', () => {
+    it('past_due blocks premium-only features', () => {
       const user = { subscriptionTier: 'premium', subscriptionStatus: 'past_due' };
-      expect(hasFeatureAccess(user, 'coachChat')).toBe(false);
+      expect(hasFeatureAccess(user, 'coachPhotoAttach')).toBe(false);
     });
-    it('canceled blocks gated features', () => {
+    it('canceled blocks premium-only features', () => {
       const user = { subscriptionTier: 'premium', subscriptionStatus: 'canceled' };
-      expect(hasFeatureAccess(user, 'coachChat')).toBe(false);
+      expect(hasFeatureAccess(user, 'coachPhotoAttach')).toBe(false);
+    });
+    it('past_due STILL grants always-free features (coachChat, coachMemory)', () => {
+      const user = { subscriptionTier: 'premium', subscriptionStatus: 'past_due' };
+      expect(hasFeatureAccess(user, 'coachChat')).toBe(true);
+      expect(hasFeatureAccess(user, 'coachMemory')).toBe(true);
     });
   });
 
   describe('free tier', () => {
     const user = { subscriptionTier: 'free', subscriptionStatus: 'free' };
-    it.each(ALL_GATED)('blocks %s', feature => {
+    it.each(PREMIUM_ONLY)('blocks %s', feature => {
       expect(hasFeatureAccess(user, feature)).toBe(false);
+    });
+    it.each(ALWAYS_FREE)('grants %s (I3.1 free-tier audit — never feature-gated)', feature => {
+      expect(hasFeatureAccess(user, feature)).toBe(true);
+    });
+  });
+
+  describe('I3.1 free-tier audit — invariants that must hold forever', () => {
+    const free = { subscriptionTier: 'free', subscriptionStatus: 'free' };
+    it('Sazon coach is never feature-gated (the brand is the friend)', () => {
+      expect(hasFeatureAccess(free, 'coachChat')).toBe(true);
+    });
+    it('Coach memory is never feature-gated (coach without memory is a stranger)', () => {
+      expect(hasFeatureAccess(free, 'coachMemory')).toBe(true);
+    });
+    it('photo-attach (vision-token cost) stays premium', () => {
+      expect(hasFeatureAccess(free, 'coachPhotoAttach')).toBe(false);
     });
   });
 
@@ -66,15 +93,15 @@ describe('hasFeatureAccess (pure tier check)', () => {
     // Both intervals write the same User columns — tier='premium', status='active'.
     const annualUser = { subscriptionTier: 'premium', subscriptionStatus: 'active' };
     const monthlyUser = { subscriptionTier: 'premium', subscriptionStatus: 'active' };
-    expect(hasFeatureAccess(annualUser, 'coachChat')).toBe(true);
-    expect(hasFeatureAccess(monthlyUser, 'coachChat')).toBe(true);
+    expect(hasFeatureAccess(annualUser, 'coachPhotoAttach')).toBe(true);
+    expect(hasFeatureAccess(monthlyUser, 'coachPhotoAttach')).toBe(true);
   });
 });
 
 describe('evaluateAccess — premium short-circuit', () => {
   it('returns { allowed: true, reason: premium_grants } for active premium', async () => {
     mockUserFindUnique.mockResolvedValueOnce({ subscriptionTier: 'premium', subscriptionStatus: 'active' });
-    expect(await evaluateAccess('u1', 'coachChat')).toEqual({
+    expect(await evaluateAccess('u1', 'coachPhotoAttach')).toEqual({
       allowed: true,
       reason: 'premium_grants',
     });
@@ -127,25 +154,47 @@ describe('evaluateAccess — free tier with rate limits', () => {
 
   it('blocks free tier on premium-only features', async () => {
     mockUserFindUnique.mockResolvedValueOnce({ subscriptionTier: 'free', subscriptionStatus: 'free' });
-    expect(await evaluateAccess('u1', 'coachChat')).toEqual({
+    expect(await evaluateAccess('u1', 'coachPhotoAttach')).toEqual({
       allowed: false,
       reason: 'tier_too_low',
     });
   });
 
-  it('treats past_due like free for the gate', async () => {
-    mockUserFindUnique.mockResolvedValueOnce({ subscriptionTier: 'premium', subscriptionStatus: 'past_due' });
+  it('grants free tier on always-free features (I3.1 — Sazon coach)', async () => {
+    mockUserFindUnique.mockResolvedValueOnce({ subscriptionTier: 'free', subscriptionStatus: 'free' });
     expect(await evaluateAccess('u1', 'coachChat')).toEqual({
+      allowed: true,
+      reason: 'free_tier_grants',
+    });
+  });
+
+  it('treats past_due like free for premium-only gates', async () => {
+    mockUserFindUnique.mockResolvedValueOnce({ subscriptionTier: 'premium', subscriptionStatus: 'past_due' });
+    expect(await evaluateAccess('u1', 'coachPhotoAttach')).toEqual({
       allowed: false,
       reason: 'tier_too_low',
     });
+  });
+
+  it('past_due STILL grants always-free coachChat (cost-control is at LLM layer, not gate)', async () => {
+    mockUserFindUnique.mockResolvedValueOnce({ subscriptionTier: 'premium', subscriptionStatus: 'past_due' });
+    expect(await evaluateAccess('u1', 'coachChat')).toEqual({
+      allowed: true,
+      reason: 'free_tier_grants',
+    });
+  });
+});
+
+describe('I3.1 — Build-a-Plate weekly cap', () => {
+  it('FREE_BUILD_A_PLATE_WEEKLY_LIMIT is 5/week (raised from 3 in I3.1 audit)', () => {
+    expect(FREE_BUILD_A_PLATE_WEEKLY_LIMIT).toBe(5);
   });
 });
 
 describe('evaluateAccess — missing user', () => {
   it('returns subscription_inactive when user not found', async () => {
     mockUserFindUnique.mockResolvedValueOnce(null);
-    expect(await evaluateAccess('missing', 'coachChat')).toEqual({
+    expect(await evaluateAccess('missing', 'coachPhotoAttach')).toEqual({
       allowed: false,
       reason: 'subscription_inactive',
     });
