@@ -1,5 +1,6 @@
 // Group 10Y-A + Tier S: Coach service tier routing + dispatch.
 
+import type Anthropic from '@anthropic-ai/sdk';
 import {
   selectModel,
   selectModelForIntent,
@@ -138,5 +139,75 @@ describe('buildAnthropicCreateParams', () => {
       messages,
     });
     expect(params.messages).toEqual(messages);
+  });
+
+  // ─── S17 — prompt caching ────────────────────────────────────────────────
+  it('S17: when systemBlocks { stable, dynamic } provided, builds two-block system with cache only on stable', () => {
+    const params = buildAnthropicCreateParams({
+      tier: 'free',
+      systemBlocks: {
+        stable: 'PERSONA: Sazon brand voice...',
+        dynamic: '<user_profile>{"id":"u1"}</user_profile>',
+      },
+      messages,
+    });
+    const sys = params.system as Array<{
+      type: string;
+      text: string;
+      cache_control?: { type: string };
+    }>;
+    expect(sys).toHaveLength(2);
+    expect(sys[0].text).toMatch(/PERSONA/);
+    expect(sys[0].cache_control).toEqual({ type: 'ephemeral' });
+    expect(sys[1].text).toMatch(/user_profile/);
+    expect(sys[1].cache_control).toBeUndefined();
+  });
+
+  it('S17: when systemBlocks has no dynamic block, falls back to single cached block', () => {
+    const params = buildAnthropicCreateParams({
+      tier: 'free',
+      systemBlocks: { stable: 'PERSONA only' },
+      messages,
+    });
+    const sys = params.system as Array<{ text: string; cache_control?: { type: string } }>;
+    expect(sys).toHaveLength(1);
+    expect(sys[0].cache_control).toEqual({ type: 'ephemeral' });
+  });
+
+  it('S17: caches the tool schema by attaching cache_control to the LAST tool', () => {
+    const tools: Anthropic.Tool[] = [
+      { name: 'a', description: 'A', input_schema: { type: 'object', properties: {} } },
+      { name: 'b', description: 'B', input_schema: { type: 'object', properties: {} } },
+      { name: 'c', description: 'C', input_schema: { type: 'object', properties: {} } },
+    ];
+    const params = buildAnthropicCreateParams({
+      tier: 'free',
+      systemPrompt,
+      messages,
+      tools,
+    });
+    expect(params.tools).toBeDefined();
+    const out = params.tools!;
+    expect(out).toHaveLength(3);
+    // Anthropic caches everything BEFORE the marker, so last tool carries the flag.
+    expect((out[0] as { cache_control?: unknown }).cache_control).toBeUndefined();
+    expect((out[1] as { cache_control?: unknown }).cache_control).toBeUndefined();
+    expect((out[2] as { cache_control?: { type: string } }).cache_control).toEqual({
+      type: 'ephemeral',
+    });
+  });
+
+  it('S17: tool array passthrough is non-mutating (caller-side array unchanged)', () => {
+    const tools: Anthropic.Tool[] = [
+      { name: 'a', description: 'A', input_schema: { type: 'object', properties: {} } },
+    ];
+    const before = JSON.stringify(tools);
+    buildAnthropicCreateParams({
+      tier: 'free',
+      systemPrompt,
+      messages,
+      tools,
+    });
+    expect(JSON.stringify(tools)).toBe(before);
   });
 });

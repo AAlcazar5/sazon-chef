@@ -300,6 +300,29 @@ export function buildSystemPrompt(
   return `${PERSONA}\n\n<user_profile>${profileJson}</user_profile>`;
 }
 
+/**
+ * S17 — split the system prompt into a stable (cached) block + a dynamic
+ * (uncached) block. The PERSONA never changes between calls — perfect for
+ * Anthropic's ephemeral prompt cache. The user-profile + memories vary per
+ * call and must NOT be cached or every request would be a write+read churn.
+ *
+ * Returns the same content as `buildSystemPrompt` (callers can concatenate
+ * `stable + '\n\n' + dynamic` to recover the legacy string), but lets the
+ * Anthropic dispatcher mark only the stable block with `cache_control`.
+ */
+export function buildSystemPromptParts(
+  snapshot: CoachProfileSnapshot,
+  options?: BuildSystemPromptOptions,
+): { stable: string; dynamic: string } {
+  const profileJson = serializeSnapshot(snapshot);
+  const memories = options?.memories;
+  const dynamic =
+    memories && memories.length > 0
+      ? `<learned_memories>${serializeMemories(memories)}</learned_memories>\n\n<user_profile>${profileJson}</user_profile>`
+      : `<user_profile>${profileJson}</user_profile>`;
+  return { stable: PERSONA, dynamic };
+}
+
 export interface ConversationTitleInput {
   firstMessage: string;
   goalPhase: GoalPhase;

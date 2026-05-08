@@ -74,9 +74,30 @@ function maxTokensFor(tier: CoachTier, intent: CoachIntent): number {
   return intent === 'deep_plan' ? MAX_TOKENS_PREMIUM_DEEP : MAX_TOKENS_PREMIUM;
 }
 
+/**
+ * S17 — split system prompt for prompt caching.
+ *
+ * Anthropic ephemeral caching uses the EXACT bytes of a system block as the
+ * cache key. The legacy single-block prompt mixed the stable PERSONA with
+ * the per-call user-profile JSON, so any drift in profile bytes (a new
+ * cooked recipe, a leftover that just expired) busted the cache.
+ *
+ * Splitting into `{ stable, dynamic }` lets us mark only the stable block
+ * with cache_control. The persona stays cached even when profile changes.
+ */
+export interface SystemPromptBlocks {
+  /** Persona, brand voice, instructions — byte-stable across calls. Cached. */
+  stable: string;
+  /** Per-call user profile / memories. Not cached. Optional. */
+  dynamic?: string;
+}
+
 export interface BuildCoachParamsInput {
   tier: CoachTier;
-  systemPrompt: string;
+  /** Legacy single-string prompt. One cached block. */
+  systemPrompt?: string;
+  /** S17 — preferred. Two-block system (stable cached + dynamic uncached). */
+  systemBlocks?: SystemPromptBlocks;
   // Phase 5: messages may carry multi-block content (text + image blocks) for
   // Pro photo attachments. The Anthropic SDK already accepts both string and
   // array forms on MessageParam.content — pass through unchanged.
@@ -86,34 +107,76 @@ export interface BuildCoachParamsInput {
   modelOverride?: string;
 }
 
+function buildSystemBlocks(
+  input: Pick<BuildCoachParamsInput, 'systemPrompt' | 'systemBlocks'>,
+): Array<Anthropic.TextBlockParam> {
+  if (input.systemBlocks) {
+    const blocks: Array<Anthropic.TextBlockParam> = [
+      {
+        type: 'text',
+        text: input.systemBlocks.stable,
+        cache_control: { type: 'ephemeral' },
+      },
+    ];
+    if (input.systemBlocks.dynamic && input.systemBlocks.dynamic.length > 0) {
+      blocks.push({ type: 'text', text: input.systemBlocks.dynamic });
+    }
+    return blocks;
+  }
+  // Legacy single-block path.
+  return [
+    {
+      type: 'text',
+      text: input.systemPrompt ?? '',
+      cache_control: { type: 'ephemeral' },
+    },
+  ];
+}
+
+/**
+ * S17 — cache the tool catalog. Anthropic caches everything before the
+ * cache_control marker, so we only need to mark the last tool. Returns a
+ * new array (no mutation of caller's tools).
+ */
+function withCachedTools(tools: Anthropic.Tool[]): Anthropic.Tool[] {
+  if (tools.length === 0) return tools;
+  const next = tools.slice();
+  const last = next[next.length - 1];
+  next[next.length - 1] = {
+    ...last,
+    cache_control: { type: 'ephemeral' },
+  } as Anthropic.Tool;
+  return next;
+}
+
 export function buildAnthropicCreateParams(
   input: BuildCoachParamsInput,
 ): Anthropic.MessageCreateParamsStreaming {
-  const { tier, systemPrompt, messages, tools, intent = 'chat', modelOverride } = input;
+  const { tier, messages, tools, intent = 'chat', modelOverride } = input;
   const params: Anthropic.MessageCreateParamsStreaming = {
     model: modelOverride ?? selectModelForIntent(tier, intent),
     max_tokens: maxTokensFor(tier, intent),
     thinking: selectThinkingBudget(tier, intent),
-    system: [
-      {
-        type: 'text',
-        text: systemPrompt,
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
+    system: buildSystemBlocks(input),
     messages: [...messages],
     stream: true,
   };
   if (tools && tools.length > 0) {
-    params.tools = tools;
+    params.tools = withCachedTools(tools);
   }
   return params;
 }
 
 export interface StreamCoachReplyInput {
   tier: CoachTier;
-  systemPrompt: string;
+  /** Legacy single-string prompt. */
+  systemPrompt?: string;
+  /** S17 — preferred. Two-block system (stable cached + dynamic uncached). */
+  systemBlocks?: SystemPromptBlocks;
   messages: Anthropic.MessageParam[];
+  tools?: Anthropic.Tool[];
+  intent?: CoachIntent;
+  modelOverride?: string;
   anthropic: Anthropic;
 }
 

@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/utils/authHelper';
 import {
   buildProfileSnapshot,
-  buildSystemPrompt,
+  buildSystemPromptParts,
   generateConversationTitle,
   type CoachProfileInput,
 } from '@/services/coachPromptService';
@@ -471,7 +471,10 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       memoriesForPrompt = [];
     }
   }
-  const systemPrompt = buildSystemPrompt(snapshot, {
+  // S17 — split system prompt for prompt caching. The persona is byte-stable
+  // across calls (cache_control: ephemeral), the profile + memories blob is
+  // per-call and stays uncached so we don't churn the cache on every turn.
+  const systemBlocks = buildSystemPromptParts(snapshot, {
     memories: memoriesForPrompt.length > 0 ? memoriesForPrompt : undefined,
   });
 
@@ -539,7 +542,7 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
     for (let iter = 0; iter < MAX_TOOL_USE_ITERATIONS; iter += 1) {
       const params = buildAnthropicCreateParams({
         tier: effectiveTier,
-        systemPrompt,
+        systemBlocks,
         messages: conversationMessages,
         tools: coachToolDefinitions,
         intent,
