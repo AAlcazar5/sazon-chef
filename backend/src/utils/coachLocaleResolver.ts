@@ -56,10 +56,22 @@ export interface ResolveLocaleInput {
   acceptLanguageHeader: string | undefined | null;
   /** Read the user's persisted locale (or null if not set). Injected for testability. */
   readUserLocale: (userId: string) => Promise<string | null>;
+  /**
+   * Optional callback fired when the resolver auto-detects a non-English
+   * locale from the Accept-Language header AND the User.locale is currently
+   * null. Caller is expected to write the value to the User row so subsequent
+   * turns skip header parsing. Errors are swallowed (fire-and-forget — never
+   * blocks the turn).
+   */
+  onAutoDetected?: (userId: string, locale: CoachLocale) => Promise<void> | void;
 }
 
 /**
- * Resolve the locale for a coach turn. Walks the priority chain.
+ * Resolve the locale for a coach turn. Uses the user's TOP Accept-Language
+ * tag (highest q-value) as the signal — not the whole chain. This matches
+ * "your device's primary language wins" semantics: a user with
+ * `Accept-Language: en;q=1, es-MX;q=0.5` is fundamentally English-primary
+ * even though they also speak Spanish.
  */
 export async function resolveLocaleForRequest(
   input: ResolveLocaleInput,
@@ -70,14 +82,31 @@ export async function resolveLocaleForRequest(
     const resolved = resolveCoachLocale(persisted);
     if (resolved !== 'en' || persisted === 'en') return resolved;
     // Persisted value was unknown (resolved to en but wasn't en); fall through
-    // to the header so we can recover. Persist auto-detection is a separate
-    // concern for the caller.
+    // to the header so we can recover. Don't fire auto-detect — the user
+    // already had a (now-broken) preference, not a clean slate.
   }
-  // 2. Accept-Language chain
+  // 2. Accept-Language top-tag
   const tags = parseAcceptLanguage(input.acceptLanguageHeader);
-  for (const tag of tags) {
-    const resolved = resolveCoachLocale(tag);
-    if (resolved !== 'en') return resolved;
+  if (tags.length > 0) {
+    const top = tags[0];
+    const resolved = resolveCoachLocale(top);
+    if (resolved !== 'en') {
+      // Auto-persist on first detection — only when User.locale was null.
+      if (input.onAutoDetected && persisted == null) {
+        try {
+          const maybePromise = input.onAutoDetected(input.userId, resolved);
+          if (maybePromise && typeof (maybePromise as Promise<void>).then === 'function') {
+            (maybePromise as Promise<void>).catch(() => {
+              // Swallow — auto-persist failure is non-blocking. Next turn will
+              // re-detect from the header.
+            });
+          }
+        } catch {
+          // sync throw — also swallow.
+        }
+      }
+      return resolved;
+    }
   }
   // 3. English fallback
   return 'en';
@@ -97,11 +126,11 @@ function shouldPersistAutoDetected(
 ): CoachLocale | null {
   if (currentLocale != null) return null;
   const tags = parseAcceptLanguage(acceptLanguage);
-  for (const tag of tags) {
-    const resolved = resolveCoachLocale(tag);
-    if (resolved !== 'en') return resolved;
-  }
-  return null;
+  if (tags.length === 0) return null;
+  // Top-tag semantics: the user's primary language is the signal. A device
+  // configured "English primary, Spanish fallback" stays English.
+  const resolved = resolveCoachLocale(tags[0]);
+  return resolved !== 'en' ? resolved : null;
 }
 
 export const __INTERNALS = { shouldPersistAutoDetected };

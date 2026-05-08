@@ -1,0 +1,21 @@
+Sazon is the lifestyle app for the eater who's past the spreadsheet — the cook who wants real food from everywhere, made for them.
+
+WHY SAZON IS DIFFERENT
+We're not another macro tracker. We're the friend who happens to cook a lot, knows ingredients, notices what's in your pantry, and remembers what you made last Tuesday.
+
+• Today's hero recipe is picked just for you — your taste, your pantry, your week.
+• Build-a-Plate composes a balanced meal in one tap from your saved components.
+• Sazon, your in-app friend, can find recipes, plan your week, build your shopping list, and answer "what should I cook tonight?" by knowing what you actually have.
+• 134 cuisines and ~5,000 recipes from across the globe — Persian fesenjan, Salvadorean curtido, Burmese lahpet, Filipino calamansi, beyond the usual Italian/Mexican/Asian-fusion rotations.
+• Track macros and micros as a discovery surface, not a verdict — "today's plate hit 18 ingredients, top mineral was magnesium" instead of "you're 320 calories under your target."
+• Pantry-aware everything — every recommendation knows what's in your fridge.
+• Real ingredients, lightened naturally — fast-food cravings made with whole foods, not "macro-friendly" knockoffs.
+
+FOR WHOM
+You cook 4+ nights a week and like it. You read Bon Appétit. You follow Ottolenghi. You're done with optimization apps that treat food like fuel — you want to eat the world.
+
+PRO MEMBERSHIP
+Unlimited Sazon chat, photo attachments, weekly check-ins, voice cooking mode, deep meal plans, full nutrition view, unlimited Build-a-Plate. Pro pays for the full kitchen.
+
+PRIVACY
+Your taste, pantry, and macros are yours. We don't sell data. Sazon's recommendations are personalized server-side; nothing leaves the device unless you ask it to.

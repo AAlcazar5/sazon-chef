@@ -119,4 +119,78 @@ describe('__INTERNALS — auto-detect signal', () => {
     ).toBeNull();
     expect(__INTERNALS.shouldPersistAutoDetected(null, undefined)).toBeNull();
   });
+
+  it('shouldPersistAutoDetected returns the resolved BCP 47 tag (not the raw header value)', () => {
+    // Unknown region es-VE walks the chain → resolves to base 'es'.
+    expect(__INTERNALS.shouldPersistAutoDetected(null, 'es-VE,es;q=0.9')).toBe(
+      'es',
+    );
+  });
+
+  it('shouldPersistAutoDetected respects q-value ordering', () => {
+    // First entry has q=0.5; en has q=1.0 by default. en wins → no persist.
+    expect(
+      __INTERNALS.shouldPersistAutoDetected(null, 'es-MX;q=0.5,en'),
+    ).toBeNull();
+    // Now flip — Spanish has higher q, should win.
+    expect(
+      __INTERNALS.shouldPersistAutoDetected(null, 'en;q=0.5,es-MX'),
+    ).toBe('es-MX');
+  });
+});
+
+describe('resolveLocaleForRequest — auto-persist side effect', () => {
+  it('invokes onAutoDetected with the resolved locale when User.locale is null + header detects', async () => {
+    const onAutoDetected = jest.fn();
+    await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'es-AR,es;q=0.9',
+      readUserLocale: async () => null,
+      onAutoDetected,
+    });
+    expect(onAutoDetected).toHaveBeenCalledWith('u1', 'es-AR');
+  });
+
+  it('does NOT invoke onAutoDetected when User.locale is already set', async () => {
+    const onAutoDetected = jest.fn();
+    await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'es-AR',
+      readUserLocale: async () => 'es-MX',
+      onAutoDetected,
+    });
+    expect(onAutoDetected).not.toHaveBeenCalled();
+  });
+
+  it('does NOT invoke onAutoDetected when header is English-only', async () => {
+    const onAutoDetected = jest.fn();
+    await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'en-US,en;q=0.9',
+      readUserLocale: async () => null,
+      onAutoDetected,
+    });
+    expect(onAutoDetected).not.toHaveBeenCalled();
+  });
+
+  it('still resolves correctly even when onAutoDetected is omitted (backward-compat)', async () => {
+    const out = await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'es-MX',
+      readUserLocale: async () => null,
+    });
+    expect(out).toBe('es-MX');
+  });
+
+  it('does not surface errors from onAutoDetected (fire-and-forget)', async () => {
+    const onAutoDetected = jest.fn().mockRejectedValue(new Error('db down'));
+    // Should not throw.
+    const out = await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'es-MX',
+      readUserLocale: async () => null,
+      onAutoDetected,
+    });
+    expect(out).toBe('es-MX');
+  });
 });

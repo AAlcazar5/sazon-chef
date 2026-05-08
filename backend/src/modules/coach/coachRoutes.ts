@@ -495,7 +495,8 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
   // i18n — resolve the user's locale (User.locale → Accept-Language → 'en').
   // Auto-detect: if User.locale is null and the device sends a Spanish
   // Accept-Language header, persist the detected locale on the row so
-  // subsequent turns skip header parsing.
+  // subsequent turns skip header parsing. Fire-and-forget — the resolver
+  // swallows write failures so a flaky DB never blocks a coach turn.
   const acceptLanguage = req.headers['accept-language'] as string | undefined;
   const locale = await resolveLocaleForRequest({
     userId,
@@ -506,6 +507,12 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         select: { locale: true },
       })) as { locale: string | null } | null;
       return u?.locale ?? null;
+    },
+    onAutoDetected: async (uid, detected) => {
+      await prisma.user.update({
+        where: { id: uid },
+        data: { locale: detected },
+      });
     },
   });
 
