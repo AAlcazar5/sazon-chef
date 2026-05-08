@@ -3,6 +3,7 @@
 
 export { default as ProfileHeader } from './ProfileHeader';
 export { default as AppearanceSection } from './AppearanceSection';
+export { default as LanguageSection } from './LanguageSection';
 export { default as ProfileCompletionCard } from './ProfileCompletionCard';
 export { default as PhysicalProfileCard } from './PhysicalProfileCard';
 export { default as WeightHistoryCard } from './WeightHistoryCard';

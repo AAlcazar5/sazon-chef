@@ -102,6 +102,16 @@
   "home.search.searching": "Buscando…",
 
   "common.delete": "Eliminar",
+  "common.expand": "Expandir",
+  "common.collapse": "Contraer",
+  "common.saving": "Guardando…",
+  "common.selected": "Seleccionado",
+
+  "language.title": "Idioma",
+  "language.toggle": "Ajustes de idioma",
+  "language.description": "Anula el idioma del dispositivo para la app y la voz de Sazon.",
+  "language.error.title": "No se pudo cambiar el idioma",
+  "language.error.body": "Inténtalo de nuevo en un momento.",
 
   "kitchen.journey.empty": "Empieza a cocinar y tu mapa se irá completando.",
   "kitchen.journey.cuisineMap": "MAPA DE COCINAS",

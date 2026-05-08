@@ -4,6 +4,7 @@ import { authenticateToken } from '../auth/authMiddleware';
 import { userPresetController } from './userPresetController';
 import { userPreferencesRoutes } from './userPreferencesRoutes';
 import { tonightModeRouter } from './userTonightModeRoutes';
+import { userLocaleRouter } from './userLocaleRoutes';
 
 const router = Router();
 
@@ -15,6 +16,9 @@ router.use(userPreferencesRoutes);
 
 // ROADMAP 4.0 T0.1: Tonight Mode toggle (gated by SAZON_TONIGHT_MODE env flag).
 router.use(tonightModeRouter);
+
+// ROADMAP 4.0 i18n-OPS4.1: PATCH /user/locale override.
+router.use(userLocaleRouter);
 
 // User profile routes
 router.get('/profile', userController.getProfile);

@@ -20,6 +20,7 @@ import {
   ProfileHeader,
   ProfileStatWidgets,
   AppearanceSection,
+  LanguageSection,
   ProfileCompletionCard,
   PhysicalProfileCard,
   WeightHistoryCard,
@@ -189,6 +190,10 @@ export default function ProfileScreen() {
 
         <StaggerItem index={1}>
           <AppearanceSection />
+        </StaggerItem>
+
+        <StaggerItem index={2}>
+          <LanguageSection />
         </StaggerItem>
 
         <StaggerItem index={2}>

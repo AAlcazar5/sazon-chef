@@ -94,5 +94,16 @@
   "home.noResults.relaxFilters.description": "Seus filtros ativos podem estar limitando demais os resultados.",
   "home.noResults.clearFilters": "Limpar todos os filtros",
   "home.noResults.generate": "Gerar uma receita",
-  "home.noResults.clearSearch": "Limpar busca"
+  "home.noResults.clearSearch": "Limpar busca",
+
+  "common.expand": "Expandir",
+  "common.collapse": "Recolher",
+  "common.saving": "Salvando…",
+  "common.selected": "Selecionado",
+
+  "language.title": "Idioma",
+  "language.toggle": "Configurações de idioma",
+  "language.description": "Substitua o idioma do dispositivo para o app e a voz do Sazon.",
+  "language.error.title": "Não foi possível mudar o idioma",
+  "language.error.body": "Tente de novo em um instante."
 }

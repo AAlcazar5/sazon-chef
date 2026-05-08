@@ -102,6 +102,16 @@
   "home.search.searching": "Searching…",
 
   "common.delete": "Delete",
+  "common.expand": "Expand",
+  "common.collapse": "Collapse",
+  "common.saving": "Saving…",
+  "common.selected": "Selected",
+
+  "language.title": "Language",
+  "language.toggle": "Language settings",
+  "language.description": "Override your device language for the app and Sazon's voice.",
+  "language.error.title": "Couldn't change language",
+  "language.error.body": "Try again in a sec.",
 
   "kitchen.journey.empty": "Start cooking and your map will fill in.",
   "kitchen.journey.cuisineMap": "CUISINE MAP",

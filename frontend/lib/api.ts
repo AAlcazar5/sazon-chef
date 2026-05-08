@@ -1192,6 +1192,11 @@ export const userApi = {
     return apiClient.patch('/user/preferences/weekly-checkin', patch);
   },
 
+  // ROADMAP 4.0 i18n-OPS4.1: locale override (en, es, es-MX/AR/CO/ES/419, pt, pt-BR/PT).
+  updateLocale: (locale: string) => {
+    return apiClient.patch('/user/locale', { locale });
+  },
+
   // Superfood preferences
   getPreferredSuperfoods: () => {
     return apiClient.get('/user/superfoods');
