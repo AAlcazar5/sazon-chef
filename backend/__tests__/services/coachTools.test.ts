@@ -336,6 +336,7 @@ describe('runCoachTool: find_recipes', () => {
       input: {
         cuisines: ['Mediterranean', 'Greek'],
         maxPrepMinutes: 30,
+        verbose: true, // $$4.1 — opt back into the personalization envelope
       },
       tier: 'free',
     });
@@ -364,7 +365,7 @@ describe('runCoachTool: find_recipes', () => {
         }),
       }),
     );
-    // All returned items carry the personalization envelope
+    // All returned items carry the personalization envelope (verbose:true)
     for (const rec of r.recipes) {
       expect(rec.personalization.pantryCoverage).toBeGreaterThanOrEqual(0);
       expect(rec.personalization.pantryCoverage).toBeLessThanOrEqual(1);
@@ -376,6 +377,98 @@ describe('runCoachTool: find_recipes', () => {
     // Mediterranean recipe has full pantry coverage
     const med = r.recipes.find((x) => x.id === 'r1');
     expect(med?.personalization.pantryCoverage).toBe(1);
+  });
+
+  // ─── $$4.1 — lean default ─────────────────────────────────────────────
+  it('$$4.1: defaults to top-3 lean rows (no personalization envelope)', async () => {
+    const recipes = Array.from({ length: 8 }, (_, i) => ({
+      ...baseRecipe,
+      id: `r${i}`,
+      title: `Recipe ${i}`,
+    }));
+    mockRecipeFindMany.mockResolvedValue(recipes);
+    mockUserPreferencesFindUnique.mockResolvedValue(null);
+    mockMacroGoalsFindUnique.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'find_recipes',
+      input: {},
+      tier: 'free',
+    });
+    const r = result as {
+      recipes: Array<Record<string, unknown>>;
+    };
+    expect(r.recipes).toHaveLength(3);
+    for (const row of r.recipes) {
+      expect(row).toEqual(
+        expect.objectContaining({ id: expect.any(String), title: expect.any(String) }),
+      );
+      expect(row.personalization).toBeUndefined();
+      expect(row.protein).toBeUndefined();
+      expect(row.imageUrl).toBeUndefined();
+    }
+  });
+
+  it('$$4.1: count parameter overrides default (capped at MAX_COUNT=12)', async () => {
+    const recipes = Array.from({ length: 20 }, (_, i) => ({
+      ...baseRecipe,
+      id: `r${i}`,
+    }));
+    mockRecipeFindMany.mockResolvedValue(recipes);
+    mockUserPreferencesFindUnique.mockResolvedValue(null);
+    mockMacroGoalsFindUnique.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'find_recipes',
+      input: { count: 999 },
+      tier: 'free',
+    });
+    const r = result as { recipes: unknown[] };
+    expect(r.recipes).toHaveLength(12);
+  });
+
+  // ─── $$4.2 — universal result size cap ───────────────────────────────
+  it('$$4.2: caps oversized list-shaped results with truncated:true + totalCount', async () => {
+    // Pad each row's title so the list comfortably exceeds 4096 bytes when
+    // verbose envelope is included.
+    const recipes = Array.from({ length: 30 }, (_, i) => ({
+      ...baseRecipe,
+      id: `r${i}`,
+      title: `Recipe ${i} — ${'lorem ipsum dolor sit amet '.repeat(8)}`,
+    }));
+    mockRecipeFindMany.mockResolvedValue(recipes);
+    mockUserPreferencesFindUnique.mockResolvedValue(null);
+    mockMacroGoalsFindUnique.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'find_recipes',
+      input: { verbose: true, count: 12 },
+      tier: 'free',
+    });
+    const r = result as {
+      recipes: unknown[];
+      truncated?: boolean;
+      totalCount?: number;
+    };
+    expect(r.truncated).toBe(true);
+    expect(r.totalCount).toBe(12);
+    expect(r.recipes.length).toBeLessThan(12);
+    // Ensure the trimmed payload actually fits the cap.
+    expect(JSON.stringify(r).length).toBeLessThanOrEqual(4096);
+  });
+
+  it('$$4.2: under-cap results pass through unchanged (no truncated flag)', async () => {
+    mockRecipeFindMany.mockResolvedValue([{ ...baseRecipe, id: 'r1' }]);
+    mockUserPreferencesFindUnique.mockResolvedValue(null);
+    mockMacroGoalsFindUnique.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'find_recipes',
+      input: {},
+      tier: 'free',
+    });
+    const r = result as { truncated?: boolean };
+    expect(r.truncated).toBeUndefined();
   });
 
   it('returns empty list when no recipes match filters', async () => {

@@ -82,7 +82,7 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'find_recipes',
     description:
-      "Personalized recipe list ranked for this user (70/30 macro/taste + pantry coverage + cuisine adjacency). Every row carries pantryCoverage / macroFit / affinityScore. Pass forHouseholdMemberId to rank for that household member instead of the account holder.",
+      "Personalized recipe list ranked for this user (70/30 macro/taste + pantry coverage + cuisine adjacency). Defaults to top-3 with lean fields {id, title, cuisine, cookTime, calories}. Pass verbose:true to recover the full personalization envelope (pantryCoverage, macroFit, affinityScore + macros). Pass count to override (max 12). Pass forHouseholdMemberId to rank for that household member.",
     input_schema: {
       type: 'object',
       properties: {
@@ -91,6 +91,8 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
         minProtein: { type: 'number' },
         maxCalories: { type: 'number' },
         forHouseholdMemberId: { type: 'string' },
+        verbose: { type: 'boolean' },
+        count: { type: 'number' },
       },
     },
   },
@@ -449,15 +451,58 @@ function rankRecipes(
     .sort((a, b) => b.personalization.affinityScore - a.personalization.affinityScore);
 }
 
+// Tier $$ — $$4.1: lean default vs verbose payload for find_recipes.
+const FIND_RECIPES_DEFAULT_COUNT = 3;
+const FIND_RECIPES_MAX_COUNT = 12;
+
+interface FindRecipesInput {
+  cuisines?: string[];
+  maxPrepMinutes?: number;
+  minProtein?: number;
+  maxCalories?: number;
+  forHouseholdMemberId?: string;
+  /** $$4.1 — return the full personalization envelope. Default off. */
+  verbose?: boolean;
+  /** $$4.1 — caller-overridable count cap (1..FIND_RECIPES_MAX_COUNT). */
+  count?: number;
+}
+
+interface RankedRow {
+  id: string;
+  title: string;
+  cuisine: string;
+  cookTime: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  imageUrl: string | null;
+  personalization: {
+    pantryCoverage: number;
+    macroFit: 'green' | 'amber' | 'red';
+    affinityScore: number;
+  };
+}
+
+function leanRow(r: RankedRow): {
+  id: string;
+  title: string;
+  cuisine: string;
+  cookTime: number;
+  calories: number;
+} {
+  return {
+    id: r.id,
+    title: r.title,
+    cuisine: r.cuisine,
+    cookTime: r.cookTime,
+    calories: r.calories,
+  };
+}
+
 async function runFindRecipes(
   userId: string,
-  input: {
-    cuisines?: string[];
-    maxPrepMinutes?: number;
-    minProtein?: number;
-    maxCalories?: number;
-    forHouseholdMemberId?: string;
-  },
+  input: FindRecipesInput,
 ): Promise<unknown> {
   const { pantryNames, prefs, macroGoals, remaining } =
     await loadUserContext(userId);
@@ -504,8 +549,16 @@ async function runFindRecipes(
     pantryNames,
     remaining,
     memberAffinityNames,
-  );
-  return { recipes: ranked.slice(0, 8), filteredForAllergens };
+  ) as unknown as RankedRow[];
+
+  // $$4.1: clamp count, default lean shape unless verbose:true.
+  const requested =
+    typeof input.count === 'number' && input.count > 0
+      ? Math.min(input.count, FIND_RECIPES_MAX_COUNT)
+      : FIND_RECIPES_DEFAULT_COUNT;
+  const top = ranked.slice(0, requested);
+  const recipesOut = input.verbose === true ? top : top.map(leanRow);
+  return { recipes: recipesOut, filteredForAllergens };
 }
 
 // ─── Tier S S4.1: find_recipes_smart via TB1 retrieval ──────────────────
@@ -1606,15 +1659,7 @@ async function dispatchTool(
     case 'get_today_remaining_macros':
       return runGetTodayRemainingMacros(userId);
     case 'find_recipes':
-      return runFindRecipes(
-        userId,
-        (input ?? {}) as {
-          cuisines?: string[];
-          maxPrepMinutes?: number;
-          minProtein?: number;
-          maxCalories?: number;
-        },
-      );
+      return runFindRecipes(userId, (input ?? {}) as FindRecipesInput);
     case 'find_recipes_smart':
       return runFindRecipesSmart(
         userId,
@@ -1656,7 +1701,8 @@ export async function runCoachTool(
     throw new Error(`Unknown coach tool: ${args.name}`);
   }
 
-  const result = await dispatchTool(args);
+  const raw = await dispatchTool(args);
+  const result = capToolResultSize(raw);
   const errorCode = extractErrorCode(result);
   emitAnalytics('coach_tool_call', {
     userId: args.userId,
@@ -1666,6 +1712,56 @@ export async function runCoachTool(
     ...(errorCode !== undefined ? { errorCode } : {}),
   });
   return { result };
+}
+
+// Tier $$ — $$4.2 — universal tool-result size cap.
+//
+// A runaway tool result (e.g. `get_meal_plan` for a user with 21 slots × full
+// recipe payload, or `get_shopping_list` for 80+ items) can blow through the
+// inner-iteration input cap and force the model into a low-quality reply.
+// Soft-cap at 4096 bytes serialized; if the cap fires, return the first N
+// items + `truncated:true` + `totalCount` so the model knows there's more.
+const TOOL_RESULT_BYTE_CAP = 4096;
+export const __$$4_2 = { TOOL_RESULT_BYTE_CAP } as const;
+
+interface MaybeListResult {
+  [key: string]: unknown;
+}
+
+function capToolResultSize(raw: unknown): unknown {
+  if (raw == null || typeof raw !== 'object') return raw;
+  const serialized = JSON.stringify(raw);
+  if (serialized.length <= TOOL_RESULT_BYTE_CAP) return raw;
+
+  // Find the first array-valued field that's contributing to bloat and trim it.
+  // Most tool results expose their list at one of these conventional keys:
+  // recipes / items / slots / rows / messages.
+  const obj = raw as MaybeListResult;
+  const listKey = ['recipes', 'items', 'slots', 'rows', 'messages'].find(
+    (k) => Array.isArray(obj[k]),
+  );
+  if (!listKey) {
+    // Non-list-shaped result over the cap — return a marker so the model
+    // knows the result was too big to inline.
+    return {
+      truncated: true,
+      reason: 'oversize_non_list_result',
+      bytesSerialized: serialized.length,
+      hint: 'Result was too large to include verbatim. Re-run with tighter filters.',
+    };
+  }
+  const list = obj[listKey] as unknown[];
+  // Binary-narrow until we fit. Cheap upper-bound: keep ~half each round.
+  let kept = list.slice();
+  while (kept.length > 1) {
+    const candidate = { ...obj, [listKey]: kept, truncated: true, totalCount: list.length };
+    if (JSON.stringify(candidate).length <= TOOL_RESULT_BYTE_CAP) {
+      return candidate;
+    }
+    kept = kept.slice(0, Math.max(1, Math.floor(kept.length / 2)));
+  }
+  // Worst case: a single row is itself too big — keep it but flag.
+  return { ...obj, [listKey]: kept, truncated: true, totalCount: list.length };
 }
 
 // ─── Phase 4 hardening: shared profile snapshot loader ───────────────────

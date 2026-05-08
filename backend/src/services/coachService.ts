@@ -5,7 +5,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 export type CoachTier = 'free' | 'premium';
-export type CoachIntent = 'chat' | 'deep_plan';
+// Tier $$ — $$3.1 — 'lookup' for pure data-fetch queries that need no
+// reasoning ("what's on my plan", "what am I allergic to"). Pro tier
+// disables the thinking budget entirely on lookup intent.
+export type CoachIntent = 'chat' | 'deep_plan' | 'lookup';
 
 interface CoachTierUserShape {
   subscriptionTier?: string | null;
@@ -38,6 +41,12 @@ export const COACH_MODELS = {
 const MAX_TOKENS_FREE = 1024;
 const MAX_TOKENS_PREMIUM = 4096;
 const MAX_TOKENS_PREMIUM_DEEP = 12000;
+// Tier $$ — $$3.2 — inner-loop iteration cap. When the model is mid-tool-use
+// sequence (not the final iteration), it tends to emit either (a) a short ack
+// + another tool_use block, or (b) a concise post-tool answer. 512 tokens is
+// safe headroom for both without risking truncation of a real conversational
+// reply. Still well below the full 1024 (free) / 4096 (premium chat) ceiling.
+const INNER_LOOP_MAX_TOKENS = 512;
 // S17c — thinking budgets dialed down. Extended thinking tokens ARE billed at
 // output rate; 8k of thinking on Sonnet was ~$0.12 per Pro chat call. 2k still
 // gives the model meaningful internal reasoning room without runaway spend.
@@ -68,6 +77,9 @@ export function selectThinkingBudget(
   intent: CoachIntent = 'chat',
 ): ThinkingBudget {
   if (tier !== 'premium') return { type: 'disabled' };
+  // Tier $$ — $$3.1: pure-lookup turns don't benefit from extended thinking.
+  // Disabling on lookup saves ~75% of the per-call thinking spend.
+  if (intent === 'lookup') return { type: 'disabled' };
   return {
     type: 'enabled',
     budget_tokens:
@@ -113,6 +125,12 @@ export interface BuildCoachParamsInput {
   tools?: Anthropic.Tool[];
   intent?: CoachIntent;
   modelOverride?: string;
+  /**
+   * Tier $$ — $$3.2. When true, max_tokens is forced to INNER_LOOP_MAX_TOKENS
+   * (96). The agent loop sets this on every iteration except the FINAL one so
+   * the model doesn't emit a long acknowledgment between tool calls.
+   */
+  innerToolIteration?: boolean;
 }
 
 function buildSystemBlocks(
@@ -160,11 +178,20 @@ function withCachedTools(tools: Anthropic.Tool[]): Anthropic.Tool[] {
 export function buildAnthropicCreateParams(
   input: BuildCoachParamsInput,
 ): Anthropic.MessageCreateParamsStreaming {
-  const { tier, messages, tools, intent = 'chat', modelOverride } = input;
+  const { tier, messages, tools, intent = 'chat', modelOverride, innerToolIteration } = input;
+  const max_tokens = innerToolIteration
+    ? INNER_LOOP_MAX_TOKENS
+    : maxTokensFor(tier, intent);
+  // Tier $$ — $$3.2: disable thinking on inner iterations. Anthropic requires
+  // max_tokens > thinking.budget_tokens, and a 96-token output cap with a
+  // 2000-token thinking budget would fail validation.
+  const thinking = innerToolIteration
+    ? ({ type: 'disabled' } as ThinkingBudget)
+    : selectThinkingBudget(tier, intent);
   const params: Anthropic.MessageCreateParamsStreaming = {
     model: modelOverride ?? selectModelForIntent(tier, intent),
-    max_tokens: maxTokensFor(tier, intent),
-    thinking: selectThinkingBudget(tier, intent),
+    max_tokens,
+    thinking,
     system: buildSystemBlocks(input),
     messages: [...messages],
     stream: true,

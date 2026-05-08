@@ -37,6 +37,8 @@ import {
 import { COACH_PAYWALL_COPY, requireCoachPro } from '@/middleware/requireCoachPro';
 import { coachMessageLimiter } from '@/middleware/rateLimiter';
 import { emit as emitAnalytics } from '@/services/coachAnalytics';
+import { recordTurnCacheUsage } from '@/services/coachCacheHealth';
+import { loadConversationHistory } from '@/services/coachHistoryService';
 import {
   identifyPantryFromImage,
   CoachVisionError,
@@ -410,6 +412,14 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
     return;
   }
 
+  // Tier $$ — $$1.1 + $$1.2: load prior turns BEFORE persisting the new user
+  // message so the loaded history excludes the message we're about to send.
+  // Service caps to MAX_HISTORY_TURNS, marks the cached prefix with
+  // cache_control, and prepends a synthetic summary if the budget overflowed.
+  const priorHistory = await loadConversationHistory({ conversationId }).catch(
+    () => ({ messages: [] as Anthropic.MessageParam[], summarized: false }),
+  );
+
   // Persist sanitized attachment record on the user message (no raw base64).
   const userAttachmentsJson =
     validated.length > 0
@@ -530,7 +540,11 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       validated.length > 0
         ? buildUserMessageContent(sanitizedMessage, validated)
         : sanitizedMessage;
+    // $$1.1 — prepend prior turns. The cached prefix has cache_control on its
+    // last block; the live tail (last 2 turns) stays uncached. New user
+    // message goes at the end and is never cached (always fresh input).
     const conversationMessages: Anthropic.MessageParam[] = [
+      ...priorHistory.messages,
       { role: 'user', content: userContent },
     ];
 
@@ -544,6 +558,14 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
     };
 
     for (let iter = 0; iter < MAX_TOOL_USE_ITERATIONS; iter += 1) {
+      // Tier $$ — $$3.2: inner-loop output cap. The first iteration always
+      // gets the full max_tokens (the model may answer directly without
+      // tool use). Subsequent iterations are post-tool-execution re-calls;
+      // those are usually short ("calling next tool…" or final answer). We
+      // still leave the LAST possible iteration uncapped so the model has
+      // headroom for a final answer. Net: caps iterations 1..MAX-2.
+      const innerToolIteration =
+        iter > 0 && iter < MAX_TOOL_USE_ITERATIONS - 1;
       const params = buildAnthropicCreateParams({
         tier: effectiveTier,
         systemBlocks,
@@ -551,6 +573,7 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         tools: coachToolDefinitions,
         intent,
         modelOverride,
+        innerToolIteration,
       });
       const stream = anthropic.messages.stream(params);
 
@@ -713,6 +736,13 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       model: lastModel,
       promptTokens: totalUsage.input_tokens,
       completionTokens: totalUsage.output_tokens,
+      cacheReadTokens: totalUsage.cache_read_input_tokens,
+      cacheWriteTokens: totalUsage.cache_creation_input_tokens,
+    });
+    // Tier $$ — $$5.1: track cache health per conversation. Warns once when
+    // 3+ consecutive turns show cacheReadTokens=0 (silent S17 regression).
+    recordTurnCacheUsage({
+      conversationId,
       cacheReadTokens: totalUsage.cache_read_input_tokens,
       cacheWriteTokens: totalUsage.cache_creation_input_tokens,
     });

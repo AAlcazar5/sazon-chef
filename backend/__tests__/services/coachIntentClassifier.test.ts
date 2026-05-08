@@ -58,4 +58,42 @@ describe('classifyCoachIntent', () => {
     expect(classifyCoachIntent('   ')).toBe('chat');
     expect(classifyCoachIntent(undefined as unknown as string)).toBe('chat');
   });
+
+  // ─── $$3.1 — lookup intent ─────────────────────────────────────────────
+  describe('$$3.1 — classifies lookup queries', () => {
+    const lookupCases: ReadonlyArray<string> = [
+      "what's on my plan this week",
+      'what is on my shopping list',
+      "what's in my pantry",
+      'what do I have in the fridge',
+      'what did I cook last week',
+      'do I have any rice left',
+      'do I need eggs',
+      'show me my pantry',
+      'show my shopping list',
+      'what am I allergic to',
+      "what's my macro goals",
+      'when did I last cook persian',
+    ];
+    for (const text of lookupCases) {
+      it(`classifies "${text}" as lookup`, () => {
+        expect(classifyCoachIntent(text)).toBe('lookup');
+      });
+    }
+  });
+
+  it('$$3.1: deep_plan wins over lookup when both could match', () => {
+    expect(classifyCoachIntent('plan my week with what is on my pantry')).toBe(
+      'deep_plan',
+    );
+  });
+
+  it('$$3.1: ambiguous "what should I cook" stays as chat (needs reasoning)', () => {
+    expect(classifyCoachIntent('what should I cook tonight')).toBe('chat');
+    expect(classifyCoachIntent('what would be good for dinner')).toBe('chat');
+  });
+
+  it('$$3.1: "is this safe for a peanut allergy" stays chat (reasoning, not lookup)', () => {
+    expect(classifyCoachIntent('is this safe for a peanut allergy')).toBe('chat');
+  });
 });

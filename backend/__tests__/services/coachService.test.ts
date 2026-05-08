@@ -65,6 +65,55 @@ describe('selectThinkingBudget by tier', () => {
       budget_tokens: 8000,
     });
   });
+
+  it('$$3.1: premium lookup intent disables thinking entirely (data fetch, no reasoning)', () => {
+    expect(selectThinkingBudget('premium', 'lookup')).toEqual({ type: 'disabled' });
+  });
+
+  it('$$3.1: free lookup also disabled (free is always disabled)', () => {
+    expect(selectThinkingBudget('free', 'lookup')).toEqual({ type: 'disabled' });
+  });
+});
+
+describe('$$3.2 — innerToolIteration cap', () => {
+  const systemPrompt = 'persona';
+  const messages = [{ role: 'user' as const, content: 'q' }];
+
+  it('caps max_tokens to 512 on inner iterations regardless of tier', () => {
+    const free = buildAnthropicCreateParams({
+      tier: 'free',
+      systemPrompt,
+      messages,
+      innerToolIteration: true,
+    });
+    expect(free.max_tokens).toBe(512);
+    const premium = buildAnthropicCreateParams({
+      tier: 'premium',
+      systemPrompt,
+      messages,
+      innerToolIteration: true,
+    });
+    expect(premium.max_tokens).toBe(512);
+  });
+
+  it('disables thinking on inner iterations (Anthropic requires max_tokens > thinking budget)', () => {
+    const params = buildAnthropicCreateParams({
+      tier: 'premium',
+      systemPrompt,
+      messages,
+      innerToolIteration: true,
+    });
+    expect(params.thinking).toEqual({ type: 'disabled' });
+  });
+
+  it('does NOT apply the inner cap when innerToolIteration is unset / false', () => {
+    const params = buildAnthropicCreateParams({
+      tier: 'free',
+      systemPrompt,
+      messages,
+    });
+    expect(params.max_tokens).toBe(1024); // tier cap, not inner cap
+  });
 });
 
 describe('buildAnthropicCreateParams', () => {
