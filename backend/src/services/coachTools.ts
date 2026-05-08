@@ -24,7 +24,15 @@ export type CoachToolName =
   | 'find_recipes_smart'
   | 'propose_tonight'
   | 'compose_plate'
-  | 'log_meal';
+  | 'log_meal'
+  // S16 — universal-agent expansion (4 read + 3 write tools).
+  | 'get_meal_plan'
+  | 'get_shopping_list'
+  | 'get_user_profile'
+  | 'get_recipe_detail'
+  | 'add_to_shopping_list'
+  | 'schedule_meal'
+  | 'generate_recipe';
 
 const READ_TOOL_NAMES: ReadonlySet<CoachToolName> = new Set([
   'search_cookbook',
@@ -33,11 +41,18 @@ const READ_TOOL_NAMES: ReadonlySet<CoachToolName> = new Set([
   'find_recipes',
   'find_recipes_smart',
   'propose_tonight',
+  'get_meal_plan',
+  'get_shopping_list',
+  'get_user_profile',
+  'get_recipe_detail',
 ]);
 
 const WRITE_TOOL_NAMES: ReadonlySet<CoachToolName> = new Set([
   'compose_plate',
   'log_meal',
+  'add_to_shopping_list',
+  'schedule_meal',
+  'generate_recipe',
 ]);
 
 export const coachToolDefinitions: Anthropic.Tool[] = [
@@ -169,6 +184,108 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
         eatenAt: { type: 'string' },
       },
       required: ['servings', 'mealType'],
+    },
+  },
+  // ─── S16 — universal-agent reads ─────────────────────────────────────────
+  {
+    name: 'get_meal_plan',
+    description:
+      "Return the user's active week meal plan with one row per (date, mealType) slot. Each row includes recipeId/title when assigned, or a custom-meal payload, or empty when unscheduled. Use when the user asks 'what's on my plan this week' or 'do I have something on Wednesday'.",
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_shopping_list',
+    description:
+      "Return the user's active shopping list — items grouped by category with purchased state, quantity, and recipe attribution. Use when the user asks 'what's on my shopping list' or 'do I need eggs'.",
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_user_profile',
+    description:
+      "Return the user's preference profile: allergies/banned ingredients, dietary restrictions, liked cuisines, skill tier, macro goals. Use when answering anything that depends on safety (allergens) or personalization (cuisine taste).",
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_recipe_detail',
+    description:
+      'Return a full recipe by id: ingredients, instructions, macros, cuisine, image, source. Use to walk the user through a recipe step-by-step in chat or to ground a swap suggestion.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        recipeId: { type: 'string', description: 'Recipe id from any prior tool result.' },
+      },
+      required: ['recipeId'],
+    },
+  },
+  // ─── S16 — universal-agent writes (Pro-only, explicit-confirm-only) ──────
+  {
+    name: 'add_to_shopping_list',
+    description:
+      "PRO-ONLY WRITE TOOL. Append items to the user's active shopping list. Only call after the user has explicitly confirmed in chat ('yes, add those'). Pass `items` as a list of {name, quantity?, category?}. Creates an active shopping list if none exists.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              quantity: { type: 'string' },
+              category: { type: 'string' },
+            },
+            required: ['name'],
+          },
+        },
+      },
+      required: ['items'],
+    },
+  },
+  {
+    name: 'schedule_meal',
+    description:
+      "PRO-ONLY WRITE TOOL. Drop a recipe into the user's active week plan at (date, mealType). Only call after the user has explicitly confirmed in chat. Date is ISO YYYY-MM-DD. mealType is breakfast|lunch|dinner|snack. Replaces any existing meal in that slot.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        recipeId: { type: 'string' },
+        date: { type: 'string', description: 'ISO YYYY-MM-DD.' },
+        mealType: {
+          type: 'string',
+          enum: ['breakfast', 'lunch', 'dinner', 'snack'],
+        },
+      },
+      required: ['recipeId', 'date', 'mealType'],
+    },
+  },
+  {
+    name: 'generate_recipe',
+    description:
+      "PRO-ONLY WRITE TOOL. Generate a brand-new AI recipe from a free-text brief and persist it to the user's cookbook. Runs the standard performSafetyChecks (allergen / banned-ingredient guard). Only call after the user has explicitly asked for a custom recipe or accepted a 'should I make one for you?' prompt.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        brief: {
+          type: 'string',
+          description: "Free-text description of what the user wants (e.g. 'a Persian fesenjan with mushrooms instead of walnuts, 30 min').",
+        },
+        mealType: {
+          type: 'string',
+          enum: ['breakfast', 'lunch', 'dinner', 'snack', 'dessert'],
+        },
+        cuisineOverride: { type: 'string' },
+        maxCookTime: { type: 'number' },
+      },
+      required: ['brief'],
     },
   },
 ];
@@ -1092,6 +1209,410 @@ async function runLogMeal(
   };
 }
 
+// ─── S16 — universal-agent read tools ───────────────────────────────────────
+
+interface MealPlanSlot {
+  id: string;
+  date: string;
+  mealType: string;
+  recipeId: string | null;
+  recipeTitle: string | null;
+  isCompleted: boolean;
+  customName: string | null;
+}
+
+async function runGetMealPlan(userId: string): Promise<unknown> {
+  const plan = (await prisma.mealPlan.findFirst({
+    where: { userId, isActive: true },
+    orderBy: { startDate: 'desc' },
+    include: {
+      meals: {
+        include: { recipe: { select: { id: true, title: true } } },
+        orderBy: [{ date: 'asc' }],
+      },
+    },
+  })) as null | {
+    id: string;
+    name: string | null;
+    startDate: Date;
+    endDate: Date;
+    meals: Array<{
+      id: string;
+      date: Date;
+      mealType: string;
+      recipeId: string | null;
+      recipe: { id: string; title: string } | null;
+      isCompleted: boolean;
+      customName: string | null;
+    }>;
+  };
+
+  if (!plan) {
+    return { plan: null, slots: [] as MealPlanSlot[] };
+  }
+  const slots: MealPlanSlot[] = plan.meals.map((m) => ({
+    id: m.id,
+    date: m.date.toISOString().slice(0, 10),
+    mealType: m.mealType,
+    recipeId: m.recipe?.id ?? null,
+    recipeTitle: m.recipe?.title ?? null,
+    isCompleted: m.isCompleted,
+    customName: m.customName,
+  }));
+  return {
+    plan: {
+      id: plan.id,
+      name: plan.name,
+      startDate: plan.startDate.toISOString().slice(0, 10),
+      endDate: plan.endDate.toISOString().slice(0, 10),
+    },
+    slots,
+  };
+}
+
+async function runGetShoppingList(userId: string): Promise<unknown> {
+  const list = (await prisma.shoppingList.findFirst({
+    where: { userId, isActive: true, tier: 'active' },
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      items: {
+        select: {
+          id: true,
+          name: true,
+          quantity: true,
+          category: true,
+          purchased: true,
+          recipeId: true,
+        },
+        orderBy: [{ purchased: 'asc' }, { category: 'asc' }, { name: 'asc' }],
+      },
+    },
+  })) as null | {
+    id: string;
+    name: string;
+    items: Array<{
+      id: string;
+      name: string;
+      quantity: string;
+      category: string | null;
+      purchased: boolean;
+      recipeId: string | null;
+    }>;
+  };
+
+  if (!list) {
+    return { list: null, items: [] };
+  }
+  return {
+    list: { id: list.id, name: list.name },
+    items: list.items,
+  };
+}
+
+async function runGetUserProfile(userId: string): Promise<unknown> {
+  // computeSkillTier takes a count, not a userId — fetch the count first.
+  // Wrap the call in try/catch so a missing composedPlate count never breaks
+  // the whole profile read.
+  let skill: SkillTier | null = null;
+  try {
+    const platesCooked = await (prisma as any).composedPlate.count({
+      where: { userId },
+    });
+    skill = computeSkillTier(Number(platesCooked) || 0);
+  } catch {
+    skill = null;
+  }
+  const [prefs, macroGoals] = await Promise.all([
+    prisma.userPreferences.findUnique({
+      where: { userId },
+      include: {
+        bannedIngredients: true,
+        likedCuisines: true,
+        dietaryRestrictions: true,
+        preferredSuperfoods: true,
+      },
+    }) as unknown as Promise<{
+      cookTimePreference?: number | null;
+      spiceLevel?: string | null;
+      bannedIngredients: Array<{ name: string }>;
+      likedCuisines: Array<{ name: string }>;
+      dietaryRestrictions: Array<{ name: string }>;
+    } | null>,
+    prisma.macroGoals.findUnique({ where: { userId } }),
+  ]);
+  return {
+    allergies: (prefs?.bannedIngredients ?? []).map((b: { name: string }) => b.name),
+    dietaryRestrictions: (prefs?.dietaryRestrictions ?? []).map(
+      (d: { name: string }) => d.name,
+    ),
+    likedCuisines: (prefs?.likedCuisines ?? []).map((c: { name: string }) => c.name),
+    cookTimePreference: prefs?.cookTimePreference ?? null,
+    spiceLevel: prefs?.spiceLevel ?? null,
+    skillTier: skill,
+    macroGoals: macroGoals
+      ? {
+          calories: macroGoals.calories,
+          protein: macroGoals.protein,
+          carbs: macroGoals.carbs,
+          fat: macroGoals.fat,
+        }
+      : null,
+  };
+}
+
+interface GetRecipeDetailInput {
+  recipeId: string;
+}
+
+async function runGetRecipeDetail(
+  input: GetRecipeDetailInput,
+): Promise<unknown> {
+  if (!input.recipeId) {
+    return { error: 'INVALID_INPUT', message: 'recipeId required' };
+  }
+  const recipe = (await prisma.recipe.findUnique({
+    where: { id: input.recipeId },
+    include: {
+      ingredients: { select: { text: true, order: true }, orderBy: { order: 'asc' } },
+      instructions: { select: { text: true, step: true }, orderBy: { step: 'asc' } },
+    },
+  })) as null | {
+    id: string;
+    title: string;
+    description: string | null;
+    cuisine: string | null;
+    cookTime: number | null;
+    calories: number | null;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
+    fiber: number | null;
+    imageUrl: string | null;
+    source: string | null;
+    sourceUrl: string | null;
+    ingredients: Array<{ text: string; order: number }>;
+    instructions: Array<{ text: string; step: number }>;
+  };
+  if (!recipe) {
+    return { error: 'NOT_FOUND', message: `Recipe ${input.recipeId} not found.` };
+  }
+  return {
+    id: recipe.id,
+    title: recipe.title,
+    description: recipe.description,
+    cuisine: recipe.cuisine,
+    cookTime: recipe.cookTime,
+    calories: recipe.calories,
+    protein: recipe.protein,
+    carbs: recipe.carbs,
+    fat: recipe.fat,
+    fiber: recipe.fiber,
+    imageUrl: recipe.imageUrl,
+    source: recipe.source,
+    sourceUrl: recipe.sourceUrl,
+    ingredients: recipe.ingredients.map((i) => i.text),
+    instructions: recipe.instructions.map((i) => i.text),
+  };
+}
+
+// ─── S16 — universal-agent write tools (Pro-only) ───────────────────────────
+
+interface AddToShoppingListInput {
+  items: Array<{ name: string; quantity?: string; category?: string }>;
+}
+
+async function runAddToShoppingList(
+  userId: string,
+  input: AddToShoppingListInput,
+): Promise<unknown> {
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    return { error: 'INVALID_INPUT', message: 'items[] required' };
+  }
+  const cleaned = input.items
+    .filter((i) => i && typeof i.name === 'string' && i.name.trim().length > 0)
+    .slice(0, 50);
+  if (cleaned.length === 0) {
+    return { error: 'INVALID_INPUT', message: 'no items with names' };
+  }
+
+  let list = (await prisma.shoppingList.findFirst({
+    where: { userId, isActive: true, tier: 'active' },
+    orderBy: { updatedAt: 'desc' },
+  })) as null | { id: string };
+  if (!list) {
+    list = (await prisma.shoppingList.create({
+      data: { userId, name: 'My Shopping List', isActive: true, tier: 'active' },
+    })) as { id: string };
+  }
+  const created = await prisma.$transaction(
+    cleaned.map((it) =>
+      prisma.shoppingListItem.create({
+        data: {
+          shoppingListId: list!.id,
+          name: it.name.trim(),
+          quantity: it.quantity?.trim() || '',
+          category: it.category?.trim() || null,
+          purchased: false,
+        },
+        select: { id: true, name: true },
+      }),
+    ),
+  );
+  return { listId: list.id, addedCount: created.length, items: created };
+}
+
+interface ScheduleMealInput {
+  recipeId: string;
+  date: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+}
+
+async function runScheduleMeal(
+  userId: string,
+  input: ScheduleMealInput,
+): Promise<unknown> {
+  if (!input.recipeId || !input.date || !input.mealType) {
+    return { error: 'INVALID_INPUT', message: 'recipeId, date, mealType required' };
+  }
+  const date = new Date(`${input.date}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    return { error: 'INVALID_INPUT', message: 'date must be ISO YYYY-MM-DD' };
+  }
+  const recipe = (await prisma.recipe.findUnique({
+    where: { id: input.recipeId },
+    select: { id: true, title: true, ingredients: { select: { text: true } } },
+  })) as null | {
+    id: string;
+    title: string;
+    ingredients: Array<{ text: string }>;
+  };
+  if (!recipe) {
+    return { error: 'NOT_FOUND', message: `Recipe ${input.recipeId} not found.` };
+  }
+
+  const prefs = (await prisma.userPreferences.findUnique({
+    where: { userId },
+    include: { bannedIngredients: true },
+  })) as null | { bannedIngredients: Array<{ name: string }> };
+  const allergens = (prefs?.bannedIngredients ?? []).map((b) => b.name);
+  const allergenCheck = checkAllergens(
+    recipe.ingredients.map((i) => i.text),
+    allergens,
+  );
+  if (!allergenCheck.ok) {
+    return {
+      error: 'ALLERGEN_VIOLATION',
+      details: { violations: allergenCheck.violations },
+    };
+  }
+
+  // Find or create the active meal plan that covers this date.
+  let plan = (await prisma.mealPlan.findFirst({
+    where: {
+      userId,
+      isActive: true,
+      startDate: { lte: date },
+      endDate: { gte: date },
+    },
+  })) as null | { id: string; startDate: Date; endDate: Date };
+  if (!plan) {
+    // Default: a one-week window starting Monday-of the date.
+    const start = new Date(date);
+    const day = start.getUTCDay();
+    const offsetToMonday = (day + 6) % 7;
+    start.setUTCDate(start.getUTCDate() - offsetToMonday);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+    plan = (await prisma.mealPlan.create({
+      data: { userId, isActive: true, startDate: start, endDate: end },
+    })) as { id: string; startDate: Date; endDate: Date };
+  }
+
+  // Replace any existing meal in this slot.
+  await prisma.meal.deleteMany({
+    where: {
+      mealPlanId: plan.id,
+      date,
+      mealType: input.mealType,
+    },
+  });
+  const meal = (await prisma.meal.create({
+    data: {
+      mealPlanId: plan.id,
+      date,
+      mealType: input.mealType,
+      recipeId: recipe.id,
+    },
+  })) as { id: string };
+
+  return {
+    mealId: meal.id,
+    planId: plan.id,
+    date: input.date,
+    mealType: input.mealType,
+    recipeId: recipe.id,
+    recipeTitle: recipe.title,
+  };
+}
+
+interface GenerateRecipeInput {
+  brief: string;
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert';
+  cuisineOverride?: string;
+  maxCookTime?: number;
+}
+
+async function runGenerateRecipe(
+  userId: string,
+  input: GenerateRecipeInput,
+): Promise<unknown> {
+  if (!input.brief || input.brief.trim().length < 4) {
+    return { error: 'INVALID_INPUT', message: 'brief required (≥4 chars)' };
+  }
+
+  // Lazy-require so unit tests that mock prisma don't pull the AI provider stack.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { aiRecipeService } = require('@/services/aiRecipeService') as {
+    aiRecipeService: {
+      generateRecipe: (params: {
+        userId: string;
+        mealType?: string;
+        cuisineOverride?: string | null;
+        userPrompt?: string;
+        maxCookTime?: number;
+      }) => Promise<unknown>;
+      saveGeneratedRecipe: (
+        recipe: unknown,
+        userId: string | null,
+      ) => Promise<{ id: string; title: string } | null>;
+    };
+  };
+
+  try {
+    const generated = await aiRecipeService.generateRecipe({
+      userId,
+      mealType: input.mealType,
+      cuisineOverride: input.cuisineOverride ?? null,
+      userPrompt: input.brief.trim(),
+      maxCookTime: input.maxCookTime,
+    });
+    const saved = await aiRecipeService.saveGeneratedRecipe(generated, userId);
+    if (!saved) {
+      return { error: 'SAVE_FAILED', message: 'Recipe generated but persist failed.' };
+    }
+    return {
+      recipeId: saved.id,
+      title: saved.title,
+      generated,
+    };
+  } catch (err) {
+    return {
+      error: 'GENERATION_FAILED',
+      message: err instanceof Error ? err.message : 'unknown',
+    };
+  }
+}
+
 function isWriteTool(name: string): boolean {
   return WRITE_TOOL_NAMES.has(name as CoachToolName);
 }
@@ -1149,6 +1670,22 @@ async function dispatchTool(
       return runComposePlate(userId, (input ?? { slots: [] }) as ComposePlateInput);
     case 'log_meal':
       return runLogMeal(userId, (input ?? {}) as LogMealInput);
+    // S16 — universal-agent reads
+    case 'get_meal_plan':
+      return runGetMealPlan(userId);
+    case 'get_shopping_list':
+      return runGetShoppingList(userId);
+    case 'get_user_profile':
+      return runGetUserProfile(userId);
+    case 'get_recipe_detail':
+      return runGetRecipeDetail((input ?? {}) as GetRecipeDetailInput);
+    // S16 — universal-agent writes
+    case 'add_to_shopping_list':
+      return runAddToShoppingList(userId, (input ?? { items: [] }) as AddToShoppingListInput);
+    case 'schedule_meal':
+      return runScheduleMeal(userId, (input ?? {}) as ScheduleMealInput);
+    case 'generate_recipe':
+      return runGenerateRecipe(userId, (input ?? {}) as GenerateRecipeInput);
     default:
       throw new Error(`Unknown coach tool: ${name}`);
   }

@@ -13,6 +13,16 @@ const mockRecipeFindMany = jest.fn();
 const mockRecipeFindUnique = jest.fn();
 const mockMealComponentFindMany = jest.fn();
 const mockComposedPlateFindUnique = jest.fn();
+// S16 — universal-agent tool mocks.
+const mockMealPlanFindFirst = jest.fn();
+const mockMealPlanCreate = jest.fn();
+const mockShoppingListFindFirst = jest.fn();
+const mockShoppingListCreate = jest.fn();
+const mockShoppingListItemCreate = jest.fn();
+const mockComposedPlateCount = jest.fn();
+const mockMealCreate = jest.fn();
+const mockMealDeleteMany = jest.fn();
+const mockTransaction = jest.fn();
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
@@ -27,7 +37,23 @@ jest.mock('@/lib/prisma', () => ({
       findMany: (...a: unknown[]) => mockMealHistoryFindMany(...a),
       create: (...a: unknown[]) => mockMealHistoryCreate(...a),
     },
-    meal: { findMany: (...a: unknown[]) => mockMealFindMany(...a) },
+    meal: {
+      findMany: (...a: unknown[]) => mockMealFindMany(...a),
+      create: (...a: unknown[]) => mockMealCreate(...a),
+      deleteMany: (...a: unknown[]) => mockMealDeleteMany(...a),
+    },
+    mealPlan: {
+      findFirst: (...a: unknown[]) => mockMealPlanFindFirst(...a),
+      create: (...a: unknown[]) => mockMealPlanCreate(...a),
+    },
+    shoppingList: {
+      findFirst: (...a: unknown[]) => mockShoppingListFindFirst(...a),
+      create: (...a: unknown[]) => mockShoppingListCreate(...a),
+    },
+    shoppingListItem: {
+      create: (...a: unknown[]) => mockShoppingListItemCreate(...a),
+    },
+    $transaction: (...a: unknown[]) => mockTransaction(...a),
     userPreferences: {
       findUnique: (...a: unknown[]) => mockUserPreferencesFindUnique(...a),
     },
@@ -46,7 +72,17 @@ jest.mock('@/lib/prisma', () => ({
     },
     composedPlate: {
       findUnique: (...a: unknown[]) => mockComposedPlateFindUnique(...a),
+      count: (...a: unknown[]) => mockComposedPlateCount(...a),
     },
+  },
+}));
+
+const mockGenerateRecipe = jest.fn();
+const mockSaveGeneratedRecipe = jest.fn();
+jest.mock('@/services/aiRecipeService', () => ({
+  aiRecipeService: {
+    generateRecipe: (...a: unknown[]) => mockGenerateRecipe(...a),
+    saveGeneratedRecipe: (...a: unknown[]) => mockSaveGeneratedRecipe(...a),
   },
 }));
 
@@ -98,22 +134,41 @@ beforeEach(() => {
   mockSavedRecipeFindMany.mockResolvedValue([]);
   mockCookingLogFindMany.mockResolvedValue([]);
   mockRecipeFindMany.mockResolvedValue([]);
+  // S16 mocks default to empty / null
+  mockMealPlanFindFirst.mockResolvedValue(null);
+  mockMealPlanCreate.mockResolvedValue({ id: 'mp-new', startDate: new Date(), endDate: new Date() });
+  mockShoppingListFindFirst.mockResolvedValue(null);
+  mockShoppingListCreate.mockResolvedValue({ id: 'sl-new' });
+  mockShoppingListItemCreate.mockResolvedValue({ id: 'sli-1', name: 'eggs' });
+  mockComposedPlateCount.mockResolvedValue(0);
+  mockMealCreate.mockResolvedValue({ id: 'm-new' });
+  mockMealDeleteMany.mockResolvedValue({ count: 0 });
+  mockTransaction.mockImplementation((promises: Promise<unknown>[]) => Promise.all(promises));
+  mockGenerateRecipe.mockReset();
+  mockSaveGeneratedRecipe.mockReset();
 });
 
 describe('coachToolDefinitions', () => {
-  it('exposes the 8 tools (6 read + 2 write) — Tier S adds find_recipes_smart + propose_tonight', () => {
-    expect(coachToolDefinitions).toHaveLength(8);
+  it('exposes 15 tools (10 read + 5 write) — S16 adds 4 reads + 3 writes for universal-agent surface', () => {
+    expect(coachToolDefinitions).toHaveLength(15);
     const names = coachToolDefinitions.map((t) => t.name).sort();
     expect(names).toContain('find_recipes_smart');
     expect(names).toContain('propose_tonight');
     expect(names).toEqual([
+      'add_to_shopping_list',
       'compose_plate',
       'find_recipes',
       'find_recipes_smart',
+      'generate_recipe',
+      'get_meal_plan',
       'get_pantry',
+      'get_recipe_detail',
+      'get_shopping_list',
       'get_today_remaining_macros',
+      'get_user_profile',
       'log_meal',
       'propose_tonight',
+      'schedule_meal',
       'search_cookbook',
     ]);
   });
@@ -897,5 +952,448 @@ describe('runCoachTool: analytics emission', () => {
     expect(props.tool).toBe('log_meal');
     expect(props.success).toBe(false);
     expect(props.errorCode).toBe('PRO_FEATURE');
+  });
+});
+
+// ─── S16 — universal-agent tools ────────────────────────────────────────────
+
+describe('runCoachTool: get_meal_plan', () => {
+  it('returns null plan when no active plan exists', async () => {
+    mockMealPlanFindFirst.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_meal_plan',
+      input: {},
+      tier: 'free',
+    });
+    expect(result).toEqual({ plan: null, slots: [] });
+  });
+
+  it('flattens meals into date+mealType slots with recipe titles', async () => {
+    mockMealPlanFindFirst.mockResolvedValue({
+      id: 'p1',
+      name: 'This Week',
+      startDate: new Date('2026-05-04T00:00:00Z'),
+      endDate: new Date('2026-05-10T00:00:00Z'),
+      meals: [
+        {
+          id: 'm1',
+          date: new Date('2026-05-05T00:00:00Z'),
+          mealType: 'dinner',
+          recipeId: 'r1',
+          recipe: { id: 'r1', title: 'Sumac Chicken' },
+          isCompleted: false,
+          customName: null,
+        },
+        {
+          id: 'm2',
+          date: new Date('2026-05-06T00:00:00Z'),
+          mealType: 'lunch',
+          recipeId: null,
+          recipe: null,
+          isCompleted: false,
+          customName: 'Leftovers',
+        },
+      ],
+    });
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_meal_plan',
+      input: {},
+      tier: 'free',
+    });
+    const r = result as { plan: { id: string }; slots: Array<{ date: string; mealType: string; recipeTitle: string | null; customName: string | null }> };
+    expect(r.plan.id).toBe('p1');
+    expect(r.slots).toHaveLength(2);
+    expect(r.slots[0]).toMatchObject({
+      date: '2026-05-05',
+      mealType: 'dinner',
+      recipeTitle: 'Sumac Chicken',
+    });
+    expect(r.slots[1]).toMatchObject({
+      mealType: 'lunch',
+      recipeTitle: null,
+      customName: 'Leftovers',
+    });
+  });
+});
+
+describe('runCoachTool: get_shopping_list', () => {
+  it('returns null list when none active', async () => {
+    mockShoppingListFindFirst.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_shopping_list',
+      input: {},
+      tier: 'free',
+    });
+    expect(result).toEqual({ list: null, items: [] });
+  });
+
+  it('returns items with category + purchased state', async () => {
+    mockShoppingListFindFirst.mockResolvedValue({
+      id: 'sl1',
+      name: 'My List',
+      items: [
+        { id: 'i1', name: 'eggs', quantity: '12', category: 'dairy', purchased: false, recipeId: null },
+        { id: 'i2', name: 'rice', quantity: '1 lb', category: 'grains', purchased: true, recipeId: 'r1' },
+      ],
+    });
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_shopping_list',
+      input: {},
+      tier: 'free',
+    });
+    const r = result as { list: { id: string }; items: Array<{ name: string; purchased: boolean }> };
+    expect(r.list.id).toBe('sl1');
+    expect(r.items).toHaveLength(2);
+    expect(r.items[0]).toMatchObject({ name: 'eggs', purchased: false });
+  });
+});
+
+describe('runCoachTool: get_user_profile', () => {
+  it('returns allergens, dietary, cuisines, skill tier, macro goals', async () => {
+    mockUserPreferencesFindUnique.mockResolvedValue({
+      cookTimePreference: 30,
+      spiceLevel: 'medium',
+      bannedIngredients: [{ name: 'peanut' }],
+      likedCuisines: [{ name: 'persian' }, { name: 'thai' }],
+      dietaryRestrictions: [{ name: 'gluten-free' }],
+      preferredSuperfoods: [],
+    });
+    mockMacroGoalsFindUnique.mockResolvedValue({
+      calories: 2200,
+      protein: 160,
+      carbs: 220,
+      fat: 75,
+    });
+    mockComposedPlateCount.mockResolvedValue(2); // beginner
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_user_profile',
+      input: {},
+      tier: 'free',
+    });
+    expect(result).toMatchObject({
+      allergies: ['peanut'],
+      dietaryRestrictions: ['gluten-free'],
+      likedCuisines: ['persian', 'thai'],
+      cookTimePreference: 30,
+      spiceLevel: 'medium',
+      skillTier: 'beginner',
+      macroGoals: { calories: 2200, protein: 160, carbs: 220, fat: 75 },
+    });
+  });
+
+  it('handles missing prefs gracefully', async () => {
+    mockUserPreferencesFindUnique.mockResolvedValue(null);
+    mockMacroGoalsFindUnique.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_user_profile',
+      input: {},
+      tier: 'free',
+    });
+    expect(result).toMatchObject({
+      allergies: [],
+      dietaryRestrictions: [],
+      likedCuisines: [],
+      macroGoals: null,
+    });
+  });
+});
+
+describe('runCoachTool: get_recipe_detail', () => {
+  it('rejects empty recipeId', async () => {
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_recipe_detail',
+      input: {},
+      tier: 'free',
+    });
+    expect((result as { error: string }).error).toBe('INVALID_INPUT');
+  });
+
+  it('returns NOT_FOUND when recipe missing', async () => {
+    mockRecipeFindUnique.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_recipe_detail',
+      input: { recipeId: 'r-ghost' },
+      tier: 'free',
+    });
+    expect((result as { error: string }).error).toBe('NOT_FOUND');
+  });
+
+  it('returns full recipe payload with ordered ingredients + instructions', async () => {
+    mockRecipeFindUnique.mockResolvedValue({
+      id: 'r1',
+      title: 'Sumac Chicken',
+      description: 'Bright + tangy',
+      cuisine: 'persian',
+      cookTime: 35,
+      calories: 480,
+      protein: 38,
+      carbs: 22,
+      fat: 24,
+      fiber: 3,
+      imageUrl: null,
+      source: 'curated',
+      sourceUrl: null,
+      ingredients: [
+        { text: 'chicken thigh', order: 1 },
+        { text: 'sumac', order: 2 },
+      ],
+      instructions: [
+        { text: 'Marinate', step: 1 },
+        { text: 'Sear', step: 2 },
+      ],
+    });
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'get_recipe_detail',
+      input: { recipeId: 'r1' },
+      tier: 'free',
+    });
+    expect(result).toMatchObject({
+      id: 'r1',
+      title: 'Sumac Chicken',
+      cuisine: 'persian',
+      ingredients: ['chicken thigh', 'sumac'],
+      instructions: ['Marinate', 'Sear'],
+    });
+  });
+});
+
+describe('runCoachTool: add_to_shopping_list (Pro)', () => {
+  it('blocks free tier with PRO_FEATURE', async () => {
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'add_to_shopping_list',
+      input: { items: [{ name: 'eggs' }] },
+      tier: 'free',
+    });
+    expect((result as { error: string }).error).toBe('PRO_FEATURE');
+  });
+
+  it('rejects empty items', async () => {
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'add_to_shopping_list',
+      input: { items: [] },
+      tier: 'premium',
+    });
+    expect((result as { error: string }).error).toBe('INVALID_INPUT');
+  });
+
+  it('appends items to the active list (creates list if missing)', async () => {
+    mockShoppingListFindFirst.mockResolvedValue(null);
+    mockShoppingListCreate.mockResolvedValue({ id: 'sl-new' });
+    mockShoppingListItemCreate
+      .mockResolvedValueOnce({ id: 'sli-1', name: 'eggs' })
+      .mockResolvedValueOnce({ id: 'sli-2', name: 'rice' });
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'add_to_shopping_list',
+      input: {
+        items: [
+          { name: 'eggs', quantity: '12' },
+          { name: 'rice', quantity: '1 lb', category: 'grains' },
+        ],
+      },
+      tier: 'premium',
+    });
+    expect(result).toMatchObject({ listId: 'sl-new', addedCount: 2 });
+    expect(mockShoppingListCreate).toHaveBeenCalled();
+    expect(mockShoppingListItemCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it('reuses an existing active list if present', async () => {
+    mockShoppingListFindFirst.mockResolvedValue({ id: 'sl-existing' });
+    mockShoppingListItemCreate.mockResolvedValue({ id: 'sli-1', name: 'eggs' });
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'add_to_shopping_list',
+      input: { items: [{ name: 'eggs' }] },
+      tier: 'premium',
+    });
+    expect((result as { listId: string }).listId).toBe('sl-existing');
+    expect(mockShoppingListCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('runCoachTool: schedule_meal (Pro)', () => {
+  it('blocks free tier with PRO_FEATURE', async () => {
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'schedule_meal',
+      input: { recipeId: 'r1', date: '2026-05-08', mealType: 'dinner' },
+      tier: 'free',
+    });
+    expect((result as { error: string }).error).toBe('PRO_FEATURE');
+  });
+
+  it('rejects missing fields', async () => {
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'schedule_meal',
+      input: { recipeId: 'r1' },
+      tier: 'premium',
+    });
+    expect((result as { error: string }).error).toBe('INVALID_INPUT');
+  });
+
+  it('rejects invalid date string', async () => {
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'schedule_meal',
+      input: { recipeId: 'r1', date: 'tomorrow', mealType: 'dinner' },
+      tier: 'premium',
+    });
+    expect((result as { error: string }).error).toBe('INVALID_INPUT');
+  });
+
+  it('blocks scheduling a recipe that violates the user\'s allergens', async () => {
+    mockRecipeFindUnique.mockResolvedValue({
+      id: 'r1',
+      title: 'Peanut Stew',
+      ingredients: [{ text: 'peanut butter' }, { text: 'water' }],
+    });
+    mockUserPreferencesFindUnique.mockResolvedValue({
+      bannedIngredients: [{ name: 'peanut' }],
+    });
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'schedule_meal',
+      input: { recipeId: 'r1', date: '2026-05-08', mealType: 'dinner' },
+      tier: 'premium',
+    });
+    expect((result as { error: string }).error).toBe('ALLERGEN_VIOLATION');
+  });
+
+  it('drops the meal into the active week plan and replaces existing slot', async () => {
+    mockRecipeFindUnique.mockResolvedValue({
+      id: 'r1',
+      title: 'Sumac Chicken',
+      ingredients: [{ text: 'chicken' }],
+    });
+    mockUserPreferencesFindUnique.mockResolvedValue({ bannedIngredients: [] });
+    mockMealPlanFindFirst.mockResolvedValue({
+      id: 'p1',
+      startDate: new Date('2026-05-04'),
+      endDate: new Date('2026-05-10'),
+    });
+    mockMealCreate.mockResolvedValue({ id: 'm-new' });
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'schedule_meal',
+      input: { recipeId: 'r1', date: '2026-05-08', mealType: 'dinner' },
+      tier: 'premium',
+    });
+    expect(result).toMatchObject({
+      mealId: 'm-new',
+      planId: 'p1',
+      date: '2026-05-08',
+      mealType: 'dinner',
+      recipeId: 'r1',
+      recipeTitle: 'Sumac Chicken',
+    });
+    expect(mockMealDeleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ mealPlanId: 'p1', mealType: 'dinner' }),
+      }),
+    );
+    expect(mockMealCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates a new week-long plan when no active plan covers the date', async () => {
+    mockRecipeFindUnique.mockResolvedValue({
+      id: 'r1',
+      title: 'Sumac Chicken',
+      ingredients: [{ text: 'chicken' }],
+    });
+    mockUserPreferencesFindUnique.mockResolvedValue({ bannedIngredients: [] });
+    mockMealPlanFindFirst.mockResolvedValue(null);
+    mockMealPlanCreate.mockResolvedValue({
+      id: 'p-new',
+      startDate: new Date('2026-05-04'),
+      endDate: new Date('2026-05-10'),
+    });
+    await runCoachTool({
+      userId: 'u1',
+      name: 'schedule_meal',
+      input: { recipeId: 'r1', date: '2026-05-08', mealType: 'dinner' },
+      tier: 'premium',
+    });
+    expect(mockMealPlanCreate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('runCoachTool: generate_recipe (Pro)', () => {
+  it('blocks free tier with PRO_FEATURE', async () => {
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'generate_recipe',
+      input: { brief: 'Persian fesenjan with mushrooms' },
+      tier: 'free',
+    });
+    expect((result as { error: string }).error).toBe('PRO_FEATURE');
+  });
+
+  it('rejects too-short brief', async () => {
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'generate_recipe',
+      input: { brief: 'fo' },
+      tier: 'premium',
+    });
+    expect((result as { error: string }).error).toBe('INVALID_INPUT');
+  });
+
+  it('returns recipeId + title on successful generation + persist', async () => {
+    mockGenerateRecipe.mockResolvedValue({
+      title: 'Vegan Fesenjan',
+      cuisine: 'persian',
+    });
+    mockSaveGeneratedRecipe.mockResolvedValue({
+      id: 'r-new',
+      title: 'Vegan Fesenjan',
+    });
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'generate_recipe',
+      input: { brief: 'Persian fesenjan with mushrooms instead of walnuts' },
+      tier: 'premium',
+    });
+    expect(result).toMatchObject({
+      recipeId: 'r-new',
+      title: 'Vegan Fesenjan',
+    });
+    expect(mockGenerateRecipe).toHaveBeenCalledTimes(1);
+    expect(mockSaveGeneratedRecipe).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns SAVE_FAILED when persist returns null', async () => {
+    mockGenerateRecipe.mockResolvedValue({ title: 'Generated' });
+    mockSaveGeneratedRecipe.mockResolvedValue(null);
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'generate_recipe',
+      input: { brief: 'a healthy dinner' },
+      tier: 'premium',
+    });
+    expect((result as { error: string }).error).toBe('SAVE_FAILED');
+  });
+
+  it('returns GENERATION_FAILED when AI provider throws', async () => {
+    mockGenerateRecipe.mockRejectedValue(new Error('upstream timeout'));
+    const { result } = await runCoachTool({
+      userId: 'u1',
+      name: 'generate_recipe',
+      input: { brief: 'a quick lunch' },
+      tier: 'premium',
+    });
+    expect((result as { error: string }).error).toBe('GENERATION_FAILED');
   });
 });
