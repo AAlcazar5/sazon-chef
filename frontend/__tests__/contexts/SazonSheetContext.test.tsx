@@ -12,6 +12,9 @@ jest.mock('../../lib/api', () => ({
   coachApi: {
     listConversations: jest.fn().mockResolvedValue([]),
   },
+  sazonTelemetryApi: {
+    recordOpen: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 
 jest.mock('../../contexts/ThemeContext', () => ({

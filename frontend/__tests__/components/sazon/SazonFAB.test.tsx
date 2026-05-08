@@ -25,33 +25,34 @@ describe('SazonFAB', () => {
     expect(getByLabelText(/talk to sazon|ask sazon|sazon/i)).toBeTruthy();
   });
 
-  it('tap fires open() with no contextSeed', () => {
+  it('tap fires open() with source=fab_tap', () => {
     const { getByLabelText } = render(<SazonFAB />);
     fireEvent.press(getByLabelText(/talk to sazon|ask sazon|sazon/i));
-    expect(mockOpen).toHaveBeenCalledWith();
+    expect(mockOpen).toHaveBeenCalledWith({ source: 'fab_tap' });
   });
 
-  it('long-press fires open() with the contextSeed from getContextSeed prop', () => {
+  it('long-press with seed fires open() with seed + source=fab_long_press', () => {
     const getContextSeed = jest.fn().mockReturnValue("What's tonight's plate?");
     const { getByLabelText } = render(<SazonFAB getContextSeed={getContextSeed} />);
     fireEvent(getByLabelText(/talk to sazon|ask sazon|sazon/i), 'longPress');
     expect(getContextSeed).toHaveBeenCalled();
     expect(mockOpen).toHaveBeenCalledWith({
       contextSeed: "What's tonight's plate?",
+      source: 'fab_long_press',
     });
   });
 
-  it('long-press without getContextSeed falls through to generic open', () => {
+  it('long-press without seed falls through to source=fab_long_press only', () => {
     const { getByLabelText } = render(<SazonFAB />);
     fireEvent(getByLabelText(/talk to sazon|ask sazon|sazon/i), 'longPress');
-    expect(mockOpen).toHaveBeenCalledWith();
+    expect(mockOpen).toHaveBeenCalledWith({ source: 'fab_long_press' });
   });
 
-  it('long-press with getContextSeed returning null falls through to generic open', () => {
+  it('long-press with null-returning seed falls through to source=fab_long_press only', () => {
     const getContextSeed = jest.fn().mockReturnValue(null);
     const { getByLabelText } = render(<SazonFAB getContextSeed={getContextSeed} />);
     fireEvent(getByLabelText(/talk to sazon|ask sazon|sazon/i), 'longPress');
-    expect(mockOpen).toHaveBeenCalledWith();
+    expect(mockOpen).toHaveBeenCalledWith({ source: 'fab_long_press' });
   });
 
   it('honors the accessibilityLabel override prop', () => {

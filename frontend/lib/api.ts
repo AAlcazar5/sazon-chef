@@ -2159,6 +2159,28 @@ export const surfaceEventApi = {
     apiClient.post('/telemetry/surface-events', { events }).catch(() => {}),
 };
 
+// ROADMAP 4.0 IA2.8 — Sazon sheet open telemetry.
+export type SazonOpenSource =
+  | 'fab_tap'
+  | 'fab_long_press'
+  | 'history_link'
+  | 'tab'
+  | 'deep_link'
+  | 'other';
+
+export interface SazonOpenEvent {
+  source: SazonOpenSource;
+  contextSeed?: string;
+  locale?: string;
+  extra?: Record<string, unknown>;
+}
+
+export const sazonTelemetryApi = {
+  /** Best-effort fire-and-forget. Telemetry never blocks UX. */
+  recordOpen: (event: SazonOpenEvent) =>
+    apiClient.post('/telemetry/sazon-open', event).catch(() => {}),
+};
+
 // ─── ROADMAP 4.0 Tier C7 — Daily check-in ──────────────────────────────────
 
 export interface DailyCheckInUpsertInput {

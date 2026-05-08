@@ -35,18 +35,18 @@ export default function SazonFAB({
   const { open } = useSazonSheet();
 
   const handlePress = () => {
-    open();
+    open({ source: 'fab_tap' });
   };
 
   const handleLongPress = () => {
     if (getContextSeed) {
       const seed = getContextSeed();
       if (seed && seed.trim().length > 0) {
-        open({ contextSeed: seed.trim() });
+        open({ contextSeed: seed.trim(), source: 'fab_long_press' });
         return;
       }
     }
-    open();
+    open({ source: 'fab_long_press' });
   };
 
   return (
