@@ -487,13 +487,14 @@ export default function TabLayout() {
           },
         }}
       />
+      {/* ROADMAP 4.0 IA2.4 — coach demoted from a tab to a floating header
+          icon (SazonFAB) on Today / Week / Kitchen. Route stays accessible
+          via push notifications + deep links + the SazonSheet's "Open full
+          Sazon" / "View all chats" links. Visibility hidden from the bar. */}
       <Tabs.Screen
-        name="coach" /* ROADMAP 4.0: visible label is "Sazon"; route name kept for backwards compat */
+        name="coach"
         options={{
-          title: t('tabs.sazon'),
-          tabBarIcon: ({ color, size, focused }) => (
-            <AnimatedTabIcon name="chatbubbles-outline" color={color} size={size} focused={focused} />
-          ),
+          href: null,
         }}
       />
       {/* ROADMAP 4.0 A2-f — Shopping retired as a tab; route stays accessible via push. */}
