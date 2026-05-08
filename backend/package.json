@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "ts-node -r tsconfig-paths/register src/server.ts",
     "build": "tsc",
+    "coach:smoke": "ts-node -r tsconfig-paths/register scripts/coach-smoke.ts",
     "start": "node dist/server.js",
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
     "seed:clear": "CLEAR_DB=true ts-node -r tsconfig-paths/register prisma/seed.ts",
