@@ -9,6 +9,7 @@ import { Shadows } from '../../constants/Shadows';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { BorderRadius, Spacing } from '../../constants/Spacing';
 import AnimatedProgressBar from '../ui/AnimatedProgressBar';
+import { t } from '../../lib/i18n';
 
 interface WeeklyNutritionSummaryProps {
   weeklyNutrition: any;
@@ -78,7 +79,7 @@ function DailyMacroTrend({
         color: isDark ? DarkColors.text.secondary : Colors.text.secondary,
         marginBottom: 8,
       }}>
-        Daily Macro Distribution
+        {t('mealPlan.weekly.dailyMacro')}
       </Text>
 
       <View style={{ alignItems: 'center' }}>
@@ -178,7 +179,7 @@ export default function WeeklyNutritionSummary({
   return (
     <View className="px-4 mb-4">
       <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : Colors.text.primary, marginBottom: 12 }}>
-        Weekly Nutrition Summary
+        {t('mealPlan.weekly.title')}
       </Text>
       <View style={[{
         backgroundColor: isDark ? DarkColors.card : Colors.card,
@@ -198,7 +199,7 @@ export default function WeeklyNutritionSummary({
         {weeklyNutrition.goals && (
           <View className="mb-4">
             <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-xs font-medium text-gray-700 dark:text-gray-200">Weekly Calories</Text>
+              <Text className="text-xs font-medium text-gray-700 dark:text-gray-200">{t('mealPlan.weekly.calories')}</Text>
               <Text className="text-xs text-gray-500 dark:text-gray-400">
                 {weeklyNutrition.totals.calories.toLocaleString()} / {weeklyNutrition.goals.weeklyCalories.toLocaleString()}
               </Text>
@@ -216,7 +217,7 @@ export default function WeeklyNutritionSummary({
         {/* Macro Breakdown — pastel bars */}
         <View className="mb-2">
           <Text style={{ fontSize: FontSize.sm, fontFamily: 'PlusJakartaSans_600SemiBold', color: isDark ? DarkColors.text.secondary : Colors.text.secondary, marginBottom: 10 }}>
-            Macro Breakdown
+            {t('mealPlan.weekly.macroBreakdown')}
           </Text>
           <View className="flex-row justify-between space-x-2">
             {MACRO_BAR_CONFIG.map(cfg => {
@@ -256,7 +257,7 @@ export default function WeeklyNutritionSummary({
         {/* Meal Completion */}
         <View style={{ marginTop: 12, paddingTop: 12 }}>
           <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-xs font-medium text-gray-700 dark:text-gray-200">Meal Completion</Text>
+            <Text className="text-xs font-medium text-gray-700 dark:text-gray-200">{t('mealPlan.weekly.completion')}</Text>
             <Text className="text-xs text-gray-500 dark:text-gray-400">
               {weeklyNutrition.completed.mealsCompleted} / {weeklyNutrition.completed.totalMeals}
             </Text>

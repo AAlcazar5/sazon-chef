@@ -9,6 +9,7 @@ import PulsingLoader from '../ui/PulsingLoader';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import type { MealPlanTemplate } from '../../types';
+import { t } from '../../lib/i18n';
 
 interface TemplatePickerModalProps {
   visible: boolean;
@@ -65,7 +66,7 @@ export default function TemplatePickerModal({
           {/* Header */}
           <View className="flex-row items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700">
             <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Meal Plan Templates
+              {t('mealPlan.templates.title')}
             </Text>
             <HapticTouchableOpacity onPress={onClose}>
               <Icon
@@ -86,10 +87,10 @@ export default function TemplatePickerModal({
             <View className="py-16 items-center px-8">
               <Text className="text-4xl mb-3">📋</Text>
               <Text className="text-gray-900 dark:text-gray-100 font-semibold text-base mb-1">
-                No Templates Yet
+                {t('mealPlan.templates.empty.title')}
               </Text>
               <Text className="text-gray-500 dark:text-gray-400 text-sm text-center">
-                Save your current week as a template to reuse it later!
+                {t('mealPlan.templates.empty.description')}
               </Text>
             </View>
           ) : (
@@ -102,7 +103,7 @@ export default function TemplatePickerModal({
                 <View className="flex-row items-center justify-center py-3 mb-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/30">
                   <PulsingLoader size={14} color={isDark ? '#34D399' : '#059669'} />
                   <Text className="text-emerald-700 dark:text-emerald-300 font-medium ml-2 text-sm">
-                    Applying template...
+                    {t('mealPlan.templates.applying')}
                   </Text>
                 </View>
               )}
@@ -135,7 +136,7 @@ export default function TemplatePickerModal({
                                 className="text-xs font-medium"
                                 style={{ color: isDark ? '#93C5FD' : '#2563EB' }}
                               >
-                                Built-in
+                                {t('mealPlan.templates.builtIn')}
                               </Text>
                             </View>
                           )}
@@ -200,7 +201,7 @@ export default function TemplatePickerModal({
                       }}
                     >
                       <Text className="text-white font-semibold text-sm">
-                        Apply to This Week
+                        {t('mealPlan.templates.apply')}
                       </Text>
                     </HapticTouchableOpacity>
                   </View>

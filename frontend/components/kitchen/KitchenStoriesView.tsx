@@ -13,6 +13,7 @@ import WeeklyRecapCard from './WeeklyRecapCard';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { Shadows } from '../../constants/Shadows';
+import { t } from '../../lib/i18n';
 
 interface KitchenStoriesViewProps {
   isDark: boolean;
@@ -36,24 +37,23 @@ export default function KitchenStoriesView({ isDark }: KitchenStoriesViewProps) 
       testID="kitchen-stories-view"
     >
       {/* This week */}
-      <Text style={[styles.eyebrow, { color: accent }]}>THIS WEEK</Text>
+      <Text style={[styles.eyebrow, { color: accent }]}>{t('kitchen.stories.thisWeek')}</Text>
       <WeeklyRecapCard />
 
       {/* This month teaser */}
       <View style={[styles.card, Shadows.SM as object, { backgroundColor: monthBg }]}>
-        <Text style={[styles.eyebrow, { color: monthAccent }]}>THIS MONTH</Text>
+        <Text style={[styles.eyebrow, { color: monthAccent }]}>{t('kitchen.stories.thisMonth')}</Text>
         <Text style={[styles.title, { color: textPrimary }]}>
-          Your monthly recap is brewing
+          {t('kitchen.stories.monthlyBrewing')}
         </Text>
         <Text style={[styles.body, { color: textSecondary }]}>
-          On the last day of the month, you'll see your top cuisine, top
-          ingredient, top nutrient, and the discovery that anchored the month.
+          {t('kitchen.stories.monthlyExplanation')}
         </Text>
       </View>
 
       {/* Past recaps archive */}
       <View style={[styles.card, Shadows.SM as object, { backgroundColor: archiveBg }]}>
-        <Text style={[styles.eyebrow, { color: archiveAccent }]}>PAST RECAPS</Text>
+        <Text style={[styles.eyebrow, { color: archiveAccent }]}>{t('kitchen.stories.pastRecaps')}</Text>
         <Text style={[styles.body, { color: textSecondary }]}>
           Your weekly recaps will be saved here, swipeable + revisitable.
         </Text>

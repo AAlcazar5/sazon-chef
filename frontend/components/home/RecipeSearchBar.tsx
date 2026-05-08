@@ -14,6 +14,7 @@ import { useSearchAutocomplete, type SearchSuggestion } from '../../hooks/useSea
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { usePopularSearches, type PopularSearch } from '../../hooks/usePopularSearches';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
+import { t } from '../../lib/i18n';
 
 interface RecipeSearchBarProps {
   /** Current search query value */
@@ -251,11 +252,11 @@ export default function RecipeSearchBar({
               <>
                 <View className="flex-row items-center justify-between px-4 pt-3 pb-1">
                   <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                    Recent
+                    {t('home.search.recent')}
                   </Text>
                   <HapticTouchableOpacity onPress={clearHistory}>
                     <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>
-                      Clear All
+                      {t('home.search.clearAll')}
                     </Text>
                   </HapticTouchableOpacity>
                 </View>
@@ -294,7 +295,7 @@ export default function RecipeSearchBar({
               <>
                 <View className="px-4 pt-3 pb-1">
                   <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                    Popular
+                    {t('home.search.popular')}
                   </Text>
                 </View>
                 {popularSearches.map((p) => (
@@ -320,7 +321,7 @@ export default function RecipeSearchBar({
             {/* Loading indicator */}
             {suggestionsLoading && value.trim().length >= 2 && suggestions.length === 0 && (
               <View className="px-4 py-4 items-center">
-                <Text className="text-sm text-gray-400 dark:text-gray-500">Searching...</Text>
+                <Text className="text-sm text-gray-400 dark:text-gray-500">{t('home.search.searching')}</Text>
               </View>
             )}
           </ScrollView>

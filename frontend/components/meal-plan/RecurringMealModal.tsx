@@ -10,6 +10,7 @@ import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Duration, Spring } from '../../constants/Animations';
 import type { RecurringMeal } from '../../types';
+import { t } from '../../lib/i18n';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MEAL_TYPE_OPTIONS = [
@@ -181,7 +182,7 @@ export default function RecurringMealModal({
 
           <ScrollView className="p-4">
             {/* Meal Type Selector */}
-            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Meal Type</Text>
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('mealPlan.recurring.mealType')}</Text>
             <View className="flex-row mb-4" style={{ gap: 8 }}>
               {MEAL_TYPE_OPTIONS.map((opt) => {
                 const isSelected = mealType === opt.value;
@@ -217,7 +218,7 @@ export default function RecurringMealModal({
             </View>
 
             {/* Day Selector */}
-            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Repeat On</Text>
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('mealPlan.recurring.repeatOn')}</Text>
             <View className="flex-row justify-between mb-3">
               {DAY_LABELS.map((label, index) => {
                 const isSelected = selectedDays.has(index);
@@ -255,19 +256,19 @@ export default function RecurringMealModal({
                 onPress={selectWeekdays}
                 className="flex-1 py-1.5 rounded-full items-center "
               >
-                <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">Weekdays</Text>
+                <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">{t('mealPlan.recurring.weekdays')}</Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={selectWeekends}
                 className="flex-1 py-1.5 rounded-full items-center "
               >
-                <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">Weekends</Text>
+                <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">{t('mealPlan.recurring.weekends')}</Text>
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={selectEveryDay}
                 className="flex-1 py-1.5 rounded-full items-center "
               >
-                <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">Every Day</Text>
+                <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">{t('mealPlan.recurring.everyDay')}</Text>
               </HapticTouchableOpacity>
             </View>
 

@@ -94,5 +94,62 @@
   "home.noResults.relaxFilters.description": "Your active filters may be narrowing results too much.",
   "home.noResults.clearFilters": "Clear all filters",
   "home.noResults.generate": "Generate a recipe instead",
-  "home.noResults.clearSearch": "Clear search"
+  "home.noResults.clearSearch": "Clear search",
+
+  "home.search.recent": "Recent",
+  "home.search.clearAll": "Clear All",
+  "home.search.popular": "Popular",
+  "home.search.searching": "Searching…",
+
+  "common.delete": "Delete",
+
+  "kitchen.journey.empty": "Start cooking and your map will fill in.",
+  "kitchen.journey.cuisineMap": "CUISINE MAP",
+  "kitchen.journey.arc": "YOUR ARC",
+  "kitchen.journey.firstPlate": "First plate",
+  "kitchen.journey.latestPlate": "Latest plate",
+  "kitchen.stories.thisWeek": "THIS WEEK",
+  "kitchen.stories.thisMonth": "THIS MONTH",
+  "kitchen.stories.monthlyBrewing": "Your monthly recap is brewing",
+  "kitchen.stories.monthlyExplanation": "On the last day of the month, you'll see your top cuisine, top ingredient, top nutrient, and the discovery that anchored the month.",
+  "kitchen.stories.pastRecaps": "PAST RECAPS",
+
+  "mealPlan.iq.title": "Plan IQ",
+  "mealPlan.iq.lean": "Lean",
+  "mealPlan.iq.topNutrient": "Top nutrient",
+  "mealPlan.iq.pantryReuse": "Pantry reuse",
+  "mealPlan.iq.cookOnce": "Cook-once plays",
+  "mealPlan.iq.share": "Share this week",
+
+  "mealPlan.templates.title": "Meal Plan Templates",
+  "mealPlan.templates.empty.title": "No Templates Yet",
+  "mealPlan.templates.empty.description": "Save your current week as a template to reuse it later!",
+  "mealPlan.templates.applying": "Applying template…",
+  "mealPlan.templates.builtIn": "Built-in",
+  "mealPlan.templates.apply": "Apply to This Week",
+
+  "mealPlan.recurring.mealType": "Meal Type",
+  "mealPlan.recurring.repeatOn": "Repeat On",
+  "mealPlan.recurring.weekdays": "Weekdays",
+  "mealPlan.recurring.weekends": "Weekends",
+  "mealPlan.recurring.everyDay": "Every Day",
+
+  "mealPlan.saveTemplate.title": "Save as Template",
+  "mealPlan.saveTemplate.description": "Save this week's meals as a reusable template you can apply to any future week.",
+  "mealPlan.saveTemplate.saving": "Saving…",
+
+  "mealPlan.timePicker.title": "Schedule Recipe",
+  "mealPlan.timePicker.selectedTime": "Selected Time",
+  "mealPlan.timePicker.hour": "Hour",
+  "mealPlan.timePicker.addRecipe": "Add Recipe",
+
+  "mealPlan.weekly.dailyMacro": "Daily Macro Distribution",
+  "mealPlan.weekly.title": "Weekly Nutrition Summary",
+  "mealPlan.weekly.calories": "Weekly Calories",
+  "mealPlan.weekly.macroBreakdown": "Macro Breakdown",
+  "mealPlan.weekly.completion": "Meal Completion",
+
+  "mealPlan.recurringManager.title": "Recurring Meals",
+  "mealPlan.recurringManager.empty": "No Recurring Meals",
+  "mealPlan.recurringManager.paused": "Paused"
 }

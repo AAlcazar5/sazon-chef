@@ -17,6 +17,7 @@ import { EditorialFontFamily } from '../../constants/Typography';
 import { Shadows } from '../../constants/Shadows';
 import CookingJourneyCard from '../profile/CookingJourneyCard';
 import KitchenIQSection from '../profile/KitchenIQSection';
+import { t } from '../../lib/i18n';
 
 interface KitchenJourneyViewProps {
   isDark: boolean;
@@ -39,7 +40,7 @@ export default function KitchenJourneyView({ isDark }: KitchenJourneyViewProps) 
     return (
       <View style={styles.quiet}>
         <Text style={[styles.quietText, { color: textSecondary }]}>
-          Start cooking and your map will fill in.
+          {t('kitchen.journey.empty')}
         </Text>
       </View>
     );
@@ -59,7 +60,7 @@ export default function KitchenJourneyView({ isDark }: KitchenJourneyViewProps) 
       {/* Cuisine Map */}
       <View style={[styles.card, Shadows.SM as object, { backgroundColor: cardBg }]}>
         <View style={styles.headerRow}>
-          <Text style={[styles.eyebrow, { color: accent }]}>CUISINE MAP</Text>
+          <Text style={[styles.eyebrow, { color: accent }]}>{t('kitchen.journey.cuisineMap')}</Text>
           <Text style={[styles.eyebrow, { color: textSecondary }]}>
             {cuisines.length} CUISINES
           </Text>
@@ -88,17 +89,17 @@ export default function KitchenJourneyView({ isDark }: KitchenJourneyViewProps) 
       {/* Your arc */}
       {showArc && firstCuisine && latestCuisine && (
         <View style={[styles.card, Shadows.SM as object, { backgroundColor: arcBg }]}>
-          <Text style={[styles.eyebrow, { color: arcAccent }]}>YOUR ARC</Text>
+          <Text style={[styles.eyebrow, { color: arcAccent }]}>{t('kitchen.journey.arc')}</Text>
           <View style={styles.arcRow}>
             <View style={styles.arcSlot}>
-              <Text style={[styles.arcLabel, { color: textSecondary }]}>First plate</Text>
+              <Text style={[styles.arcLabel, { color: textSecondary }]}>{t('kitchen.journey.firstPlate')}</Text>
               <Text style={[styles.arcCuisine, { color: textPrimary }]}>
                 {firstCuisine.cuisine}
               </Text>
             </View>
             <Text style={[styles.arcArrow, { color: arcAccent }]}>→</Text>
             <View style={styles.arcSlot}>
-              <Text style={[styles.arcLabel, { color: textSecondary }]}>Latest plate</Text>
+              <Text style={[styles.arcLabel, { color: textSecondary }]}>{t('kitchen.journey.latestPlate')}</Text>
               <Text style={[styles.arcCuisine, { color: textPrimary }]}>
                 {latestCuisine.cuisine}
               </Text>

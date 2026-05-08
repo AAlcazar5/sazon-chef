@@ -32,8 +32,14 @@ const FRONTEND_ROOT = path.resolve(__dirname, '../..');
  * 2026-05-08 — Tier i18n-OPS3.2 batch 1 wrapped strings in NoResultsState,
  * DraggableMealCard, DuplicateModal, LogFoodSheet, MealSnackSelectorModal.
  * Baseline lowered 220 → 165 to lock in the gain.
+ *
+ * 2026-05-08 — Tier i18n-OPS3.2 batch 2 wrapped Kitchen views
+ * (KitchenJourneyView, KitchenStoriesView) plus meal-plan modals
+ * (PlanIQCard, TemplatePickerModal, RecurringMealModal, SaveTemplateModal,
+ * TimePickerModal, WeeklyNutritionSummary, RecurringMealsManagerModal) and
+ * RecipeSearchBar. Baseline lowered 165 → 114 to lock in the gain.
  */
-const HARDCODED_STRING_BASELINE = 165;
+const HARDCODED_STRING_BASELINE = 114;
 
 const HARDCODED_STRING_PATTERN =
   /<Text[^>]*>\s*[A-Z][A-Za-z][A-Za-z\s'.,!?:;\-—]{2,}\s*<\/Text>/g;

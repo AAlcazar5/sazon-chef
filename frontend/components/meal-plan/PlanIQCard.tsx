@@ -18,6 +18,7 @@ import { FontSize } from '../../constants/Typography';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { Shadows } from '../../constants/Shadows';
 import { useTheme } from '../../contexts/ThemeContext';
+import { t } from '../../lib/i18n';
 
 export interface PlanIQSummary {
   /** "Mediterranean (3 cuisines)" — caller pre-formats. */
@@ -56,7 +57,7 @@ function PlanIQCard({ summary, onShare }: PlanIQCardProps) {
       style={[styles.container, { backgroundColor: tint }, Shadows.MD]}
     >
       <Text style={[styles.headline, { color: textColor }]}>
-        Plan IQ
+        {t('mealPlan.iq.title')}
       </Text>
       <Text style={[styles.tagline, { color: subTextColor }]}>
         {summary.rhythmTagline}
@@ -64,25 +65,25 @@ function PlanIQCard({ summary, onShare }: PlanIQCardProps) {
 
       <View style={styles.statsGrid}>
         <View testID="plan-iq-stat-cuisine" style={styles.stat}>
-          <Text style={[styles.statLabel, { color: subTextColor }]}>Lean</Text>
+          <Text style={[styles.statLabel, { color: subTextColor }]}>{t('mealPlan.iq.lean')}</Text>
           <Text style={[styles.statValue, { color: textColor }]}>
             {summary.cuisineLean}
           </Text>
         </View>
         <View testID="plan-iq-stat-nutrient" style={styles.stat}>
-          <Text style={[styles.statLabel, { color: subTextColor }]}>Top nutrient</Text>
+          <Text style={[styles.statLabel, { color: subTextColor }]}>{t('mealPlan.iq.topNutrient')}</Text>
           <Text style={[styles.statValue, { color: textColor }]}>
             {summary.topNutrient}
           </Text>
         </View>
         <View testID="plan-iq-stat-pantry" style={styles.stat}>
-          <Text style={[styles.statLabel, { color: subTextColor }]}>Pantry reuse</Text>
+          <Text style={[styles.statLabel, { color: subTextColor }]}>{t('mealPlan.iq.pantryReuse')}</Text>
           <Text style={[styles.statValue, { color: textColor }]}>
             {pantryPct}%
           </Text>
         </View>
         <View testID="plan-iq-stat-carryover" style={styles.stat}>
-          <Text style={[styles.statLabel, { color: subTextColor }]}>Cook-once plays</Text>
+          <Text style={[styles.statLabel, { color: subTextColor }]}>{t('mealPlan.iq.cookOnce')}</Text>
           <Text style={[styles.statValue, { color: textColor }]}>
             {summary.carryOverCount}
           </Text>
@@ -97,7 +98,7 @@ function PlanIQCard({ summary, onShare }: PlanIQCardProps) {
           onPress={onShare}
           style={[styles.shareBtn, { backgroundColor: accent }]}
         >
-          <Text style={styles.shareText}>Share this week</Text>
+          <Text style={styles.shareText}>{t('mealPlan.iq.share')}</Text>
         </HapticTouchableOpacity>
       ) : null}
     </View>

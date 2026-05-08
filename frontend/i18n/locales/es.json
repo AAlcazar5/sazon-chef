@@ -94,5 +94,62 @@
   "home.noResults.relaxFilters.description": "Tus filtros activos pueden estar limitando demasiado los resultados.",
   "home.noResults.clearFilters": "Limpiar todos los filtros",
   "home.noResults.generate": "Generar una receta",
-  "home.noResults.clearSearch": "Limpiar búsqueda"
+  "home.noResults.clearSearch": "Limpiar búsqueda",
+
+  "home.search.recent": "Recientes",
+  "home.search.clearAll": "Limpiar todo",
+  "home.search.popular": "Populares",
+  "home.search.searching": "Buscando…",
+
+  "common.delete": "Eliminar",
+
+  "kitchen.journey.empty": "Empieza a cocinar y tu mapa se irá completando.",
+  "kitchen.journey.cuisineMap": "MAPA DE COCINAS",
+  "kitchen.journey.arc": "TU RECORRIDO",
+  "kitchen.journey.firstPlate": "Primer plato",
+  "kitchen.journey.latestPlate": "Último plato",
+  "kitchen.stories.thisWeek": "ESTA SEMANA",
+  "kitchen.stories.thisMonth": "ESTE MES",
+  "kitchen.stories.monthlyBrewing": "Tu resumen mensual se está preparando",
+  "kitchen.stories.monthlyExplanation": "El último día del mes verás tu cocina favorita, ingrediente estrella, nutriente top y el descubrimiento que ancló el mes.",
+  "kitchen.stories.pastRecaps": "RESÚMENES ANTERIORES",
+
+  "mealPlan.iq.title": "IQ del Plan",
+  "mealPlan.iq.lean": "Ligero",
+  "mealPlan.iq.topNutrient": "Nutriente estrella",
+  "mealPlan.iq.pantryReuse": "Reuso de despensa",
+  "mealPlan.iq.cookOnce": "Cocina una vez",
+  "mealPlan.iq.share": "Compartir esta semana",
+
+  "mealPlan.templates.title": "Plantillas de plan",
+  "mealPlan.templates.empty.title": "Sin plantillas aún",
+  "mealPlan.templates.empty.description": "Guarda la semana actual como plantilla para reusarla luego.",
+  "mealPlan.templates.applying": "Aplicando plantilla…",
+  "mealPlan.templates.builtIn": "Incluida",
+  "mealPlan.templates.apply": "Aplicar a esta semana",
+
+  "mealPlan.recurring.mealType": "Tipo de comida",
+  "mealPlan.recurring.repeatOn": "Repetir",
+  "mealPlan.recurring.weekdays": "Días laborables",
+  "mealPlan.recurring.weekends": "Fines de semana",
+  "mealPlan.recurring.everyDay": "Todos los días",
+
+  "mealPlan.saveTemplate.title": "Guardar como plantilla",
+  "mealPlan.saveTemplate.description": "Guarda las comidas de esta semana como plantilla reusable para cualquier semana futura.",
+  "mealPlan.saveTemplate.saving": "Guardando…",
+
+  "mealPlan.timePicker.title": "Programar receta",
+  "mealPlan.timePicker.selectedTime": "Hora seleccionada",
+  "mealPlan.timePicker.hour": "Hora",
+  "mealPlan.timePicker.addRecipe": "Añadir receta",
+
+  "mealPlan.weekly.dailyMacro": "Distribución diaria de macros",
+  "mealPlan.weekly.title": "Resumen nutricional semanal",
+  "mealPlan.weekly.calories": "Calorías semanales",
+  "mealPlan.weekly.macroBreakdown": "Desglose de macros",
+  "mealPlan.weekly.completion": "Comidas completadas",
+
+  "mealPlan.recurringManager.title": "Comidas recurrentes",
+  "mealPlan.recurringManager.empty": "Sin comidas recurrentes",
+  "mealPlan.recurringManager.paused": "En pausa"
 }

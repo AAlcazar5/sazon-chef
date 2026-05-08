@@ -7,6 +7,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import WheelPicker from './WheelPicker';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
+import { t } from '../../lib/i18n';
 
 interface TimePickerModalProps {
   /** Whether the modal is visible */
@@ -61,7 +62,7 @@ export default function TimePickerModal({
     <View className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
       <View className="bg-white dark:bg-gray-800 rounded-lg p-6 mx-4 w-full max-w-sm">
         <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Schedule Recipe
+          {t('mealPlan.timePicker.title')}
         </Text>
         <Text className="text-gray-600 dark:text-gray-100 mb-4">
           Choose a time for "{recipeTitle}":
@@ -70,7 +71,7 @@ export default function TimePickerModal({
         {/* Time Display */}
         <View className="bg-surface dark:bg-card-dark rounded-lg p-4 mb-4">
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-sm font-medium text-gray-700 dark:text-gray-100">Selected Time</Text>
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-100">{t('mealPlan.timePicker.selectedTime')}</Text>
             <HapticTouchableOpacity
               onPress={onToggleManualInput}
               className="px-3 py-1 rounded-lg"
@@ -111,7 +112,7 @@ export default function TimePickerModal({
           <View className="flex-row justify-center items-center">
             {/* Hour Picker */}
             <View className="items-center mr-6">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-100 mb-2">Hour</Text>
+              <Text className="text-sm font-medium text-gray-700 dark:text-gray-100 mb-2">{t('mealPlan.timePicker.hour')}</Text>
               <WheelPicker
                 data={Array.from({ length: 24 }, (_, i) => i)}
                 selectedValue={selectedHour}
@@ -149,7 +150,7 @@ export default function TimePickerModal({
             }}
             className="flex-1 py-3 px-4  rounded-lg"
           >
-            <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
+            <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">{t('common.cancel')}</Text>
           </HapticTouchableOpacity>
 
           <HapticTouchableOpacity
@@ -160,7 +161,7 @@ export default function TimePickerModal({
             className="flex-1 py-3 px-4 rounded-lg"
             style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
           >
-            <Text className="text-white font-medium text-center">Add Recipe</Text>
+            <Text className="text-white font-medium text-center">{t('mealPlan.timePicker.addRecipe')}</Text>
           </HapticTouchableOpacity>
         </View>
       </View>

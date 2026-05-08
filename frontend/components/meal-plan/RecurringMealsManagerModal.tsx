@@ -10,6 +10,7 @@ import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Duration, Spring } from '../../constants/Animations';
 import type { RecurringMeal } from '../../types';
+import { t } from '../../lib/i18n';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -99,7 +100,7 @@ export default function RecurringMealsManagerModal({
           {/* Header */}
           <View className="p-4 border-b border-gray-200 dark:border-gray-700 flex-row items-start justify-between">
             <View className="flex-1 pr-3">
-              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recurring Meals</Text>
+              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('mealPlan.recurringManager.title')}</Text>
               <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {rules.length === 0
                   ? 'No recurring meals set'
@@ -119,7 +120,7 @@ export default function RecurringMealsManagerModal({
             {rules.length === 0 ? (
               <View className="items-center py-8">
                 <Icon name={Icons.REFRESH} size={48} color={isDark ? '#4B5563' : '#D1D5DB'} accessibilityLabel="No recurring meals" />
-                <Text className="text-base font-medium text-gray-500 dark:text-gray-400 mt-3">No Recurring Meals</Text>
+                <Text className="text-base font-medium text-gray-500 dark:text-gray-400 mt-3">{t('mealPlan.recurringManager.empty')}</Text>
                 <Text className="text-sm text-gray-400 dark:text-gray-500 mt-1 text-center px-4">
                   Long-press a meal card and tap "Set as Recurring" to repeat it automatically.
                 </Text>
@@ -142,7 +143,7 @@ export default function RecurringMealsManagerModal({
                 {inactiveRules.length > 0 && (
                   <>
                     <Text className="text-xs font-medium text-gray-400 dark:text-gray-500 mt-4 mb-2 uppercase tracking-wider">
-                      Paused
+                      {t('mealPlan.recurringManager.paused')}
                     </Text>
                     {inactiveRules.map(rule => (
                       <RuleCard
@@ -259,11 +260,11 @@ function RuleCard({
         <View className="flex-row justify-end mt-2" style={{ gap: 8 }}>
           <HapticTouchableOpacity onPress={onEdit} className="flex-row items-center">
             <Icon name={Icons.EDIT_OUTLINE} size={14} color={isDark ? '#9CA3AF' : '#6B7280'} accessibilityLabel="Edit" />
-            <Text className="text-xs text-gray-500 dark:text-gray-400 ml-1">Edit</Text>
+            <Text className="text-xs text-gray-500 dark:text-gray-400 ml-1">{t('common.edit')}</Text>
           </HapticTouchableOpacity>
           <HapticTouchableOpacity onPress={onDelete} className="flex-row items-center">
             <Icon name={Icons.DELETE_OUTLINE} size={14} color={isDark ? DarkColors.secondaryRed : Colors.secondaryRed} accessibilityLabel="Delete" />
-            <Text className="text-xs ml-1" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>Delete</Text>
+            <Text className="text-xs ml-1" style={{ color: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}>{t('common.delete')}</Text>
           </HapticTouchableOpacity>
         </View>
       </View>
