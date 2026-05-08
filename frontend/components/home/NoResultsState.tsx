@@ -12,6 +12,7 @@ import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
 import { LogoMascot } from '../mascot';
 import Sazon from '../mascot/Sazon';
+import { t } from '../../lib/i18n';
 
 interface NoResultsStateProps {
   searchQuery: string;
@@ -50,14 +51,14 @@ export default function NoResultsState({
         No recipes found for &ldquo;{searchQuery}&rdquo;
       </Text>
       <Text className="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 max-w-xs">
-        We couldn't find an exact match — here are some ways to get unstuck.
+        {t('home.noResults.intro')}
       </Text>
 
       {/* Section 1: Similar recipe titles */}
       {suggestions.length > 0 && (
         <View className="w-full mt-6">
           <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
-            Similar recipes
+            {t('home.noResults.similar')}
           </Text>
           {suggestions.slice(0, 4).map((title, idx) => (
             <HapticTouchableOpacity
@@ -98,18 +99,18 @@ export default function NoResultsState({
               style={{ marginRight: 8 }}
             />
             <Text className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              Try relaxing your filters
+              {t('home.noResults.relaxFilters.title')}
             </Text>
           </View>
           <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            Your active filters may be narrowing results too much.
+            {t('home.noResults.relaxFilters.description')}
           </Text>
           <HapticTouchableOpacity
             onPress={onClearFilters}
             className="rounded-xl py-2.5 items-center"
             style={{ backgroundColor: primary }}
           >
-            <Text className="text-white font-semibold text-sm">Clear all filters</Text>
+            <Text className="text-white font-semibold text-sm">{t('home.noResults.clearFilters')}</Text>
           </HapticTouchableOpacity>
         </View>
       )}
@@ -127,7 +128,7 @@ export default function NoResultsState({
             style={{ marginRight: 8 }}
           />
           <Text className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            Generate a recipe instead
+            {t('home.noResults.generate')}
           </Text>
         </View>
         <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
@@ -147,7 +148,7 @@ export default function NoResultsState({
       {/* Clear search fallback */}
       <HapticTouchableOpacity onPress={onClearSearch} className="mt-5 py-2">
         <Text className="text-sm font-medium" style={{ color: isDark ? '#6B7280' : '#9CA3AF' }}>
-          Clear search
+          {t('home.noResults.clearSearch')}
         </Text>
       </HapticTouchableOpacity>
     </View>

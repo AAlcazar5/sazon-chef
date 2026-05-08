@@ -7,6 +7,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import PulsingLoader from '../ui/PulsingLoader';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
+import { t } from '../../lib/i18n';
 
 interface DuplicateModalProps {
   visible: boolean;
@@ -150,7 +151,7 @@ export default function DuplicateModal({
           {/* Header */}
           <View className="flex-row items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700">
             <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Duplicate Meals
+              {t('mealPlan.duplicate.title')}
             </Text>
             <HapticTouchableOpacity onPress={handleClose}>
               <Icon
@@ -167,7 +168,7 @@ export default function DuplicateModal({
             <View className="flex-row items-center justify-center py-3 mx-4 mt-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/30">
               <PulsingLoader size={14} color={isDark ? '#34D399' : '#059669'} />
               <Text className="text-emerald-700 dark:text-emerald-300 font-medium ml-2 text-sm">
-                Copying meals...
+                {t('mealPlan.duplicate.copying')}
               </Text>
             </View>
           )}
@@ -185,11 +186,11 @@ export default function DuplicateModal({
               <View className="flex-row items-center mb-2">
                 <Text className="text-lg mr-2">📋</Text>
                 <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Copy Last Week
+                  {t('mealPlan.duplicate.copyLastWeek.title')}
                 </Text>
               </View>
               <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                Duplicate last week's entire meal plan to this week
+                {t('mealPlan.duplicate.copyLastWeek.description')}
               </Text>
               <HapticTouchableOpacity
                 onPress={onCopyLastWeek}
@@ -198,7 +199,7 @@ export default function DuplicateModal({
                 style={{ backgroundColor: isDark ? '#065F46' : '#059669' }}
               >
                 <Text className="text-white font-semibold text-sm">
-                  Copy Last Week
+                  {t('mealPlan.duplicate.copyLastWeek.cta')}
                 </Text>
               </HapticTouchableOpacity>
             </View>
@@ -211,16 +212,16 @@ export default function DuplicateModal({
               <View className="flex-row items-center mb-2">
                 <Text className="text-lg mr-2">📅</Text>
                 <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Copy a Day
+                  {t('mealPlan.duplicate.copyDay.title')}
                 </Text>
               </View>
               <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                Copy all meals from one day to another
+                {t('mealPlan.duplicate.copyDay.description')}
               </Text>
 
               {/* From row */}
               <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                From
+                {t('mealPlan.duplicate.from')}
               </Text>
               <View className="flex-row mb-3" style={{ gap: 6 }}>
                 {weekDates.map((date, i) => {
@@ -257,7 +258,7 @@ export default function DuplicateModal({
 
               {/* To row */}
               <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                To
+                {t('mealPlan.duplicate.to')}
               </Text>
               <View className="flex-row mb-3" style={{ gap: 6 }}>
                 {weekDates.map((_, i) => {
@@ -295,7 +296,7 @@ export default function DuplicateModal({
                 style={{ backgroundColor: isDark ? '#065F46' : '#059669' }}
               >
                 <Text className="text-white font-semibold text-sm">
-                  Copy Day
+                  {t('mealPlan.duplicate.copyDay.cta')}
                 </Text>
               </HapticTouchableOpacity>
             </View>
@@ -308,7 +309,7 @@ export default function DuplicateModal({
               <View className="flex-row items-center mb-2">
                 <Text className="text-lg mr-2">🔁</Text>
                 <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Same Meal All Week
+                  {t('mealPlan.duplicate.sameMealAllWeek')}
                 </Text>
               </View>
               <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
@@ -317,7 +318,7 @@ export default function DuplicateModal({
 
               {/* Source day */}
               <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                Copy from
+                {t('mealPlan.duplicate.copyFrom')}
               </Text>
               <View className="flex-row mb-3" style={{ gap: 6 }}>
                 {weekDates.map((date, i) => {
@@ -353,7 +354,7 @@ export default function DuplicateModal({
               {mealSourceDay !== null && (
                 <>
                   <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                    Meal type
+                    {t('mealPlan.duplicate.mealType')}
                   </Text>
                   <View className="flex-row mb-3" style={{ gap: 6 }}>
                     {MEAL_TYPES.map((type) => {
@@ -404,7 +405,7 @@ export default function DuplicateModal({
               {mealSourceDay !== null && mealSourceType && (
                 <>
                   <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                    Copy to
+                    {t('mealPlan.duplicate.copyTo')}
                   </Text>
                   <View className="flex-row mb-3" style={{ gap: 6 }}>
                     {weekDates.map((_, i) => {

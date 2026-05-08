@@ -6,6 +6,7 @@ import { View, Text, Modal } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Colors, DarkColors } from '../../constants/Colors';
 import GoalModeSelector, { GoalMode } from './GoalModeSelector';
+import { t } from '../../lib/i18n';
 
 interface MealSnackSelectorModalProps {
   visible: boolean;
@@ -74,7 +75,7 @@ function MealSnackSelectorModal({
           {generationType === 'weekly' && (
             <View className="mb-6">
               <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
-                Goal Mode
+                {t('mealPlan.selector.goalMode')}
               </Text>
               <GoalModeSelector
                 selectedMode={planningMode}
@@ -87,7 +88,7 @@ function MealSnackSelectorModal({
           {/* Meals Selector */}
           <View className="mb-6">
             <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
-              Number of Meals
+              {t('mealPlan.selector.numberOfMeals')}
             </Text>
             <View className="flex-row justify-between">
               {[0, 1, 2, 3, 4].map((count) => (
@@ -167,7 +168,7 @@ function MealSnackSelectorModal({
           {/* Total Prep Time Selector */}
           <View className="mb-6">
             <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
-              Max Total Prep Time
+              {t('mealPlan.selector.maxPrep')}
             </Text>
             <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               Keep total meal prep time under this limit for {generationType === 'fullDay' ? 'today' : 'each day'}
@@ -210,7 +211,7 @@ function MealSnackSelectorModal({
           {/* Weekly Budget Selector */}
           <View className="mb-6">
             <Text className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
-              Max Weekly Budget
+              {t('mealPlan.selector.maxBudget')}
             </Text>
             <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               Keep total meal plan cost under this amount for {generationType === 'fullDay' ? 'today' : 'the week'}
@@ -253,7 +254,7 @@ function MealSnackSelectorModal({
               className="mt-2 py-2 px-4 rounded-lg "
             >
               <Text className="text-center text-sm text-gray-600 dark:text-gray-400">
-                No Budget Limit
+                {t('mealPlan.selector.noBudget')}
               </Text>
             </HapticTouchableOpacity>
           </View>
@@ -264,7 +265,7 @@ function MealSnackSelectorModal({
               onPress={onClose}
               className="flex-1 py-3 px-4  rounded-lg"
             >
-              <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
+              <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">{t('common.cancel')}</Text>
             </HapticTouchableOpacity>
 
             <HapticTouchableOpacity
@@ -272,7 +273,7 @@ function MealSnackSelectorModal({
               className="flex-1 py-3 px-4 rounded-lg"
               style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
             >
-              <Text className="text-white font-medium text-center">Create</Text>
+              <Text className="text-white font-medium text-center">{t('common.create')}</Text>
             </HapticTouchableOpacity>
           </View>
         </View>

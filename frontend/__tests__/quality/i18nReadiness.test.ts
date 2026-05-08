@@ -28,8 +28,12 @@ const FRONTEND_ROOT = path.resolve(__dirname, '../..');
  * Baseline pinned 2026-05-06 during N8.4 wiring. The count cannot grow.
  * Cleanup that lowers the count is welcome — update the constant in this
  * file to match.
+ *
+ * 2026-05-08 — Tier i18n-OPS3.2 batch 1 wrapped strings in NoResultsState,
+ * DraggableMealCard, DuplicateModal, LogFoodSheet, MealSnackSelectorModal.
+ * Baseline lowered 220 → 165 to lock in the gain.
  */
-const HARDCODED_STRING_BASELINE = 220;
+const HARDCODED_STRING_BASELINE = 165;
 
 const HARDCODED_STRING_PATTERN =
   /<Text[^>]*>\s*[A-Z][A-Za-z][A-Za-z\s'.,!?:;\-—]{2,}\s*<\/Text>/g;

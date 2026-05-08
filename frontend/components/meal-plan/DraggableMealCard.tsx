@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { recipeApi } from '../../lib/api';
 import { HapticPatterns } from '../../constants/Haptics';
 import SurpriseBadge from './SurpriseBadge';
+import { t } from '../../lib/i18n';
 
 const MEAL_TYPE_PILL: Record<string, { label: string; tint: string; tintDark: string; accent: string }> = {
   breakfast: { label: 'Breakfast', tint: Pastel.golden, tintDark: PastelDark.golden, accent: Accent.golden },
@@ -598,7 +599,7 @@ function DraggableMealCard({
                 </>
               )}
               <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? '#F9FAFB' : '#0F172A', marginRight: 12 }}>
-                View Recipe
+                {t('mealPlan.draggable.viewRecipe')}
               </Text>
               <HapticTouchableOpacity
                 onPress={() => {
@@ -642,12 +643,12 @@ function DraggableMealCard({
                     color={isDark ? DarkColors.primary : Colors.primary}
                     accessibilityLabel="Notes"
                   />
-                  <Text className="text-xs font-semibold text-gray-700 dark:text-gray-200">Notes</Text>
+                  <Text className="text-xs font-semibold text-gray-700 dark:text-gray-200">{t('common.notes')}</Text>
                 </View>
                 {onOpenNotes && meal.mealPlanMealId && (
                   <HapticTouchableOpacity onPress={() => onOpenNotes(meal.mealPlanMealId)}>
                     <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>
-                      Edit
+                      {t('common.edit')}
                     </Text>
                   </HapticTouchableOpacity>
                 )}
@@ -662,11 +663,11 @@ function DraggableMealCard({
           {isSwapExpanded && meal.mealPlanMealId && (
             <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-xs font-semibold text-gray-700 dark:text-gray-200">Swap Suggestions</Text>
+                <Text className="text-xs font-semibold text-gray-700 dark:text-gray-200">{t('mealPlan.draggable.swapTitle')}</Text>
                 {isLoadingSwap && <PulsingLoader size={12} color={isDark ? DarkColors.primary : Colors.primary} />}
               </View>
               {isLoadingSwap ? (
-                <Text className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">Loading suggestions...</Text>
+                <Text className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">{t('mealPlan.draggable.swapLoading')}</Text>
               ) : swapSuggestions.length > 0 ? (
                 <View className="space-y-2">
                   {swapSuggestions.slice(0, 3).map((suggestion: any, index: number) => (
@@ -716,7 +717,7 @@ function DraggableMealCard({
                             backgroundColor: isDark ? DarkColors.primary : Colors.primary,
                           }}
                         >
-                          <Text className="text-xs font-semibold text-white">Swap</Text>
+                          <Text className="text-xs font-semibold text-white">{t('mealPlan.draggable.swap')}</Text>
                         </HapticTouchableOpacity>
                       </View>
                     </HapticTouchableOpacity>
@@ -729,7 +730,7 @@ function DraggableMealCard({
                 </View>
               ) : (
                 <Text className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
-                  No swap suggestions available
+                  {t('mealPlan.draggable.noSwap')}
                 </Text>
               )}
             </View>

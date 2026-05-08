@@ -24,6 +24,7 @@ import { Shadows } from '../../constants/Shadows';
 import { BorderRadius } from '../../constants/Spacing';
 import { foodApi } from '../../lib/api';
 import type { FoodItem } from '../../types';
+import { t } from '../../lib/i18n';
 
 interface LogFoodSheetProps {
   visible: boolean;
@@ -287,7 +288,7 @@ export default function LogFoodSheet({
                   fontSize: 14,
                 }}
               >
-                No results found
+                {t('mealPlan.logFood.noResults')}
               </Text>
             ) : null
           }
@@ -312,7 +313,7 @@ export default function LogFoodSheet({
                       letterSpacing: 0.5,
                     }}
                   >
-                    Recent Foods
+                    {t('mealPlan.logFood.recent')}
                   </Text>
                   {recentFoods.map(renderFoodRow)}
                 </View>
@@ -330,7 +331,7 @@ export default function LogFoodSheet({
                       letterSpacing: 0.5,
                     }}
                   >
-                    Frequent Foods
+                    {t('mealPlan.logFood.frequent')}
                   </Text>
                   {frequentFoods.map(renderFoodRow)}
                 </View>
@@ -357,7 +358,7 @@ export default function LogFoodSheet({
         }}
       >
         <Text style={{ fontSize: 14, color: MACRO_COLORS.calories.accent, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
-          Can't find it? Add your own
+          {t('mealPlan.logFood.cantFind')}
         </Text>
       </HapticTouchableOpacity>
     </>
@@ -379,7 +380,7 @@ export default function LogFoodSheet({
         >
           <Ionicons name="chevron-back" size={20} color={MACRO_COLORS.calories.accent} />
           <Text style={{ fontSize: 14, color: MACRO_COLORS.calories.accent, marginLeft: 4 }}>
-            Back to search
+            {t('mealPlan.logFood.backToSearch')}
           </Text>
         </HapticTouchableOpacity>
 
@@ -527,7 +528,7 @@ export default function LogFoodSheet({
       </HapticTouchableOpacity>
 
       <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: textPrimary, marginBottom: 16 }}>
-        Add your own food
+        {t('mealPlan.logFood.addYourOwn')}
       </Text>
 
       {([
@@ -640,7 +641,7 @@ export default function LogFoodSheet({
                 marginBottom: 14,
               }}
             >
-              Log Food
+              {t('mealPlan.logFood.cta')}
             </Text>
 
             {view === 'search' && renderSearchView()}
