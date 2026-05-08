@@ -42,6 +42,9 @@ export default function LanguageSection() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [active, setActive] = useState<SazonLocale>(getLocale());
   const [saving, setSaving] = useState<SazonLocale | null>(null);
+  // G1.2 — coach voice override: null means "match app language".
+  const [coachLocale, setCoachLocale] = useState<'es' | 'pt' | null>(null);
+  const [savingCoach, setSavingCoach] = useState<'es' | 'pt' | null | 'inherit'>(null);
   const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -76,8 +79,33 @@ export default function LanguageSection() {
     }
   };
 
+  const handleCoachVoiceSelect = async (next: 'es' | 'pt' | null) => {
+    if (next === coachLocale) return;
+    HapticPatterns.buttonPress();
+    setSavingCoach(next ?? 'inherit');
+    try {
+      await userApi.updateCoachLocale(next);
+      setCoachLocale(next);
+    } catch (error) {
+      Alert.alert(t('language.error.title'), t('language.error.body'));
+    } finally {
+      setSavingCoach(null);
+    }
+  };
+
   const activeOption =
     LOCALE_OPTIONS.find((o) => o.code === active) ?? LOCALE_OPTIONS[0];
+
+  const COACH_VOICE_OPTIONS: Array<{
+    value: 'es' | 'pt' | null;
+    label: string;
+    flag: string;
+    savingKey: 'es' | 'pt' | 'inherit';
+  }> = [
+    { value: null, label: t('language.coachVoice.inherit'), flag: '🔗', savingKey: 'inherit' },
+    { value: 'es', label: 'Español', flag: '🌎', savingKey: 'es' },
+    { value: 'pt', label: 'Português', flag: '🌎', savingKey: 'pt' },
+  ];
 
   return (
     <View
@@ -198,6 +226,63 @@ export default function LanguageSection() {
               </HapticTouchableOpacity>
             );
           })}
+        </View>
+
+        {/* G1.2 — Sazon's voice override (independent of UI locale) */}
+        <View className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            {t('language.coachVoice.title')}
+          </Text>
+          <Text className="text-gray-500 dark:text-gray-200 text-xs mb-3">
+            {t('language.coachVoice.description')}
+          </Text>
+          <View className="gap-2">
+            {COACH_VOICE_OPTIONS.map((opt) => {
+              const isSelected = opt.value === coachLocale;
+              const isSavingThis = savingCoach === opt.savingKey;
+              return (
+                <HapticTouchableOpacity
+                  key={opt.savingKey}
+                  onPress={() => handleCoachVoiceSelect(opt.value)}
+                  disabled={savingCoach != null}
+                  accessibilityLabel={opt.label}
+                  accessibilityRole="button"
+                  className={`flex-row items-center justify-between py-3 px-3 rounded-lg ${
+                    isSelected ? '' : 'bg-gray-50 dark:bg-gray-700'
+                  } ${savingCoach != null && !isSavingThis ? 'opacity-50' : ''}`}
+                  style={
+                    isSelected
+                      ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary }
+                      : undefined
+                  }
+                >
+                  <View className="flex-row items-center flex-1">
+                    <Text className="text-xl mr-3">{opt.flag}</Text>
+                    <Text
+                      className={`flex-1 font-medium ${
+                        isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'
+                      }`}
+                    >
+                      {opt.label}
+                    </Text>
+                  </View>
+                  {isSelected && !isSavingThis && (
+                    <Icon
+                      name={Icons.CHECKMARK}
+                      size={IconSizes.SM}
+                      color="#FFFFFF"
+                      accessibilityLabel={t('common.selected')}
+                    />
+                  )}
+                  {isSavingThis && (
+                    <Text className="text-xs text-gray-500 dark:text-gray-300">
+                      {t('common.saving')}
+                    </Text>
+                  )}
+                </HapticTouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </Animated.View>
     </View>

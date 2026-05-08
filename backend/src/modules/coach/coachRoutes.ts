@@ -508,6 +508,13 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       })) as { locale: string | null } | null;
       return u?.locale ?? null;
     },
+    readUserCoachLocale: async (uid) => {
+      const u = (await prisma.user.findUnique({
+        where: { id: uid },
+        select: { coachLocale: true },
+      })) as { coachLocale: string | null } | null;
+      return u?.coachLocale ?? null;
+    },
     onAutoDetected: async (uid, detected) => {
       await prisma.user.update({
         where: { id: uid },

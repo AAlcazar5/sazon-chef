@@ -112,6 +112,9 @@
   "language.description": "Override your device language for the app and Sazon's voice.",
   "language.error.title": "Couldn't change language",
   "language.error.body": "Try again in a sec.",
+  "language.coachVoice.title": "Sazon's voice",
+  "language.coachVoice.description": "Pick the language Sazon speaks in. Different from app language — use this if your phone is in English but you want Sazon to chat in Spanish or Portuguese.",
+  "language.coachVoice.inherit": "Match app language",
 
   "kitchen.journey.empty": "Start cooking and your map will fill in.",
   "kitchen.journey.cuisineMap": "CUISINE MAP",

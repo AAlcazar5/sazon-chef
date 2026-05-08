@@ -194,3 +194,77 @@ describe('resolveLocaleForRequest — auto-persist side effect', () => {
     expect(out).toBe('es-MX');
   });
 });
+
+describe('G1.2 — coachLocale override (highest priority)', () => {
+  it('coachLocale wins over User.locale', async () => {
+    const out = await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'en',
+      readUserLocale: async () => 'en',
+      readUserCoachLocale: async () => 'es-MX',
+    });
+    expect(out).toBe('es-MX');
+  });
+
+  it('coachLocale wins over Accept-Language', async () => {
+    const out = await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'en',
+      readUserLocale: async () => null,
+      readUserCoachLocale: async () => 'pt-BR',
+    });
+    expect(out).toBe('pt-BR');
+  });
+
+  it('falls through to User.locale when coachLocale is null', async () => {
+    const out = await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'en',
+      readUserLocale: async () => 'es-MX',
+      readUserCoachLocale: async () => null,
+    });
+    expect(out).toBe('es-MX');
+  });
+
+  it('falls through to Accept-Language when both coachLocale and User.locale are null', async () => {
+    const out = await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'pt-BR',
+      readUserLocale: async () => null,
+      readUserCoachLocale: async () => null,
+    });
+    expect(out).toBe('pt-BR');
+  });
+
+  it('coachLocale unknown tag falls through (does not silently coerce to en)', async () => {
+    const out = await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'es-MX',
+      readUserLocale: async () => null,
+      readUserCoachLocale: async () => 'jp-JP',
+    });
+    // Unknown coachLocale → fall through. Header detects es-MX.
+    expect(out).toBe('es-MX');
+  });
+
+  it('does not auto-persist when coachLocale provides the override (user already chose)', async () => {
+    const onAutoDetected = jest.fn();
+    await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'pt-BR',
+      readUserLocale: async () => null,
+      readUserCoachLocale: async () => 'es-MX',
+      onAutoDetected,
+    });
+    expect(onAutoDetected).not.toHaveBeenCalled();
+  });
+
+  it('backward-compat: callers that omit readUserCoachLocale still resolve correctly', async () => {
+    const out = await resolveLocaleForRequest({
+      userId: 'u1',
+      acceptLanguageHeader: 'pt-BR',
+      readUserLocale: async () => null,
+    });
+    expect(out).toBe('pt-BR');
+  });
+});

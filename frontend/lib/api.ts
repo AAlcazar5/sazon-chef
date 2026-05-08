@@ -1197,6 +1197,12 @@ export const userApi = {
     return apiClient.patch('/user/locale', { locale });
   },
 
+  // ROADMAP 4.0 G1.2: bilingual coach-voice override. null clears the override
+  // (coach voice falls back to User.locale).
+  updateCoachLocale: (coachLocale: string | null) => {
+    return apiClient.patch('/user/coach-locale', { coachLocale });
+  },
+
   // Superfood preferences
   getPreferredSuperfoods: () => {
     return apiClient.get('/user/superfoods');

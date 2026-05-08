@@ -105,5 +105,8 @@
   "language.toggle": "Configurações de idioma",
   "language.description": "Substitua o idioma do dispositivo para o app e a voz do Sazon.",
   "language.error.title": "Não foi possível mudar o idioma",
-  "language.error.body": "Tente de novo em um instante."
+  "language.error.body": "Tente de novo em um instante.",
+  "language.coachVoice.title": "A voz do Sazon",
+  "language.coachVoice.description": "Escolha o idioma que o Sazon usa pra falar. Diferente do idioma do app — use isso se seu celular tá em inglês mas você prefere que o Sazon converse em espanhol ou português.",
+  "language.coachVoice.inherit": "Igual ao idioma do app"
 }

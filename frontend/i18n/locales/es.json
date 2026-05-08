@@ -112,6 +112,9 @@
   "language.description": "Anula el idioma del dispositivo para la app y la voz de Sazon.",
   "language.error.title": "No se pudo cambiar el idioma",
   "language.error.body": "Inténtalo de nuevo en un momento.",
+  "language.coachVoice.title": "La voz de Sazon",
+  "language.coachVoice.description": "Elige el idioma en el que Sazon te habla. Distinto del idioma de la app — úsalo si tu teléfono está en inglés pero prefieres que Sazon converse en español o portugués.",
+  "language.coachVoice.inherit": "Igual al idioma de la app",
 
   "kitchen.journey.empty": "Empieza a cocinar y tu mapa se irá completando.",
   "kitchen.journey.cuisineMap": "MAPA DE COCINAS",

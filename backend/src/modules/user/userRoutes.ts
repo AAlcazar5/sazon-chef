@@ -5,6 +5,7 @@ import { userPresetController } from './userPresetController';
 import { userPreferencesRoutes } from './userPreferencesRoutes';
 import { tonightModeRouter } from './userTonightModeRoutes';
 import { userLocaleRouter } from './userLocaleRoutes';
+import { userCoachLocaleRouter } from './userCoachLocaleRoutes';
 
 const router = Router();
 
@@ -19,6 +20,9 @@ router.use(tonightModeRouter);
 
 // ROADMAP 4.0 i18n-OPS4.1: PATCH /user/locale override.
 router.use(userLocaleRouter);
+
+// ROADMAP 4.0 G1.2: PATCH /user/coach-locale (coach-voice override).
+router.use(userCoachLocaleRouter);
 
 // User profile routes
 router.get('/profile', userController.getProfile);

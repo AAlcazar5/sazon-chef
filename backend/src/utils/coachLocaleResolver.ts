@@ -57,6 +57,13 @@ export interface ResolveLocaleInput {
   /** Read the user's persisted locale (or null if not set). Injected for testability. */
   readUserLocale: (userId: string) => Promise<string | null>;
   /**
+   * G1.2 — read the user's bilingual coach voice override (or null if not set).
+   * When set, overrides everything below: a user with `locale='en'` but
+   * `coachLocale='es-MX'` gets English UI but Spanish coach voice. Optional
+   * for backward-compat with callers that don't yet pass it.
+   */
+  readUserCoachLocale?: (userId: string) => Promise<string | null>;
+  /**
    * Optional callback fired when the resolver auto-detects a non-English
    * locale from the Accept-Language header AND the User.locale is currently
    * null. Caller is expected to write the value to the User row so subsequent
@@ -76,6 +83,16 @@ export interface ResolveLocaleInput {
 export async function resolveLocaleForRequest(
   input: ResolveLocaleInput,
 ): Promise<CoachLocale> {
+  // 0. G1.2 — coachLocale override (highest priority).
+  // Set explicitly when the user wants coach voice ≠ UI locale.
+  if (input.readUserCoachLocale) {
+    const coachOverride = await input.readUserCoachLocale(input.userId);
+    if (coachOverride) {
+      const resolved = resolveCoachLocale(coachOverride);
+      if (resolved !== 'en' || coachOverride === 'en') return resolved;
+      // Unknown override — fall through to the locale chain below.
+    }
+  }
   // 1. User.locale (if set + resolves to a known locale)
   const persisted = await input.readUserLocale(input.userId);
   if (persisted) {

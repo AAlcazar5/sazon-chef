@@ -28,6 +28,10 @@ model User {
   // first message from Accept-Language; user can override in profile.
   // Resolves through resolveCoachLocale fallback chain server-side.
   locale         String?  @default("en")
+  // ROADMAP 4.0 G1.2: bilingual coach voice override. NULL = inherit from
+  // `locale`. Set explicitly when the user wants coach voice ≠ UI locale
+  // (e.g. en-US device, but prefers Spanish food guidance).
+  coachLocale    String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
