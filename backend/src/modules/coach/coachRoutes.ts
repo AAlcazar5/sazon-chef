@@ -39,6 +39,12 @@ import { coachMessageLimiter } from '@/middleware/rateLimiter';
 import { emit as emitAnalytics } from '@/services/coachAnalytics';
 import { recordTurnCacheUsage } from '@/services/coachCacheHealth';
 import { loadConversationHistory } from '@/services/coachHistoryService';
+import { selectLLMClient } from '@/services/llm';
+import {
+  anthropicMessagesToNormalized,
+  anthropicToolsToNormalized,
+  normalizedToAnthropicContent,
+} from '@/services/llm/anthropicAdapter';
 import {
   identifyPantryFromImage,
   CoachVisionError,
@@ -534,7 +540,10 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       res.write(`event: cost_notice\ndata: ${JSON.stringify({ message: costNotice })}\n\n`);
     }
 
-    const anthropic = getAnthropicClient();
+    // Tier $$ — $$2.2: tier-aware LLM client. Premium → Anthropic always.
+    // Free → Anthropic by default; flips to OpenRouter (Gemini Flash) when
+    // COACH_FREE_PROVIDER=openrouter-gemini.
+    const llmClient = selectLLMClient(effectiveTier);
     const toolUses: RecordedToolUse[] = [];
     const userContent =
       validated.length > 0
@@ -566,68 +575,57 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       // headroom for a final answer. Net: caps iterations 1..MAX-2.
       const innerToolIteration =
         iter > 0 && iter < MAX_TOOL_USE_ITERATIONS - 1;
-      const params = buildAnthropicCreateParams({
+      const handle = llmClient.startStream({
         tier: effectiveTier,
         systemBlocks,
-        messages: conversationMessages,
-        tools: coachToolDefinitions,
+        messages: anthropicMessagesToNormalized(conversationMessages),
+        tools: anthropicToolsToNormalized(coachToolDefinitions),
         intent,
         modelOverride,
         innerToolIteration,
       });
-      const stream = anthropic.messages.stream(params);
 
-      // Capture the IDs/names from the streaming protocol for early SSE echo.
-      // `block.input` from `content_block_start` is per Anthropic spec always
-      // `{}` — the populated input arrives via `input_json_delta` and is only
-      // assembled on `final.content`. So we re-attach inputs after finalMessage.
+      // Capture the IDs/names from the stream for early SSE echo.
+      // `input` is empty during streaming and arrives populated on
+      // `finalMessage().content`. We re-attach inputs after the stream ends.
       const pendingToolUses: Array<{ id: string; name: string; input: unknown }> = [];
 
-      for await (const event of stream as AsyncIterable<Anthropic.RawMessageStreamEvent>) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          assistantText += event.delta.text;
-          res.write(`data: ${event.delta.text}\n\n`);
-        } else if (
-          event.type === 'content_block_start' &&
-          event.content_block.type === 'tool_use'
-        ) {
-          const block = event.content_block;
+      for await (const event of handle.events) {
+        if (event.type === 'text_delta') {
+          assistantText += event.text;
+          res.write(`data: ${event.text}\n\n`);
+        } else if (event.type === 'tool_use_start') {
           pendingToolUses.push({
-            id: block.id,
-            name: block.name,
+            id: event.id,
+            name: event.name,
             input: {},
           });
           // Early echo — IDs/names are reliable; input filled in below.
           res.write(
             `event: tool_use\ndata: ${JSON.stringify({
-              name: block.name,
+              name: event.name,
               input: {},
-              toolUseId: block.id,
+              toolUseId: event.id,
               partial: true,
             })}\n\n`,
           );
         }
       }
 
-      const final = await stream.finalMessage();
+      const final = await handle.finalMessage();
       lastModel = final.model;
       totalUsage = {
-        input_tokens: totalUsage.input_tokens + (final.usage.input_tokens ?? 0),
-        output_tokens: totalUsage.output_tokens + (final.usage.output_tokens ?? 0),
+        input_tokens: totalUsage.input_tokens + final.usage.inputTokens,
+        output_tokens: totalUsage.output_tokens + final.usage.outputTokens,
         cache_read_input_tokens:
-          totalUsage.cache_read_input_tokens +
-          (final.usage.cache_read_input_tokens ?? 0),
+          totalUsage.cache_read_input_tokens + final.usage.cacheReadTokens,
         cache_creation_input_tokens:
-          totalUsage.cache_creation_input_tokens +
-          (final.usage.cache_creation_input_tokens ?? 0),
+          totalUsage.cache_creation_input_tokens + final.usage.cacheWriteTokens,
       };
 
-      // Populate tool_use inputs from the final assembled message. This is the
-      // canonical fix for TS#1 — `content_block_start.input` is always `{}` per
-      // the Anthropic streaming spec.
+      // Populate tool_use inputs from the final assembled message. The
+      // tool_use_start event arrives without `input` populated (matches
+      // Anthropic streaming spec); inputs come on finalMessage().
       const pendingById = new Map(pendingToolUses.map((p) => [p.id, p]));
       for (const block of final.content) {
         if (block.type !== 'tool_use') continue;
@@ -635,8 +633,6 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         if (pending) {
           pending.input = block.input;
         } else {
-          // Defensive: tool_use appeared in final.content but not in stream
-          // events (shouldn't happen with current SDK). Surface anyway.
           pendingToolUses.push({
             id: block.id,
             name: block.name,
@@ -664,7 +660,9 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       // Echo assistant turn (text + tool_use blocks) into conversation history.
       conversationMessages.push({
         role: 'assistant',
-        content: final.content as Anthropic.ContentBlock[],
+        content: normalizedToAnthropicContent(
+          final.content,
+        ) as Anthropic.ContentBlock[],
       });
 
       const toolResultBlocks: Anthropic.ToolResultBlockParam[] = [];
