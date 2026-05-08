@@ -5,6 +5,15 @@ import { logger } from '../utils/logger';
 import { prisma } from '@/lib/prisma';
 import { pushNotificationService } from './pushNotificationService';
 import { emailService } from './emailService';
+import { pushCopy } from './pushNotificationCopy';
+
+async function readUserLocale(userId: string): Promise<string | null> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { locale: true },
+  });
+  return u?.locale ?? null;
+}
 
 export const notificationTriggerService = {
   // ─── EVENT-DRIVEN TRIGGERS ──────────────────────────────────────────────────
@@ -21,9 +30,11 @@ export const notificationTriggerService = {
 
     if (!settings?.shoppingReminders) return;
 
+    const locale = await readUserLocale(userId);
+    const copy = pushCopy.shoppingListReady(locale, { itemCount });
     await pushNotificationService.sendToUser(userId, {
-      title: 'Your shopping list is ready',
-      body: `${itemCount} item${itemCount !== 1 ? 's' : ''} — tap to view.`,
+      title: copy.title,
+      body: copy.body,
       data: { screen: '/shopping-list' },
     });
   },
@@ -39,9 +50,11 @@ export const notificationTriggerService = {
 
     if (!settings?.mealReminders) return;
 
+    const locale = await readUserLocale(userId);
+    const copy = pushCopy.mealPlanReady(locale);
     await pushNotificationService.sendToUser(userId, {
-      title: 'Your meal plan is ready!',
-      body: 'Tap to see your week at a glance.',
+      title: copy.title,
+      body: copy.body,
       data: { screen: '/meal-plan' },
     });
   },
@@ -89,9 +102,11 @@ export const notificationTriggerService = {
         });
 
         if (!existingPlan) {
+          const locale = await readUserLocale(userId);
+          const copy = pushCopy.planReminder(locale);
           await pushNotificationService.sendToUser(userId, {
-            title: 'Plan your week?',
-            body: 'Want me to plan next week? Takes 10 seconds.',
+            title: copy.title,
+            body: copy.body,
             data: { screen: '/meal-plan' },
           });
         }
@@ -132,14 +147,12 @@ export const notificationTriggerService = {
       }
 
       for (const [userId, titles] of userExpirations) {
-        const itemName = titles[0];
-        const body = titles.length === 1
-          ? `${itemName} expires soon — here are some quick recipes.`
-          : `${titles.length} items expire soon — use them before they go!`;
+        const locale = await readUserLocale(userId);
+        const copy = pushCopy.expiringSoon(locale, { titles });
 
         await pushNotificationService.sendToUser(userId, {
-          title: 'Expiring soon',
-          body,
+          title: copy.title,
+          body: copy.body,
           data: { screen: '/meal-prep' },
         });
       }
@@ -171,9 +184,11 @@ export const notificationTriggerService = {
 
         if (activityCount === 0) continue;
 
+        const locale = await readUserLocale(userId);
+        const copy = pushCopy.weeklyDigest(locale, { activityCount });
         await pushNotificationService.sendToUser(userId, {
-          title: 'Your week at a glance',
-          body: `You cooked ${activityCount} meal${activityCount !== 1 ? 's' : ''} this week! Tap for your summary.`,
+          title: copy.title,
+          body: copy.body,
           data: { screen: '/profile' },
         });
       }

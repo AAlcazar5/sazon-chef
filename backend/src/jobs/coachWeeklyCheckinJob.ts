@@ -16,6 +16,7 @@ import {
 } from '@/services/coachService';
 import { generateConversationTitle } from '@/services/coachPromptService';
 import { pushNotificationService } from '@/services/pushNotificationService';
+import { pushCopy } from '@/services/pushNotificationCopy';
 
 const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -31,6 +32,7 @@ interface CandidateUser {
   subscriptionTier: string | null;
   subscriptionStatus: string | null;
   lastWeeklyCheckinAt: Date | null;
+  locale: string | null;
   preferences: { weeklyCheckinOptIn: boolean } | null;
 }
 
@@ -197,8 +199,9 @@ async function processUser(
     },
   });
 
+  const checkinCopy = pushCopy.coachWeeklyCheckin(user.locale);
   await pushNotificationService.sendToUser(user.id, {
-    title: 'Hey — quick check-in?',
+    title: checkinCopy.title,
     body: summary.stem,
     data: { screen: 'coach', conversationId: conversation.id },
   });
@@ -223,6 +226,7 @@ export async function runOnce(now: Date): Promise<RunOnceResult> {
       subscriptionTier: true,
       subscriptionStatus: true,
       lastWeeklyCheckinAt: true,
+      locale: true,
       preferences: { select: { weeklyCheckinOptIn: true } },
     },
   })) as CandidateUser[];
