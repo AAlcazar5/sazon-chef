@@ -3,7 +3,7 @@
 //
 // Slides up from the avatar in FrostedHeader. Lightweight menu with anchors
 // into the existing profile sections (rendered in /(tabs)/profile when
-// "Open full profile" is tapped). Avoids duplicating the profile screen's
+// "Profile" is tapped). Avoids duplicating the profile screen's
 // data hooks inside the sheet.
 
 import React from 'react';
@@ -179,7 +179,7 @@ export default function ProfileSheet({
         <Row
           testID="profile-sheet-row-full-profile"
           icon="open-outline"
-          label="Open full profile"
+          label="Profile"
           description="All settings + history"
           onPress={onOpenFullProfile}
           isDark={isDark}
