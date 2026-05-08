@@ -3,7 +3,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import FrostedHeader from '../ui/FrostedHeader';
 import ProfileAvatarButton from '../profile/ProfileAvatarButton';
-import SazonFAB from '../sazon/SazonFAB';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { DarkColors } from '../../constants/Colors';
 
@@ -27,13 +26,7 @@ export default function CookbookHeader(_props: CookbookHeaderProps) {
         <Text style={[styles.title, { color: titleColor }]} accessibilityRole="header">
           Kit<Text style={[styles.titleAccent, { color: titleColor }]}>chen</Text>
         </Text>
-        <View style={styles.actions}>
-          <SazonFAB
-            getContextSeed={() => 'Tell me about my kitchen'}
-            accessibilityLabel="Talk to Sazon about your kitchen"
-          />
-          <ProfileAvatarButton size={36} />
-        </View>
+        <ProfileAvatarButton size={36} />
       </View>
     </FrostedHeader>
   );
@@ -59,10 +52,5 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: TITLE_SIZE,
     letterSpacing: -1.6,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
 });

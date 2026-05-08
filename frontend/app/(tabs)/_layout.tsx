@@ -5,6 +5,7 @@ import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboar
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SearchBar from '../../components/ui/SearchBar';
+import SazonFAB from '../../components/sazon/SazonFAB';
 import { t } from '../../lib/i18n';
 import { router, usePathname, useSegments } from 'expo-router';
 import { type ActionSheetItem } from '../../components/ui/ActionSheet';
@@ -624,6 +625,14 @@ export default function TabLayout() {
               </View>
             )}
           </View>
+
+          {/* ROADMAP 4.0 IA2.5 — SazonFAB sits next to Search + Quick Actions
+              as a third peer action. Globally mounted (visible across all
+              tabs) so chat is always one tap away. */}
+          <SazonFAB
+            getContextSeed={undefined}
+            accessibilityLabel="Talk to Sazon"
+          />
 
           {/* Quick Actions Button — gradient pill matching header buttons */}
 

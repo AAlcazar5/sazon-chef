@@ -4,7 +4,6 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import FrostedHeader from '../ui/FrostedHeader';
 import ShopThisWeekPill from './ShopThisWeekPill';
 import ProfileAvatarButton from '../profile/ProfileAvatarButton';
-import SazonFAB from '../sazon/SazonFAB';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 
@@ -58,10 +57,6 @@ export default function MealPlanHeader({
           {onShopThisWeek && missingShopCount > 0 && (
             <ShopThisWeekPill missingCount={missingShopCount} onPress={onShopThisWeek} />
           )}
-          <SazonFAB
-            getContextSeed={() => "How's my week shaping up?"}
-            accessibilityLabel="Talk to Sazon about this week"
-          />
           <ProfileAvatarButton size={32} />
           {!isSelectedDateToday && (
             <HapticTouchableOpacity

@@ -57,7 +57,15 @@ describe('IA2.4 — Sazon tab demotion', () => {
     expect(src).toMatch(/import.*SazonSheetProvider.*SazonSheetContext/);
   });
 
-  it('SazonFAB present in HomeHeader / MealPlanHeader / CookbookHeader', () => {
+  it('SazonFAB mounted globally in the tabs layout (Search + Quick Actions row)', () => {
+    // IA2.5 relocated SazonFAB from individual tab headers to the global
+    // Search + Quick-Actions row above the tab bar. Single mount point.
+    const src = fs.readFileSync(LAYOUT_PATH, 'utf-8');
+    expect(src).toMatch(/import\s+SazonFAB/);
+    expect(src).toMatch(/<SazonFAB[\s\S]*?\/>/);
+  });
+
+  it('SazonFAB is NOT mounted inside individual tab headers (single global mount)', () => {
     const headers = [
       '../../components/home/HomeHeader.tsx',
       '../../components/meal-plan/MealPlanHeader.tsx',
@@ -65,7 +73,10 @@ describe('IA2.4 — Sazon tab demotion', () => {
     ];
     for (const rel of headers) {
       const src = fs.readFileSync(path.resolve(__dirname, rel), 'utf-8');
-      expect(src).toMatch(/SazonFAB/);
+      // No JSX usage and no import of the FAB. Comments mentioning the
+      // component name are fine (and explain why it's NOT here).
+      expect(src).not.toMatch(/<SazonFAB/);
+      expect(src).not.toMatch(/import\s+SazonFAB/);
     }
   });
 });
