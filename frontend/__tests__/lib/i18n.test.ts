@@ -34,7 +34,7 @@ describe('t() — basic lookup', () => {
   });
 
   it('falls back through the BCP 47 chain (es-VE → es → en)', () => {
-    setLocale('es-VE' as never); // not in our shipped locales
+    setLocale('es-VE'); // not in our shipped locales
     // No es-VE bundle; should fall through to base 'es' (which we ship as
     // the LatAm-neutral default), and ultimately to 'en'.
     const result = t('tabs.today');
@@ -99,5 +99,33 @@ describe('regional fallback chain', () => {
     // Tab labels are identical across LatAm — base es covers them.
     // Voseo-specific copy (e.g. "Comé el mundo") would override.
     expect(t('tabs.today')).toBe('Hoy');
+  });
+});
+
+describe('Portuguese fallback chain (pt, pt-BR, pt-PT)', () => {
+  it('pt uses the BR-leaning base bundle', () => {
+    setLocale('pt');
+    expect(t('tabs.today')).toBe('Hoje');
+    expect(t('tabs.kitchen')).toBe('Cozinha');
+  });
+
+  it('pt-BR falls through to base pt for shared keys', () => {
+    setLocale('pt-BR');
+    // BR-leaning base — tab labels are identical
+    expect(t('tabs.today')).toBe('Hoje');
+  });
+
+  it('pt-PT overrides European-Portuguese-divergent strings', () => {
+    setLocale('pt-PT');
+    // pt-PT ships an override for kitchen.tab.saved → "Guardados" (vs BR "Salvos")
+    expect(t('kitchen.tab.saved')).toBe('Guardados');
+    // And uses planeado not planejado:
+    expect(t('today.empty.title')).toBe('Ainda não há nada planeado');
+  });
+
+  it('pt-AO (Angolan, not shipped) falls through pt-AO → pt → en', () => {
+    setLocale('pt-AO' as never);
+    // Unknown region collapses to base pt via normalizeLocale's split('-')[0]
+    expect(t('tabs.today')).toBe('Hoje');
   });
 });
