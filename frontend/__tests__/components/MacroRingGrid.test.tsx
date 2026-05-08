@@ -37,7 +37,7 @@ describe('MacroRingGrid', () => {
     const { getByText } = render(
       <MacroRingGrid macros={baseMacros} />
     );
-    expect(getByText('Cal')).toBeTruthy();
+    expect(getByText('Calories')).toBeTruthy();
     expect(getByText('Protein')).toBeTruthy();
     expect(getByText('Carbs')).toBeTruthy();
     expect(getByText('Fat')).toBeTruthy();

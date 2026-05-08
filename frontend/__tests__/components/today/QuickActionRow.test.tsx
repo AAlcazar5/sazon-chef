@@ -68,7 +68,9 @@ describe('<QuickActionRow />', () => {
     expect(onVoice).toHaveBeenCalledTimes(1);
   });
 
-  it('persists most-recently-used to AsyncStorage on tap', async () => {
+  it('persists tap log to AsyncStorage on tap', async () => {
+    // Storage key was renamed today.quick-actions.mru → quickActionTapLog:v1
+    // and the shape changed from a string[] to a { count, lastTappedAt } map.
     const { getByTestId } = render(<QuickActionRow {...baseHandlers} />);
     await act(async () => {
       await Promise.resolve();
@@ -76,17 +78,21 @@ describe('<QuickActionRow />', () => {
     fireEvent.press(getByTestId('quick-action-snap'));
     await waitFor(() => {
       expect(mockSetItem).toHaveBeenCalledWith(
-        'today.quick-actions.mru',
-        expect.stringContaining('snap')
+        'quickActionTapLog:v1',
+        expect.stringContaining('snap'),
       );
     });
   });
 
-  it('reads the MRU list from AsyncStorage on mount', async () => {
-    mockGetItem.mockResolvedValue(JSON.stringify(['snap', 'voice', 'build-a-plate', 'find-me-a-meal']));
+  it('reads the tap log from AsyncStorage on mount', async () => {
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({
+        snap: { count: 3, lastTappedAt: Date.now() },
+      }),
+    );
     render(<QuickActionRow {...baseHandlers} />);
     await waitFor(() => {
-      expect(mockGetItem).toHaveBeenCalledWith('today.quick-actions.mru');
+      expect(mockGetItem).toHaveBeenCalledWith('quickActionTapLog:v1');
     });
   });
 
