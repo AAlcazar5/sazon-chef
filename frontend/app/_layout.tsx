@@ -12,6 +12,7 @@ import { EDITORIAL_FONTS } from '../constants/Typography';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { ToastProvider } from '../contexts/ToastContext';
+import { SazonSheetProvider } from '../contexts/SazonSheetContext';
 import SplashScreen from '../components/ui/SplashScreen';
 
 // Keep native splash visible until our animated splash is ready
@@ -243,7 +244,9 @@ export default function RootLayout() {
           <AuthProvider>
             <ToastProvider>
               <BottomSheetModalProvider>
-                <RootLayoutNav />
+                <SazonSheetProvider>
+                  <RootLayoutNav />
+                </SazonSheetProvider>
               </BottomSheetModalProvider>
             </ToastProvider>
           </AuthProvider>

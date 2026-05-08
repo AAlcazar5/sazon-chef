@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useColorScheme } from 'nativewind';
 import FrostedHeader from '../ui/FrostedHeader';
 import ProfileAvatarButton from '../profile/ProfileAvatarButton';
+import SazonFAB from '../sazon/SazonFAB';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Sazon from '../mascot/Sazon';
 import { Ink, AccentTokens, Brand, Radius, Space, Type } from '../../constants/tokens';
@@ -64,8 +65,11 @@ export default function HomeHeader({
             </HapticTouchableOpacity>
           )}
 
-          {/* ROADMAP 4.0 — Filter button moved to in-page FilterRow.
-              Header now hosts only the Profile avatar (consistent across tabs). */}
+          {/* ROADMAP 4.0 IA2.3 — Sazon-everywhere icon + Profile avatar. */}
+          <SazonFAB
+            getContextSeed={() => "What should I cook tonight?"}
+            accessibilityLabel="Talk to Sazon about today"
+          />
           <ProfileAvatarButton size={36} />
         </View>
       </View>
