@@ -231,7 +231,7 @@ describe('POST /api/coach/message — analytics emission', () => {
       title: 't1',
       tier: 'free',
     });
-    mockMessageCount.mockResolvedValue(10);
+    mockMessageCount.mockResolvedValue(50); // S17c — free daily cap bumped from 10 → 50
 
     const res = await request(makeApp())
       .post('/api/coach/message')

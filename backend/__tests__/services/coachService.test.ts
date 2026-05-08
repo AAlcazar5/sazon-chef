@@ -48,21 +48,21 @@ describe('selectThinkingBudget by tier', () => {
     });
   });
 
-  it('premium chat enables 8k token thinking budget', () => {
+  it('S17c: premium chat enables a tighter 2k thinking budget (was 8k)', () => {
     expect(selectThinkingBudget('premium')).toEqual({
       type: 'enabled',
-      budget_tokens: 8000,
+      budget_tokens: 2000,
     });
     expect(selectThinkingBudget('premium', 'chat')).toEqual({
       type: 'enabled',
-      budget_tokens: 8000,
+      budget_tokens: 2000,
     });
   });
 
-  it('premium deep_plan enables 16k token thinking budget', () => {
+  it('S17c: premium deep_plan keeps a generous 8k thinking budget (was 16k)', () => {
     expect(selectThinkingBudget('premium', 'deep_plan')).toEqual({
       type: 'enabled',
-      budget_tokens: 16000,
+      budget_tokens: 8000,
     });
   });
 });
@@ -97,17 +97,17 @@ describe('buildAnthropicCreateParams', () => {
     expect(params.thinking).toEqual({ type: 'disabled' });
   });
 
-  it('selects Sonnet for premium chat by default', () => {
+  it('selects Sonnet for premium chat by default with the trimmed thinking budget', () => {
     const params = buildAnthropicCreateParams({
       tier: 'premium',
       systemPrompt,
       messages,
     });
     expect(params.model).toMatch(/sonnet/);
-    expect(params.thinking).toEqual({ type: 'enabled', budget_tokens: 8000 });
+    expect(params.thinking).toEqual({ type: 'enabled', budget_tokens: 2000 });
   });
 
-  it('escalates to Opus + 16k thinking when intent is deep_plan', () => {
+  it('escalates to Opus + 8k thinking when intent is deep_plan', () => {
     const params = buildAnthropicCreateParams({
       tier: 'premium',
       systemPrompt,
@@ -117,9 +117,27 @@ describe('buildAnthropicCreateParams', () => {
     expect(params.model).toMatch(/opus/);
     expect(params.thinking).toEqual({
       type: 'enabled',
-      budget_tokens: 16000,
+      budget_tokens: 8000,
     });
-    expect(params.max_tokens).toBeGreaterThan(16000);
+    expect(params.max_tokens).toBeGreaterThan(8000);
+  });
+
+  it('S17c: free-tier max_tokens output cap drops to 1024', () => {
+    const params = buildAnthropicCreateParams({
+      tier: 'free',
+      systemPrompt,
+      messages,
+    });
+    expect(params.max_tokens).toBe(1024);
+  });
+
+  it('S17c: premium chat max_tokens cap drops to 4096', () => {
+    const params = buildAnthropicCreateParams({
+      tier: 'premium',
+      systemPrompt,
+      messages,
+    });
+    expect(params.max_tokens).toBe(4096);
   });
 
   it('honors modelOverride when provided (used by per-user budget downgrade)', () => {

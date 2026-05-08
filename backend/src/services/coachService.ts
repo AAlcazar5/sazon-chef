@@ -32,11 +32,19 @@ export const COACH_MODELS = {
   premiumDeepPlan: 'claude-opus-4-7',
 } as const;
 
-const MAX_TOKENS_FREE = 4096;
-const MAX_TOKENS_PREMIUM = 16000;
-const MAX_TOKENS_PREMIUM_DEEP = 24000;
-const PREMIUM_THINKING_BUDGET = 8000;
-const PREMIUM_DEEP_THINKING_BUDGET = 16000;
+// S17c — output-token caps. Output is 5× more expensive than input on every
+// Claude tier, so over-provisioning max_tokens is wasted ceiling. The persona
+// enforces "one paragraph max" — 1024 tokens fits ~750 words, ample for chat.
+const MAX_TOKENS_FREE = 1024;
+const MAX_TOKENS_PREMIUM = 4096;
+const MAX_TOKENS_PREMIUM_DEEP = 12000;
+// S17c — thinking budgets dialed down. Extended thinking tokens ARE billed at
+// output rate; 8k of thinking on Sonnet was ~$0.12 per Pro chat call. 2k still
+// gives the model meaningful internal reasoning room without runaway spend.
+// deep_plan intent (explicit "plan my week" / "rebuild my pantry" asks) keeps
+// a generous 8k budget — that's where reasoning earns its cost.
+const PREMIUM_THINKING_BUDGET = 2000;
+const PREMIUM_DEEP_THINKING_BUDGET = 8000;
 
 type ThinkingBudget =
   | { type: 'disabled' }

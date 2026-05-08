@@ -50,7 +50,11 @@ import {
   topMemoriesForUser,
 } from '@/services/coachMemoryService';
 
-const FREE_DAILY_MESSAGE_CAP = 10;
+// S17c — free daily cap bumped from 10 → 50. With S17 prompt caching + S17b
+// lean dynamic block, per-message cost on free tier is ~$0.0008 once warmed.
+// 50 messages/day per free user = ~$0.04/day worst case. Generous tier;
+// realistic usage will land far below the cap.
+const FREE_DAILY_MESSAGE_CAP = 50;
 const MAX_TOOL_USE_ITERATIONS = 5;
 const MAX_MESSAGE_CHARS = 4000;
 // Phase 5: photo attachments. Wire-level cap per image; the server rejects
