@@ -5,7 +5,9 @@
 import {
   buildProfileSnapshot,
   buildSystemPrompt,
+  buildSystemPromptParts,
   serializeSnapshot,
+  serializeSnapshotLean,
   type CoachProfileInput,
   generateConversationTitle,
 } from '../../src/services/coachPromptService';
@@ -178,5 +180,82 @@ describe('generateConversationTitle', () => {
     });
     expect(title.length).toBeGreaterThan(0);
     expect(title.length).toBeLessThanOrEqual(80);
+  });
+});
+
+// ─── S17b — lean dynamic system block ──────────────────────────────────────
+
+describe('serializeSnapshotLean', () => {
+  it('only includes safety-critical + voice-shaping fields', () => {
+    const snap = buildProfileSnapshot(baseInput);
+    const lean = JSON.parse(serializeSnapshotLean(snap)) as Record<string, unknown>;
+    expect(Object.keys(lean).sort()).toEqual([
+      'allergens',
+      'dietaryProfile',
+      'goalPhase',
+      'skillTier',
+    ]);
+  });
+
+  it('strips pantry, leftovers, last7Cooks, slot/pair/cuisine affinity, macros, meal plan day', () => {
+    const snap = buildProfileSnapshot(baseInput);
+    const json = serializeSnapshotLean(snap);
+    expect(json).not.toMatch(/pantry/);
+    expect(json).not.toMatch(/leftoverInventory/);
+    expect(json).not.toMatch(/last7Cooks/);
+    expect(json).not.toMatch(/slotAffinity/);
+    expect(json).not.toMatch(/pairAffinity/);
+    expect(json).not.toMatch(/cuisineAffinity/);
+    expect(json).not.toMatch(/remainingMacros/);
+    expect(json).not.toMatch(/currentMealPlanDay/);
+  });
+
+  it('preserves allergens + dietary so safety stays in-prompt', () => {
+    const snap = buildProfileSnapshot({
+      ...baseInput,
+      allergens: ['peanut', 'tree nut'],
+      dietaryProfile: ['gluten-free', 'vegetarian'],
+    });
+    const json = serializeSnapshotLean(snap);
+    expect(json).toMatch(/peanut/);
+    expect(json).toMatch(/gluten-free/);
+  });
+
+  it('produces materially smaller payload than the full snapshot', () => {
+    const snap = buildProfileSnapshot(baseInput);
+    const full = serializeSnapshot(snap);
+    const lean = serializeSnapshotLean(snap);
+    expect(lean.length).toBeLessThan(full.length / 2);
+  });
+});
+
+describe('buildSystemPromptParts (S17 split + S17b lean dynamic)', () => {
+  it('returns { stable: PERSONA, dynamic: lean profile JSON }', () => {
+    const snap = buildProfileSnapshot(baseInput);
+    const { stable, dynamic } = buildSystemPromptParts(snap);
+    expect(stable).toContain('You are Sazon');
+    expect(stable).toContain('not a medical');
+    expect(dynamic).toContain('<user_profile>');
+    expect(dynamic).toMatch(/"allergens":/);
+    expect(dynamic).not.toMatch(/"pantry":/);
+    expect(dynamic).not.toMatch(/"slotAffinity":/);
+  });
+
+  it('persona block instructs the model to fetch state via tools', () => {
+    const { stable } = buildSystemPromptParts(buildProfileSnapshot(baseInput));
+    // Tool-use directive — at least one of the read tools must be named.
+    expect(stable).toMatch(/get_pantry|get_meal_plan|search_cookbook|find_recipes/);
+    // Allergens are in-prompt (safety) — directive says so explicitly.
+    expect(stable.toLowerCase()).toMatch(/allergens|dietary/);
+  });
+
+  it('memories appear in the dynamic block when provided, and only there', () => {
+    const snap = buildProfileSnapshot(baseInput);
+    const { stable, dynamic } = buildSystemPromptParts(snap, {
+      memories: [{ kind: 'preference', content: 'dislikes cilantro', confidence: 0.9 }],
+    });
+    expect(dynamic).toContain('<learned_memories>');
+    expect(dynamic).toContain('dislikes cilantro');
+    expect(stable).not.toContain('dislikes cilantro');
   });
 });
