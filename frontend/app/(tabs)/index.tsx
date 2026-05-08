@@ -35,7 +35,9 @@ import HeroRerollPill, { type HeroRerollRecipe } from '../../components/home/Her
 import FirstCuisineBadge from '../../components/home/FirstCuisineBadge';
 import { useReasoningPeekGate } from '../../hooks/useReasoningPeekGate';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
-import AskSazonHomeCard from '../../components/coach/AskSazonHomeCard';
+// IA2.6 — AskSazonHomeCard removed; the global SazonFAB (in the
+// Search + Quick-Actions row above the tab bar) replaces this card.
+// Two competing "ask Sazon" affordances on the same screen was redundant.
 import NutritionStrip from '../../components/today/NutritionStrip';
 import FriendsFeedSection from '../../components/today/FriendsFeedSection';
 import QuickActionRow from '../../components/today/QuickActionRow';
@@ -43,6 +45,7 @@ import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import FirstOfDayNote from '../../components/home/FirstOfDayNote';
 import SundayPolaroidCard from '../../components/today/SundayPolaroidCard';
 import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
+import MoreForYouSection from '../../components/today/MoreForYouSection';
 import CohortSocialProofPill from '../../components/today/CohortSocialProofPill';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
 import { useHomeFilterRowChips } from '../../hooks/useFilterRowChips';
@@ -1156,9 +1159,8 @@ export default function HomeScreen() {
           onPress={onSoftFilterPillPress}
         />
 
-        {/* 10Y entry-point: Ask Sazon card sits directly under the
-            filters as the primary "ask anything" affordance. */}
-        <AskSazonHomeCard />
+        {/* IA2.6 — AskSazonHomeCard removed. The global SazonFAB next to
+            the search bar replaces this card. */}
 
         {/* Featured recipe (Today's hero) — sits directly under the Coach card
             so the user lands on a cookable plate, not on supplementary widgets. */}
@@ -1230,17 +1232,17 @@ export default function HomeScreen() {
           onFindMeAMeal={handleQuickActionFindMeAMeal}
         />
 
-        {/* ROADMAP 4.0 HX3.1 — discovery surfaces lifted above the recipe
-            grid (previously dead-zone below-fold). Both are small,
-            horizontally compact, and earn an above-fold slot. */}
-        <SeasonalProduceCard />
-        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
-
-        {/* Group 10X Phase 6 — Stretch last night card */}
-        <StretchHomeCard />
-
-        {/* Group 10X Phase 8 — Plate of the week editorial card */}
-        <PlateOfWeekCard />
+        {/* ROADMAP 4.0 IA2.6 — Today carry-over consolidation. The 4 editorial
+            discovery / leftover cards used to render unconditionally and crowd
+            the home feed. They now sit inside <MoreForYouSection> which caps
+            visible cards at 2 and tucks the rest behind a "More for you" toggle.
+            User's expand preference persists per-device. */}
+        <MoreForYouSection>
+          <SeasonalProduceCard />
+          <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
+          <StretchHomeCard />
+          <PlateOfWeekCard />
+        </MoreForYouSection>
 
         {/* Contextual Recipe Sections (below editorial fold) */}
         <RecipeSectionsGrid
