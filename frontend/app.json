@@ -74,7 +74,8 @@
           "NSHealthUpdateUsageDescription": "Sazon can log meals you've cooked back to Apple Health so calories and macros stay in sync."
         }
       ],
-      "react-native-health-connect"
+      "react-native-health-connect",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

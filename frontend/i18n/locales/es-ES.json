@@ -1,0 +1,9 @@
+{
+  "today.empty.subtitle": "Toca abajo para encontrar la cena de esta noche.",
+  "today.cta.findMeMeal": "Encuéntrame algo",
+  "sazon.empty.description": "Nevera, macros, sobras — yo lo sé todo. Pregúntame lo que quieras sobre esta noche.",
+  "sazon.error.generic": "Mmm, Sazon se ha quedado callada. Inténtalo en un momento.",
+  "onboarding.welcome.subtitle": "Más allá de la hoja de cálculo, hacia la cocina.",
+  "common.error.network": "Sin conexión. Inténtalo en un momento.",
+  "common.error.unknown": "Algo ha fallado. Toca para reintentar."
+}

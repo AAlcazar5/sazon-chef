@@ -1,0 +1,17 @@
+{
+  "today.empty.subtitle": "Tocá abajo para encontrar el plato de esta noche.",
+  "today.cta.surpriseMe": "Sorprendeme",
+  "today.cta.findMeMeal": "Buscame algo",
+  "sazon.composer.placeholder": "Decime qué se te antoja…",
+  "sazon.empty.title": "Tu chef privada, lista cuando vos lo estés",
+  "sazon.empty.description": "Heladera, macros, sobras — yo sé todo. Preguntame lo que quieras sobre esta noche.",
+  "sazon.error.generic": "Mmm, Sazon se quedó callada. Probá de nuevo en un toque.",
+  "onboarding.welcome.title": "Bienvenido a Sazon",
+  "onboarding.eatStyle.question": "¿Cómo describirías la forma en que querés comer?",
+  "onboarding.cuisines.question": "¿Qué cocinas te encantan?",
+  "onboarding.skill.question": "¿Qué tan cómoda te sentís en la cocina?",
+  "onboarding.skill.cook": "Cocino algunas noches por semana",
+  "onboarding.complete.subtitle": "Tu primer plato está listo.",
+  "paywall.greeting": "Hola {{name}}, bienvenido a Pro.",
+  "common.error.network": "Sin conexión. Probá de nuevo en un toque."
+}

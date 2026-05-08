@@ -58,6 +58,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { ComponentSpacing } from '../../constants/Spacing';
+import { t } from '../../lib/i18n';
 import { useSubscription } from '../../hooks/useSubscription';
 import { deriveCoachFlags } from '../../lib/coachClient';
 import { classifyCoachIntent } from '../../lib/coachIntentClassifier';
@@ -437,7 +438,7 @@ export default function CoachScreen() {
 
           {stream.error && !stream.paywall && (
             <Text style={[styles.errorText, { color: isDark ? DarkColors.error : Colors.error }]}>
-              Hmm, the coach went quiet. Try again in a sec.
+              {t('sazon.error.generic')}
             </Text>
           )}
         </ScrollView>
@@ -483,7 +484,7 @@ export default function CoachScreen() {
             <TextInput
               value={composerText}
               onChangeText={setComposerText}
-              placeholder={voice.isListening ? 'Listening…' : "Tell me what you're hungry for..."}
+              placeholder={voice.isListening ? 'Listening…' : t('sazon.composer.placeholder')}
               placeholderTextColor={subtle}
               multiline
               accessibilityLabel="Coach message composer"
@@ -579,9 +580,9 @@ export default function CoachScreen() {
           <AnimatedEmptyState
             useMascot
             mascotExpression="curious"
-            title="Your private chef, ready when you are"
-            description="Pantry, macros, leftovers — I know it all. Ask me anything about tonight."
-            actionLabel="Tell me what you're hungry for."
+            title={t('sazon.empty.title')}
+            description={t('sazon.empty.description')}
+            actionLabel={t('sazon.composer.placeholder')}
             onAction={openNewConversation}
           />
           <View style={styles.chipsWrap}>

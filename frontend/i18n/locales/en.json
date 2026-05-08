@@ -1,0 +1,52 @@
+{
+  "tabs.today": "Today",
+  "tabs.week": "Week",
+  "tabs.kitchen": "Kitchen",
+  "tabs.sazon": "Sazon",
+
+  "today.hero.eyebrow.tonight": "TONIGHT",
+  "today.hero.match": "{{percent}}% MATCH",
+  "today.empty.title": "Nothing planned yet",
+  "today.empty.subtitle": "Tap below to find tonight's plate.",
+  "today.cta.surpriseMe": "Surprise me",
+  "today.cta.findMeMeal": "Find me a meal",
+
+  "kitchen.tab.saved": "Saved",
+  "kitchen.tab.collections": "Collections",
+  "kitchen.tab.discover": "Discover",
+  "kitchen.tab.journey": "Journey",
+  "kitchen.tab.stories": "Stories",
+
+  "sazon.composer.placeholder": "Tell me what you're hungry for…",
+  "sazon.empty.title": "Your private chef, ready when you are",
+  "sazon.empty.description": "Pantry, macros, leftovers — I know it all. Ask me anything about tonight.",
+  "sazon.error.generic": "Hmm, the coach went quiet. Try again in a sec.",
+
+  "onboarding.welcome.title": "Welcome to Sazon",
+  "onboarding.welcome.subtitle": "Past the spreadsheet, into the kitchen.",
+  "onboarding.eatStyle.question": "How would you describe how you want to eat?",
+  "onboarding.cuisines.question": "Which cuisines do you love?",
+  "onboarding.allergens.question": "Anything you can't eat?",
+  "onboarding.skill.question": "How comfortable are you in the kitchen?",
+  "onboarding.skill.beginner": "Getting started",
+  "onboarding.skill.cook": "I cook a few nights a week",
+  "onboarding.skill.chef": "I'm in the kitchen all the time",
+  "onboarding.complete.title": "All set, {{name}}",
+  "onboarding.complete.subtitle": "Your first plate is ready.",
+
+  "paywall.hero.title": "Sazon Pro: the friend who knows your kitchen",
+  "paywall.hero.subtitle": "Unlimited Sazon chat, photo attachments, weekly check-ins, voice cooking, deep meal plans.",
+  "paywall.greeting": "Hey {{name}}, welcome to Pro.",
+  "paywall.cta.upgrade": "Upgrade to Pro",
+  "paywall.cta.notNow": "Not right now",
+  "paywall.trust.cancel": "Cancel anytime.",
+
+  "common.cancel": "Cancel",
+  "common.save": "Save",
+  "common.done": "Done",
+  "common.next": "Next",
+  "common.back": "Back",
+  "common.close": "Close",
+  "common.error.network": "No connection. Try again in a sec.",
+  "common.error.unknown": "Something went sideways. Tap to retry."
+}

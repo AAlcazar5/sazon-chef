@@ -1,0 +1,52 @@
+{
+  "tabs.today": "Hoy",
+  "tabs.week": "Semana",
+  "tabs.kitchen": "Cocina",
+  "tabs.sazon": "Sazon",
+
+  "today.hero.eyebrow.tonight": "ESTA NOCHE",
+  "today.hero.match": "{{percent}}% MATCH",
+  "today.empty.title": "Aún no hay nada planeado",
+  "today.empty.subtitle": "Toca abajo para encontrar el plato de esta noche.",
+  "today.cta.surpriseMe": "Sorpréndeme",
+  "today.cta.findMeMeal": "Búscame algo",
+
+  "kitchen.tab.saved": "Guardadas",
+  "kitchen.tab.collections": "Colecciones",
+  "kitchen.tab.discover": "Descubrir",
+  "kitchen.tab.journey": "Recorrido",
+  "kitchen.tab.stories": "Historias",
+
+  "sazon.composer.placeholder": "Dime qué se te antoja…",
+  "sazon.empty.title": "Tu chef privada, lista cuando lo estés",
+  "sazon.empty.description": "Despensa, macros, sobras — yo sé todo. Pregúntame lo que sea sobre esta noche.",
+  "sazon.error.generic": "Mmm, Sazon se quedó callada. Inténtalo en un momento.",
+
+  "onboarding.welcome.title": "Bienvenido a Sazon",
+  "onboarding.welcome.subtitle": "Más allá de las dietas, hacia la cocina.",
+  "onboarding.eatStyle.question": "¿Cómo describirías la forma en que quieres comer?",
+  "onboarding.cuisines.question": "¿Qué cocinas te encantan?",
+  "onboarding.allergens.question": "¿Hay algo que no puedas comer?",
+  "onboarding.skill.question": "¿Qué tan cómoda te sientes en la cocina?",
+  "onboarding.skill.beginner": "Apenas empezando",
+  "onboarding.skill.cook": "Cocino algunas noches a la semana",
+  "onboarding.skill.chef": "Vivo en la cocina",
+  "onboarding.complete.title": "Listo, {{name}}",
+  "onboarding.complete.subtitle": "Tu primer plato está listo.",
+
+  "paywall.hero.title": "Sazon Pro: la amiga que conoce tu cocina",
+  "paywall.hero.subtitle": "Sazon ilimitado, fotos adjuntas, check-ins semanales, modo cocina por voz, planes profundos.",
+  "paywall.greeting": "Hola {{name}}, bienvenido a Pro.",
+  "paywall.cta.upgrade": "Actualizar a Pro",
+  "paywall.cta.notNow": "Ahora no",
+  "paywall.trust.cancel": "Cancela cuando quieras.",
+
+  "common.cancel": "Cancelar",
+  "common.save": "Guardar",
+  "common.done": "Listo",
+  "common.next": "Siguiente",
+  "common.back": "Atrás",
+  "common.close": "Cerrar",
+  "common.error.network": "Sin conexión. Inténtalo en un momento.",
+  "common.error.unknown": "Algo se torció. Toca para reintentar."
+}

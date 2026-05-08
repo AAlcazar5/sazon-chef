@@ -5,6 +5,7 @@ import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboar
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SearchBar from '../../components/ui/SearchBar';
+import { t } from '../../lib/i18n';
 import { router, usePathname, useSegments } from 'expo-router';
 import { type ActionSheetItem } from '../../components/ui/ActionSheet';
 import QuickActionsSheet from '../../components/action-sheet/QuickActionsSheet';
@@ -370,7 +371,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('tabs.today'),
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="home-outline" color={color} size={size} focused={focused} />
           ),
@@ -429,7 +430,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="cookbook" /* ROADMAP 4.0: visible label is "Kitchen"; route name kept for backwards compat */
         options={{
-          title: 'Kitchen',
+          title: t('tabs.kitchen'),
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="book-outline" color={color} size={size} focused={focused} />
           ),
@@ -459,7 +460,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="meal-plan"
         options={{
-          title: 'Week',
+          title: t('tabs.week'),
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="calendar-outline" color={color} size={size} focused={focused} badgeDot={mealPlanHasUncooked} badgeColor={colors.primary} />
           ),
@@ -489,7 +490,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="coach" /* ROADMAP 4.0: visible label is "Sazon"; route name kept for backwards compat */
         options={{
-          title: 'Sazon',
+          title: t('tabs.sazon'),
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="chatbubbles-outline" color={color} size={size} focused={focused} />
           ),
