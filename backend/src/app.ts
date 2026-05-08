@@ -7,6 +7,7 @@ import path from 'path';
 import { recipeRoutes } from '@modules/recipe/recipeRoutes';
 import { userRoutes } from '@modules/user/userRoutes';
 import { cityCuisineRouter } from '@modules/cityCuisine/cityCuisineRoutes';
+import { travelJournalRouter } from '@modules/travelJournal/travelJournalRoutes';
 import { healthMetricsRoutes } from '@modules/healthMetrics/healthMetricsRoutes';
 import { weightGoalRoutes } from '@modules/weightGoal/weightGoalRoutes';
 import mealPlanRoutes from '@modules/mealPlan/mealPlanRoutes';
@@ -185,6 +186,8 @@ app.use('/api/coach', authenticateToken, coachRoutes);
 app.use('/api/user/affinity', affinityRoutes);
 // ROADMAP 4.0 G2.2 — city-cuisine recommendations (powers G2.1 Sazon Travel mode).
 app.use('/api/city-cuisine', authenticateToken, cityCuisineRouter);
+// ROADMAP 4.0 G2.3 — travel journal ("what I ate" log; private by default).
+app.use('/api/travel-journal', authenticateToken, travelJournalRouter);
 // ROADMAP 4.0 B3 — surface event sink (impression/tap/cook/rate per surface)
 app.use('/api/telemetry/surface-events', authenticateToken, surfaceEventRoutes);
 // ROADMAP 4.0 HX7.1 — home-surface event sink (hero re-rolls / discovery card taps / etc.)

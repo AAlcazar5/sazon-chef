@@ -127,6 +127,9 @@ model User {
   // ROADMAP 4.0 TB3.1 — back-relation for recommender events.
   recommenderEvents       RecommenderEvent[]
 
+  // ROADMAP 4.0 G2.3 — back-relation for travel journal entries.
+  travelJournalEntries    TravelJournalEntry[]
+
   // ROADMAP 4.0 IG0.2 — back-relation for the ingredient event stream.
   ingredientEvents        IngredientEvent[]
 
@@ -1673,6 +1676,33 @@ model UserCuisineAdjacencyWeight {
   @@index([userId])
   @@index([userId, sourceCuisine])
   @@map("user_cuisine_adjacency_weights")
+}
+
+// ROADMAP 4.0 G2.3 — "What I ate" travel journal.
+// Per-user log of dishes eaten while traveling. Default private; opt-in
+// to share with friends (F1) or contribute anonymized to the global
+// adjacency model. Each entry can carry a free-text note + photo + cuisine
+// tag; the cuisine tag drives a high-signal adjacency writeback when present.
+model TravelJournalEntry {
+  id                       String   @id @default(cuid())
+  userId                   String
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurredAt               DateTime @default(now())
+  /// City slug from cityCuisineCatalog (e.g. "cdmx"). NULL = unknown city.
+  citySlug                 String?
+  dishName                 String
+  cuisineTag               String?
+  photoUri                 String?
+  note                     String?
+  isPrivate                Boolean  @default(true)
+  sharedWithFriendsAt      DateTime?
+  contributedAnonymizedAt  DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([userId, occurredAt])
+  @@index([userId, citySlug])
+  @@map("travel_journal_entries")
 }
 
 // C12 — Adaptive notification log.
