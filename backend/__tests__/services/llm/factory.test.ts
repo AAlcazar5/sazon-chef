@@ -51,4 +51,30 @@ describe('selectLLMClient', () => {
     expect(selectLLMClient('free').providerId).toBe('openrouter-gemini');
     expect(selectLLMClient('premium').providerId).toBe('openrouter-gemini');
   });
+
+  // ─── $$2.3 — direct Gemini ────────────────────────────────────────────
+  it('free routes to Gemini-direct when COACH_FREE_PROVIDER=gemini-direct + GEMINI_API_KEY set', () => {
+    process.env.COACH_FREE_PROVIDER = 'gemini-direct';
+    process.env.GEMINI_API_KEY = 'g-test';
+    expect(selectLLMClient('free').providerId).toBe('gemini-direct');
+  });
+
+  it('Gemini-direct falls back to Anthropic when GEMINI_API_KEY missing', () => {
+    process.env.COACH_FREE_PROVIDER = 'gemini-direct';
+    delete process.env.GEMINI_API_KEY;
+    expect(selectLLMClient('free').providerId).toBe('anthropic');
+  });
+
+  it('premium with COACH_FREE_PROVIDER=gemini-direct still routes to Anthropic', () => {
+    process.env.COACH_FREE_PROVIDER = 'gemini-direct';
+    process.env.GEMINI_API_KEY = 'g-test';
+    expect(selectLLMClient('premium').providerId).toBe('anthropic');
+  });
+
+  it('COACH_LLM_PROVIDER=gemini-direct forces Gemini regardless of tier (with key)', () => {
+    process.env.COACH_LLM_PROVIDER = 'gemini-direct';
+    process.env.GEMINI_API_KEY = 'g-test';
+    expect(selectLLMClient('free').providerId).toBe('gemini-direct');
+    expect(selectLLMClient('premium').providerId).toBe('gemini-direct');
+  });
 });

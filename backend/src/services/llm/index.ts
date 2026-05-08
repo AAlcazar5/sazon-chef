@@ -13,18 +13,28 @@ import type { CoachTier } from '../coachService';
 import { logger } from '../../utils/logger';
 import { anthropicAdapter } from './anthropicAdapter';
 import { openRouterAdapter } from './openRouterAdapter';
+import { geminiAdapter } from './geminiAdapter';
 import type { LLMClient } from './types';
 
-export type CoachLLMProviderId = 'anthropic' | 'openrouter-gemini';
+export type CoachLLMProviderId =
+  | 'anthropic'
+  | 'openrouter-gemini'
+  | 'gemini-direct';
+
+const PROVIDER_IDS: ReadonlySet<string> = new Set([
+  'anthropic',
+  'openrouter-gemini',
+  'gemini-direct',
+]);
 
 function resolveProviderForTier(tier: CoachTier): CoachLLMProviderId {
   const force = process.env.COACH_LLM_PROVIDER;
-  if (force === 'anthropic' || force === 'openrouter-gemini') {
-    return force;
-  }
+  if (force && PROVIDER_IDS.has(force)) return force as CoachLLMProviderId;
   if (tier === 'premium') return 'anthropic';
   const freeOverride = process.env.COACH_FREE_PROVIDER;
-  if (freeOverride === 'openrouter-gemini') return 'openrouter-gemini';
+  if (freeOverride && PROVIDER_IDS.has(freeOverride)) {
+    return freeOverride as CoachLLMProviderId;
+  }
   return 'anthropic';
 }
 
@@ -32,8 +42,6 @@ export function selectLLMClient(tier: CoachTier): LLMClient {
   const id = resolveProviderForTier(tier);
   if (id === 'openrouter-gemini') {
     if (!process.env.OPENROUTER_API_KEY) {
-      // Fail-safe: never route a paying user to a misconfigured provider.
-      // Log loudly + fall back to Anthropic.
       logger.warn(
         { tier },
         'COACH_FREE_PROVIDER=openrouter-gemini but OPENROUTER_API_KEY not set — falling back to Anthropic',
@@ -42,8 +50,18 @@ export function selectLLMClient(tier: CoachTier): LLMClient {
     }
     return openRouterAdapter;
   }
+  if (id === 'gemini-direct') {
+    if (!process.env.GEMINI_API_KEY) {
+      logger.warn(
+        { tier },
+        'COACH_FREE_PROVIDER=gemini-direct but GEMINI_API_KEY not set — falling back to Anthropic',
+      );
+      return anthropicAdapter;
+    }
+    return geminiAdapter;
+  }
   return anthropicAdapter;
 }
 
-export { anthropicAdapter, openRouterAdapter };
+export { anthropicAdapter, openRouterAdapter, geminiAdapter };
 export * from './types';
