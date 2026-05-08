@@ -22,7 +22,7 @@ import {
   exportPlateMenuPdf,
   type PlateMenuPlate,
 } from '../../components/recipe/PlateMenuExportButton';
-import AskCoachAboutRecipePill from '../../components/coach/AskCoachAboutRecipePill';
+import AskSazonAboutRecipePill from '../../components/coach/AskSazonAboutRecipePill';
 import RecipeDetailActionMenu from '../../components/recipe/RecipeDetailActionMenu';
 import MoreLikeThisRow from '../../components/recipe/MoreLikeThisRow';
 import CookedNextRow from '../../components/recipe/CookedNextRow';
@@ -305,7 +305,7 @@ export default function RecipeIdScreen() {
               Vary / Edit / Export buttons that were diluting the lead. */}
           <View style={styles.leadActionsRow}>
             <View style={{ flex: 1 }}>
-              <AskCoachAboutRecipePill recipeTitle={recipe.title} />
+              <AskSazonAboutRecipePill recipeTitle={recipe.title} />
             </View>
             <RecipeDetailActionMenu
               isComposed={isComposed}

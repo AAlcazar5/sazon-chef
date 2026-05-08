@@ -17,6 +17,7 @@ export const SAZON_OPEN_SOURCES = [
   'history_link',
   'tab',
   'deep_link',
+  'recipe_detail_pill',
   'other',
 ] as const;
 export type SazonOpenSource = (typeof SAZON_OPEN_SOURCES)[number];

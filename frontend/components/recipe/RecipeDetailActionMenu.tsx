@@ -3,7 +3,7 @@
 //
 // Replaces the stacked Vary / Edit composition / Export menu PDF buttons
 // with a single ellipsis trigger that opens a small bottom sheet. Keeps
-// AskCoachAboutRecipePill as the sole primary CTA so the conversion focus
+// AskSazonAboutRecipePill as the sole primary CTA so the conversion focus
 // stays sharp.
 
 import React, { useState } from 'react';

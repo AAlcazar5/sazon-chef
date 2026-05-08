@@ -30,7 +30,7 @@ beforeEach(() => {
 describe('SAZON_OPEN_SOURCES', () => {
   it('exposes the canonical set of open-source enums', () => {
     expect([...SAZON_OPEN_SOURCES].sort()).toEqual(
-      ['deep_link', 'fab_long_press', 'fab_tap', 'history_link', 'other', 'tab'].sort(),
+      ['deep_link', 'fab_long_press', 'fab_tap', 'history_link', 'other', 'recipe_detail_pill', 'tab'].sort(),
     );
   });
 });

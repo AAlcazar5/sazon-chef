@@ -2166,6 +2166,7 @@ export type SazonOpenSource =
   | 'history_link'
   | 'tab'
   | 'deep_link'
+  | 'recipe_detail_pill'
   | 'other';
 
 export interface SazonOpenEvent {
