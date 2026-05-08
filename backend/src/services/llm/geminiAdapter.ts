@@ -34,7 +34,12 @@ import type {
 } from './types';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+// `gemini-flash-latest` is Google's moving alias for whichever Flash family
+// model is currently free-tier eligible. Verified 2026-05 to alias to
+// `gemini-3-flash-preview`. Pinning the alias (not the dated version) avoids
+// the periodic free-tier-revocation churn on specific model ids — you don't
+// have to re-test the swap every time Google rotates the free model.
+const DEFAULT_MODEL = 'gemini-flash-latest';
 const MAX_OUTPUT_TOKENS_FREE = 1024;
 
 function selectGeminiModel(call: LLMStreamCall): string {
