@@ -59,73 +59,52 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'search_cookbook',
     description:
-      "Search the user's saved + recently-cooked recipes by query string. Returns a personalized ranking that boosts recently cooked and 4★+ rated recipes — not a generic search. Use when the user asks 'what have I made before with X' or wants to revisit a saved recipe.",
+      "Search the user's saved + recently-cooked recipes — personalized ranking that boosts recent + highly-rated. Use for 'what have I made with X' / revisit-a-recipe questions.",
     input_schema: {
       type: 'object',
       properties: {
-        query: {
-          type: 'string',
-          description: 'Free-text query matched against recipe title/cuisine.',
-        },
+        query: { type: 'string', description: 'Matched against recipe title/cuisine.' },
       },
       required: ['query'],
     },
   },
   {
     name: 'get_pantry',
-    description:
-      "Return the user's current pantry items and leftover inventory. Use to ground answers in what they actually have right now.",
-    input_schema: {
-      type: 'object',
-      properties: {},
-    },
+    description: "Current pantry items + leftover inventory.",
+    input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'get_today_remaining_macros',
     description:
-      "Return the user's macro goals minus what they've already eaten today. Use when nutrition fit matters (e.g. 'do I have room for X?'). Returns null fields if no goals set.",
-    input_schema: {
-      type: 'object',
-      properties: {},
-    },
+      "Macro goals minus today's intake. Use for 'do I have room for X' questions. Null fields if no goals set.",
+    input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'find_recipes',
     description:
-      "Return a personalized list of recipes ranked through the Sazon 70/30 macro-match / taste-match scoring engine plus pantry coverage + cuisine adjacency boost. Each result carries a personalization envelope (pantryCoverage, macroFit, affinityScore). NOT a generic search — every result is ranked for THIS user. Pass `forHouseholdMemberId` to rank for *this* kid/adult's affinity instead of the account holder's.",
+      "Personalized recipe list ranked for this user (70/30 macro/taste + pantry coverage + cuisine adjacency). Every row carries pantryCoverage / macroFit / affinityScore. Pass forHouseholdMemberId to rank for that household member instead of the account holder.",
     input_schema: {
       type: 'object',
       properties: {
-        cuisines: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Optional list of cuisines to require.',
-        },
-        maxPrepMinutes: {
-          type: 'number',
-          description: 'Optional max cook time in minutes.',
-        },
+        cuisines: { type: 'array', items: { type: 'string' } },
+        maxPrepMinutes: { type: 'number' },
         minProtein: { type: 'number' },
         maxCalories: { type: 'number' },
-        forHouseholdMemberId: {
-          type: 'string',
-          description:
-            "Optional household member id. When set, ranking uses *this* member's slot affinity instead of the account holder's — kid plate adapts to *this* kid.",
-        },
+        forHouseholdMemberId: { type: 'string' },
       },
     },
   },
   {
     name: 'find_recipes_smart',
     description:
-      "Tier S S4.1: PERSONALIZED RETRIEVAL via the new TB1 embeddings pipeline. Returns up to 5 recipe candidates ranked by cosine similarity to the user's cooking-history context vector + hard filters (allergens, dietary). Use when the user asks 'what should I eat' / 'find me something' / 'try a new dish' — preferred over `find_recipes` when no specific cuisine or constraint is given. Returns `{ error: 'retrieval_unavailable' }` when the embedding store is cold-start or the user has no cook history.",
+      "Embedding-based recipe retrieval (cosine over cook-history). Up to 5 candidates with allergens + dietary applied. Prefer over find_recipes for 'what should I eat' / 'try a new dish' when no specific constraint is given. Returns { error: 'retrieval_unavailable' } on cold-start.",
     input_schema: {
       type: 'object',
       properties: {
-        maxCookTime: { type: 'number', description: 'Optional cook-time cap in minutes.' },
+        maxCookTime: { type: 'number' },
         minPantryCoverage: {
           type: 'number',
-          description: 'Optional 0..1 minimum fraction of recipe ingredients the user already has.',
+          description: '0..1 fraction of recipe ingredients already in pantry.',
         },
       },
     },
@@ -133,16 +112,13 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'propose_tonight',
     description:
-      "Tier S S4.2: PRIMARY 'what should I eat tonight' tool. Calls the same retrieval + LLM-ranker pipeline that powers /api/tonight/proposal so Sazon's recommendation matches the home-feed hero. Returns `{ recipeId, title, copyLine, eventId }`. The eventId is a RecommenderEvent that lets us log accept/swap outcomes via S4.3. Returns `{ error: 'cold_start' | 'low_confidence' | 'ranker_unavailable' }` when the pipeline declines.",
-    input_schema: {
-      type: 'object',
-      properties: {},
-    },
+      "PRIMARY 'what should I eat tonight' tool — same engine as the home-feed hero. Returns { recipeId, title, copyLine, eventId }. Errors: cold_start | low_confidence | ranker_unavailable.",
+    input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'compose_plate',
     description:
-      "PRO-ONLY WRITE TOOL. Compose a Build-a-Plate (10X) plate from per-slot component IDs or queries and persist it for the user. Only use after the user has explicitly confirmed they want to build/save a plate in chat — never call speculatively. Runs an allergen safety check against the user's profile before persisting.",
+      "PRO-ONLY WRITE. Compose + persist a Build-a-Plate from per-slot component IDs or queries. Only call after explicit user confirmation. Allergen-checked.",
     input_schema: {
       type: 'object',
       properties: {
@@ -151,10 +127,7 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
           items: {
             type: 'object',
             properties: {
-              slot: {
-                type: 'string',
-                enum: ['protein', 'veg', 'carb', 'sauce', 'extra'],
-              },
+              slot: { type: 'string', enum: ['protein', 'veg', 'carb', 'sauce', 'extra'] },
               componentId: { type: 'string' },
               query: { type: 'string' },
             },
@@ -169,7 +142,7 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'log_meal',
     description:
-      "PRO-ONLY WRITE TOOL. Record a meal the user actually ate to their meal history. Only use after the user has explicitly confirmed they want to log a meal — never call speculatively. Exactly one of recipeId / plateId / foodItemId must be provided. Runs an allergen safety check before writing.",
+      "PRO-ONLY WRITE. Record an eaten meal to history. Only call after explicit user confirmation. Exactly one of recipeId / plateId / foodItemId. Allergen-checked.",
     input_schema: {
       type: 'object',
       properties: {
@@ -177,10 +150,7 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
         plateId: { type: 'string' },
         foodItemId: { type: 'string' },
         servings: { type: 'number' },
-        mealType: {
-          type: 'string',
-          enum: ['breakfast', 'lunch', 'dinner', 'snack'],
-        },
+        mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snack'] },
         eatenAt: { type: 'string' },
       },
       required: ['servings', 'mealType'],
@@ -190,38 +160,29 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'get_meal_plan',
     description:
-      "Return the user's active week meal plan with one row per (date, mealType) slot. Each row includes recipeId/title when assigned, or a custom-meal payload, or empty when unscheduled. Use when the user asks 'what's on my plan this week' or 'do I have something on Wednesday'.",
-    input_schema: {
-      type: 'object',
-      properties: {},
-    },
+      "Active week meal plan, flattened to (date, mealType) slots. Use for 'what's on my plan' / 'do I have something Wednesday'.",
+    input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'get_shopping_list',
     description:
-      "Return the user's active shopping list — items grouped by category with purchased state, quantity, and recipe attribution. Use when the user asks 'what's on my shopping list' or 'do I need eggs'.",
-    input_schema: {
-      type: 'object',
-      properties: {},
-    },
+      "Active shopping list — items grouped by category with purchased state. Use for 'what's on my list' / 'do I need eggs'.",
+    input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'get_user_profile',
     description:
-      "Return the user's preference profile: allergies/banned ingredients, dietary restrictions, liked cuisines, skill tier, macro goals. Use when answering anything that depends on safety (allergens) or personalization (cuisine taste).",
-    input_schema: {
-      type: 'object',
-      properties: {},
-    },
+      "User preference profile: allergens, dietary, liked cuisines, skill tier, macro goals. Use for safety-sensitive or taste-personalization questions.",
+    input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'get_recipe_detail',
     description:
-      'Return a full recipe by id: ingredients, instructions, macros, cuisine, image, source. Use to walk the user through a recipe step-by-step in chat or to ground a swap suggestion.',
+      'Full recipe by id — ingredients, instructions, macros, cuisine, source. Use to walk a recipe step-by-step or ground a swap.',
     input_schema: {
       type: 'object',
       properties: {
-        recipeId: { type: 'string', description: 'Recipe id from any prior tool result.' },
+        recipeId: { type: 'string', description: 'From any prior tool result.' },
       },
       required: ['recipeId'],
     },
@@ -230,7 +191,7 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'add_to_shopping_list',
     description:
-      "PRO-ONLY WRITE TOOL. Append items to the user's active shopping list. Only call after the user has explicitly confirmed in chat ('yes, add those'). Pass `items` as a list of {name, quantity?, category?}. Creates an active shopping list if none exists.",
+      "PRO-ONLY WRITE. Append items to the active shopping list (creates one if missing). Only call after explicit user confirmation.",
     input_schema: {
       type: 'object',
       properties: {
@@ -253,16 +214,13 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'schedule_meal',
     description:
-      "PRO-ONLY WRITE TOOL. Drop a recipe into the user's active week plan at (date, mealType). Only call after the user has explicitly confirmed in chat. Date is ISO YYYY-MM-DD. mealType is breakfast|lunch|dinner|snack. Replaces any existing meal in that slot.",
+      "PRO-ONLY WRITE. Drop a recipe into the active week plan at (date, mealType). Replaces existing slot. Date ISO YYYY-MM-DD. Only call after explicit user confirmation. Allergen-checked.",
     input_schema: {
       type: 'object',
       properties: {
         recipeId: { type: 'string' },
-        date: { type: 'string', description: 'ISO YYYY-MM-DD.' },
-        mealType: {
-          type: 'string',
-          enum: ['breakfast', 'lunch', 'dinner', 'snack'],
-        },
+        date: { type: 'string' },
+        mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snack'] },
       },
       required: ['recipeId', 'date', 'mealType'],
     },
@@ -270,13 +228,13 @@ export const coachToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'generate_recipe',
     description:
-      "PRO-ONLY WRITE TOOL. Generate a brand-new AI recipe from a free-text brief and persist it to the user's cookbook. Runs the standard performSafetyChecks (allergen / banned-ingredient guard). Only call after the user has explicitly asked for a custom recipe or accepted a 'should I make one for you?' prompt.",
+      "PRO-ONLY WRITE. AI-generate a recipe from a free-text brief, persist to cookbook, allergen-checked. Only call when the user explicitly asks or accepts.",
     input_schema: {
       type: 'object',
       properties: {
         brief: {
           type: 'string',
-          description: "Free-text description of what the user wants (e.g. 'a Persian fesenjan with mushrooms instead of walnuts, 30 min').",
+          description: "What the user wants (e.g. 'fesenjan with mushrooms instead of walnuts, 30 min').",
         },
         mealType: {
           type: 'string',

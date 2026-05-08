@@ -228,4 +228,50 @@ describe('buildAnthropicCreateParams', () => {
     });
     expect(JSON.stringify(tools)).toBe(before);
   });
+
+  // ─── #6 — cache verification ───────────────────────────────────────────────
+  it('#6 cache verify: same systemBlocks + tools produce byte-identical params (cache HIT precondition)', () => {
+    const systemBlocks = {
+      stable: 'persona X',
+      dynamic: '<user_profile>{"a":1}</user_profile>',
+    };
+    const tools: Anthropic.Tool[] = [
+      { name: 't1', description: 'tool 1', input_schema: { type: 'object', properties: {} } },
+      { name: 't2', description: 'tool 2', input_schema: { type: 'object', properties: {} } },
+    ];
+    const a = buildAnthropicCreateParams({ tier: 'free', systemBlocks, messages, tools });
+    const b = buildAnthropicCreateParams({ tier: 'free', systemBlocks, messages, tools });
+    expect(JSON.stringify(a.system)).toBe(JSON.stringify(b.system));
+    expect(JSON.stringify(a.tools)).toBe(JSON.stringify(b.tools));
+  });
+
+  it('#6 cache verify: changing the dynamic block does NOT bust the stable cache', () => {
+    const tools: Anthropic.Tool[] = [
+      { name: 't1', description: 'tool 1', input_schema: { type: 'object', properties: {} } },
+    ];
+    const a = buildAnthropicCreateParams({
+      tier: 'free',
+      systemBlocks: { stable: 'persona X', dynamic: '<user_profile>{"day":1}</user_profile>' },
+      messages,
+      tools,
+    });
+    const b = buildAnthropicCreateParams({
+      tier: 'free',
+      systemBlocks: { stable: 'persona X', dynamic: '<user_profile>{"day":2}</user_profile>' },
+      messages,
+      tools,
+    });
+    const sysA = a.system as Array<{ text: string }>;
+    const sysB = b.system as Array<{ text: string }>;
+    expect(sysA[0].text).toBe(sysB[0].text); // stable block — cache hit
+    expect(sysA[1].text).not.toBe(sysB[1].text); // dynamic block differs (intended)
+    expect(JSON.stringify(a.tools)).toBe(JSON.stringify(b.tools)); // tools — cache hit
+  });
+
+  it('#6 cache verify: model is on Claude 4.x family — prompt caching is GA, no beta header needed', () => {
+    const params = buildAnthropicCreateParams({ tier: 'free', systemPrompt, messages });
+    // If a future change downgrades to Claude 3.x, the SDK call would need
+    // `anthropic-beta: prompt-caching-2024-07-31` and this test would catch it.
+    expect(params.model).toMatch(/claude-(haiku|sonnet|opus)-4/);
+  });
 });
