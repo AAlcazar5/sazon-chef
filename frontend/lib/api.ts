@@ -1988,6 +1988,25 @@ export interface ActivationSurface {
   headline: string;
   body: string;
 }
+// ROADMAP 4.0 I2.4 — reverse-discovery payload shape.
+export interface ReverseDiscoveryCandidatePayload {
+  canonical: string;
+  locale: string;
+  localName: string;
+  availabilityTier: 'common' | 'specialty' | 'rare';
+  notes: string | null;
+}
+export interface ReverseDiscoveryCopyPayload {
+  eyebrow: string;
+  headline: string;
+  body: string;
+  cta: string;
+}
+export interface ReverseDiscoveryResponse {
+  candidate: ReverseDiscoveryCandidatePayload | null;
+  copy: ReverseDiscoveryCopyPayload | null;
+}
+
 export const todayApi = {
   activation: () =>
     apiClient.get<{ surface: ActivationSurface | null }>('/today/activation'),
@@ -1999,6 +2018,11 @@ export const todayApi = {
       lifetimeCookCount: number;
       daysSinceSignup: number;
     }>('/today/coverage'),
+  // ROADMAP 4.0 I2.4 — "your market has X" reverse-discovery surface.
+  // Returns { candidate: null, copy: null } for en/en-US users (no value
+  // to add) and unsupported locales — surface auto-hides client-side.
+  reverseDiscovery: () =>
+    apiClient.get<ReverseDiscoveryResponse>('/today/reverse-discovery'),
 };
 
 // ROADMAP 4.0 IG8.2 — "Try this ingredient" weekly cultural discovery.

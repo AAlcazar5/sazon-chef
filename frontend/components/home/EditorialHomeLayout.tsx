@@ -7,7 +7,12 @@ import HeroCohortOverlay from './HeroCohortOverlay';
 import PantryPlateHeroCard from './PantryPlateHeroCard';
 import DidYouKnowCard from './DidYouKnowCard';
 import KitchenIQPromoCard from './KitchenIQPromoCard';
+import ReverseDiscoveryCard, {
+  type ReverseDiscoveryCandidate,
+} from '../today/ReverseDiscoveryCard';
 import { useTonightsPlate } from '../../hooks/useTonightsPlate';
+import { useReverseDiscovery } from '../../hooks/useReverseDiscovery';
+import { openSazonWithSeed } from '../../lib/sazonTabShortcut';
 import type { SuggestedRecipe } from '../../types';
 
 const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Dessert'];
@@ -68,6 +73,16 @@ export function EditorialHomeLayout({
   }, [activeCategory, recipePool, heroRecipe]);
 
   const { plate: tonightsPlate } = useTonightsPlate();
+  // ROADMAP 4.0 I2.4 — "your market has X" reverse-discovery card.
+  // Auto-hides for en/en-US users via the backend short-circuit.
+  const { payload: reverseDiscovery } = useReverseDiscovery();
+  const handleAskAboutDiscovery = React.useCallback(
+    (candidate: ReverseDiscoveryCandidate) => {
+      const seed = `Tell me about ${candidate.localName} — what's a good way in?`;
+      openSazonWithSeed(seed);
+    },
+    []
+  );
 
   return (
     <>
@@ -105,6 +120,14 @@ export function EditorialHomeLayout({
           </View>
         </View>
       )}
+
+      {/* I2.4 — reverse-discovery surface ("YOUR MARKET HAS mandioca").
+          Returns null for en-US users; visible only for non-en locales
+          where the catalog has a fresh-to-you common ingredient. */}
+      <ReverseDiscoveryCard
+        payload={reverseDiscovery}
+        onAsk={handleAskAboutDiscovery}
+      />
 
       {/* Tonight's pantry plate hero card — renders between hero and macro widgets */}
       {tonightsPlate && (
