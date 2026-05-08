@@ -24,6 +24,10 @@ model User {
   resetCode       String? // 6-digit code for password reset
   resetCodeExpiry DateTime? // When the reset code expires
   profilePictureUrl String? // URL to uploaded profile picture
+  // i18n — BCP 47 locale tag (e.g. 'en', 'es-MX', 'es-AR'). Auto-detected on
+  // first message from Accept-Language; user can override in profile.
+  // Resolves through resolveCoachLocale fallback chain server-side.
+  locale         String?  @default("en")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

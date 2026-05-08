@@ -23,12 +23,18 @@ import 'dotenv/config';
 import { selectLLMClient } from '../src/services/llm';
 import { coachToolDefinitions } from '../src/services/coachTools';
 import { anthropicToolsToNormalized } from '../src/services/llm/anthropicAdapter';
+import {
+  buildProfileSnapshot,
+  buildSystemPromptParts,
+  resolveCoachLocale,
+} from '../src/services/coachPromptService';
 import type { CoachTier } from '../src/services/coachService';
 
 interface CliOptions {
   message: string;
   tier: CoachTier;
   withTools: boolean;
+  locale: string;
 }
 
 function parseCli(argv: string[]): CliOptions {
@@ -36,6 +42,7 @@ function parseCli(argv: string[]): CliOptions {
     message: '',
     tier: 'free',
     withTools: false,
+    locale: 'en',
   };
   const positional: string[] = [];
   for (let i = 2; i < argv.length; i += 1) {
@@ -43,6 +50,7 @@ function parseCli(argv: string[]): CliOptions {
     if (a === '--tier=premium' || a === '--premium') opts.tier = 'premium';
     else if (a === '--tier=free' || a === '--free') opts.tier = 'free';
     else if (a === '--with-tools') opts.withTools = true;
+    else if (a.startsWith('--locale=')) opts.locale = a.slice('--locale='.length);
     else if (a.startsWith('--')) {
       // Ignore unknown flags rather than fail loudly.
     } else {
@@ -53,9 +61,28 @@ function parseCli(argv: string[]): CliOptions {
   return opts;
 }
 
-const PERSONA_STABLE = `You are Sazon — a warm friend who eats well around the world. Reply briefly. Keep it conversational. No medical claims. Honor allergens.`;
-
-const PROFILE_DYNAMIC = `<user_profile>{"allergens":[],"dietaryProfile":[],"goalPhase":"maintain","skillTier":"cook"}</user_profile>`;
+// Build the same systemBlocks the real route would build, for the given
+// locale, so the smoke test exercises actual regional personas.
+function buildSmokeSystemBlocks(locale: string): { stable: string; dynamic: string } {
+  const snapshot = buildProfileSnapshot({
+    userId: 'smoke-test',
+    pantry: [],
+    leftoverInventory: [],
+    slotAffinity: [],
+    pairAffinity: [],
+    remainingMacros: null,
+    last7Cooks: [],
+    dietaryProfile: [],
+    allergens: [],
+    cuisineAffinity: [],
+    skillTier: 'cook',
+    goalPhase: 'maintain',
+    currentMealPlanDay: null,
+  });
+  return buildSystemPromptParts(snapshot, {
+    locale: resolveCoachLocale(locale),
+  });
+}
 
 async function main(): Promise<void> {
   const opts = parseCli(process.argv);
@@ -68,10 +95,14 @@ async function main(): Promise<void> {
   }
 
   const client = selectLLMClient(opts.tier);
+  const resolvedLocale = resolveCoachLocale(opts.locale);
+  const systemBlocks = buildSmokeSystemBlocks(opts.locale);
   // eslint-disable-next-line no-console
   console.error(`\n→ provider: ${client.providerId}`);
   // eslint-disable-next-line no-console
   console.error(`→ tier:     ${opts.tier}`);
+  // eslint-disable-next-line no-console
+  console.error(`→ locale:   ${opts.locale}${resolvedLocale !== opts.locale ? ` (resolved → ${resolvedLocale})` : ''}`);
   // eslint-disable-next-line no-console
   console.error(`→ tools:    ${opts.withTools ? `${coachToolDefinitions.length} tools` : 'none'}`);
   // eslint-disable-next-line no-console
@@ -81,7 +112,7 @@ async function main(): Promise<void> {
   const handle = client.startStream({
     tier: opts.tier,
     intent: 'chat',
-    systemBlocks: { stable: PERSONA_STABLE, dynamic: PROFILE_DYNAMIC },
+    systemBlocks,
     messages: [{ role: 'user', content: opts.message }],
     tools: opts.withTools
       ? anthropicToolsToNormalized(coachToolDefinitions)

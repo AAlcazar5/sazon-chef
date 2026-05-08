@@ -40,6 +40,7 @@ import { emit as emitAnalytics } from '@/services/coachAnalytics';
 import { recordTurnCacheUsage } from '@/services/coachCacheHealth';
 import { loadConversationHistory } from '@/services/coachHistoryService';
 import { selectLLMClient } from '@/services/llm';
+import { resolveLocaleForRequest } from '@/utils/coachLocaleResolver';
 import {
   anthropicMessagesToNormalized,
   anthropicToolsToNormalized,
@@ -491,11 +492,29 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       memoriesForPrompt = [];
     }
   }
+  // i18n — resolve the user's locale (User.locale → Accept-Language → 'en').
+  // Auto-detect: if User.locale is null and the device sends a Spanish
+  // Accept-Language header, persist the detected locale on the row so
+  // subsequent turns skip header parsing.
+  const acceptLanguage = req.headers['accept-language'] as string | undefined;
+  const locale = await resolveLocaleForRequest({
+    userId,
+    acceptLanguageHeader: acceptLanguage,
+    readUserLocale: async (uid) => {
+      const u = (await prisma.user.findUnique({
+        where: { id: uid },
+        select: { locale: true },
+      })) as { locale: string | null } | null;
+      return u?.locale ?? null;
+    },
+  });
+
   // S17 — split system prompt for prompt caching. The persona is byte-stable
   // across calls (cache_control: ephemeral), the profile + memories blob is
   // per-call and stays uncached so we don't churn the cache on every turn.
   const systemBlocks = buildSystemPromptParts(snapshot, {
     memories: memoriesForPrompt.length > 0 ? memoriesForPrompt : undefined,
+    locale,
   });
 
   // Tier S: classify the user's message intent for routing between Sonnet

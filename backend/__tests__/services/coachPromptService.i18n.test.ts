@@ -129,3 +129,82 @@ describe('i18n PoC — locale-aware buildSystemPromptParts', () => {
     expect(dynamic).toContain('no le gusta el cilantro');
   });
 });
+
+// ─── Regional Spanish (BCP 47) ─────────────────────────────────────────────
+//
+// Each region appends a small "Notas regionales" block to the base Spanish
+// persona. Vocabulary is locale-correct so "tortilla" means the right food
+// to a Mexican vs Argentine user, "frijoles" vs "porotos" vs "judías" etc.
+
+describe('i18n PoC — regional Spanish (es-MX, es-AR, es-CO, es-ES, es-419)', () => {
+  const snap = buildProfileSnapshot(baseInput);
+
+  it('es-MX appends Mexican vocab notes to the base Spanish persona', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'es-MX' });
+    expect(stable).toContain('Eres Sazon'); // base es persona
+    expect(stable).toMatch(/Notas regionales/i);
+    expect(stable.toLowerCase()).toMatch(/méxico|mexicana?s?/);
+    // Mexican vocab: tortilla = pan plano, frijoles, elote, chile (not ají)
+    expect(stable.toLowerCase()).toMatch(/tortilla.*pan|pan.*tortilla|maíz/);
+    expect(stable.toLowerCase()).toMatch(/elote/);
+  });
+
+  it('es-AR appends Argentine vocab notes — "porotos" not "frijoles"', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'es-AR' });
+    expect(stable).toContain('Eres Sazon');
+    expect(stable.toLowerCase()).toMatch(/argentina|porotos|chimichurri|asado/);
+    // Argentine "tortilla" = potato omelette, must be flagged
+    expect(stable.toLowerCase()).toMatch(/tortilla.*papas?|tortilla de papas?/);
+  });
+
+  it('es-ES appends Spanish (Spain) vocab notes — "patata" not "papa"', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'es-ES' });
+    expect(stable).toContain('Eres Sazon');
+    expect(stable.toLowerCase()).toMatch(/españa|paella|sofrito/);
+    expect(stable.toLowerCase()).toMatch(/patata|judías|pimiento/);
+    // Spanish "tortilla" = potato omelette (tortilla española)
+    expect(stable.toLowerCase()).toMatch(/tortilla\s+española|tortilla.*huevo/);
+  });
+
+  it('es-CO appends Colombian vocab notes — arepa, ajiaco, mild ají', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'es-CO' });
+    expect(stable).toContain('Eres Sazon');
+    expect(stable.toLowerCase()).toMatch(/colombia|arepa|ajiaco|mazorca/);
+  });
+
+  it('es-419 (LatAm catch-all) appends a neutral LatAm note (no region-specific cuisine bias)', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'es-419' });
+    expect(stable).toContain('Eres Sazon');
+    expect(stable.toLowerCase()).toMatch(/latinoamérica|latinoamericana|latam/);
+    // Should NOT name any specific country — it's a catch-all
+    expect(stable.toLowerCase()).not.toMatch(/^.*méxico.*$/);
+  });
+
+  it('unknown Spanish region (e.g. es-VE) falls back to base es with NO regional notes', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'es-VE' as never });
+    expect(stable).toContain('Eres Sazon');
+    expect(stable).not.toMatch(/Notas regionales/i);
+  });
+
+  it('unknown locale entirely (e.g. jp-JP) falls back to English persona', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'jp-JP' as never });
+    expect(stable).toContain('You are Sazon');
+    expect(stable).not.toContain('Eres Sazon');
+  });
+
+  it('each regional persona is byte-stable across calls (cache-hit precondition)', () => {
+    for (const loc of ['es-MX', 'es-AR', 'es-CO', 'es-ES', 'es-419'] as const) {
+      const a = buildSystemPromptParts(snap, { locale: loc }).stable;
+      const b = buildSystemPromptParts(snap, { locale: loc }).stable;
+      expect(a).toBe(b);
+    }
+  });
+
+  it('each regional persona is byte-different from every other region (cache key separation)', () => {
+    const personas = ['es', 'es-MX', 'es-AR', 'es-CO', 'es-ES', 'es-419'].map(
+      (l) => buildSystemPromptParts(snap, { locale: l as never }).stable,
+    );
+    const unique = new Set(personas);
+    expect(unique.size).toBe(personas.length);
+  });
+});
