@@ -310,3 +310,99 @@ describe('i18n PoC — Portuguese persona (pt, pt-BR, pt-PT)', () => {
     expect(en).toBe(ptBR);
   });
 });
+
+// ─── French (fr, fr-CA) — Tier I1B.2 ───────────────────────────────────────
+//
+// fr is the base persona (Hexagone-leaning, "tu" by default — matches the
+// brand's lifestyle voice; "vous" would feel like a hotel concierge).
+// fr-CA appends Quebec vocab + cuisine notes (frigidaire/dépanneur, poutine/
+// tourtière). Other French regions (Belgian, Swiss, West African) fall back
+// to base fr cleanly until distribution justifies their own notes.
+
+describe('i18n PoC — French persona (fr, fr-CA)', () => {
+  const snap = buildProfileSnapshot(baseInput);
+
+  it('locale=fr returns the French persona', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'fr' as never });
+    expect(stable).toMatch(/Tu es Sazon|Sazon — /);
+    expect(stable).not.toContain('You are Sazon');
+    expect(stable).not.toContain('Eres Sazon');
+    expect(stable).not.toContain('Você é a Sazon');
+  });
+
+  it('French persona preserves the medical-deflection rule', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'fr' as never });
+    expect(stable.toLowerCase()).toMatch(/professionnel.*(médical|santé|nutritionniste)/);
+  });
+
+  it('French persona preserves the allergen-honor rule', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'fr' as never });
+    expect(stable.toLowerCase()).toMatch(/allergèn/);
+  });
+
+  it('French persona preserves the prompt-injection guard', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'fr' as never });
+    expect(stable).toMatch(/<user_profile>|<tool_result>/);
+    expect(stable.toLowerCase()).toMatch(/données|instructions?/);
+  });
+
+  it('French persona keeps tool names in English (API identifiers)', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'fr' as never });
+    expect(stable).toMatch(/get_pantry|get_meal_plan|search_cookbook|find_recipes/);
+  });
+
+  it('French persona uses "tu" as the default register (lifestyle voice)', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'fr' as never });
+    // The persona should explicitly favor tu — either by stating it or by
+    // using tu-conjugated forms in the voice rules.
+    expect(stable).toMatch(/"tu"|tutoie|tu \w/i);
+  });
+
+  it('fr-CA appends Quebec vocab + cuisine notes — frigidaire, poutine, tourtière', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'fr-CA' as never });
+    expect(stable).toMatch(/Sazon/);
+    expect(stable).toMatch(/Notes régionales/i);
+    expect(stable.toLowerCase()).toMatch(/québec|québécois/);
+    expect(stable.toLowerCase()).toMatch(/frigidaire|dépanneur/);
+    expect(stable.toLowerCase()).toMatch(/poutine|tourtière|cretons/);
+  });
+
+  it('unknown French region (e.g. fr-BE) falls back to base fr with NO regional notes', () => {
+    const { stable } = buildSystemPromptParts(snap, { locale: 'fr-BE' as never });
+    expect(stable).toMatch(/Sazon/);
+    expect(stable).not.toMatch(/Notes régionales/i);
+  });
+
+  it('French persona is byte-stable across calls (cache HIT precondition)', () => {
+    for (const loc of ['fr', 'fr-CA'] as const) {
+      const a = buildSystemPromptParts(snap, { locale: loc as never }).stable;
+      const b = buildSystemPromptParts(snap, { locale: loc as never }).stable;
+      expect(a).toBe(b);
+    }
+  });
+
+  it('every persona (en/es/es-*/pt/pt-*/fr/fr-CA) is byte-different (cache key separation)', () => {
+    const personas = [
+      'en',
+      'es',
+      'es-MX',
+      'es-AR',
+      'es-CO',
+      'es-ES',
+      'es-419',
+      'pt',
+      'pt-BR',
+      'pt-PT',
+      'fr',
+      'fr-CA',
+    ].map((l) => buildSystemPromptParts(snap, { locale: l as never }).stable);
+    const unique = new Set(personas);
+    expect(unique.size).toBe(personas.length);
+  });
+
+  it('dynamic block is locale-agnostic for French too', () => {
+    const en = buildSystemPromptParts(snap, { locale: 'en' }).dynamic;
+    const fr = buildSystemPromptParts(snap, { locale: 'fr' as never }).dynamic;
+    expect(en).toBe(fr);
+  });
+});

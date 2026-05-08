@@ -47,6 +47,8 @@ describe('PATCH /api/user/locale — accepted tags', () => {
     ['pt'],
     ['pt-BR'],
     ['pt-PT'],
+    ['fr'],
+    ['fr-CA'],
   ])('persists %s and returns the new locale', async (locale) => {
     const app = makeApp();
     const res = await request(app)
@@ -74,6 +76,17 @@ describe('PATCH /api/user/locale — validation', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/unsupported|invalid|locale/i);
+    expect(mockUserUpdate).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for spurious French regional tags (e.g. fr-XX) — no silent fr fallback', async () => {
+    const app = makeApp();
+    const res = await request(app)
+      .patch('/api/user/locale')
+      .set('x-user-id', 'user-1')
+      .send({ locale: 'fr-XX' });
+
+    expect(res.status).toBe(400);
     expect(mockUserUpdate).not.toHaveBeenCalled();
   });
 

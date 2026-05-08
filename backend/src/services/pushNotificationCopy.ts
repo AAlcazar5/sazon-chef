@@ -34,12 +34,13 @@ export interface PushPayload {
   body: string;
 }
 
-type BaseLocale = 'en' | 'es' | 'pt';
+type BaseLocale = 'en' | 'es' | 'pt' | 'fr';
 
 function baseLocale(locale: string | null | undefined): BaseLocale {
   const resolved: CoachLocale = resolveCoachLocale(locale);
   if (resolved.startsWith('es')) return 'es';
   if (resolved.startsWith('pt')) return 'pt';
+  if (resolved.startsWith('fr')) return 'fr';
   return 'en';
 }
 
@@ -67,6 +68,12 @@ function shoppingListReady(
       body: `${n} ${n === 1 ? 'item' : 'itens'} — toque para ver.`,
     };
   }
+  if (lang === 'fr') {
+    return {
+      title: 'Ta liste de courses est prête',
+      body: `${n} article${n !== 1 ? 's' : ''} — touche pour voir.`,
+    };
+  }
   return {
     title: 'Your shopping list is ready',
     body: `${n} item${n !== 1 ? 's' : ''} — tap to view.`,
@@ -87,6 +94,12 @@ function mealPlanReady(locale: string | null | undefined): PushPayload {
       body: 'Toque para ver sua semana de relance.',
     };
   }
+  if (lang === 'fr') {
+    return {
+      title: 'Ton menu de la semaine est prêt !',
+      body: 'Touche pour voir ta semaine en un coup d’œil.',
+    };
+  }
   return {
     title: 'Your meal plan is ready!',
     body: 'Tap to see your week at a glance.',
@@ -105,6 +118,12 @@ function planReminder(locale: string | null | undefined): PushPayload {
     return {
       title: 'Planejar a semana?',
       body: 'Quer que eu planeje a próxima semana? Leva 10 segundos.',
+    };
+  }
+  if (lang === 'fr') {
+    return {
+      title: 'On planifie la semaine ?',
+      body: 'Tu veux que je planifie la semaine prochaine ? Ça prend 10 secondes.',
     };
   }
   return {
@@ -142,6 +161,15 @@ function expiringSoon(
           : `${count} ingredientes vencem em breve — use antes que estraguem!`,
     };
   }
+  if (lang === 'fr') {
+    return {
+      title: 'Bientôt périmé',
+      body:
+        count === 1
+          ? `${first} expire bientôt — voici quelques recettes rapides.`
+          : `${count} ingrédients expirent bientôt — utilise-les avant qu'ils ne s'abîment !`,
+    };
+  }
   return {
     title: 'Expiring soon',
     body:
@@ -173,6 +201,13 @@ function weeklyDigest(
       body: `Você cozinhou ${n} ${n === 1 ? 'refeição' : 'refeições'} esta semana. Toque para ver o resumo.`,
     };
   }
+  if (lang === 'fr') {
+    // "repas" is invariable in French — same form for singular and plural.
+    return {
+      title: 'Ta semaine en un coup d’œil',
+      body: `Tu as cuisiné ${n} repas cette semaine. Touche pour voir ton résumé.`,
+    };
+  }
   return {
     title: 'Your week at a glance',
     body: `You cooked ${n} meal${n !== 1 ? 's' : ''} this week! Tap for your summary.`,
@@ -186,6 +221,9 @@ function coachWeeklyCheckin(locale: string | null | undefined): PushPayload {
   }
   if (lang === 'pt') {
     return { title: 'Oi — tudo bem?', body: '' };
+  }
+  if (lang === 'fr') {
+    return { title: 'Salut — ça va ?', body: '' };
   }
   return { title: 'Hey — quick check-in?', body: '' };
 }

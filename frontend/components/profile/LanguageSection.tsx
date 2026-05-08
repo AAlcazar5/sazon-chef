@@ -34,6 +34,10 @@ const LOCALE_OPTIONS: LocaleOption[] = [
   { code: 'pt', label: 'Português', flag: '🌎' },
   { code: 'pt-BR', label: 'Português (Brasil)', flag: '🇧🇷' },
   { code: 'pt-PT', label: 'Português (Portugal)', flag: '🇵🇹' },
+  // 'fr' bundle, persona, push templates, and resolver are wired (Tier I1B.1–.4)
+  // but the picker entry is intentionally withheld until i18n-OPS7.3 review
+  // clears the DeepL draft. Add `{ code: 'fr', label: 'Français', flag: '🇫🇷' }`
+  // to expose it once a native speaker has signed off on fr.json.
 ];
 
 export default function LanguageSection() {

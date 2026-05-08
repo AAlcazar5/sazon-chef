@@ -102,6 +102,34 @@ describe('regional fallback chain', () => {
   });
 });
 
+describe('French fallback chain (fr, fr-CA) — Tier I1B.4', () => {
+  it('fr returns the French bundle for shipped keys', () => {
+    setLocale('fr');
+    // DeepL-bootstrapped, native-review pending, but these are stable enough
+    // to pin: tabs.today / tabs.kitchen / tabs.week shouldn't drift.
+    expect(t('tabs.today')).toBe("Aujourd'hui");
+    expect(t('tabs.kitchen')).toBe('Cuisine');
+    expect(t('tabs.week')).toBe('Semaine');
+  });
+
+  it('fr-CA (no delta bundle) falls through fr-CA → fr → en', () => {
+    setLocale('fr-CA');
+    expect(getLocale()).toBe('fr');
+    expect(t('tabs.today')).toBe("Aujourd'hui");
+  });
+
+  it('fr-BE (Belgian, not shipped) falls through to base fr', () => {
+    setLocale('fr-BE');
+    expect(getLocale()).toBe('fr');
+    expect(t('tabs.today')).toBe("Aujourd'hui");
+  });
+
+  it('setLocale("fr") persists', () => {
+    setLocale('fr');
+    expect(getLocale()).toBe('fr');
+  });
+});
+
 describe('Portuguese fallback chain (pt, pt-BR, pt-PT)', () => {
   it('pt uses the BR-leaning base bundle', () => {
     setLocale('pt');

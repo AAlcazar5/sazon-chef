@@ -146,6 +146,59 @@ describe('pushNotificationCopy — i18n templates', () => {
     });
   });
 
+  // ─── French (Tier I1B.3) ─────────────────────────────────────────────
+  describe('French (fr, fr-CA)', () => {
+    it('shoppingListReady renders in French base with article/articles plural', () => {
+      const sing = pushCopy.shoppingListReady('fr', { itemCount: 1 });
+      const plur = pushCopy.shoppingListReady('fr', { itemCount: 9 });
+      expect(sing.title.toLowerCase()).toMatch(/courses|liste/);
+      expect(sing.body).toMatch(/1 article\b/);
+      expect(plur.body).toMatch(/9 articles\b/);
+    });
+
+    it('shoppingListReady falls back fr-CA → fr', () => {
+      const out = pushCopy.shoppingListReady('fr-CA', { itemCount: 4 });
+      expect(out.title.toLowerCase()).toMatch(/courses|liste/);
+      expect(out.body).toContain('4');
+    });
+
+    it('mealPlanReady renders in French', () => {
+      const out = pushCopy.mealPlanReady('fr');
+      expect(out.title.toLowerCase()).toMatch(/menu|plan/);
+    });
+
+    it('planReminder body references the week (semaine) in French', () => {
+      const out = pushCopy.planReminder('fr');
+      expect(out.body.toLowerCase()).toContain('semaine');
+    });
+
+    it('expiringSoon renders French singular + plural', () => {
+      const sing = pushCopy.expiringSoon('fr', { titles: ['Ratatouille'] });
+      const plur = pushCopy.expiringSoon('fr', {
+        titles: ['Ratatouille', 'Cassoulet', 'Tartiflette'],
+      });
+      expect(sing.body).toContain('Ratatouille');
+      expect(sing.body.toLowerCase()).toMatch(/expire|bientôt|périme/);
+      expect(plur.body).toContain('3');
+    });
+
+    it('weeklyDigest renders with repas (invariable singular/plural in French)', () => {
+      // "repas" is the same in singular and plural — French quirk. Both
+      // "1 repas" and "5 repas" are correct; the test verifies we don't
+      // accidentally emit "repass" or "repases".
+      const sing = pushCopy.weeklyDigest('fr', { activityCount: 1 });
+      const plur = pushCopy.weeklyDigest('fr', { activityCount: 5 });
+      expect(sing.body).toMatch(/1 repas\b/);
+      expect(plur.body).toMatch(/5 repas\b/);
+      expect(sing.body).not.toMatch(/repass|repases/);
+    });
+
+    it('coachWeeklyCheckin renders informal French greeting', () => {
+      const out = pushCopy.coachWeeklyCheckin('fr');
+      expect(out.title.toLowerCase()).toMatch(/salut|coucou|ça va|alors/);
+    });
+  });
+
   describe('TEMPLATE_IDS', () => {
     it('exports a stable list of every template id', () => {
       const expected: PushTemplateId[] = [

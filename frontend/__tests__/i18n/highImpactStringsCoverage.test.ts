@@ -19,6 +19,7 @@
 import en from '../../i18n/locales/en.json';
 import es from '../../i18n/locales/es.json';
 import pt from '../../i18n/locales/pt.json';
+import fr from '../../i18n/locales/fr.json';
 
 const CRITICAL_KEYS: ReadonlyArray<string> = [
   // tabs (every screen)
@@ -81,10 +82,11 @@ const BRAND_KEYS: ReadonlySet<string> = new Set([
   'tabs.sazon',
 ]);
 
-const BASE_LOCALES: Record<'en' | 'es' | 'pt', Record<string, string>> = {
+const BASE_LOCALES: Record<'en' | 'es' | 'pt' | 'fr', Record<string, string>> = {
   en: en as Record<string, string>,
   es: es as Record<string, string>,
   pt: pt as Record<string, string>,
+  fr: fr as Record<string, string>,
 };
 
 describe('i18n-OPS3.2 — high-impact string coverage', () => {
@@ -119,6 +121,23 @@ describe('i18n-OPS3.2 — high-impact string coverage', () => {
       const enV = (en as Record<string, string>)[key];
       const ptV = (pt as Record<string, string>)[key];
       if (enV && ptV && enV === ptV) identical.push(key);
+    }
+    expect(identical).toEqual([]);
+  });
+
+  it('French translations differ from English (catches copy-paste regressions)', () => {
+    // True cognates — words that are spelled identically in English and
+    // French and are correct French. Not copy-paste; just shared etymology.
+    // Keep this set tight; growing it silently erodes the parity check.
+    const FR_COGNATE_EXEMPTIONS: ReadonlySet<string> = new Set([
+      'kitchen.tab.collections', // "Collections" — same word, correct French
+    ]);
+    const identical: string[] = [];
+    for (const key of CRITICAL_KEYS) {
+      if (BRAND_KEYS.has(key) || FR_COGNATE_EXEMPTIONS.has(key)) continue;
+      const enV = (en as Record<string, string>)[key];
+      const frV = (fr as Record<string, string>)[key];
+      if (enV && frV && enV === frV) identical.push(key);
     }
     expect(identical).toEqual([]);
   });

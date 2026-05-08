@@ -22,6 +22,7 @@ import esCO from '../i18n/locales/es-CO.json';
 import pt from '../i18n/locales/pt.json';
 import ptBR from '../i18n/locales/pt-BR.json';
 import ptPT from '../i18n/locales/pt-PT.json';
+import fr from '../i18n/locales/fr.json';
 
 export type SazonLocale =
   | 'en'
@@ -32,7 +33,8 @@ export type SazonLocale =
   | 'es-ES'
   | 'pt'
   | 'pt-BR'
-  | 'pt-PT';
+  | 'pt-PT'
+  | 'fr';
 
 const KNOWN_LOCALES: ReadonlySet<SazonLocale> = new Set([
   'en',
@@ -44,6 +46,7 @@ const KNOWN_LOCALES: ReadonlySet<SazonLocale> = new Set([
   'pt',
   'pt-BR',
   'pt-PT',
+  'fr',
 ]);
 
 type StringDict = Record<string, string>;
@@ -58,6 +61,7 @@ const BUNDLES: Record<SazonLocale, StringDict> = {
   pt: pt as StringDict,
   'pt-BR': ptBR as StringDict,
   'pt-PT': ptPT as StringDict,
+  fr: fr as StringDict,
 };
 
 /**
@@ -116,6 +120,7 @@ function buildFallbackChain(locale: SazonLocale): SazonLocale[] {
   if (locale === 'en') return ['en'];
   if (locale === 'es') return ['es', 'en'];
   if (locale === 'pt') return ['pt', 'en'];
+  if (locale === 'fr') return ['fr', 'en'];
   // Regional Portuguese: region → base pt → en.
   if (locale === 'pt-BR' || locale === 'pt-PT') return [locale, 'pt', 'en'];
   // Regional Spanish: try region → base es → en.

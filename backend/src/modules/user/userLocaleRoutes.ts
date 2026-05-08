@@ -20,6 +20,8 @@ const SUPPORTED_LOCALES = new Set([
   'pt',
   'pt-BR',
   'pt-PT',
+  'fr',
+  'fr-CA',
 ]);
 
 const router = Router();
