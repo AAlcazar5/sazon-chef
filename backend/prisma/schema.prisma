@@ -34,6 +34,12 @@ model User {
   coachLocale    String?
   // ROADMAP 4.0 G2.4 — internal-only admin flag for founder-trip tooling.
   isAdmin        Boolean  @default(false)
+  // ROADMAP 4.0 G2.1 — Sazon Travel mode. Home location + travel state
+  // power "Eat the world" Today header when >50mi from home >24h.
+  homeLatitude   Float?
+  homeLongitude  Float?
+  travelStartedAt DateTime?
+  travelCitySlug  String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

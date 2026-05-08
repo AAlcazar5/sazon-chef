@@ -10,6 +10,7 @@ import { cityCuisineRouter } from '@modules/cityCuisine/cityCuisineRoutes';
 import { travelJournalRouter } from '@modules/travelJournal/travelJournalRoutes';
 import { diasporaOnboardingRouter } from '@modules/diasporaOnboarding/diasporaOnboardingRoutes';
 import { founderTripRouter } from '@modules/founderTrip/founderTripRoutes';
+import { travelModeRouter } from '@modules/travelMode/travelModeRoutes';
 import { requireAdmin } from '@/middleware/requireAdmin';
 import { healthMetricsRoutes } from '@modules/healthMetrics/healthMetricsRoutes';
 import { weightGoalRoutes } from '@modules/weightGoal/weightGoalRoutes';
@@ -195,6 +196,8 @@ app.use('/api/travel-journal', authenticateToken, travelJournalRouter);
 app.use('/api/onboarding/diaspora', authenticateToken, diasporaOnboardingRouter);
 // ROADMAP 4.0 G2.4 — founder-trip curation tooling (admin-only).
 app.use('/api/admin/founder-trips', authenticateToken, requireAdmin, founderTripRouter);
+// ROADMAP 4.0 G2.1 — Sazon Travel mode heartbeat ("Eat the world" Today header).
+app.use('/api/travel-mode', authenticateToken, travelModeRouter);
 // ROADMAP 4.0 B3 — surface event sink (impression/tap/cook/rate per surface)
 app.use('/api/telemetry/surface-events', authenticateToken, surfaceEventRoutes);
 // ROADMAP 4.0 HX7.1 — home-surface event sink (hero re-rolls / discovery card taps / etc.)
