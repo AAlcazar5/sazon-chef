@@ -17,12 +17,31 @@ Without IG1, three surfaces fall back to less-personal logic:
   cuisine name from CookingLog. Embeddings let us classify ingredients into
   cuisine clusters even when the user logs them generically.
 
-The training run is **OpenAI-API-cost-bound, not engineering-bound** — the
-script exists; you run it once, then re-run as the catalog grows.
+The script exists; you run it once, then re-run as the catalog grows.
+**The launch run already shipped using the local provider** — 1,267 rows
+persisted to `IngredientEmbedding` (see ROADMAP_4.0 IG1.1). Re-run only
+when the catalog grows past the existing rows or you want to swap models.
 
-## Cost estimate
+## Providers
 
-For ~5,000 canonical ingredient names + USDA descriptions:
+The script supports two embedding backends. **Local is the default and
+shipped path; OpenAI is a fallback option.**
+
+| Provider                                      | `--provider` | Cost                                | Quality bar                                  | Setup                              |
+|-----------------------------------------------|-------------|-------------------------------------|----------------------------------------------|------------------------------------|
+| **Local (Hugging Face transformers.js)** ✅   | `local`     | $0 (one-time ~80MB model download)  | Good; `Xenova/all-MiniLM-L6-v2` 384-d native | `npm i @huggingface/transformers` (already installed) |
+| OpenAI *(fallback)*                           | `openai`    | ~$0.0025 / 5,000 names              | Strong; 1536-d → 384-d random projection     | `OPENAI_API_KEY` in `backend/.env` |
+
+The IG1.1 launch run used `--provider local`. Cosine magnitudes are
+tighter on bare ingredient names than OpenAI's, but the cluster
+rank-order is still correct (see Validate section below). The OpenAI
+path stays in the script for future re-runs if the local model's quality
+bar ever proves insufficient on a specific ingredient cluster.
+
+## Cost estimate (OpenAI fallback only)
+
+The local provider is $0. If you opt into the OpenAI fallback, costs
+for ~5,000 canonical ingredient names + USDA descriptions:
 
 | Item                       | Value                                         |
 |----------------------------|-----------------------------------------------|
@@ -34,20 +53,6 @@ For ~5,000 canonical ingredient names + USDA descriptions:
 Cost will scale linearly as the catalog grows. The script is idempotent —
 re-runs only embed names that aren't already in `IngredientEmbedding`, so
 incremental costs are bounded.
-
-## Providers
-
-The script supports two embedding backends. Pick one:
-
-| Provider              | `--provider` | Cost                     | Quality bar                              | Setup                            |
-|-----------------------|-------------|--------------------------|------------------------------------------|----------------------------------|
-| **OpenAI** (default)  | `openai`    | ~$0.0025 / 5,000 names   | Strong; 1536-d → 384-d random projection | `OPENAI_API_KEY` in `backend/.env` |
-| **Local (Hugging Face transformers.js)** | `local`     | $0 (one-time ~80MB model download) | Good; `Xenova/all-MiniLM-L6-v2` 384-d native | `npm i @huggingface/transformers` (already installed) |
-
-The local backend is the default fallback when OpenAI access isn't
-available — the IG1.1 launch run used it. Cosine magnitudes are tighter
-on bare ingredient names, but the cluster rank-order is still correct
-(see Validate section below).
 
 ## Candidate sources
 
@@ -62,8 +67,9 @@ The script reads canonical names from one of two sources, picked via
 
 ## Prerequisites
 
-1. **One of the provider credentials above** (or `--provider local` and an
-   internet connection for the one-time model download).
+1. **`--provider local` needs internet** for the one-time model download
+   (cached after first run). The OpenAI fallback needs `OPENAI_API_KEY`
+   in `backend/.env`.
 2. **Prisma client up-to-date** for `IngredientEmbedding` (already pushed
    via `npx prisma db push` when IG0.3 shipped):
    ```bash
@@ -79,15 +85,7 @@ The script reads canonical names from one of two sources, picked via
 
 ## Run it
 
-OpenAI:
-```bash
-cd backend
-npx ts-node scripts/recommender/trainIngredientEmbeddings.ts \
-    --provider openai \
-    --batch-size 100
-```
-
-Local (no API key needed):
+Local (default — no API key needed):
 ```bash
 cd backend
 npx ts-node scripts/recommender/trainIngredientEmbeddings.ts \
@@ -95,8 +93,16 @@ npx ts-node scripts/recommender/trainIngredientEmbeddings.ts \
     --batch-size 64
 ```
 
+OpenAI (fallback):
+```bash
+cd backend
+npx ts-node scripts/recommender/trainIngredientEmbeddings.ts \
+    --provider openai \
+    --batch-size 100
+```
+
 Flags:
-- `--provider {openai|local}` — pick the embedding backend (default `openai`).
+- `--provider {local|openai}` — pick the embedding backend (default `local`; OpenAI is a fallback).
 - `--source {fdc|recipe_ingredients|auto}` — pick the canonical-name source
   (default `auto`).
 - `--batch-size N` — names per call. OpenAI cap is 2048; local provider has
@@ -138,28 +144,29 @@ Expected output depends on the provider — both are valid as long as the
 *cluster rank-order* is correct (herb siblings outrank unrelated items):
 
 ```
-# OpenAI text-embedding-3-small + 384-d projection
-rosemary → cosine 0.71
-oregano  → cosine 0.68
-sage     → cosine 0.65
-cinnamon → cosine 0.42
-flour    → cosine 0.18
-
-# Xenova/all-MiniLM-L6-v2 (local)
+# Xenova/all-MiniLM-L6-v2 (local — default, what shipped)
 rosemary → cosine 0.30
 oregano  → cosine 0.28
 sage     → cosine 0.22
 cinnamon → cosine 0.10
 flour    → cosine -0.02
+
+# OpenAI text-embedding-3-small + 384-d projection (fallback)
+rosemary → cosine 0.71
+oregano  → cosine 0.68
+sage     → cosine 0.65
+cinnamon → cosine 0.42
+flour    → cosine 0.18
 ```
 
 The smoke-test suite at `backend/__tests__/services/recommender/ingredientEmbeddings.smoke.test.ts`
 codifies this — it asserts rank-order rather than absolute cosine so
 both providers pass.
 
-The IG7.1 default cosine threshold (0.8) is calibrated for OpenAI; pass
-a lower override (≈ 0.4–0.5) when running with the local provider, or
-leave the default and let the binary fallback handle most of the matches.
+The IG7.1 default cosine threshold (0.8) is calibrated for OpenAI;
+because the launch run used the local provider, IG7.1 callers should
+pass a lower override (≈ 0.4–0.5), or leave the default and let the
+binary fallback handle most of the matches.
 
 ## Roll forward to IG1.2
 
