@@ -28,6 +28,11 @@ jest.mock('../../src/lib/prisma', () => ({
     cookingLog: {
       count: jest.fn(),
     },
+    // i18n-OPS3.3 — notificationTriggerService now reads User.locale
+    // for locale-aware push copy. Default to en (no locale override).
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ locale: 'en' }),
+    },
   },
 }));
 
