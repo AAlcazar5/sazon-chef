@@ -45,7 +45,7 @@ describe('t() — basic lookup', () => {
 
   it('returns the key as a tell when the key is missing across all locales', () => {
     setLocale('en');
-    expect(t('completely.invented.key' as never)).toBe('completely.invented.key');
+    expect(t('completely.invented.key')).toBe('completely.invented.key');
   });
 });
 
@@ -54,12 +54,12 @@ describe('t() — args interpolation', () => {
     setLocale('en');
     // Pin a string we know has interpolation:
     // (define in en.json so this works)
-    expect(t('paywall.greeting' as never, { name: 'Alex' })).toMatch(/Alex/);
+    expect(t('paywall.greeting', { name: 'Alex' })).toMatch(/Alex/);
   });
 
   it('leaves placeholders untouched when args missing', () => {
     setLocale('en');
-    const out = t('paywall.greeting' as never);
+    const out = t('paywall.greeting');
     // Should still contain the {{name}} marker as a tell rather than crash
     expect(out).toMatch(/\{\{name\}\}|name/i);
   });
@@ -74,7 +74,7 @@ describe('setLocale / getLocale', () => {
   });
 
   it('rejects unknown locale tags by falling back to en', () => {
-    setLocale('jp-JP' as never);
+    setLocale('jp-JP');
     expect(getLocale()).toBe('en');
   });
 
@@ -124,7 +124,7 @@ describe('Portuguese fallback chain (pt, pt-BR, pt-PT)', () => {
   });
 
   it('pt-AO (Angolan, not shipped) falls through pt-AO → pt → en', () => {
-    setLocale('pt-AO' as never);
+    setLocale('pt-AO');
     // Unknown region collapses to base pt via normalizeLocale's split('-')[0]
     expect(t('tabs.today')).toBe('Hoje');
   });
