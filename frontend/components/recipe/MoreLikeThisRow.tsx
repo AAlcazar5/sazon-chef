@@ -13,8 +13,8 @@ import {
   ScrollView,
   Image,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
+import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useColorScheme } from 'nativewind';
@@ -79,7 +79,7 @@ export default function MoreLikeThisRow({ recipeId, referrer = 'detail-similar' 
   if (loading && (!cards || cards.length === 0)) {
     return (
       <View testID="more-like-this-loading" style={styles.loadingBlock}>
-        <ActivityIndicator color={subtle} />
+        <AnimatedActivityIndicator color={subtle} />
       </View>
     );
   }

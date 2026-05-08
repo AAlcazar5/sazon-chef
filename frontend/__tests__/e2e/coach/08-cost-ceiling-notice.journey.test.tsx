@@ -93,6 +93,22 @@ jest.mock('../../../components/mascot/LogoMascot', () => {
 
 jest.mock('../../../lib/coachAnalytics', () => ({ emit: jest.fn() }));
 
+jest.mock('../../../hooks/useCoachQuickChipContext', () => ({
+  __esModule: true,
+  useCoachQuickChipContext: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+  default: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+}));
+
 import CoachScreen from '../../../app/(tabs)/coach';
 
 // ─── Journey ─────────────────────────────────────────────────────────────────
@@ -113,8 +129,7 @@ describe('Journey 8 — Cost ceiling soft notice', () => {
       <CoachScreen />,
     );
 
-    const chip = await findByText("Try a cuisine I haven't yet");
-    fireEvent.press(chip);
+    const chip = await findByText("Try a persian dish I haven't yet");  // chip auto-sends per S0.1 — but the test wants to assert on user-typed input, so don\'t tap
 
     const composer = getByPlaceholderText(/Tell me what you're hungry for/i);
     fireEvent.changeText(composer, 'What should I make tonight?');
@@ -130,8 +145,7 @@ describe('Journey 8 — Cost ceiling soft notice', () => {
 
     const { findByText, getByPlaceholderText, getByLabelText } = render(<CoachScreen />);
 
-    const chip = await findByText("Try a cuisine I haven't yet");
-    fireEvent.press(chip);
+    const chip = await findByText("Try a persian dish I haven't yet");  // chip auto-sends per S0.1 — but the test wants to assert on user-typed input, so don\'t tap
 
     fireEvent.changeText(
       getByPlaceholderText(/Tell me what you're hungry for/i),
@@ -149,8 +163,7 @@ describe('Journey 8 — Cost ceiling soft notice', () => {
       <CoachScreen />,
     );
 
-    const chip = await findByText("Try a cuisine I haven't yet");
-    fireEvent.press(chip);
+    const chip = await findByText("Try a persian dish I haven't yet");  // chip auto-sends per S0.1 — but the test wants to assert on user-typed input, so don\'t tap
 
     fireEvent.changeText(
       getByPlaceholderText(/Tell me what you're hungry for/i),
@@ -171,8 +184,7 @@ describe('Journey 8 — Cost ceiling soft notice', () => {
 
     const { findByText, getByPlaceholderText, getByLabelText } = render(<CoachScreen />);
 
-    const chip = await findByText("Try a cuisine I haven't yet");
-    fireEvent.press(chip);
+    const chip = await findByText("Try a persian dish I haven't yet");  // chip auto-sends per S0.1 — but the test wants to assert on user-typed input, so don\'t tap
 
     fireEvent.changeText(
       getByPlaceholderText(/Tell me what you're hungry for/i),

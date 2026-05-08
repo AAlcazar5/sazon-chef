@@ -92,6 +92,22 @@ jest.mock('../../../components/mascot/LogoMascot', () => {
 
 jest.mock('../../../lib/coachAnalytics', () => ({ emit: jest.fn() }));
 
+jest.mock('../../../hooks/useCoachQuickChipContext', () => ({
+  __esModule: true,
+  useCoachQuickChipContext: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+  default: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+}));
+
 import CoachScreen from '../../../app/(tabs)/coach';
 
 // ─── Journey ─────────────────────────────────────────────────────────────────
@@ -129,8 +145,8 @@ describe('Journey 7 — Conversation export (Pro)', () => {
 
   it('J7.1 — download icon is visible when Pro user has an active conversation', async () => {
     const { findByText, getByLabelText } = render(<CoachScreen />);
-
-    // Open existing conversation.
+    // S15.1 default view = conversation; tap the history icon to surface the thread list.
+    fireEvent.press(getByLabelText('View conversation history'));
     const row = await findByText('Chicken night');
     fireEvent.press(row);
 
@@ -142,6 +158,7 @@ describe('Journey 7 — Conversation export (Pro)', () => {
   it('J7.2 — tapping download calls exportConversation with the correct conversationId', async () => {
     const { findByText, getByLabelText } = render(<CoachScreen />);
 
+    fireEvent.press(getByLabelText('View conversation history'));
     const row = await findByText('Chicken night');
     fireEvent.press(row);
 
@@ -156,6 +173,7 @@ describe('Journey 7 — Conversation export (Pro)', () => {
   it('J7.3 — Share.share is called with the markdown returned by the API', async () => {
     const { findByText, getByLabelText } = render(<CoachScreen />);
 
+    fireEvent.press(getByLabelText('View conversation history'));
     const row = await findByText('Chicken night');
     fireEvent.press(row);
 
@@ -172,10 +190,10 @@ describe('Journey 7 — Conversation export (Pro)', () => {
   it('J7.4 — export button is absent when there is no active conversationId (new chat)', async () => {
     mockListConversations.mockResolvedValue([]);
 
-    const { findByText, queryByLabelText } = render(<CoachScreen />);
+    const { findByText, queryByLabelText, getByLabelText } = render(<CoachScreen />);
 
     // Enter a new conversation (no id yet).
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Try a persian dish I haven't yet");
     fireEvent.press(chip);
 
     await waitFor(() => {

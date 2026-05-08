@@ -88,6 +88,22 @@ jest.mock('../../../components/mascot/LogoMascot', () => {
 
 jest.mock('../../../lib/coachAnalytics', () => ({ emit: jest.fn() }));
 
+jest.mock('../../../hooks/useCoachQuickChipContext', () => ({
+  __esModule: true,
+  useCoachQuickChipContext: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+  default: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+}));
+
 import CoachScreen from '../../../app/(tabs)/coach';
 
 // ─── Journey ─────────────────────────────────────────────────────────────────
@@ -104,7 +120,7 @@ describe('Journey 2 — Free-tier paperclip block', () => {
     const { findByText, getByLabelText } = render(<CoachScreen />);
 
     // Tap any chip to enter conversation view.
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Try a persian dish I haven't yet");
     fireEvent.press(chip);
 
     await waitFor(() => {
@@ -116,7 +132,7 @@ describe('Journey 2 — Free-tier paperclip block', () => {
   it('J2.2 — tapping the locked paperclip opens the paywall sheet with photos headline', async () => {
     const { findByText, getByLabelText, findAllByText } = render(<CoachScreen />);
 
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Try a persian dish I haven't yet");
     fireEvent.press(chip);
 
     const attachBtn = await waitFor(() => getByLabelText(/Attach a photo \(Pro only\)/i));
@@ -129,7 +145,7 @@ describe('Journey 2 — Free-tier paperclip block', () => {
   it('J2.3 — dismissing the paywall sheet closes it without navigating away', async () => {
     const { findByText, getByLabelText, findAllByText, queryByText } = render(<CoachScreen />);
 
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Try a persian dish I haven't yet");
     fireEvent.press(chip);
 
     const attachBtn = await waitFor(() => getByLabelText(/Attach a photo \(Pro only\)/i));

@@ -56,6 +56,10 @@ const GRANDFATHERED: ReadonlySet<string> = new Set([
   'components/meal-plan/WeeklyCalendarSkeleton.tsx',
   'components/meal-plan/WeeklyNutritionSummary.tsx',
   'components/meal-plan/WheelPicker.tsx',
+  // 2026-05-08: pure layout primitives — no semantic content of their
+  // own. A11y is on each child the consumer passes in.
+  'components/home/LazyMountBoundary.tsx',
+  'components/today/DiscoveryStrip.tsx',
 ]);
 
 const A11Y_PATTERN = /accessibilityLabel|accessibilityRole|accessibilityValue/;

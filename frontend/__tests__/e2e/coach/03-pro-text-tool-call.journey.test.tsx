@@ -95,6 +95,22 @@ jest.mock('../../../components/mascot/LogoMascot', () => {
 
 jest.mock('../../../lib/coachAnalytics', () => ({ emit: jest.fn() }));
 
+jest.mock('../../../hooks/useCoachQuickChipContext', () => ({
+  __esModule: true,
+  useCoachQuickChipContext: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+  default: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+}));
+
 import CoachScreen from '../../../app/(tabs)/coach';
 
 // ─── Journey ─────────────────────────────────────────────────────────────────
@@ -116,8 +132,7 @@ describe('Journey 3 — Pro happy path: text + find_recipes tool call', () => {
     const { findByText } = render(<CoachScreen />);
 
     // Enter conversation view.
-    const chip = await findByText("Try a cuisine I haven't yet");
-    fireEvent.press(chip);
+    const chip = await findByText("Try a persian dish I haven't yet");  // chip auto-sends per S0.1 — but the test wants to assert on user-typed input, so don\'t tap
 
     await waitFor(() => {
       // deriveCoachFlags returns modelLabel:"Opus" for premium users.
@@ -128,8 +143,7 @@ describe('Journey 3 — Pro happy path: text + find_recipes tool call', () => {
   it('J3.2 — sending a message triggers streamMessage with the typed text', async () => {
     const { findByText, getByPlaceholderText, getByLabelText } = render(<CoachScreen />);
 
-    const chip = await findByText("Try a cuisine I haven't yet");
-    fireEvent.press(chip);
+    const chip = await findByText("Try a persian dish I haven't yet");  // chip auto-sends per S0.1 — but the test wants to assert on user-typed input, so don\'t tap
 
     const composer = getByPlaceholderText(/Tell me what you're hungry for/i);
     fireEvent.changeText(composer, 'Got chicken thighs and 30 minutes');
@@ -149,8 +163,7 @@ describe('Journey 3 — Pro happy path: text + find_recipes tool call', () => {
     // We assert through the message bubble's accessible label instead.
     const { findByText, getByPlaceholderText, getByLabelText } = render(<CoachScreen />);
 
-    const chip = await findByText("Try a cuisine I haven't yet");
-    fireEvent.press(chip);
+    const chip = await findByText("Try a persian dish I haven't yet");  // chip auto-sends per S0.1 — but the test wants to assert on user-typed input, so don\'t tap
 
     const composer = getByPlaceholderText(/Tell me what you're hungry for/i);
     fireEvent.changeText(composer, 'Got chicken thighs and 30 minutes');
@@ -163,8 +176,7 @@ describe('Journey 3 — Pro happy path: text + find_recipes tool call', () => {
   it('J3.4 — memory pill is visible for Pro users with remembered notes', async () => {
     const { findByText, findByLabelText } = render(<CoachScreen />);
 
-    const chip = await findByText("Try a cuisine I haven't yet");
-    fireEvent.press(chip);
+    const chip = await findByText("Try a persian dish I haven't yet");  // chip auto-sends per S0.1 — but the test wants to assert on user-typed input, so don\'t tap
 
     // CoachMemoryHeaderPill accessibilityLabel: "Sazon remembers 3 notes"
     const pill = await findByLabelText(/Sazon remembers/i);

@@ -55,6 +55,25 @@ jest.mock('../../../hooks/useCoachMemoryCount', () => ({
   useCoachMemoryCount: () => 0,
 }));
 
+// Provide a deterministic chip context so chipsFromCoachContext returns
+// the chips the test asserts on (otherwise the hook fetches /api/coach/
+// context and times out, and only FALLBACK_CHIPS render).
+jest.mock('../../../hooks/useCoachQuickChipContext', () => ({
+  __esModule: true,
+  useCoachQuickChipContext: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+  default: () => ({
+    pantryExpiringSoon: ['rice'],
+    remainingMacros: { calories: 320, protein: 0, carbs: 0, fat: 0 },
+    leftoverInventory: [],
+    topAdjacentCuisine: 'persian',
+  }),
+}));
+
 jest.mock('../../../hooks/useCoachAttachments', () => ({
   useCoachAttachments: () => ({
     attachments: [],
@@ -105,29 +124,34 @@ describe('Journey 1 — Free-tier message cap', () => {
     const { findByTestId, findByText } = render(<CoachScreen />);
 
     expect(await findByTestId('mascot')).toBeTruthy();
-    expect(await findByText("Chicken thighs + 30 min — what should I make?")).toBeTruthy();
+    // Context-driven chips (mock injects pantry + macros + cuisine).
     expect(await findByText("I have leftover rice — bridge it forward")).toBeTruthy();
-    expect(await findByText("320 cal under — got dessert ideas?")).toBeTruthy();
-    expect(await findByText("Try a cuisine I haven't yet")).toBeTruthy();
+    expect(await findByText("320 cal left — what should I eat?")).toBeTruthy();
+    expect(await findByText("Try a persian dish I haven't yet")).toBeTruthy();
   });
 
-  it('J1.2 — tapping a chip seeds the composer and transitions to conversation view', async () => {
+  it('J1.2 — tapping a chip auto-sends the chip text (S0.1)', async () => {
+    // Tier S S0.1 changed chip-tap behavior: tapping a chip now AUTO-SENDS
+    // the chip text instead of just seeding the composer. The composer
+    // clears (back to empty) once the send fires.
+    mockStreamMessage.mockReturnValue(textStream(['ok']));
     const { findByText, getByPlaceholderText } = render(<CoachScreen />);
 
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Try a persian dish I haven't yet");
     fireEvent.press(chip);
 
     await waitFor(() => {
-      const composer = getByPlaceholderText(/Tell me what you're hungry for/i) as any;
-      expect(composer.props.value).toBe("Try a cuisine I haven't yet");
+      expect(mockStreamMessage).toHaveBeenCalled();
     });
+    const composer = getByPlaceholderText(/Tell me what you're hungry for/i) as any;
+    expect(composer.props.value).toBe('');
   });
 
   it('J1.3 — sending a message streams a reply and clears the composer', async () => {
     mockStreamMessage.mockReturnValue(textStream(['Here is a great Thai option', ' for tonight!']));
 
     const { findByText, getByPlaceholderText, getByLabelText } = render(<CoachScreen />);
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Try a persian dish I haven't yet");
     fireEvent.press(chip);
 
     const sendBtn = getByLabelText('Send message to coach');
@@ -161,7 +185,7 @@ describe('Journey 1 — Free-tier message cap', () => {
     const { findByText, getByPlaceholderText, getByLabelText, findAllByText } = render(<CoachScreen />);
 
     // Navigate to conversation view via a chip tap.
-    const chip = await findByText("Try a cuisine I haven't yet");
+    const chip = await findByText("Try a persian dish I haven't yet");
     fireEvent.press(chip);
 
     const composer = getByPlaceholderText(/Tell me what you're hungry for/i);

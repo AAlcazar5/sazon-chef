@@ -30,4 +30,13 @@ module.exports = {
     '**/__tests__/**/*.{ts,tsx}',
     '**/*.test.{ts,tsx}',
   ],
+  // Exclude fixture/factory files inside __tests__/__fixtures__ + the
+  // landing-app subtree (separate Next.js test surface) + agent
+  // worktrees from the main test run.
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/__tests__/__fixtures__/',
+    '/landing/',
+    '/.claude/worktrees/',
+  ],
 };
