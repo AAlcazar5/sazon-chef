@@ -127,8 +127,6 @@ describe('Coach paperclip — photo attachment entry point', () => {
   it('free tier: tapping paperclip surfaces the photos paywall sheet (no picker)', async () => {
     const { findByLabelText, findByText } = render(<CoachScreen />);
     // Open a fresh conversation so the composer is visible.
-    const newBtn = await findByLabelText('New Sazon conversation');
-    fireEvent.press(newBtn);
 
     const paperclip = await findByLabelText(/Attach a photo \(Pro only\)/i);
     fireEvent.press(paperclip);
@@ -150,8 +148,6 @@ describe('Coach paperclip — photo attachment entry point', () => {
       .mockImplementation(() => {});
 
     const { findByLabelText } = render(<CoachScreen />);
-    const newBtn = await findByLabelText('New Sazon conversation');
-    fireEvent.press(newBtn);
 
     const paperclip = await findByLabelText('Attach a photo');
     fireEvent.press(paperclip);
@@ -170,8 +166,6 @@ describe('Coach paperclip — photo attachment entry point', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
     const { findByLabelText } = render(<CoachScreen />);
-    const newBtn = await findByLabelText('New Sazon conversation');
-    fireEvent.press(newBtn);
 
     const paperclip = await findByLabelText('Attach a photo');
     fireEvent.press(paperclip);

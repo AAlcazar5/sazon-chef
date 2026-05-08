@@ -135,29 +135,13 @@ jest.mock('./contexts/AuthContext', () => {
   };
 });
 
-// Mock lottie-react-native (native module not available in tests)
-jest.mock('lottie-react-native', () => {
-  const { forwardRef } = require('react');
-  const { View } = require('react-native');
-  return {
-    __esModule: true,
-    default: forwardRef(function MockLottieView(props, ref) {
-      return View({ testID: 'lottie-view', ...props });
-    }),
-  };
-});
-
-// Mock react-native-view-shot
-jest.mock('react-native-view-shot', () => {
-  const { forwardRef } = require('react');
-  const { View } = require('react-native');
-  return {
-    __esModule: true,
-    default: forwardRef(function MockViewShot(props, ref) {
-      return View({ testID: 'view-shot', ...props });
-    }),
-  };
-});
+// lottie-react-native + react-native-view-shot mocked via manual
+// __mocks__/*.js files. Inline jest.mock factories don't work here:
+// nativewind/babel transforms React.createElement(View, …) into a
+// CSS-interop wrapper that hoists an out-of-scope helper, which jest
+// rejects from inside mock factories.
+jest.mock('lottie-react-native');
+jest.mock('react-native-view-shot');
 
 // Mock expo-sharing
 jest.mock('expo-sharing', () => ({

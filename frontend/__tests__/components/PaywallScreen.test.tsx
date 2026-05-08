@@ -16,7 +16,10 @@ jest.mock('../../hooks/useSubscription', () => ({
     checkoutLoading: false,
     trialDaysLeft: null,
     startCheckout: mockStartCheckout,
+    purchase: mockStartCheckout,
     openPortal: mockOpenPortal,
+    // Empty offerings → component falls back to '$9 / mo' / '$60 / yr'.
+    offerings: {},
   })),
 }));
 
@@ -104,14 +107,14 @@ describe('PaywallScreen', () => {
       expect(getByText('Smart reminders & alerts')).toBeTruthy();
     });
 
-    it('renders monthly price', () => {
+    it('renders monthly price (fallback when offerings undefined)', () => {
       const { getByText } = render(<PaywallScreen />);
-      expect(getByText('$4.99 / mo')).toBeTruthy();
+      expect(getByText('$9 / mo')).toBeTruthy();
     });
 
-    it('renders annual price', () => {
+    it('renders annual price (fallback when offerings undefined)', () => {
       const { getByText } = render(<PaywallScreen />);
-      expect(getByText('$39.99 / yr')).toBeTruthy();
+      expect(getByText('$60 / yr')).toBeTruthy();
     });
 
     it('renders "Start Free Trial" CTA button', () => {
@@ -158,7 +161,9 @@ describe('PaywallScreen', () => {
         checkoutLoading: false,
         trialDaysLeft: null,
         startCheckout: mockStartCheckout,
+    purchase: mockStartCheckout,
         openPortal: mockOpenPortal,
+        offerings: {},
       });
     });
 
@@ -192,7 +197,9 @@ describe('PaywallScreen', () => {
         checkoutLoading: false,
         trialDaysLeft: 5,
         startCheckout: mockStartCheckout,
+    purchase: mockStartCheckout,
         openPortal: mockOpenPortal,
+        offerings: {},
       });
     });
 
@@ -210,7 +217,9 @@ describe('PaywallScreen', () => {
         checkoutLoading: false,
         trialDaysLeft: null,
         startCheckout: jest.fn(),
+        purchase: jest.fn(),
         openPortal: jest.fn(),
+        offerings: {},
       });
       const { queryByText } = render(<PaywallScreen />);
       expect(queryByText('Unlimited AI meal plans')).toBeNull();

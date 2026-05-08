@@ -13,6 +13,23 @@ const MockView = React.forwardRef(function MockReanimatedView(props, ref) {
   return React.createElement(View, { ...props, ref });
 });
 
+// Layout-animation builders chain .delay().duration().springify().damping()
+// .stiffness().easing()... and finally are passed to <Animated.View entering>
+// All chain methods return the same proxy for easy mocking.
+function makeChainableEntering() {
+  const proxy = {};
+  const noop = () => proxy;
+  for (const method of [
+    'delay', 'duration', 'springify', 'damping', 'stiffness',
+    'mass', 'easing', 'overshootClamping', 'restDisplacementThreshold',
+    'restSpeedThreshold', 'reduceMotion', 'withCallback', 'withInitialValues',
+    'build',
+  ]) {
+    proxy[method] = noop;
+  }
+  return proxy;
+}
+
 const MockText = React.forwardRef(function MockReanimatedText(props, ref) {
   const { Text } = require('react-native');
   return React.createElement(Text, { ...props, ref });
@@ -98,17 +115,24 @@ module.exports = {
   Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
   Easing,
 
-  // Layout animations
-  FadeIn: { duration: jest.fn(() => ({ delay: jest.fn(() => ({})) })) },
-  FadeOut: { duration: jest.fn(() => ({})) },
-  FadeInDown: { duration: jest.fn(() => ({ delay: jest.fn(() => ({})) })) },
-  FadeInUp: { duration: jest.fn(() => ({ delay: jest.fn(() => ({})) })) },
-  SlideInRight: { duration: jest.fn(() => ({})) },
-  SlideOutRight: { duration: jest.fn(() => ({})) },
-  Layout: { springify: jest.fn(() => ({})), duration: jest.fn(() => ({})) },
-  LinearTransition: { springify: jest.fn(() => ({})) },
-  ZoomIn: { duration: jest.fn(() => ({})) },
-  ZoomOut: { duration: jest.fn(() => ({})) },
+  // Layout animations — chainable proxy so .delay().duration().springify()
+  // .damping().stiffness().easing(...) all return self.
+  FadeIn: makeChainableEntering(),
+  FadeOut: makeChainableEntering(),
+  FadeInDown: makeChainableEntering(),
+  FadeInUp: makeChainableEntering(),
+  FadeOutDown: makeChainableEntering(),
+  FadeOutUp: makeChainableEntering(),
+  SlideInRight: makeChainableEntering(),
+  SlideOutRight: makeChainableEntering(),
+  SlideInLeft: makeChainableEntering(),
+  SlideOutLeft: makeChainableEntering(),
+  SlideInUp: makeChainableEntering(),
+  SlideInDown: makeChainableEntering(),
+  Layout: makeChainableEntering(),
+  LinearTransition: makeChainableEntering(),
+  ZoomIn: makeChainableEntering(),
+  ZoomOut: makeChainableEntering(),
 
   // Animated components
   AnimatedScrollView: MockScrollView,
