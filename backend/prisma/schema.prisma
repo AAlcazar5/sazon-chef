@@ -32,6 +32,8 @@ model User {
   // `locale`. Set explicitly when the user wants coach voice ≠ UI locale
   // (e.g. en-US device, but prefers Spanish food guidance).
   coachLocale    String?
+  // ROADMAP 4.0 G2.4 — internal-only admin flag for founder-trip tooling.
+  isAdmin        Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -129,6 +131,9 @@ model User {
 
   // ROADMAP 4.0 G2.3 — back-relation for travel journal entries.
   travelJournalEntries    TravelJournalEntry[]
+
+  // ROADMAP 4.0 G2.4 — back-relation for founder-trip curation tasks.
+  curationTasks           LocalCurationTask[]
 
   // ROADMAP 4.0 IG0.2 — back-relation for the ingredient event stream.
   ingredientEvents        IngredientEvent[]
@@ -1703,6 +1708,37 @@ model TravelJournalEntry {
   @@index([userId, occurredAt])
   @@index([userId, citySlug])
   @@map("travel_journal_entries")
+}
+
+// ROADMAP 4.0 G2.4 — Founder-trip curation tasks.
+// Internal-only admin tooling. When founder/team travels, the trip
+// generates structured curation tasks (review N ingredients for {locale},
+// photograph + tag M produce items, record cultural-primer voice memo).
+// Funds the I2 catalog with first-hand provenance, not LLM hallucination.
+model LocalCurationTask {
+  id              String   @id @default(cuid())
+  /// Admin who created/owns the task.
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// BCP 47 locale this task augments (e.g. "es-MX", "pt-BR").
+  locale          String
+  /// City slug from cityCuisineCatalog when applicable.
+  citySlug        String?
+  /// Type of curation work: review_ingredients | photograph_produce | cultural_primer_voice_memo
+  taskType        String
+  targetCount     Int      @default(0)
+  completedCount  Int      @default(0)
+  /// pending | in_progress | completed | abandoned
+  status          String   @default("pending")
+  notes           String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([locale, status])
+  @@map("local_curation_tasks")
 }
 
 // C12 — Adaptive notification log.

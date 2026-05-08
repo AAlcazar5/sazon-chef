@@ -9,6 +9,8 @@ import { userRoutes } from '@modules/user/userRoutes';
 import { cityCuisineRouter } from '@modules/cityCuisine/cityCuisineRoutes';
 import { travelJournalRouter } from '@modules/travelJournal/travelJournalRoutes';
 import { diasporaOnboardingRouter } from '@modules/diasporaOnboarding/diasporaOnboardingRoutes';
+import { founderTripRouter } from '@modules/founderTrip/founderTripRoutes';
+import { requireAdmin } from '@/middleware/requireAdmin';
 import { healthMetricsRoutes } from '@modules/healthMetrics/healthMetricsRoutes';
 import { weightGoalRoutes } from '@modules/weightGoal/weightGoalRoutes';
 import mealPlanRoutes from '@modules/mealPlan/mealPlanRoutes';
@@ -191,6 +193,8 @@ app.use('/api/city-cuisine', authenticateToken, cityCuisineRouter);
 app.use('/api/travel-journal', authenticateToken, travelJournalRouter);
 // ROADMAP 4.0 G1.1 — diaspora onboarding (heritage cuisine selection seeds affinity weights).
 app.use('/api/onboarding/diaspora', authenticateToken, diasporaOnboardingRouter);
+// ROADMAP 4.0 G2.4 — founder-trip curation tooling (admin-only).
+app.use('/api/admin/founder-trips', authenticateToken, requireAdmin, founderTripRouter);
 // ROADMAP 4.0 B3 — surface event sink (impression/tap/cook/rate per surface)
 app.use('/api/telemetry/surface-events', authenticateToken, surfaceEventRoutes);
 // ROADMAP 4.0 HX7.1 — home-surface event sink (hero re-rolls / discovery card taps / etc.)
