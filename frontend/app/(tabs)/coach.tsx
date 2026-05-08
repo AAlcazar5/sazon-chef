@@ -68,12 +68,43 @@ type CoachView = 'list' | 'conversation';
 
 const TTS_PREF_KEY = 'sazon.coach.tts.enabled';
 
-export default function CoachScreen() {
+interface CoachScreenProps {
+  /**
+   * IA2 follow-up — when rendered inside the SazonSheet (vs as a route),
+   * `mode='sheet'` lets the screen know to skip route-coupled affordances
+   * and accept its seed/conversation via props. Default 'route'.
+   */
+  mode?: 'route' | 'sheet';
+  /** When mode='sheet', overrides params.seedMessage. */
+  seedMessage?: string;
+  /** When mode='sheet', overrides params.conversationId. */
+  conversationId?: string;
+  /** When mode='sheet', tapping the back/history icon calls this instead of view-toggling. */
+  onShowHistory?: () => void;
+  /** When mode='sheet', tapping a Close affordance calls this. */
+  onClose?: () => void;
+}
+
+export default function CoachScreen({
+  mode = 'route',
+  seedMessage: propSeedMessage,
+  conversationId: propConversationId,
+  onShowHistory,
+  onClose,
+}: CoachScreenProps = {}) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { subscription } = useSubscription();
   const chipContext = useCoachQuickChipContext();
-  const params = useLocalSearchParams<{ conversationId?: string; seedMessage?: string }>();
+  const routeParams = useLocalSearchParams<{ conversationId?: string; seedMessage?: string }>();
+  // Sheet mode: prop seed wins; route mode: route param wins.
+  const params = useMemo(
+    () => ({
+      conversationId: mode === 'sheet' ? propConversationId : routeParams.conversationId,
+      seedMessage: mode === 'sheet' ? propSeedMessage : routeParams.seedMessage,
+    }),
+    [mode, propSeedMessage, propConversationId, routeParams.conversationId, routeParams.seedMessage],
+  );
 
   // ROADMAP 4.0 S15.1 — composer-first landing. Default to the conversation
   // view so tapping the Sazon tab shows the text input immediately. The
@@ -269,8 +300,15 @@ export default function CoachScreen() {
   }, [attachments, flags.canAttachPhotos]);
 
   const onBack = useCallback(() => {
+    // Sheet mode: tap the history icon → switch to the sheet's own
+    // past-chats list (caller-supplied). Route mode: flip to the
+    // in-screen list view.
+    if (mode === 'sheet' && onShowHistory) {
+      onShowHistory();
+      return;
+    }
     setView('list');
-  }, []);
+  }, [mode, onShowHistory]);
 
   // ─── Tier S S2.1: voice input — hold-to-talk mic ─────────────────────────
   const voice = useVoiceInput({

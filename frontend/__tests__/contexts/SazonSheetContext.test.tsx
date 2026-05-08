@@ -6,6 +6,7 @@ import { Text, TouchableOpacity } from 'react-native';
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
+  useLocalSearchParams: () => ({}),
 }));
 
 jest.mock('../../lib/api', () => ({
@@ -20,6 +21,15 @@ jest.mock('../../lib/api', () => ({
 jest.mock('../../contexts/ThemeContext', () => ({
   useTheme: () => ({ theme: 'light' }),
 }));
+
+// Mock CoachScreen so this test can focus on the provider's controller
+// behavior. CoachScreen is exercised separately.
+jest.mock('../../app/(tabs)/coach', () => {
+  const { Text } = require('react-native');
+  return function MockCoachScreen() {
+    return <Text testID="mock-coach-screen">coach</Text>;
+  };
+});
 
 import {
   SazonSheetProvider,

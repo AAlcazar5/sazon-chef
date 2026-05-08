@@ -16,7 +16,6 @@ import {
   View,
   Text,
   ScrollView,
-  TextInput,
   TouchableWithoutFeedback,
   Keyboard,
   StyleSheet,
@@ -30,7 +29,7 @@ import { Shadows } from '../../constants/Shadows';
 import { BorderRadius, Spacing } from '../../constants/Spacing';
 import { useTheme } from '../../contexts/ThemeContext';
 import { coachApi } from '../../lib/api';
-import { t } from '../../lib/i18n';
+import CoachScreen from '../../app/(tabs)/coach';
 
 interface SazonSheetProps {
   visible: boolean;
@@ -54,11 +53,9 @@ export default function SazonSheet({ visible, onClose, contextSeed }: SazonSheet
   const isDark = theme === 'dark';
   const [view, setView] = useState<SheetView>('chat');
   const [conversations, setConversations] = useState<ConversationLite[]>([]);
-  const [composerText, setComposerText] = useState('');
 
   useEffect(() => {
     if (!visible) return;
-    setComposerText(contextSeed ?? '');
     setView('chat');
   }, [visible, contextSeed]);
 
@@ -88,18 +85,6 @@ export default function SazonSheet({ visible, onClose, contextSeed }: SazonSheet
   const titleColor = isDark ? DarkColors.text.primary : Colors.text.primary;
   const subtleColor = isDark ? DarkColors.text.secondary : Colors.text.secondary;
 
-  const openFullSazon = () => {
-    onClose();
-    if (composerText.trim().length > 0) {
-      router.push({
-        pathname: '/coach',
-        params: { seedMessage: composerText.trim() },
-      } as never);
-    } else {
-      router.push('/coach' as never);
-    }
-  };
-
   const openConversation = (conversationId: string) => {
     onClose();
     router.push({
@@ -107,6 +92,8 @@ export default function SazonSheet({ visible, onClose, contextSeed }: SazonSheet
       params: { conversationId },
     } as never);
   };
+
+  const showHistoryFromChat = () => setView('history');
 
   if (!visible) return null;
 
@@ -127,81 +114,72 @@ export default function SazonSheet({ visible, onClose, contextSeed }: SazonSheet
         accessibilityRole="none"
         accessibilityLabel="Sazon chat sheet"
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <HapticTouchableOpacity
-            onPress={() => setView((v) => (v === 'chat' ? 'history' : 'chat'))}
-            accessibilityRole="button"
-            accessibilityLabel={view === 'chat' ? 'Past chats' : 'Back to chat'}
-            style={styles.headerLeftAction}
-          >
-            <Icon
-              name={view === 'chat' ? Icons.TIME_OUTLINE : Icons.CHEVRON_BACK}
-              size={IconSizes.MD}
-              color={titleColor as string}
-              accessibilityLabel=""
-            />
-            <Text style={[styles.headerLeftLabel, { color: titleColor }]}>
-              {view === 'chat' ? 'Past chats' : 'Back'}
-            </Text>
-          </HapticTouchableOpacity>
+        {/* Sheet header — only shown in history view; chat view uses
+            CoachScreen's own header (history + TTS + export + close). */}
+        {view === 'history' && (
+          <View style={styles.header}>
+            <HapticTouchableOpacity
+              onPress={() => setView('chat')}
+              accessibilityRole="button"
+              accessibilityLabel="Back to chat"
+              style={styles.headerLeftAction}
+            >
+              <Icon
+                name={Icons.CHEVRON_BACK}
+                size={IconSizes.MD}
+                color={titleColor as string}
+                accessibilityLabel=""
+              />
+              <Text style={[styles.headerLeftLabel, { color: titleColor }]}>Back</Text>
+            </HapticTouchableOpacity>
 
-          <Text style={[styles.title, { color: titleColor }]}>Sazon</Text>
+            <Text style={[styles.title, { color: titleColor }]}>Past chats</Text>
 
+            <HapticTouchableOpacity
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close Sazon sheet"
+              style={styles.headerRightAction}
+            >
+              <Icon
+                name={Icons.CLOSE}
+                size={IconSizes.MD}
+                color={titleColor as string}
+                accessibilityLabel=""
+              />
+            </HapticTouchableOpacity>
+          </View>
+        )}
+
+        {/* Floating close X — chat view's CoachScreen has its own history
+            and TTS buttons in its header; we just need a way to dismiss. */}
+        {view === 'chat' && (
           <HapticTouchableOpacity
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel="Close Sazon sheet"
-            style={styles.headerRightAction}
+            style={styles.chatCloseOverlay}
           >
             <Icon
               name={Icons.CLOSE}
-              size={IconSizes.MD}
+              size={IconSizes.SM}
               color={titleColor as string}
               accessibilityLabel=""
             />
           </HapticTouchableOpacity>
-        </View>
+        )}
 
         {/* Body */}
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <TouchableWithoutFeedback onPress={view === 'history' ? Keyboard.dismiss : undefined}>
           <View style={styles.body}>
             {view === 'chat' ? (
               <View testID="sazon-sheet-chat" style={styles.chatBody}>
-                <Text style={[styles.intro, { color: subtleColor }]}>
-                  {t('sazon.empty.title')}
-                </Text>
-                <TextInput
-                  testID="sazon-sheet-composer"
-                  value={composerText}
-                  onChangeText={setComposerText}
-                  placeholder={t('sazon.composer.placeholder')}
-                  placeholderTextColor={subtleColor as string}
-                  style={[
-                    styles.composer,
-                    {
-                      color: titleColor,
-                      borderColor: isDark ? '#33333344' : '#0001',
-                      backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-                    },
-                  ]}
-                  multiline
+                <CoachScreen
+                  mode="sheet"
+                  seedMessage={contextSeed}
+                  onShowHistory={showHistoryFromChat}
+                  onClose={onClose}
                 />
-                <HapticTouchableOpacity
-                  onPress={openFullSazon}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open full Sazon"
-                  style={[
-                    styles.openFullCTA,
-                    {
-                      backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                    },
-                  ]}
-                >
-                  <Text style={styles.openFullCTALabel}>
-                    {composerText.trim().length > 0 ? 'Send to Sazon' : 'Open full Sazon'}
-                  </Text>
-                </HapticTouchableOpacity>
               </View>
             ) : (
               <ScrollView
@@ -322,7 +300,18 @@ const styles = StyleSheet.create({
   },
   chatBody: {
     flex: 1,
-    gap: 12,
+  },
+  chatCloseOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    zIndex: 5,
   },
   intro: {
     fontSize: 15,
