@@ -228,7 +228,7 @@ export function getAnthropicClient(): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error(
-      'ANTHROPIC_API_KEY is not configured — cannot create Anthropic client for Sazon Coach.',
+      'ANTHROPIC_API_KEY is not configured — cannot create Anthropic client for Sazon.',
     );
   }
   cachedClient = new Anthropic({ apiKey });

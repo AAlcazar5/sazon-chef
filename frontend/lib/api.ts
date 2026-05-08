@@ -2772,7 +2772,7 @@ export const sharedPlatesApi = {
     ),
 };
 
-// ─── Sazon Coach (Group 10Y) ─────────────────────────────────────────────────
+// ─── Sazon (Group 10Y) ───────────────────────────────────────────────────────
 
 export type CoachTier = 'free' | 'premium';
 export type CoachMessageRole = 'user' | 'assistant';

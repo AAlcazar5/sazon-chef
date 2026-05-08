@@ -85,7 +85,7 @@ describe('GET /api/coach/conversations/:id/export', () => {
     expect(res.headers['content-type']).toMatch(/text\/markdown/);
     expect(res.text).toContain('# Pesto night chat');
     expect(res.text).toContain('## You');
-    expect(res.text).toContain('## Sazon Coach');
+    expect(res.text).toContain('## Sazon');
     expect(res.text).toContain('Try pesto pasta.');
     expect(res.text).toContain('2026-05-01T12:00:00.000Z');
   });

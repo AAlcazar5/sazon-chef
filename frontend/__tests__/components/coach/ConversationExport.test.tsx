@@ -51,7 +51,7 @@ describe('ConversationExport', () => {
     const { queryByLabelText } = render(
       <ConversationExport
         conversationId={null}
-        conversationTitle="Sazon Coach"
+        conversationTitle="Sazon"
         isPremium
       />,
     );

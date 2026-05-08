@@ -96,7 +96,7 @@ import CoachScreen from '../../../app/(tabs)/coach';
 
 // ─── Journey ─────────────────────────────────────────────────────────────────
 
-const MARKDOWN_EXPORT = `# Sazon Coach\n\n**User:** Got chicken thighs\n\n**Coach:** Here's what I'd make...`;
+const MARKDOWN_EXPORT = `# Sazon\n\n**User:** Got chicken thighs\n\n**Sazon:** Here's what I'd make...`;
 
 describe('Journey 7 — Conversation export (Pro)', () => {
   let shareSpy: jest.SpyInstance;

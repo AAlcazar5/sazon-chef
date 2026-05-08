@@ -20,7 +20,7 @@ Sazon's free tier is generous on purpose. The paid tier exists to subsidize the 
 
 MyFitnessPal's #1 user complaint in App Store reviews (verified 2026 audit): **the barcode scanner is locked behind premium**. The feature most associated with the brand's identity — "scan a barcode and log it" — is the feature behind the paywall. The result: 1-star reviews, churn, and a brand that tastes like extraction.
 
-Sazon's analog would be: locking Sazon coach (the friend who knows your kitchen) behind a paywall. We do not do this. Coach is the brand. Coach is free.
+Sazon's analog would be: locking Sazon (the friend who knows your kitchen) behind a paywall. We do not do this. Sazon is the brand. Sazon is free.
 
 ## The current matrix (I3.1, 2026-05-08)
 
@@ -31,7 +31,7 @@ Sazon's analog would be: locking Sazon coach (the friend who knows your kitchen)
 | **`coachMemory`** — long-term per-user memory carried turn-to-turn | Coach without memory is a stranger. Memory is what makes Sazon feel personal — the N=1 promise. |
 | Build-a-Plate (capped at **5/week**, raised from 3) | A typical 3-cook-nights-per-week user explores Build-a-Plate without hitting the cap before forming a habit. Above-cap users still route through LLM cost telemetry. |
 | Recipe browsing, search, saves, collections | Discovery is the floor. Locking it gates the value before the user has tasted it. |
-| Today screen, Week tab, Kitchen library, Sazon coach tab | The four-tab IA is the product. |
+| Today screen, Week tab, Kitchen library, Sazon tab | The four-tab IA is the product. |
 | Reverse-discovery surface (I2.4 — "your market has X") | The cultural moat. Free for international users — that's the wedge. |
 | Local-ingredient resolver (I2.1 / I2.2 — "kale → couve manteiga") | Same — translation IS the international acquisition story. |
 
@@ -52,7 +52,7 @@ Sazon's analog would be: locking Sazon coach (the friend who knows your kitchen)
 
 **Changed:**
 - `coachChat` moved from premium-only → always free.
-  - Rationale: Sazon coach is the brand. Gating it is the MFP barcode-scan mistake.
+  - Rationale: Sazon is the brand. Gating it is the MFP barcode-scan mistake.
   - Cost control: I3.3 telemetry (`coachTokensIn/Out` per user per day) catches outlier free users. If median free-user variable cost spikes >$0.50/mo, soft-cap with rate limits, not a feature wall.
 - `coachMemory` moved from premium-only → always free.
   - Rationale: coach without memory is a stranger. Locking memory undermines the "friend who knows your kitchen" tagline.
@@ -73,7 +73,7 @@ Sazon's analog would be: locking Sazon coach (the friend who knows your kitchen)
 
 The audit's commitments are encoded in `subscriptionTierService.test.ts` under `describe('I3.1 free-tier audit — invariants that must hold forever')`:
 
-1. `hasFeatureAccess(freeUser, 'coachChat')` → `true` — Sazon coach is never feature-gated.
+1. `hasFeatureAccess(freeUser, 'coachChat')` → `true` — Sazon is never feature-gated.
 2. `hasFeatureAccess(freeUser, 'coachMemory')` → `true` — Coach memory is never feature-gated.
 3. `hasFeatureAccess(freeUser, 'coachPhotoAttach')` → `false` — Photo-attach (vision-token cost) stays premium.
 4. `FREE_BUILD_A_PLATE_WEEKLY_LIMIT === 5`.

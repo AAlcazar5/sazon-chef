@@ -52,9 +52,9 @@ const ACTIVE_PAID_STATUSES: ReadonlySet<SubscriptionStatus> = new Set(['active',
  * not in this map is allowed for everyone.
  *
  * I3.1 (2026-05-08) — free-tier audit changes:
- *   - `coachChat` MOVED OUT — Sazon coach is the brand. Gating it kills
+ *   - `coachChat` MOVED OUT — Sazon is the brand. Gating it kills
  *     the differentiator; rate-limit at the LLM layer instead (I3.3).
- *   - `coachMemory` MOVED OUT — coach without memory is a stranger;
+ *   - `coachMemory` MOVED OUT — Sazon without memory is a stranger;
  *     locking it behind a paywall is the MyFitnessPal "barcode-scan
  *     locked" antipattern (#1 user complaint in App Store reviews).
  *   - `coachPhotoAttach` STAYS — photo upload has real per-message

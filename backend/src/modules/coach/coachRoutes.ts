@@ -1,4 +1,4 @@
-// Group 10Y-A + Phase 3: Sazon Coach routes — conversation CRUD + SSE streaming
+// Group 10Y-A + Phase 3: Sazon routes — conversation CRUD + SSE streaming
 // with Anthropic tool-use loop (read-only personalized tools).
 
 import { Router, Request, Response } from 'express';
@@ -267,7 +267,7 @@ function formatConversationMarkdown(input: {
   const header = `# ${input.title}`;
   const body = input.messages
     .map((m) => {
-      const role = m.role === 'user' ? 'You' : 'Sazon Coach';
+      const role = m.role === 'user' ? 'You' : 'Sazon';
       const ts =
         m.createdAt instanceof Date
           ? m.createdAt.toISOString()

@@ -1,5 +1,5 @@
 #!/usr/bin/env ts-node
-// ROADMAP 4.0 Tier $$ — provider-agnostic smoke test for the Sazon coach.
+// ROADMAP 4.0 Tier $$ — provider-agnostic smoke test for Sazon.
 //
 // Hits whichever LLM provider is configured via env (selectLLMClient), streams
 // the response to stdout, prints model + token usage at the end. No DB, no

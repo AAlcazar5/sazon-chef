@@ -112,7 +112,7 @@ async function buildWeeklySummary(
   };
 }
 
-const QUESTION_SYSTEM_PROMPT = `You are Sazon Coach. Read the user's weekly summary and write ONE warm, open-ended question (under 25 words) that invites reflection. No preamble, no greeting — just the question. End with "?".`;
+const QUESTION_SYSTEM_PROMPT = `You are Sazon. Read the user's weekly summary and write ONE warm, open-ended question (under 25 words) that invites reflection. No preamble, no greeting — just the question. End with "?".`;
 
 function templateQuestion(summary: WeeklySummary): string {
   if (summary.newRecipesTried === 0) {

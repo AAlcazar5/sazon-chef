@@ -73,7 +73,7 @@ describe('CoachPaywallSheet', () => {
     const { getByText } = render(
       <CoachPaywallSheet visible reason="generic" onClose={() => {}} />,
     );
-    expect(getByText(/Unlock the real Sazon Coach/i)).toBeTruthy();
+    expect(getByText(/Unlock the real Sazon/i)).toBeTruthy();
   });
 
   it('shows the three Pro benefit lines', () => {

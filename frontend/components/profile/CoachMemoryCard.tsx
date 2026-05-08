@@ -1,4 +1,4 @@
-// Phase 6 (10Y-C): Profile entry into Sazon Coach memory + weekly check-in toggle.
+// Phase 6 (10Y-C): Profile entry into Sazon memory + weekly check-in toggle.
 // Free users see a lock icon + Pro badge; tapping the toggle opens the paywall.
 // Pro users tap through to the full coach-memory screen and toggle the check-in on/off.
 
@@ -92,7 +92,7 @@ export default function CoachMemoryCard({
             { color: isDark ? DarkColors.text.primary : Colors.text.primary },
           ]}
         >
-          Sazon Coach
+          Sazon
         </Text>
       </View>
 

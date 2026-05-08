@@ -1,4 +1,4 @@
-// Phase 6 (10Y-C): Sazon coach memory — Pro-only screen showing what Sazon
+// Phase 6 (10Y-C): Sazon memory — Pro-only screen showing what Sazon
 // has learned about this user. Edit/delete each note. Free users see an upsell.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';

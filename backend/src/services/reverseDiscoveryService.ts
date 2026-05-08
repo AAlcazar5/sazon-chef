@@ -112,7 +112,7 @@ export interface DiscoveryCopy {
   headline: string;
   /** One-line invitation. */
   body: string;
-  /** CTA label — opens Sazon coach seeded with the ingredient. */
+  /** CTA label — opens Sazon seeded with the ingredient. */
   cta: string;
 }
 

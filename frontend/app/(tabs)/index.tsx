@@ -1156,7 +1156,7 @@ export default function HomeScreen() {
           onPress={onSoftFilterPillPress}
         />
 
-        {/* 10Y entry-point: Ask Sazon Coach card sits directly under the
+        {/* 10Y entry-point: Ask Sazon card sits directly under the
             filters as the primary "ask anything" affordance. */}
         <AskSazonHomeCard />
 

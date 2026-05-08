@@ -1,5 +1,5 @@
 // frontend/app/(tabs)/coach.tsx
-// 10Y-B + Tier S: Sazon Coach chat surface. Two views in one screen:
+// 10Y-B + Tier S: Sazon chat surface. Two views in one screen:
 //   1) Thread list (default, no conversation selected)
 //   2) Active conversation (header + bubbles + composer + streaming)
 //

@@ -48,7 +48,7 @@ export interface StoredMemory {
   updatedAt: Date;
 }
 
-const EXTRACTION_SYSTEM_PROMPT = `You are an information extractor. Read the recent chat between Sazon Coach and the user, and pull out durable, long-term FACTS about the user that should persist across sessions.
+const EXTRACTION_SYSTEM_PROMPT = `You are an information extractor. Read the recent chat between Sazon and the user, and pull out durable, long-term FACTS about the user that should persist across sessions.
 
 Only return memories of these four kinds:
 - "preference": durable taste / cuisine / texture / format preferences ("loves spicy food", "prefers one-pan dinners")

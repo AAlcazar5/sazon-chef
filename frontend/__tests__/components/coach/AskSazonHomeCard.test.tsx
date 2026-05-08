@@ -99,7 +99,7 @@ describe('AskSazonHomeCard component', () => {
   it('renders generic fallback while context is loading', () => {
     mockUseCoachContext.mockReturnValue({ context: null, isLoading: true, error: null });
     const { getByText } = render(<AskSazonHomeCard />);
-    expect(getByText(/Ask Sazon Coach/i)).toBeTruthy();
+    expect(getByText(/Ask Sazon/i)).toBeTruthy();
     expect(getByText(/hungry/i)).toBeTruthy();
   });
 

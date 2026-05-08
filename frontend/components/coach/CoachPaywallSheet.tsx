@@ -33,12 +33,12 @@ interface CoachPaywallSheetProps {
 }
 
 const HEADLINES: Record<CoachPaywallReason, string> = {
-  cap: "You're on a roll — Pro Coach has no daily cap.",
-  photos: 'Snap your fridge → get plate ideas. Pro Coach unlocks photos.',
-  memory: 'Pro Coach remembers what worked. Free starts fresh every chat.',
+  cap: "You're on a roll — Sazon Pro has no daily cap.",
+  photos: 'Snap your fridge → get plate ideas. Sazon Pro unlocks photos.',
+  memory: 'Sazon Pro remembers what worked. Free starts fresh every chat.',
   weekly_checkin:
-    'Pro Coach checks in every week and adapts. Unlock weekly check-ins.',
-  generic: 'Unlock the real Sazon Coach',
+    'Sazon Pro checks in every week and adapts. Unlock weekly check-ins.',
+  generic: 'Unlock the real Sazon',
 };
 
 const BENEFITS: ReadonlyArray<{ icon: 'sparkles' | 'infinite' | 'heart'; text: string }> = [
@@ -81,12 +81,12 @@ export default function CoachPaywallSheet({
     >
       <Pressable
         style={styles.backdrop}
-        accessibilityLabel="Dismiss Coach paywall"
+        accessibilityLabel="Dismiss Sazon paywall"
         onPress={onClose}
       />
       <View
         style={[styles.sheet, Shadows.MD as object, { backgroundColor: sheetBg }]}
-        accessibilityLabel="Coach paywall sheet"
+        accessibilityLabel="Sazon paywall sheet"
       >
         <View style={styles.handle} />
 

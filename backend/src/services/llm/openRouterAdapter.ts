@@ -234,7 +234,7 @@ export const openRouterAdapter: LLMClient = {
           Authorization: `Bearer ${apiKey}`,
           // Recommended by OpenRouter for analytics — these don't change pricing.
           'HTTP-Referer': process.env.OPENROUTER_REFERER ?? 'https://sazon.app',
-          'X-Title': 'Sazon Coach',
+          'X-Title': 'Sazon',
         },
         body,
       });

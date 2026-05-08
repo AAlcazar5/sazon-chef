@@ -1,4 +1,4 @@
-// i18n PoC — locale-aware persona for Sazon coach.
+// i18n PoC — locale-aware persona for Sazon.
 //
 // This is a sketch of what proper localization looks like, scoped to one
 // non-English locale (Spanish) so the path forward is concrete:

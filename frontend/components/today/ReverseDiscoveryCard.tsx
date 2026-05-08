@@ -2,7 +2,7 @@
 // ROADMAP 4.0 I2.4 — "Your market has..." reverse-discovery card.
 //
 // Renders one candidate ingredient that the user's locale stocks commonly
-// AND the user has never cooked. Tap → opens Sazon coach seeded with the
+// AND the user has never cooked. Tap → opens Sazon seeded with the
 // ingredient. Returns null when payload is null (en-US users, unsupported
 // locale, or no candidates left). Caller fetches from /api/today/reverse-
 // discovery and passes the response in.
@@ -36,7 +36,7 @@ export interface ReverseDiscoveryPayload {
 
 interface ReverseDiscoveryCardProps {
   payload: ReverseDiscoveryPayload;
-  /** Fired when user taps the CTA — caller seeds Sazon coach with `ingredient`. */
+  /** Fired when user taps the CTA — caller seeds Sazon with `ingredient`. */
   onAsk: (ingredient: ReverseDiscoveryCandidate) => void;
 }
 

@@ -25,7 +25,7 @@ beforeEach(() => {
 
 describe('hasFeatureAccess (pure tier check)', () => {
   // I3.1 (2026-05-08) — coachChat + coachMemory MOVED OUT of premium-only.
-  // Sazon coach is free; cost-control happens at the LLM rate-limit layer.
+  // Sazon is free; cost-control happens at the LLM rate-limit layer.
   const PREMIUM_ONLY: FeatureKey[] = [
     'coachPhotoAttach',
     'adaptiveNutritionCoverage', 'culturalPrimers', 'voiceCooking',
@@ -78,7 +78,7 @@ describe('hasFeatureAccess (pure tier check)', () => {
 
   describe('I3.1 free-tier audit — invariants that must hold forever', () => {
     const free = { subscriptionTier: 'free', subscriptionStatus: 'free' };
-    it('Sazon coach is never feature-gated (the brand is the friend)', () => {
+    it('Sazon is never feature-gated (the brand is the friend)', () => {
       expect(hasFeatureAccess(free, 'coachChat')).toBe(true);
     });
     it('Coach memory is never feature-gated (coach without memory is a stranger)', () => {
@@ -160,7 +160,7 @@ describe('evaluateAccess — free tier with rate limits', () => {
     });
   });
 
-  it('grants free tier on always-free features (I3.1 — Sazon coach)', async () => {
+  it('grants free tier on always-free features (I3.1 — Sazon)', async () => {
     mockUserFindUnique.mockResolvedValueOnce({ subscriptionTier: 'free', subscriptionStatus: 'free' });
     expect(await evaluateAccess('u1', 'coachChat')).toEqual({
       allowed: true,

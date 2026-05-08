@@ -82,7 +82,7 @@ export default function AskSazonHomeCard() {
         style={[styles.card, Shadows.SM as any, { backgroundColor: bg }]}
       >
         <View style={styles.textCol}>
-          <Text style={[styles.headline, { color: titleColor }]}>Ask Sazon Coach</Text>
+          <Text style={[styles.headline, { color: titleColor }]}>Ask Sazon</Text>
           <Text style={[styles.subtitle, { color: subtitleColor }]} numberOfLines={2}>
             {subtitle}
           </Text>

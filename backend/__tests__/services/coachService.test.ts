@@ -117,7 +117,7 @@ describe('$$3.2 — innerToolIteration cap', () => {
 });
 
 describe('buildAnthropicCreateParams', () => {
-  const systemPrompt = 'Sazon Coach. <user_profile>{}</user_profile>';
+  const systemPrompt = 'Sazon. <user_profile>{}</user_profile>';
   const messages = [{ role: 'user' as const, content: 'What should I cook?' }];
 
   it('attaches cache_control: ephemeral on the system prompt block', () => {
@@ -133,7 +133,7 @@ describe('buildAnthropicCreateParams', () => {
       cache_control?: { type: string };
     }>;
     expect(sys[0].cache_control).toEqual({ type: 'ephemeral' });
-    expect(sys[0].text).toContain('Sazon Coach');
+    expect(sys[0].text).toContain('Sazon');
   });
 
   it('selects Haiku for free tier and disables thinking', () => {
