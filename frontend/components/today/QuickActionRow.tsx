@@ -28,11 +28,11 @@ interface ActionDef {
 }
 
 const ACTIONS: ActionDef[] = [
-  { id: 'build-a-plate', label: 'Build a plate', icon: 'restaurant-outline', a11y: 'Build a plate', tint: 'lavender', accent: 'lavender' },
-  { id: 'cook-for-family', label: 'Cook for the family', icon: 'people-outline', a11y: 'Cook for the family — multi-plate composer', tint: 'sage', accent: 'sage' },
-  { id: 'log-meal', label: 'Log a meal', icon: 'nutrition-outline', a11y: 'Log a meal', tint: 'peach', accent: 'peach' },
-  { id: 'surprise-me', label: 'Surprise me', icon: 'shuffle-outline', a11y: 'Surprise me with a recipe', tint: 'blush', accent: 'blush' },
-  { id: 'find-me-a-meal', label: 'Find me a meal', icon: 'sparkles-outline', a11y: 'Find me a meal', tint: 'sky', accent: 'sky' },
+  { id: 'build-a-plate', label: 'Build a Plate', icon: 'restaurant-outline', a11y: 'Build a plate', tint: 'lavender', accent: 'lavender' },
+  { id: 'cook-for-family', label: 'Family Cooking', icon: 'people-outline', a11y: 'Family cooking — multi-plate composer', tint: 'sage', accent: 'sage' },
+  { id: 'log-meal', label: 'Log a Meal', icon: 'nutrition-outline', a11y: 'Log a meal', tint: 'peach', accent: 'peach' },
+  { id: 'surprise-me', label: 'Surprise Me', icon: 'shuffle-outline', a11y: 'Surprise me with a recipe', tint: 'blush', accent: 'blush' },
+  { id: 'find-me-a-meal', label: 'Find Me a Meal', icon: 'sparkles-outline', a11y: 'Find me a meal', tint: 'sky', accent: 'sky' },
 ];
 
 interface QuickActionRowProps {
