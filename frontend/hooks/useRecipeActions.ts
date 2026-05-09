@@ -67,12 +67,16 @@ export function useRecipeActions(options: UseRecipeActionsOptions): UseRecipeAct
     if (!selectedRecipe) return;
 
     try {
+      // M11: response is { recipes: [...] } since the duplicate-key bug
+      // was fixed in lib/api.ts. Pre-fix, response.data.length was always
+      // undefined → the "No Similar Recipes" branch always fired.
       const response = await recipeApi.getSimilarRecipes(selectedRecipe.id, 10);
-      if (response.data && response.data.length > 0) {
+      const recipes = response.data?.recipes ?? [];
+      if (recipes.length > 0) {
         if (onSimilarRecipesFound) {
-          onSimilarRecipesFound(response.data);
+          onSimilarRecipesFound(recipes as any);
         }
-        showToast(`Found ${response.data.length} similar recipes`, 'success');
+        showToast(`Found ${recipes.length} similar recipes`, 'success');
         onClose();
       } else {
         Alert.alert('No Similar Recipes', "We couldn't find any similar recipes at the moment.");

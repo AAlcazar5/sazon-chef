@@ -526,14 +526,11 @@ export const recipeApi = {
     return apiClient.get(`/recipes/${id}`);
   },
 
-  getSimilarRecipes: (id: string, limit?: number, mealPrepMode?: boolean) => {
-    return apiClient.get(`/recipes/${id}/similar`, {
-      params: {
-        limit: limit || 5,
-        mealPrepMode: mealPrepMode !== undefined ? mealPrepMode : undefined,
-      },
-    });
-  },
+  // M11: removed duplicate-key getSimilarRecipes — the second definition at
+  // line ~869 shadowed this one at runtime. cookbook.tsx and useRecipeActions
+  // had been silently receiving `{ recipes: [...] }` instead of the array
+  // they expected (their `Array.isArray` checks always failed → empty UI).
+  // Both callers updated below to consume `response.data.recipes`.
 
   getRelatedRecipes: (id: string, limit?: number) => {
     return apiClient.get(`/recipes/${id}/related`, {
