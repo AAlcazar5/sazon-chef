@@ -13,7 +13,7 @@ export interface PackageSize {
 
 // Common package sizes for ingredients (in their typical store units)
 // This is a simplified database - in production, this would come from a database or API
-export const COMMON_PACKAGE_SIZES: Record<string, PackageSize> = {
+const COMMON_PACKAGE_SIZES: Record<string, PackageSize> = {
   // Flours & Grains
   'flour': { size: 5, unit: 'lb', commonSizes: [1, 2, 5, 10] },
   'sugar': { size: 4, unit: 'lb', commonSizes: [1, 2, 4, 10] },
@@ -82,7 +82,7 @@ export const COMMON_PACKAGE_SIZES: Record<string, PackageSize> = {
 /**
  * Find package size info for an ingredient
  */
-export function getPackageSize(ingredientName: string): PackageSize | null {
+function getPackageSize(ingredientName: string): PackageSize | null {
   const normalized = ingredientName.toLowerCase().trim();
   
   // Direct match

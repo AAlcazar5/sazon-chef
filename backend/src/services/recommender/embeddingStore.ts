@@ -4,6 +4,10 @@
 // Recipe.embedding column (256 B per recipe). Single source of truth
 // for the dimension constant.
 
+import { cosineSimilarity } from '../../utils/vectorMath';
+
+export { cosineSimilarity };
+
 export const EMBEDDING_DIM = 64;
 
 const BYTES_PER_FLOAT = 4;
@@ -48,23 +52,4 @@ export function isValidEmbedding(vec: unknown): vec is number[] {
     if (typeof v !== 'number' || !Number.isFinite(v)) return false;
   }
   return true;
-}
-
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) {
-    throw new Error(
-      `cosineSimilarity: dimension mismatch (${a.length} vs ${b.length})`,
-    );
-  }
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  if (denom === 0) return 0;
-  return dot / denom;
 }

@@ -21,6 +21,7 @@
 // correlation). This bookkeeping happens entirely inside the adapter.
 
 import { logger } from '../../utils/logger';
+import { ensureStreamOk } from './adapterHelpers';
 import type {
   LLMClient,
   LLMFinalMessage,
@@ -253,16 +254,8 @@ export const geminiAdapter: LLMClient = {
         },
         body,
       });
-      if (!resp.ok || !resp.body) {
-        const text = await resp.text().catch(() => '');
-        logger.warn(
-          { status: resp.status, body: text.slice(0, 300) },
-          'Gemini streamGenerateContent call failed',
-        );
-        throw new Error(`Gemini stream failed: ${resp.status}`);
-      }
-
-      const reader = (resp.body as unknown as ReadableStream<Uint8Array>).getReader();
+      const stream = await ensureStreamOk(resp, 'Gemini');
+      const reader = stream.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let toolIdx = 0;

@@ -19,7 +19,7 @@ const DEFAULT_PRIVACY_SETTINGS: PrivacySettings = {
  * Get privacy settings from request headers or query params
  * Frontend passes privacy settings in headers or query params
  */
-export function getPrivacySettingsFromRequest(req: Request): PrivacySettings {
+function getPrivacySettingsFromRequest(req: Request): PrivacySettings {
   // Check for privacy settings in headers (preferred)
   const dataSharingEnabled = req.headers['x-data-sharing-enabled'];
   const analyticsEnabled = req.headers['x-analytics-enabled'];
@@ -63,76 +63,5 @@ export function isDataSharingEnabledFromRequest(req: Request): boolean {
 export function isLocationServicesEnabledFromRequest(req: Request): boolean {
   const settings = getPrivacySettingsFromRequest(req);
   return settings.locationServicesEnabled;
-}
-
-/**
- * Get user preferences for recommendations (only if data sharing is enabled)
- */
-export async function getUserPreferencesForRecommendations(
-  userId: string,
-  req: Request
-): Promise<{
-  preferences: any | null;
-  macroGoals: any | null;
-  physicalProfile: any | null;
-  feedbackData: any[];
-  usePersonalization: boolean;
-}> {
-  const dataSharingEnabled = isDataSharingEnabledFromRequest(req);
-  
-  if (!dataSharingEnabled) {
-    // PII-safe: log decision without userId. If we ever need per-user audit,
-    // route through logger with redact paths — never bare console with IDs.
-    logger.debug('privacy.recommendations.generic');
-    // Return null/empty data when data sharing is disabled
-    return {
-      preferences: null,
-      macroGoals: null,
-      physicalProfile: null,
-      feedbackData: [],
-      usePersonalization: false,
-    };
-  }
-
-  logger.debug('privacy.recommendations.personalized');
-  
-  // Fetch user data for personalization
-  const [preferences, macroGoals, physicalProfile, feedbackData] = await Promise.all([
-    prisma.userPreferences.findUnique({
-      where: { userId },
-      include: {
-        likedCuisines: true,
-        dietaryRestrictions: true,
-        bannedIngredients: true,
-        preferredSuperfoods: true,
-      },
-    }),
-    prisma.macroGoals.findUnique({
-      where: { userId },
-    }),
-    prisma.userPhysicalProfile.findUnique({
-      where: { userId },
-    }),
-    prisma.recipeFeedback.findMany({
-      where: { userId },
-      include: {
-        recipe: {
-          include: {
-            ingredients: true,
-          },
-        },
-      },
-      take: 50,
-      orderBy: { createdAt: 'desc' },
-    }),
-  ]);
-  
-  return {
-    preferences,
-    macroGoals,
-    physicalProfile,
-    feedbackData,
-    usePersonalization: true,
-  };
 }
 

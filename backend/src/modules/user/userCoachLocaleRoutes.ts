@@ -11,21 +11,7 @@
 import { Router, type Request, type Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/utils/authHelper';
-
-const SUPPORTED_LOCALES = new Set([
-  'en',
-  'es',
-  'es-MX',
-  'es-AR',
-  'es-CO',
-  'es-ES',
-  'es-419',
-  'pt',
-  'pt-BR',
-  'pt-PT',
-  'fr',
-  'fr-CA',
-]);
+import { SUPPORTED_LOCALES } from '@/config/locales';
 
 const router = Router();
 

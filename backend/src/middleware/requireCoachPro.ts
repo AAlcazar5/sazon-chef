@@ -2,9 +2,9 @@
 // returns the Coach paywall payload shape the frontend expects.
 
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '@/lib/prisma';
 import { resolveCoachTier } from '@/services/coachService';
 import { emit } from '@/services/coachAnalytics';
+import { fetchUserSubscription } from './fetchUserSubscription';
 
 export type CoachProFeature =
   | 'attachments'
@@ -47,10 +47,7 @@ export function requireCoachPro(feature: CoachProFeature) {
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { subscriptionTier: true, subscriptionStatus: true },
-    });
+    const user = await fetchUserSubscription(userId);
     const tier = resolveCoachTier(user);
     if (tier !== 'premium') {
       const paywall = FEATURE_COPY[feature];
