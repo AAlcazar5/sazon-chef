@@ -55,4 +55,37 @@ describe('Banned design patterns (R6)', () => {
     const count = countMatches('rounded-lg');
     expect(count).toBeLessThanOrEqual(195);
   });
+
+  // H11: every HapticTouchableOpacity in the 5 worst-offender screens has an
+  // accessibilityLabel after the H11 sweep. Cap test asserts label-coverage
+  // parity inside each file. New interactive surfaces must ship with a label
+  // or this test fails — see CLAUDE.md DS1.5 banned-pattern rule.
+  describe('H11 accessibility coverage — every HapticTouchableOpacity needs accessibilityLabel', () => {
+    const SWEPT_FILES = [
+      'app/recipe-form.tsx',
+      'app/modal.tsx',
+      'app/scanner.tsx',
+      'app/cooking.tsx',
+      'app/edit-preferences.tsx',
+    ];
+
+    function countInFile(file: string, pattern: string): number {
+      try {
+        const out = execSync(
+          `grep -cE ${JSON.stringify(pattern)} ${REPO_ROOT}/${file} 2>/dev/null || true`,
+          { encoding: 'utf-8' },
+        );
+        const n = parseInt(out.trim(), 10);
+        return Number.isFinite(n) ? n : 0;
+      } catch {
+        return 0;
+      }
+    }
+
+    it.each(SWEPT_FILES)('%s — accessibilityLabel count ≥ HapticTouchableOpacity count', (file) => {
+      const interactive = countInFile(file, '<HapticTouchableOpacity');
+      const labels = countInFile(file, 'accessibilityLabel');
+      expect(labels).toBeGreaterThanOrEqual(interactive);
+    });
+  });
 });

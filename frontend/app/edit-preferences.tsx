@@ -66,6 +66,9 @@ function CuisineChip({
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={onToggle}
+        accessibilityRole="checkbox"
+        accessibilityLabel={item.label}
+        accessibilityState={{ checked: isSelected }}
         style={{
           paddingHorizontal: 13,
           paddingVertical: 9,
@@ -255,11 +258,23 @@ export default function EditPreferencesScreen() {
       <KeyboardAvoidingContainer>
         {/* Header */}
         <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+          <HapticTouchableOpacity
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            style={{ padding: 4 }}
+          >
             <Ionicons name="arrow-back" size={24} color={label} />
           </HapticTouchableOpacity>
           <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: label }}>Culinary Preferences</Text>
-          <HapticTouchableOpacity onPress={handleSave} disabled={loading} style={{ padding: 4 }}>
+          <HapticTouchableOpacity
+            onPress={handleSave}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel={loading ? 'Saving preferences' : 'Save preferences'}
+            accessibilityState={{ disabled: loading, busy: loading }}
+            style={{ padding: 4 }}
+          >
             <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_600SemiBold', color: loading ? sub : primaryColor }}>
               {loading ? 'Saving…' : 'Save'}
             </Text>
@@ -373,6 +388,9 @@ export default function EditPreferencesScreen() {
                         {/* Main chip area — tap to toggle selection */}
                         <HapticTouchableOpacity
                           onPress={() => toggleDietary(id)}
+                          accessibilityRole="checkbox"
+                          accessibilityLabel={optLabel}
+                          accessibilityState={{ checked: isSelected }}
                           style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: chipPaddingH, paddingVertical: chipPaddingV, paddingRight: isSelected ? 6 : chipPaddingH, gap: 5 }}
                         >
                           <Text style={{ fontSize: 14 }}>{emoji}</Text>
@@ -383,6 +401,8 @@ export default function EditPreferencesScreen() {
                         {isSelected && (
                           <HapticTouchableOpacity
                             onPress={() => toggleSeverity(id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${optLabel}: ${isAllergic ? 'allergic' : 'avoid'} — tap to toggle severity`}
                             style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: chipPaddingV, borderLeftWidth: 1, borderLeftColor: chipBorderColor, gap: 3 }}
                           >
                             <Text style={{ fontSize: 11 }}>{isAllergic ? '🚫' : '⚠️'}</Text>
@@ -421,6 +441,8 @@ export default function EditPreferencesScreen() {
               />
               <HapticTouchableOpacity
                 onPress={addBannedIngredient}
+                accessibilityRole="button"
+                accessibilityLabel="Add banned ingredient"
                 style={{ paddingHorizontal: 14, paddingVertical: 11, borderRadius: 9, backgroundColor: primaryColor, alignItems: 'center', justifyContent: 'center' }}
               >
                 <Ionicons name="add" size={20} color="white" />
@@ -433,6 +455,8 @@ export default function EditPreferencesScreen() {
                   <HapticTouchableOpacity
                     key={index}
                     onPress={() => removeBannedIngredient(ingredient)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${ingredient} from banned ingredients`}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 10, paddingRight: 8, paddingVertical: 7, borderRadius: 100, marginRight: 8, marginBottom: 8, borderWidth: 1, backgroundColor: isDark ? 'rgba(220,38,38,0.15)' : '#FEE2E2', borderColor: isDark ? '#F87171' : '#DC2626', gap: 4 }}
                   >
                     <Text style={{ fontSize: 12, color: isDark ? '#FCA5A5' : '#B91C1C' }}>{ingredient}</Text>
@@ -457,6 +481,9 @@ export default function EditPreferencesScreen() {
                   <HapticTouchableOpacity
                     key={superfood.id}
                     onPress={() => toggleSuperfood(superfood.id)}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={superfood.name}
+                    accessibilityState={{ checked: isSelected }}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 100, marginRight: 8, marginBottom: 8, gap: 4, backgroundColor: isSelected ? (isDark ? '#166534' : '#16A34A') : (isDark ? '#374151' : '#E5E7EB') }}
                   >
                     {superfood.emoji && <Text style={{ fontSize: 14 }}>{superfood.emoji}</Text>}
@@ -532,6 +559,9 @@ export default function EditPreferencesScreen() {
                     <HapticTouchableOpacity
                       key={level}
                       onPress={() => setSpiceLevel(level)}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`Spice level: ${level}`}
+                      accessibilityState={{ selected: isSelected }}
                       style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: isSelected ? primaryColor : (isDark ? '#374151' : '#E5E7EB') }}
                     >
                       <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: isSelected ? 'white' : (isDark ? '#D1D5DB' : '#374151') }}>

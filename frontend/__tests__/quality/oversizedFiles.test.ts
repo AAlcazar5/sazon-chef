@@ -27,7 +27,7 @@ function lineCount(rel: string): number {
 //     in IA2.6 added MoreForYouSection wrap; removed AskSazonHomeCard
 //     but net positive due to G2.1 / discovery card additions).
 //   app/cooking.tsx: 1100 → 1200 (cooking-flow polish + intent
-//     classification work).
+//     classification work). 1200 → 1210 (H11 a11y labels).
 const CAPS: Record<string, number> = {
   'lib/api.ts': 3200,
   'app/modal.tsx': 2700,
@@ -42,7 +42,7 @@ const CAPS: Record<string, number> = {
   'lib/foodIntelTips.ts': 1200,
   'lib/kitchenIQ/cards.ts': 1100,
   'app/scanner.tsx': 1100,
-  'app/cooking.tsx': 1200,
+  'app/cooking.tsx': 1210,
 };
 
 describe('Oversized frontend files (R4)', () => {

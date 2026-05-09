@@ -33,6 +33,7 @@ export default function HapticTouchableOpacity({
   pressedScale = 0.97,
   disabled,
   accessibilityRole = 'button',
+  accessibilityState,
   style,
   ...props
 }: HapticTouchableOpacityProps) {
@@ -86,7 +87,9 @@ export default function HapticTouchableOpacity({
       onPressOut={handlePressOut}
       disabled={disabled}
       accessibilityRole={accessibilityRole}
-      accessibilityState={{ disabled }}
+      // H11 fix: merge caller-provided state (e.g. checked/selected/expanded)
+      // with the disabled flag instead of overwriting it.
+      accessibilityState={{ ...accessibilityState, disabled: disabled ?? accessibilityState?.disabled }}
       activeOpacity={1}
     />
   );
