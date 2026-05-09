@@ -34,9 +34,9 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import QuickActionRow from '../../../components/today/QuickActionRow';
 
 const baseHandlers = {
-  onVoice: jest.fn(),
-  onSnap: jest.fn(),
   onBuildAPlate: jest.fn(),
+  onCookForFamily: jest.fn(),
+  onLogMeal: jest.fn(),
   onSurpriseMe: jest.fn(),
   onFindMeAMeal: jest.fn(),
 };
@@ -48,14 +48,14 @@ describe('<QuickActionRow />', () => {
     mockSetItem.mockResolvedValue(undefined);
   });
 
-  it('renders all 5 action chips (Voice, Snap, Build a plate, Surprise me, Find me a meal)', async () => {
+  it('renders all 5 action chips (Build a plate, Cook for the family, Log a meal, Surprise me, Find me a meal)', async () => {
     const { getByTestId } = render(<QuickActionRow {...baseHandlers} />);
     await act(async () => {
       await Promise.resolve();
     });
-    expect(getByTestId('quick-action-voice')).toBeTruthy();
-    expect(getByTestId('quick-action-snap')).toBeTruthy();
     expect(getByTestId('quick-action-build-a-plate')).toBeTruthy();
+    expect(getByTestId('quick-action-cook-for-family')).toBeTruthy();
+    expect(getByTestId('quick-action-log-meal')).toBeTruthy();
     expect(getByTestId('quick-action-surprise-me')).toBeTruthy();
     expect(getByTestId('quick-action-find-me-a-meal')).toBeTruthy();
   });
@@ -73,13 +73,13 @@ describe('<QuickActionRow />', () => {
   });
 
   it('fires correct handler when chip is tapped', async () => {
-    const onVoice = jest.fn();
-    const { getByTestId } = render(<QuickActionRow {...baseHandlers} onVoice={onVoice} />);
+    const onCookForFamily = jest.fn();
+    const { getByTestId } = render(<QuickActionRow {...baseHandlers} onCookForFamily={onCookForFamily} />);
     await act(async () => {
       await Promise.resolve();
     });
-    fireEvent.press(getByTestId('quick-action-voice'));
-    expect(onVoice).toHaveBeenCalledTimes(1);
+    fireEvent.press(getByTestId('quick-action-cook-for-family'));
+    expect(onCookForFamily).toHaveBeenCalledTimes(1);
   });
 
   it('persists tap log to AsyncStorage on tap', async () => {
@@ -89,11 +89,11 @@ describe('<QuickActionRow />', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    fireEvent.press(getByTestId('quick-action-snap'));
+    fireEvent.press(getByTestId('quick-action-log-meal'));
     await waitFor(() => {
       expect(mockSetItem).toHaveBeenCalledWith(
         'quickActionTapLog:v1',
-        expect.stringContaining('snap'),
+        expect.stringContaining('log-meal'),
       );
     });
   });
@@ -101,7 +101,7 @@ describe('<QuickActionRow />', () => {
   it('reads the tap log from AsyncStorage on mount', async () => {
     mockGetItem.mockResolvedValue(
       JSON.stringify({
-        snap: { count: 3, lastTappedAt: Date.now() },
+        'log-meal': { count: 3, lastTappedAt: Date.now() },
       }),
     );
     render(<QuickActionRow {...baseHandlers} />);
@@ -125,9 +125,9 @@ describe('<QuickActionRow />', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(getByTestId('quick-action-voice').props.accessibilityRole).toBe('button');
-    expect(getByTestId('quick-action-snap').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-build-a-plate').props.accessibilityRole).toBe('button');
+    expect(getByTestId('quick-action-cook-for-family').props.accessibilityRole).toBe('button');
+    expect(getByTestId('quick-action-log-meal').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-surprise-me').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-find-me-a-meal').props.accessibilityRole).toBe('button');
   });
@@ -137,9 +137,9 @@ describe('<QuickActionRow />', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(getByLabelText(/Voice composer/i)).toBeTruthy();
-    expect(getByLabelText(/Snap to log/i)).toBeTruthy();
     expect(getByLabelText(/Build a plate/i)).toBeTruthy();
+    expect(getByLabelText(/Cook for the family/i)).toBeTruthy();
+    expect(getByLabelText(/Log a meal/i)).toBeTruthy();
     expect(getByLabelText(/Surprise me/i)).toBeTruthy();
     expect(getByLabelText(/Find me a meal/i)).toBeTruthy();
   });
@@ -149,9 +149,9 @@ describe('<QuickActionRow />', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(getByText(/Voice/)).toBeTruthy();
-    expect(getByText(/Snap/)).toBeTruthy();
     expect(getByText(/Build/)).toBeTruthy();
+    expect(getByText(/Cook for the family/)).toBeTruthy();
+    expect(getByText(/Log a meal/)).toBeTruthy();
     expect(getByText(/Surprise me/)).toBeTruthy();
     expect(getByText(/Find me/)).toBeTruthy();
   });

@@ -37,6 +37,7 @@ import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 import NutritionStrip from '../../components/today/NutritionStrip';
 import FriendsFeedSection from '../../components/today/FriendsFeedSection';
 import QuickActionRow from '../../components/today/QuickActionRow';
+import { QuickMealLogModal } from '../../components/meal-plan';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import FirstOfDayNote from '../../components/home/FirstOfDayNote';
 import SundayPolaroidCard from '../../components/today/SundayPolaroidCard';
@@ -118,6 +119,8 @@ export default function HomeScreen() {
   // Quick meals and perfect matches state managed by extracted hooks (defined after filters/mealPrepMode)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
   const [initialRecipesLoaded, setInitialRecipesLoaded] = useState(false); // Track if we've loaded initial recipes
+  // QuickMealLog modal owned here now that the chip row triggers it (relocated from FAB).
+  const [showQuickMealLog, setShowQuickMealLog] = useState(false);
 
   // ROADMAP 4.0 D14 — daily nutrient snapshot for the discovery strip.
   const [dailyNutrition, setDailyNutrition] = useState<DailyNutritionSnapshot | null>(null);
@@ -205,14 +208,14 @@ export default function HomeScreen() {
   }, []);
 
   // ── ROADMAP 4.0 A1-d — Today quick-action chip handlers ──
-  const handleQuickActionVoice = useCallback(() => {
-    router.push('/(tabs)/?voice=open' as never);
-  }, []);
-  const handleQuickActionSnap = useCallback(() => {
-    router.push('/scanner' as never);
-  }, []);
   const handleQuickActionBuildAPlate = useCallback(() => {
     router.push('/build-a-plate' as never);
+  }, []);
+  const handleQuickActionCookForFamily = useCallback(() => {
+    router.push('/build-a-plate-family' as never);
+  }, []);
+  const handleQuickActionLogMeal = useCallback(() => {
+    setShowQuickMealLog(true);
   }, []);
   const handleQuickActionFindMeAMeal = useCallback(() => {
     router.push('/(tabs)/meal-plan?action=find-me-a-meal' as never);
@@ -1060,9 +1063,9 @@ export default function HomeScreen() {
           KitchenModeBar's placement in the Kitchen tab). Surprise Me joins
           Voice / Snap / Build a plate / Find me a meal here. */}
       <QuickActionRow
-        onVoice={handleQuickActionVoice}
-        onSnap={handleQuickActionSnap}
         onBuildAPlate={handleQuickActionBuildAPlate}
+        onCookForFamily={handleQuickActionCookForFamily}
+        onLogMeal={handleQuickActionLogMeal}
         onSurpriseMe={() => setShowSurpriseModal(true)}
         onFindMeAMeal={handleQuickActionFindMeAMeal}
       />
@@ -1331,6 +1334,15 @@ export default function HomeScreen() {
         isDark={isDark}
         onClose={closeRandomModal}
       />
+
+      {/* Quick meal logging — triggered by the "Log a meal" chip in the action row.
+          Relocated from the FAB; mounted here so the chip's owning screen owns the modal. */}
+      {showQuickMealLog && (
+        <QuickMealLogModal
+          visible={showQuickMealLog}
+          onClose={() => setShowQuickMealLog(false)}
+        />
+      )}
 
       {/* First-time user guidance tooltip */}
       <HelpTooltip

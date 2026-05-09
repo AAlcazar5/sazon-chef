@@ -22,7 +22,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GradientPresets } from '../../constants/Gradients';
 
 import { useSearchHistory } from '../../hooks/useSearchHistory';
-import { QuickMealLogModal } from '../../components/meal-plan';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabBar';
 import { VoiceComposerModal } from '../../components/home';
 import {
@@ -45,10 +44,8 @@ export default function TabLayout() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showQuickTimer, setShowQuickTimer] = useState(false);
-  const [showQuickMealLog, setShowQuickMealLog] = useState(false);
   // 10X Phase 7 — long-press home tab opens the voice composer.
   const [showVoiceComposer, setShowVoiceComposer] = useState(false);
-  const [shoppingRemaining, setShoppingRemaining] = useState<number | null>(null);
   const [shoppingBadge, setShoppingBadge] = useState<number | undefined>(undefined);
   const [mealPlanHasUncooked, setMealPlanHasUncooked] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
@@ -155,8 +152,11 @@ export default function TabLayout() {
 
   // Group 9O — Tier 1 (always-visible primary): the 5 highest-frequency,
   // N=1-aligned actions. Build-a-Plate is the hero (sage tint, top of list)
-  // and serves the flagship N=1 surface; the rest are daily-use entry points
-  // that feed the personalization model (logging, snap-to-log, discovery).
+  // and serves the flagship N=1 surface; daily-use cooking entry points
+  // follow, then occasional power-user actions. Single flat list — the
+  // two-tier "More actions" expander was removed once the high-redundancy
+  // items (Edit Preferences, Daily Weight, Create Collection, Create
+  // Shopping List) were dropped, leaving a list short enough to read at once.
   const primaryActions: ActionSheetItem[] = [
     {
       label: 'Build a plate',
@@ -164,20 +164,6 @@ export default function TabLayout() {
       subtitle: 'Compose tonight’s meal',
       onPress: () => router.push('/build-a-plate' as any),
       tint: 'sage',
-    },
-    {
-      label: 'Cook for the family',
-      icon: 'people-outline',
-      subtitle: 'Multi-plate composer',
-      onPress: () => router.push('/build-a-plate-family' as any),
-      tint: 'lavender',
-    },
-    {
-      label: 'Log a Meal',
-      icon: 'nutrition-outline',
-      subtitle: 'Track what you ate',
-      onPress: () => setShowQuickMealLog(true),
-      tint: 'peach',
     },
     {
       label: 'Take a Picture',
@@ -195,23 +181,26 @@ export default function TabLayout() {
       tint: 'blush',
     },
     {
-      label: 'Surprise Me!',
-      icon: 'dice-outline',
-      subtitle: 'Pick a recipe for me',
-      onPress: () => {
-        router.push({
-          pathname: '/(tabs)',
-          params: { openRoulette: 'true' },
-        });
-      },
+      label: 'Talk to Sazon',
+      icon: 'mic-outline',
+      subtitle: 'Hands-free composer',
+      onPress: () => setShowVoiceComposer(true),
+      tint: 'lavender',
+    },
+    {
+      label: 'Update Pantry',
+      icon: 'basket-outline',
+      subtitle: 'What’s in the kitchen',
+      onPress: () => router.push('/pantry' as any),
+      tint: 'peach',
+    },
+    {
+      label: 'Tonight Mode',
+      icon: 'moon-outline',
+      subtitle: 'One-gesture dinner pick',
+      onPress: () => router.push('/tonight' as any),
       tint: 'sky',
     },
-  ];
-
-  // Group 9O — Tier 2 (behind "More actions" → secondary sheet): occasional
-  // power-user actions and items that have natural homes elsewhere (kept
-  // reachable here until contextual relocation lands as a follow-up).
-  const secondaryActions: ActionSheetItem[] = [
     {
       label: 'Add Recipe',
       icon: 'restaurant-outline',
@@ -221,69 +210,12 @@ export default function TabLayout() {
       color: 'red',
     },
     {
-      label: 'Import Recipe',
-      icon: 'link-outline',
-      onPress: () => {
-        router.push({
-          pathname: '/(tabs)/cookbook',
-          params: { openImport: 'true' },
-        });
-      },
-      color: 'blue',
-    },
-    {
       label: 'Quick Timer',
       icon: 'timer-outline',
       onPress: () => {
         setShowQuickTimer(true);
       },
       color: 'green',
-    },
-    {
-      label: 'Input Daily Weight',
-      icon: 'scale-outline',
-      onPress: () => {
-        router.push('/weight-input');
-      },
-      color: 'blue',
-    },
-    {
-      label: 'Edit Preferences',
-      icon: 'settings-outline',
-      onPress: () => {
-        router.push('/edit-preferences');
-      },
-      color: 'gray',
-    },
-    {
-      label: 'Create Collection',
-      icon: 'create-outline',
-      onPress: () => {
-        router.push('/create-collection');
-      },
-      color: 'purple',
-    },
-    {
-      label: 'Create Shopping List',
-      icon: 'cart-outline',
-      onPress: () => {
-        router.push('/create-shopping-list');
-      },
-      color: 'green',
-    },
-    {
-      label: 'Shopping Mode',
-      icon: 'storefront-outline',
-      onPress: () => {
-        router.push({
-          pathname: '/(tabs)/shopping-list' as any,
-          params: { activateInStore: 'true' },
-        });
-      },
-      color: 'green',
-      subtitle: shoppingRemaining != null && shoppingRemaining > 0
-        ? `${shoppingRemaining} left`
-        : undefined,
     },
   ];
 
@@ -659,20 +591,6 @@ export default function TabLayout() {
                 }),
               ]).start();
 
-              // Fetch shopping list remaining count for badge
-              try {
-                const response = await shoppingListApi.getShoppingLists();
-                const lists = response.data || [];
-                const activeList = lists.find((l: any) => l.isActive) || lists[0];
-                if (activeList?.items) {
-                  setShoppingRemaining(activeList.items.filter((i: any) => !i.purchased).length);
-                } else {
-                  setShoppingRemaining(null);
-                }
-              } catch {
-                // Silently fail - badge just won't show
-              }
-
               setShowActionSheet(true);
             }}
             activeOpacity={1}
@@ -713,12 +631,14 @@ export default function TabLayout() {
 
       </View>
 
-      {/* Quick Actions — two-tier sheet (5 hero items + "More actions" → 8 secondary). */}
+      {/* Quick Actions — single flat list. The two-tier "More actions" expander
+          was removed once the redundant items (Edit Preferences, Daily Weight,
+          Create Collection, Create Shopping List) were dropped. */}
       <QuickActionsSheet
         visible={showActionSheet}
         onClose={() => setShowActionSheet(false)}
         primaryItems={primaryActions}
-        secondaryItems={secondaryActions}
+        secondaryItems={[]}
       />
 
       {/* Quick Timer Modal */}
@@ -726,14 +646,6 @@ export default function TabLayout() {
         <QuickTimerModal
           visible={showQuickTimer}
           onClose={() => setShowQuickTimer(false)}
-        />
-      )}
-
-      {/* Quick Meal Log Modal */}
-      {showQuickMealLog && (
-        <QuickMealLogModal
-          visible={showQuickMealLog}
-          onClose={() => setShowQuickMealLog(false)}
         />
       )}
 
