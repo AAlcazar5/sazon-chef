@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useColorScheme } from 'nativewind';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { useArcDimensions } from '../../hooks/useArcDimensions';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -57,9 +58,7 @@ export default function AnimatedRing({
   const bgTrackColor = trackColor ?? (isDark ? '#2C2C2E' : '#E5E7EB');
   const textColor = labelColor ?? (isDark ? DarkColors.text.primary : Colors.text.primary);
 
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const center = size / 2;
+  const { radius, circumference, center } = useArcDimensions(size, strokeWidth);
 
   const animatedProgress = useSharedValue(0);
 

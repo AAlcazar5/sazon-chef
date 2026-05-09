@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useColorScheme } from 'nativewind';
 import { DarkColors } from '../../constants/Colors';
+import { useArcDimensions } from '../../hooks/useArcDimensions';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -57,9 +58,7 @@ export default function ProgressRing({
   const isGradient = Array.isArray(color);
   const solidColor = isGradient ? undefined : color;
 
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const center = size / 2;
+  const { radius, circumference, center } = useArcDimensions(size, strokeWidth);
   // Clamp progress to reasonable range (allow >100% for overflow visual)
   const clampedProgress = Math.max(0, Math.min(progress, 1.5));
 
