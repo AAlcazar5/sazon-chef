@@ -2,6 +2,7 @@ import { logger } from '../../utils/logger';
 // backend/src/modules/aiRecipe/aiRecipeController.ts
 import { Request, Response } from 'express';
 import { aiRecipeService } from '../../services/aiRecipeService';
+import { serializeAIRecipeResponse } from '../../services/aiRecipeResponseShape';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 
@@ -215,30 +216,7 @@ export class AIRecipeController {
       const totalTime = Date.now() - startTime;
       logger.info(`⏱️  AI Recipe Generation: Completed in ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s)`);
 
-      res.json({
-        success: true,
-        recipe: {
-          id: savedRecipe.id,
-          title: savedRecipe.title,
-          description: savedRecipe.description,
-          cuisine: savedRecipe.cuisine,
-          cookTime: savedRecipe.cookTime,
-          difficulty: savedRecipe.difficulty,
-          servings: savedRecipe.servings,
-          calories: savedRecipe.calories,
-          protein: savedRecipe.protein,
-          carbs: savedRecipe.carbs,
-          fat: savedRecipe.fat,
-          fiber: savedRecipe.fiber,
-          imageUrl: savedRecipe.imageUrl,
-          source: 'ai-generated',
-          ingredients: savedRecipe.ingredients,
-          instructions: savedRecipe.instructions.map((inst: any) => ({
-            step: inst.step,
-            instruction: inst.text,
-          })),
-        },
-      });
+      res.json(serializeAIRecipeResponse(savedRecipe));
     } catch (error: any) {
       logger.error({ data: error }, '❌ Generate AI Recipe Error:');
       

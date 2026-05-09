@@ -41,4 +41,18 @@ describe('Banned design patterns (R6)', () => {
     const count = countMatches('Animated[,}]');
     expect(count).toBeLessThanOrEqual(95);
   });
+
+  it('has zero raw `<TouchableOpacity` JSX usages (K24 — use HapticTouchableOpacity)', () => {
+    // K24 cleared the 7 sites in cooking/recipe components. New sites must
+    // wrap with HapticTouchableOpacity for the spring + haptic feedback.
+    expect(countMatches('<TouchableOpacity')).toBe(0);
+  });
+
+  it('caps `rounded-lg` NativeWind class at the K22 baseline (per-site migration deferred)', () => {
+    // ~192 sites at the K22 audit. Per-site review needed (content cards
+    // → 20px BorderRadius.card; buttons/modals may want different radii).
+    // Cap to ratchet down over time; bulk sed-replace would over-shoot.
+    const count = countMatches('rounded-lg');
+    expect(count).toBeLessThanOrEqual(195);
+  });
 });

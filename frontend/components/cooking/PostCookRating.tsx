@@ -7,7 +7,8 @@
 // high-confidence taste signal. 1–4 stars submit normally without the bloom.
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
@@ -65,12 +66,12 @@ function Star({ index, filled, bloom, onPress }: StarProps) {
   }));
 
   return (
-    <TouchableOpacity
+    <HapticTouchableOpacity
       testID={`post-cook-star-${index}`}
       accessibilityRole="button"
       accessibilityLabel={`${index} star${index === 1 ? '' : 's'}`}
       onPress={onPress}
-      activeOpacity={0.85}
+      pressedScale={0.97}
       style={styles.starHit}
     >
       <Animated.View style={animStyle}>
@@ -80,7 +81,7 @@ function Star({ index, filled, bloom, onPress }: StarProps) {
           color={filled ? Accent.golden : '#9CA3AF'}
         />
       </Animated.View>
-    </TouchableOpacity>
+    </HapticTouchableOpacity>
   );
 }
 

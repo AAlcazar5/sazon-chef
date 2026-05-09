@@ -10,8 +10,8 @@ import {
   PanResponder,
   Dimensions,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
@@ -194,12 +194,13 @@ export default function RecipeRoulette({
           </Text>
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
             {onReshuffle && (
-              <TouchableOpacity
+              <HapticTouchableOpacity
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   setCurrentIndex(0);
                   onReshuffle();
                 }}
+                hapticStyle="medium"
+                accessibilityLabel="Shuffle Again"
                 style={[styles.closeButton, {
                   backgroundColor: isDark ? '#374151' : '#F3F4F6',
                   flex: 1,
@@ -208,14 +209,15 @@ export default function RecipeRoulette({
                 <Text style={[styles.closeButtonText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>
                   Shuffle Again
                 </Text>
-              </TouchableOpacity>
+              </HapticTouchableOpacity>
             )}
-            <TouchableOpacity
+            <HapticTouchableOpacity
               onPress={onClose}
+              accessibilityLabel="Close"
               style={[styles.closeButton, { backgroundColor: isDark ? DarkColors.primary : Colors.primary, flex: 1 }]}
             >
               <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
+            </HapticTouchableOpacity>
           </View>
         </View>
       </View>
@@ -284,9 +286,8 @@ export default function RecipeRoulette({
 
       {/* Action buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity
+        <HapticTouchableOpacity
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             onPass(currentRecipe.id);
             if (currentIndex < recipes.length - 1) {
               setCurrentIndex(currentIndex + 1);
@@ -294,14 +295,15 @@ export default function RecipeRoulette({
               onClose();
             }
           }}
+          hapticStyle="medium"
+          accessibilityLabel="Pass on this recipe"
           style={[styles.actionButton, styles.passButton]}
         >
           <Ionicons name="close" size={32} color="#FFFFFF" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
 
-        <TouchableOpacity
+        <HapticTouchableOpacity
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             onLike(currentRecipe.id);
             if (currentIndex < recipes.length - 1) {
               setCurrentIndex(currentIndex + 1);
@@ -309,19 +311,22 @@ export default function RecipeRoulette({
               onClose();
             }
           }}
+          hapticStyle="medium"
+          accessibilityLabel="Like this recipe"
           style={[styles.actionButton, styles.likeButton]}
         >
           <Ionicons name="heart" size={32} color="#FFFFFF" />
-        </TouchableOpacity>
+        </HapticTouchableOpacity>
       </View>
 
       {/* Close button */}
-      <TouchableOpacity
+      <HapticTouchableOpacity
         onPress={onClose}
+        accessibilityLabel="Close"
         style={styles.closeButtonTop}
       >
         <Ionicons name="close" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
-      </TouchableOpacity>
+      </HapticTouchableOpacity>
 
       {/* Card counter */}
       <View style={styles.counter}>
