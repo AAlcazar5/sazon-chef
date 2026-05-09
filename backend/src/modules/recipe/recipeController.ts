@@ -762,7 +762,10 @@ export const recipeController = {
 
       // Track search query for analytics (non-blocking)
       if (search && typeof search === 'string' && search.trim().length > 0) {
-        recordSearchQuery(userId, search, recipes.length).catch(() => {});
+        // M15: was empty catch — search analytics dropped silently on DB error.
+        recordSearchQuery(userId, search, recipes.length).catch((err) =>
+          logger.warn({ err, userId, query: search, source: 'getSuggestedRecipes' }, 'recordSearchQuery.failed'),
+        );
       }
 
       res.json({
@@ -2065,7 +2068,10 @@ export const recipeController = {
 
         // Track search query for analytics (non-blocking)
         if (search && typeof search === 'string' && (search as string).trim().length > 0) {
-          recordSearchQuery(userId, search as string, finalRecipes.length).catch(() => {});
+          // M15: was empty catch.
+          recordSearchQuery(userId, search as string, finalRecipes.length).catch((err) =>
+            logger.warn({ err, userId, query: search, source: 'getRecipes' }, 'recordSearchQuery.failed'),
+          );
         }
 
         res.json(recipesWithVariedImages);
@@ -2490,10 +2496,13 @@ export const recipeController = {
           // Calculate discriminatory score
           let discriminatoryScore;
           try {
-            discriminatoryScore = userPrefsForScoring ? 
-              calculateDiscriminatoryScore(recipe, userPrefsForScoring) : 
+            discriminatoryScore = userPrefsForScoring ?
+              calculateDiscriminatoryScore(recipe, userPrefsForScoring) :
               { total: 50, breakdown: {} };
           } catch (error) {
+            // M14: was empty catch — silently reset every recipe to 50,
+            // corrupting the 70/30 ranking with no log signal.
+            logger.warn({ err: error, recipeId: recipe.id }, 'discriminatoryScore.fallback.applied');
             discriminatoryScore = { total: 50, breakdown: {} };
           }
           
@@ -4285,13 +4294,19 @@ export const recipeController = {
       // Score a recipe using shared context
       function scoreRecipe(recipe: any) {
         try {
-          const behavioralScore = (() => { try { return calculateBehavioralScoreFromProfile(recipe, userTasteProfile); } catch { return { total: 0 }; } })();
-          const temporalScore = (() => { try { return calculateTemporalScore(recipe, temporalContext, userTemporalPatterns); } catch { return { total: 0 }; } })();
-          const enhancedScore = (() => { try { return calculateEnhancedScore(recipe, cookTimeContext, userKitchenProfile); } catch { return { total: 0 }; } })();
-          const discriminatoryScore = (() => { try { return userPrefsForScoring ? calculateDiscriminatoryScore(recipe, userPrefsForScoring) : { total: 50, breakdown: {} }; } catch { return { total: 50, breakdown: {} }; } })();
-          const healthGoalScore = (() => { try { return calculateHealthGoalMatch(recipe, physicalProfile?.fitnessGoal || null, macroGoals ? { calories: macroGoals.calories, protein: macroGoals.protein, carbs: macroGoals.carbs, fat: macroGoals.fat } : null); } catch { return { total: 50 }; } })();
-          const healthGrade = (() => { try { return calculateHealthGrade(recipe); } catch { return { grade: 'C', score: 50 }; } })();
-          const baseScore = (() => { try { return calculateRecipeScore(recipe, userPreferences, macroGoals, behavioralScore.total, temporalScore.total); } catch { return { total: 50, macroScore: 50, tasteScore: 50 }; } })();
+          // M14: each of these IIFEs previously silently swallowed scoring
+          // errors and substituted a midpoint value (50 / 0). When ANY of
+          // these fired in production the recipe was ranked as if average,
+          // with zero log signal — making ranking-drift bugs invisible.
+          // Now: warn-level log per fallback so a runaway error becomes
+          // visible in pino + correlatable to a recipeId via H12 trace.
+          const behavioralScore = (() => { try { return calculateBehavioralScoreFromProfile(recipe, userTasteProfile); } catch (err) { logger.warn({ err, recipeId: recipe.id }, 'behavioralScore.fallback.applied'); return { total: 0 }; } })();
+          const temporalScore = (() => { try { return calculateTemporalScore(recipe, temporalContext, userTemporalPatterns); } catch (err) { logger.warn({ err, recipeId: recipe.id }, 'temporalScore.fallback.applied'); return { total: 0 }; } })();
+          const enhancedScore = (() => { try { return calculateEnhancedScore(recipe, cookTimeContext, userKitchenProfile); } catch (err) { logger.warn({ err, recipeId: recipe.id }, 'enhancedScore.fallback.applied'); return { total: 0 }; } })();
+          const discriminatoryScore = (() => { try { return userPrefsForScoring ? calculateDiscriminatoryScore(recipe, userPrefsForScoring) : { total: 50, breakdown: {} }; } catch (err) { logger.warn({ err, recipeId: recipe.id }, 'discriminatoryScore.fallback.applied'); return { total: 50, breakdown: {} }; } })();
+          const healthGoalScore = (() => { try { return calculateHealthGoalMatch(recipe, physicalProfile?.fitnessGoal || null, macroGoals ? { calories: macroGoals.calories, protein: macroGoals.protein, carbs: macroGoals.carbs, fat: macroGoals.fat } : null); } catch (err) { logger.warn({ err, recipeId: recipe.id }, 'healthGoalScore.fallback.applied'); return { total: 50 }; } })();
+          const healthGrade = (() => { try { return calculateHealthGrade(recipe); } catch (err) { logger.warn({ err, recipeId: recipe.id }, 'healthGrade.fallback.applied'); return { grade: 'C', score: 50 }; } })();
+          const baseScore = (() => { try { return calculateRecipeScore(recipe, userPreferences, macroGoals, behavioralScore.total, temporalScore.total); } catch (err) { logger.warn({ err, recipeId: recipe.id }, 'baseScore.fallback.applied'); return { total: 50, macroScore: 50, tasteScore: 50 }; } })();
 
           const internalScore = Math.round(
             discriminatoryScore.total * weights.discriminatoryWeight +
@@ -4442,7 +4457,10 @@ export const recipeController = {
 
       // Track search query for analytics (non-blocking)
       if (search && typeof search === 'string' && search.trim().length > 0) {
-        recordSearchQuery(userId, search, paginatedRecipes.length).catch(() => {});
+        // M15: was empty catch.
+        recordSearchQuery(userId, search, paginatedRecipes.length).catch((err) =>
+          logger.warn({ err, userId, query: search, source: 'searchRecipes' }, 'recordSearchQuery.failed'),
+        );
       }
 
       // When a search returns 0 results, generate fuzzy suggestions from individual words
