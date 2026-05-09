@@ -14,7 +14,7 @@ import { EditorialFontFamily } from '../../constants/Typography';
 import { useQuickActionRanking } from '../../hooks/useQuickActionRanking';
 import { logHomeSurfaceEvent } from '../../lib/homeSurfaceEvents';
 
-type ActionId = 'voice' | 'snap' | 'build-a-plate' | 'find-me-a-meal' | 'surprise-me';
+type ActionId = 'build-a-plate' | 'cook-for-family' | 'log-meal' | 'find-me-a-meal' | 'surprise-me';
 
 type AccentKey = keyof typeof AccentTokens;
 
@@ -28,25 +28,25 @@ interface ActionDef {
 }
 
 const ACTIONS: ActionDef[] = [
-  { id: 'voice', label: 'Voice', icon: 'mic-outline', a11y: 'Voice composer', tint: 'sage', accent: 'sage' },
-  { id: 'snap', label: 'Snap', icon: 'camera-outline', a11y: 'Snap to log a meal', tint: 'peach', accent: 'peach' },
   { id: 'build-a-plate', label: 'Build a plate', icon: 'restaurant-outline', a11y: 'Build a plate', tint: 'lavender', accent: 'lavender' },
+  { id: 'cook-for-family', label: 'Cook for the family', icon: 'people-outline', a11y: 'Cook for the family — multi-plate composer', tint: 'sage', accent: 'sage' },
+  { id: 'log-meal', label: 'Log a meal', icon: 'nutrition-outline', a11y: 'Log a meal', tint: 'peach', accent: 'peach' },
   { id: 'surprise-me', label: 'Surprise me', icon: 'shuffle-outline', a11y: 'Surprise me with a recipe', tint: 'blush', accent: 'blush' },
   { id: 'find-me-a-meal', label: 'Find me a meal', icon: 'sparkles-outline', a11y: 'Find me a meal', tint: 'sky', accent: 'sky' },
 ];
 
 interface QuickActionRowProps {
-  onVoice: () => void;
-  onSnap: () => void;
   onBuildAPlate: () => void;
+  onCookForFamily: () => void;
+  onLogMeal: () => void;
   onSurpriseMe: () => void;
   onFindMeAMeal: () => void;
 }
 
 export default function QuickActionRow({
-  onVoice,
-  onSnap,
   onBuildAPlate,
+  onCookForFamily,
+  onLogMeal,
   onSurpriseMe,
   onFindMeAMeal,
 }: QuickActionRowProps) {
@@ -62,19 +62,19 @@ export default function QuickActionRow({
   const handlerFor = useCallback(
     (id: ActionId): (() => void) => {
       switch (id) {
-        case 'voice':
-          return onVoice;
-        case 'snap':
-          return onSnap;
         case 'build-a-plate':
           return onBuildAPlate;
+        case 'cook-for-family':
+          return onCookForFamily;
+        case 'log-meal':
+          return onLogMeal;
         case 'surprise-me':
           return onSurpriseMe;
         case 'find-me-a-meal':
           return onFindMeAMeal;
       }
     },
-    [onVoice, onSnap, onBuildAPlate, onSurpriseMe, onFindMeAMeal]
+    [onBuildAPlate, onCookForFamily, onLogMeal, onSurpriseMe, onFindMeAMeal]
   );
 
   const handleChipPress = useCallback(
