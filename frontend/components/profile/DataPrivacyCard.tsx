@@ -1,7 +1,7 @@
 // frontend/components/profile/DataPrivacyCard.tsx
 // Data usage stats, privacy toggles, export and clear history with modals
 
-import { View, Text, Switch, Modal } from 'react-native';
+import { View, Text, Modal } from 'react-native';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useState } from 'react';
@@ -10,6 +10,8 @@ import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { useTheme } from '../../contexts/ThemeContext';
+import PrivacyToggleRow from './PrivacyToggleRow';
+import DataStatRow from './DataStatRow';
 
 interface DataPrivacyCardProps {
   dataStats: {
@@ -85,33 +87,24 @@ export default function DataPrivacyCard({
             </View>
           ) : (
             <View className="space-y-2">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Saved Recipes</Text>
-                <Text className="text-xs font-semibold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{dataStats.savedRecipes}</Text>
-              </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Meal Plans</Text>
-                <Text className="text-xs font-semibold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{dataStats.mealPlans}</Text>
-              </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Shopping Lists</Text>
-                <Text className="text-xs font-semibold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{dataStats.shoppingLists}</Text>
-              </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Meal History</Text>
-                <Text className="text-xs font-semibold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{dataStats.mealHistory}</Text>
-              </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Collections</Text>
-                <Text className="text-xs font-semibold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{dataStats.collections}</Text>
-              </View>
+              <DataStatRow label="Saved Recipes" value={dataStats.savedRecipes} isDark={isDark} />
+              <DataStatRow label="Meal Plans" value={dataStats.mealPlans} isDark={isDark} />
+              <DataStatRow label="Shopping Lists" value={dataStats.shoppingLists} isDark={isDark} />
+              <DataStatRow label="Meal History" value={dataStats.mealHistory} isDark={isDark} />
+              <DataStatRow label="Collections" value={dataStats.collections} isDark={isDark} />
               <View className="mt-2 pt-2 border-t" style={{ borderTopColor: isDark ? DarkColors.border.light : Colors.border.light }}>
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-xs font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Total Items</Text>
-                  <Text className="text-xs font-bold" style={{ color: isDark ? DarkColors.primary : Colors.primary }}>
-                    {dataStats.savedRecipes + dataStats.mealPlans + dataStats.shoppingLists + dataStats.mealHistory + dataStats.collections}
-                  </Text>
-                </View>
+                <DataStatRow
+                  label="Total Items"
+                  value={
+                    dataStats.savedRecipes +
+                    dataStats.mealPlans +
+                    dataStats.shoppingLists +
+                    dataStats.mealHistory +
+                    dataStats.collections
+                  }
+                  isDark={isDark}
+                  emphasized
+                />
               </View>
             </View>
           )}
@@ -123,68 +116,30 @@ export default function DataPrivacyCard({
             Privacy Settings
           </Text>
           <View className="space-y-3">
-            <View className="flex-row items-center justify-between py-3 ">
-              <View className="flex-1 mr-4">
-                <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-                  Analytics & Tracking
-                </Text>
-                <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                  Help us improve the app by sharing usage analytics
-                </Text>
-              </View>
-              {updatingPrivacySetting === 'analyticsEnabled' ? (
-                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
-              ) : (
-                <Switch
-                  value={privacySettings.analyticsEnabled}
-                  onValueChange={(value) => onUpdatePrivacySetting('analyticsEnabled', value)}
-                  trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
-                  thumbColor="#FFFFFF"
-                />
-              )}
-            </View>
-
-            <View className="flex-row items-center justify-between py-3 ">
-              <View className="flex-1 mr-4">
-                <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-                  Data Sharing for Recommendations
-                </Text>
-                <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                  Allow your data to be used for personalized recommendations
-                </Text>
-              </View>
-              {updatingPrivacySetting === 'dataSharingEnabled' ? (
-                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
-              ) : (
-                <Switch
-                  value={privacySettings.dataSharingEnabled}
-                  onValueChange={(value) => onUpdatePrivacySetting('dataSharingEnabled', value)}
-                  trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
-                  thumbColor="#FFFFFF"
-                />
-              )}
-            </View>
-
-            <View className="flex-row items-center justify-between py-3 ">
-              <View className="flex-1 mr-4">
-                <Text className="text-sm font-medium" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-                  Location Services
-                </Text>
-                <Text className="text-xs mt-1" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                  Use your location for store recommendations and pricing
-                </Text>
-              </View>
-              {updatingPrivacySetting === 'locationServicesEnabled' ? (
-                <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
-              ) : (
-                <Switch
-                  value={privacySettings.locationServicesEnabled}
-                  onValueChange={(value) => onUpdatePrivacySetting('locationServicesEnabled', value)}
-                  trackColor={{ false: '#D1D5DB', true: isDark ? DarkColors.primary : Colors.primary }}
-                  thumbColor="#FFFFFF"
-                />
-              )}
-            </View>
+            <PrivacyToggleRow
+              title="Analytics & Tracking"
+              description="Help us improve the app by sharing usage analytics"
+              value={privacySettings.analyticsEnabled}
+              isUpdating={updatingPrivacySetting === 'analyticsEnabled'}
+              isDark={isDark}
+              onValueChange={(v) => onUpdatePrivacySetting('analyticsEnabled', v)}
+            />
+            <PrivacyToggleRow
+              title="Data Sharing for Recommendations"
+              description="Allow your data to be used for personalized recommendations"
+              value={privacySettings.dataSharingEnabled}
+              isUpdating={updatingPrivacySetting === 'dataSharingEnabled'}
+              isDark={isDark}
+              onValueChange={(v) => onUpdatePrivacySetting('dataSharingEnabled', v)}
+            />
+            <PrivacyToggleRow
+              title="Location Services"
+              description="Use your location for store recommendations and pricing"
+              value={privacySettings.locationServicesEnabled}
+              isUpdating={updatingPrivacySetting === 'locationServicesEnabled'}
+              isDark={isDark}
+              onValueChange={(v) => onUpdatePrivacySetting('locationServicesEnabled', v)}
+            />
           </View>
         </View>
 
