@@ -9,20 +9,6 @@ jest.mock('../../src/services/aiProviders/AIProviderManager', () => ({
   }))
 }));
 
-// Mock OpenAI (kept for legacy compatibility, not used by service)
-jest.mock('openai', () => {
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: jest.fn()
-        }
-      }
-    }))
-  };
-});
-
 // Mock imageService
 jest.mock('../../src/services/imageService', () => ({
   imageService: {

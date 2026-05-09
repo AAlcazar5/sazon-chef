@@ -5,7 +5,7 @@
 // detail screen can render the slot without an extra round-trip. Backend
 // remains the source of truth — keep these in sync when adding cuisines.
 
-export const BEVERAGE_PAIRINGS: Readonly<Record<string, readonly string[]>> = {
+const BEVERAGE_PAIRINGS: Readonly<Record<string, readonly string[]>> = {
   japanese: ['green tea', 'genmaicha', 'mugicha (barley tea)'],
   mexican: ['agua fresca de jamaica', 'horchata', 'tepache'],
   lebanese: ['ayran', 'tamarind juice', 'mint lemonade'],

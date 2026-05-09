@@ -12,22 +12,36 @@ import {
 } from '../../services/shoppingListLifecycleService';
 import { tierArchivedListsForUser } from '../../services/shoppingListArchiveTiering';
 
+// K11: shared try/catch wrapper for the 6 lifecycle handlers — eliminates
+// 4 clones of the same error-shape pattern. `errorStatus` differs by route
+// (400 for user-actionable, 500 for sweepers); `includeData` flips between
+// `{success}` and `{success, data}` payloads.
+async function runLifecycleAction<T>(
+  req: Request,
+  res: Response,
+  errorStatus: number,
+  action: (userId: string) => Promise<T>,
+  includeData = true,
+): Promise<void> {
+  try {
+    const userId = getUserId(req);
+    const result = await action(userId);
+    res.json(includeData ? { success: true, data: result } : { success: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(errorStatus).json({ success: false, error: message });
+  }
+}
+
 export const shoppingListLifecycleController = {
   /**
    * POST /api/shopping-lists/:id/set-active
    * Atomically makes the given list the active list for the user.
    */
   async setActive(req: Request, res: Response) {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-
-      const result = await setActiveList(userId, id);
-      res.json({ success: true, data: result });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      res.status(400).json({ success: false, error: message });
-    }
+    await runLifecycleAction(req, res, 400, (userId) =>
+      setActiveList(userId, req.params.id),
+    );
   },
 
   /**
@@ -35,16 +49,13 @@ export const shoppingListLifecycleController = {
    * Explicitly archives a list (not via active swap).
    */
   async archive(req: Request, res: Response) {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-
-      await archiveList(userId, id);
-      res.json({ success: true });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      res.status(400).json({ success: false, error: message });
-    }
+    await runLifecycleAction(
+      req,
+      res,
+      400,
+      (userId) => archiveList(userId, req.params.id),
+      false,
+    );
   },
 
   /**
@@ -53,16 +64,13 @@ export const shoppingListLifecycleController = {
    * Creates a fresh empty active list automatically.
    */
   async archiveOnCompletion(req: Request, res: Response) {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-
-      await archiveOnCompletion(userId, id);
-      res.json({ success: true });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      res.status(400).json({ success: false, error: message });
-    }
+    await runLifecycleAction(
+      req,
+      res,
+      400,
+      (userId) => archiveOnCompletion(userId, req.params.id),
+      false,
+    );
   },
 
   /**
@@ -71,14 +79,7 @@ export const shoppingListLifecycleController = {
    * Returns { archivedIds } for toast payload.
    */
   async autoArchiveStale(req: Request, res: Response) {
-    try {
-      const userId = getUserId(req);
-      const result = await autoArchiveStale(userId);
-      res.json({ success: true, data: result });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      res.status(500).json({ success: false, error: message });
-    }
+    await runLifecycleAction(req, res, 500, (userId) => autoArchiveStale(userId));
   },
 
   /**
@@ -87,14 +88,7 @@ export const shoppingListLifecycleController = {
    * Returns { deletedCount }.
    */
   async cleanupOrphans(req: Request, res: Response) {
-    try {
-      const userId = getUserId(req);
-      const result = await cleanupOrphans(userId);
-      res.json({ success: true, data: result });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      res.status(500).json({ success: false, error: message });
-    }
+    await runLifecycleAction(req, res, 500, (userId) => cleanupOrphans(userId));
   },
 
   /**
@@ -103,13 +97,8 @@ export const shoppingListLifecycleController = {
    * Deletes item rows for tiered lists. Returns { tieredCount }.
    */
   async tierArchived(req: Request, res: Response) {
-    try {
-      const userId = getUserId(req);
-      const result = await tierArchivedListsForUser(userId);
-      res.json({ success: true, data: result });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      res.status(500).json({ success: false, error: message });
-    }
+    await runLifecycleAction(req, res, 500, (userId) =>
+      tierArchivedListsForUser(userId),
+    );
   },
 };

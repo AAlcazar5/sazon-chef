@@ -471,27 +471,6 @@ export const PastelsJewelDark = {
   lilac:  { bg: '#2e1b3a', accent: '#D2B0DD', dot: '#9466A8' },
 } as const;
 
-// Editorial dark — cocoa scaffold + ivory ink scale + soft accent overlay
-export const EditorialDark = {
-  scaffold:     '#1A1410',
-  scaffoldEnd:  '#221915',
-  surface:      '#2A201B',
-  surfaceMuted: '#352923',
-  border:       'rgba(245,239,230,0.08)',
-  ink:          '#F5EFE6',
-  inkMuted:     '#B8A99A',
-  inkSoft:      '#7A6A5C',
-  serifTitle:   '#F5EFE6',
-  serifMuted:   '#E8D9C5',
-  accent:       '#FF9559',
-  accentInk:    '#1A1410', // text on accent
-  accentSoft:   'rgba(255,149,89,0.14)', // tinted accent backgrounds
-  // Shadows — deeper / opaque on cocoa
-  shadowHero:   '0 18px 36px rgba(0,0,0,0.5), 0 6px 14px rgba(0,0,0,0.3)',
-  shadowCard:   '0 8px 24px rgba(0,0,0,0.35)',
-  shadowCTA:    '0 10px 24px rgba(255,149,89,0.35)',
-} as const;
-
 // Helper functions
 export const getScoreColor = (score: number): keyof typeof Colors.score => {
   if (score >= 80) return 'high';

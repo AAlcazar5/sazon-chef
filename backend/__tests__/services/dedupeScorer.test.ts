@@ -25,8 +25,8 @@ describe('cosineSimilarity (pure)', () => {
     expect(cosineSimilarity([1, 2, 3], [-1, -2, -3])).toBeCloseTo(-1, 6);
   });
 
-  it('throws on zero-length vector', () => {
-    expect(() => cosineSimilarity([], [])).toThrow();
+  it('returns 0 for zero-length vector (cold-start safe)', () => {
+    expect(cosineSimilarity([], [])).toBe(0);
   });
 
   it('throws on dimension mismatch', () => {

@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 // Returns 402 with PREMIUM_REQUIRED error code for easy frontend detection.
 
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '@/lib/prisma';
+import { fetchUserSubscription } from './fetchUserSubscription';
 
 export const requirePremium = async (
   req: Request,
@@ -17,10 +17,7 @@ export const requirePremium = async (
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { subscriptionTier: true, subscriptionStatus: true },
-    });
+    const user = await fetchUserSubscription(userId);
 
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });

@@ -8,6 +8,7 @@
 // scorer fires for real.
 
 import type { FailureReason } from './recipeQualityScoreService';
+import { cosineSimilarity } from '../utils/vectorMath';
 
 export const DUPLICATE_SIM_THRESHOLD = 0.92;
 
@@ -27,27 +28,7 @@ export interface DedupeScoreResult {
   reasons: FailureReason[];
 }
 
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length === 0 || b.length === 0) {
-    throw new Error('cosineSimilarity: zero-length vector');
-  }
-  if (a.length !== b.length) {
-    throw new Error(
-      `cosineSimilarity: dimension mismatch (${a.length} vs ${b.length})`,
-    );
-  }
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  if (denom === 0) return 0;
-  return dot / denom;
-}
+export { cosineSimilarity };
 
 export function scoreDedupe(input: DedupeScoreInput): DedupeScoreResult {
   if (!input.embedding || input.embedding.length === 0) {
