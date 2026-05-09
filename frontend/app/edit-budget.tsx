@@ -1,12 +1,12 @@
 // frontend/app/edit-budget.tsx
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
+import BudgetInputRow from '../components/budget/BudgetInputRow';
 // Budget settings screen
 
-import { View, Text, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import LoadingState from '../components/ui/LoadingState';
-import { ProfileLoadingStates } from '../constants/LoadingStates';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,13 @@ import { BudgetSettings } from '../types';
 import * as Haptics from 'expo-haptics';
 import { Colors, DarkColors } from '../constants/Colors';
 import { useColorScheme } from 'nativewind';
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  CAD: '$',
+};
 
 export default function EditBudgetScreen() {
   const { colorScheme } = useColorScheme();
@@ -139,98 +146,37 @@ export default function EditBudgetScreen() {
             </View>
           </View>
 
-          {/* Max Recipe Cost */}
-          <View className="mb-6">
-            <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-              Max Recipe Cost ({budget.currency})
-            </Text>
-            <Text className="text-sm mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-              Maximum cost for a single recipe. Recipes exceeding this will be filtered out.
-            </Text>
-            <View className="flex-row items-center rounded-lg border" style={{
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: 'transparent',
-              borderWidth: 0,
-            }}>
-              <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}
-              </Text>
-              <TextInput
-                placeholder="No limit"
-                value={budget.maxRecipeCost?.toString() || ''}
-                onChangeText={(text) => {
-                  const value = text === '' ? undefined : parseFloat(text);
-                  setBudget({ ...budget, maxRecipeCost: value || undefined });
-                }}
-                keyboardType="decimal-pad"
-                className="flex-1 py-3"
-                style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
-                placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-              />
-            </View>
-          </View>
-
-          {/* Max Meal Cost */}
-          <View className="mb-6">
-            <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-              Max Meal Cost ({budget.currency})
-            </Text>
-            <Text className="text-sm mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-              Maximum cost per meal. Useful for meal planning.
-            </Text>
-            <View className="flex-row items-center rounded-lg border" style={{
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: 'transparent',
-              borderWidth: 0,
-            }}>
-              <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}
-              </Text>
-              <TextInput
-                placeholder="No limit"
-                value={budget.maxMealCost?.toString() || ''}
-                onChangeText={(text) => {
-                  const value = text === '' ? undefined : parseFloat(text);
-                  setBudget({ ...budget, maxMealCost: value || undefined });
-                }}
-                keyboardType="decimal-pad"
-                className="flex-1 py-3"
-                style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
-                placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-              />
-            </View>
-          </View>
-
-          {/* Daily Food Budget */}
-          <View className="mb-6">
-            <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>
-              Daily Food Budget ({budget.currency})
-            </Text>
-            <Text className="text-sm mb-2" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-              Maximum daily food spending. Helps track overall food costs.
-            </Text>
-            <View className="flex-row items-center rounded-lg border" style={{
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: 'transparent',
-              borderWidth: 0,
-            }}>
-              <Text className="px-4 font-semibold" style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>
-                {budget.currency === 'USD' ? '$' : budget.currency === 'EUR' ? '€' : budget.currency === 'GBP' ? '£' : '$'}
-              </Text>
-              <TextInput
-                placeholder="No limit"
-                value={budget.maxDailyFoodBudget?.toString() || ''}
-                onChangeText={(text) => {
-                  const value = text === '' ? undefined : parseFloat(text);
-                  setBudget({ ...budget, maxDailyFoodBudget: value || undefined });
-                }}
-                keyboardType="decimal-pad"
-                className="flex-1 py-3"
-                style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}
-                placeholderTextColor={isDark ? DarkColors.text.tertiary : Colors.text.tertiary}
-              />
-            </View>
-          </View>
+          {(() => {
+            const symbol = CURRENCY_SYMBOLS[budget.currency] ?? '$';
+            return (
+              <>
+                <BudgetInputRow
+                  title={`Max Recipe Cost (${budget.currency})`}
+                  description="Maximum cost for a single recipe. Recipes exceeding this will be filtered out."
+                  currencySymbol={symbol}
+                  value={budget.maxRecipeCost}
+                  onChange={(v) => setBudget({ ...budget, maxRecipeCost: v })}
+                  isDark={isDark}
+                />
+                <BudgetInputRow
+                  title={`Max Meal Cost (${budget.currency})`}
+                  description="Maximum cost per meal. Useful for meal planning."
+                  currencySymbol={symbol}
+                  value={budget.maxMealCost}
+                  onChange={(v) => setBudget({ ...budget, maxMealCost: v })}
+                  isDark={isDark}
+                />
+                <BudgetInputRow
+                  title={`Daily Food Budget (${budget.currency})`}
+                  description="Maximum daily food spending. Helps track overall food costs."
+                  currencySymbol={symbol}
+                  value={budget.maxDailyFoodBudget}
+                  onChange={(v) => setBudget({ ...budget, maxDailyFoodBudget: v })}
+                  isDark={isDark}
+                />
+              </>
+            );
+          })()}
 
           {/* Save Button */}
           <HapticTouchableOpacity
