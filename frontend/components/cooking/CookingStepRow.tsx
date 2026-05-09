@@ -8,7 +8,8 @@
 // lesson rhythm.
 
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
@@ -90,13 +91,14 @@ export default function CookingStepRow({
       : '#E5E7EB';
 
   return (
-    <TouchableOpacity
+    <HapticTouchableOpacity
       testID={`cooking-step-row-${stepNumber}`}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: completed }}
       accessibilityLabel={`Step ${stepNumber}: ${text}`}
       onPress={onToggle}
-      activeOpacity={0.85}
+      pressedScale={0.99}
+      hapticDisabled
       style={styles.touchRoot}
     >
       <Animated.View style={[styles.row, animatedRowStyle]}>
@@ -125,7 +127,7 @@ export default function CookingStepRow({
           {text}
         </Text>
       </Animated.View>
-    </TouchableOpacity>
+    </HapticTouchableOpacity>
   );
 }
 
