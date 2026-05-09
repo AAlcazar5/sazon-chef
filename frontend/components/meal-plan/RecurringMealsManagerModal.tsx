@@ -1,14 +1,13 @@
 // frontend/components/meal-plan/RecurringMealsManagerModal.tsx
 // Full-screen modal to view, edit, and delete recurring meal rules
 
-import { View, Text, Modal, ScrollView, Switch, Alert, Animated } from 'react-native';
-import { useRef, useEffect } from 'react';
+import { View, Text, Switch, Alert } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
-import { Duration, Spring } from '../../constants/Animations';
+import RecurringModalShell from './RecurringModalShell';
 import type { RecurringMeal } from '../../types';
 import { t } from '../../lib/i18n';
 
@@ -47,28 +46,6 @@ export default function RecurringMealsManagerModal({
 }: RecurringMealsManagerModalProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const scale = useRef(new Animated.Value(0.8)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      scale.setValue(0.8);
-      opacity.setValue(0);
-      Animated.parallel([
-        Animated.spring(scale, {
-          toValue: 1,
-          friction: Spring.default.friction,
-          tension: Spring.default.tension,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: Duration.medium,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, scale, opacity]);
 
   const handleDelete = (rule: RecurringMeal) => {
     const title = rule.recipe?.title || rule.title || 'this rule';
@@ -84,39 +61,19 @@ export default function RecurringMealsManagerModal({
 
   const activeRules = rules.filter(r => r.isActive);
   const inactiveRules = rules.filter(r => !r.isActive);
+  const subtitle =
+    rules.length === 0
+      ? 'No recurring meals set'
+      : `${activeRules.length} active rule${activeRules.length !== 1 ? 's' : ''}`;
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Animated.View className="flex-1 bg-black/50 justify-center items-center px-4" style={{ opacity }}>
-        <HapticTouchableOpacity
-          activeOpacity={1}
-          onPress={onClose}
-          className="absolute inset-0"
-        />
-        <Animated.View
-          className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm shadow-lg"
-          style={{ transform: [{ scale }], maxHeight: '80%' }}
-        >
-          {/* Header */}
-          <View className="p-4 border-b border-gray-200 dark:border-gray-700 flex-row items-start justify-between">
-            <View className="flex-1 pr-3">
-              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('mealPlan.recurringManager.title')}</Text>
-              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {rules.length === 0
-                  ? 'No recurring meals set'
-                  : `${activeRules.length} active rule${activeRules.length !== 1 ? 's' : ''}`}
-              </Text>
-            </View>
-            <HapticTouchableOpacity
-              onPress={onClose}
-              className="p-2 rounded-full"
-              style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }}
-            >
-              <Icon name={Icons.CLOSE} size={IconSizes.SM} color={isDark ? '#D1D5DB' : '#6B7280'} accessibilityLabel="Close" />
-            </HapticTouchableOpacity>
-          </View>
-
-          <ScrollView className="p-4">
+    <RecurringModalShell
+      visible={visible}
+      onClose={onClose}
+      title={t('mealPlan.recurringManager.title')}
+      subtitle={subtitle}
+      maxHeight="80%"
+    >
             {rules.length === 0 ? (
               <View className="items-center py-8">
                 <Icon name={Icons.REFRESH} size={48} color={isDark ? '#4B5563' : '#D1D5DB'} accessibilityLabel="No recurring meals" />
@@ -159,10 +116,7 @@ export default function RecurringMealsManagerModal({
                 )}
               </>
             )}
-          </ScrollView>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+    </RecurringModalShell>
   );
 }
 

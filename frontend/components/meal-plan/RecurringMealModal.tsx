@@ -1,14 +1,14 @@
 // frontend/components/meal-plan/RecurringMealModal.tsx
 // Modal for creating/editing a recurring meal rule
 
-import { View, Text, Modal, ScrollView, Animated } from 'react-native';
-import { useRef, useEffect, useState } from 'react';
+import { View, Text } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
-import { Duration, Spring } from '../../constants/Animations';
+import RecurringModalShell from './RecurringModalShell';
 import type { RecurringMeal } from '../../types';
 import { t } from '../../lib/i18n';
 
@@ -50,8 +50,6 @@ export default function RecurringMealModal({
 }: RecurringMealModalProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const scale = useRef(new Animated.Value(0.8)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
 
   // State
   const [selectedDays, setSelectedDays] = useState<Set<number>>(new Set());
@@ -74,25 +72,8 @@ export default function RecurringMealModal({
         setSelectedDays(new Set());
         setMealType('breakfast');
       }
-
-      // Animate in
-      scale.setValue(0.8);
-      opacity.setValue(0);
-      Animated.parallel([
-        Animated.spring(scale, {
-          toValue: 1,
-          friction: Spring.default.friction,
-          tension: Spring.default.tension,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: Duration.medium,
-          useNativeDriver: true,
-        }),
-      ]).start();
     }
-  }, [visible, existingRule, meal, scale, opacity]);
+  }, [visible, existingRule, meal]);
 
   const toggleDay = (day: number) => {
     setSelectedDays(prev => {
@@ -150,37 +131,12 @@ export default function RecurringMealModal({
   const isEditing = !!existingRule;
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Animated.View className="flex-1 bg-black/50 justify-center items-center px-4" style={{ opacity }}>
-        <HapticTouchableOpacity
-          activeOpacity={1}
-          onPress={onClose}
-          className="absolute inset-0"
-        />
-        <Animated.View
-          className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm shadow-lg"
-          style={{ transform: [{ scale }] }}
-        >
-          {/* Header */}
-          <View className="p-4 border-b border-gray-200 dark:border-gray-700 flex-row items-start justify-between">
-            <View className="flex-1 pr-3">
-              <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {isEditing ? 'Edit Recurring Meal' : 'Set as Recurring'}
-              </Text>
-              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1" numberOfLines={1}>
-                {mealTitle}
-              </Text>
-            </View>
-            <HapticTouchableOpacity
-              onPress={onClose}
-              className="p-2 rounded-full"
-              style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }}
-            >
-              <Icon name={Icons.CLOSE} size={IconSizes.SM} color={isDark ? '#D1D5DB' : '#6B7280'} accessibilityLabel="Close" />
-            </HapticTouchableOpacity>
-          </View>
-
-          <ScrollView className="p-4">
+    <RecurringModalShell
+      visible={visible}
+      onClose={onClose}
+      title={isEditing ? 'Edit Recurring Meal' : 'Set as Recurring'}
+      subtitle={mealTitle}
+    >
             {/* Meal Type Selector */}
             <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('mealPlan.recurring.mealType')}</Text>
             <View className="flex-row mb-4" style={{ gap: 8 }}>
@@ -297,9 +253,6 @@ export default function RecurringMealModal({
                 {isEditing ? 'Update Rule' : 'Set Recurring'}
               </Text>
             </HapticTouchableOpacity>
-          </ScrollView>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+    </RecurringModalShell>
   );
 }
