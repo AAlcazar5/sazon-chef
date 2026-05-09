@@ -48,7 +48,7 @@ describe('<QuickActionRow />', () => {
     mockSetItem.mockResolvedValue(undefined);
   });
 
-  it('renders all 5 action chips (Build a plate, Cook for the family, Log a meal, Surprise me, Find me a meal)', async () => {
+  it('renders all 5 action chips (Build a Plate, Family Cooking, Log a Meal, Surprise Me, Find Me a Meal)', async () => {
     const { getByTestId } = render(<QuickActionRow {...baseHandlers} />);
     await act(async () => {
       await Promise.resolve();
@@ -138,7 +138,7 @@ describe('<QuickActionRow />', () => {
       await Promise.resolve();
     });
     expect(getByLabelText(/Build a plate/i)).toBeTruthy();
-    expect(getByLabelText(/Cook for the family/i)).toBeTruthy();
+    expect(getByLabelText(/Family cooking/i)).toBeTruthy();
     expect(getByLabelText(/Log a meal/i)).toBeTruthy();
     expect(getByLabelText(/Surprise me/i)).toBeTruthy();
     expect(getByLabelText(/Find me a meal/i)).toBeTruthy();
@@ -149,10 +149,10 @@ describe('<QuickActionRow />', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(getByText(/Build/)).toBeTruthy();
-    expect(getByText(/Cook for the family/)).toBeTruthy();
-    expect(getByText(/Log a meal/)).toBeTruthy();
-    expect(getByText(/Surprise me/)).toBeTruthy();
-    expect(getByText(/Find me/)).toBeTruthy();
+    expect(getByText(/Build a Plate/)).toBeTruthy();
+    expect(getByText(/Family Cooking/)).toBeTruthy();
+    expect(getByText(/Log a Meal/)).toBeTruthy();
+    expect(getByText(/Surprise Me/)).toBeTruthy();
+    expect(getByText(/Find Me a Meal/)).toBeTruthy();
   });
 });
