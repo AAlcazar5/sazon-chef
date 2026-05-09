@@ -87,8 +87,11 @@ describe('DraggableMealCard', () => {
   });
 
   it('renders the meal calories', () => {
+    // Card renders calories as a stat with separate "CAL" label and the
+    // numeric value, e.g. <Text>450</Text><Text>CAL</Text>.
     const { getByText } = render(<DraggableMealCard {...defaultProps} />);
-    expect(getByText('450 calories')).toBeTruthy();
+    expect(getByText('450')).toBeTruthy();
+    expect(getByText('CAL')).toBeTruthy();
   });
 
   it('renders image when meal has imageUrl', () => {

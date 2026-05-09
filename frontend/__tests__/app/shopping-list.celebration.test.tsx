@@ -100,7 +100,10 @@ jest.mock('../../components/celebrations', () => {
 });
 
 jest.mock('../../lib/api', () => ({
-  userApi: { getPreferences: jest.fn().mockResolvedValue({ data: {} }) },
+  userApi: {
+    getPreferences: jest.fn().mockResolvedValue({ data: {} }),
+    getCookingStats: jest.fn().mockResolvedValue({ data: { totalCooked: 0 } }),
+  },
   mealPlanApi: { getWeeklyPlan: jest.fn().mockResolvedValue({ data: { days: [] } }) },
   shoppingListApi: {
     getMergeSuggestion: jest.fn().mockResolvedValue({ data: null }),

@@ -22,7 +22,16 @@ jest.mock('expo-haptics', () => ({
 
 jest.mock('../../../constants/Haptics', () => ({
   triggerHaptic: jest.fn(),
-  HapticPatterns: { MEDIUM_IMPACT: 'medium', LIGHT_IMPACT: 'light' },
+  HapticPatterns: {
+    MEDIUM_IMPACT: 'medium',
+    LIGHT_IMPACT: 'light',
+    // ArchiveView calls HapticPatterns.buttonPress() inline.
+    buttonPress: jest.fn(),
+    selection: jest.fn(),
+    success: jest.fn(),
+    error: jest.fn(),
+    warning: jest.fn(),
+  },
   ImpactStyle: { LIGHT: 'light', MEDIUM: 'medium', HEAVY: 'heavy' },
 }));
 
@@ -268,14 +277,15 @@ describe('ArchiveView', () => {
   });
 
   test('long-press fires haptic feedback', async () => {
-    const { triggerHaptic } = require('../../../constants/Haptics');
+    // ArchiveView now calls HapticPatterns.buttonPress() (not triggerHaptic).
+    const { HapticPatterns } = require('../../../constants/Haptics');
     const list = makeArchivedList({ id: 'list-1' });
 
     const { getByTestId } = render(<ArchiveView lists={[list]} onRestore={jest.fn()} />);
     fireEvent(getByTestId('archive-row-list-1'), 'longPress');
 
     await waitFor(() => {
-      expect(triggerHaptic).toHaveBeenCalled();
+      expect(HapticPatterns.buttonPress).toHaveBeenCalled();
     });
   });
 

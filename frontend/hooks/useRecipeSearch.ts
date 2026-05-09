@@ -140,6 +140,13 @@ export function useRecipeSearch(options: UseRecipeSearchOptions): UseRecipeSearc
         };
 
         applyFetchResult(result);
+        if (deduplicated.length > 0) {
+          showToast(
+            `🔍 Found ${deduplicated.length} recipes matching "${query}"`,
+            'success',
+            2000,
+          );
+        }
       } catch {
         showToast('❌ Craving search failed', 'error');
       }

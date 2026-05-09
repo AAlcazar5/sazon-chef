@@ -18,9 +18,15 @@ const mockGetVariations = jest.fn();
 jest.mock('../../../lib/api', () => ({
   recipeApi: {
     getRecipe: (...args: any[]) => mockGetRecipe(...args),
+    getSimilarRecipes: jest.fn().mockResolvedValue({ data: { recipes: [] } }),
+    getCookedNext: jest.fn().mockResolvedValue({ data: { recipes: [] } }),
+    getLeftoverBridge: jest.fn().mockResolvedValue({ data: { rows: [] } }),
   },
   composedPlateApi: {
     fetchVariations: (...args: any[]) => mockGetVariations(...args),
+  },
+  nutritionApi: {
+    fetchRecipe: jest.fn().mockResolvedValue({ data: { aggregate: null } }),
   },
 }));
 
@@ -180,13 +186,24 @@ describe('RecipeIdScreen', () => {
       expect(getByText('Yogurt Sauce')).toBeTruthy();
     });
 
+    // RD1.2 — Vary / Edit / Export collapsed into an action menu. Open it
+    // first via the ellipsis trigger before the row labels are findable.
+    async function openActionMenu(findByTestId: (id: string) => Promise<any>) {
+      const trigger = await findByTestId('recipe-detail-action-menu-trigger');
+      await act(async () => {
+        fireEvent.press(trigger);
+      });
+    }
+
     it('shows the Edit composition button', async () => {
-      const { findByText } = render(<RecipeIdScreen />);
+      const { findByText, findByTestId } = render(<RecipeIdScreen />);
+      await openActionMenu(findByTestId);
       expect(await findByText('Edit composition')).toBeTruthy();
     });
 
     it('Edit composition navigates to /build-a-plate with plateId', async () => {
-      const { findByText } = render(<RecipeIdScreen />);
+      const { findByText, findByTestId } = render(<RecipeIdScreen />);
+      await openActionMenu(findByTestId);
       const btn = await findByText('Edit composition');
       await act(async () => {
         fireEvent.press(btn);
@@ -198,12 +215,14 @@ describe('RecipeIdScreen', () => {
     });
 
     it('shows the Vary this plate button', async () => {
-      const { findByText } = render(<RecipeIdScreen />);
+      const { findByText, findByTestId } = render(<RecipeIdScreen />);
+      await openActionMenu(findByTestId);
       expect(await findByText('Vary this plate')).toBeTruthy();
     });
 
     it('Vary this plate opens the variations sheet with correct plateId', async () => {
       const { findByText, findByTestId } = render(<RecipeIdScreen />);
+      await openActionMenu(findByTestId);
       const btn = await findByText('Vary this plate');
       await act(async () => {
         fireEvent.press(btn);

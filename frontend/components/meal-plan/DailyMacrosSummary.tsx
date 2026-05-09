@@ -248,7 +248,7 @@ function DailyMacrosSummary({
       )}
 
       {macrosExpanded ? (
-        <View>
+        <View testID="macro-widget-grid">
           {/* Ring on left, macro progress bars on right */}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 16 }}>
             <View style={{ alignItems: 'center' }}>
@@ -285,7 +285,7 @@ function DailyMacrosSummary({
                   <HapticTouchableOpacity
                     key={cfg.key}
                     onPress={weeklyMacroData ? () => handleMacroCardPress(cfg.key) : undefined}
-                    testID={`macro-bar-${cfg.key}`}
+                    testID={`widget-${cfg.key}`}
                     accessibilityLabel={`${cfg.label} ${value} of ${target}${cfg.unit}`}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>

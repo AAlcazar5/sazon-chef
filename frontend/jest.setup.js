@@ -135,6 +135,29 @@ jest.mock('./contexts/AuthContext', () => {
   };
 });
 
+// expo-av native module isn't available in jest. useVoicePlayback (used by
+// app/cooking.tsx) imports Audio at module level, so any test that pulls
+// CookingScreen explodes with "Cannot find native module 'ExponentAV'".
+jest.mock('expo-av', () => ({
+  Audio: {
+    Sound: class MockSound {
+      static createAsync = jest.fn(() => Promise.resolve({ sound: { unloadAsync: jest.fn(), playAsync: jest.fn(), stopAsync: jest.fn(), pauseAsync: jest.fn(), setOnPlaybackStatusUpdate: jest.fn() } }));
+    },
+    setAudioModeAsync: jest.fn(() => Promise.resolve()),
+    setIsEnabledAsync: jest.fn(() => Promise.resolve()),
+    InterruptionModeIOS: { DoNotMix: 0, DuckOthers: 1, MixWithOthers: 2 },
+    InterruptionModeAndroid: { DoNotMix: 0, DuckOthers: 1 },
+  },
+  AVPlaybackStatus: {},
+}));
+
+jest.mock('expo-speech', () => ({
+  speak: jest.fn(),
+  stop: jest.fn(),
+  isSpeakingAsync: jest.fn(() => Promise.resolve(false)),
+  getAvailableVoicesAsync: jest.fn(() => Promise.resolve([])),
+}));
+
 // lottie-react-native + react-native-view-shot mocked via manual
 // __mocks__/*.js files. Inline jest.mock factories don't work here:
 // nativewind/babel transforms React.createElement(View, …) into a

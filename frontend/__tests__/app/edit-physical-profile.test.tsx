@@ -18,7 +18,8 @@ const mockAlert = jest.fn();
 async function renderAndWait() {
   const result = render(<EditPhysicalProfileScreen />);
   await waitFor(() => {
-    expect(screen.getByText('Save')).toBeTruthy();
+    // Button label is "Save Profile" (or "Saving..." when in flight).
+    expect(screen.getByText(/Save Profile|Saving/)).toBeTruthy();
   });
   return result;
 }
@@ -71,7 +72,7 @@ describe('EditPhysicalProfileScreen', () => {
 
     await renderAndWait();
 
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please fill in all required fields');
@@ -84,7 +85,7 @@ describe('EditPhysicalProfileScreen', () => {
     await renderAndWait();
 
     fireEvent.changeText(screen.getByPlaceholderText('25'), '5'); // Too young
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Age must be between 13 and 120');
@@ -97,7 +98,7 @@ describe('EditPhysicalProfileScreen', () => {
     await renderAndWait();
 
     fireEvent.changeText(screen.getByPlaceholderText('25'), '150'); // Too old
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Age must be between 13 and 120');
@@ -111,7 +112,7 @@ describe('EditPhysicalProfileScreen', () => {
 
     fireEvent.changeText(screen.getByPlaceholderText('25'), '25');
     fireEvent.changeText(screen.getByPlaceholderText('5'), '1'); // Too short
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
@@ -125,7 +126,7 @@ describe('EditPhysicalProfileScreen', () => {
 
     fireEvent.changeText(screen.getByPlaceholderText('25'), '25');
     fireEvent.changeText(screen.getByPlaceholderText('5'), '10'); // Too tall
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
@@ -139,8 +140,8 @@ describe('EditPhysicalProfileScreen', () => {
 
     fireEvent.changeText(screen.getByPlaceholderText('25'), '25');
     fireEvent.changeText(screen.getByPlaceholderText('5'), '5');
-    fireEvent.changeText(screen.getByPlaceholderText('154'), '10'); // Too light
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.changeText(screen.getByPlaceholderText('154 lbs'), '10'); // Too light
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
@@ -154,8 +155,8 @@ describe('EditPhysicalProfileScreen', () => {
 
     fireEvent.changeText(screen.getByPlaceholderText('25'), '25');
     fireEvent.changeText(screen.getByPlaceholderText('5'), '5');
-    fireEvent.changeText(screen.getByPlaceholderText('154'), '800'); // Too heavy
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.changeText(screen.getByPlaceholderText('154 lbs'), '800'); // Too heavy
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
@@ -178,9 +179,9 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.changeText(screen.getByPlaceholderText('25'), '30');
     fireEvent.changeText(screen.getByPlaceholderText('5'), '5');
     fireEvent.changeText(screen.getByPlaceholderText('10'), '10');
-    fireEvent.changeText(screen.getByPlaceholderText('154'), '154');
+    fireEvent.changeText(screen.getByPlaceholderText('154 lbs'), '154');
 
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(userApi.updatePhysicalProfile).toHaveBeenCalledWith({
@@ -213,9 +214,9 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.changeText(screen.getByPlaceholderText('25'), '30');
     fireEvent.changeText(screen.getByPlaceholderText('5'), '5');
     fireEvent.changeText(screen.getByPlaceholderText('10'), '10');
-    fireEvent.changeText(screen.getByPlaceholderText('154'), '154');
+    fireEvent.changeText(screen.getByPlaceholderText('154 lbs'), '154');
 
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith('Oops!', 'Save failed');
@@ -227,9 +228,11 @@ describe('EditPhysicalProfileScreen', () => {
 
     await renderAndWait();
 
-    fireEvent.press(screen.getByText('Switch to cm'));
+    // Default mode is imperial; the toggle button shows the *target* unit
+    // ("cm" while in imperial, "ft/in" while in metric).
+    fireEvent.press(screen.getByText('cm'));
 
-    expect(screen.getByText('Switch to ft/in')).toBeTruthy();
+    expect(screen.getByText('ft/in')).toBeTruthy();
   });
 
   test('should display calculated metrics after save', async () => {
@@ -248,13 +251,15 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.changeText(screen.getByPlaceholderText('25'), '30');
     fireEvent.changeText(screen.getByPlaceholderText('5'), '5');
     fireEvent.changeText(screen.getByPlaceholderText('10'), '10');
-    fireEvent.changeText(screen.getByPlaceholderText('154'), '154');
+    fireEvent.changeText(screen.getByPlaceholderText('154 lbs'), '154');
 
-    fireEvent.press(screen.getByText('Save'));
+    fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
-      expect(screen.getByText('1800 cal/day')).toBeTruthy();
-      expect(screen.getByText('2300 cal/day')).toBeTruthy();
+      // BMR/TDEE values render in separate <Text> nodes from the "cal/day" unit.
+      expect(screen.getByText('1800')).toBeTruthy();
+      expect(screen.getByText('2300')).toBeTruthy();
+      expect(screen.getAllByText('cal/day').length).toBeGreaterThanOrEqual(2);
     });
   });
 

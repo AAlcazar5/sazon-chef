@@ -2,7 +2,7 @@
 // Phase 5: CookbookInsights — stat values render, accessible pill labels present
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import CookbookInsights from '../../components/cookbook/CookbookInsights';
 import type { SavedRecipe } from '../../types';
 
@@ -93,16 +93,18 @@ describe('CookbookInsights', () => {
     expect(getByText('Cookbook insights')).toBeTruthy();
   });
 
+  // AnimatedStatCounter exposes the FINAL value via accessibilityLabel
+  // regardless of animation state — assert on that instead of the
+  // animated text content (which starts at 0).
   it('renders best match percentage from recipes', () => {
-    const { getByText } = render(<CookbookInsights {...baseProps} />);
-    // bestMatch = max of 85, 60, 70 = 85
-    expect(getByText('85%')).toBeTruthy();
+    const { getByLabelText } = render(<CookbookInsights {...baseProps} />);
+    expect(getByLabelText('85%')).toBeTruthy();
   });
 
   it('renders A/B health percentage', () => {
-    const { getByText } = render(<CookbookInsights {...baseProps} />);
+    const { getByLabelText } = render(<CookbookInsights {...baseProps} />);
     // grades: A, C, B → 2 out of 3 are A/B → 67%
-    expect(getByText('67%')).toBeTruthy();
+    expect(getByLabelText('67%')).toBeTruthy();
   });
 
   it('renders average cook time', () => {

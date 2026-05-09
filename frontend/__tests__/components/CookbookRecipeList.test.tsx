@@ -26,6 +26,34 @@ jest.mock('../../components/recipe/RecipeCard', () => ({
   },
 }));
 
+// CookbookRecipeList now uses EditorialRecipeCard instead of RecipeCard.
+// Mirror the test mock contract (testID + onPress + image-placeholder)
+// so the same assertions still hold.
+jest.mock('../../components/home/EditorialRecipeCard', () => ({
+  EditorialRecipeCard: function MockEditorialRecipeCard({ recipe, onPress, footer }: any) {
+    const { TouchableOpacity, Text, View } = require('react-native');
+    const hasImage = !!(recipe.imageUrl && recipe.imageUrl.trim() !== '');
+    return (
+      <TouchableOpacity testID={`recipe-card-${recipe.id}`} onPress={() => onPress?.(recipe.id)}>
+        <View>
+          <Text testID={`recipe-title-${recipe.id}`}>{recipe.title}</Text>
+          {!hasImage && (
+            <View testID={`image-placeholder-${recipe.id}`} accessibilityLabel="Recipe image placeholder" />
+          )}
+          {footer}
+        </View>
+      </TouchableOpacity>
+    );
+  },
+}));
+
+// SwipeableRecipeCard wraps EditorialRecipeCard — passthrough for tests.
+jest.mock('../../components/cookbook/SwipeableRecipeCard', () => {
+  return function MockSwipeableRecipeCard({ children }: any) {
+    return children;
+  };
+});
+
 jest.mock('../../components/recipe/AnimatedRecipeCard', () => {
   return function MockAnimatedRecipeCard({ children }: any) {
     return children;

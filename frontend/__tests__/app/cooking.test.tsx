@@ -58,6 +58,45 @@ jest.mock('../../components/cooking/ConsumeIngredientsSheet', () => ({
   __esModule: true,
   default: () => null,
 }));
+// Sheets / overlays that mount their own BottomSheet (which needs a
+// BottomSheetModalProvider context). In unit tests they don't add value —
+// stub to render nothing.
+jest.mock('../../components/recipe/TasteSurveySheet', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../components/cooking/LeftoverIdeasSheet', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../components/cooking/CookCompleteCelebration', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../components/cooking/PostCookRating', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../components/recipe/CulturalPrimerModal', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../components/celebrations/FirstCuisineStamp', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../components/celebrations/DiscoveryMilestoneInline', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../components/cooking/TechniqueTip', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('../../components/cooking/FoodIntelCookingTip', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 
 jest.mock('../../components/mascot/AnimatedLottieMascot', () => {
   const { View } = require('react-native');
@@ -66,8 +105,48 @@ jest.mock('../../components/mascot/AnimatedLottieMascot', () => {
   };
 });
 
+// CelebrationOverlay renders title, expression mascot, stats, and CTAs from
+// props. The done-screen tests assert these — render a minimal skeleton.
 jest.mock('../../components/celebrations', () => ({
-  CelebrationOverlay: () => null,
+  CelebrationOverlay: function MockCelebrationOverlay({
+    visible,
+    title,
+    subtitle,
+    expression,
+    stats,
+    primaryCTA,
+    secondaryCTA,
+    children,
+  }: any) {
+    const { View, Text, TouchableOpacity } = require('react-native');
+    if (visible === false) return null;
+    return (
+      <View testID="celebration-overlay">
+        {title ? <Text>{title}</Text> : null}
+        {subtitle ? <Text>{subtitle}</Text> : null}
+        {expression ? <View testID={`sazon-${expression}`} /> : null}
+        {Array.isArray(stats)
+          ? stats.map((s: any, i: number) => (
+              <View key={`stat-${i}`}>
+                <Text>{s.value}</Text>
+                <Text>{s.label}</Text>
+              </View>
+            ))
+          : null}
+        {primaryCTA ? (
+          <TouchableOpacity onPress={primaryCTA.onPress}>
+            <Text>{primaryCTA.label}</Text>
+          </TouchableOpacity>
+        ) : null}
+        {secondaryCTA ? (
+          <TouchableOpacity onPress={secondaryCTA.onPress}>
+            <Text>{secondaryCTA.label}</Text>
+          </TouchableOpacity>
+        ) : null}
+        {children}
+      </View>
+    );
+  },
 }));
 
 jest.mock('../../components/celebrations/ShareCardCapture', () => {
@@ -252,23 +331,23 @@ describe('CookingScreen — completion screen', () => {
     await waitFor(() => expect(getByTestId('sazon-chef-kiss')).toBeTruthy());
   });
 
-  it('renders "Recipe Complete!" heading on completion', async () => {
+  it('renders celebration heading on completion', async () => {
     const { getByText } = await reachDoneScreen();
-    await waitFor(() => expect(getByText('Recipe Complete!')).toBeTruthy());
+    await waitFor(() => expect(getByText('You nailed it!')).toBeTruthy());
   });
 
   it('renders step count stat on completion', async () => {
     const { getByText } = await reachDoneScreen();
-    // oneStepRecipe has 1 instruction → totalSteps = 1
+    // oneStepRecipe has 1 instruction → totalSteps = 1, value rendered as "1/1"
     await waitFor(() => {
-      expect(getByText('1')).toBeTruthy();
+      expect(getByText('1/1')).toBeTruthy();
       expect(getByText('Steps')).toBeTruthy();
     });
   });
 
   it('renders elapsed time stat on completion', async () => {
     const { getByText } = await reachDoneScreen();
-    await waitFor(() => expect(getByText('Time')).toBeTruthy());
+    await waitFor(() => expect(getByText('Cook Time')).toBeTruthy());
   });
 
   it('renders "Back to Recipe" CTA on completion', async () => {
@@ -285,14 +364,10 @@ describe('CookingScreen — completion screen', () => {
     expect(router.back).toHaveBeenCalled();
   });
 
-  it('fires success haptic on completion', async () => {
-    const Haptics = require('expo-haptics');
+  it('fires the cookingComplete haptic choreography on completion', async () => {
+    const { HapticChoreography } = require('../../utils/hapticChoreography');
     await reachDoneScreen();
-    await waitFor(() =>
-      expect(Haptics.notificationAsync).toHaveBeenCalledWith(
-        Haptics.NotificationFeedbackType.Success
-      )
-    );
+    await waitFor(() => expect(HapticChoreography.cookingComplete).toHaveBeenCalled());
   });
 
   it('calls recordCook with the recipe id on completion', async () => {

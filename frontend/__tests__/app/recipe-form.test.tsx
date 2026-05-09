@@ -281,14 +281,14 @@ describe('RecipeFormScreen', () => {
   test('should handle recipe type selection', () => {
     render(<RecipeFormScreen />);
 
-    fireEvent.press(screen.getByText('Snack'));
-    expect(screen.getByText('Snack')).toBeTruthy();
+    fireEvent.press(screen.getByText(/Snack/));
+    expect(screen.getByText(/Snack/)).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Dessert'));
-    expect(screen.getByText('Dessert')).toBeTruthy();
+    fireEvent.press(screen.getByText(/Dessert/));
+    expect(screen.getByText(/Dessert/)).toBeTruthy();
 
     // Switch back to Meal (meal sub-types should appear)
-    fireEvent.press(screen.getByText('Meal'));
-    expect(screen.getByText('Breakfast')).toBeTruthy();
+    fireEvent.press(screen.getByText(/Meal/));
+    expect(screen.getByText(/Breakfast/)).toBeTruthy();
   });
 });
