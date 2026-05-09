@@ -11,6 +11,8 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
   theme: 'light' | 'dark';
+  /** Convenience flag — true iff theme === 'dark'. (M9: was missing.) */
+  isDark: boolean;
   themeMode: ThemeMode;
   systemColorScheme: ColorSchemeName;
   colors: typeof Colors;
@@ -128,6 +130,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       <ThemeContext.Provider
         value={{
           theme: 'light',
+          isDark: false,
           themeMode: 'system',
           systemColorScheme: 'light',
           colors: Colors,
@@ -145,6 +148,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       <ThemeContext.Provider
         value={{
           theme: actualTheme,
+          isDark: actualTheme === 'dark',
           themeMode,
           systemColorScheme,
           colors,

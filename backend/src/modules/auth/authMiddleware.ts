@@ -3,7 +3,25 @@ import { logger } from '../../utils/logger';
 // JWT authentication middleware
 
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { type JwtPayload, type VerifyErrors } from 'jsonwebtoken';
+
+// H10: typed JWT payload. Tokens are minted in authController.login /
+// register / socialAuth with `{ id, email }`. Centralizing the shape
+// here means any future field rename surfaces as a compile error in
+// every consumer instead of silently producing `undefined` at runtime.
+export interface SazonJwtPayload extends JwtPayload {
+  id: string;
+  email: string;
+}
+
+function isSazonPayload(value: unknown): value is SazonJwtPayload {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { id?: unknown }).id === 'string' &&
+    typeof (value as { email?: unknown }).email === 'string'
+  );
+}
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   throw new Error(
@@ -42,8 +60,8 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     }
 
     // Verify token
-    jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
-      if (err) {
+    jwt.verify(token, JWT_SECRET, (err: VerifyErrors | null, decoded: unknown) => {
+      if (err || !isSazonPayload(decoded)) {
         return res.status(401).json({
           error: 'Unauthorized',
           message: 'Your session has expired. Please log in again.'
@@ -53,7 +71,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
       // Attach user info to request
       req.user = {
         id: decoded.id,
-        email: decoded.email
+        email: decoded.email,
       };
 
       next();
@@ -77,11 +95,11 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token) {
-      jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
-        if (!err && decoded) {
+      jwt.verify(token, JWT_SECRET, (err: VerifyErrors | null, decoded: unknown) => {
+        if (!err && isSazonPayload(decoded)) {
           req.user = {
             id: decoded.id,
-            email: decoded.email
+            email: decoded.email,
           };
         }
         next();

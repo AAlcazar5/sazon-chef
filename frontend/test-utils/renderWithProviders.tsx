@@ -36,6 +36,7 @@ const defaultAuthValue: AuthValue = {
 
 const defaultThemeValue: ThemeValue = {
   theme: 'light',
+  isDark: false,
   themeMode: 'light',
   systemColorScheme: 'light',
   colors: Colors,

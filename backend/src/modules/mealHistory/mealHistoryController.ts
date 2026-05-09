@@ -10,17 +10,17 @@ export const mealHistoryController = {
     try {
       logger.info('📊 GET /api/meal-history - METHOD CALLED');
       const userId = getUserId(req);
-      
-      const { 
-        startDate, 
-        endDate, 
+
+      const {
+        startDate,
+        endDate,
         limit = '50',
-        offset = '0'
+        offset = '0',
       } = req.query;
-      
+
       // Build where clause
       const where: any = { userId };
-      
+
       // Date range filtering
       if (startDate || endDate) {
         where.date = {};
@@ -31,7 +31,20 @@ export const mealHistoryController = {
           where.date.lte = new Date(endDate as string);
         }
       }
-      
+
+      // H8: clamp client-supplied limit. Without a ceiling, a buggy or
+      // malicious client can pass `?limit=999999` and pull every history
+      // row + every nested ingredient/instruction. Default 50 unchanged;
+      // hard cap is 500 (covers ~17 weeks of 4-meals/day power use).
+      const MAX_LIMIT = 500;
+      const parsedLimit = parseInt(limit as string, 10);
+      const take = Math.min(
+        Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 50, 1),
+        MAX_LIMIT,
+      );
+      const parsedOffset = parseInt(offset as string, 10);
+      const skip = Math.max(Number.isFinite(parsedOffset) ? parsedOffset : 0, 0);
+
       // Get meal history with recipe details
       const mealHistory = await prisma.mealHistory.findMany({
         where,
@@ -39,13 +52,13 @@ export const mealHistoryController = {
           recipe: {
             include: {
               ingredients: { orderBy: { order: 'asc' } },
-              instructions: { orderBy: { step: 'asc' } }
-            }
-          }
+              instructions: { orderBy: { step: 'asc' } },
+            },
+          },
         },
         orderBy: { date: 'desc' },
-        take: parseInt(limit as string),
-        skip: parseInt(offset as string)
+        take,
+        skip,
       });
       
       // Calculate summary statistics
@@ -57,10 +70,10 @@ export const mealHistoryController = {
         mealHistory,
         summary,
         pagination: {
-          limit: parseInt(limit as string),
-          offset: parseInt(offset as string),
-          total: mealHistory.length
-        }
+          limit: take,
+          offset: skip,
+          total: mealHistory.length,
+        },
       });
       
     } catch (error) {

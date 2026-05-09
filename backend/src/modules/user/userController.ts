@@ -514,33 +514,64 @@ export const userController = {
   // Get user meal history
   async getMealHistory(req: Request, res: Response) {
     try {
-      // TODO: Get user ID from authentication
       const userId = getUserId(req);
-      const { startDate, endDate } = req.query;
-      
-      const where: any = { userId };
-      
+      const { startDate, endDate, limit, cursor } = req.query;
+
+      // H8: cap unbounded queries. A 2-year power user with 4 meals/day has
+      // ~2,920 history rows; previously this returned all of them with the
+      // full nested ingredients + instructions per recipe (~30k child rows).
+      // Default cap of 100 covers ~3 weeks of full daily logging — more than
+      // any client UI shows at once. Callers needing more pages pass `cursor`.
+      const DEFAULT_LIMIT = 100;
+      const MAX_LIMIT = 500;
+      const parsedLimit = limit ? parseInt(limit as string, 10) : DEFAULT_LIMIT;
+      const take = Math.min(
+        Math.max(Number.isFinite(parsedLimit) ? parsedLimit : DEFAULT_LIMIT, 1),
+        MAX_LIMIT,
+      );
+
+      const where: { userId: string; date?: { gte: Date; lte: Date } } = { userId };
+
       if (startDate && endDate) {
         where.date = {
           gte: new Date(startDate as string),
-          lte: new Date(endDate as string)
+          lte: new Date(endDate as string),
         };
       }
-      
+
+      // H8: list-view shape — drop the heavy nested ingredient/instruction
+      // arrays. Recipe detail view already loads those on demand.
       const mealHistory = await prisma.mealHistory.findMany({
         where,
         include: {
           recipe: {
-            include: {
-              ingredients: { orderBy: { order: 'asc' } },
-              instructions: { orderBy: { step: 'asc' } }
-            }
-          }
+            select: {
+              id: true,
+              title: true,
+              cuisine: true,
+              cookTime: true,
+              imageUrl: true,
+              calories: true,
+              protein: true,
+              carbs: true,
+              fat: true,
+            },
+          },
         },
-        orderBy: { date: 'desc' }
+        orderBy: { date: 'desc' },
+        take,
+        ...(cursor
+          ? { skip: 1, cursor: { id: cursor as string } }
+          : {}),
       });
-      
-      res.json(mealHistory);
+
+      // Cursor for next page = id of the last row, or null when fewer than
+      // `take` rows came back (end of stream).
+      const nextCursor = mealHistory.length === take
+        ? mealHistory[mealHistory.length - 1]?.id ?? null
+        : null;
+
+      res.json({ items: mealHistory, nextCursor, limit: take });
     } catch (error) {
       logger.error({ err: error }, 'Get meal history error:');
       res.status(500).json({ error: 'Failed to fetch meal history' });

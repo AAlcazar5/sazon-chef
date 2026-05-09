@@ -681,10 +681,14 @@ export default function CookbookScreen() {
       lastSimilarBaseIdRef.current = baseRecipe.id;
 
       try {
+        // M11: response is { recipes: [...] } since the duplicate-key bug
+        // was fixed in lib/api.ts. Pre-fix, this Array.isArray() check
+        // always failed and the UI silently fell to the empty branch.
         const response = await recipeApi.getSimilarRecipes(baseRecipe.id, 10);
-        if (response.data && Array.isArray(response.data)) {
-          rawSimilarRecipesRef.current = response.data;
-          setSimilarRecipes(applyFiltersToSimilarRecipes(response.data));
+        const recipes = response.data?.recipes ?? [];
+        if (Array.isArray(recipes) && recipes.length > 0) {
+          rawSimilarRecipesRef.current = recipes;
+          setSimilarRecipes(applyFiltersToSimilarRecipes(recipes));
         } else {
           rawSimilarRecipesRef.current = [];
           setSimilarRecipes([]);
