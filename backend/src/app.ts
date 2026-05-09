@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
+import { requestIdMiddleware } from './middleware/requestId';
 import { recipeRoutes } from '@modules/recipe/recipeRoutes';
 import { userRoutes } from '@modules/user/userRoutes';
 import { cityCuisineRouter } from '@modules/cityCuisine/cityCuisineRoutes';
@@ -98,6 +99,10 @@ const ALLOWED_ORIGINS: (string | RegExp)[] = [
 const app = express();
 
 // Sentry v8+: request context is captured automatically via expressIntegration
+
+// H12: per-request trace ID + scoped pino child logger on res.locals.logger.
+// Mounted FIRST so every downstream middleware error inherits the requestId.
+app.use(requestIdMiddleware);
 
 // Security headers
 app.use(helmet());
@@ -280,19 +285,28 @@ if (process.env.SENTRY_DSN) {
 
 // Generic error handler
 app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
-  logger.error({ err: error }, 'http.unhandled_error');
+  // H12: prefer the request-scoped child logger when available so the log
+  // line carries requestId + method + path automatically.
+  const log = res.locals.logger ?? logger;
+  const requestId = res.locals.requestId;
+  log.error({ err: error }, 'http.unhandled_error');
+
+  // Surface requestId in every error response so support / Sentry breadcrumbs
+  // can correlate a user-visible failure to the server log line.
+  const withRequestId = (body: Record<string, unknown>) =>
+    requestId ? { ...body, requestId } : body;
 
   if (error.name === 'UnauthenticatedError') {
-    return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
+    return res.status(401).json(withRequestId({ error: 'Unauthorized', message: 'Authentication required.' }));
   }
   if (error.code?.startsWith('P')) {
-    return res.status(400).json({ error: 'Database error', message: 'An error occurred while processing your request' });
+    return res.status(400).json(withRequestId({ error: 'Database error', message: 'An error occurred while processing your request' }));
   }
   if (error.name === 'JsonWebTokenError') {
-    return res.status(401).json({ error: 'Invalid token', message: 'Please provide a valid authentication token' });
+    return res.status(401).json(withRequestId({ error: 'Invalid token', message: 'Please provide a valid authentication token' }));
   }
   if (error.name === 'ValidationError') {
-    return res.status(400).json({ error: 'Validation failed', details: error.details });
+    return res.status(400).json(withRequestId({ error: 'Validation failed', details: error.details }));
   }
 
   // ERR-1: error.message from Prisma can leak constraint names and column
@@ -304,10 +318,10 @@ app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
   const safeMessage = isClientError
     ? error.message || 'Bad request'
     : 'Internal server error';
-  res.status(statusCode).json({
+  res.status(statusCode).json(withRequestId({
     error: safeMessage,
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
-  });
+  }));
 });
 
 export { app };

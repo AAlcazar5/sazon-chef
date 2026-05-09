@@ -37,6 +37,73 @@ function extractSourceName(url: string): string {
   }
 }
 
+// H1: SSRF blocklist. Pre-fix coverage missed IPv6 loopback, IPv6 private
+// ranges, the AWS/GCP instance metadata endpoint (169.254.169.254), and
+// IPv4 encoded as decimal/octal/hex (Node's URL parser canonicalizes some
+// of those for us, but not all — explicit checks are belt-and-braces).
+function isBlockedHostname(rawHostname: string): boolean {
+  // Strip IPv6 brackets if present (e.g., "[::1]" → "::1").
+  const hostname = rawHostname.startsWith('[') && rawHostname.endsWith(']')
+    ? rawHostname.slice(1, -1).toLowerCase()
+    : rawHostname.toLowerCase();
+
+  // Direct hostname matches.
+  if (
+    hostname === 'localhost' ||
+    hostname === '0.0.0.0' ||
+    hostname === '127.0.0.1' ||
+    // IPv6 loopback + the IPv4-mapped variant.
+    hostname === '::1' ||
+    hostname === '::ffff:127.0.0.1' ||
+    // AWS/GCP/Azure instance-metadata endpoints. Exfiltrating IAM creds
+    // from a cloud VM is the canonical SSRF payoff.
+    hostname === '169.254.169.254' ||
+    hostname === 'metadata.google.internal' ||
+    hostname === 'fd00:ec2::254'
+  ) {
+    return true;
+  }
+
+  // RFC1918 + link-local IPv4 prefixes.
+  if (
+    hostname.startsWith('10.') ||
+    hostname.startsWith('192.168.') ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+    hostname.startsWith('169.254.') ||
+    hostname.startsWith('127.')
+  ) {
+    return true;
+  }
+
+  // IPv6 private ranges: unique-local (fc00::/7 → starts fc/fd) and
+  // link-local (fe80::/10).
+  if (/^f[cd][0-9a-f]{0,2}:/.test(hostname) || hostname.startsWith('fe80:')) {
+    return true;
+  }
+
+  // Decimal IPv4 (e.g., 2130706433 == 127.0.0.1). A single all-digits
+  // hostname that fits in a 32-bit unsigned int is a packed IP.
+  if (/^\d+$/.test(hostname)) {
+    const n = Number(hostname);
+    if (Number.isFinite(n) && n >= 0 && n <= 0xffffffff) return true;
+  }
+
+  // Octal-prefixed IPv4 (e.g., 0177.0.0.1 == 127.0.0.1) — any octet that
+  // starts with 0 and has more than one digit is suspicious enough to block.
+  const dottedQuad = hostname.split('.');
+  if (dottedQuad.length === 4 && dottedQuad.every((p) => /^\d+$/.test(p))) {
+    if (dottedQuad.some((p) => p.length > 1 && p.startsWith('0'))) return true;
+    // Also block any well-formed dotted-quad that wasn't caught above —
+    // raw IPv4 literals shouldn't appear in legitimate recipe URLs.
+    return true;
+  }
+
+  // Hex-prefixed IPv4 (0x7f000001).
+  if (/^0x[0-9a-f]+$/.test(hostname)) return true;
+
+  return false;
+}
+
 function validateUrl(url: string): void {
   let parsed: URL;
   try {
@@ -49,20 +116,13 @@ function validateUrl(url: string): void {
     throw new RecipeImportError('Only HTTP/HTTPS URLs are supported', 'INVALID_URL');
   }
 
-  // Block private/internal IPs and localhost
-  const hostname = parsed.hostname;
-  if (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname.startsWith('192.168.') ||
-    hostname.startsWith('10.') ||
-    hostname.startsWith('172.16.') ||
-    hostname === '0.0.0.0' ||
-    /^\d+\.\d+\.\d+\.\d+$/.test(hostname) // Block raw IPs
-  ) {
+  if (isBlockedHostname(parsed.hostname)) {
     throw new RecipeImportError('Private or internal URLs are not allowed', 'INVALID_URL');
   }
 }
+
+// H1: exported for unit tests so we can table-drive every blocked form.
+export const __INTERNALS = { isBlockedHostname };
 
 async function fetchHtml(url: string): Promise<string> {
   try {

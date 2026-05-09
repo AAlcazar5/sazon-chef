@@ -3,6 +3,7 @@ import { logger } from '../../utils/logger';
 // Authentication controller for user registration, login, and password management
 
 import { Request, Response } from 'express';
+import { randomInt } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import * as bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -14,6 +15,12 @@ import { stripeService } from '@/services/stripeService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+// H4: bcrypt cost factor — bumped 10 → 12 to match 2024 OWASP guidance.
+// Bcrypt cost is exponential: 12 ≈ 4× the work of 10. Hash time on a
+// modern server is ~250ms vs ~60ms; still well under the 1s threshold
+// that would harm login UX, while making offline brute-force ~16× slower.
+const BCRYPT_ROUNDS = 12;
 
 export const authController = {
   /**
@@ -89,8 +96,7 @@ export const authController = {
       }
 
       // Hash password
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
       // Encrypt email and name for data at rest
       const encryptedEmail = encrypt(email);
@@ -508,8 +514,7 @@ export const authController = {
       }
 
       // Hash new password
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
       // Update password
       await prisma.user.update({
@@ -597,8 +602,8 @@ export const authController = {
         });
       }
 
-      // Generate a simple 6-digit reset code
-      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      // B1: 6-digit reset code from CSPRNG (was Math.random — brute-forceable).
+      const resetCode = randomInt(100_000, 1_000_000).toString();
       const resetCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
       // Store reset code in user record
@@ -632,52 +637,9 @@ export const authController = {
    * Reset password with email (simplified for development)
    * POST /api/auth/reset-password
    */
-  /**
-   * Delete user account and all associated data
-   * DELETE /api/auth/account
-   * Apple guideline 5.1.1 requires in-app account deletion
-   */
-  async deleteAccount(req: Request, res: Response) {
-    try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          error: 'Authentication required'
-        });
-      }
-
-      const userId = req.user.id;
-
-      // Verify user exists
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true }
-      });
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: 'User not found'
-        });
-      }
-
-      // Delete user — all child models have onDelete: Cascade
-      await prisma.user.delete({
-        where: { id: userId }
-      });
-
-      res.json({
-        success: true,
-        message: 'Account and all associated data have been permanently deleted'
-      });
-    } catch (error: any) {
-      logger.error({ err: error }, 'Delete account error:');
-      res.status(500).json({
-        success: false,
-        error: 'Failed to delete account. Please try again.'
-      });
-    }
-  },
+  // B2: deleteAccount removed — see userController.deleteAccount which
+  // requires { confirm: 'DELETE' } in the body. Apple 5.1.1 in-app
+  // deletion requirement is satisfied by DELETE /api/user/account.
 
   async resetPassword(req: Request, res: Response) {
     try {
@@ -788,8 +750,7 @@ export const authController = {
       }
 
       // Hash new password
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
       // Update password and clear reset code
       await prisma.user.update({
