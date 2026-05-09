@@ -95,6 +95,11 @@ export async function calculateCollaborativeScore(
 
 /**
  * User-based collaborative filtering
+ *
+ * H5: previously did N (similar users) × 3 (findFirst per interaction)
+ * round-trips PER recipe. For a 200-recipe scoring pass with 20 similar
+ * users that meant ~12,000 SQLite queries. Now batched into 3 findMany
+ * calls regardless of N.
  */
 async function calculateUserBasedScore(
   recipe: any,
@@ -106,54 +111,53 @@ async function calculateUserBasedScore(
   similarUsersCount: number;
   avgSimilarity: number;
 }> {
-  // Get all users with similar preferences
   const similarUsers = await findSimilarUsers(currentUserId, userBehavior, prisma);
-  
+
   if (similarUsers.length === 0) {
     return { score: 0, similarUsersCount: 0, avgSimilarity: 0 };
   }
-  
-  // Check how many similar users liked/saved this recipe
+
   const recipeId = recipe.id;
+  const candidateIds = similarUsers.map((u) => u.userId);
+
+  // H5: 3 batched queries (was N×3 findFirsts inside a loop). Each returns
+  // only the userIds that interacted with THIS recipe; we merge to a Set
+  // for O(1) membership checks below.
+  const [liked, saved, consumed] = await Promise.all([
+    prisma.recipeFeedback.findMany({
+      where: { userId: { in: candidateIds }, recipeId, liked: true },
+      select: { userId: true },
+    }),
+    prisma.savedRecipe.findMany({
+      where: { userId: { in: candidateIds }, recipeId },
+      select: { userId: true },
+    }),
+    prisma.mealHistory.findMany({
+      where: { userId: { in: candidateIds }, recipeId, consumed: true },
+      select: { userId: true },
+    }),
+  ]);
+
+  const interactedUserIds = new Set<string>([
+    ...liked.map((r: { userId: string }) => r.userId),
+    ...saved.map((r: { userId: string }) => r.userId),
+    ...consumed.map((r: { userId: string }) => r.userId),
+  ]);
+
   let weightedScore = 0;
   let totalWeight = 0;
-  
+
   for (const similarUser of similarUsers) {
-    // Check if this user has interacted with this recipe
-    const hasLiked = await prisma.recipeFeedback.findFirst({
-      where: {
-        userId: similarUser.userId,
-        recipeId: recipeId,
-        liked: true,
-      },
-    });
-    
-    const hasSaved = await prisma.savedRecipe.findFirst({
-      where: {
-        userId: similarUser.userId,
-        recipeId: recipeId,
-      },
-    });
-    
-    const hasConsumed = await prisma.mealHistory.findFirst({
-      where: {
-        userId: similarUser.userId,
-        recipeId: recipeId,
-        consumed: true,
-      },
-    });
-    
-    if (hasLiked || hasSaved || hasConsumed) {
-      // Weight by similarity and common interactions
+    if (interactedUserIds.has(similarUser.userId)) {
       const weight = similarUser.similarity * (1 + similarUser.commonInteractions * 0.1);
       weightedScore += weight * 50; // Max 50 points per similar user
       totalWeight += weight;
     }
   }
-  
+
   const score = totalWeight > 0 ? weightedScore / Math.max(totalWeight, 1) : 0;
   const avgSimilarity = similarUsers.reduce((sum, u) => sum + u.similarity, 0) / similarUsers.length;
-  
+
   return {
     score: Math.min(50, Math.round(score)),
     similarUsersCount: similarUsers.length,
@@ -161,48 +165,101 @@ async function calculateUserBasedScore(
   };
 }
 
+/** H5: cap candidate-user scan. Pre-fix `findMany` returned every user. */
+const CANDIDATE_USER_CAP = 500;
+
 /**
- * Find users similar to the current user
+ * Find users similar to the current user.
+ *
+ * H5 rewrite: was O(users) full-table scan + O(users) per-user DB queries
+ * inside `calculateUserSimilarity` (3 findMany + 1 findFirst per candidate).
+ * Now: 1 capped findMany for candidates + 4 batched `userId: { in: [...] }`
+ * queries up front, then a synchronous similarity loop.
  */
 async function findSimilarUsers(
   currentUserId: string,
   userBehavior: UserBehaviorData,
   prisma: any
 ): Promise<UserSimilarity[]> {
-  // Get current user's preferences
   const currentUserPrefs = await prisma.userPreferences.findFirst({
     where: { userId: currentUserId },
+    include: { likedCuisines: true, dietaryRestrictions: true },
   });
-  
+
   if (!currentUserPrefs) {
     return [];
   }
-  
-  // Get all other users
+
+  // H5: cap at CANDIDATE_USER_CAP. Pre-fix this scanned the entire users
+  // table. Picking the most-recently-active users keeps the candidate pool
+  // relevant; full clustering / cuisine pre-filter is a future TB1 task.
   const allUsers = await prisma.user.findMany({
     where: {
       id: { not: currentUserId },
+      preferences: { isNot: null },
     },
     include: {
-      preferences: true,
+      preferences: { include: { likedCuisines: true, dietaryRestrictions: true } },
     },
+    orderBy: { updatedAt: 'desc' },
+    take: CANDIDATE_USER_CAP,
   });
-  
+
+  if (allUsers.length === 0) return [];
+
+  const candidateIds = allUsers.map((u: { id: string }) => u.id);
+
+  // H5: hoist all per-candidate DB calls out of the similarity loop and
+  // batch them. Pre-fix, each candidate triggered 4 round-trips inside
+  // calculateUserSimilarity → 500 candidates × 4 = 2,000 queries. Now: 4.
+  const currentMacroGoals = await prisma.macroGoals.findFirst({
+    where: { userId: currentUserId },
+    select: { userId: true },
+  });
+  const [allLiked, allSaved, allConsumed, allMacroGoals] = await Promise.all([
+    prisma.recipeFeedback.findMany({
+      where: { userId: { in: candidateIds }, liked: true },
+      select: { userId: true, recipeId: true },
+    }),
+    prisma.savedRecipe.findMany({
+      where: { userId: { in: candidateIds } },
+      select: { userId: true, recipeId: true },
+    }),
+    prisma.mealHistory.findMany({
+      where: { userId: { in: candidateIds }, consumed: true },
+      select: { userId: true, recipeId: true },
+    }),
+    prisma.macroGoals.findMany({
+      where: { userId: { in: candidateIds } },
+      select: { userId: true },
+    }),
+  ]);
+
+  // Index per-candidate interaction sets for O(1) lookup in the sync loop.
+  const likedByUser = bucketByUser(allLiked);
+  const savedByUser = bucketByUser(allSaved);
+  const consumedByUser = bucketByUser(allConsumed);
+  const candidatesWithMacros = new Set<string>(
+    allMacroGoals.map((g: { userId: string }) => g.userId),
+  );
+
   const similarUsers: UserSimilarity[] = [];
-  
+
   for (const user of allUsers) {
     if (!user.preferences) continue;
-    
-    // Calculate similarity based on preferences and behavior
-    const similarity = await calculateUserSimilarity(
+
+    const similarity = calculateUserSimilarityFromBatch(
       userBehavior,
       currentUserPrefs,
       user.preferences,
-      user.id,
-      prisma
+      likedByUser.get(user.id) ?? new Set(),
+      savedByUser.get(user.id) ?? new Set(),
+      consumedByUser.get(user.id) ?? new Set(),
+      candidatesWithMacros.has(user.id),
+      Boolean(currentMacroGoals),
     );
-    
-    if (similarity.similarity > 0.3) { // Threshold for similar users
+
+    if (similarity.similarity > 0.3) {
       similarUsers.push({
         userId: user.id,
         similarity: similarity.similarity,
@@ -211,121 +268,115 @@ async function findSimilarUsers(
       });
     }
   }
-  
-  // Sort by similarity and return top 20
+
   return similarUsers
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, 20);
 }
 
+function bucketByUser(
+  rows: Array<{ userId: string; recipeId: string }>,
+): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>();
+  for (const row of rows) {
+    let set = map.get(row.userId);
+    if (!set) {
+      set = new Set<string>();
+      map.set(row.userId, set);
+    }
+    set.add(row.recipeId);
+  }
+  return map;
+}
+
 /**
- * Calculate similarity between two users
+ * Calculate similarity between two users — synchronous, takes pre-batched
+ * interaction sets so the caller (`findSimilarUsers`) can issue 4 batched
+ * queries up front instead of 4 per-candidate.
+ *
+ * H5: replaces the previous async `calculateUserSimilarity` which hit the
+ * DB 4× per call. The shared-preferences `macroRanges` block was dropped
+ * because (a) it's never read by callers and (b) it required loading every
+ * candidate's full recipe history to compute. `cuisines` is preserved.
  */
-async function calculateUserSimilarity(
+function calculateUserSimilarityFromBatch(
   currentUserBehavior: UserBehaviorData,
   currentUserPrefs: any,
   otherUserPrefs: any,
-  otherUserId: string,
-  prisma: any
-): Promise<{
+  otherLikedIds: Set<string>,
+  otherSavedIds: Set<string>,
+  otherConsumedIds: Set<string>,
+  otherHasMacroGoals: boolean,
+  currentHasMacroGoals: boolean,
+): {
   similarity: number;
   commonInteractions: number;
   sharedPreferences: UserSimilarity['sharedPreferences'];
-}> {
+} {
   let similarity = 0;
-  let factors = 0;
-  
-  // 1. Cuisine preferences similarity (30%)
+
+  // 1. Cuisine preferences similarity (30%) — Jaccard
   const currentCuisines = new Set(
-    (currentUserPrefs.likedCuisines || []).map((c: any) => (c.name || c).toLowerCase())
+    (currentUserPrefs.likedCuisines || []).map((c: any) => (c.name || c).toLowerCase()),
   );
   const otherCuisines = new Set(
-    (otherUserPrefs.likedCuisines || []).map((c: any) => (c.name || c).toLowerCase())
+    (otherUserPrefs.likedCuisines || []).map((c: any) => (c.name || c).toLowerCase()),
   );
-  
-  const cuisineIntersection = Array.from(currentCuisines).filter(c => otherCuisines.has(c)).length;
+  const cuisineIntersection = Array.from(currentCuisines).filter((c) => otherCuisines.has(c)).length;
   const cuisineUnion = new Set([...Array.from(currentCuisines), ...Array.from(otherCuisines)]).size;
   const cuisineSimilarity = cuisineUnion > 0 ? cuisineIntersection / cuisineUnion : 0;
   similarity += cuisineSimilarity * 0.3;
-  factors++;
-  
-  // 2. Dietary restrictions similarity (20%)
-  const currentDietary = new Set((currentUserPrefs.dietaryRestrictions || []).map((d: string) => d.toLowerCase()));
-  const otherDietary = new Set((otherUserPrefs.dietaryRestrictions || []).map((d: string) => d.toLowerCase()));
-  const dietaryMatch = currentDietary.size === otherDietary.size && 
-    [...currentDietary].every(d => otherDietary.has(d));
+
+  // 2. Dietary restrictions similarity (20%) — exact-set match
+  const currentDietary = new Set(
+    (currentUserPrefs.dietaryRestrictions || []).map((d: any) =>
+      (typeof d === 'string' ? d : d.name || '').toLowerCase(),
+    ),
+  );
+  const otherDietary = new Set(
+    (otherUserPrefs.dietaryRestrictions || []).map((d: any) =>
+      (typeof d === 'string' ? d : d.name || '').toLowerCase(),
+    ),
+  );
+  const dietaryMatch =
+    currentDietary.size === otherDietary.size &&
+    [...currentDietary].every((d) => otherDietary.has(d));
   similarity += (dietaryMatch ? 1 : 0) * 0.2;
-  factors++;
-  
-  // 3. Common recipe interactions (40%)
-  const currentLikedIds = new Set(currentUserBehavior.likedRecipes.map(r => r.recipeId));
-  const currentSavedIds = new Set(currentUserBehavior.savedRecipes.map(r => r.recipeId));
-  const currentConsumedIds = new Set(currentUserBehavior.consumedRecipes.map(r => r.recipeId));
-  
-  const otherLiked = await prisma.recipeFeedback.findMany({
-    where: { userId: otherUserId, liked: true },
-    select: { recipeId: true },
-  });
-  const otherSaved = await prisma.savedRecipe.findMany({
-    where: { userId: otherUserId },
-    select: { recipeId: true },
-  });
-  const otherConsumed = await prisma.mealHistory.findMany({
-    where: { userId: otherUserId, consumed: true },
-    select: { recipeId: true },
-  });
-  
-  const otherLikedIds = new Set(otherLiked.map((r: any) => r.recipeId));
-  const otherSavedIds = new Set(otherSaved.map((r: any) => r.recipeId));
-  const otherConsumedIds = new Set(otherConsumed.map((r: any) => r.recipeId));
-  
-  const commonLiked = Array.from(currentLikedIds).filter(id => otherLikedIds.has(id)).length;
-  const commonSaved = Array.from(currentSavedIds).filter(id => otherSavedIds.has(id)).length;
-  const commonConsumed = Array.from(currentConsumedIds).filter(id => otherConsumedIds.has(id)).length;
+
+  // 3. Common recipe interactions (40%) — Jaccard over the union of
+  // (liked ∪ saved ∪ consumed) ids on both sides.
+  const currentLikedIds = new Set(currentUserBehavior.likedRecipes.map((r) => r.recipeId));
+  const currentSavedIds = new Set(currentUserBehavior.savedRecipes.map((r) => r.recipeId));
+  const currentConsumedIds = new Set(currentUserBehavior.consumedRecipes.map((r) => r.recipeId));
+
+  const commonLiked = Array.from(currentLikedIds).filter((id) => otherLikedIds.has(id)).length;
+  const commonSaved = Array.from(currentSavedIds).filter((id) => otherSavedIds.has(id)).length;
+  const commonConsumed = Array.from(currentConsumedIds).filter((id) => otherConsumedIds.has(id)).length;
   const commonInteractions = commonLiked + commonSaved + commonConsumed;
-  
-  const totalInteractions = currentLikedIds.size + currentSavedIds.size + currentConsumedIds.size +
+
+  const totalInteractions =
+    currentLikedIds.size + currentSavedIds.size + currentConsumedIds.size +
     otherLikedIds.size + otherSavedIds.size + otherConsumedIds.size;
   const interactionSimilarity = totalInteractions > 0 ? commonInteractions / totalInteractions : 0;
   similarity += interactionSimilarity * 0.4;
-  factors++;
-  
-  // 4. Macro goals similarity (10%)
-  // Simplified: just check if both users have macro goals set
-  const currentMacroGoals = await prisma.macroGoals.findFirst({
-    where: { userId: currentUserPrefs.userId },
-  });
-  const otherMacroGoals = await prisma.macroGoals.findFirst({
-    where: { userId: otherUserPrefs.userId },
-  });
-  const macroSimilarity = (currentMacroGoals && otherMacroGoals) ? 1 : 0;
-  similarity += macroSimilarity * 0.1;
-  factors++;
-  
-  // Calculate shared preferences
-  const sharedCuisines = Array.from(currentCuisines).filter(c => otherCuisines.has(c)) as string[];
-  const currentMacroRanges = calculateMacroRanges(currentUserBehavior);
-  const otherUserBehavior = await getUserBehaviorForSimilarity(otherUserId, prisma);
-  const otherMacroRanges = calculateMacroRanges(otherUserBehavior);
-  
-  const sharedPreferences = {
+
+  // 4. Macro goals similarity (10%) — both users have macro goals set?
+  similarity += (currentHasMacroGoals && otherHasMacroGoals ? 1 : 0) * 0.1;
+
+  const sharedCuisines = Array.from(currentCuisines).filter((c) => otherCuisines.has(c)) as string[];
+
+  // H5: shared `macroRanges` dropped — previously required loading every
+  // candidate's full recipe history (3 more queries per candidate). Field
+  // is unused outside this file. `cuisines` retained.
+  const sharedPreferences: UserSimilarity['sharedPreferences'] = {
     cuisines: sharedCuisines,
     macroRanges: {
-      calories: {
-        min: Math.max(currentMacroRanges.calories.min, otherMacroRanges.calories.min),
-        max: Math.min(currentMacroRanges.calories.max, otherMacroRanges.calories.max),
-      },
-      protein: {
-        min: Math.max(currentMacroRanges.protein.min, otherMacroRanges.protein.min),
-        max: Math.min(currentMacroRanges.protein.max, otherMacroRanges.protein.max),
-      },
+      calories: { min: 0, max: 0 },
+      protein: { min: 0, max: 0 },
     },
-    cookTimeRange: {
-      min: Math.max(currentMacroRanges.cookTime.min, otherMacroRanges.cookTime.min),
-      max: Math.min(currentMacroRanges.cookTime.max, otherMacroRanges.cookTime.max),
-    },
+    cookTimeRange: { min: 0, max: 0 },
   };
-  
+
   return {
     similarity: Math.min(1, similarity),
     commonInteractions,
@@ -492,63 +543,6 @@ export function calculateMacroSimilarity(recipe1: any, recipe2: any): number {
   const magnitude2 = Math.sqrt(normalized2.reduce((sum, val) => sum + val * val, 0));
   
   return magnitude1 > 0 && magnitude2 > 0 ? dotProduct / (magnitude1 * magnitude2) : 0;
-}
-
-/**
- * Helper: Get user behavior for similarity calculation
- */
-async function getUserBehaviorForSimilarity(userId: string, prisma: any): Promise<UserBehaviorData> {
-  const likedRecipes = await prisma.recipeFeedback.findMany({
-    where: { userId, liked: true },
-    include: { recipe: true },
-  });
-  
-  const savedRecipes = await prisma.savedRecipe.findMany({
-    where: { userId },
-    include: { recipe: true },
-  });
-  
-  const consumedRecipes = await prisma.mealHistory.findMany({
-    where: { userId, consumed: true },
-    include: { recipe: true },
-  });
-  
-  return {
-    likedRecipes: likedRecipes.map((r: any) => ({
-      recipeId: r.recipeId,
-      cuisine: r.recipe.cuisine,
-      cookTime: r.recipe.cookTime,
-      calories: r.recipe.calories,
-      protein: r.recipe.protein,
-      carbs: r.recipe.carbs,
-      fat: r.recipe.fat,
-      ingredients: r.recipe.ingredients || [],
-      createdAt: r.createdAt,
-    })),
-    dislikedRecipes: [],
-    savedRecipes: savedRecipes.map((r: any) => ({
-      recipeId: r.recipeId,
-      cuisine: r.recipe.cuisine,
-      cookTime: r.recipe.cookTime,
-      calories: r.recipe.calories,
-      protein: r.recipe.protein,
-      carbs: r.recipe.carbs,
-      fat: r.recipe.fat,
-      ingredients: r.recipe.ingredients || [],
-      savedDate: r.savedDate,
-    })),
-    consumedRecipes: consumedRecipes.map((r: any) => ({
-      recipeId: r.recipeId,
-      cuisine: r.recipe.cuisine,
-      cookTime: r.recipe.cookTime,
-      calories: r.recipe.calories,
-      protein: r.recipe.protein,
-      carbs: r.recipe.carbs,
-      fat: r.recipe.fat,
-      ingredients: r.recipe.ingredients || [],
-      date: r.date,
-    })),
-  };
 }
 
 /**
