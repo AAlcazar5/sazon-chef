@@ -6,9 +6,16 @@
 // - Enhanced notification settings
 
 import { Request, Response } from 'express';
-import { authController } from '../../src/modules/auth/authController';
 import { userController } from '../../src/modules/user/userController';
 import { prisma } from '../../src/lib/prisma';
+
+// B2: deleteAccount lives on userController (confirm-guarded), not authController.
+// Mock fs to avoid touching the real uploads directory during the test.
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  readdirSync: jest.fn(() => []),
+  unlinkSync: jest.fn(),
+}));
 
 // Mock encryption utility
 jest.mock('../../src/utils/encryption', () => ({
@@ -60,17 +67,14 @@ describe('Profile Advanced (Group 5)', () => {
 
   // ─── Delete Account ───────────────────────────────────────────────
 
-  describe('deleteAccount', () => {
-    it('should delete user and return success', async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'test-user-id' });
+  describe('deleteAccount (B2 — userController, confirm-guarded)', () => {
+    it('should delete user and return success when confirm is DELETE', async () => {
+      mockReq.body = { confirm: 'DELETE' };
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'test-user-id', profilePictureUrl: null });
       (prisma.user.delete as jest.Mock).mockResolvedValue({ id: 'test-user-id' });
 
-      await authController.deleteAccount(mockReq as Request, mockRes as Response);
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'test-user-id' },
-        select: { id: true },
-      });
       expect(prisma.user.delete).toHaveBeenCalledWith({
         where: { id: 'test-user-id' },
       });
@@ -79,29 +83,40 @@ describe('Profile Advanced (Group 5)', () => {
       );
     });
 
-    it('should return 401 if not authenticated', async () => {
-      mockReq.user = undefined;
+    it('should return 400 CONFIRMATION_REQUIRED if confirm is missing', async () => {
+      mockReq.body = {};
 
-      await authController.deleteAccount(mockReq as Request, mockRes as Response);
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
 
-      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 if confirm has wrong value', async () => {
+      mockReq.body = { confirm: 'delete' }; // wrong case
+
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(prisma.user.delete).not.toHaveBeenCalled();
     });
 
     it('should return 404 if user not found', async () => {
+      mockReq.body = { confirm: 'DELETE' };
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await authController.deleteAccount(mockReq as Request, mockRes as Response);
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
       expect(prisma.user.delete).not.toHaveBeenCalled();
     });
 
     it('should return 500 on database error', async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'test-user-id' });
+      mockReq.body = { confirm: 'DELETE' };
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'test-user-id', profilePictureUrl: null });
       (prisma.user.delete as jest.Mock).mockRejectedValue(new Error('DB error'));
 
-      await authController.deleteAccount(mockReq as Request, mockRes as Response);
+      await userController.deleteAccount(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
     });

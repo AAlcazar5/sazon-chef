@@ -21,7 +21,9 @@ router.get('/verify-email/:token', authController.verifyEmail);
 router.get('/profile', authenticateToken, authController.getProfile);
 router.put('/profile', authenticateToken, authController.updateProfile);
 router.put('/password', authenticateToken, authController.changePassword);
-router.delete('/account', authenticateToken, authController.deleteAccount);
+// B2: DELETE /api/auth/account removed — was unguarded (no confirm body).
+// Account deletion lives at DELETE /api/user/account, which requires
+// { "confirm": "DELETE" } in the body.
 router.post('/social/link', authenticateToken, linkSocialAccount);
 router.delete('/social/unlink', authenticateToken, unlinkSocialAccount);
 

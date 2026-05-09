@@ -4,6 +4,37 @@ import { logger } from '../utils/logger';
 
 import { prisma } from '../lib/prisma';
 import axios from 'axios';
+import { encrypt, decrypt, isEncrypted } from '../utils/encryption';
+
+// B3: third-party OAuth tokens / API keys are encrypted at rest. Reads
+// transparently round-trip via decryptCredentials. Pre-existing rows
+// (written before B3) round-trip cleanly because isEncrypted() returns
+// false on plaintext and we leave it as-is on read; on the next write the
+// upsert encrypts going forward.
+function encryptCredential(value: string | undefined): string | null {
+  if (!value) return null;
+  return encrypt(value);
+}
+
+function decryptCredential(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  return isEncrypted(value) ? decrypt(value) : value;
+}
+
+interface IntegrationCredentialsRow {
+  apiKey?: string | null;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+}
+
+function decryptIntegrationCredentials<T extends IntegrationCredentialsRow>(integration: T): T {
+  return {
+    ...integration,
+    apiKey: decryptCredential(integration.apiKey) ?? null,
+    accessToken: decryptCredential(integration.accessToken) ?? null,
+    refreshToken: decryptCredential(integration.refreshToken) ?? null,
+  };
+}
 
 export interface ShoppingAppConfig {
   appName: string;
@@ -55,9 +86,10 @@ export class ShoppingAppIntegrationService {
    * Get user's shopping app integrations
    */
   async getUserIntegrations(userId: string) {
-    return await prisma.shoppingAppIntegration.findMany({
+    const rows = await prisma.shoppingAppIntegration.findMany({
       where: { userId, isActive: true },
     });
+    return rows.map(decryptIntegrationCredentials);
   }
 
   /**
@@ -73,7 +105,11 @@ export class ShoppingAppIntegrationService {
       throw new Error(`Shopping app "${appName}" is not supported`);
     }
 
-    // Create or update integration
+    // B3: encrypt all three credential fields at rest before persisting.
+    const encryptedApiKey = encryptCredential(credentials.apiKey);
+    const encryptedAccessToken = encryptCredential(credentials.accessToken);
+    const encryptedRefreshToken = encryptCredential(credentials.refreshToken);
+
     const integration = await prisma.shoppingAppIntegration.upsert({
       where: {
         userId_appName: {
@@ -82,22 +118,23 @@ export class ShoppingAppIntegrationService {
         },
       },
       update: {
-        apiKey: credentials.apiKey,
-        accessToken: credentials.accessToken,
-        refreshToken: credentials.refreshToken,
+        apiKey: encryptedApiKey,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         isActive: true,
       },
       create: {
         userId,
         appName: appName.toLowerCase(),
-        apiKey: credentials.apiKey,
-        accessToken: credentials.accessToken,
-        refreshToken: credentials.refreshToken,
+        apiKey: encryptedApiKey,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         isActive: true,
       },
     });
 
-    return integration;
+    // Return decrypted shape so the caller works with plaintext.
+    return decryptIntegrationCredentials(integration);
   }
 
   /**
@@ -123,7 +160,7 @@ export class ShoppingAppIntegrationService {
     appName: string,
     items: ShoppingListItem[]
   ): Promise<ShoppingAppResponse> {
-    const integration = await prisma.shoppingAppIntegration.findUnique({
+    const integrationRow = await prisma.shoppingAppIntegration.findUnique({
       where: {
         userId_appName: {
           userId,
@@ -132,12 +169,15 @@ export class ShoppingAppIntegrationService {
       },
     });
 
-    if (!integration || !integration.isActive) {
+    if (!integrationRow || !integrationRow.isActive) {
       return {
         success: false,
         message: `Not connected to ${appName}. Please connect your account first.`,
       };
     }
+
+    // B3: decrypt credentials before handing the row to the per-app sync.
+    const integration = decryptIntegrationCredentials(integrationRow);
 
     const config = SHOPPING_APPS[appName.toLowerCase()];
     if (!config) {

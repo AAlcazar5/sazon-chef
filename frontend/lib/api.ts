@@ -1171,8 +1171,11 @@ export const authApi = {
     return apiClient.put('/auth/password', { currentPassword, newPassword });
   },
 
+  // B2: deleteAccount moved to userApi.deleteAccount (calls /user/account
+  // which requires { confirm: 'DELETE' }). The unguarded /auth/account
+  // route is being removed.
   deleteAccount: () => {
-    return apiClient.delete('/auth/account');
+    return apiClient.delete('/user/account', { data: { confirm: 'DELETE' } });
   },
 };
 

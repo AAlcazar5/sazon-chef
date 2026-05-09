@@ -93,7 +93,7 @@ describe('Auth Controller', () => {
 
       await authController.register(mockReq as Request, mockRes as Response);
 
-      expect(bcrypt.hash).toHaveBeenCalledWith(userData.password, 10);
+      expect(bcrypt.hash).toHaveBeenCalledWith(userData.password, 12);
 
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
@@ -525,7 +525,7 @@ describe('Auth Controller', () => {
         'hashedOldPassword'
       );
 
-      expect(bcrypt.hash).toHaveBeenCalledWith('newPassword123', 10);
+      expect(bcrypt.hash).toHaveBeenCalledWith('newPassword123', 12);
 
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-123' },

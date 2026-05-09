@@ -9,39 +9,39 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  name           String
-  password       String? // Hashed password (nullable for social login users)
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String
+  password          String? // Hashed password (nullable for social login users)
   // Social login fields
-  provider       String? // 'google', 'apple', or null for email/password
-  providerId     String? // OAuth provider's user ID
-  providerEmail  String? // Email from OAuth provider (may differ from email field)
+  provider          String? // 'google', 'apple', or null for email/password
+  providerId        String? // OAuth provider's user ID
+  providerEmail     String? // Email from OAuth provider (may differ from email field)
   // Encryption metadata
-  emailEncrypted Boolean  @default(false) // Whether email is encrypted
-  nameEncrypted  Boolean  @default(false) // Whether name is encrypted
+  emailEncrypted    Boolean   @default(false) // Whether email is encrypted
+  nameEncrypted     Boolean   @default(false) // Whether name is encrypted
   // Password reset fields
-  resetCode       String? // 6-digit code for password reset
-  resetCodeExpiry DateTime? // When the reset code expires
+  resetCode         String? // 6-digit code for password reset
+  resetCodeExpiry   DateTime? // When the reset code expires
   profilePictureUrl String? // URL to uploaded profile picture
   // i18n — BCP 47 locale tag (e.g. 'en', 'es-MX', 'es-AR'). Auto-detected on
   // first message from Accept-Language; user can override in profile.
   // Resolves through resolveCoachLocale fallback chain server-side.
-  locale         String?  @default("en")
+  locale            String?   @default("en")
   // ROADMAP 4.0 G1.2: bilingual coach voice override. NULL = inherit from
   // `locale`. Set explicitly when the user wants coach voice ≠ UI locale
   // (e.g. en-US device, but prefers Spanish food guidance).
-  coachLocale    String?
+  coachLocale       String?
   // ROADMAP 4.0 G2.4 — internal-only admin flag for founder-trip tooling.
-  isAdmin        Boolean  @default(false)
+  isAdmin           Boolean   @default(false)
   // ROADMAP 4.0 G2.1 — Sazon Travel mode. Home location + travel state
   // power "Eat the world" Today header when >50mi from home >24h.
-  homeLatitude   Float?
-  homeLongitude  Float?
-  travelStartedAt DateTime?
-  travelCitySlug  String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  homeLatitude      Float?
+  homeLongitude     Float?
+  travelStartedAt   DateTime?
+  travelCitySlug    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Preferences and goals
   preferences     UserPreferences?
@@ -80,80 +80,80 @@ model User {
   cravingSearchEvents     CravingSearchEvent[]
 
   // Group 10X: Build-a-Plate
-  mealComponents          MealComponent[]
-  composedPlates          ComposedPlate[]
-  slotAffinities          SlotAffinity[]
-  pairAffinities          PairAffinity[]
-  leftoverInventory       LeftoverInventory[]
-  plateShares             PlateShare[]
-  plateSaves              PlateSave[]
+  mealComponents      MealComponent[]
+  composedPlates      ComposedPlate[]
+  slotAffinities      SlotAffinity[]
+  pairAffinities      PairAffinity[]
+  leftoverInventory   LeftoverInventory[]
+  plateShares         PlateShare[]
+  plateSaves          PlateSave[]
   // Group 10X Phase 7: family mode
-  householdMembers        HouseholdMember[]
-  composedFamilyMeals     ComposedFamilyMeal[]
+  householdMembers    HouseholdMember[]
+  composedFamilyMeals ComposedFamilyMeal[]
 
   // Group 6: Email verification
-  emailVerified           Boolean  @default(false)
+  emailVerified Boolean @default(false)
 
   // Group 7: Stripe subscription
-  stripeCustomerId        String?
-  subscriptionStatus      String   @default("free") // free | trialing | active | past_due | canceled
-  subscriptionTier        String   @default("free") // free | premium
-  trialEndsAt             DateTime?
-  currentPeriodEnd        DateTime?
+  stripeCustomerId   String?
+  subscriptionStatus String    @default("free") // free | trialing | active | past_due | canceled
+  subscriptionTier   String    @default("free") // free | premium
+  trialEndsAt        DateTime?
+  currentPeriodEnd   DateTime?
 
   // ROADMAP 4.0 E4: RevenueCat (parallel to Stripe — same status/tier columns)
-  revenueCatAppUserId     String?  @unique
-  cancelAtPeriodEnd       Boolean  @default(false)
+  revenueCatAppUserId     String?                  @unique
+  cancelAtPeriodEnd       Boolean                  @default(false)
   revenueCatWebhookEvents RevenueCatWebhookEvent[]
 
   // ROADMAP 4.0 E9: Health platform integration (HealthKit / Health Connect)
-  healthIntegration       HealthIntegration?
+  healthIntegration HealthIntegration?
 
   // ROADMAP 4.0 D13: per-day nutrient roll-ups
-  dailyNutrientSnapshots  DailyNutrientSnapshot[]
+  dailyNutrientSnapshots DailyNutrientSnapshot[]
 
   // Group 8: Revenue Optimization
-  cancellationSurveys     CancellationSurvey[]
+  cancellationSurveys CancellationSurvey[]
 
   // Group 10Y: Sazon Coach
-  coachConversations      CoachConversation[]
-  coachMessages           CoachMessage[]
+  coachConversations  CoachConversation[]
+  coachMessages       CoachMessage[]
   // Group 10Y Phase 6: Coach memory & weekly check-in
-  coachMemories           CoachMemory[]
-  lastWeeklyCheckinAt     DateTime?
+  coachMemories       CoachMemory[]
+  lastWeeklyCheckinAt DateTime?
 
   // ROADMAP 4.0 J5: discovery milestones (single-fire celebrations)
   // JSON-stringified array of milestone keys the user has crossed for the
   // first time (e.g. ["first-photo","first-leftover","first-appliance:ninja-creami"]).
   // Stored as String? because SQLite has no native Json type.
-  discoveryMilestones     String?
+  discoveryMilestones String?
 
   // ROADMAP 4.0 F1: social graph for "Cook a friend's plate" feed
-  follows                 UserFollow[] @relation("FollowerRelation")
-  followers               UserFollow[] @relation("FollowingRelation")
+  follows   UserFollow[] @relation("FollowerRelation")
+  followers UserFollow[] @relation("FollowingRelation")
 
   // ROADMAP 4.0 TB3.1 — back-relation for recommender events.
-  recommenderEvents       RecommenderEvent[]
+  recommenderEvents RecommenderEvent[]
 
   // ROADMAP 4.0 G2.3 — back-relation for travel journal entries.
-  travelJournalEntries    TravelJournalEntry[]
+  travelJournalEntries TravelJournalEntry[]
 
   // ROADMAP 4.0 G2.4 — back-relation for founder-trip curation tasks.
-  curationTasks           LocalCurationTask[]
+  curationTasks LocalCurationTask[]
 
   // ROADMAP 4.0 IG0.2 — back-relation for the ingredient event stream.
-  ingredientEvents        IngredientEvent[]
+  ingredientEvents IngredientEvent[]
 
   // ROADMAP 4.0 IG2.1 / IG3.1 — back-relations for adjacency + cadence.
-  ingredientCoOccurrence  IngredientCoOccurrence[]
-  ingredientCadence       IngredientCadence[]
+  ingredientCoOccurrence IngredientCoOccurrence[]
+  ingredientCadence      IngredientCadence[]
 
   // ROADMAP 4.0 IG9.2 — back-relation for the ingredient-recommender daily rollup.
   ingredientRecommenderDaily IngredientRecommenderDaily[]
 
   // ROADMAP 4.0 T0.1 — Tonight Mode opt-in (gated by SAZON_TONIGHT_MODE env flag).
-  tonightModeEnabled      Boolean   @default(false)
-  tonightModePromptedAt   DateTime?
+  tonightModeEnabled    Boolean   @default(false)
+  tonightModePromptedAt DateTime?
 
   @@map("users")
 }
@@ -172,30 +172,30 @@ model UserPreferences {
   spiceLevel          String? // mild, medium, spicy
 
   // Cooking context (Group 5: Profile Advanced)
-  cookingSkillLevel   String? // beginner | home_cook | confident | chef
-  weekdayCookTime     Int?    // max cooking minutes on weekdays
-  weekendCookTime     Int?    // max cooking minutes on weekends
+  cookingSkillLevel String? // beginner | home_cook | confident | chef
+  weekdayCookTime   Int? // max cooking minutes on weekdays
+  weekendCookTime   Int? // max cooking minutes on weekends
 
   // Group 10I: Cooking Journey — user-seeded cuisines they already know how to cook
   // (JSON-stringified array, e.g. '["Italian","Thai"]') — merged into cuisinesExplored stat
-  seededCuisines      String?
+  seededCuisines String?
 
   // Group 10S: Kitchen IQ — JSON-stringified array of card IDs the user has already
   // been notified about as "unlocked"; used to compute `newUnlocks` diff on next read.
-  lastCheckedUnlocks  String?
+  lastCheckedUnlocks String?
 
   // Group 10Y Phase 6: weekly check-in opt-in for Pro Coach
-  weeklyCheckinOptIn  Boolean @default(false)
+  weeklyCheckinOptIn Boolean @default(false)
 
   // ROADMAP 4.0 C5 — Sazon memory writeback to structured stack.
   // Goal phase the user has declared: 'cut' | 'maintain' | 'bulk' | 'recomp'.
   // Default null = lifestyle user with no specific phase. Coach voice never
   // uses this phrase set in user-facing copy (see C11 voice rules).
-  goalPhase            String?
+  goalPhase         String?
   // JSON-stringified flag map of structured intents extracted from
   // CoachMemory writeback ({cuisineVarietyBoost, proteinTargetNudge,
   // fiberTargetNudge}). Drives prompt addenda + ranking nudges downstream.
-  structuredIntents    String?
+  structuredIntents String?
 
   // Cost tracking & budget preferences (Phase 6, Group 13)
   maxRecipeCost      Float? // Maximum cost per recipe
@@ -218,11 +218,11 @@ model UserPreferences {
   // ROADMAP 4.0 N5.2 — onboarding parity (engine signals captured at signup).
   // Each field maps to a downstream ranker input that previously cold-started
   // at zero. All optional; never block onboarding completion.
-  cookFrequency        String? // 'rare' | 'occasional' | 'frequent' | 'daily' — seeds skill-tier + macro distribution prior
-  notificationWindow   String? // 'morning' | 'evening' — seeds C12 cook-hour window
-  socialOptIn          Boolean? @default(false) // 'happy to see friends here?' — seeds F1 + HX2.3 social opt-in
+  cookFrequency         String? // 'rare' | 'occasional' | 'frequent' | 'daily' — seeds skill-tier + macro distribution prior
+  notificationWindow    String? // 'morning' | 'evening' — seeds C12 cook-hour window
+  socialOptIn           Boolean? @default(false) // 'happy to see friends here?' — seeds F1 + HX2.3 social opt-in
   pantryLeaningCuisines String? // JSON-stringified array, e.g. '["Mediterranean","Asian"]' — seeds IG10.1 cold-start
-  leftoverAccept       Boolean? @default(true) // 'ok with leftovers?' — seeds WK2.1 carry-over default
+  leftoverAccept        Boolean? @default(true) // 'ok with leftovers?' — seeds WK2.1 carry-over default
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -415,13 +415,6 @@ model Recipe {
   recipeViews       RecipeView[]
   cookingLogs       CookingLog[]
   recurringMeals    RecurringMeal[]
-
-  // Performance indexes for recipe queries
-  @@index([userId])
-  @@index([isUserCreated])
-  @@index([cuisine])
-  @@index([mealType])
-  @@index([cookTime])
   // ROADMAP 4.0 D13 — back-relation for the lazy nutrient aggregate.
   nutrientAggregate RecipeNutrientAggregate?
 
@@ -435,9 +428,9 @@ model Recipe {
   subCuisine       String?
 
   // ROADMAP 4.0 D7 — soft delete + back-relation to audit log.
-  deletedAt        DateTime?
-  rebuildRequired  Boolean   @default(false)
-  deletionLog      RecipeDeletion?
+  deletedAt       DateTime?
+  rebuildRequired Boolean         @default(false)
+  deletionLog     RecipeDeletion?
 
   // ROADMAP 4.0 D11 — cultural authenticity tier.
   // 'authentic' | 'adapted' | 'inspired' | null. Surfaceability gated
@@ -449,18 +442,24 @@ model Recipe {
   // Stored as raw bytes (Float32Array, 64 × 4 = 256 bytes). Written by
   // alignCatalog.ts (TB0.3); consumed by retrieveCandidates (TB1.2) and
   // dedupeScorer (D2.5).
-  embedding         Bytes?
-  embeddingSource   String?  // 'foodcom' | 'openai' | null
+  embedding          Bytes?
+  embeddingSource    String? // 'foodcom' | 'openai' | null
   embeddingUpdatedAt DateTime?
 
   // ROADMAP 4.0 TB3.1 — back-relations for recommender event logging.
-  recommenderEvents      RecommenderEvent[]      @relation("PickedRecipe")
-  recommenderRunnerUps   RecommenderRunnerUp[]
+  recommenderEvents    RecommenderEvent[]    @relation("PickedRecipe")
+  recommenderRunnerUps RecommenderRunnerUp[]
 
   // ROADMAP 4.0 J18.1 — recipe variants as siblings.
-  variantsAsSource       RecipeVariant[]         @relation("RecipeVariantSource")
-  variantsAsSibling      RecipeVariant[]         @relation("RecipeVariantSibling")
+  variantsAsSource  RecipeVariant[] @relation("RecipeVariantSource")
+  variantsAsSibling RecipeVariant[] @relation("RecipeVariantSibling")
 
+  // Performance indexes for recipe queries
+  @@index([userId])
+  @@index([isUserCreated])
+  @@index([cuisine])
+  @@index([mealType])
+  @@index([cookTime])
   @@index([isUserCreated, cuisine])
   @@index([isUserCreated, mealType])
   @@index([isUserCreated, cuisine, mealType])
@@ -482,19 +481,21 @@ model RecipeIngredient {
   estimatedCost Float? // Estimated cost for this ingredient
   unitCost      Float? // Cost per unit (e.g., per lb, per cup)
 
+  @@index([recipeId]) // H6: every recipe-list `include: { ingredients }` would full-scan this table without it
   @@map("recipe_ingredients")
 }
 
 model RecipeInstruction {
-  id       String @id @default(cuid())
-  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  recipeId String
-  text     String
-  step     Int
+  id            String  @id @default(cuid())
+  recipe        Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId      String
+  text          String
+  step          Int
   // ROADMAP 4.0 C2 — optional inline swap; surfaced only when it matches user gap.
   // JSON shape: {type: 'fiber'|'protein'|'calorie', text: string, deltaMacro: {fiber?: number, protein?: number, calories?: number}}
   healthierSwap String?
 
+  @@index([recipeId]) // H6: every recipe-list `include: { instructions }` would full-scan this table without it
   @@map("recipe_instructions")
 }
 
@@ -531,7 +532,7 @@ model SavedRecipe {
 
   // Cookbook Quick Wins
   notes  String? // Personal notes ("needs more garlic", "kids loved it")
-  rating Int?    // Personal 1-5 star rating
+  rating Int? // Personal 1-5 star rating
 
   // Many-to-many relationship with collections via RecipeCollection
   recipeCollections RecipeCollection[]
@@ -578,7 +579,7 @@ model Collection {
   isPinned      Boolean  @default(false)
   sortOrder     Int      @default(0)
   isDefault     Boolean  @default(false)
-  category      String?  // meal_type | cuisine | mood | dietary | seasonal | custom
+  category      String? // meal_type | cuisine | mood | dietary | seasonal | custom
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -624,7 +625,7 @@ model MealPlan {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name         String?
-  planningMode String?  // 'cut' | 'maintain' | 'build'
+  planningMode String? // 'cut' | 'maintain' | 'build'
   startDate    DateTime
   endDate      DateTime
 
@@ -667,11 +668,11 @@ model Meal {
   notes  String?
 
   // 10F: Taste feedback
-  tasteRating Int?      // 1-5 emoji scale
-  flavorTags  String?   // JSON array of selected tags (e.g. '["Perfect spice","Great texture"]')
+  tasteRating Int? // 1-5 emoji scale
+  flavorTags  String? // JSON array of selected tags (e.g. '["Perfect spice","Great texture"]')
 
-  isFromRecurring   Boolean @default(false)
-  recurringMealId   String?
+  isFromRecurring Boolean @default(false)
+  recurringMealId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -703,7 +704,7 @@ model TemplateMeal {
   templateId String
   template   MealPlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-  dayIndex Int    // 0-6 (relative day offset within the week)
+  dayIndex Int // 0-6 (relative day offset within the week)
   mealType String // "breakfast", "lunch", "dinner", "snack"
   recipeId String?
   recipe   Recipe? @relation(fields: [recipeId], references: [id])
@@ -722,21 +723,21 @@ model TemplateMeal {
 
 // Recurring Meals (Group 18b)
 model RecurringMeal {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mealType    String   // "breakfast" | "lunch" | "dinner" | "snack"
-  daysOfWeek  String   // Comma-separated day indices: "1,2,3,4,5" = Mon-Fri
-  recipeId    String?
-  recipe      Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-  title       String?  // Custom meal title (when no recipe)
-  calories    Int?
-  protein     Float?
-  carbs       Float?
-  fat         Float?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealType   String // "breakfast" | "lunch" | "dinner" | "snack"
+  daysOfWeek String // Comma-separated day indices: "1,2,3,4,5" = Mon-Fri
+  recipeId   String?
+  recipe     Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  title      String? // Custom meal title (when no recipe)
+  calories   Int?
+  protein    Float?
+  carbs      Float?
+  fat        Float?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([userId, isActive])
   @@map("recurring_meals")
@@ -884,13 +885,13 @@ model ShoppingList {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name            String    @default("My Shopping List")
   isActive        Boolean   @default(true)
-  sourceRecipeIds String?   // JSON array of recipe IDs used to generate this list
+  sourceRecipeIds String? // JSON array of recipe IDs used to generate this list
   // Group 10Q-ListMgmt: lifecycle fields
   archivedAt      DateTime?
   tier            String    @default("active") // "active" | "archived" | "older"
-  summaryStats    String?   // JSON string, populated when tier flips to "older"
+  summaryStats    String? // JSON string, populated when tier flips to "older"
   // Group 10Q-ListMgmt: auto-name provenance — cleared when user manually renames
-  autoNamedFrom   String?   // JSON: { source: "recipes"|"mealPlan"|"items", payload: any }
+  autoNamedFrom   String? // JSON: { source: "recipes"|"mealPlan"|"items", payload: any }
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -1001,8 +1002,8 @@ model PantryItem {
   // ROADMAP 4.0 IG0.1 — Pantry data model upgrade. All nullable so existing
   // rows stay valid; depletion (IG3) + use-it-up (IG4) gate on these.
   quantity          Float?
-  unit              String?  // 'g' | 'oz' | 'lb' | 'cup' | 'piece' | etc.
-  expiryHint        Int?     // days-from-purchase before going bad (heuristic)
+  unit              String? // 'g' | 'oz' | 'lb' | 'cup' | 'piece' | etc.
+  expiryHint        Int? // days-from-purchase before going bad (heuristic)
   lastConsumedAt    DateTime?
   addedFromRecipeId String?
 
@@ -1135,11 +1136,11 @@ model ProfilePreset {
 model StripeWebhookEvent {
   id            String   @id @default(cuid())
   stripeEventId String   @unique
-  type          String   // e.g. "customer.subscription.updated"
+  type          String // e.g. "customer.subscription.updated"
   userId        String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   processedAt   DateTime @default(now())
-  data          String   // JSON string of the event payload for audit trail
+  data          String // JSON string of the event payload for audit trail
 
   @@index([userId])
   @@index([type])
@@ -1150,18 +1151,18 @@ model StripeWebhookEvent {
 // platform is wired up + which signals are enabled. Read-only at v1; meal
 // write-back gated behind a separate Apple review checkpoint.
 model HealthIntegration {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform              String   // "healthkit" | "healthconnect"
-  weightSyncEnabled     Boolean  @default(false)
-  bodyCompositionSyncEnabled Boolean @default(false)
-  activitySyncEnabled   Boolean  @default(false)
-  sleepSyncEnabled      Boolean  @default(false)
-  mealWriteEnabled      Boolean  @default(false) // gated until Apple checkpoint
-  lastSyncAt            DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                         String    @id @default(cuid())
+  userId                     String    @unique
+  user                       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform                   String // "healthkit" | "healthconnect"
+  weightSyncEnabled          Boolean   @default(false)
+  bodyCompositionSyncEnabled Boolean   @default(false)
+  activitySyncEnabled        Boolean   @default(false)
+  sleepSyncEnabled           Boolean   @default(false)
+  mealWriteEnabled           Boolean   @default(false) // gated until Apple checkpoint
+  lastSyncAt                 DateTime?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
   @@map("health_integrations")
 }
@@ -1170,11 +1171,11 @@ model HealthIntegration {
 model RevenueCatWebhookEvent {
   id                String   @id @default(cuid())
   revenueCatEventId String   @unique
-  type              String   // INITIAL_PURCHASE | RENEWAL | CANCELLATION | EXPIRATION | TRIAL_STARTED | TRIAL_CONVERTED | BILLING_ISSUE | …
+  type              String // INITIAL_PURCHASE | RENEWAL | CANCELLATION | EXPIRATION | TRIAL_STARTED | TRIAL_CONVERTED | BILLING_ISSUE | …
   userId            String?
   user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   processedAt       DateTime @default(now())
-  data              String   // JSON string of the event payload for audit trail
+  data              String // JSON string of the event payload for audit trail
 
   @@index([userId])
   @@index([type])
@@ -1186,9 +1187,9 @@ model CancellationSurvey {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reason    String   // too_expensive | not_using | missing_feature | other
-  feedback  String?  // free-text for "missing_feature" reason
-  action    String   // cancel | pause
+  reason    String // too_expensive | not_using | missing_feature | other
+  feedback  String? // free-text for "missing_feature" reason
+  action    String // cancel | pause
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -1202,7 +1203,7 @@ model CravingSearchEvent {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   cravingQuery String
   recipeId     String
-  action       String   // "tap" | "save" | "cook"
+  action       String // "tap" | "save" | "cook"
   createdAt    DateTime @default(now())
 
   @@index([userId])
@@ -1216,7 +1217,7 @@ model PushToken {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
-  platform  String   // "ios" | "android"
+  platform  String // "ios" | "android"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1227,7 +1228,7 @@ model PushToken {
 // Group 10X: Build-a-Plate — composable meal components
 model MealComponent {
   id                      String   @id @default(cuid())
-  slot                    String   // protein | base | vegetable | sauce | garnish
+  slot                    String // protein | base | vegetable | sauce | garnish
   name                    String
   description             String?
   defaultPortionGrams     Float
@@ -1237,12 +1238,12 @@ model MealComponent {
   fatG                    Float
   fiberG                  Float?
   estimatedCostPerPortion Float?
-  cuisineTags             String   // JSON array, e.g. '["Mediterranean","Asian"]'
-  dietaryTags             String   // JSON array, e.g. '["vegan","gluten_free"]'
-  cookMethodHint          String   // roast | pan_sear | simmer | raw | mix
+  cuisineTags             String // JSON array, e.g. '["Mediterranean","Asian"]'
+  dietaryTags             String // JSON array, e.g. '["vegan","gluten_free"]'
+  cookMethodHint          String // roast | pan_sear | simmer | raw | mix
   cookTimeMinutes         Int      @default(0)
   equipmentNeeded         String   @default("[]") // JSON array: ["oven","stovetop_burner","none","mixing_bowl"]
-  pantryIngredientNames   String   // JSON array used to compute pantry coverage
+  pantryIngredientNames   String // JSON array used to compute pantry coverage
   imageUrl                String?
   isUserCreated           Boolean  @default(false)
   userId                  String?
@@ -1250,13 +1251,13 @@ model MealComponent {
   createdAt               DateTime @default(now())
 
   // Phase 4: affinity back-references
-  slotAffinities          SlotAffinity[]
+  slotAffinities SlotAffinity[]
 
   // Phase 6: leftover inventory back-reference
-  leftovers               LeftoverInventory[]
+  leftovers LeftoverInventory[]
 
   // 10X-Deferred: variant chip row (roasted / steamed / raw / pickled, etc.)
-  variants                MealComponentVariant[]
+  variants MealComponentVariant[]
 
   @@index([slot])
   @@index([userId])
@@ -1269,13 +1270,13 @@ model MealComponentVariant {
   id                     String        @id @default(cuid())
   componentId            String
   component              MealComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
-  variantKey             String        // "roasted" | "steamed" | "raw" | "pickled" ...
-  displayName            String        // "Roasted Carrots"
+  variantKey             String // "roasted" | "steamed" | "raw" | "pickled" ...
+  displayName            String // "Roasted Carrots"
   cookTimeMinutes        Int
-  caloriePerPortionDelta Int           // relative to base; can be negative
-  equipmentNeeded        String?       // "oven" | "stovetop" | "none" ...
-  flavorProfile          String?       // "sweet,charred"
-  compatibilityScores    String?       // JSON: { proteinId|sauceId: 0.0-1.0 }
+  caloriePerPortionDelta Int // relative to base; can be negative
+  equipmentNeeded        String? // "oven" | "stovetop" | "none" ...
+  flavorProfile          String? // "sweet,charred"
+  compatibilityScores    String? // JSON: { proteinId|sauceId: 0.0-1.0 }
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
@@ -1325,13 +1326,13 @@ model PairAffinity {
 
 // Group 10X Phase 8: shareable plate links
 model PlateShare {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  plateId     String
-  plate       ComposedPlate @relation(fields: [plateId], references: [id], onDelete: Cascade)
-  createdBy   String
-  user        User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  id        String        @id @default(cuid())
+  slug      String        @unique
+  plateId   String
+  plate     ComposedPlate @relation(fields: [plateId], references: [id], onDelete: Cascade)
+  createdBy String
+  user      User          @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
 
   @@index([createdBy])
   @@map("plate_shares")
@@ -1339,12 +1340,12 @@ model PlateShare {
 
 // Group 10X Phase 8: per-user save of someone else's shared plate
 model PlateSave {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   plateId   String
   plate     ComposedPlate @relation(fields: [plateId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  createdAt DateTime      @default(now())
 
   @@unique([userId, plateId])
   @@index([plateId, createdAt])
@@ -1394,7 +1395,7 @@ model ComposedPlate {
   userId                String
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name                  String?
-  componentIds          String   // JSON: [{slot, componentId, portionMultiplier}]
+  componentIds          String // JSON: [{slot, componentId, portionMultiplier}]
   totalCalories         Float
   totalProtein          Float
   totalCarbs            Float
@@ -1409,11 +1410,11 @@ model ComposedPlate {
   createdAt             DateTime @default(now())
 
   // Phase 8: social
-  shares                PlateShare[]
-  saves                 PlateSave[]
+  shares PlateShare[]
+  saves  PlateSave[]
 
   // Phase 7: family-meal membership
-  familyMealMembers     ComposedFamilyMealPlate[]
+  familyMealMembers ComposedFamilyMealPlate[]
 
   @@index([userId, createdAt])
   @@map("composed_plates")
@@ -1423,16 +1424,16 @@ model ComposedPlate {
 // kid-vs-adult plates and family meals adapt to *this* family member, not a
 // generic kid template (N=1 north star).
 model HouseholdMember {
-  id                String   @id @default(cuid())
-  userId            String   // owning account
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName       String   // "Mia (kid)" / "Alex" / "Mom"
-  ageBand           String   // "toddler" | "kid" | "teen" | "adult" | "elder"
-  pickinessLevel    Int      @default(0) // 0..4 (0 = adventurous, 4 = beige-foods-only)
-  dietaryFlags      String   @default("[]") // JSON: ["dairy_free", "no_spicy", "no_seafood"]
-  bannedComponentIds String  @default("[]") // JSON: componentIds this member rejects outright
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String // owning account
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName        String // "Mia (kid)" / "Alex" / "Mom"
+  ageBand            String // "toddler" | "kid" | "teen" | "adult" | "elder"
+  pickinessLevel     Int      @default(0) // 0..4 (0 = adventurous, 4 = beige-foods-only)
+  dietaryFlags       String   @default("[]") // JSON: ["dairy_free", "no_spicy", "no_seafood"]
+  bannedComponentIds String   @default("[]") // JSON: componentIds this member rejects outright
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   familyPlateAssignments ComposedFamilyMealPlate[]
   slotAffinities         SlotAffinity[]
@@ -1444,16 +1445,16 @@ model HouseholdMember {
 // Group 10X Phase 7: persisted family meal — N plates that belong to one
 // cook event, with the merged cook-step plan persisted alongside.
 model ComposedFamilyMeal {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name            String?  // "Sunday dinner" / auto-generated
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String? // "Sunday dinner" / auto-generated
   // Merged cook-step plan as JSON for fast read on the cook timeline.
   // Shape: [{componentId, totalPortions, servesPlateIds, slot}, ...]
-  cookStepsJson   String
-  createdAt       DateTime @default(now())
+  cookStepsJson String
+  createdAt     DateTime @default(now())
 
-  plates          ComposedFamilyMealPlate[]
+  plates ComposedFamilyMealPlate[]
 
   @@index([userId, createdAt])
   @@map("composed_family_meals")
@@ -1462,14 +1463,14 @@ model ComposedFamilyMeal {
 // Join row — one ComposedPlate participates in one ComposedFamilyMeal,
 // optionally assigned to a HouseholdMember (kid plate vs adult plate).
 model ComposedFamilyMealPlate {
-  id                  String              @id @default(cuid())
-  familyMealId        String
-  familyMeal          ComposedFamilyMeal  @relation(fields: [familyMealId], references: [id], onDelete: Cascade)
-  plateId             String
-  plate               ComposedPlate       @relation(fields: [plateId], references: [id], onDelete: Cascade)
-  householdMemberId   String?
-  householdMember     HouseholdMember?    @relation(fields: [householdMemberId], references: [id], onDelete: SetNull)
-  positionIndex       Int                 // 0..N-1 column order in the composer
+  id                String             @id @default(cuid())
+  familyMealId      String
+  familyMeal        ComposedFamilyMeal @relation(fields: [familyMealId], references: [id], onDelete: Cascade)
+  plateId           String
+  plate             ComposedPlate      @relation(fields: [plateId], references: [id], onDelete: Cascade)
+  householdMemberId String?
+  householdMember   HouseholdMember?   @relation(fields: [householdMemberId], references: [id], onDelete: SetNull)
+  positionIndex     Int // 0..N-1 column order in the composer
 
   @@unique([familyMealId, plateId])
   @@index([familyMealId])
@@ -1482,8 +1483,8 @@ model CoachConversation {
   id            String         @id @default(cuid())
   userId        String
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title         String         // Auto-generated, injects user signals (cuisine affinity, goal phase)
-  tier          String         // "free" | "premium" — recorded at creation
+  title         String // Auto-generated, injects user signals (cuisine affinity, goal phase)
+  tier          String // "free" | "premium" — recorded at creation
   createdAt     DateTime       @default(now())
   lastMessageAt DateTime       @default(now())
   messages      CoachMessage[]
@@ -1498,8 +1499,8 @@ model CoachMessage {
   conversation     CoachConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   userId           String
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role             String            // "user" | "assistant"
-  content          String            // Text content
+  role             String // "user" | "assistant"
+  content          String // Text content
   attachments      String            @default("[]") // JSON array of attachment descriptors
   thinkingTokens   Int?
   modelUsed        String?
@@ -1520,7 +1521,7 @@ model CoachMemory {
   id                   String   @id @default(cuid())
   userId               String
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind                 String   // "preference" | "goal" | "constraint" | "milestone"
+  kind                 String // "preference" | "goal" | "constraint" | "milestone"
   content              String
   confidence           Float    @default(0.7)
   sourceConversationId String?
@@ -1535,17 +1536,17 @@ model CoachMemory {
 // Branded/restaurant food item cache (Group 10L)
 model FoodItem {
   id          String   @id @default(cuid())
-  name        String                    // "Round Table Pepperoni Pizza (1 slice)"
-  brand       String?                   // "Round Table"
-  category    String?                   // "restaurant" | "packaged" | "fast_food"
-  servingSize String?                   // "1 slice (125g)"
+  name        String // "Round Table Pepperoni Pizza (1 slice)"
+  brand       String? // "Round Table"
+  category    String? // "restaurant" | "packaged" | "fast_food"
+  servingSize String? // "1 slice (125g)"
   calories    Float
   protein     Float
   carbs       Float
   fat         Float
   fiber       Float?
-  source      String                    // "nutritionix" | "openfoodfacts" | "user"
-  externalId  String?                   // Nutritionix item_id or OFF barcode for dedup
+  source      String // "nutritionix" | "openfoodfacts" | "user"
+  externalId  String? // Nutritionix item_id or OFF barcode for dedup
   imageUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1564,21 +1565,21 @@ model FoodItem {
 // `period` is the window size in days (7 | 30 | 90). `computedAt` is when the
 // snapshot was taken; the snapshot covers (computedAt - period, computedAt].
 model UserSignalSnapshot {
-  id                       String   @id @default(cuid())
-  userId                   String
-  period                   Int      // window size in days (7 | 30 | 90)
-  cooks                    Int      @default(0)
-  ratings                  Int      @default(0)
-  swaps                    Int      @default(0)
-  utterances               Int      @default(0)
-  leftoverDecisions        Int      @default(0)
-  photoUploads             Int      @default(0)
-  tasteFeedback            Int      @default(0)
-  cravingSearches          Int      @default(0)
-  preCookCheckIns          Int      @default(0)
-  postCookNutritionViews   Int      @default(0)
-  totalSignals             Int      @default(0)
-  computedAt               DateTime @default(now())
+  id                     String   @id @default(cuid())
+  userId                 String
+  period                 Int // window size in days (7 | 30 | 90)
+  cooks                  Int      @default(0)
+  ratings                Int      @default(0)
+  swaps                  Int      @default(0)
+  utterances             Int      @default(0)
+  leftoverDecisions      Int      @default(0)
+  photoUploads           Int      @default(0)
+  tasteFeedback          Int      @default(0)
+  cravingSearches        Int      @default(0)
+  preCookCheckIns        Int      @default(0)
+  postCookNutritionViews Int      @default(0)
+  totalSignals           Int      @default(0)
+  computedAt             DateTime @default(now())
 
   @@unique([userId, period, computedAt])
   @@index([userId, computedAt])
@@ -1591,14 +1592,14 @@ model UserSignalSnapshot {
 // increasing over time, personalization is converging (broken).
 // `cohortId` is a stable bucket name (e.g., "all", "premium", "lifestyle").
 model CohortDistanceSnapshot {
-  id          String   @id @default(cuid())
-  cohortId    String
-  asOfDate    DateTime
-  d7Median    Float
-  d30Median   Float
-  d90Median   Float
-  sampleSize  Int
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  cohortId   String
+  asOfDate   DateTime
+  d7Median   Float
+  d30Median  Float
+  d90Median  Float
+  sampleSize Int
+  createdAt  DateTime @default(now())
 
   @@unique([cohortId, asOfDate])
   @@index([cohortId, asOfDate])
@@ -1618,8 +1619,8 @@ model SurfaceEvent {
   userId    String
   surface   String
   recipeId  String?
-  action    String   // impression | tap | cook | rate
-  variant   String?  // B4 — algorithmic A/B variant key, optional
+  action    String // impression | tap | cook | rate
+  variant   String? // B4 — algorithmic A/B variant key, optional
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
@@ -1631,16 +1632,16 @@ model SurfaceEvent {
 // B3 — Daily roll-up of SurfaceEvent funnel per surface.
 // Computed daily by surfaceYieldService.
 model SurfaceYieldSnapshot {
-  id            String   @id @default(cuid())
-  surface       String
-  asOfDate      DateTime
-  variant       String?  // null = aggregate; non-null = per-variant for B4
-  impressions   Int      @default(0)
-  taps          Int      @default(0)
-  cooks         Int      @default(0)
-  rates         Int      @default(0)
-  signalYield   Float    @default(0) // (cooks + rates) / max(impressions, 1)
-  createdAt     DateTime @default(now())
+  id          String   @id @default(cuid())
+  surface     String
+  asOfDate    DateTime
+  variant     String? // null = aggregate; non-null = per-variant for B4
+  impressions Int      @default(0)
+  taps        Int      @default(0)
+  cooks       Int      @default(0)
+  rates       Int      @default(0)
+  signalYield Float    @default(0) // (cooks + rates) / max(impressions, 1)
+  createdAt   DateTime @default(now())
 
   @@unique([surface, asOfDate, variant])
   @@index([surface, asOfDate])
@@ -1654,13 +1655,13 @@ model SurfaceYieldSnapshot {
 // pairs and other surface events. Aggregated globally first; per-user
 // writeback is v1.1 (F4 backlog).
 model CuisineAdjacencyWeight {
-  id              String   @id @default(cuid())
-  sourceCuisine   String
-  targetCuisine   String
-  weight          Float    @default(0)
-  signalCount     Int      @default(0)
-  updatedAt       DateTime @updatedAt
-  createdAt       DateTime @default(now())
+  id            String   @id @default(cuid())
+  sourceCuisine String
+  targetCuisine String
+  weight        Float    @default(0)
+  signalCount   Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
 
   @@unique([sourceCuisine, targetCuisine])
   @@index([sourceCuisine])
@@ -1674,14 +1675,14 @@ model CuisineAdjacencyWeight {
 // keeps them separate). Read-time blending: 70% global + 30% per-user when
 // per-user signal count >= 3, otherwise fall back to global only.
 model UserCuisineAdjacencyWeight {
-  id              String   @id @default(cuid())
-  userId          String
-  sourceCuisine   String
-  targetCuisine   String
-  weight          Float    @default(0)
-  signalCount     Int      @default(0)
-  updatedAt       DateTime @updatedAt
-  createdAt       DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String
+  sourceCuisine String
+  targetCuisine String
+  weight        Float    @default(0)
+  signalCount   Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
 
   @@unique([userId, sourceCuisine, targetCuisine])
   @@index([userId])
@@ -1695,21 +1696,21 @@ model UserCuisineAdjacencyWeight {
 // adjacency model. Each entry can carry a free-text note + photo + cuisine
 // tag; the cuisine tag drives a high-signal adjacency writeback when present.
 model TravelJournalEntry {
-  id                       String   @id @default(cuid())
-  userId                   String
-  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  occurredAt               DateTime @default(now())
+  id                      String    @id @default(cuid())
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurredAt              DateTime  @default(now())
   /// City slug from cityCuisineCatalog (e.g. "cdmx"). NULL = unknown city.
-  citySlug                 String?
-  dishName                 String
-  cuisineTag               String?
-  photoUri                 String?
-  note                     String?
-  isPrivate                Boolean  @default(true)
-  sharedWithFriendsAt      DateTime?
-  contributedAnonymizedAt  DateTime?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  citySlug                String?
+  dishName                String
+  cuisineTag              String?
+  photoUri                String?
+  note                    String?
+  isPrivate               Boolean   @default(true)
+  sharedWithFriendsAt     DateTime?
+  contributedAnonymizedAt DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   @@index([userId, occurredAt])
   @@index([userId, citySlug])
@@ -1722,25 +1723,25 @@ model TravelJournalEntry {
 // photograph + tag M produce items, record cultural-primer voice memo).
 // Funds the I2 catalog with first-hand provenance, not LLM hallucination.
 model LocalCurationTask {
-  id              String   @id @default(cuid())
+  id             String    @id @default(cuid())
   /// Admin who created/owns the task.
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// BCP 47 locale this task augments (e.g. "es-MX", "pt-BR").
-  locale          String
+  locale         String
   /// City slug from cityCuisineCatalog when applicable.
-  citySlug        String?
+  citySlug       String?
   /// Type of curation work: review_ingredients | photograph_produce | cultural_primer_voice_memo
-  taskType        String
-  targetCount     Int      @default(0)
-  completedCount  Int      @default(0)
+  taskType       String
+  targetCount    Int       @default(0)
+  completedCount Int       @default(0)
   /// pending | in_progress | completed | abandoned
-  status          String   @default("pending")
-  notes           String?
-  startedAt       DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  status         String    @default("pending")
+  notes          String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([userId, status])
   @@index([locale, status])
@@ -1751,13 +1752,13 @@ model LocalCurationTask {
 // Cadence-aware push: only at the user's typical cook hour, max 3/day,
 // content adapts to pantry + remaining macros + cuisine variety state.
 model AdaptiveNotificationLog {
-  id           String   @id @default(cuid())
-  userId       String
-  sentAt       DateTime @default(now())
-  template     String   // logical template id, e.g. "expiring-pantry"
-  signalsUsed  String   // JSON snapshot of signals that drove the choice
-  tapped       Boolean  @default(false)
-  tappedAt     DateTime?
+  id          String    @id @default(cuid())
+  userId      String
+  sentAt      DateTime  @default(now())
+  template    String // logical template id, e.g. "expiring-pantry"
+  signalsUsed String // JSON snapshot of signals that drove the choice
+  tapped      Boolean   @default(false)
+  tappedAt    DateTime?
 
   @@index([userId, sentAt])
   @@index([template, sentAt])
@@ -1770,22 +1771,22 @@ model AdaptiveNotificationLog {
 // Power-user mode also includes a macroAdjustment field with the suggested
 // daily target delta (the MacroFactor pattern, opt-in).
 model NutritionCoverageSnapshot {
-  id                  String   @id @default(cuid())
-  userId              String
-  period              Int      // window size in days (typically 14)
-  asOfDate            DateTime
+  id                String   @id @default(cuid())
+  userId            String
+  period            Int // window size in days (typically 14)
+  asOfDate          DateTime
   // Macro adherence (% of daily target hit, averaged over the window).
-  caloriesAdherence   Float    @default(0)
-  proteinAdherence    Float    @default(0)
-  fiberAdherence      Float    @default(0)
+  caloriesAdherence Float    @default(0)
+  proteinAdherence  Float    @default(0)
+  fiberAdherence    Float    @default(0)
   // JSON-string array of gap labels we detected in the window
   // ("fiber", "iron", "magnesium", "variety", "consistency").
-  gaps                String   @default("[]")
+  gaps              String   @default("[]")
   // Optional power-user macro adjustment suggestion. JSON shape:
   // {calories?: number, protein?: number, reason: string} where the deltas
   // are the new daily target minus the old. null when not applicable.
-  macroAdjustment     String?
-  computedAt          DateTime @default(now())
+  macroAdjustment   String?
+  computedAt        DateTime @default(now())
 
   @@unique([userId, period, asOfDate])
   @@index([userId, asOfDate])
@@ -1798,17 +1799,17 @@ model NutritionCoverageSnapshot {
 // pair is the highest-fidelity adaptation signal in the stack.
 // Hunger + energy are 1..5 Likert scales (1 = very low, 5 = very high).
 model DailyCheckIn {
-  id                  String   @id @default(cuid())
-  userId              String
-  date                DateTime
+  id                   String   @id @default(cuid())
+  userId               String
+  date                 DateTime
   // JSON snapshot of the nutrition card the user tapped on. Optional — user
   // can submit reflection without expanding the card.
-  nutritionSnapshot   String?
-  reflectionText      String?
-  hungerNow           Int?
-  energyAtLastMeal    Int?
+  nutritionSnapshot    String?
+  reflectionText       String?
+  hungerNow            Int?
+  energyAtLastMeal     Int?
   satietyFromYesterday Int?
-  createdAt           DateTime @default(now())
+  createdAt            DateTime @default(now())
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -1828,12 +1829,12 @@ model DailyCheckIn {
 // ──────────────────────────────────────────────────────────────────────────
 
 model IngredientNutrient {
-  id           String  @id @default(cuid())
-  fdcId        Int     @unique
-  description  String
-  category     String?
-  servingSize  Float   @default(100)
-  servingUnit  String  @default("g")
+  id          String  @id @default(cuid())
+  fdcId       Int     @unique
+  description String
+  category    String?
+  servingSize Float   @default(100)
+  servingUnit String  @default("g")
 
   // Macros (per 100g, kcal/g — same units USDA uses)
   calories     Float?
@@ -1850,50 +1851,50 @@ model IngredientNutrient {
   cholesterol  Float?
 
   // Minerals (mg unless noted)
-  sodium       Float?
-  potassium    Float?
-  calcium      Float?
-  iron         Float?
-  magnesium    Float?
-  zinc         Float?
-  phosphorus   Float?
-  selenium     Float? // mcg
+  sodium     Float?
+  potassium  Float?
+  calcium    Float?
+  iron       Float?
+  magnesium  Float?
+  zinc       Float?
+  phosphorus Float?
+  selenium   Float? // mcg
 
   // Vitamins
-  vitA         Float? // mcg RAE
-  vitC         Float? // mg
-  vitD         Float? // mcg
-  vitE         Float? // mg
-  vitK         Float? // mcg
-  thiamin      Float? // B1, mg
-  riboflavin   Float? // B2, mg
-  niacin       Float? // B3, mg
-  b6           Float? // mg
-  b12          Float? // mcg
-  folate       Float? // mcg DFE
+  vitA       Float? // mcg RAE
+  vitC       Float? // mg
+  vitD       Float? // mcg
+  vitE       Float? // mg
+  vitK       Float? // mcg
+  thiamin    Float? // B1, mg
+  riboflavin Float? // B2, mg
+  niacin     Float? // B3, mg
+  b6         Float? // mg
+  b12        Float? // mcg
+  folate     Float? // mcg DFE
 
   // Omegas (g)
-  omega3       Float?
-  omega6       Float?
+  omega3 Float?
+  omega6 Float?
 
   // Long tail — JSON map of nutrient_id → { value, unit, name }
-  extras       String?
+  extras String?
 
-  fetchedAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  mappings     IngredientFDCMapping[]
+  mappings IngredientFDCMapping[]
 
   @@map("ingredient_nutrients")
 }
 
 model IngredientFDCMapping {
-  id             String   @id @default(cuid())
-  normalizedName String   @unique
+  id             String             @id @default(cuid())
+  normalizedName String             @unique
   fdcId          Int
   ingredient     IngredientNutrient @relation(fields: [fdcId], references: [fdcId], onDelete: Cascade)
-  confidence     Float    @default(1.0)
-  createdAt      DateTime @default(now())
+  confidence     Float              @default(1.0)
+  createdAt      DateTime           @default(now())
 
   @@index([fdcId])
   @@map("ingredient_fdc_mappings")
@@ -1913,10 +1914,10 @@ model IngredientFDCMapping {
 // ──────────────────────────────────────────────────────────────────────────
 
 model RecipeNutrientAggregate {
-  id           String   @id @default(cuid())
-  recipeId     String   @unique
-  recipe       Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  servings     Int      @default(1)
+  id       String @id @default(cuid())
+  recipeId String @unique
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  servings Int    @default(1)
 
   // Per-serving aggregates — same units / shape as IngredientNutrient
   calories     Float?
@@ -1957,17 +1958,17 @@ model RecipeNutrientAggregate {
   // Lets the UI decide whether to surface "approximate" disclaimers.
   ingredientCoverage Float @default(0)
 
-  computedAt   DateTime @default(now())
-  invalidated  Boolean  @default(false)
+  computedAt  DateTime @default(now())
+  invalidated Boolean  @default(false)
 
   @@map("recipe_nutrient_aggregates")
 }
 
 model DailyNutrientSnapshot {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      String   // ISO 'YYYY-MM-DD' — SQLite-friendly, timezone-stable
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   String // ISO 'YYYY-MM-DD' — SQLite-friendly, timezone-stable
 
   calories     Float?
   protein      Float?
@@ -2003,8 +2004,8 @@ model DailyNutrientSnapshot {
   omega3       Float?
   omega6       Float?
 
-  mealCount    Int      @default(0)
-  computedAt   DateTime @default(now())
+  mealCount  Int      @default(0)
+  computedAt DateTime @default(now())
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -2043,15 +2044,15 @@ model UserFollow {
 // ──────────────────────────────────────────────────────────────────────────
 
 model RecipeDeletion {
-  id               String   @id @default(cuid())
-  recipeId         String   @unique
-  recipe           Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  composite        Float
-  suggestedAction  String   // 'delete_candidate' | 'rebuild_required'
-  reasonCodes      String   @default("[]") // JSON array of FailureReason codes
-  isOnlyInstance   Boolean  @default(false)
-  softDeletedAt    DateTime @default(now())
-  hardDeleteAfter  DateTime
+  id              String   @id @default(cuid())
+  recipeId        String   @unique
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  composite       Float
+  suggestedAction String // 'delete_candidate' | 'rebuild_required'
+  reasonCodes     String   @default("[]") // JSON array of FailureReason codes
+  isOnlyInstance  Boolean  @default(false)
+  softDeletedAt   DateTime @default(now())
+  hardDeleteAfter DateTime
 
   @@index([softDeletedAt])
   @@index([hardDeleteAfter])
@@ -2086,13 +2087,13 @@ model RecipeQualityScore {
 }
 
 model WaitlistSignup {
-  id          String   @id @default(cuid())
-  email       String   @unique
+  id          String    @id @default(cuid())
+  email       String    @unique
   topCuisine  String?
-  macroGoal   String?  // 'lighter' | 'strong_lean' | 'flavor_balanced' | 'discovery'
-  dietary     String   @default("[]") // JSON-encoded string array
-  source      String?  // utm_source / referrer for attribution
-  createdAt   DateTime @default(now())
+  macroGoal   String? // 'lighter' | 'strong_lean' | 'flavor_balanced' | 'discovery'
+  dietary     String    @default("[]") // JSON-encoded string array
+  source      String? // utm_source / referrer for attribution
+  createdAt   DateTime  @default(now())
   invitedAt   DateTime?
   convertedAt DateTime?
 
@@ -2109,17 +2110,17 @@ model RecommenderEvent {
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   asOf            DateTime
-  contextSnapshot String   // JSON-stringified user context at proposal time
-  candidateIds    String   // JSON-stringified string[]
+  contextSnapshot String // JSON-stringified user context at proposal time
+  candidateIds    String // JSON-stringified string[]
   pickedRecipeId  String?
   pickedRecipe    Recipe?  @relation("PickedRecipe", fields: [pickedRecipeId], references: [id], onDelete: SetNull)
   confidence      Float
-  copyLine        String   // The reason / copy line returned to client
-  source          String   // 'llm' | 'retrieval_fallback'
+  copyLine        String // The reason / copy line returned to client
+  source          String // 'llm' | 'retrieval_fallback'
   createdAt       DateTime @default(now())
 
-  outcome     RecommenderEventOutcome?
-  runnerUps   RecommenderRunnerUp[]
+  outcome   RecommenderEventOutcome?
+  runnerUps RecommenderRunnerUp[]
 
   @@index([userId, createdAt])
   @@index([pickedRecipeId])
@@ -2127,12 +2128,12 @@ model RecommenderEvent {
 }
 
 model RecommenderRunnerUp {
-  id        String           @id @default(cuid())
-  eventId   String
-  event     RecommenderEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  recipeId  String
-  recipe    Recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  rank      Int
+  id       String           @id @default(cuid())
+  eventId  String
+  event    RecommenderEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipeId String
+  recipe   Recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  rank     Int
 
   @@unique([eventId, rank])
   @@index([eventId])
@@ -2145,7 +2146,7 @@ model RecommenderEventOutcome {
   id        String           @id @default(cuid())
   eventId   String           @unique
   event     RecommenderEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  outcome   String           // 'accepted' | 'swapped' | 'escaped' | 'abandoned'
+  outcome   String // 'accepted' | 'swapped' | 'escaped' | 'abandoned'
   latencyMs Int
   createdAt DateTime         @default(now())
 
@@ -2161,12 +2162,12 @@ model IngredientEvent {
   id             String   @id @default(cuid())
   userId         String
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ingredientName String   // canonical name; pre-normalize at write site
-  eventType      String   // addedToPantry | addedToShoppingList | purchased | consumed | expired | swappedIn | swappedOut | removedManually
+  ingredientName String // canonical name; pre-normalize at write site
+  eventType      String // addedToPantry | addedToShoppingList | purchased | consumed | expired | swappedIn | swappedOut | removedManually
   quantity       Float?
   unit           String?
   recipeId       String?
-  swapTargetName String?  // for swappedIn/Out events: the partner ingredient name
+  swapTargetName String? // for swappedIn/Out events: the partner ingredient name
   occurredAt     DateTime @default(now())
   createdAt      DateTime @default(now())
 
@@ -2183,15 +2184,15 @@ model IngredientEvent {
 // signals stay personal (cross-user aggregation goes through IG2.x v2 with
 // k-anonymity).
 model IngredientCoOccurrence {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ingredientA  String   // lexicographically smaller name
-  ingredientB  String   // lexicographically larger name
-  coCount      Float    @default(0)  // float to support fractional decay
-  lastSeenAt   DateTime
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredientA String // lexicographically smaller name
+  ingredientB String // lexicographically larger name
+  coCount     Float    @default(0) // float to support fractional decay
+  lastSeenAt  DateTime
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 
   @@unique([userId, ingredientA, ingredientB])
   @@index([userId, ingredientA])
@@ -2204,17 +2205,17 @@ model IngredientCoOccurrence {
 // reads `confidence: 'low'` and downstream predictRunningLow tightens its
 // threshold accordingly.
 model IngredientCadence {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ingredientName  String   // canonical
-  meanIntervalDays Float?  // null = cold-start
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredientName   String // canonical
+  meanIntervalDays Float? // null = cold-start
   stdDevDays       Float?
   lastPurchasedAt  DateTime?
-  sampleCount      Int      @default(0)
-  confidence       String   @default("low") // 'low' | 'medium' | 'high'
-  updatedAt        DateTime @updatedAt
-  createdAt        DateTime @default(now())
+  sampleCount      Int       @default(0)
+  confidence       String    @default("low") // 'low' | 'medium' | 'high'
+  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime  @default(now())
 
   @@unique([userId, ingredientName])
   @@index([userId])
@@ -2228,8 +2229,8 @@ model IngredientCadence {
 model IngredientEmbedding {
   id            String   @id @default(cuid())
   canonicalName String   @unique
-  embedding     Bytes    // Float32Array serialized as bytes
-  model         String   // model id, e.g. 'text-embedding-3-small'
+  embedding     Bytes // Float32Array serialized as bytes
+  model         String // model id, e.g. 'text-embedding-3-small'
   dimensions    Int
   updatedAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
@@ -2247,20 +2248,20 @@ model IngredientEmbedding {
 // (TELEMETRY_CONTRACT.rawEventTtlDays). This roll-up is retained indefinitely
 // so longitudinal trends survive raw-event purge.
 model IngredientRecommenderDaily {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date          DateTime // start-of-day UTC
-  source        String   // 'cadence' | 'co_purchase' | 'embedding' | 'static' | 'user' | 'crowd' | 'cultural'
-  impressions   Int      @default(0)
-  taps          Int      @default(0)
-  accepts       Int      @default(0)
-  dismisses     Int      @default(0)
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime // start-of-day UTC
+  source         String // 'cadence' | 'co_purchase' | 'embedding' | 'static' | 'user' | 'crowd' | 'cultural'
+  impressions    Int      @default(0)
+  taps           Int      @default(0)
+  accepts        Int      @default(0)
+  dismisses      Int      @default(0)
   // Acceptance rate = accepts / impressions, computed at write time. Null when
   // impressions == 0 (impossible by construction but kept defensive).
   acceptanceRate Float?
-  updatedAt     DateTime @updatedAt
-  createdAt     DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
 
   @@unique([userId, date, source])
   @@index([userId, date])
