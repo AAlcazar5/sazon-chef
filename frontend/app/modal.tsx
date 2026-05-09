@@ -892,7 +892,12 @@ export default function RecipeModal() {
       >
         <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
           <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
+            <HapticTouchableOpacity
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Close recipe"
+              className="p-2"
+            >
               <Ionicons name="close" size={24} color={isDark ? '#E5E7EB' : '#374151'} />
             </HapticTouchableOpacity>
             <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recipe Details</Text>
@@ -943,8 +948,10 @@ export default function RecipeModal() {
       >
         <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <HapticTouchableOpacity 
+        <HapticTouchableOpacity
             onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Close recipe"
             className="p-2"
           >
           <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
@@ -1786,6 +1793,8 @@ export default function RecipeModal() {
                       router.push(`/modal?id=${similarRecipe.id}` as any);
                     }}
                     pressedScale={0.97}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${similarRecipe.title}`}
                     style={[
                       {
                         width: 200,
@@ -1976,7 +1985,12 @@ export default function RecipeModal() {
               alignItems: 'center',
             }}
           >
-            <HapticTouchableOpacity onPress={() => router.back()} style={{ width: 32 }}>
+            <HapticTouchableOpacity
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              style={{ width: 32 }}
+            >
               <Ionicons name="chevron-back" size={22} color={isDark ? '#fff' : '#111'} />
             </HapticTouchableOpacity>
             <Text
@@ -2015,7 +2029,12 @@ export default function RecipeModal() {
               pointerEvents="none"
             />
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <HapticTouchableOpacity onPress={() => router.back()} style={{ width: 32 }}>
+              <HapticTouchableOpacity
+                onPress={() => router.back()}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                style={{ width: 32 }}
+              >
                 <Ionicons name="chevron-back" size={22} color={isDark ? '#fff' : '#111'} />
               </HapticTouchableOpacity>
               <Text
@@ -2098,6 +2117,8 @@ export default function RecipeModal() {
                 key={integration.id}
                 onPress={() => handleSyncRecipeToApp(integration.appName)}
                 hapticStyle="medium"
+                accessibilityRole="button"
+                accessibilityLabel={`Sync recipe to ${integration.appName}`}
                 className="bg-red-100 dark:bg-red-900/30 py-3 px-4 rounded-lg items-center mb-2 flex-row justify-center border border-red-200 dark:border-red-800"
               >
                 <Ionicons name="link-outline" size={18} color={Colors.secondaryRed} style={{ marginRight: 8 }} />
@@ -2299,6 +2320,9 @@ export default function RecipeModal() {
                   : [...prev, c.id]
               );
             }}
+            accessibilityRole="checkbox"
+            accessibilityLabel={c.name}
+            accessibilityState={{ checked: selectedCollectionIds.includes(c.id) }}
             style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}
           >
             <View style={{
@@ -2337,12 +2361,22 @@ export default function RecipeModal() {
             />
           </View>
         ) : (
-          <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} style={{ paddingVertical: 14 }}>
+          <HapticTouchableOpacity
+            onPress={() => setCreatingCollection(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Create new collection"
+            style={{ paddingVertical: 14 }}
+          >
             <Text style={{ color: isDark ? DarkColors.primary : Colors.primary, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 }}>+ Create new collection</Text>
           </HapticTouchableOpacity>
         )}
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
-          <HapticTouchableOpacity onPress={() => setPickerVisible(false)} style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+          <HapticTouchableOpacity
+            onPress={() => setPickerVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel collection selection"
+            style={{ paddingHorizontal: 16, paddingVertical: 12 }}
+          >
             <Text style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Cancel</Text>
           </HapticTouchableOpacity>
           <GradientButton
@@ -2364,8 +2398,10 @@ export default function RecipeModal() {
         <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
           {/* Header */}
           <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <HapticTouchableOpacity 
+            <HapticTouchableOpacity
               onPress={() => setShowHealthifyModal(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close healthified recipe"
               className="p-2"
             >
               <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
@@ -2555,10 +2591,12 @@ export default function RecipeModal() {
               style={{ marginBottom: 8 }}
             />
             
-            <HapticTouchableOpacity 
+            <HapticTouchableOpacity
               onPress={() => setShowHealthifyModal(false)}
-          className=" py-3 px-6 rounded-lg items-center"
-        >
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              className=" py-3 px-6 rounded-lg items-center"
+            >
               <Text className="text-gray-700 dark:text-gray-300 font-semibold text-lg">Close</Text>
             </HapticTouchableOpacity>
       </View>

@@ -659,7 +659,12 @@ export default function RecipeFormScreen() {
       <KeyboardAvoidingContainer>
       {/* Header */}
       <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} px-4 py-4 flex-row items-center justify-between`}>
-        <HapticTouchableOpacity onPress={() => router.back()} className="p-2">
+        <HapticTouchableOpacity
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          className="p-2"
+        >
           <Ionicons name="arrow-back" size={24} color={isDark ? "#E5E7EB" : "#111827"} />
         </HapticTouchableOpacity>
         <Text className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
@@ -668,6 +673,9 @@ export default function RecipeFormScreen() {
         <HapticTouchableOpacity
           onPress={handleSubmit}
           disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel={loading ? 'Saving recipe' : 'Save recipe'}
+          accessibilityState={{ disabled: loading, busy: loading }}
           className="p-2"
         >
           <Text className={`text-lg font-semibold ${loading ? (isDark ? 'text-gray-400' : 'text-gray-500') : 'text-orange-500'}`}>
@@ -687,6 +695,9 @@ export default function RecipeFormScreen() {
             <HapticTouchableOpacity
               key={label}
               onPress={() => scrollToSection(i)}
+              accessibilityRole="tab"
+              accessibilityLabel={`${label} section`}
+              accessibilityState={{ selected: activeSection === i }}
               style={{
                 paddingHorizontal: 14,
                 paddingVertical: 6,
@@ -742,6 +753,13 @@ export default function RecipeFormScreen() {
                 onPress={handleGenerateRandomRecipe}
                 disabled={generatingAI}
                 hapticStyle="medium"
+                accessibilityRole="button"
+                accessibilityLabel={
+                  generatingAI
+                    ? `Generating ${title.trim() || 'random'} recipe`
+                    : `Generate ${title.trim() || 'a random'} recipe`
+                }
+                accessibilityState={{ disabled: generatingAI, busy: generatingAI }}
                 style={{
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   borderRadius: 12,
@@ -841,6 +859,9 @@ export default function RecipeFormScreen() {
             <View className="flex-row gap-2 mb-2">
               <HapticTouchableOpacity
                 onPress={() => setRecipeType('meal')}
+                accessibilityRole="radio"
+                accessibilityLabel="Meal"
+                accessibilityState={{ selected: recipeType === 'meal' }}
                 className={`flex-1 py-3 px-4 rounded-xl ${
                   recipeType === 'meal'
                     ? isDark
@@ -862,6 +883,9 @@ export default function RecipeFormScreen() {
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={() => setRecipeType('snack')}
+                accessibilityRole="radio"
+                accessibilityLabel="Snack"
+                accessibilityState={{ selected: recipeType === 'snack' }}
                 className={`flex-1 py-3 px-4 rounded-xl ${
                   recipeType === 'snack'
                     ? isDark
@@ -883,6 +907,9 @@ export default function RecipeFormScreen() {
               </HapticTouchableOpacity>
               <HapticTouchableOpacity
                 onPress={() => setRecipeType('dessert')}
+                accessibilityRole="radio"
+                accessibilityLabel="Dessert"
+                accessibilityState={{ selected: recipeType === 'dessert' }}
                 className={`flex-1 py-3 px-4 rounded-xl ${
                   recipeType === 'dessert'
                     ? isDark
@@ -909,6 +936,9 @@ export default function RecipeFormScreen() {
               <View className="flex-row gap-2">
                 <HapticTouchableOpacity
                   onPress={() => setMealType('breakfast')}
+                  accessibilityRole="radio"
+                  accessibilityLabel="Breakfast"
+                  accessibilityState={{ selected: mealType === 'breakfast' }}
                   className={`flex-1 py-2 px-3 rounded-xl ${
                     mealType === 'breakfast'
                       ? isDark ? 'bg-orange-500/20' : 'bg-orange-50'
@@ -926,6 +956,9 @@ export default function RecipeFormScreen() {
                 </HapticTouchableOpacity>
                 <HapticTouchableOpacity
                   onPress={() => setMealType('lunch')}
+                  accessibilityRole="radio"
+                  accessibilityLabel="Lunch"
+                  accessibilityState={{ selected: mealType === 'lunch' }}
                   className={`flex-1 py-2 px-3 rounded-xl ${
                     mealType === 'lunch'
                       ? isDark ? 'bg-orange-500/20' : 'bg-orange-50'
@@ -943,6 +976,9 @@ export default function RecipeFormScreen() {
                 </HapticTouchableOpacity>
                 <HapticTouchableOpacity
                   onPress={() => setMealType('dinner')}
+                  accessibilityRole="radio"
+                  accessibilityLabel="Dinner"
+                  accessibilityState={{ selected: mealType === 'dinner' }}
                   className={`flex-1 py-2 px-3 rounded-xl ${
                     mealType === 'dinner'
                       ? isDark ? 'bg-orange-500/20' : 'bg-orange-50'
@@ -966,6 +1002,9 @@ export default function RecipeFormScreen() {
           <HapticTouchableOpacity
             testID="toggle-nutrition-btn"
             onPress={() => setShowNutrition(v => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={showNutrition ? 'Hide nutrition and macros' : 'Show nutrition and macros (required)'}
+            accessibilityState={{ expanded: showNutrition }}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -1089,7 +1128,13 @@ export default function RecipeFormScreen() {
         <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-card p-4 mb-4 shadow-sm`}>
           <View className="flex-row justify-between items-center mb-3">
             <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Ingredients *</Text>
-            <HapticTouchableOpacity testID="add-ingredient-btn" onPress={addIngredient} className="p-2">
+            <HapticTouchableOpacity
+              testID="add-ingredient-btn"
+              onPress={addIngredient}
+              accessibilityRole="button"
+              accessibilityLabel="Add ingredient"
+              className="p-2"
+            >
               <Ionicons name="add-circle" size={24} color={Colors.secondaryRed} />
             </HapticTouchableOpacity>
           </View>
@@ -1106,7 +1151,13 @@ export default function RecipeFormScreen() {
                 />
               </View>
               {ingredients.length > 1 && (
-                <HapticTouchableOpacity testID={`remove-ingredient-${index}`} onPress={() => removeIngredient(index)} className="p-2">
+                <HapticTouchableOpacity
+                  testID={`remove-ingredient-${index}`}
+                  onPress={() => removeIngredient(index)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ingredient ${index + 1}`}
+                  className="p-2"
+                >
                   <Ionicons name="remove-circle" size={24} color={Colors.secondaryRed} />
                 </HapticTouchableOpacity>
               )}
@@ -1125,7 +1176,13 @@ export default function RecipeFormScreen() {
         <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-card p-4 mb-4 shadow-sm`}>
           <View className="flex-row justify-between items-center mb-3">
             <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Instructions *</Text>
-            <HapticTouchableOpacity testID="add-step-btn" onPress={addInstruction} className="p-2">
+            <HapticTouchableOpacity
+              testID="add-step-btn"
+              onPress={addInstruction}
+              accessibilityRole="button"
+              accessibilityLabel="Add cooking step"
+              className="p-2"
+            >
               <Ionicons name="add-circle" size={24} color={Colors.secondaryRed} />
             </HapticTouchableOpacity>
           </View>
@@ -1147,7 +1204,13 @@ export default function RecipeFormScreen() {
                   />
                 </View>
                 {instructions.length > 1 && (
-                  <HapticTouchableOpacity testID={`remove-instruction-${index}`} onPress={() => removeInstruction(index)} className="p-2 mt-6">
+                  <HapticTouchableOpacity
+                    testID={`remove-instruction-${index}`}
+                    onPress={() => removeInstruction(index)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove step ${index + 1}`}
+                    className="p-2 mt-6"
+                  >
                     <Ionicons name="remove-circle" size={24} color={Colors.secondaryRed} />
                   </HapticTouchableOpacity>
                 )}
@@ -1184,7 +1247,12 @@ export default function RecipeFormScreen() {
             <>
               <View className="flex-row justify-between items-center mb-3">
                 <Text className={`text-base font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Collections</Text>
-                <HapticTouchableOpacity onPress={openCollectionPicker} className="p-2">
+                <HapticTouchableOpacity
+                  onPress={openCollectionPicker}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add to collection"
+                  className="p-2"
+                >
                   <Ionicons name="add-circle" size={24} color="#F97316" />
                 </HapticTouchableOpacity>
               </View>
@@ -1197,6 +1265,8 @@ export default function RecipeFormScreen() {
                       <HapticTouchableOpacity
                         key={id}
                         onPress={() => setSelectedCollectionIds(prev => prev.filter(i => i !== id))}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove from ${collection.name} collection`}
                         className="bg-red-100 dark:bg-red-900/30 px-3 py-1 rounded-full flex-row items-center border border-red-200 dark:border-red-800"
                       >
                         <Text className="text-red-800 dark:text-red-300 font-medium mr-2">{collection.name}</Text>
@@ -1213,6 +1283,8 @@ export default function RecipeFormScreen() {
 
               <HapticTouchableOpacity
                 onPress={openCollectionPicker}
+                accessibilityRole="button"
+                accessibilityLabel={selectedCollectionIds.length > 0 ? 'Change collections' : 'Select collections'}
                 className="border border-red-600 dark:border-red-400 rounded-lg px-4 py-3 flex-row items-center justify-center"
               >
                 <Ionicons name="folder-outline" size={20} color={Colors.secondaryRed} />
@@ -1252,12 +1324,15 @@ export default function RecipeFormScreen() {
                 <HapticTouchableOpacity
                   key={c.id}
                   onPress={() => {
-                    setSelectedCollectionIds(prev => 
-                      prev.includes(c.id) 
+                    setSelectedCollectionIds(prev =>
+                      prev.includes(c.id)
                         ? prev.filter(id => id !== c.id)
                         : [...prev, c.id]
                     );
                   }}
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={c.name}
+                  accessibilityState={{ checked: selectedCollectionIds.includes(c.id) }}
                   className={`flex-row items-center py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}
                 >
                   <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-red-600 dark:bg-red-400 border-red-600 dark:border-red-400' : (isDark ? 'border-gray-600' : 'border-gray-300')}`}>
@@ -1285,13 +1360,23 @@ export default function RecipeFormScreen() {
                   />
                 </View>
               ) : (
-                <HapticTouchableOpacity onPress={() => setCreatingCollection(true)} className="py-3">
+                <HapticTouchableOpacity
+                  onPress={() => setCreatingCollection(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create new collection"
+                  className="py-3"
+                >
                   <Text className="text-red-600 dark:text-red-400 font-medium">+ Create new collection</Text>
                 </HapticTouchableOpacity>
               )}
             </ScrollView>
             <View className="flex-row justify-end space-x-3">
-              <HapticTouchableOpacity onPress={() => setPickerVisible(false)} className="px-4 py-3">
+              <HapticTouchableOpacity
+                onPress={() => setPickerVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Done selecting collections"
+                className="px-4 py-3"
+              >
                 <Text className={isDark ? 'text-gray-300' : 'text-gray-700'}>Done</Text>
               </HapticTouchableOpacity>
             </View>

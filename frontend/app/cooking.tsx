@@ -623,6 +623,8 @@ export default function CookingScreen() {
                 }
               }}
               hapticStyle="light"
+              accessibilityRole="button"
+              accessibilityLabel={userPhotoUri ? 'Retake photo of dish' : 'Add a photo of your dish'}
               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>📸</Text>
@@ -653,6 +655,8 @@ export default function CookingScreen() {
                 } catch {}
               }}
               hapticStyle="light"
+              accessibilityRole="button"
+              accessibilityLabel="Share your creation"
               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>📤</Text>
@@ -768,7 +772,13 @@ export default function CookingScreen() {
 
         {/* Top bar */}
         <View className="flex-row items-center px-4 pt-3 pb-2">
-          <HapticTouchableOpacity onPress={() => router.back()} hapticStyle="light" className="p-1 mr-3">
+          <HapticTouchableOpacity
+            onPress={() => router.back()}
+            hapticStyle="light"
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            className="p-1 mr-3"
+          >
             <Icon name={Icons.ARROW_BACK} size={IconSizes.MD} color="#9CA3AF" />
           </HapticTouchableOpacity>
           <Text className="flex-1 text-gray-100 font-semibold text-base" numberOfLines={1}>
@@ -892,6 +902,9 @@ export default function CookingScreen() {
                           onPress={() => addTimerFromSuggestion(label, minutes)}
                           hapticStyle="medium"
                           disabled={isActive}
+                          accessibilityRole="button"
+                          accessibilityLabel={isActive ? `${label} timer running` : `Start ${label} timer for ${minutes} minutes`}
+                          accessibilityState={{ disabled: isActive }}
                           className="flex-row items-center px-3 py-2 rounded-full border"
                           style={{
                             borderColor: isActive ? '#4B5563' : '#F97316',
@@ -1008,6 +1021,9 @@ export default function CookingScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               hapticStyle="light"
+              accessibilityRole="button"
+              accessibilityLabel={showIngredients ? 'Back to cooking steps' : `Show ingredients — ${ingredientStrings.length} total`}
+              accessibilityState={{ expanded: showIngredients }}
               className="flex-1 flex-row items-center justify-center py-2.5 rounded-xl "
             >
               <Ionicons
@@ -1158,6 +1174,9 @@ export default function CookingScreen() {
                 onPress={goPrev}
                 hapticStyle="light"
                 disabled={currentStep === 0}
+                accessibilityRole="button"
+                accessibilityLabel="Previous step"
+                accessibilityState={{ disabled: currentStep === 0 }}
                 className="flex-1 flex-row items-center justify-center py-3.5 rounded-xl "
                 style={{ opacity: currentStep === 0 ? 0.3 : 1 }}
               >

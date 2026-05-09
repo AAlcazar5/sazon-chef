@@ -453,6 +453,9 @@ export default function ScannerScreen() {
       <View className="flex-row bg-gray-900 px-4 py-2">
         <HapticTouchableOpacity
           onPress={() => { setMode('food'); reset(); }}
+          accessibilityRole="tab"
+          accessibilityLabel="Food photo mode"
+          accessibilityState={{ selected: mode === 'food' }}
           className={`flex-1 py-2 px-4 rounded-lg mr-2 ${mode === 'food' ? 'bg-red-600 dark:bg-red-400' : 'bg-gray-700'}`}
         >
           <Text className={`text-center font-semibold ${mode === 'food' ? 'text-white' : 'text-gray-300'}`}>
@@ -461,6 +464,9 @@ export default function ScannerScreen() {
         </HapticTouchableOpacity>
         <HapticTouchableOpacity
           onPress={() => { setMode('barcode'); reset(); }}
+          accessibilityRole="tab"
+          accessibilityLabel="Barcode mode"
+          accessibilityState={{ selected: mode === 'barcode' }}
           className={`flex-1 py-2 px-4 rounded-lg ${mode === 'barcode' ? 'bg-red-600 dark:bg-red-400' : 'bg-gray-700'}`}
         >
           <Text className={`text-center font-semibold ${mode === 'barcode' ? 'text-white' : 'text-gray-300'}`}>
@@ -512,6 +518,8 @@ export default function ScannerScreen() {
               <View className="flex-row" style={{ gap: 16 }}>
                 <HapticTouchableOpacity
                   onPress={handlePickImage}
+                  accessibilityRole="button"
+                  accessibilityLabel="Pick an image from your library"
                   className="w-16 h-16 rounded-full bg-gray-700 items-center justify-center"
                 >
                   <Ionicons name="images-outline" size={32} color="white" />
@@ -520,6 +528,9 @@ export default function ScannerScreen() {
                   onPress={handleTakePhoto}
                   disabled={scanning || processing}
                   hapticStyle="medium"
+                  accessibilityRole="button"
+                  accessibilityLabel={scanning || processing ? 'Scanning food' : 'Take photo'}
+                  accessibilityState={{ disabled: scanning || processing, busy: scanning || processing }}
                   className="w-20 h-20 rounded-full bg-red-600 dark:bg-red-400 items-center justify-center border-4 border-white"
                 >
                   {scanning || processing ? (
@@ -530,6 +541,8 @@ export default function ScannerScreen() {
                 </HapticTouchableOpacity>
                 <HapticTouchableOpacity
                   onPress={() => router.back()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close scanner"
                   className="w-16 h-16 rounded-full bg-gray-700 items-center justify-center"
                 >
                   <Ionicons name="close" size={32} color="white" />
@@ -550,6 +563,8 @@ export default function ScannerScreen() {
           </Text>
           <HapticTouchableOpacity
             onPress={reset}
+            accessibilityRole="button"
+            accessibilityLabel="Try scanning again"
             style={styles.noMatchSearchBtn}
             hapticStyle="medium"
           >
@@ -558,6 +573,8 @@ export default function ScannerScreen() {
           </HapticTouchableOpacity>
           <HapticTouchableOpacity
             onPress={() => router.replace('/' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Search by name instead"
             style={styles.noMatchRetryBtn}
           >
             <Text style={styles.noMatchRetryText}>Search by name instead</Text>
@@ -578,7 +595,11 @@ export default function ScannerScreen() {
               >
                 <View className="flex-row justify-between items-center mb-4">
                   <Text className="text-2xl font-bold text-gray-900">Results</Text>
-                  <HapticTouchableOpacity onPress={reset}>
+                  <HapticTouchableOpacity
+                    onPress={reset}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close results"
+                  >
                     <Ionicons name="close-circle" size={32} color="#9CA3AF" />
                   </HapticTouchableOpacity>
                 </View>
@@ -929,6 +950,8 @@ export default function ScannerScreen() {
                 <HapticTouchableOpacity
                   onPress={() => router.back()}
                   pressedScale={0.97}
+                  accessibilityRole="button"
+                  accessibilityLabel="Done"
                   style={{ paddingVertical: 13, borderRadius: 12, backgroundColor: '#E5E7EB', alignItems: 'center' }}
                 >
                   <Text style={{ color: '#374151', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 }}>Done</Text>
