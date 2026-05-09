@@ -9,26 +9,29 @@ import { ScrollView, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Pastel, PastelDark, Accent } from '../../constants/Colors';
+import { PastelTokens, AccentTokens, Ink } from '../../constants/tokens';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { useQuickActionRanking } from '../../hooks/useQuickActionRanking';
 import { logHomeSurfaceEvent } from '../../lib/homeSurfaceEvents';
 
-type ActionId = 'voice' | 'snap' | 'build-a-plate' | 'find-me-a-meal';
+type ActionId = 'voice' | 'snap' | 'build-a-plate' | 'find-me-a-meal' | 'surprise-me';
+
+type AccentKey = keyof typeof AccentTokens;
 
 interface ActionDef {
   id: ActionId;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   a11y: string;
-  tint: keyof typeof Pastel;
-  accent: keyof typeof Accent;
+  tint: AccentKey;
+  accent: AccentKey;
 }
 
 const ACTIONS: ActionDef[] = [
   { id: 'voice', label: 'Voice', icon: 'mic-outline', a11y: 'Voice composer', tint: 'sage', accent: 'sage' },
   { id: 'snap', label: 'Snap', icon: 'camera-outline', a11y: 'Snap to log a meal', tint: 'peach', accent: 'peach' },
   { id: 'build-a-plate', label: 'Build a plate', icon: 'restaurant-outline', a11y: 'Build a plate', tint: 'lavender', accent: 'lavender' },
+  { id: 'surprise-me', label: 'Surprise me', icon: 'shuffle-outline', a11y: 'Surprise me with a recipe', tint: 'blush', accent: 'blush' },
   { id: 'find-me-a-meal', label: 'Find me a meal', icon: 'sparkles-outline', a11y: 'Find me a meal', tint: 'sky', accent: 'sky' },
 ];
 
@@ -36,6 +39,7 @@ interface QuickActionRowProps {
   onVoice: () => void;
   onSnap: () => void;
   onBuildAPlate: () => void;
+  onSurpriseMe: () => void;
   onFindMeAMeal: () => void;
 }
 
@@ -43,6 +47,7 @@ export default function QuickActionRow({
   onVoice,
   onSnap,
   onBuildAPlate,
+  onSurpriseMe,
   onFindMeAMeal,
 }: QuickActionRowProps) {
   const { theme } = useTheme();
@@ -63,11 +68,13 @@ export default function QuickActionRow({
           return onSnap;
         case 'build-a-plate':
           return onBuildAPlate;
+        case 'surprise-me':
+          return onSurpriseMe;
         case 'find-me-a-meal':
           return onFindMeAMeal;
       }
     },
-    [onVoice, onSnap, onBuildAPlate, onFindMeAMeal]
+    [onVoice, onSnap, onBuildAPlate, onSurpriseMe, onFindMeAMeal]
   );
 
   const handleChipPress = useCallback(
@@ -88,6 +95,7 @@ export default function QuickActionRow({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scroll}
       contentContainerStyle={styles.row}
     >
       {sortedActions.map((action) => (
@@ -101,12 +109,23 @@ export default function QuickActionRow({
           style={[
             styles.chip,
             {
-              backgroundColor: isDark ? PastelDark[action.tint] : Pastel[action.tint],
+              backgroundColor: isDark
+                ? PastelTokens.dark[action.tint]
+                : PastelTokens.light[action.tint],
             },
           ]}
         >
-          <Ionicons name={action.icon} size={16} color={Accent[action.accent]} />
-          <Text style={[styles.label, { color: Accent[action.accent] }]} numberOfLines={1}>
+          {/* Icon keeps the vivid accent (small enough that the saturation
+              reads as decoration). Label uses ink for AA-legible contrast on
+              the pastel chip — accent-on-pastel-of-same-hue was unreadable. */}
+          <Ionicons name={action.icon} size={16} color={AccentTokens[action.accent]} />
+          <Text
+            style={[
+              styles.label,
+              { color: isDark ? Ink.dark.primary : Ink.light.primary },
+            ]}
+            numberOfLines={1}
+          >
             {action.label}
           </Text>
         </HapticTouchableOpacity>
@@ -116,8 +135,15 @@ export default function QuickActionRow({
 }
 
 const styles = StyleSheet.create({
+  // ScrollView in a flex column would otherwise stretch to fill the parent
+  // — clamp it to its content height so the chip row reads as a compact band.
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   row: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 8,

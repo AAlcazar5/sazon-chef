@@ -56,7 +56,6 @@ import {
   type CollectionSortMode,
 } from '../../components/cookbook';
 import WeeklyRecapCard from '../../components/kitchen/WeeklyRecapCard';
-import DailyCheckIn from '../../components/today/DailyCheckIn';
 import KitchenModeBar, { type KitchenMode } from '../../components/kitchen/KitchenModeBar';
 import type { CookbookViewMode } from '../../types/kitchen';
 import KitchenDiscoverView from '../../components/kitchen/KitchenDiscoverView';
@@ -1564,12 +1563,10 @@ export default function CookbookScreen() {
         </ScrollView>
       )}
 
-      {/* ROADMAP 4.0 C7 — Daily check-in. Lives at the top of the saved view
-          regardless of whether any recipes have been saved yet, so the prompt
-          is the first thing the user sees when there's no library yet. */}
-      {viewMode === 'saved' && !selectedListId && (
-        <DailyCheckIn visible={true} onClose={() => { /* dismissable in a follow-up */ }} />
-      )}
+      {/* ROADMAP 4.0 Tier C7 — DailyCheckIn moved to the post-cook
+          completion screen (app/cooking.tsx). The reflection earns higher
+          fidelity when anchored to a real cook event than when prompted on
+          a random Kitchen-tab open. */}
 
       {viewMode !== 'collections' && viewMode !== 'discover' && viewMode !== 'journey' && viewMode !== 'stories' && !cacheLoading && allRecipes.length === 0 ? (
         // No recipes found (but API call succeeded with null/empty response)

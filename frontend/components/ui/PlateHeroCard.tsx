@@ -131,8 +131,8 @@ export function PlateHeroCard({
 const styles = StyleSheet.create({
   container: {
     borderRadius: 22,
-    overflow: 'visible',
-    minHeight: 180,
+    overflow: 'hidden',
+    minHeight: 200,
     position: 'relative',
   },
   gradient: {
@@ -142,7 +142,8 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     padding: 20,
-    paddingRight: 0,
+    paddingRight: 16,
+    alignItems: 'center',
   },
   textBlock: {
     flex: 1,
@@ -175,21 +176,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   photo: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    marginRight: -36,
+    width: 144,
+    height: 144,
+    borderRadius: 72,
     alignSelf: 'center',
   },
   photoImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: 144,
+    height: 144,
+    borderRadius: 72,
   },
+  // Save chip sits over the top-right of the card (above the photo plate)
+  // so it never collides with the eyebrow / title block on the left.
   saveChip: {
     position: 'absolute',
     top: 12,
-    left: 12,
+    right: 12,
     width: 36,
     height: 36,
     borderRadius: 18,

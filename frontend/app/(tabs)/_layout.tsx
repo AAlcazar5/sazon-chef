@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform, Alert } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SearchBar from '../../components/ui/SearchBar';
 import SazonFAB from '../../components/sazon/SazonFAB';
@@ -19,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Spacing, ComponentSpacing, Gap } from '../../constants/Spacing';
+import { LinearGradient } from 'expo-linear-gradient';
 import { GradientPresets } from '../../constants/Gradients';
 
 import { useSearchHistory } from '../../hooks/useSearchHistory';
@@ -505,11 +505,16 @@ export default function TabLayout() {
           href: null,
         }}
       />
-      {/* ROADMAP 4.0 A0-a — Profile retired as a tab; opens via avatar in FrostedHeader. */}
+      {/* Profile restored as the trailing tab. The avatar in FrostedHeader
+          still works as a redundant entry point (opens the lightweight
+          ProfileSheet); the tab routes to the full profile screen. */}
       <Tabs.Screen
         name="profile"
         options={{
-          href: null,
+          title: t('tabs.profile'),
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon name="person-outline" color={color} size={size} focused={focused} />
+          ),
         }}
       />
     </Tabs>
@@ -634,8 +639,9 @@ export default function TabLayout() {
             accessibilityLabel="Talk to Sazon"
           />
 
-          {/* Quick Actions Button — gradient pill matching header buttons */}
-
+          {/* Quick Actions Button — matches SazonFAB's template: 36×36 brand
+              coral circle, white glyph in both themes. The two header
+              actions read as a pair. */}
           <HapticTouchableOpacity
             onPress={async () => {
               Animated.sequence([
@@ -673,31 +679,33 @@ export default function TabLayout() {
             accessibilityLabel="Quick actions menu"
             accessibilityRole="button"
             accessibilityHint="Opens menu with options to add recipes, take photos, and more"
-            style={{
-              borderRadius: 100,
-              overflow: 'hidden',
-              shadowColor: '#E84D3D',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 4,
-              elevation: 4,
-            }}
+            style={{ padding: 4 }}
           >
-            <Animated.View style={{ transform: [{ scale: fabScale }] }}>
+            <Animated.View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                overflow: 'hidden',
+                transform: [{ scale: fabScale }],
+              }}
+            >
+              {/* Coral→deep-coral gradient (`primaryCTA`) pairs with the
+                  sage→deep-green Sazon FAB. Same 36×36 footprint, same
+                  white glyph. */}
               <LinearGradient
                 colors={GradientPresets.primaryCTA}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
-                  flexDirection: 'row',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
                   alignItems: 'center',
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  borderRadius: 100,
-                  gap: 5,
+                  justifyContent: 'center',
                 }}
               >
-                <Ionicons name="add" size={18} color="#FFF" />
+                <Ionicons name="add" size={20} color="#FFFFFF" />
               </LinearGradient>
             </Animated.View>
           </HapticTouchableOpacity>

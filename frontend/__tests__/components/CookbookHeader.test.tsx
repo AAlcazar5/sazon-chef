@@ -24,6 +24,14 @@ jest.mock('expo-linear-gradient', () => {
   };
 });
 
+jest.mock('../../components/mascot/Sazon', () => {
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: function MockSazon() { return <View testID="sazon-mascot" />; },
+  };
+});
+
 describe('CookbookHeader', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -31,6 +39,11 @@ describe('CookbookHeader', () => {
     const { getByText } = render(<CookbookHeader />);
     expect(getByText(/Kit/)).toBeTruthy();
     expect(getByText(/chen/)).toBeTruthy();
+  });
+
+  it('renders the Sazon logo (geometry matched to HomeHeader)', () => {
+    const { getByTestId } = render(<CookbookHeader />);
+    expect(getByTestId('sazon-mascot')).toBeTruthy();
   });
 
   it('renders the ProfileAvatarButton in the right slot', () => {

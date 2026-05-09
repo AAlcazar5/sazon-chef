@@ -31,6 +31,8 @@ import CulturalPrimerModal from '../components/recipe/CulturalPrimerModal';
 import FirstCuisineStamp from '../components/celebrations/FirstCuisineStamp';
 import DiscoveryMilestoneInline from '../components/celebrations/DiscoveryMilestoneInline';
 import PostCookRating from '../components/cooking/PostCookRating';
+import DailyCheckIn from '../components/today/DailyCheckIn';
+import { useDailyCheckInGate } from '../hooks/useDailyCheckInGate';
 import CookCompleteCelebration from '../components/cooking/CookCompleteCelebration';
 import CookRecapLine from '../components/cooking/CookRecapLine';
 import DailyPlateShareCard from '../components/celebrations/DailyPlateShareCard';
@@ -120,6 +122,9 @@ export default function CookingScreen() {
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
   const [servings, setServings] = useState(1);
   const [done, setDone] = useState(false);
+  // ROADMAP 4.0 Tier C7 — daily check-in gate (once per local day, surfaced
+  // here on the cook-complete screen rather than the Kitchen tab).
+  const dailyCheckInGate = useDailyCheckInGate();
   const [stepCheckVisible, setStepCheckVisible] = useState(false);
 
   // Timer state
@@ -565,6 +570,17 @@ export default function CookingScreen() {
 
           {/* ROADMAP 4.0 J5 — single-fire discovery milestone (photo / appliance) */}
           <DiscoveryMilestoneInline milestoneKey={discoveryMilestone} />
+
+          {/* ROADMAP 4.0 Tier C7 — Daily check-in. Anchored to the post-cook
+              moment (was on the Kitchen tab where the prompt felt random).
+              The gate hook persists today's-shown date so it doesn't repeat
+              on subsequent cooks the same day. */}
+          {dailyCheckInGate.shouldShow === true && (
+            <DailyCheckIn
+              visible={true}
+              onClose={() => { void dailyCheckInGate.dismiss(); }}
+            />
+          )}
 
           {/* ROADMAP 4.0 J9 — post-cook 5-star bloom; submits taste feedback if mealId resolved */}
           <PostCookRating

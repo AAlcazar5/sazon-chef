@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useColorScheme } from 'nativewind';
+import { GradientPresets } from '../../constants/Gradients';
 import Icon from './Icon';
 import { Icons } from '../../constants/Icons';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
@@ -167,13 +169,20 @@ export default function AnimatedEmptyState({
           >
             <HapticTouchableOpacity
               onPress={handleAction}
-              style={[
-                styles.actionButton,
-                { backgroundColor: isDark ? DarkColors.primary : Colors.primary },
-              ]}
+              style={styles.actionButtonTouchable}
               {...buttonAccessibility(displayActionLabel)}
             >
-              <Text style={styles.actionButtonText}>{displayActionLabel}</Text>
+              {/* Coral→deep-coral gradient (`primaryCTA`) — same preset
+                  the header Quick Actions FAB uses, so the empty-state
+                  CTA reads as a brand-primary action everywhere. */}
+              <LinearGradient
+                colors={GradientPresets.primaryCTA}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButton}
+              >
+                <Text style={styles.actionButtonText}>{displayActionLabel}</Text>
+              </LinearGradient>
             </HapticTouchableOpacity>
           </MotiView>
         </MotiView>
@@ -231,11 +240,16 @@ const styles = StyleSheet.create({
     marginTop: ComponentSpacing.emptyState.descriptionGap,
     lineHeight: FontSize.base * 1.5,
   },
+  // Touchable owns the spacing + rounded clip; the gradient inside fills
+  // edge-to-edge so its colors run all the way to the rounded corners.
+  actionButtonTouchable: {
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    marginTop: ComponentSpacing.emptyState.actionGap,
+  },
   actionButton: {
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    marginTop: ComponentSpacing.emptyState.actionGap,
   },
   actionButtonText: {
     color: '#FFFFFF',

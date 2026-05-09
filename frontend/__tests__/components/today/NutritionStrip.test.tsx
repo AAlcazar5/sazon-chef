@@ -39,11 +39,15 @@ describe('NutritionStrip (D14)', () => {
     expect(queryByTestId('nutrition-strip-empty')).toBeNull();
   });
 
-  it('renders the empty-state copy when no nutrient values are present', () => {
-    const { getByTestId } = render(
+  it('renders nothing when no nutrient values are present (no placeholder copy)', () => {
+    // Previously rendered a "Cook a meal — today's nutrition story starts
+    // here" placeholder; the strip now hides cleanly until there's data.
+    const { queryByTestId, queryByText } = render(
       <NutritionStrip snapshot={{ date: '2026-05-05', mealCount: 0 }} />,
     );
-    expect(getByTestId('nutrition-strip-empty')).toBeTruthy();
+    expect(queryByTestId('nutrition-strip')).toBeNull();
+    expect(queryByTestId('nutrition-strip-empty')).toBeNull();
+    expect(queryByText(/today's nutrition story/i)).toBeNull();
   });
 
   it('renders nothing when snapshot is null', () => {

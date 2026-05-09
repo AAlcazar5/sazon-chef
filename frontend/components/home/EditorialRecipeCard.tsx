@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { HapticPatterns } from '../../constants/Haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import SmartBadges from '../recipe/SmartBadges';
 import type { SuggestedRecipe } from '../../types';
+import { optimizedImageUrl } from '../../utils/imageUtils';
 
 interface EditorialRecipeCardProps {
   recipe: SuggestedRecipe;
@@ -62,6 +63,14 @@ export function EditorialRecipeCard({
   const cookTime = recipe.cookTime ?? 0;
   const calories = recipe.calories ?? 0;
 
+  // Image source resolution — three failure modes (null, empty/whitespace,
+  // broken URL) all fall through to the Ionicons placeholder. Without
+  // imageError state, a stale-cached failure stays "loading" forever.
+  const [imageError, setImageError] = useState(false);
+  const trimmedUrl = recipe.imageUrl?.trim() || '';
+  const showImage = trimmedUrl.length > 0 && !imageError;
+  const optimizedUri = showImage ? optimizedImageUrl(trimmedUrl) : '';
+
   const handleSave = () => {
     HapticPatterns.buttonPress();
     onSave?.(recipe.id);
@@ -88,12 +97,13 @@ export function EditorialRecipeCard({
     >
       {/* Circular photo */}
       <View style={styles.photoContainer}>
-        {recipe.imageUrl ? (
+        {showImage ? (
           <Image
-            source={{ uri: recipe.imageUrl }}
+            source={{ uri: optimizedUri }}
             style={styles.photo}
             contentFit="cover"
             cachePolicy="memory-disk"
+            onError={() => setImageError(true)}
           />
         ) : (
           <View

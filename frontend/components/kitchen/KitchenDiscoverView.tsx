@@ -17,6 +17,8 @@ import { EditorialFontFamily } from '../../constants/Typography';
 import { Shadows } from '../../constants/Shadows';
 import { NewToYouSection } from '../home/NewToYouSection';
 import { BrowseByFamilySection, type FamilyEntry } from '../home/BrowseByFamilySection';
+import DidYouKnowCard from '../home/DidYouKnowCard';
+import SeasonalProduceCard from '../today/SeasonalProduceCard';
 import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 
 const CRAVING_CHIPS = [
@@ -66,6 +68,15 @@ export default function KitchenDiscoverView({ isDark }: KitchenDiscoverViewProps
       showsVerticalScrollIndicator={false}
       testID="kitchen-discover-view"
     >
+      {/* Did You Know? — rotating food trivia. Lives at the top of Discover
+          where editorial curiosity earns the moment. */}
+      <DidYouKnowCard />
+
+      {/* In Season — seasonal produce nudge. Pairs with Did You Know? as a
+          two-card discovery cluster; the Week tab was too crowded with it
+          alongside the shopping-list preview. */}
+      <SeasonalProduceCard />
+
       {/* Cravings, Made Real — flagship tile */}
       <HapticTouchableOpacity
         accessibilityLabel="Cravings, Made Real collection"

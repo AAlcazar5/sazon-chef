@@ -29,11 +29,7 @@ import HomeErrorState from '../../components/home/HomeErrorState';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
 import SoftFilterPill from '../../components/home/SoftFilterPill';
-import HeroRationaleRibbon from '../../components/home/HeroRationaleRibbon';
 import AlmostMadeItSheet from '../../components/home/AlmostMadeItSheet';
-import HeroRerollPill, { type HeroRerollRecipe } from '../../components/home/HeroRerollPill';
-import FirstCuisineBadge from '../../components/home/FirstCuisineBadge';
-import { useReasoningPeekGate } from '../../hooks/useReasoningPeekGate';
 import CollectionPickerModal from '../../components/home/CollectionPickerModal';
 // IA2.6 — AskSazonHomeCard removed; the global SazonFAB (in the
 // Search + Quick-Actions row above the tab bar) replaces this card.
@@ -44,8 +40,6 @@ import QuickActionRow from '../../components/today/QuickActionRow';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import FirstOfDayNote from '../../components/home/FirstOfDayNote';
 import SundayPolaroidCard from '../../components/today/SundayPolaroidCard';
-import SeasonalProduceCard from '../../components/today/SeasonalProduceCard';
-import MoreForYouSection from '../../components/today/MoreForYouSection';
 import CohortSocialProofPill from '../../components/today/CohortSocialProofPill';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
 import { useHomeFilterRowChips } from '../../hooks/useFilterRowChips';
@@ -475,20 +469,9 @@ export default function HomeScreen() {
   // Recipe of the Day — pulled directly from home feed so it always reflects current filters.
   // Bypasses the useRecipeOfTheDay intermediate state to prevent stale values after refetch.
   // When a craving search is active, promote the top craving result as the hero recipe.
-  // ROADMAP 4.0 HX2.1 — re-rolled hero overrides the home-feed pick until the
-  // user navigates away or filters change.
-  const [rerolledHero, setRerolledHero] = useState<HeroRerollRecipe | null>(null);
-  const baseRecipeOfTheDay = isCravingSearch && suggestedRecipes.length > 0
+  const recipeOfTheDay = isCravingSearch && suggestedRecipes.length > 0
     ? suggestedRecipes[0]
     : homeFeed.recipeOfTheDay;
-  const recipeOfTheDay = rerolledHero
-    ? ({
-        ...rerolledHero,
-        // Synthesize the SuggestedRecipe shape — keep the rerolled fields,
-        // null out the score so the UI doesn't show a stale match%.
-        score: { matchPercentage: 0 },
-      } as any)
-    : baseRecipeOfTheDay;
   const loadingRecipeOfTheDay = homeFeed.loading && !homeFeed.recipeOfTheDay;
 
   // Use consolidated home feed data instead of separate useApi('/recipes/suggested')
@@ -660,9 +643,6 @@ export default function HomeScreen() {
     handleQuickMacroFilter,
     handleToggleMealPrepMode,
   });
-
-  // ROADMAP 4.0 HX2.4 — once-per-session reasoning peek gate.
-  const reasoningPeek = useReasoningPeekGate();
 
   // ROADMAP 4.0 FX3.4 — chip ranking by user toggle frequency.
   const { rankedChips, recordChipToggle } = useFilterChipRanking(DEFAULT_FILTER_CHIPS);
@@ -1076,6 +1056,17 @@ export default function HomeScreen() {
         onChipToggle={onRankedChipToggle}
       />
 
+      {/* Quick-action chip row sits directly under the filters (mirrors
+          KitchenModeBar's placement in the Kitchen tab). Surprise Me joins
+          Voice / Snap / Build a plate / Find me a meal here. */}
+      <QuickActionRow
+        onVoice={handleQuickActionVoice}
+        onSnap={handleQuickActionSnap}
+        onBuildAPlate={handleQuickActionBuildAPlate}
+        onSurpriseMe={() => setShowSurpriseModal(true)}
+        onFindMeAMeal={handleQuickActionFindMeAMeal}
+      />
+
       {/* ROADMAP 4.0 FX1.1 — body-only state branches; chrome above stays visible */}
       {bodyState === 'loading' && <HomeLoadingState viewMode={viewMode} />}
 
@@ -1174,28 +1165,16 @@ export default function HomeScreen() {
           onToggleSave={handleSave}
         />
 
-        {/* ROADMAP 4.0 HX2.2 — first-cuisine badge (renders only when this
-            cuisine is one the user has never cooked). */}
-        <FirstCuisineBadge
-          cuisine={(recipeOfTheDay as any)?.cuisine ?? null}
-          onTap={(cuisine) => router.push(`/cultural-primer/${encodeURIComponent(cuisine)}` as never)}
-        />
+        {/* FirstCuisineBadge ("🌍 first time?") removed from under the hero.
+            The cultural primer modal still fires from the cooking-complete
+            flow (J2), which earns the moment more than a small badge under
+            today's recipe. */}
 
-        {/* ROADMAP 4.0 HX0.2 + HX2.4 — rationale ribbon with the once-per-
-            session "tap to peek" pulse dot. */}
-        <HeroRationaleRibbon
-          rationale={(recipeOfTheDay as any)?.rationale ?? null}
-          peekHint={reasoningPeek.showPeek}
-          onPeekDismiss={reasoningPeek.dismissPeek}
-        />
-
-        {/* ROADMAP 4.0 HX2.1 — hero re-roll pill (3 rerolls → SurpriseMeModal). */}
-        {recipeOfTheDay && (
-          <HeroRerollPill
-            onReroll={(recipe) => setRerolledHero(recipe)}
-            onExhausted={() => setShowSurpriseModal(true)}
-          />
-        )}
+        {/* HeroRationaleRibbon (the "• 50g protein per serving" rationale)
+            and HeroRerollPill ("↻ Try another") were removed from the hero
+            stack. The Surprise me chip in the QuickActionRow above covers
+            the re-roll affordance, and the rationale text was crowding the
+            hero without earning the space. */}
 
         {/* ROADMAP 4.0 J4 — Sunday Polaroid drop (renders only on local Sunday) */}
         {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}
@@ -1224,25 +1203,15 @@ export default function HomeScreen() {
 
         {/* ROADMAP 4.0 — Daily check-in moved to Kitchen (above Recently Saved). */}
 
-        {/* ROADMAP 4.0 A1-d — Today quick-action chip row */}
-        <QuickActionRow
-          onVoice={handleQuickActionVoice}
-          onSnap={handleQuickActionSnap}
-          onBuildAPlate={handleQuickActionBuildAPlate}
-          onFindMeAMeal={handleQuickActionFindMeAMeal}
-        />
+        {/* QuickActionRow now sits above the body switch (under FilterRow) —
+            mirrors KitchenModeBar's placement in the Kitchen tab. */}
 
-        {/* ROADMAP 4.0 IA2.6 — Today carry-over consolidation. The 4 editorial
-            discovery / leftover cards used to render unconditionally and crowd
-            the home feed. They now sit inside <MoreForYouSection> which caps
-            visible cards at 2 and tucks the rest behind a "More for you" toggle.
-            User's expand preference persists per-device. */}
-        <MoreForYouSection>
-          <SeasonalProduceCard />
-          <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
-          <StretchHomeCard />
-          <PlateOfWeekCard />
-        </MoreForYouSection>
+        {/* MoreForYouSection wrapper removed — the "More for you (N) / Show
+            less" toggle was redundant once SeasonalProduce + DidYouKnow
+            moved off Today. Render the remaining three cards inline. */}
+        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
+        <StretchHomeCard />
+        <PlateOfWeekCard />
 
         {/* Contextual Recipe Sections (below editorial fold) */}
         <RecipeSectionsGrid

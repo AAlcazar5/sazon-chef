@@ -4,11 +4,14 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import FrostedHeader from '../ui/FrostedHeader';
 import ShopThisWeekPill from './ShopThisWeekPill';
 import ProfileAvatarButton from '../profile/ProfileAvatarButton';
+import Sazon from '../mascot/Sazon';
 import { Colors, DarkColors } from '../../constants/Colors';
-import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
+import { EditorialFontFamily } from '../../constants/Typography';
+import { Space } from '../../constants/tokens';
 
 interface MealPlanHeaderProps {
-  dateRange: string;
+  /** @deprecated — date range now anchors to the Weekly Meal Plan section header. */
+  dateRange?: string;
   isSelectedDateToday: boolean;
   isDark: boolean;
   onJumpToToday: () => void;
@@ -21,7 +24,6 @@ interface MealPlanHeaderProps {
 }
 
 export default function MealPlanHeader({
-  dateRange,
   isSelectedDateToday,
   isDark,
   onJumpToToday,
@@ -30,34 +32,31 @@ export default function MealPlanHeader({
   weekTheme,
 }: MealPlanHeaderProps) {
   return (
-    <FrostedHeader paddingBottom={16} withTopInset>
+    <FrostedHeader paddingBottom={14} withTopInset>
       <View style={styles.headerStack}>
       <View style={styles.headerRow}>
-        {/* Editorial title — date range sits inline to the right of "Week" */}
+        {/* Editorial title — Sazon logo + "This Week". The date range now
+            anchors to the Weekly Meal Plan section header instead of riding
+            the title (which keeps the chrome compact + matches HomeHeader). */}
         <View style={styles.titleBlock}>
+          <Sazon variant="orange" motion="idle" size={36} />
           <Text
             style={[styles.title, { color: isDark ? DarkColors.text.primary : '#111827' }]}
             accessibilityRole="header"
           >
             This{' '}
             <Text style={[styles.titleAccent, { color: isDark ? DarkColors.text.primary : '#111827' }]}>
-              week
+              Week
             </Text>
-          </Text>
-          <Text
-            style={[styles.dateRange, { color: isDark ? DarkColors.text.tertiary : '#9CA3AF' }]}
-            numberOfLines={1}
-          >
-            {dateRange}
           </Text>
         </View>
 
-        {/* Header-right action cluster: Shop pill + Sazon FAB + Today jump + Profile avatar */}
+        {/* Header-right action cluster: Shop pill + Today jump + Profile avatar */}
         <View style={styles.actionCluster}>
           {onShopThisWeek && missingShopCount > 0 && (
             <ShopThisWeekPill missingCount={missingShopCount} onPress={onShopThisWeek} />
           )}
-          <ProfileAvatarButton size={32} />
+          <ProfileAvatarButton size={36} />
           {!isSelectedDateToday && (
             <HapticTouchableOpacity
               onPress={onJumpToToday}
@@ -89,12 +88,12 @@ export default function MealPlanHeader({
   );
 }
 
-const TITLE_SIZE = 40;
+const TITLE_SIZE = 36;
 
 const styles = StyleSheet.create({
   headerStack: {
     flexDirection: 'column',
-    paddingHorizontal: 20,
+    paddingHorizontal: Space['5'],
     gap: 6,
   },
   headerRow: {
@@ -115,25 +114,21 @@ const styles = StyleSheet.create({
   titleBlock: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
+    gap: Space['2'],
   },
   title: {
     fontFamily: EditorialFontFamily.display.bold,
     fontSize: TITLE_SIZE,
     lineHeight: TITLE_SIZE * 1.04,
-    letterSpacing: -1.4,
+    letterSpacing: -1.6,
     flexShrink: 0,
   },
   titleAccent: {
     fontFamily: EditorialFontFamily.displayItalic.bold,
     fontStyle: 'italic',
     fontSize: TITLE_SIZE,
-    letterSpacing: -1.4,
-  },
-  dateRange: {
-    ...EditorialTypography.eyebrow,
-    marginLeft: 12,
-    flexShrink: 1,
+    letterSpacing: -1.6,
   },
   actionCluster: {
     flexDirection: 'row',

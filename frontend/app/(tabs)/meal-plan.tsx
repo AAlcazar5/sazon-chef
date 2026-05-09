@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Alert } from 'react-native';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import { EditorialSectionHeader } from '../../components/home/EditorialSectionHeader';
+import ShoppingListPreview from '../../components/meal-plan/ShoppingListPreview';
 import WhyThisPlanLink from '../../components/coach/WhyThisPlanLink';
 import { useFoodIntelUserState } from '../../hooks/useFoodIntelUserState';
 import AnimatedActivityIndicator from '../../components/ui/AnimatedActivityIndicator';
@@ -392,8 +393,9 @@ export default function MealPlanScreen() {
   const memoizedGroupedMeals = useMemo(() => groupMealsByType(hourlyMeals), [hourlyMeals]);
   const formattedSelectedDate = useMemo(() => formatDate(selectedDate), [selectedDate]);
 
-  // ── ROADMAP 4.0 A2-b: Shop this week pill — count unpurchased items on the active list ──
+  // ── ROADMAP 4.0 A2-b + Tier SH: Shop pill + inline ShoppingListPreview ──
   const [missingShopCount, setMissingShopCount] = useState(0);
+  const [totalShopCount, setTotalShopCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -406,12 +408,17 @@ export default function MealPlanScreen() {
           if (activeList?.items) {
             const unpurchased = activeList.items.filter((i: { purchased?: boolean }) => !i.purchased).length;
             setMissingShopCount(unpurchased);
+            setTotalShopCount(activeList.items.length);
           } else {
             setMissingShopCount(0);
+            setTotalShopCount(0);
           }
         }
       } catch {
-        if (!cancelled) setMissingShopCount(0);
+        if (!cancelled) {
+          setMissingShopCount(0);
+          setTotalShopCount(0);
+        }
       }
     };
     fetchShopCount();
@@ -778,7 +785,6 @@ export default function MealPlanScreen() {
         ) : (
           <>
         <MealPlanHeader
-          dateRange={formatDateRange(weekDates[0], weekDates[6])}
           isSelectedDateToday={isToday(selectedDate)}
           isDark={isDark}
           onJumpToToday={handleJumpToToday}
@@ -832,7 +838,22 @@ export default function MealPlanScreen() {
           {/* Editorial intro: MONTH · WEEK # / "This week." / subtitle */}
           <EditorialMealPlanIntro weekStart={weekDates[0]} selectedDate={selectedDate} />
 
-          {/* Weekly Meal Plan calendar — directly under the intro */}
+          {/* Tier SH — inline shopping-list preview. Anchored to the top of
+              the Week scroll so the shop status is above the fold. Hides
+              when there's no active list with items. Sazon helper
+              interventions (SH2.x — budget swaps, leftover bridges) will
+              layer in here. */}
+          <ShoppingListPreview
+            totalCount={totalShopCount}
+            unpurchasedCount={missingShopCount}
+            onPress={handleShopThisWeek}
+          />
+
+          {/* SeasonalProduceCard moved to Kitchen → Discover (joins
+              DidYouKnowCard in the discovery cluster) — Week was getting
+              crowded with the always-on shopping preview. */}
+
+          {/* Weekly Meal Plan calendar */}
           <WeeklyCalendar
             weekDates={weekDates}
             selectedDate={selectedDate}
@@ -845,6 +866,7 @@ export default function MealPlanScreen() {
             onNextWeek={handleNextWeek}
             onShowDayMeals={handleShowDayMeals}
             onRegenerateDay={handleRegenerateDay}
+            dateRange={formatDateRange(weekDates[0], weekDates[6])}
           />
 
           {/* Weekly Macro Budget */}

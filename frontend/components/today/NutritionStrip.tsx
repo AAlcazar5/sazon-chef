@@ -10,7 +10,7 @@
 // "you're low on iron".
 
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Text, ScrollView, StyleSheet } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { PastelTokens, AccentTokens, Ink, Type, Radius, Space } from '../../constants/tokens';
@@ -46,20 +46,9 @@ export default function NutritionStrip({
   if (!snapshot || density === 'minimal') return null;
 
   const pills = DAILY_TOP_NUTRIENTS.filter(key => typeof snapshot[key] === 'number');
-  if (pills.length === 0) {
-    return (
-      <View testID="nutrition-strip-empty" style={styles.emptyWrap}>
-        <Text
-          style={[
-            styles.emptyText,
-            { color: isDark ? Ink.dark.tertiary : Ink.light.tertiary },
-          ]}
-        >
-          Cook a meal — today's nutrition story starts here.
-        </Text>
-      </View>
-    );
-  }
+  // No nutrients today → render nothing rather than a placeholder line.
+  // The strip reappears when the user logs their first meal.
+  if (pills.length === 0) return null;
 
   return (
     <ScrollView
@@ -153,14 +142,5 @@ const styles = StyleSheet.create({
     fontFamily: Type.eyebrow.fontFamily,
     fontSize: 11,
     marginTop: 2,
-  },
-  emptyWrap: {
-    paddingHorizontal: Space['5'],
-    paddingVertical: Space['3'],
-  },
-  emptyText: {
-    fontFamily: Type.label.fontFamily,
-    fontSize: 13,
-    fontStyle: 'italic',
   },
 });

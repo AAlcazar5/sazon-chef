@@ -5,13 +5,15 @@ import { View, Text, Modal, TextInput, Image, Animated } from 'react-native';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import FrostedHeader from '../ui/FrostedHeader';
+import Sazon from '../mascot/Sazon';
 import { useState, useEffect, useRef } from 'react';
 import Icon from '../ui/Icon';
 import AnimatedStatCounter from '../ui/AnimatedStatCounter';
 import ShimmerBadge from '../ui/ShimmerBadge';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
-import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
+import { Space } from '../../constants/tokens';
+import { EditorialFontFamily } from '../../constants/Typography';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { UserProfile } from '../../types';
 
@@ -86,22 +88,34 @@ export default function ProfileHeader({
 
   return (
     <>
-      <FrostedHeader paddingBottom={20} withTopInset>
-        <View style={{ paddingHorizontal: 20 }}>
-          {/* Editorial title */}
-          <Text
+      <FrostedHeader paddingBottom={14} withTopInset>
+        <View style={{ paddingHorizontal: Space['5'] }}>
+          {/* Editorial title — geometry matches HomeHeader / CookbookHeader /
+              MealPlanHeader / EditorialShoppingIntro: Sazon logo (36) +
+              Fraunces 36 split (regular + italic accent), FrostedHeader
+              paddingBottom 14. */}
+          <View
             style={{
-              fontFamily: EditorialFontFamily.display.bold,
-              fontSize: 48,
-              lineHeight: 50,
-              letterSpacing: -1.6,
-              color: isDark ? '#F3F4F6' : '#111827',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: Space['2'],
               marginBottom: 16,
             }}
             accessibilityRole="header"
           >
-            Your Pro<Text style={{ fontFamily: EditorialFontFamily.displayItalic.bold, fontStyle: 'italic' }}>file</Text>
-          </Text>
+            <Sazon variant="orange" motion="idle" size={36} />
+            <Text
+              style={{
+                fontFamily: EditorialFontFamily.display.bold,
+                fontSize: 36,
+                lineHeight: 36 * 1.04,
+                letterSpacing: -1.6,
+                color: isDark ? '#F3F4F6' : '#111827',
+              }}
+            >
+              Your Pro<Text style={{ fontFamily: EditorialFontFamily.displayItalic.bold, fontStyle: 'italic' }}>file</Text>
+            </Text>
+          </View>
 
           {/* Avatar + name row */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>

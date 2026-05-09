@@ -135,7 +135,11 @@ function RecipeSectionsGrid({
   const cardTitleRotation = isDark ? TITLE_ROTATION_DARK : TITLE_ROTATION;
 
   return (
-    <View className="px-4">
+    // mt-6 separates the contextual recipe rails from the editorial
+    // discovery cards above (PairingDiscoveryCard / StretchHomeCard /
+    // PlateOfWeekCard) — without it the section header sat flush against
+    // the previous card with only 8px of card-margin.
+    <View className="px-4 mt-6">
       {filtered.map((section) => {
         const isCollapsed = collapsedSections[section.key];
         const isQuickMeals = section.key === 'quick-meals';

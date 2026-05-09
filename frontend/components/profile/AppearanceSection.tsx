@@ -2,11 +2,13 @@
 // Collapsible appearance section with dark mode toggle and theme mode selector
 
 import { View, Text, Switch, Animated, Easing } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useState, useRef } from 'react';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { GradientPresets } from '../../constants/Gradients';
 import { Shadows } from '../../constants/Shadows';
 import { Duration } from '../../constants/Animations';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -110,32 +112,53 @@ export default function AppearanceSection() {
               { mode: 'light' as const, icon: Icons.LIGHT_MODE, label: 'Light' },
               { mode: 'dark' as const, icon: Icons.DARK_MODE, label: 'Dark' },
               { mode: 'system' as const, icon: Icons.SYSTEM_MODE_OUTLINE, label: 'System' },
-            ]).map(({ mode, icon, label }) => (
-              <HapticTouchableOpacity
-                key={mode}
-                onPress={() => setThemeMode(mode)}
-                className={`flex-1 py-2 px-3 rounded-lg border ${
-                  themeMode === mode
-                    ? ''
-                    : 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600'
-                }`}
-                style={themeMode === mode ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary, borderColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
-              >
+            ]).map(({ mode, icon, label }) => {
+              const isActive = themeMode === mode;
+              const content = (
                 <View className="items-center">
                   <Icon
                     name={icon}
                     size={IconSizes.XS}
-                    color={themeMode === mode ? '#FFFFFF' : (theme === 'dark' ? '#D1D5DB' : '#6B7280')}
+                    color={isActive ? '#FFFFFF' : (theme === 'dark' ? '#D1D5DB' : '#6B7280')}
                     accessibilityLabel={label}
                   />
                   <Text className={`text-center font-medium mt-1 ${
-                    themeMode === mode ? 'text-white' : 'text-gray-700 dark:text-gray-100'
+                    isActive ? 'text-white' : 'text-gray-700 dark:text-gray-100'
                   }`}>
                     {label}
                   </Text>
                 </View>
-              </HapticTouchableOpacity>
-            ))}
+              );
+              return (
+                <HapticTouchableOpacity
+                  key={mode}
+                  onPress={() => setThemeMode(mode)}
+                  // The active button uses the brand `primaryCTA` gradient
+                  // (coral → deep coral) so the selected state reads as a
+                  // brand action — matches the gradient FABs in the header
+                  // and the empty-state CTAs.
+                  className={`flex-1 rounded-lg border ${
+                    isActive
+                      ? 'overflow-hidden'
+                      : 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 py-2 px-3'
+                  }`}
+                  style={isActive ? { borderColor: 'transparent' } : undefined}
+                >
+                  {isActive ? (
+                    <LinearGradient
+                      colors={GradientPresets.primaryCTA}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ paddingVertical: 8, paddingHorizontal: 12 }}
+                    >
+                      {content}
+                    </LinearGradient>
+                  ) : (
+                    content
+                  )}
+                </HapticTouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </Animated.View>

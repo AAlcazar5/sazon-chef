@@ -168,6 +168,9 @@ interface WeeklyCalendarProps {
   onShowDayMeals: (date: Date) => void;
   /** Regenerate a single day (long press) */
   onRegenerateDay?: (date: Date) => void;
+  /** Pre-formatted date range (e.g. "Apr 28 – May 4") shown alongside
+   *  the section title. */
+  dateRange?: string;
 }
 
 function WeeklyCalendar({
@@ -182,6 +185,7 @@ function WeeklyCalendar({
   onNextWeek,
   onShowDayMeals,
   onRegenerateDay,
+  dateRange,
 }: WeeklyCalendarProps) {
   const swipeTranslateX = useSharedValue(0);
 
@@ -206,12 +210,30 @@ function WeeklyCalendar({
   return (
     <View className="px-4 mb-4">
       <View className="flex-row items-center justify-between mb-3">
-        <Text
-          numberOfLines={1}
-          style={{ flex: 1, marginRight: 8, fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}
-        >
-          Weekly Meal Plan
-        </Text>
+        <View style={{ flex: 1, marginRight: 8, flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap' }}>
+          <Text
+            numberOfLines={1}
+            style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: isDark ? DarkColors.text.primary : Colors.text.primary }}
+          >
+            Weekly Meal Plan
+          </Text>
+          {dateRange && (
+            <Text
+              testID="weekly-meal-plan-date-range"
+              numberOfLines={1}
+              style={{
+                marginLeft: 8,
+                fontSize: 12,
+                fontFamily: 'PlusJakartaSans_600SemiBold',
+                letterSpacing: 0.6,
+                textTransform: 'uppercase',
+                color: isDark ? DarkColors.text.tertiary : '#9CA3AF',
+              }}
+            >
+              {dateRange}
+            </Text>
+          )}
+        </View>
         <View className="flex-row items-center space-x-2">
           <HapticTouchableOpacity
             onPress={onPreviousWeek}

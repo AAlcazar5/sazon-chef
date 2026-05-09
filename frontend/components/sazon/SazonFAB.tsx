@@ -8,12 +8,12 @@
 // supplies its own `getContextSeed` callback.
 
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors } from '../../constants/Colors';
-import { useTheme } from '../../contexts/ThemeContext';
+import { GradientPresets } from '../../constants/Gradients';
 import { useSazonSheet } from '../../contexts/SazonSheetContext';
 
 interface SazonFABProps {
@@ -30,8 +30,6 @@ export default function SazonFAB({
   size,
   accessibilityLabel = 'Talk to Sazon',
 }: SazonFABProps) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { open } = useSazonSheet();
 
   const handlePress = () => {
@@ -58,13 +56,14 @@ export default function SazonFAB({
       accessibilityHint="Long-press to ask about this screen"
       style={styles.touchable}
     >
-      <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-          },
-        ]}
+      {/* Sage→deep-green gradient (`successCTA` preset) — same kitchen-warm
+          / produce-cool pairing as the coral Quick Actions FAB next to it.
+          White glyph in both themes per spec. */}
+      <LinearGradient
+        colors={GradientPresets.successCTA}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.container}
       >
         <Icon
           name={Icons.CHATBUBBLES}
@@ -72,7 +71,7 @@ export default function SazonFAB({
           color="#FFFFFF"
           accessibilityLabel=""
         />
-      </View>
+      </LinearGradient>
     </HapticTouchableOpacity>
   );
 }

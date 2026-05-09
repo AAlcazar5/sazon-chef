@@ -42,7 +42,7 @@ describe('PlateHeroCard', () => {
     expect(getByTestId('hero')).toBeTruthy();
   });
 
-  it('renders circular photo at 200px', () => {
+  it('renders the circular photo inset within the card (does not bleed past the edge)', () => {
     const { getByTestId } = render(
       <PlateHeroCard recipe={recipe} onPress={jest.fn()} saved={false} onToggleSave={jest.fn()} testID="hero" />
     );
@@ -50,12 +50,14 @@ describe('PlateHeroCard', () => {
     const flatStyle = Array.isArray(photo.props.style)
       ? Object.assign({}, ...photo.props.style.filter(Boolean))
       : photo.props.style;
-    expect(flatStyle.width).toBe(200);
-    expect(flatStyle.height).toBe(200);
-    expect(flatStyle.borderRadius).toBe(100);
+    expect(flatStyle.width).toBe(144);
+    expect(flatStyle.height).toBe(144);
+    expect(flatStyle.borderRadius).toBe(72);
+    // The photo no longer bleeds past the card's right edge — no negative margin.
+    expect(flatStyle.marginRight ?? 0).toBeGreaterThanOrEqual(0);
   });
 
-  it('container has overflow visible', () => {
+  it('container clips the photo to the rounded card boundary', () => {
     const { getByTestId } = render(
       <PlateHeroCard recipe={recipe} onPress={jest.fn()} saved={false} onToggleSave={jest.fn()} testID="hero" />
     );
@@ -63,7 +65,7 @@ describe('PlateHeroCard', () => {
     const flatStyle = Array.isArray(container.props.style)
       ? Object.assign({}, ...container.props.style.filter(Boolean))
       : container.props.style;
-    expect(flatStyle.overflow).toBe('visible');
+    expect(flatStyle.overflow).toBe('hidden');
   });
 
   it('save chip toggles', () => {

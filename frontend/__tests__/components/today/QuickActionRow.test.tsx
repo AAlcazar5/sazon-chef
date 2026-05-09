@@ -37,6 +37,7 @@ const baseHandlers = {
   onVoice: jest.fn(),
   onSnap: jest.fn(),
   onBuildAPlate: jest.fn(),
+  onSurpriseMe: jest.fn(),
   onFindMeAMeal: jest.fn(),
 };
 
@@ -47,7 +48,7 @@ describe('<QuickActionRow />', () => {
     mockSetItem.mockResolvedValue(undefined);
   });
 
-  it('renders all 4 action chips', async () => {
+  it('renders all 5 action chips (Voice, Snap, Build a plate, Surprise me, Find me a meal)', async () => {
     const { getByTestId } = render(<QuickActionRow {...baseHandlers} />);
     await act(async () => {
       await Promise.resolve();
@@ -55,7 +56,20 @@ describe('<QuickActionRow />', () => {
     expect(getByTestId('quick-action-voice')).toBeTruthy();
     expect(getByTestId('quick-action-snap')).toBeTruthy();
     expect(getByTestId('quick-action-build-a-plate')).toBeTruthy();
+    expect(getByTestId('quick-action-surprise-me')).toBeTruthy();
     expect(getByTestId('quick-action-find-me-a-meal')).toBeTruthy();
+  });
+
+  it('fires onSurpriseMe when the surprise-me chip is tapped', async () => {
+    const onSurpriseMe = jest.fn();
+    const { getByTestId } = render(
+      <QuickActionRow {...baseHandlers} onSurpriseMe={onSurpriseMe} />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.press(getByTestId('quick-action-surprise-me'));
+    expect(onSurpriseMe).toHaveBeenCalledTimes(1);
   });
 
   it('fires correct handler when chip is tapped', async () => {
@@ -103,7 +117,7 @@ describe('<QuickActionRow />', () => {
       await Promise.resolve();
     });
     const chips = getAllByTestId(/quick-action-/);
-    expect(chips.length).toBe(4);
+    expect(chips.length).toBe(5);
   });
 
   it('exposes accessibilityRole="button" on each chip', async () => {
@@ -114,6 +128,7 @@ describe('<QuickActionRow />', () => {
     expect(getByTestId('quick-action-voice').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-snap').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-build-a-plate').props.accessibilityRole).toBe('button');
+    expect(getByTestId('quick-action-surprise-me').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-find-me-a-meal').props.accessibilityRole).toBe('button');
   });
 
@@ -125,6 +140,7 @@ describe('<QuickActionRow />', () => {
     expect(getByLabelText(/Voice composer/i)).toBeTruthy();
     expect(getByLabelText(/Snap to log/i)).toBeTruthy();
     expect(getByLabelText(/Build a plate/i)).toBeTruthy();
+    expect(getByLabelText(/Surprise me/i)).toBeTruthy();
     expect(getByLabelText(/Find me a meal/i)).toBeTruthy();
   });
 
@@ -136,6 +152,7 @@ describe('<QuickActionRow />', () => {
     expect(getByText(/Voice/)).toBeTruthy();
     expect(getByText(/Snap/)).toBeTruthy();
     expect(getByText(/Build/)).toBeTruthy();
+    expect(getByText(/Surprise me/)).toBeTruthy();
     expect(getByText(/Find me/)).toBeTruthy();
   });
 });

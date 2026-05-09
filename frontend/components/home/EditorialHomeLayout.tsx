@@ -5,7 +5,6 @@ import { VerticalCategoryRail } from '../ui/VerticalCategoryRail';
 import { PlateHeroCard } from '../ui/PlateHeroCard';
 import HeroCohortOverlay from './HeroCohortOverlay';
 import PantryPlateHeroCard from './PantryPlateHeroCard';
-import DidYouKnowCard from './DidYouKnowCard';
 import KitchenIQPromoCard from './KitchenIQPromoCard';
 import ReverseDiscoveryCard, {
   type ReverseDiscoveryCandidate,
@@ -134,8 +133,8 @@ export function EditorialHomeLayout({
         <PantryPlateHeroCard plate={tonightsPlate} />
       )}
 
-      {/* Group 10R Surface 3 — rotating "Did You Know?" tip */}
-      <DidYouKnowCard />
+      {/* DidYouKnowCard moved to Kitchen → Discover view (its natural home —
+          educational discovery surface, not the personalized Today feed). */}
 
       {/* Group 10S Surface 4 — Kitchen IQ promo for the most recent unlock */}
       <KitchenIQPromoCard />
