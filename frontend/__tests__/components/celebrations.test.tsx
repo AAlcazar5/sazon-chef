@@ -44,6 +44,26 @@ jest.mock('@expo/vector-icons', () => ({
 
 // ── CelebrationOverlay Tests ──────────────────────────────────────────────
 
+// CelebrationOverlay queues confetti via Animated.timing with 1.2–2s
+// useNativeDriver durations. The jest-expo native-driver mock translates
+// those into real setTimeout callbacks that fire long after these tests
+// end, then re-enter Animated.timing — which leaks past the suite boundary
+// and crashes the worker after teardown. Replace the animation primitives
+// with inert no-ops at module load (before CelebrationOverlay's useEffect
+// can ever queue real animations).
+const inertAnimation = () => ({
+  start: (cb?: (r: { finished: boolean }) => void) => cb?.({ finished: true }),
+  stop: jest.fn(),
+  reset: jest.fn(),
+});
+(Animated as any).timing = inertAnimation;
+(Animated as any).sequence = inertAnimation;
+(Animated as any).parallel = inertAnimation;
+(Animated as any).delay = inertAnimation;
+(Animated as any).spring = inertAnimation;
+if ((Animated as any).stagger) (Animated as any).stagger = inertAnimation;
+if ((Animated as any).loop) (Animated as any).loop = inertAnimation;
+
 describe('CelebrationOverlay', () => {
   const { default: CelebrationOverlay } = require('../../components/celebrations/CelebrationOverlay');
 
@@ -53,6 +73,7 @@ describe('CelebrationOverlay', () => {
   });
 
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 

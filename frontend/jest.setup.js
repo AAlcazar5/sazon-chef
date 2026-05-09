@@ -135,6 +135,39 @@ jest.mock('./contexts/AuthContext', () => {
   };
 });
 
+// Belt-and-braces guard against cross-suite Animated leaks.
+//
+// Tests that use the real RN Animated API (via Animated.View / Animated.Text
+// / Animated.timing) can leak setTimeout-backed callbacks past their suite
+// boundary. When a leaked callback fires later, jest.resetModules() in a
+// sibling suite (e.g. revenueCat / sentry) may have invalidated the
+// react-native module graph, which surfaces as
+//   • `Cannot read properties of undefined (reading 'timing')` (Animated)
+//   • `_bezier is not a function`                              (Easing)
+// neither of which is the symptom test's fault.
+//
+// Replace Easing.bezier / .ease with identity functions so a stale timer
+// firing into a torn-down module graph degrades into a no-op rather than
+// crashing the worker. Real animations in app code aren't affected — this
+// path is only hit by the JS-driven Animated mock inside Jest.
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Easing = require('react-native/Libraries/Animated/Easing').default
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    ?? require('react-native/Libraries/Animated/Easing');
+  if (Easing && typeof Easing === 'object') {
+    const identity = (x) => x;
+    Easing.bezier = () => identity;
+    Easing.ease = identity;
+    Easing.linear = identity;
+    Easing.in = () => identity;
+    Easing.out = () => identity;
+    Easing.inOut = () => identity;
+  }
+} catch {
+  // Easing module not available — fall through silently.
+}
+
 // expo-av native module isn't available in jest. useVoicePlayback (used by
 // app/cooking.tsx) imports Audio at module level, so any test that pulls
 // CookingScreen explodes with "Cannot find native module 'ExponentAV'".

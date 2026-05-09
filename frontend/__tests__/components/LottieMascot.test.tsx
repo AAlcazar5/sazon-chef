@@ -5,7 +5,29 @@
 // - Lottie plays on peak moments (via CelebrationOverlay)
 
 import React from 'react';
+import { Animated } from 'react-native';
 import { render } from '@testing-library/react-native';
+
+// Neutralize Animated primitives at module load so AnimatedLottieMascot
+// (and the real CelebrationOverlay rendered later in this file) cannot
+// queue 1.2–2s setTimeouts that leak past the test boundary and crash
+// later suites with `_reactNative.Animated is undefined` once any other
+// suite calls jest.resetModules().
+const inertAnimation = () => ({
+  start: (cb?: (r: { finished: boolean }) => void) => cb?.({ finished: true }),
+  stop: jest.fn(),
+  reset: jest.fn(),
+});
+(Animated as any).timing = inertAnimation;
+(Animated as any).sequence = inertAnimation;
+(Animated as any).parallel = inertAnimation;
+(Animated as any).delay = inertAnimation;
+(Animated as any).spring = inertAnimation;
+if ((Animated as any).stagger) (Animated as any).stagger = inertAnimation;
+if ((Animated as any).loop) (Animated as any).loop = inertAnimation;
+afterEach(() => {
+  jest.clearAllTimers();
+});
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 

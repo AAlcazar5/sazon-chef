@@ -52,20 +52,19 @@ jest.mock('../../../lib/foodIntelMatcher', () => ({
   recordTipEngagement: jest.fn(() => Promise.resolve()),
 }));
 
-jest.mock(
-  '../../../hooks/useFoodIntelUserState',
-  () => ({
-    useFoodIntelUserState: () => ({
-      userId: 'user_test',
-      cookHistory: { cuisines: [] },
-      topAffinityIngredients: [],
-      rolling7dNutrientGaps: [],
-      skillTier: 'cook',
-      goalPhase: 'maintain',
-    }),
+// `{ virtual: true }` is for modules that don't exist on disk; this hook
+// is a real file. Without that flag jest correctly replaces the module
+// and the test gets the deterministic `user_test` userId it asserts on.
+jest.mock('../../../hooks/useFoodIntelUserState', () => ({
+  useFoodIntelUserState: () => ({
+    userId: 'user_test',
+    cookHistory: { cuisines: [] },
+    topAffinityIngredients: [],
+    rolling7dNutrientGaps: [],
+    skillTier: 'cook',
+    goalPhase: 'maintain',
   }),
-  { virtual: true },
-);
+}));
 
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';

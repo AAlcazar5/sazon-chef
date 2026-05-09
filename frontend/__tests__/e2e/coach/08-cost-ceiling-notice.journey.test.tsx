@@ -171,9 +171,7 @@ describe('Journey 8 — Cost ceiling soft notice', () => {
     );
     fireEvent.press(getByLabelText('Send message to coach'));
 
-    await waitFor(() => {
-      expect(findByText('Here is a recipe suggestion.')).toBeTruthy();
-    });
+    await findByText('Here is a recipe suggestion.');
 
     // CostNotice banner must be absent.
     expect(queryByLabelText(/Coach is at reduced power until tomorrow/i)).toBeNull();
