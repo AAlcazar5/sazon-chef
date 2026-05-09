@@ -649,7 +649,10 @@ model Meal {
   date     DateTime
   mealType String
   recipeId String?
-  recipe   Recipe?  @relation(fields: [recipeId], references: [id])
+  // M4: explicit SetNull. Was relying on Prisma's default-for-optional behavior
+  // which is opaque; making it explicit prevents future surprise when hard
+  // recipe deletes ship (today recipes are soft-deleted so this is dormant).
+  recipe   Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
 
   foodItemId String?
   foodItem   FoodItem? @relation(fields: [foodItemId], references: [id])
@@ -677,6 +680,11 @@ model Meal {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // M3: composite index for the two hottest queries — `findMany({ where:
+  // { mealPlanId } })` on plan load and date-scoped day views. The
+  // `(mealPlanId, date)` ordering covers both because Meal queries are
+  // always plan-scoped first.
+  @@index([mealPlanId, date])
   @@map("meals")
 }
 
@@ -707,7 +715,8 @@ model TemplateMeal {
   dayIndex Int // 0-6 (relative day offset within the week)
   mealType String // "breakfast", "lunch", "dinner", "snack"
   recipeId String?
-  recipe   Recipe? @relation(fields: [recipeId], references: [id])
+  // M4: explicit SetNull (matches Meal.recipe). Same rationale.
+  recipe   Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
 
   customName        String?
   customDescription String?
@@ -793,6 +802,7 @@ model MealPrepPortion {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId]) // M3: every meal-prep + shopping-list call filters on userId
   @@map("meal_prep_portions")
 }
 
@@ -816,6 +826,7 @@ model MealPrepSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId]) // M3: session list is always userId-scoped
   @@map("meal_prep_sessions")
 }
 
@@ -1040,6 +1051,7 @@ model IngredientCost {
   lastUpdated    DateTime @default(now())
   createdAt      DateTime @default(now())
 
+  @@index([userId]) // M3: 4 call sites filter by userId; was full-scanning
   @@map("ingredient_costs")
 }
 
