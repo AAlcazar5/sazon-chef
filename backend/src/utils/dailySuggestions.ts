@@ -290,7 +290,7 @@ function calculateMealTypeScore(recipe: any, mealType: string, macroTarget: Macr
   return Math.round((macroScore * 0.6 + score * 0.4));
 }
 
-function generateSuggestionReasoning(
+export function generateSuggestionReasoning(
   recipe: any,
   mealType: string,
   score: any,
@@ -384,7 +384,7 @@ function calculateMacroProgress(totalMacros: any, macroGoals: any): {
   };
 }
 
-function formatCookTime(minutes: number): string {
+export function formatCookTime(minutes: number): string {
   if (minutes < 60) {
     return `${minutes} minutes`;
   } else {
@@ -398,7 +398,7 @@ function formatCookTime(minutes: number): string {
   }
 }
 
-function assessDifficulty(recipe: any): 'easy' | 'medium' | 'hard' {
+export function assessDifficulty(recipe: any): 'easy' | 'medium' | 'hard' {
   const cookTime = recipe.cookTime;
   const ingredientCount = recipe.ingredients?.length || 0;
   const instructionCount = recipe.instructions?.length || 0;

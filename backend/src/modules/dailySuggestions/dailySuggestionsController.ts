@@ -3,7 +3,13 @@ import { logger } from '../../utils/logger';
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/utils/authHelper';
-import { generateDailySuggestions, getDailySuggestionInsights } from '@/utils/dailySuggestions';
+import {
+  generateDailySuggestions,
+  getDailySuggestionInsights,
+  generateSuggestionReasoning,
+  formatCookTime,
+  assessDifficulty,
+} from '@/utils/dailySuggestions';
 import { getCurrentTemporalContext, analyzeUserTemporalPatterns } from '@/utils/temporalScoring';
 import { getUserBehaviorData } from '../recipe/recipeController';
 
@@ -423,62 +429,3 @@ function calculateMealTypeScore(recipe: any, mealType: string, macroTarget: any)
   return Math.round((macroScore * 0.6 + score * 0.4));
 }
 
-function generateSuggestionReasoning(recipe: any, mealType: string, score: any, context: any): string[] {
-  const reasoning: string[] = [];
-  
-  if (score.total >= 80) {
-    reasoning.push(`Perfect match for ${mealType} (${score.total}% compatibility)`);
-  } else if (score.total >= 60) {
-    reasoning.push(`Good choice for ${mealType} (${score.total}% compatibility)`);
-  } else {
-    reasoning.push(`Suitable for ${mealType} (${score.total}% compatibility)`);
-  }
-  
-  if (score.baseScore?.macroScore >= 70) {
-    reasoning.push('Excellent macro balance for your goals');
-  }
-  
-  if (score.temporalScore?.total >= 80) {
-    reasoning.push('Perfect timing for this meal period');
-  }
-  
-  if (score.behavioralScore?.total >= 70) {
-    reasoning.push('Matches your taste preferences');
-  }
-  
-  return reasoning;
-}
-
-function formatCookTime(minutes: number): string {
-  if (minutes < 60) {
-    return `${minutes} minutes`;
-  } else {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    if (remainingMinutes === 0) {
-      return `${hours} hour${hours > 1 ? 's' : ''}`;
-    } else {
-      return `${hours}h ${remainingMinutes}m`;
-    }
-  }
-}
-
-function assessDifficulty(recipe: any): 'easy' | 'medium' | 'hard' {
-  const cookTime = recipe.cookTime;
-  const ingredientCount = recipe.ingredients?.length || 0;
-  
-  let difficultyScore = 0;
-  
-  if (cookTime <= 15) difficultyScore += 1;
-  else if (cookTime <= 30) difficultyScore += 2;
-  else if (cookTime <= 60) difficultyScore += 3;
-  else difficultyScore += 4;
-  
-  if (ingredientCount <= 5) difficultyScore += 1;
-  else if (ingredientCount <= 10) difficultyScore += 2;
-  else difficultyScore += 3;
-  
-  if (difficultyScore <= 3) return 'easy';
-  else if (difficultyScore <= 6) return 'medium';
-  else return 'hard';
-}
