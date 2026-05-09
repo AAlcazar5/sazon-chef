@@ -51,8 +51,9 @@ export function EditorialRecipeCard({
   const isDark = colorScheme === 'dark';
   // Translucent strip + action buttons over jewel-dark cards use ivory-on-cocoa instead of white-on-pastel
   const macroRowBg = isDark ? 'rgba(245,239,230,0.08)' : 'rgba(255,255,255,0.55)';
-  const actionBtnBg = isDark ? 'rgba(245,239,230,0.10)' : 'rgba(255,255,255,0.7)';
-  const actionBtnActiveBg = isDark ? 'rgba(245,239,230,0.18)' : '#FFFFFF';
+  const actionBtnBg = isDark ? 'rgba(245,239,230,0.22)' : 'rgba(255,255,255,0.7)';
+  const actionBtnActiveBg = isDark ? 'rgba(245,239,230,0.32)' : '#FFFFFF';
+  const actionIconInactiveColor = isDark ? '#F5EFE6' : '#6B7280';
   // Macro text colors are theme-aware so they stay legible against either pastel.
   const macroValueColor = isDark ? '#F5EFE6' : '#374151';
   const macroLabelColor = isDark ? 'rgba(245,239,230,0.6)' : '#9CA3AF';
@@ -173,7 +174,7 @@ export function EditorialRecipeCard({
           style={[styles.actionButton, { backgroundColor: actionBtnBg }]}
           accessibilityLabel="Save to cookbook"
         >
-          <Ionicons name="bookmark-outline" size={16} color="#6B7280" />
+          <Ionicons name="bookmark-outline" size={16} color={actionIconInactiveColor} />
         </HapticTouchableOpacity>
 
         <View style={styles.actionsRight}>
@@ -186,7 +187,7 @@ export function EditorialRecipeCard({
               <Ionicons
                 name={feedback.disliked ? 'thumbs-down' : 'thumbs-down-outline'}
                 size={16}
-                color={feedback.disliked ? '#EF4444' : '#6B7280'}
+                color={feedback.disliked ? '#EF4444' : actionIconInactiveColor}
               />
             </HapticTouchableOpacity>
           )}
@@ -199,7 +200,7 @@ export function EditorialRecipeCard({
               <Ionicons
                 name={feedback.liked ? 'heart' : 'heart-outline'}
                 size={16}
-                color={feedback.liked ? '#EF4444' : '#6B7280'}
+                color={feedback.liked ? '#EF4444' : actionIconInactiveColor}
               />
             </HapticTouchableOpacity>
           )}
