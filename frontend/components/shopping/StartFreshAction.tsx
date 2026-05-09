@@ -4,14 +4,14 @@
 // Requires confirm sheet when list has >10 items.
 
 import { useState, useRef } from 'react';
-import { View, Text, Modal, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import BrandButton from '../ui/BrandButton';
+import ConfirmActionSheet from '../ui/ConfirmActionSheet';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
-import { Colors, DarkColors, Pastel, PastelDark } from '../../constants/Colors';
+import { Pastel, PastelDark } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { shoppingListApi } from '../../lib/api';
 import { ShoppingListItem } from '../../types';
@@ -124,49 +124,17 @@ export default function StartFreshAction({
       </HapticTouchableOpacity>
 
       {/* Confirm sheet for large lists */}
-      <Modal
+      <ConfirmActionSheet
         visible={showConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowConfirm(false)}
-      >
-        <View style={styles.overlay}>
-          <View
-            style={[
-              styles.sheet,
-              { backgroundColor: isDark ? DarkColors.card : '#FAF7F4' },
-              Shadows.LG,
-            ]}
-          >
-            <Text style={[styles.title, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-              Clear all items?
-            </Text>
-            <Text style={[styles.subtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-              You have {items.length} items. You'll have 5 seconds to undo if you change your mind.
-            </Text>
-
-            <View style={styles.actions}>
-              <BrandButton
-                label="Yes, clear all"
-                onPress={handleConfirm}
-                variant="peach"
-                disabled={loading}
-                loading={loading}
-                accessibilityLabel="Confirm clear all items"
-              />
-              <HapticTouchableOpacity
-                onPress={() => setShowConfirm(false)}
-                style={styles.cancelButton}
-                hapticStyle="light"
-              >
-                <Text style={[styles.cancelText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                  Cancel
-                </Text>
-              </HapticTouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        title="Clear all items?"
+        body={`You have ${items.length} items. You'll have 5 seconds to undo if you change your mind.`}
+        confirmLabel="Yes, clear all"
+        variant="peach"
+        loading={loading}
+        onConfirm={handleConfirm}
+        onCancel={() => setShowConfirm(false)}
+        confirmAccessibilityLabel="Confirm clear all items"
+      />
 
       {/* Undo banner */}
       {showUndo && (
@@ -200,40 +168,6 @@ export default function StartFreshAction({
 const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-    padding: 16,
-  },
-  sheet: {
-    borderRadius: 28,
-    padding: 24,
-    gap: 12,
-  },
-  title: {
-    fontSize: 20,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  actions: {
-    gap: 8,
-    marginTop: 8,
-  },
-  cancelButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  cancelText: {
-    fontSize: 15,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
   undoBanner: {
     position: 'absolute',
