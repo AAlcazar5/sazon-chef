@@ -35,7 +35,7 @@ import QuickActionRow from '../../../components/today/QuickActionRow';
 
 const baseHandlers = {
   onBuildAPlate: jest.fn(),
-  onCookForFamily: jest.fn(),
+  onMealPrep: jest.fn(),
   onLogMeal: jest.fn(),
   onSurpriseMe: jest.fn(),
   onFindMeAMeal: jest.fn(),
@@ -48,13 +48,13 @@ describe('<QuickActionRow />', () => {
     mockSetItem.mockResolvedValue(undefined);
   });
 
-  it('renders all 5 action chips (Build a Plate, Family Cooking, Log a Meal, Surprise Me, Find Me a Meal)', async () => {
+  it('renders all 5 action chips (Build a Plate, Meal Prep, Log a Meal, Surprise Me, Find Me a Meal)', async () => {
     const { getByTestId } = render(<QuickActionRow {...baseHandlers} />);
     await act(async () => {
       await Promise.resolve();
     });
     expect(getByTestId('quick-action-build-a-plate')).toBeTruthy();
-    expect(getByTestId('quick-action-cook-for-family')).toBeTruthy();
+    expect(getByTestId('quick-action-meal-prep')).toBeTruthy();
     expect(getByTestId('quick-action-log-meal')).toBeTruthy();
     expect(getByTestId('quick-action-surprise-me')).toBeTruthy();
     expect(getByTestId('quick-action-find-me-a-meal')).toBeTruthy();
@@ -73,13 +73,13 @@ describe('<QuickActionRow />', () => {
   });
 
   it('fires correct handler when chip is tapped', async () => {
-    const onCookForFamily = jest.fn();
-    const { getByTestId } = render(<QuickActionRow {...baseHandlers} onCookForFamily={onCookForFamily} />);
+    const onMealPrep = jest.fn();
+    const { getByTestId } = render(<QuickActionRow {...baseHandlers} onMealPrep={onMealPrep} />);
     await act(async () => {
       await Promise.resolve();
     });
-    fireEvent.press(getByTestId('quick-action-cook-for-family'));
-    expect(onCookForFamily).toHaveBeenCalledTimes(1);
+    fireEvent.press(getByTestId('quick-action-meal-prep'));
+    expect(onMealPrep).toHaveBeenCalledTimes(1);
   });
 
   it('persists tap log to AsyncStorage on tap', async () => {
@@ -126,7 +126,7 @@ describe('<QuickActionRow />', () => {
       await Promise.resolve();
     });
     expect(getByTestId('quick-action-build-a-plate').props.accessibilityRole).toBe('button');
-    expect(getByTestId('quick-action-cook-for-family').props.accessibilityRole).toBe('button');
+    expect(getByTestId('quick-action-meal-prep').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-log-meal').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-surprise-me').props.accessibilityRole).toBe('button');
     expect(getByTestId('quick-action-find-me-a-meal').props.accessibilityRole).toBe('button');
@@ -138,7 +138,7 @@ describe('<QuickActionRow />', () => {
       await Promise.resolve();
     });
     expect(getByLabelText(/Build a plate/i)).toBeTruthy();
-    expect(getByLabelText(/Family cooking/i)).toBeTruthy();
+    expect(getByLabelText(/Meal Prep/i)).toBeTruthy();
     expect(getByLabelText(/Log a meal/i)).toBeTruthy();
     expect(getByLabelText(/Surprise me/i)).toBeTruthy();
     expect(getByLabelText(/Find me a meal/i)).toBeTruthy();
@@ -150,7 +150,7 @@ describe('<QuickActionRow />', () => {
       await Promise.resolve();
     });
     expect(getByText(/Build a Plate/)).toBeTruthy();
-    expect(getByText(/Family Cooking/)).toBeTruthy();
+    expect(getByText(/Meal Prep/)).toBeTruthy();
     expect(getByText(/Log a Meal/)).toBeTruthy();
     expect(getByText(/Surprise Me/)).toBeTruthy();
     expect(getByText(/Find Me a Meal/)).toBeTruthy();

@@ -211,8 +211,8 @@ export default function HomeScreen() {
   const handleQuickActionBuildAPlate = useCallback(() => {
     router.push('/build-a-plate' as never);
   }, []);
-  const handleQuickActionCookForFamily = useCallback(() => {
-    router.push('/build-a-plate-family' as never);
+  const handleQuickActionMealPrep = useCallback(() => {
+    router.push('/meal-prep' as never);
   }, []);
   const handleQuickActionLogMeal = useCallback(() => {
     setShowQuickMealLog(true);
@@ -1064,7 +1064,7 @@ export default function HomeScreen() {
           Voice / Snap / Build a plate / Find me a meal here. */}
       <QuickActionRow
         onBuildAPlate={handleQuickActionBuildAPlate}
-        onCookForFamily={handleQuickActionCookForFamily}
+        onMealPrep={handleQuickActionMealPrep}
         onLogMeal={handleQuickActionLogMeal}
         onSurpriseMe={() => setShowSurpriseModal(true)}
         onFindMeAMeal={handleQuickActionFindMeAMeal}

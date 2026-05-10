@@ -14,7 +14,7 @@ import { EditorialFontFamily } from '../../constants/Typography';
 import { useQuickActionRanking } from '../../hooks/useQuickActionRanking';
 import { logHomeSurfaceEvent } from '../../lib/homeSurfaceEvents';
 
-type ActionId = 'build-a-plate' | 'cook-for-family' | 'log-meal' | 'find-me-a-meal' | 'surprise-me';
+type ActionId = 'build-a-plate' | 'meal-prep' | 'log-meal' | 'find-me-a-meal' | 'surprise-me';
 
 type AccentKey = keyof typeof AccentTokens;
 
@@ -29,7 +29,7 @@ interface ActionDef {
 
 const ACTIONS: ActionDef[] = [
   { id: 'build-a-plate', label: 'Build a Plate', icon: 'restaurant-outline', a11y: 'Build a plate', tint: 'lavender', accent: 'lavender' },
-  { id: 'cook-for-family', label: 'Family Cooking', icon: 'people-outline', a11y: 'Family cooking — multi-plate composer', tint: 'sage', accent: 'sage' },
+  { id: 'meal-prep', label: 'Meal Prep', icon: 'layers-outline', a11y: 'Meal Prep — cook once, eat all week', tint: 'sage', accent: 'sage' },
   { id: 'log-meal', label: 'Log a Meal', icon: 'nutrition-outline', a11y: 'Log a meal', tint: 'peach', accent: 'peach' },
   { id: 'surprise-me', label: 'Surprise Me', icon: 'shuffle-outline', a11y: 'Surprise me with a recipe', tint: 'blush', accent: 'blush' },
   { id: 'find-me-a-meal', label: 'Find Me a Meal', icon: 'sparkles-outline', a11y: 'Find me a meal', tint: 'sky', accent: 'sky' },
@@ -37,7 +37,7 @@ const ACTIONS: ActionDef[] = [
 
 interface QuickActionRowProps {
   onBuildAPlate: () => void;
-  onCookForFamily: () => void;
+  onMealPrep: () => void;
   onLogMeal: () => void;
   onSurpriseMe: () => void;
   onFindMeAMeal: () => void;
@@ -45,7 +45,7 @@ interface QuickActionRowProps {
 
 export default function QuickActionRow({
   onBuildAPlate,
-  onCookForFamily,
+  onMealPrep,
   onLogMeal,
   onSurpriseMe,
   onFindMeAMeal,
@@ -64,8 +64,8 @@ export default function QuickActionRow({
       switch (id) {
         case 'build-a-plate':
           return onBuildAPlate;
-        case 'cook-for-family':
-          return onCookForFamily;
+        case 'meal-prep':
+          return onMealPrep;
         case 'log-meal':
           return onLogMeal;
         case 'surprise-me':
@@ -74,7 +74,7 @@ export default function QuickActionRow({
           return onFindMeAMeal;
       }
     },
-    [onBuildAPlate, onCookForFamily, onLogMeal, onSurpriseMe, onFindMeAMeal]
+    [onBuildAPlate, onMealPrep, onLogMeal, onSurpriseMe, onFindMeAMeal]
   );
 
   const handleChipPress = useCallback(
