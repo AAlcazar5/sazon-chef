@@ -223,7 +223,6 @@ export const userController = {
   // Update user preferences
   async updatePreferences(req: Request, res: Response) {
     try {
-      // TODO: Get user ID from authentication
       const userId = getUserId(req);
       const {
         bannedIngredients,
@@ -360,7 +359,6 @@ export const userController = {
   // Update macro goals
   async updateMacroGoals(req: Request, res: Response) {
     try {
-      // TODO: Get user ID from authentication
       const userId = getUserId(req);
       const { calories, protein, carbs, fat, fiber } = req.body;
 
@@ -794,7 +792,7 @@ export const userController = {
   // Get preferred superfoods
   async getPreferredSuperfoods(req: Request, res: Response) {
     try {
-      const userId = getUserId(req); // TODO: Get from authentication
+      const userId = getUserId(req);
       
       const preferences = await prisma.userPreferences.findUnique({
         where: { userId },
@@ -817,7 +815,7 @@ export const userController = {
   // Add preferred superfood
   async addPreferredSuperfood(req: Request, res: Response) {
     try {
-      const userId = getUserId(req); // TODO: Get from authentication
+      const userId = getUserId(req);
       const { category } = req.body;
       
       if (!category || typeof category !== 'string') {
@@ -869,7 +867,7 @@ export const userController = {
   // Remove preferred superfood
   async removePreferredSuperfood(req: Request, res: Response) {
     try {
-      const userId = getUserId(req); // TODO: Get from authentication
+      const userId = getUserId(req);
       const { category } = req.params;
       
       if (!category) {
@@ -907,7 +905,7 @@ export const userController = {
   // Update preferred superfoods (replace all)
   async updatePreferredSuperfoods(req: Request, res: Response) {
     try {
-      const userId = getUserId(req); // TODO: Get from authentication
+      const userId = getUserId(req);
       const { categories } = req.body;
       
       if (!Array.isArray(categories)) {

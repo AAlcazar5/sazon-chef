@@ -264,29 +264,27 @@ export const Type = {
     lineHeight: 32 * 1.15,
     letterSpacing: -0.6,
   } as TextStyle,
-  // DS2.5 — Fraunces stylistic-set ss01 (alternate g) enabled on display sizes
-  // for the Clay-inspired editorial flourish. Body kept on default glyphs for
-  // readability. See docs/design-decisions/DS2.5-opentype-features.md.
+  // DS2.5 — Fraunces stylistic-set ss01 (alternate g) was originally enabled
+  // on display sizes for the Clay-inspired editorial flourish, but RN's
+  // TextStyle.fontVariant doesn't accept OpenType `ss01`. Field dropped
+  // until we wire a font-loader-side feature flag. Body unchanged.
   displayMd: {
     fontFamily: 'Fraunces_600SemiBold',
     fontSize: 44,
     lineHeight: 44 * 1.05,
     letterSpacing: -0.9,
-    fontVariant: ['ss01'],
   } as TextStyle,
   displayLg: {
     fontFamily: 'Fraunces_700Bold',
     fontSize: 56,
     lineHeight: 56 * 1.05,
     letterSpacing: -1.4,
-    fontVariant: ['ss01'],
   } as TextStyle,
   display: {
     fontFamily: 'Fraunces_700Bold',
     fontSize: 80,
     lineHeight: 80 * 1.0,
     letterSpacing: -2.4,
-    fontVariant: ['ss01'],
   } as TextStyle,
   // Stat numbers — DS5.4 — tabular figures so column-aligned numbers don't
   // shimmy. `123` and `222` render at the same width.

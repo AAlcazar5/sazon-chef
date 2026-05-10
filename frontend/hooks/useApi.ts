@@ -16,8 +16,8 @@ interface UseApiOptions {
   showErrorAlert?: boolean; // Whether to show an alert on error
 }
 
-export function useApi<T = any>(
-  url: string, 
+export function useApi<T = unknown>(
+  url: string,
   options: UseApiOptions = { immediate: true, showErrorAlert: true }
 ): UseApiResult<T> {
   const [data, setData] = useState<T | null>(null);

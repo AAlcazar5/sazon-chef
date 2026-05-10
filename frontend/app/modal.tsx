@@ -875,10 +875,7 @@ export default function RecipeModal() {
     );
   };
 
-  // Check if this is a user-created recipe
-  // For now, we'll check if the recipe has userId and isUserCreated fields
-  // TODO: Replace with actual user ID check when auth is implemented
-  const isUserRecipe = recipe && (recipe as any).isUserCreated === true;
+  const isUserRecipe = recipe?.isUserCreated === true;
 
   // Loading state — skeleton that matches the modal layout for better perceived speed
   if (loading) {

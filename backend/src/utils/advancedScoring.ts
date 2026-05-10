@@ -1,6 +1,8 @@
 // backend/src/utils/advancedScoring.ts
 // Advanced scoring enhancements for Phase 6, Group 11
 
+import type { ScoringIngredient, ScoringInstruction, ScoringRecipe } from './scoringTypes';
+
 /**
  * Enhanced spice level detection and matching
  * Detects spice level from recipe ingredients and instructions
@@ -14,14 +16,14 @@ export interface SpiceLevelDetection {
 /**
  * Detect spice level from recipe ingredients and instructions
  */
-export function detectSpiceLevel(recipe: any): SpiceLevelDetection {
+export function detectSpiceLevel(recipe: ScoringRecipe): SpiceLevelDetection {
   const indicators: string[] = [];
   let spicyScore = 0;
-  
+
   // Combine all text for analysis
   const allText = [
-    ...(recipe.ingredients || []).map((i: any) => (i.text || i.name || '').toLowerCase()),
-    ...(recipe.instructions || []).map((i: any) => (i.text || i.instruction || '').toLowerCase()),
+    ...(recipe.ingredients || []).map((i: ScoringIngredient) => (i.text || i.name || '').toLowerCase()),
+    ...(recipe.instructions || []).map((i: ScoringInstruction) => (i.text || i.instruction || '').toLowerCase()),
     (recipe.title || '').toLowerCase(),
     (recipe.description || '').toLowerCase(),
   ].join(' ');
@@ -98,7 +100,7 @@ export function detectSpiceLevel(recipe: any): SpiceLevelDetection {
  * Calculate spice level match score between recipe and user preference
  */
 export function calculateSpiceLevelMatch(
-  recipe: any,
+  recipe: ScoringRecipe,
   userSpiceLevel: string | null | undefined
 ): number {
   if (!userSpiceLevel) {
@@ -152,7 +154,7 @@ export interface ComplexityAssessment {
 /**
  * Assess recipe complexity based on multiple factors
  */
-export function assessRecipeComplexity(recipe: any): ComplexityAssessment {
+export function assessRecipeComplexity(recipe: ScoringRecipe): ComplexityAssessment {
   const cookTime = recipe.cookTime || 30;
   const ingredientCount = Array.isArray(recipe.ingredients) ? recipe.ingredients.length : 0;
   const instructionCount = Array.isArray(recipe.instructions) ? recipe.instructions.length : 0;
@@ -181,7 +183,7 @@ export function assessRecipeComplexity(recipe: any): ComplexityAssessment {
   // Technique complexity factor (0-25 points)
   // Analyze instructions for complex cooking techniques
   const allInstructions = (recipe.instructions || [])
-    .map((i: any) => (i.text || i.instruction || '').toLowerCase())
+    .map((i: ScoringInstruction) => (i.text || i.instruction || '').toLowerCase())
     .join(' ');
 
   let techniqueScore = 0;
@@ -252,7 +254,7 @@ export function assessRecipeComplexity(recipe: any): ComplexityAssessment {
  * Matches recipe complexity to user's cooking skill level
  */
 export function calculateSkillLevelMatch(
-  recipe: any,
+  recipe: ScoringRecipe,
   userSkillLevel: 'beginner' | 'intermediate' | 'advanced' | undefined
 ): number {
   if (!userSkillLevel) {
@@ -313,7 +315,7 @@ export interface DietaryCompliance {
  * Check recipe compliance with dietary restrictions
  */
 export function checkDietaryCompliance(
-  recipe: any,
+  recipe: ScoringRecipe,
   dietaryRestrictions: string[]
 ): DietaryCompliance {
   if (!dietaryRestrictions || dietaryRestrictions.length === 0) {
@@ -326,8 +328,8 @@ export function checkDietaryCompliance(
 
   const violations: string[] = [];
   const allText = [
-    ...(recipe.ingredients || []).map((i: any) => (i.text || i.name || '').toLowerCase()),
-    ...(recipe.instructions || []).map((i: any) => (i.text || i.instruction || '').toLowerCase()),
+    ...(recipe.ingredients || []).map((i: ScoringIngredient) => (i.text || i.name || '').toLowerCase()),
+    ...(recipe.instructions || []).map((i: ScoringInstruction) => (i.text || i.instruction || '').toLowerCase()),
     (recipe.title || '').toLowerCase(),
     (recipe.description || '').toLowerCase(),
   ].join(' ');

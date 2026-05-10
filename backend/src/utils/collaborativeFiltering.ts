@@ -2,6 +2,7 @@
 // Advanced collaborative filtering (Phase 6, Group 11)
 
 import type { UserBehaviorData } from './behavioralScoring';
+import type { ScoringIngredient, ScoringRecipe } from './scoringTypes';
 
 export interface CollaborativeScore {
   total: number; // 0-100
@@ -54,7 +55,7 @@ export interface RecipeSimilarity {
  * Calculate collaborative filtering score
  */
 export async function calculateCollaborativeScore(
-  recipe: any,
+  recipe: ScoringRecipe,
   currentUserId: string,
   userBehavior: UserBehaviorData
 ): Promise<CollaborativeScore> {
@@ -102,7 +103,7 @@ export async function calculateCollaborativeScore(
  * calls regardless of N.
  */
 async function calculateUserBasedScore(
-  recipe: any,
+  recipe: ScoringRecipe,
   currentUserId: string,
   userBehavior: UserBehaviorData,
   prisma: any
@@ -388,7 +389,7 @@ function calculateUserSimilarityFromBatch(
  * Item-based collaborative filtering
  */
 async function calculateItemBasedScore(
-  recipe: any,
+  recipe: ScoringRecipe,
   userBehavior: UserBehaviorData,
   prisma: any
 ): Promise<{
@@ -432,7 +433,7 @@ async function calculateItemBasedScore(
  * Find recipes similar to recipes the user has liked
  */
 async function findSimilarRecipes(
-  targetRecipe: any,
+  targetRecipe: ScoringRecipe,
   positiveRecipeIds: string[],
   prisma: any
 ): Promise<RecipeSimilarity[]> {
@@ -468,8 +469,8 @@ async function findSimilarRecipes(
  * Calculate similarity between two recipes
  */
 export function calculateRecipeSimilarity(
-  recipe1: any,
-  recipe2: any
+  recipe1: ScoringRecipe,
+  recipe2: ScoringRecipe
 ): {
   similarity: number;
   sharedAttributes: RecipeSimilarity['sharedAttributes'];
@@ -484,10 +485,10 @@ export function calculateRecipeSimilarity(
   
   // 2. Ingredient overlap (40%)
   const ingredients1 = new Set(
-    (recipe1.ingredients || []).map((i: any) => (i.text || i.name || '').toLowerCase().trim())
+    (recipe1.ingredients || []).map((i: ScoringIngredient) => (i.text || i.name || '').toLowerCase().trim())
   );
   const ingredients2 = new Set(
-    (recipe2.ingredients || []).map((i: any) => (i.text || i.name || '').toLowerCase().trim())
+    (recipe2.ingredients || []).map((i: ScoringIngredient) => (i.text || i.name || '').toLowerCase().trim())
   );
   
   const ingredientIntersection = Array.from(ingredients1).filter(i => ingredients2.has(i)).length;
@@ -524,7 +525,7 @@ export function calculateRecipeSimilarity(
 /**
  * Calculate macro similarity between two recipes
  */
-export function calculateMacroSimilarity(recipe1: any, recipe2: any): number {
+export function calculateMacroSimilarity(recipe1: ScoringRecipe, recipe2: ScoringRecipe): number {
   const macros1 = [recipe1.calories || 0, recipe1.protein || 0, recipe1.carbs || 0, recipe1.fat || 0];
   const macros2 = [recipe2.calories || 0, recipe2.protein || 0, recipe2.carbs || 0, recipe2.fat || 0];
   

@@ -1,5 +1,7 @@
 // backend/src/utils/temporalScoring.ts
 
+import type { ScoringMealHistoryEntry, ScoringRecipe } from './scoringTypes';
+
 export interface TemporalContext {
   currentHour: number;
   currentDay: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
@@ -87,7 +89,7 @@ export function getCurrentTemporalContext(): TemporalContext {
 }
 
 export function calculateTemporalScore(
-  recipe: any,
+  recipe: ScoringRecipe,
   temporalContext: TemporalContext,
   userPatterns?: UserTemporalPatterns
 ): TemporalScore {
@@ -113,12 +115,14 @@ export function calculateTemporalScore(
 }
 
 function calculateTimeOfDayScore(
-  recipe: any,
+  recipe: ScoringRecipe,
   context: TemporalContext,
   userPatterns?: UserTemporalPatterns
 ): number {
   const { currentHour, mealPeriod } = context;
-  const { cookTime, calories, cuisine } = recipe;
+  const cookTime = recipe.cookTime ?? 0;
+  const calories = recipe.calories ?? 0;
+  const cuisine = recipe.cuisine ?? '';
   
   // Base scoring based on time of day
   let score = 50; // Neutral base score
@@ -167,12 +171,14 @@ function calculateTimeOfDayScore(
 }
 
 function calculateDayOfWeekScore(
-  recipe: any,
+  recipe: ScoringRecipe,
   context: TemporalContext,
   userPatterns?: UserTemporalPatterns
 ): number {
   const { isWeekend, isWeekday, mealPeriod } = context;
-  const { cookTime, cuisine, calories } = recipe;
+  const cookTime = recipe.cookTime ?? 0;
+  const calories = recipe.calories ?? 0;
+  const cuisine = recipe.cuisine ?? '';
   
   let score = 50; // Neutral base score
   
@@ -208,12 +214,14 @@ function calculateDayOfWeekScore(
 }
 
 function calculateSeasonalScore(
-  recipe: any,
+  recipe: ScoringRecipe,
   context: TemporalContext,
   userPatterns?: UserTemporalPatterns
 ): number {
   const { season } = context;
-  const { cuisine, calories, cookTime } = recipe;
+  const cookTime = recipe.cookTime ?? 0;
+  const calories = recipe.calories ?? 0;
+  const cuisine = recipe.cuisine ?? '';
   
   let score = 50; // Neutral base score
   
@@ -259,12 +267,14 @@ function calculateSeasonalScore(
 }
 
 function calculateMealPeriodScore(
-  recipe: any,
+  recipe: ScoringRecipe,
   context: TemporalContext,
   userPatterns?: UserTemporalPatterns
 ): number {
   const { mealPeriod } = context;
-  const { cookTime, calories, cuisine } = recipe;
+  const cookTime = recipe.cookTime ?? 0;
+  const calories = recipe.calories ?? 0;
+  const cuisine = recipe.cuisine ?? '';
   
   let score = 50; // Neutral base score
   
@@ -317,7 +327,7 @@ function getUserPreferredTimesForMeal(
   }
 }
 
-export function analyzeUserTemporalPatterns(mealHistory: any[]): UserTemporalPatterns {
+export function analyzeUserTemporalPatterns(mealHistory: ScoringMealHistoryEntry[]): UserTemporalPatterns {
   // Analyze meal history to determine user's temporal patterns
   const patterns = {
     preferredBreakfastTimes: [] as number[],
@@ -443,12 +453,12 @@ export function analyzeUserTemporalPatterns(mealHistory: any[]): UserTemporalPat
   return patterns;
 }
 
-function getMostCommonCuisines(meals: any[]): string[] {
-  const cuisineCounts = meals.reduce((counts, meal) => {
+function getMostCommonCuisines(meals: ScoringMealHistoryEntry[]): string[] {
+  const cuisineCounts = meals.reduce<Record<string, number>>((counts, meal) => {
     const cuisine = meal.recipe?.cuisine || 'Unknown';
     counts[cuisine] = (counts[cuisine] || 0) + 1;
     return counts;
-  }, {} as Record<string, number>);
+  }, {});
 
   return Object.entries(cuisineCounts)
     .sort(([,a], [,b]) => (b as number) - (a as number))
