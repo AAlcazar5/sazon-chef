@@ -1,12 +1,14 @@
 import { logger } from '../utils/logger';
 // backend/src/utils/autoBackup.ts
 // Automatic recipe backup on server startup and periodic backups
+//
+// Tier L M7 — uses the shared singleton PrismaClient instead of minting a
+// second one. SQLite serializes WAL writes per connection and a parallel
+// PrismaClient could fight the main one over the WAL lock during a backup.
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const prisma = new PrismaClient();
 
 const BACKUP_INTERVAL_HOURS = 24; // Backup every 24 hours
 const BACKUPS_DIR = path.join(__dirname, '../../backups');

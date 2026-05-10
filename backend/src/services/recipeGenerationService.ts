@@ -1,8 +1,34 @@
 import axios from 'axios'
+import { logger } from '../utils/logger'
 
 function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)) }
+
+// Tier L M13 — log when LLM JSON parse fails so an outage / model-format
+// drift is observable instead of silently returning null. We log the
+// content (truncated) and the underlying parse error.
 function safeParseJSON(text: string) {
-  try { return JSON.parse(text) } catch { const s=text.indexOf('{'); const e=text.lastIndexOf('}'); if(s!==-1&&e!==-1&&e>s){ try{return JSON.parse(text.slice(s,e+1))}catch{}} return null }
+  try {
+    return JSON.parse(text)
+  } catch (firstErr) {
+    const s = text.indexOf('{')
+    const e = text.lastIndexOf('}')
+    if (s !== -1 && e !== -1 && e > s) {
+      try {
+        return JSON.parse(text.slice(s, e + 1))
+      } catch (secondErr) {
+        logger.warn(
+          { err: secondErr, snippet: text.slice(0, 240), source: 'recipeGenerationService' },
+          'llm.jsonParse.failed',
+        )
+        return null
+      }
+    }
+    logger.warn(
+      { err: firstErr, snippet: text.slice(0, 240), source: 'recipeGenerationService' },
+      'llm.jsonParse.failed',
+    )
+    return null
+  }
 }
 
 type GenerateOptions = {

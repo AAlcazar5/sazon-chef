@@ -230,11 +230,28 @@ export default function HomeScreen() {
   const { setUserFeedback, setFeedbackLoading, openActionMenu, closeActionMenu, updateRecipeFeedback, initializeFeedback } = interactions;
 
   // Recipe action handlers (meal plan, similar, healthify, report) - using extracted hook
+  // M10: similar-recipes API returns a slim shape; widen to SuggestedRecipe
+  // for the home feed by zero-filling the missing macro/score fields rather
+  // than casting through `as any`. The list view only renders title/cuisine/
+  // cookTime/imageUrl, so the placeholders are display-safe.
   const recipeActions = useRecipeActions({
     selectedRecipe: selectedRecipeForMenu,
     onClose: closeActionMenu,
     showToast,
-    onSimilarRecipesFound: setSuggestedRecipes,
+    onSimilarRecipesFound: (similar) =>
+      setSuggestedRecipes(
+        similar.map((r) => ({
+          ...r,
+          description: '',
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          ingredients: [],
+          instructions: [],
+          score: { total: 0, macroMatch: 0, tasteMatch: 0 },
+        })) as unknown as SuggestedRecipe[],
+      ),
   });
   const { handleAddToMealPlan, handleViewSimilar, handleHealthify, handleReportIssue } = recipeActions;
 

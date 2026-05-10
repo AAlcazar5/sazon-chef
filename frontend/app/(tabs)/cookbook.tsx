@@ -685,10 +685,25 @@ export default function CookbookScreen() {
         // was fixed in lib/api.ts. Pre-fix, this Array.isArray() check
         // always failed and the UI silently fell to the empty branch.
         const response = await recipeApi.getSimilarRecipes(baseRecipe.id, 10);
-        const recipes = response.data?.recipes ?? [];
-        if (Array.isArray(recipes) && recipes.length > 0) {
-          rawSimilarRecipesRef.current = recipes;
-          setSimilarRecipes(applyFiltersToSimilarRecipes(recipes));
+        const slim = response.data?.recipes ?? [];
+        if (Array.isArray(slim) && slim.length > 0) {
+          // M10: the API returns a slim shape (id/title/cuisine/cookTime/
+          // imageUrl/score). Widen to SavedRecipe via zero-fill so the
+          // existing render code (calories/protein/etc.) still renders
+          // — placeholders read as N/A in the row UI.
+          const widened = slim.map((r) => ({
+            ...r,
+            description: '',
+            calories: 0,
+            protein: 0,
+            carbs: 0,
+            fat: 0,
+            ingredients: [],
+            instructions: [],
+            savedDate: '',
+          })) as unknown as SavedRecipe[];
+          rawSimilarRecipesRef.current = widened;
+          setSimilarRecipes(applyFiltersToSimilarRecipes(widened));
         } else {
           rawSimilarRecipesRef.current = [];
           setSimilarRecipes([]);

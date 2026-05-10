@@ -3,6 +3,7 @@
 
 import { Request, Response } from 'express';
 import { getUserId } from '../../utils/authHelper';
+import { logger } from '../../utils/logger';
 import {
   setActiveList,
   archiveList,
@@ -28,6 +29,13 @@ async function runLifecycleAction<T>(
     const result = await action(userId);
     res.json(includeData ? { success: true, data: result } : { success: true });
   } catch (error: unknown) {
+    // Tier L M20 — log before responding so the six lifecycle endpoints
+    // are observable instead of silently 4xx/5xx-ing. Path is included so
+    // operators can correlate the failure to the specific endpoint.
+    logger.error(
+      { err: error, path: req.originalUrl ?? req.path, errorStatus },
+      'shoppingListLifecycle.action.failed',
+    );
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(errorStatus).json({ success: false, error: message });
   }

@@ -100,7 +100,7 @@ export const stripeController = {
       }
 
       // Record survey response first (before calling Stripe)
-      await (prisma as any).cancellationSurvey.create({
+      await prisma.cancellationSurvey.create({
         data: { userId, reason, feedback: feedback || null, action },
       });
 
@@ -121,10 +121,13 @@ export const stripeController = {
       // Cancel
       await stripeService.cancelSubscription(userId);
 
-      // Send cancellation email (fire-and-forget)
+      // Send cancellation email (fire-and-forget). Log on failure so an email
+      // outage is observable instead of swallowed (Tier L M16).
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, emailEncrypted: true } });
       if (user?.email && !user.emailEncrypted) {
-        emailService.sendSubscriptionChange(user.email, 'cancelled').catch(() => {});
+        emailService.sendSubscriptionChange(user.email, 'cancelled').catch((err: unknown) =>
+          logger.error({ err, userId }, 'stripe.cancellationEmail.failed'),
+        );
       }
 
       return res.json({ cancelled: true });

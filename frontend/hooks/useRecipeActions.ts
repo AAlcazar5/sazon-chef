@@ -8,11 +8,23 @@ import { recipeApi, mealPlanApi } from '../lib/api';
 import { HapticPatterns } from '../constants/Haptics';
 import type { SuggestedRecipe } from '../types';
 
+// Tier L M10 — narrow shape returned by GET /recipes/:id/similar. Keeps
+// the callback signature explicit instead of casting to SuggestedRecipe[]
+// (the slim API response is missing macros / score breakdown).
+export interface SimilarRecipeSummary {
+  id: string;
+  title: string;
+  cuisine: string | null;
+  cookTime: number | null;
+  imageUrl: string | null;
+  score: number;
+}
+
 interface UseRecipeActionsOptions {
   selectedRecipe: SuggestedRecipe | null;
   onClose: () => void;
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
-  onSimilarRecipesFound?: (recipes: SuggestedRecipe[]) => void;
+  onSimilarRecipesFound?: (recipes: SimilarRecipeSummary[]) => void;
 }
 
 interface UseRecipeActionsReturn {
@@ -71,10 +83,10 @@ export function useRecipeActions(options: UseRecipeActionsOptions): UseRecipeAct
       // was fixed in lib/api.ts. Pre-fix, response.data.length was always
       // undefined → the "No Similar Recipes" branch always fired.
       const response = await recipeApi.getSimilarRecipes(selectedRecipe.id, 10);
-      const recipes = response.data?.recipes ?? [];
+      const recipes: SimilarRecipeSummary[] = response.data?.recipes ?? [];
       if (recipes.length > 0) {
         if (onSimilarRecipesFound) {
-          onSimilarRecipesFound(recipes as any);
+          onSimilarRecipesFound(recipes);
         }
         showToast(`Found ${recipes.length} similar recipes`, 'success');
         onClose();
