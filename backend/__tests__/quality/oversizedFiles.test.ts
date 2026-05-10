@@ -26,7 +26,10 @@ const CAPS: Record<string, number> = {
   // future Tier-R item.
   'modules/recipe/recipeController.ts': 5600,
   'modules/user/userController.ts': 1400,
-  'modules/mealPlan/mealPlanController.ts': 1300,
+  // Bumped 1300 → 1320 (2026-05-09) — Tier L L2/H9 added planningMode zod
+  // validation + 400 path. Split into module-local sub-controllers tracked
+  // as a Tier-R follow-up.
+  'modules/mealPlan/mealPlanController.ts': 1320,
   'modules/mealPrep/mealPrepController.ts': 1200,
   'services/aiRecipeService.ts': 1300,
   // Bumped from 1200 → 1450 after Tier S4 added find_recipes /

@@ -171,19 +171,22 @@ export const authController = {
 
       // Find user - search by providerEmail first (unencrypted), then by encrypted email
       // For efficiency, we check providerEmail first, then only decrypt if needed
+      const userSelect = {
+        id: true,
+        email: true,
+        name: true,
+        password: true,
+        emailEncrypted: true,
+        nameEncrypted: true,
+        providerEmail: true,
+        emailVerified: true,
+      } as const;
+
       let user = await prisma.user.findFirst({
         where: {
           providerEmail: email // Check unencrypted OAuth email first
         },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          password: true,
-          emailEncrypted: true,
-          nameEncrypted: true,
-          providerEmail: true
-        }
+        select: userSelect,
       });
 
       // If not found by providerEmail, search users with encrypted emails
@@ -193,15 +196,7 @@ export const authController = {
           where: {
             emailEncrypted: true
           },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            password: true,
-            emailEncrypted: true,
-            nameEncrypted: true,
-            providerEmail: true
-          }
+          select: userSelect,
         });
 
         // Decrypt and find matching email
@@ -224,15 +219,7 @@ export const authController = {
               email: email,
               emailEncrypted: false
             },
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              password: true,
-              emailEncrypted: true,
-              nameEncrypted: true,
-              providerEmail: true
-            }
+            select: userSelect,
           });
         }
       }
@@ -259,6 +246,23 @@ export const authController = {
         return res.status(401).json({
           success: false,
           error: 'Email or password is incorrect'
+        });
+      }
+
+      // Tier L H3 — email-verification gate.
+      //
+      // When `REQUIRE_EMAIL_VERIFICATION=true` (launch posture), unverified
+      // users are blocked at the door with a stable `code` so the mobile
+      // client can route to the "verify your email" wall. The flag stays off
+      // by default so the gate doesn't lock out legacy accounts created
+      // before email verification was wired end-to-end.
+      const requireVerified =
+        process.env.REQUIRE_EMAIL_VERIFICATION === 'true' || process.env.REQUIRE_EMAIL_VERIFICATION === '1';
+      if (requireVerified && !user.emailVerified) {
+        return res.status(403).json({
+          success: false,
+          code: 'EMAIL_NOT_VERIFIED',
+          error: 'Please verify your email before signing in. Check your inbox for the verification link.',
         });
       }
 

@@ -348,6 +348,77 @@ describe('Auth Controller', () => {
         })
       );
     });
+
+    // Tier L H3 — email-verification gate. The flag is read at request time
+    // so the env var can be toggled per test.
+    describe('email verification gate (H3)', () => {
+      const originalFlag = process.env.REQUIRE_EMAIL_VERIFICATION;
+      afterAll(() => {
+        if (originalFlag === undefined) delete process.env.REQUIRE_EMAIL_VERIFICATION;
+        else process.env.REQUIRE_EMAIL_VERIFICATION = originalFlag;
+      });
+
+      function userFixture(overrides: Partial<{ emailVerified: boolean }> = {}) {
+        return {
+          id: 'user-h3',
+          email: 'encrypted_test@example.com',
+          name: 'encrypted_Test User',
+          password: 'hashedPassword123',
+          emailEncrypted: true,
+          nameEncrypted: true,
+          providerEmail: null,
+          emailVerified: false,
+          ...overrides,
+        };
+      }
+
+      function mockLookup(user: ReturnType<typeof userFixture>) {
+        (prisma.user.findFirst as jest.Mock).mockResolvedValueOnce(null);
+        (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([user]);
+      }
+
+      it('blocks unverified user with 403 EMAIL_NOT_VERIFIED when flag is on', async () => {
+        process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
+        mockReq.body = { email: 'test@example.com', password: 'password123' };
+        mockLookup(userFixture({ emailVerified: false }));
+        (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+        await authController.login(mockReq as Request, mockRes as Response);
+
+        expect(mockRes.status).toHaveBeenCalledWith(403);
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({ code: 'EMAIL_NOT_VERIFIED' }),
+        );
+      });
+
+      it('lets verified user through when flag is on', async () => {
+        process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
+        mockReq.body = { email: 'test@example.com', password: 'password123' };
+        mockLookup(userFixture({ emailVerified: true }));
+        (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+        (jwt.sign as jest.Mock).mockReturnValue('mockJwtToken');
+
+        await authController.login(mockReq as Request, mockRes as Response);
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({ success: true, token: 'mockJwtToken' }),
+        );
+      });
+
+      it('lets unverified user through when flag is off (legacy posture)', async () => {
+        delete process.env.REQUIRE_EMAIL_VERIFICATION;
+        mockReq.body = { email: 'test@example.com', password: 'password123' };
+        mockLookup(userFixture({ emailVerified: false }));
+        (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+        (jwt.sign as jest.Mock).mockReturnValue('mockJwtToken');
+
+        await authController.login(mockReq as Request, mockRes as Response);
+
+        expect(mockRes.json).toHaveBeenCalledWith(
+          expect.objectContaining({ success: true, token: 'mockJwtToken' }),
+        );
+      });
+    });
   });
 
   describe('getProfile', () => {

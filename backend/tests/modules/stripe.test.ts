@@ -302,4 +302,73 @@ describe('Stripe webhook handler', () => {
     await handleStripeWebhook(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
   });
+
+  // H9 — make sure invoice.payment_succeeded resolves the userId from
+  // invoice.subscription_details.metadata when invoice.metadata is empty,
+  // and re-fetches the subscription for an authoritative period_end.
+  it('handles invoice.payment_succeeded and re-fetches subscription for period end', async () => {
+    const obj = {
+      customer: 'cus_test',
+      metadata: {},
+      subscription_details: { metadata: { userId: 'user1' } },
+      subscription: 'sub_x',
+    };
+    const event = makeEvent('invoice.payment_succeeded', obj, 'evt_ok');
+    mockStripeService.constructWebhookEvent.mockReturnValue(event as any);
+    mockStripeService.getSubscription.mockResolvedValue({
+      status: 'active',
+      current_period_end: Math.floor(Date.now() / 1000) + 86400 * 30,
+      trial_end: null,
+    } as any);
+
+    const { req, res } = mockReqRes(event);
+    await handleStripeWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockStripeService.getSubscription).toHaveBeenCalledWith('sub_x');
+    expect(mockPrisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user1' },
+        data: expect.objectContaining({ subscriptionStatus: 'active', subscriptionTier: 'premium' }),
+      }),
+    );
+  });
+
+  it('handles checkout.session.completed and writes the new subscription to the user', async () => {
+    const obj = {
+      metadata: { userId: 'user1' },
+      subscription: 'sub_chk',
+    };
+    const event = makeEvent('checkout.session.completed', obj, 'evt_chk');
+    mockStripeService.constructWebhookEvent.mockReturnValue(event as any);
+    mockStripeService.getSubscription.mockResolvedValue({
+      status: 'active',
+      current_period_end: Math.floor(Date.now() / 1000) + 86400 * 30,
+      trial_end: null,
+    } as any);
+
+    const { req, res } = mockReqRes(event);
+    await handleStripeWebhook(req, res);
+
+    expect(mockStripeService.getSubscription).toHaveBeenCalledWith('sub_chk');
+    expect(mockPrisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user1' },
+        data: expect.objectContaining({ subscriptionTier: 'premium' }),
+      }),
+    );
+  });
+
+  it('checkout.session.completed without metadata.userId is a graceful no-op', async () => {
+    const obj = { metadata: {}, subscription: 'sub_orphan' };
+    const event = makeEvent('checkout.session.completed', obj, 'evt_orphan');
+    mockStripeService.constructWebhookEvent.mockReturnValue(event as any);
+
+    const { req, res } = mockReqRes(event);
+    await handleStripeWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    expect(mockStripeService.getSubscription).not.toHaveBeenCalled();
+  });
 });

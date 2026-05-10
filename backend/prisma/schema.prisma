@@ -625,7 +625,7 @@ model MealPlan {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name         String?
-  planningMode String? // 'cut' | 'maintain' | 'build'
+  planningMode String? // enum 'cut' | 'maintain' | 'build' — enforced at app layer via PlanningModeSchema in mealPlanSchemas.ts (SQLite has no enum type)
   startDate    DateTime
   endDate      DateTime
 

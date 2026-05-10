@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 import { aiRecipeService } from '../../services/aiRecipeService';
 import { logger } from '../../utils/logger';
+import { coercePlanningMode, parsePlanningMode, type PlanningMode } from './mealPlanSchemas';
 
 // Get daily meal suggestions
 export const getDailySuggestion = async (req: Request, res: Response) => {
@@ -244,7 +245,7 @@ export const getWeeklyPlan = async (req: Request, res: Response) => {
 
 // ─── Goal-Based Macro Helpers ─────────────────────────────────────────────
 
-function mapFitnessGoalToMode(fitnessGoal?: string | null): string {
+function mapFitnessGoalToMode(fitnessGoal?: string | null): PlanningMode {
   switch (fitnessGoal) {
     case 'lose_weight': return 'cut';
     case 'gain_muscle':
@@ -256,10 +257,10 @@ function mapFitnessGoalToMode(fitnessGoal?: string | null): string {
 
 function adjustMacrosForGoalMode(
   baseMacros: { calories: number; protein: number; carbs: number; fat: number },
-  planningMode: string | null | undefined,
+  planningMode: PlanningMode | null | undefined,
   physicalProfile?: { fitnessGoal?: string } | null,
 ): { calories: number; protein: number; carbs: number; fat: number } {
-  const mode = planningMode || mapFitnessGoalToMode(physicalProfile?.fitnessGoal);
+  const mode: PlanningMode = planningMode || mapFitnessGoalToMode(physicalProfile?.fitnessGoal);
 
   switch (mode) {
     case 'cut':
@@ -380,8 +381,18 @@ export const generateMealPlan = async (req: Request, res: Response) => {
       mealsPerDay = ['breakfast', 'lunch', 'dinner', 'snack'],
       maxTotalPrepTime = 60,
       maxDailyBudget,
-      planningMode,
+      planningMode: rawPlanningMode,
     } = req.body;
+
+    let planningMode: PlanningMode | null;
+    try {
+      planningMode = parsePlanningMode(rawPlanningMode);
+    } catch (err) {
+      return res.status(400).json({
+        error: 'Invalid planningMode',
+        message: err instanceof Error ? err.message : 'planningMode must be cut, maintain, or build',
+      });
+    }
 
     logger.info({ userId, days, mealsPerDay, maxTotalPrepTime, maxDailyBudget, planningMode }, '🍽️ Generate Meal Plan:');
 
@@ -556,8 +567,8 @@ export const regenerateSingleDay = async (req: Request, res: Response) => {
     // Fetch user context
     const { userPrefs, baseMacros, physicalProfile, physProfileData, userFeedback } = await fetchUserPlanningContext(userId);
 
-    // Apply goal mode from the stored plan
-    const adjustedMacros = adjustMacrosForGoalMode(baseMacros, mealPlan.planningMode, physicalProfile);
+    // Apply goal mode from the stored plan (coerce legacy DB strings to enum)
+    const adjustedMacros = adjustMacrosForGoalMode(baseMacros, coercePlanningMode(mealPlan.planningMode), physicalProfile);
 
     // Get existing meals in the plan (for variety enforcement)
     const existingMeals = await prisma.meal.findMany({
