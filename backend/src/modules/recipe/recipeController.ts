@@ -10,6 +10,7 @@ import { importRecipeFromUrl as importFromUrl, RecipeImportError } from '@/servi
 import { getUserId, isAuthenticated } from '@/utils/authHelper';
 import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
 import { varyImageUrlsForPage } from '@/utils/runtimeImageVariation';
+import { diversifyByTitleSignature } from '@/utils/diversifyResults';
 import { recommendationCache } from '@/utils/recommendationCache';
 import { cacheService } from '@/utils/cacheService';
 import {
@@ -363,22 +364,16 @@ export const recipeController = {
         andConditions.push({ calories: { lte: Number(maxCalories) } });
       }
 
-      // Time-aware defaults (Home Page 2.0) - auto-apply mealType based on time of day
-      if (useTimeAwareDefaults === 'true' && !mealType) {
-        const { getCurrentTemporalContext } = require('@/utils/temporalScoring');
-        const temporalContext = getCurrentTemporalContext();
-        // Map meal period to mealType filter
-        const mealTypeMap: Record<string, string> = {
-          'breakfast': 'breakfast',
-          'lunch': 'lunch',
-          'dinner': 'dinner',
-          'snack': 'snack'
-        };
-        const suggestedMealType = mealTypeMap[temporalContext.mealPeriod];
-        if (suggestedMealType) {
-          where.mealType = suggestedMealType;
-        }
-      }
+      // Time-aware defaults — used to *exclude* by mealType (e.g. only dinners
+      // from 3pm–9pm), which collapsed the visible catalog from 1,505 → 688
+      // and made the app hostile to anyone planning a meal for a different
+      // time of day (browsing breakfast at 6pm, lunch at 9am, etc.). Now a
+      // no-op: the broader OR clause below already restricts to
+      // breakfast/lunch/dinner/null, and downstream temporal scoring +
+      // recipe-of-the-day picking still bias toward the current period
+      // without removing options the user can opt back into via the explicit
+      // mealType filter chip.
+      void useTimeAwareDefaults;
 
       // Mood-based recommendations (Home Page 2.0)
       if (mood) {
@@ -719,6 +714,16 @@ export const recipeController = {
         const scoreB = b.score?.matchPercentage || b.score?.total || 0;
         return scoreB - scoreA; // Descending order (highest score first)
       });
+
+      // Diversify near-duplicates (e.g., 4 "Soy-Honey Sesame Glazed…"
+      // variants surfacing back-to-back because they all score within a
+      // hair of each other). Title-signature based; preserves score
+      // order globally and never drops recipes — only re-positions twins
+      // so no two share a signature within a 3-recipe window. When
+      // Recipe.embedding is populated, swap this for an embedding-cosine
+      // version (see services/dedupeScorer.ts). Mutates in place via
+      // splice since `allRecipesWithScores` is a const binding.
+      allRecipesWithScores.splice(0, allRecipesWithScores.length, ...diversifyByTitleSignature(allRecipesWithScores, 2));
 
       // Shuffle mode for pull-to-discover (Home Page 2.0)
       // Applies weighted randomization while still respecting scores
@@ -4092,12 +4097,10 @@ export const recipeController = {
       if (dietaryRestrictions && typeof dietaryRestrictions === 'string') {
         // Apply dietary restriction filtering if needed
       }
-      if (useTimeAwareDefaults === 'true') {
-        const { getCurrentTemporalContext } = require('@/utils/temporalScoring');
-        const tc = getCurrentTemporalContext();
-        const mealTypeMap: Record<string, string> = { breakfast: 'breakfast', lunch: 'lunch', dinner: 'dinner', snack: 'snack' };
-        if (mealTypeMap[tc.mealPeriod]) where.mealType = mealTypeMap[tc.mealPeriod];
-      }
+      // Time-aware defaults — see getRecipes for rationale; this strict
+      // mealType filter was removed because it shrank the visible catalog
+      // by ~54% and blocked browsing/planning across times of day.
+      void useTimeAwareDefaults;
       if (mood) {
         const moodCriteria: Record<string, any> = {
           lazy: { maxCookTime: 20 },
