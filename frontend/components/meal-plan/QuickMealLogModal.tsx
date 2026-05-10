@@ -6,6 +6,7 @@ import { View, Text, Modal, TextInput, Dimensions, KeyboardAvoidingView, Platfor
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useModalAnimation } from '../../hooks/useModalAnimation';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -261,25 +262,14 @@ export default function QuickMealLogModal({
               ) : null}
 
               {/* Submit Button */}
-              <HapticTouchableOpacity
+              <BrandButton
+                label={loading ? 'Logging...' : 'Log Meal'}
                 onPress={handleSubmit}
+                loading={loading}
                 disabled={!canSubmit}
-                className="py-3.5 rounded-xl items-center"
-                style={{
-                  backgroundColor: canSubmit
-                    ? (isDark ? DarkColors.primary : Colors.primary)
-                    : (isDark ? '#374151' : '#E5E7EB'),
-                  opacity: canSubmit ? 1 : 0.5,
-                }}
+                variant="sage"
                 accessibilityLabel="Log meal"
-                accessibilityHint="Logs this meal to your meal plan"
-              >
-                <Text className="font-bold text-base" style={{
-                  color: canSubmit ? '#FFFFFF' : (isDark ? '#6B7280' : '#9CA3AF'),
-                }}>
-                  {loading ? 'Logging...' : 'Log Meal'}
-                </Text>
-              </HapticTouchableOpacity>
+              />
             </ScrollView>
           </Animated.View>
         </View>

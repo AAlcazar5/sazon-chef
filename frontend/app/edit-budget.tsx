@@ -1,11 +1,11 @@
 // frontend/app/edit-budget.tsx
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import BrandButton from '../components/ui/BrandButton';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import BudgetInputRow from '../components/budget/BudgetInputRow';
 // Budget settings screen
 
 import { View, Text, ScrollView, Alert } from 'react-native';
-import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import LoadingState from '../components/ui/LoadingState';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -179,23 +179,12 @@ export default function EditBudgetScreen() {
           })()}
 
           {/* Save Button */}
-          <HapticTouchableOpacity
+          <BrandButton
+            label="Save Budget Settings"
             onPress={handleSave}
+            loading={saving}
             disabled={saving}
-            className="py-4 rounded-lg"
-            style={{
-              backgroundColor: saving 
-                ? (isDark ? '#4B5563' : '#D1D5DB')
-                : (isDark ? DarkColors.secondaryRed : Colors.secondaryRed),
-              opacity: saving ? 0.6 : 1,
-            }}
-          >
-            {saving ? (
-              <AnimatedActivityIndicator size="small" color="white" />
-            ) : (
-              <Text className="text-white text-center font-semibold text-lg">Save Budget Settings</Text>
-            )}
-          </HapticTouchableOpacity>
+          />
         </View>
       </ScrollView>
       </KeyboardAvoidingContainer>

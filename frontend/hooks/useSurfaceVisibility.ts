@@ -16,8 +16,11 @@
 //
 // Each unlock is a tiny "Sazon learned a new trick" beat — capability reveals
 // (N6) wrapped on the surface fire on the first render after unlock.
+//
+// P5: migrated to React Query so every tab + every Today surface that gates
+// on this hook reads from one cache entry.
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { todayApi } from '../lib/api';
 import {
   APP_SURFACE_INVENTORY,
@@ -47,6 +50,7 @@ export interface UseSurfaceVisibilityResult {
 }
 
 const COLD_FALLBACK: SignalCoverageTier = 'cold';
+const QUERY_KEY = ['signalCoverage'] as const;
 
 function buildVisibility(tier: SignalCoverageTier): SurfaceVisibility {
   const out: SurfaceVisibility = {};
@@ -65,31 +69,20 @@ function buildVisibility(tier: SignalCoverageTier): SurfaceVisibility {
  * the count caps (N4.2) honest.
  */
 export function useSurfaceVisibility(): UseSurfaceVisibilityResult {
-  const [tier, setTier] = useState<SignalCoverageTier | null>(null);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<SignalCoverageTier> => {
+      try {
+        const res = await todayApi.coverage();
+        const payload = (res?.data ?? res) as { tier?: SignalCoverageTier };
+        return payload?.tier ?? COLD_FALLBACK;
+      } catch {
+        return COLD_FALLBACK;
+      }
+    },
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    todayApi
-      .coverage()
-      .then((res) => {
-        if (cancelled) return;
-        const payload = (res?.data ?? res) as {
-          tier?: SignalCoverageTier;
-        };
-        setTier(payload?.tier ?? COLD_FALLBACK);
-      })
-      .catch(() => {
-        if (!cancelled) setTier(COLD_FALLBACK);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+  const tier = query.data ?? null;
   const visibility = tier ? buildVisibility(tier) : {};
   const visibleSurfaceIds = (tab: AppTab) =>
     APP_SURFACE_INVENTORY.filter(
@@ -99,7 +92,12 @@ export function useSurfaceVisibility(): UseSurfaceVisibilityResult {
         visibility[s.surfaceId] === true,
     ).map((s) => s.surfaceId);
 
-  return { tier, visibility, visibleSurfaceIds, loading };
+  return {
+    tier,
+    visibility,
+    visibleSurfaceIds,
+    loading: query.isLoading,
+  };
 }
 
 // Pure helper exported for tests + cap tests.

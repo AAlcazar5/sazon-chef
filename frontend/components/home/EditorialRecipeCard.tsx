@@ -31,7 +31,7 @@ interface EditorialRecipeCardProps {
 
 const PHOTO_SIZE = 132;
 
-export function EditorialRecipeCard({
+function EditorialRecipeCardComponent({
   recipe,
   bg,
   titleColor,
@@ -326,3 +326,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+// P6: memoize. Hot-path: rendered as the renderItem of every recipe
+// carousel + section grid. Without it, sibling card state (feedback,
+// loading on a different recipe) triggers a re-render of every card.
+export const EditorialRecipeCard = React.memo(EditorialRecipeCardComponent);

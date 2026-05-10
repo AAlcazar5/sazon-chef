@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import WheelPicker from './WheelPicker';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -153,16 +154,16 @@ export default function TimePickerModal({
             <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">{t('common.cancel')}</Text>
           </HapticTouchableOpacity>
 
-          <HapticTouchableOpacity
-            onPress={() => {
-              HapticPatterns.buttonPressPrimary();
-              onConfirm();
-            }}
-            className="flex-1 py-3 px-4 rounded-lg"
-            style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-          >
-            <Text className="text-white font-medium text-center">{t('mealPlan.timePicker.addRecipe')}</Text>
-          </HapticTouchableOpacity>
+          <View className="flex-1">
+            <BrandButton
+              label={t('mealPlan.timePicker.addRecipe')}
+              onPress={() => {
+                HapticPatterns.buttonPressPrimary();
+                onConfirm();
+              }}
+              size="compact"
+            />
+          </View>
         </View>
       </View>
     </View>

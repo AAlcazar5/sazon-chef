@@ -28,8 +28,11 @@ function lineCount(rel: string): number {
 //     but net positive due to G2.1 / discovery card additions).
 //   app/cooking.tsx: 1100 → 1200 (cooking-flow polish + intent
 //     classification work). 1200 → 1210 (H11 a11y labels).
+// 2026-05-10 — lib/api.ts: 3200 → 3220 (KeepUnder API: KeepUnderCaps,
+//     KeepUnderBody, KeepUnderResult interfaces + composedPlateApi.keepUnder
+//     endpoint, ~34 lines). Tier P9 split still pending.
 const CAPS: Record<string, number> = {
-  'lib/api.ts': 3200,
+  'lib/api.ts': 3220,
   'app/modal.tsx': 2700,
   'app/(tabs)/cookbook.tsx': 2100,
   'hooks/useMealPlanActions.ts': 1900,

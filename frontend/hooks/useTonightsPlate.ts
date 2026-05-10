@@ -1,17 +1,17 @@
 // frontend/hooks/useTonightsPlate.ts
 // Group 10X Phase 2 — fetches and caches the plate-from-pantry suggestion.
+//
+// P5 (persister): migrated from a hand-rolled in-mem + AsyncStorage cache
+// to React Query. The cache persister (lib/queryPersister.ts) handles
+// disk hydration on cold start; `staleTime: 30min` preserves the original
+// "cached for 30 minutes before refetch" contract.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { mealComponentApi, type PermutationCandidate } from '../lib/api';
 
-const CACHE_KEY = 'tonights_plate_cache';
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-interface CacheEntry {
-  ts: number;
-  plate: PermutationCandidate | null;
-}
+const QUERY_KEY = ['tonightsPlate'] as const;
+const STALE_TIME_MS = 30 * 60 * 1000;
 
 interface UseTonightsPlateResult {
   plate: PermutationCandidate | null;
@@ -21,62 +21,25 @@ interface UseTonightsPlateResult {
 }
 
 export function useTonightsPlate(): UseTonightsPlateResult {
-  const [plate, setPlate] = useState<PermutationCandidate | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const memCacheRef = useRef<CacheEntry | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchFromApi = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<PermutationCandidate | null> => {
       const res = await mealComponentApi.plateFromPantry();
-      const fetched = res.data?.plate ?? null;
-      const entry: CacheEntry = { ts: Date.now(), plate: fetched };
-      memCacheRef.current = entry;
-      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(entry)).catch(() => undefined);
-      setPlate(fetched);
-    } catch {
-      setError(true);
-      setPlate(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return res.data?.plate ?? null;
+    },
+    staleTime: STALE_TIME_MS,
+  });
 
   const refetch = useCallback(() => {
-    memCacheRef.current = null;
-    void fetchFromApi();
-  }, [fetchFromApi]);
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+  }, [queryClient]);
 
-  useEffect(() => {
-    async function init() {
-      if (memCacheRef.current && Date.now() - memCacheRef.current.ts < CACHE_TTL_MS) {
-        setPlate(memCacheRef.current.plate);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const raw = await AsyncStorage.getItem(CACHE_KEY);
-        if (raw) {
-          const cached: CacheEntry = JSON.parse(raw);
-          if (Date.now() - cached.ts < CACHE_TTL_MS) {
-            memCacheRef.current = cached;
-            setPlate(cached.plate);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // Cache read failed — fall through to API call
-      }
-
-      await fetchFromApi();
-    }
-
-    void init();
-  }, [fetchFromApi]);
-
-  return { plate, loading, error, refetch };
+  return {
+    plate: query.data ?? null,
+    loading: query.isLoading,
+    error: query.isError,
+    refetch,
+  };
 }

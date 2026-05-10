@@ -47,22 +47,26 @@ export const recordSlotAffinity = async (input: RecordSlotAffinityInput): Promis
   const { userId, componentId, slot, delta } = input;
   const householdMemberId = input.householdMemberId ?? null;
 
-  // Read-then-upsert with the clamp applied in JS so scores stay inside [-2, +2]
-  // on every event. Prisma's `{ increment }` shortcut runs in SQL and would let
-  // long-tail accumulators drift past the bound.
-  const existing = await (prisma as any).slotAffinity.findUnique({
-    where: { userId_householdMemberId_componentId: { userId, householdMemberId, componentId } },
-    select: { score: true },
+  // Prisma 5.x rejects `null` in a compound unique `findUnique`/`upsert` even
+  // when the field is `String?`, so we use findFirst + conditional update/create.
+  // Score clamp is applied in JS so values stay inside [-2, +2] on every event;
+  // Prisma's `{ increment }` shortcut runs in SQL and would let long-tail
+  // accumulators drift past the bound.
+  const existing = await (prisma as any).slotAffinity.findFirst({
+    where: { userId, householdMemberId, componentId },
+    select: { id: true, score: true },
   });
   const nextScore = clamp((existing?.score ?? 0) + delta);
-  await (prisma as any).slotAffinity.upsert({
-    where: { userId_householdMemberId_componentId: { userId, householdMemberId, componentId } },
-    create: { userId, householdMemberId, componentId, slot, score: nextScore, sampleCount: 1 },
-    update: {
-      score: nextScore,
-      sampleCount: { increment: 1 },
-    },
-  });
+  if (existing) {
+    await (prisma as any).slotAffinity.update({
+      where: { id: existing.id },
+      data: { score: nextScore, sampleCount: { increment: 1 } },
+    });
+  } else {
+    await (prisma as any).slotAffinity.create({
+      data: { userId, householdMemberId, componentId, slot, score: nextScore, sampleCount: 1 },
+    });
+  }
 };
 
 const upsertPairAffinity = async (
@@ -72,19 +76,21 @@ const upsertPairAffinity = async (
   delta: number
 ): Promise<void> => {
   const [componentIdA, componentIdB] = [idA, idB].sort();
-  const existing = await (prisma as any).pairAffinity.findUnique({
-    where: { userId_componentIdA_componentIdB: { userId, componentIdA, componentIdB } },
-    select: { score: true },
+  const existing = await (prisma as any).pairAffinity.findFirst({
+    where: { userId, componentIdA, componentIdB },
+    select: { id: true, score: true },
   });
   const nextScore = clamp((existing?.score ?? 0) + delta);
-  await (prisma as any).pairAffinity.upsert({
-    where: { userId_componentIdA_componentIdB: { userId, componentIdA, componentIdB } },
-    create: { userId, componentIdA, componentIdB, score: nextScore, sampleCount: 1 },
-    update: {
-      score: nextScore,
-      sampleCount: { increment: 1 },
-    },
-  });
+  if (existing) {
+    await (prisma as any).pairAffinity.update({
+      where: { id: existing.id },
+      data: { score: nextScore, sampleCount: { increment: 1 } },
+    });
+  } else {
+    await (prisma as any).pairAffinity.create({
+      data: { userId, componentIdA, componentIdB, score: nextScore, sampleCount: 1 },
+    });
+  }
 };
 
 const resolveSlots = async (

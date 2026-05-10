@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, Text, Modal } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import { Colors, DarkColors } from '../../constants/Colors';
 import GoalModeSelector, { GoalMode } from './GoalModeSelector';
 import { t } from '../../lib/i18n';
@@ -268,13 +269,13 @@ function MealSnackSelectorModal({
               <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">{t('common.cancel')}</Text>
             </HapticTouchableOpacity>
 
-            <HapticTouchableOpacity
-              onPress={onConfirm}
-              className="flex-1 py-3 px-4 rounded-lg"
-              style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-            >
-              <Text className="text-white font-medium text-center">{t('common.create')}</Text>
-            </HapticTouchableOpacity>
+            <View className="flex-1">
+              <BrandButton
+                label={t('common.create')}
+                onPress={onConfirm}
+                size="compact"
+              />
+            </View>
           </View>
         </View>
       </View>

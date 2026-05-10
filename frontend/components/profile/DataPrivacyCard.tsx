@@ -4,6 +4,7 @@
 import { View, Text, Modal } from 'react-native';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import { useState } from 'react';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -251,18 +252,16 @@ export default function DataPrivacyCard({
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>
-              <HapticTouchableOpacity
-                onPress={handleConfirmClear}
-                disabled={clearingHistory || (!clearOptions.mealHistory && !clearOptions.shoppingLists)}
-                className={`flex-1 py-3 px-4 rounded-lg ${clearingHistory || (!clearOptions.mealHistory && !clearOptions.shoppingLists) ? 'opacity-50' : ''}`}
-                style={{ backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
-              >
-                {clearingHistory ? (
-                  <AnimatedActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text className="text-white font-medium text-center">Clear</Text>
-                )}
-              </HapticTouchableOpacity>
+              <View className="flex-1">
+                <BrandButton
+                  label="Clear"
+                  onPress={handleConfirmClear}
+                  loading={clearingHistory}
+                  disabled={clearingHistory || (!clearOptions.mealHistory && !clearOptions.shoppingLists)}
+                  gradient={['#EF4444', '#BE123C']}
+                  size="compact"
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -321,18 +320,15 @@ export default function DataPrivacyCard({
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>
-              <HapticTouchableOpacity
-                onPress={() => { onExportData(selectedExportFormat); setShowExportFormatModal(false); }}
-                disabled={exportingData}
-                className={`flex-1 py-3 px-4 rounded-lg ${exportingData ? 'opacity-50' : ''}`}
-                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                {exportingData ? (
-                  <AnimatedActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text className="text-white font-medium text-center">Export</Text>
-                )}
-              </HapticTouchableOpacity>
+              <View className="flex-1">
+                <BrandButton
+                  label="Export"
+                  onPress={() => { onExportData(selectedExportFormat); setShowExportFormatModal(false); }}
+                  loading={exportingData}
+                  disabled={exportingData}
+                  size="compact"
+                />
+              </View>
             </View>
           </View>
         </View>

@@ -1,7 +1,11 @@
 // frontend/hooks/useLeftoverInventory.ts
 // Group 10X Phase 6 — fetches active leftovers from /api/leftover-inventory.
+//
+// P5: migrated to React Query so leftover inventory is cached across the
+// Build-a-Plate "stretch this leftover" surfaces and the Today use-it-up
+// strip without redundant fetches.
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { leftoverInventoryApi, type LeftoverInventoryItem } from '../lib/api';
 
 export interface UseLeftoverInventoryResult {
@@ -10,36 +14,27 @@ export interface UseLeftoverInventoryResult {
   hasEnoughForStretch: boolean;
 }
 
-export function useLeftoverInventory(): UseLeftoverInventoryResult {
-  const [leftovers, setLeftovers] = useState<LeftoverInventoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const QUERY_KEY = ['leftoverInventory'] as const;
+const EMPTY: LeftoverInventoryItem[] = [];
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+export function useLeftoverInventory(): UseLeftoverInventoryResult {
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<LeftoverInventoryItem[]> => {
       try {
         const res = await leftoverInventoryApi.list();
-        if (!cancelled) {
-          setLeftovers(res.data?.leftovers ?? []);
-        }
+        return res.data?.leftovers ?? EMPTY;
       } catch {
-        if (!cancelled) {
-          setLeftovers([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        return EMPTY;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    },
+  });
+
+  const leftovers = query.data ?? EMPTY;
 
   return {
     leftovers,
-    isLoading,
+    isLoading: query.isLoading,
     hasEnoughForStretch: leftovers.length >= 2,
   };
 }

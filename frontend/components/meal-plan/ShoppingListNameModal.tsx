@@ -4,8 +4,8 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import BottomSheet from '../ui/BottomSheet';
-import PulsingLoader from '../ui/PulsingLoader';
 
 interface ShoppingListNameModalProps {
   visible: boolean;
@@ -58,22 +58,16 @@ export default function ShoppingListNameModal({
             </Text>
           </HapticTouchableOpacity>
 
-          <HapticTouchableOpacity
-            onPress={onConfirm}
-            disabled={generatingShoppingList}
-            className={`flex-1 py-3 px-4 bg-emerald-500 dark:bg-emerald-600 rounded-lg ${
-              generatingShoppingList ? 'opacity-50' : ''
-            } flex-row items-center justify-center`}
-          >
-            {generatingShoppingList ? (
-              <>
-                <PulsingLoader size={14} color="white" />
-                <Text className="text-white font-medium text-center ml-2">Generating...</Text>
-              </>
-            ) : (
-              <Text className="text-white font-medium text-center">Create</Text>
-            )}
-          </HapticTouchableOpacity>
+          <View className="flex-1">
+            <BrandButton
+              label={generatingShoppingList ? 'Generating...' : 'Create'}
+              onPress={onConfirm}
+              loading={generatingShoppingList}
+              disabled={generatingShoppingList}
+              variant="sage"
+              size="compact"
+            />
+          </View>
         </View>
       </View>
     </BottomSheet>

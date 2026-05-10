@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Modal } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import PulsingLoader from '../ui/PulsingLoader';
+import BrandButton from '../ui/BrandButton';
 import { t } from '../../lib/i18n';
 
 interface SaveTemplateModalProps {
@@ -88,20 +88,16 @@ export default function SaveTemplateModal({
               <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">{t('common.cancel')}</Text>
             </HapticTouchableOpacity>
 
-            <HapticTouchableOpacity
-              onPress={handleSave}
-              disabled={saving || !name.trim()}
-              className={`flex-1 py-3 px-4 bg-emerald-500 dark:bg-emerald-600 rounded-lg ${saving || !name.trim() ? 'opacity-50' : ''} flex-row items-center justify-center`}
-            >
-              {saving ? (
-                <>
-                  <PulsingLoader size={14} color="white" />
-                  <Text className="text-white font-medium text-center ml-2">{t('mealPlan.saveTemplate.saving')}</Text>
-                </>
-              ) : (
-                <Text className="text-white font-medium text-center">{t('common.save')}</Text>
-              )}
-            </HapticTouchableOpacity>
+            <View className="flex-1">
+              <BrandButton
+                label={saving ? t('mealPlan.saveTemplate.saving') : t('common.save')}
+                onPress={handleSave}
+                loading={saving}
+                disabled={saving || !name.trim()}
+                variant="sage"
+                size="compact"
+              />
+            </View>
           </View>
         </View>
       </View>

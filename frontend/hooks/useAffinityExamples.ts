@@ -10,8 +10,11 @@
 // Empty states across cookbook / meal plan / shopping list consume this
 // hook to render copy like "Try Salvadorean pupusas or Vietnamese pho —
 // both fit your taste" instead of "save your favorite recipes!"
+//
+// P5: migrated to React Query so the three empty-state surfaces share one
+// browse-by-family fetch.
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { recipeApi } from '../lib/api';
 
 export interface AffinityExamples {
@@ -32,6 +35,45 @@ interface FamilyEntry {
   hasNewForYou: boolean;
 }
 
+interface ExamplesShape {
+  topCuisines: string[];
+  wildcard: string | null;
+}
+
+const EMPTY: ExamplesShape = { topCuisines: [], wildcard: null };
+const QUERY_KEY = ['affinityExamples'] as const;
+
+function deriveExamples(families: FamilyEntry[]): ExamplesShape {
+  // Top cuisines: most-cooked from highest-affinity families, in
+  // descending family-affinity order. We pull from exploredCuisines
+  // since those are the cuisines this user has actually touched.
+  const cooked: string[] = [];
+  for (const fam of families) {
+    if (fam.affinityScore <= 0) break; // families are sorted by affinity desc
+    for (const c of fam.exploredCuisines) {
+      if (!cooked.includes(c)) cooked.push(c);
+      if (cooked.length >= 3) break;
+    }
+    if (cooked.length >= 3) break;
+  }
+
+  // Wildcard: first cuisine in the first hasNewForYou family that
+  // isn't already in topCuisines.
+  let pickedWildcard: string | null = null;
+  for (const fam of families) {
+    if (!fam.hasNewForYou) continue;
+    for (const c of fam.cuisines) {
+      if (cooked.includes(c)) continue;
+      if (fam.exploredCuisines.includes(c)) continue;
+      pickedWildcard = c;
+      break;
+    }
+    if (pickedWildcard) break;
+  }
+
+  return { topCuisines: cooked, wildcard: pickedWildcard };
+}
+
 /**
  * Pull personalized cuisine examples for empty-state copy.
  *
@@ -40,62 +82,29 @@ interface FamilyEntry {
  * same affinity calculation along with adjacency flags.
  */
 export function useAffinityExamples(): AffinityExamples {
-  const [topCuisines, setTopCuisines] = useState<string[]>([]);
-  const [wildcard, setWildcard] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<ExamplesShape> => {
       try {
         const res = await recipeApi.getBrowseByFamily();
-        const data = (res as unknown as { data?: { families?: FamilyEntry[] }; families?: FamilyEntry[] });
+        const data = res as unknown as {
+          data?: { families?: FamilyEntry[] };
+          families?: FamilyEntry[];
+        };
         const families = (data?.data?.families ?? data?.families ?? []) as FamilyEntry[];
-
-        // Top cuisines: most-cooked from highest-affinity families, in
-        // descending family-affinity order. We pull from exploredCuisines
-        // since those are the cuisines this user has actually touched.
-        const cooked: string[] = [];
-        for (const fam of families) {
-          if (fam.affinityScore <= 0) break; // families are sorted by affinity desc
-          for (const c of fam.exploredCuisines) {
-            if (!cooked.includes(c)) cooked.push(c);
-            if (cooked.length >= 3) break;
-          }
-          if (cooked.length >= 3) break;
-        }
-
-        // Wildcard: first cuisine in the first hasNewForYou family that
-        // isn't already in topCuisines.
-        let pickedWildcard: string | null = null;
-        for (const fam of families) {
-          if (!fam.hasNewForYou) continue;
-          for (const c of fam.cuisines) {
-            if (cooked.includes(c)) continue;
-            if (fam.exploredCuisines.includes(c)) continue;
-            pickedWildcard = c;
-            break;
-          }
-          if (pickedWildcard) break;
-        }
-
-        if (!cancelled) {
-          setTopCuisines(cooked);
-          setWildcard(pickedWildcard);
-          setLoading(false);
-        }
+        return deriveExamples(families);
       } catch {
-        if (!cancelled) setLoading(false);
+        return EMPTY;
       }
-    })();
+    },
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { topCuisines, wildcard, loading };
+  const data = query.data ?? EMPTY;
+  return {
+    topCuisines: data.topCuisines,
+    wildcard: data.wildcard,
+    loading: query.isLoading,
+  };
 }
 
 /**

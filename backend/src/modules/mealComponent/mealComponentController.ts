@@ -17,6 +17,7 @@ import {
 import { solveCookTimeline, ComponentTask } from '../../services/cookTimelineService';
 import { getTopComponentsForSlot, recordAffinityEvent } from '../../services/slotAffinityService';
 import { fitPlateToMacros } from '../../services/macroAutoFitService';
+import { fitPlateUnderCaps } from '../../services/macroCapFitService';
 import {
   addLeftoversFromPlate,
   consumeLeftoversForPlate,
@@ -103,6 +104,25 @@ const autoFitBodySchema = z.object({
   lockedSlots: z.array(lockedSlotWithMultiplierSchema).max(5),
   slotsToFill: z.array(slotEnum).max(5),
 });
+
+// "Keep under" caps — every field optional, at least one required. Caps are
+// upper bounds (the solver rejects combos that exceed any specified cap).
+const keepUnderBodySchema = z
+  .object({
+    caps: z
+      .object({
+        calories: z.number().positive().optional(),
+        protein: z.number().nonnegative().optional(),
+        carbs: z.number().nonnegative().optional(),
+        fat: z.number().nonnegative().optional(),
+        fiber: z.number().nonnegative().optional(),
+      })
+      .refine((c) => Object.values(c).some((v) => typeof v === 'number'), {
+        message: 'At least one cap must be specified',
+      }),
+    lockedSlots: z.array(lockedSlotWithMultiplierSchema).max(5),
+    slotsToFill: z.array(slotEnum).max(5),
+  });
 
 const leftoverInputSchema = z.object({
   componentId: z.string().min(1).max(128),
@@ -418,6 +438,38 @@ export const mealComponentController = {
       }
       logger.error({ err: error }, 'Error running macro auto-fit:');
       return res.status(500).json({ error: 'Failed to compute macro auto-fit' });
+    }
+  },
+
+  async keepUnder(req: Request, res: Response) {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const parsed = keepUnderBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: formatZodIssues(parsed.error),
+      });
+    }
+
+    try {
+      const userId = getUserId(req);
+      const result = await fitPlateUnderCaps({
+        userId,
+        caps: parsed.data.caps,
+        lockedSlots: parsed.data.lockedSlots,
+        slotsToFill: parsed.data.slotsToFill,
+      });
+      return res.json({ result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (/not found or not owned/i.test(message)) {
+        return res.status(400).json({ error: message });
+      }
+      logger.error({ err: error }, 'Error running keep-under solver:');
+      return res.status(500).json({ error: 'Failed to compute keep-under fit' });
     }
   },
 

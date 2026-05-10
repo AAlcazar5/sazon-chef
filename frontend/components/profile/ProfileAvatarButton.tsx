@@ -4,7 +4,8 @@
 // utility / settings rows that don't have a tab home.
 
 import React, { useCallback, useState } from 'react';
-import { View, Text, Image, StyleSheet, Linking } from 'react-native';
+import { View, Text, StyleSheet, Linking } from 'react-native';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import ProfileSheet from './ProfileSheet';
@@ -70,6 +71,9 @@ export default function ProfileAvatarButton({ size = 36 }: ProfileAvatarButtonPr
           <Image
             source={{ uri: avatarUrl }}
             style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
           />
         ) : (
           <View style={styles.initialWrap}>

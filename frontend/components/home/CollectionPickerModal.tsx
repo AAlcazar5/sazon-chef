@@ -5,6 +5,7 @@ import React from 'react';
 import { View, Text, TextInput } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../ui/GradientButton';
+import BrandButton from '../ui/BrandButton';
 import BottomSheet from '../ui/BottomSheet';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -120,13 +121,11 @@ function CollectionPickerModal({
           <HapticTouchableOpacity onPress={onClose} className="px-4 py-3">
             <Text className="text-gray-700 dark:text-gray-100">Cancel</Text>
           </HapticTouchableOpacity>
-          <HapticTouchableOpacity
+          <BrandButton
+            label="Save"
             onPress={onSave}
-            className="px-4 py-3 rounded-lg"
-            style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-          >
-            <Text className="text-white font-semibold">Save</Text>
-          </HapticTouchableOpacity>
+            size="compact"
+          />
         </View>
       </View>
     </BottomSheet>

@@ -8,7 +8,7 @@
 // celebrates discovery, not a streak.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';

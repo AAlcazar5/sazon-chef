@@ -85,7 +85,7 @@ jest.mock('../../lib/api', () => ({
 }));
 
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '../test-utils/render';
 import BuildAPlateScreen from '../../app/build-a-plate';
 import { mealComponentApi, composedPlateApi, shoppingListApi } from '../../lib/api';
 const mockSwapAway = mealComponentApi.swapAway as jest.Mock;

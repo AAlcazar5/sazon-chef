@@ -16,8 +16,10 @@ import {
   SlotPicker,
   PlatePreview,
   PermutationCarousel,
-  SwapStrip,
+  QuickSwapButton,
   MacroFitButton,
+  KeepUnderButton,
+  KeepUnderSheet,
   PortionStepper,
   SubstitutionBanner,
   BudgetToggle,
@@ -25,7 +27,9 @@ import {
   TechniqueChallengeBanner,
   HarmonyReveal,
   FewSmallThingsMode,
+  PantryOnlyToggle,
   type MacroFitState,
+  type KeepUnderState,
   type HarmonySignal,
 } from '../components/build-a-plate';
 import useDailyPlateSeed from '../hooks/useDailyPlateSeed';
@@ -39,12 +43,14 @@ import {
   shoppingListApi,
   leftoverInventoryApi,
   nutrientGapApi,
+  userApi,
   type MealComponent,
   type MealComponentSlot,
   type PermutationCandidate,
   type LeftoverInventoryItem,
   type ComponentVariantResponse,
   type TrackedNutrient,
+  type KeepUnderCaps,
 } from '../lib/api';
 import type { ComponentVariant } from '../components/build-a-plate';
 import { Pastel, Accent } from '../constants/Colors';
@@ -120,6 +126,15 @@ export default function BuildAPlateScreen() {
   // downstream consumer).
   const fetchedVariantIds = useRef<Set<string>>(new Set());
   const [topNutrientGap, setTopNutrientGap] = useState<TrackedNutrient | null>(null);
+  const [keepUnderState, setKeepUnderState] = useState<KeepUnderState>('idle');
+  const [keepUnderSheetOpen, setKeepUnderSheetOpen] = useState<boolean>(false);
+  const [dailyMacroGoals, setDailyMacroGoals] = useState<{
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    fiber?: number;
+  } | null>(null);
 
   const loadSlot = useCallback(async (slot: MealComponentSlot) => {
     if (poolBySlot[slot]) return poolBySlot[slot]!;
@@ -170,6 +185,37 @@ export default function BuildAPlateScreen() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Pull the user's daily macro goals once so the Keep Under sheet can
+  // pre-fill sensible defaults (~1/3 of daily for one meal).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await userApi.getMacroGoals();
+        if (cancelled) return;
+        const goals = (res.data ?? null) as {
+          calories?: number;
+          protein?: number;
+          carbs?: number;
+          fat?: number;
+          fiber?: number | null;
+        } | null;
+        if (goals) {
+          setDailyMacroGoals({
+            calories: goals.calories,
+            protein: goals.protein,
+            carbs: goals.carbs,
+            fat: goals.fat,
+            fiber: goals.fiber ?? undefined,
+          });
+        }
+      } catch {
+        // Non-blocking — sheet just opens with empty defaults.
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Phase 9: top nutrient gap fetched once on mount.
@@ -496,6 +542,59 @@ export default function BuildAPlateScreen() {
     setBudgetMode((prev) => !prev);
   }, []);
 
+  const handleKeepUnderPress = useCallback(() => {
+    setKeepUnderSheetOpen(true);
+  }, []);
+
+  const handleKeepUnderApply = useCallback(
+    async (caps: KeepUnderCaps) => {
+      setKeepUnderSheetOpen(false);
+      setKeepUnderState('loading');
+      try {
+        const lockedSlots = (Object.entries(composer.selections) as [
+          MealComponentSlot,
+          MealComponent | undefined,
+        ][])
+          .filter(([slot, component]) => Boolean(component) && composer.locks[slot])
+          .map(([slot, component]) => ({
+            slot,
+            componentId: component!.id,
+            portionMultiplier: composer.multipliers[slot] ?? 1,
+          }));
+        const slotsToFill = requiredSlotsForTier.filter(
+          (s) => !composer.locks[s] || !composer.selections[s],
+        );
+        const res = await composedPlateApi.keepUnder({ caps, lockedSlots, slotsToFill });
+        const result = res.data?.result;
+        if (!result || result.filled.length === 0) {
+          setKeepUnderState('impossible');
+          HapticPatterns.error();
+          return;
+        }
+        composer.applyAutoFit(result.filled);
+        if (result.achievable) {
+          HapticPatterns.success();
+          setKeepUnderState('fit');
+        } else {
+          HapticPatterns.error();
+          setKeepUnderState('impossible');
+        }
+      } catch {
+        setKeepUnderState('impossible');
+        HapticPatterns.error();
+      }
+    },
+    [composer, requiredSlotsForTier],
+  );
+
+  // Reset keep-under pulse when state changes back to idle (mirrors macroFit)
+  useEffect(() => {
+    if (keepUnderState === 'fit' || keepUnderState === 'impossible') {
+      const timer = setTimeout(() => setKeepUnderState('idle'), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [keepUnderState]);
+
   const handleShowOriginal = useCallback(() => {
     setSubsBannerDismissed(true);
     Alert.alert(
@@ -539,23 +638,42 @@ export default function BuildAPlateScreen() {
           </HapticTouchableOpacity>
         </View>
 
-        <View style={styles.headerPills} testID="build-a-plate-header-pills">
-          <MacroFitButton
-            state={macroFitState}
-            onPress={handleMacroFit}
-            testID="macro-fit-btn"
-          />
-          <BudgetToggle
-            active={budgetMode}
-            onToggle={handleBudgetToggle}
-            testID="budget-toggle"
-          />
-          <FewSmallThingsMode
-            active={fewSmallThingsActive}
-            slotCount={fewSmallThingsActive ? 5 : 3}
-            onToggle={() => setFewSmallThingsActive((prev) => !prev)}
-          />
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.headerPills}
+          style={styles.headerPillsScroll}
+          testID="build-a-plate-header-pills"
+        >
+          <View style={styles.headerPillSlot}>
+            <MacroFitButton
+              state={macroFitState}
+              onPress={handleMacroFit}
+              testID="macro-fit-btn"
+            />
+          </View>
+          <View style={styles.headerPillSlot}>
+            <KeepUnderButton
+              state={keepUnderState}
+              onPress={handleKeepUnderPress}
+              testID="keep-under-btn"
+            />
+          </View>
+          <View style={styles.headerPillSlot}>
+            <BudgetToggle
+              active={budgetMode}
+              onToggle={handleBudgetToggle}
+              testID="budget-toggle"
+            />
+          </View>
+          <View style={styles.headerPillSlot}>
+            <FewSmallThingsMode
+              active={fewSmallThingsActive}
+              slotCount={fewSmallThingsActive ? 5 : 3}
+              onToggle={() => setFewSmallThingsActive((prev) => !prev)}
+            />
+          </View>
+        </ScrollView>
 
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -579,50 +697,49 @@ export default function BuildAPlateScreen() {
             testID="technique-banner"
           />
 
-          <HapticTouchableOpacity
-            onPress={composer.togglePantryOnly}
-            hapticStyle="light"
-            style={[
-              styles.pantryToggle,
-              composer.pantryOnly && { backgroundColor: Accent.sage },
-            ]}
-            testID="pantry-only-toggle"
-            accessibilityLabel={`Cook with what I have, ${composer.pantryOnly ? 'on' : 'off'}`}
-          >
-            <Ionicons
-              name="basket"
-              size={16}
-              color={composer.pantryOnly ? '#FFFFFF' : Accent.sage}
+          <View style={styles.pantryToggleWrap}>
+            <PantryOnlyToggle
+              active={composer.pantryOnly}
+              onToggle={composer.togglePantryOnly}
+              testID="pantry-only-toggle"
             />
-            <Text
-              style={[
-                styles.pantryToggleText,
-                composer.pantryOnly && { color: '#FFFFFF' },
-              ]}
-            >
-              Cook with what I have
-            </Text>
-          </HapticTouchableOpacity>
+          </View>
 
           {visibleSlots.map((slot) => {
             const selected = composer.selections[slot];
             const pool = poolBySlot[slot] ?? [];
-            const alternatives = selected
-              ? pool.filter((c) => c.id !== selected.id)
-              : [];
+            const topAlternative = selected
+              ? [...pool]
+                  .filter((c) => c.id !== selected.id)
+                  .sort((a, b) => b.pantryCoveragePercent - a.pantryCoveragePercent)[0] ?? null
+              : null;
             const multiplier = composer.multipliers[slot] ?? 1;
             return (
               <View key={slot}>
-                <SlotRow
-                  slot={slot}
-                  label={SLOT_META[slot].label}
-                  emoji={SLOT_META[slot].emoji}
-                  selected={selected}
-                  locked={composer.locks[slot]}
-                  onPress={() => handleOpenPicker(slot)}
-                  onLongPress={() => handleLongPress(slot)}
-                  testID={`slot-row-${slot}`}
-                />
+                <View style={styles.slotRowWrap}>
+                  <SlotRow
+                    slot={slot}
+                    label={SLOT_META[slot].label}
+                    emoji={SLOT_META[slot].emoji}
+                    selected={selected}
+                    locked={composer.locks[slot]}
+                    onPress={() => handleOpenPicker(slot)}
+                    onLongPress={() => handleLongPress(slot)}
+                    testID={`slot-row-${slot}`}
+                  />
+                  {selected && topAlternative && !composer.locks[slot] && (
+                    <View style={styles.quickSwapWrap} pointerEvents="box-none">
+                      <QuickSwapButton
+                        topAlternative={topAlternative}
+                        onSwap={(componentId) => {
+                          const next = pool.find((c) => c.id === componentId);
+                          if (next) composer.setSlot(slot, next);
+                        }}
+                        testID={`quick-swap-${slot}`}
+                      />
+                    </View>
+                  )}
+                </View>
                 {selected && (
                   <View style={styles.portionRow}>
                     <PortionStepper
@@ -631,17 +748,6 @@ export default function BuildAPlateScreen() {
                       testID={`portion-stepper-${slot}`}
                     />
                   </View>
-                )}
-                {selected && alternatives.length > 0 && (
-                  <SwapStrip
-                    alternatives={alternatives}
-                    current={selected}
-                    onSwap={(componentId) => {
-                      const next = pool.find((c) => c.id === componentId);
-                      if (next) composer.setSlot(slot, next);
-                    }}
-                    testID={`swap-strip-${slot}`}
-                  />
                 )}
               </View>
             );
@@ -772,6 +878,13 @@ export default function BuildAPlateScreen() {
         totalPlatesThisWeek={weeklyPlates.isLoading ? undefined : weeklyPlates.totalPlatesThisWeek}
       />
 
+      <KeepUnderSheet
+        visible={keepUnderSheetOpen}
+        onClose={() => setKeepUnderSheetOpen(false)}
+        onApply={handleKeepUnderApply}
+        dailyDefaults={dailyMacroGoals}
+      />
+
       {showBeginnerTutorial && (
         <HapticTouchableOpacity
           onPress={handleDismissBeginnerTutorial}
@@ -831,16 +944,35 @@ const styles = StyleSheet.create({
   },
   headerPills: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 12,
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  // Inside a horizontal ScrollView each pill takes its natural width and
+  // overflow scrolls — no flex/shrink needed (those clipped the pills earlier).
+  headerPillSlot: {},
+  // Explicit height — RN's horizontal ScrollView won't always size to its
+  // content's intrinsic cross-axis height, which clipped the pills in half.
+  // Pill ≈ 32px + 12px vertical padding + a few px for shadow.
+  headerPillsScroll: {
+    height: 56,
+    flexGrow: 0,
   },
   portionRow: {
     paddingHorizontal: 4,
     paddingTop: 6,
     paddingBottom: 4,
+  },
+  slotRowWrap: {
+    position: 'relative',
+  },
+  quickSwapWrap: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 10,
+    justifyContent: 'center',
   },
   costRow: {
     flexDirection: 'row',
@@ -853,21 +985,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 32,
   },
-  pantryToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 100,
-    backgroundColor: Pastel.sage,
+  pantryToggleWrap: {
     marginBottom: 16,
-  },
-  pantryToggleText: {
-    fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 12,
-    color: '#2E5931',
   },
   garnishCta: {
     flexDirection: 'row',

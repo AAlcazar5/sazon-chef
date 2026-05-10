@@ -29,6 +29,7 @@ interface MacroFitButtonProps {
 interface VisualConfig {
   bg: string;
   fg: string;
+  fgDark: string;
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   a11y: string;
@@ -38,6 +39,7 @@ const STATE_VISUALS: Record<MacroFitState, VisualConfig> = {
   idle: {
     bg: Pastel.lavender,
     fg: '#6a2677',
+    fgDark: '#D8B4DF',
     icon: 'sparkles-outline',
     label: 'Fit my macros',
     a11y: 'Fit my macros — auto-balance the plate to your daily macro target',
@@ -45,6 +47,7 @@ const STATE_VISUALS: Record<MacroFitState, VisualConfig> = {
   loading: {
     bg: Pastel.lavender,
     fg: '#6a2677',
+    fgDark: '#D8B4DF',
     icon: 'sparkles-outline',
     label: 'Fitting…',
     a11y: 'Computing macro fit',
@@ -52,6 +55,7 @@ const STATE_VISUALS: Record<MacroFitState, VisualConfig> = {
   fit: {
     bg: Pastel.sage,
     fg: '#2E5931',
+    fgDark: '#A8DDA9',
     icon: 'checkmark-circle',
     label: 'Macros fit',
     a11y: 'Macros fit — your plate is within ten percent of your daily target',
@@ -59,6 +63,7 @@ const STATE_VISUALS: Record<MacroFitState, VisualConfig> = {
   impossible: {
     bg: Pastel.peach,
     fg: '#8a4a00',
+    fgDark: '#FFD4A6',
     icon: 'alert-circle',
     label: 'Cannot fit today',
     a11y: "Cannot fit my macros — Sazon couldn't land within your remaining target",
@@ -69,6 +74,7 @@ export default function MacroFitButton({ state, onPress, testID }: MacroFitButto
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const visuals = STATE_VISUALS[state];
+  const fg = isDark ? visuals.fgDark : visuals.fg;
   const scale = useSharedValue(1);
   const pulse = useSharedValue(1);
 
@@ -121,9 +127,9 @@ export default function MacroFitButton({ state, onPress, testID }: MacroFitButto
           style={state === 'loading' ? iconAnimatedStyle : undefined}
           testID={state === 'loading' && testID ? `${testID}-loading` : undefined}
         >
-          <Ionicons name={visuals.icon} size={16} color={visuals.fg} />
+          <Ionicons name={visuals.icon} size={16} color={fg} />
         </Animated.View>
-        <Text style={[styles.label, { color: visuals.fg }]} numberOfLines={1}>{visuals.label}</Text>
+        <Text style={[styles.label, { color: fg }]} numberOfLines={1}>{visuals.label}</Text>
       </HapticTouchableOpacity>
     </Animated.View>
   );
@@ -133,13 +139,15 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
+    gap: 5,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
+    minWidth: 0,
   },
   label: {
     fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 12,
+    fontSize: 11,
+    flexShrink: 1,
   },
 });

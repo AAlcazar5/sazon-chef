@@ -6,8 +6,8 @@
 //      account-level row (so household-head context still updates).
 //   2. Each member's affinity is isolated — cooking for member A must not
 //      bleed into member B's row.
-//   3. Re-cooking the same combo upserts (sampleCount += 1) instead of
-//      duplicating rows.
+//   3. Re-cooking the same combo updates an existing row (sampleCount += 1)
+//      instead of duplicating rows.
 
 import {
   recordSlotAffinity,
@@ -21,23 +21,25 @@ beforeEach(() => {
   jest.clearAllMocks();
   if (!mockPrisma.slotAffinity) {
     mockPrisma.slotAffinity = {
-      findUnique: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn(),
-      upsert: jest.fn(),
-      update: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     };
+  } else {
+    mockPrisma.slotAffinity.findFirst = mockPrisma.slotAffinity.findFirst ?? jest.fn();
+    mockPrisma.slotAffinity.create = mockPrisma.slotAffinity.create ?? jest.fn();
+    mockPrisma.slotAffinity.update = mockPrisma.slotAffinity.update ?? jest.fn();
   }
   if (!mockPrisma.mealComponent) {
     mockPrisma.mealComponent = { findMany: jest.fn() };
   }
-  mockPrisma.slotAffinity.findUnique.mockResolvedValue(null);
+  mockPrisma.slotAffinity.findFirst.mockResolvedValue(null);
 });
 
 describe('recordSlotAffinity — per-household-member keying', () => {
   it('writes a row keyed on (userId, householdMemberId, componentId) when a member is provided', async () => {
-    mockPrisma.slotAffinity.upsert.mockResolvedValue({});
+    mockPrisma.slotAffinity.create.mockResolvedValue({});
 
     await recordSlotAffinity({
       userId: 'u1',
@@ -47,17 +49,18 @@ describe('recordSlotAffinity — per-household-member keying', () => {
       delta: 0.2,
     });
 
-    const [[args]] = mockPrisma.slotAffinity.upsert.mock.calls;
-    expect(args.where.userId_householdMemberId_componentId).toEqual({
+    const [[{ where }]] = mockPrisma.slotAffinity.findFirst.mock.calls;
+    expect(where).toEqual({
       userId: 'u1',
       householdMemberId: 'kid-a',
       componentId: 'comp-roast-carrot',
     });
-    expect(args.create.householdMemberId).toBe('kid-a');
+    const [[{ data }]] = mockPrisma.slotAffinity.create.mock.calls;
+    expect(data.householdMemberId).toBe('kid-a');
   });
 
   it('writes a row keyed on (userId, NULL, componentId) when no member is provided', async () => {
-    mockPrisma.slotAffinity.upsert.mockResolvedValue({});
+    mockPrisma.slotAffinity.create.mockResolvedValue({});
 
     await recordSlotAffinity({
       userId: 'u1',
@@ -66,13 +69,14 @@ describe('recordSlotAffinity — per-household-member keying', () => {
       delta: 0.2,
     });
 
-    const [[args]] = mockPrisma.slotAffinity.upsert.mock.calls;
-    expect(args.where.userId_householdMemberId_componentId).toEqual({
+    const [[{ where }]] = mockPrisma.slotAffinity.findFirst.mock.calls;
+    expect(where).toEqual({
       userId: 'u1',
       householdMemberId: null,
       componentId: 'comp-roast-carrot',
     });
-    expect(args.create.householdMemberId).toBeNull();
+    const [[{ data }]] = mockPrisma.slotAffinity.create.mock.calls;
+    expect(data.householdMemberId).toBeNull();
   });
 });
 
@@ -82,7 +86,7 @@ describe('recordFamilyMealCookedAffinity', () => {
       { id: 'pasta', slot: 'base' },
       { id: 'carrot', slot: 'vegetable' },
     ]);
-    mockPrisma.slotAffinity.upsert.mockResolvedValue({});
+    mockPrisma.slotAffinity.create.mockResolvedValue({});
 
     await recordFamilyMealCookedAffinity({
       userId: 'u1',
@@ -95,11 +99,11 @@ describe('recordFamilyMealCookedAffinity', () => {
       ],
     });
 
-    // Per-member rows (2 components) + shared rows (2 components) = 4 upserts
-    expect(mockPrisma.slotAffinity.upsert.mock.calls.length).toBe(4);
+    // Per-member rows (2 components) + shared rows (2 components) = 4 creates
+    expect(mockPrisma.slotAffinity.create.mock.calls.length).toBe(4);
 
-    const memberKeys = mockPrisma.slotAffinity.upsert.mock.calls
-      .map(([a]: any) => a.where.userId_householdMemberId_componentId.householdMemberId)
+    const memberKeys = mockPrisma.slotAffinity.create.mock.calls
+      .map(([a]: any) => a.data.householdMemberId)
       .sort();
     expect(memberKeys).toEqual(['kid-a', 'kid-a', null, null]);
   });
@@ -108,7 +112,7 @@ describe('recordFamilyMealCookedAffinity', () => {
     mockPrisma.mealComponent.findMany.mockResolvedValue([
       { id: 'pasta', slot: 'base' },
     ]);
-    mockPrisma.slotAffinity.upsert.mockResolvedValue({});
+    mockPrisma.slotAffinity.create.mockResolvedValue({});
 
     await recordFamilyMealCookedAffinity({
       userId: 'u1',
@@ -117,16 +121,17 @@ describe('recordFamilyMealCookedAffinity', () => {
       ],
     });
 
-    const memberIds = mockPrisma.slotAffinity.upsert.mock.calls
-      .map(([a]: any) => a.where.userId_householdMemberId_componentId.householdMemberId);
+    const memberIds = mockPrisma.slotAffinity.create.mock.calls
+      .map(([a]: any) => a.data.householdMemberId);
     expect(memberIds).toContain('kid-b');
     expect(memberIds).not.toContain('kid-a');
   });
 
-  it('re-cooking the same (member, component) combo passes sampleCount.increment=1 to upsert.update', async () => {
+  it('re-cooking the same (member, component) combo updates the existing row with sampleCount += 1', async () => {
     mockPrisma.mealComponent.findMany.mockResolvedValue([{ id: 'pasta', slot: 'base' }]);
-    mockPrisma.slotAffinity.findUnique.mockResolvedValue({ score: 0.4 });
-    mockPrisma.slotAffinity.upsert.mockResolvedValue({});
+    // Existing row found for the per-member lookup → update path
+    mockPrisma.slotAffinity.findFirst.mockResolvedValue({ id: 'sa-1', score: 0.4 });
+    mockPrisma.slotAffinity.update.mockResolvedValue({});
 
     await recordFamilyMealCookedAffinity({
       userId: 'u1',
@@ -135,25 +140,23 @@ describe('recordFamilyMealCookedAffinity', () => {
       ],
     });
 
-    // First upsert call is the per-member row
-    const memberCall = mockPrisma.slotAffinity.upsert.mock.calls.find(
-      ([a]: any) => a.where.userId_householdMemberId_componentId.householdMemberId === 'kid-a',
-    );
-    expect(memberCall).toBeDefined();
-    expect(memberCall[0].update.sampleCount.increment).toBe(1);
+    // Update was called for both the per-member and shared rows
+    expect(mockPrisma.slotAffinity.update).toHaveBeenCalled();
+    const [[{ data }]] = mockPrisma.slotAffinity.update.mock.calls;
+    expect(data.sampleCount.increment).toBe(1);
   });
 
   it('plates without a householdMemberId only write the shared (NULL) row', async () => {
     mockPrisma.mealComponent.findMany.mockResolvedValue([{ id: 'pasta', slot: 'base' }]);
-    mockPrisma.slotAffinity.upsert.mockResolvedValue({});
+    mockPrisma.slotAffinity.create.mockResolvedValue({});
 
     await recordFamilyMealCookedAffinity({
       userId: 'u1',
       plates: [{ plateId: 'p1', componentIds: ['pasta'] }],
     });
 
-    expect(mockPrisma.slotAffinity.upsert.mock.calls.length).toBe(1);
-    const [[args]] = mockPrisma.slotAffinity.upsert.mock.calls;
-    expect(args.where.userId_householdMemberId_componentId.householdMemberId).toBeNull();
+    expect(mockPrisma.slotAffinity.create.mock.calls.length).toBe(1);
+    const [[{ data }]] = mockPrisma.slotAffinity.create.mock.calls;
+    expect(data.householdMemberId).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import { View, Text, ScrollView, Dimensions, Alert } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useState } from 'react';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import BottomSheet from '../ui/BottomSheet';
 import CollectionCard from '../collection/CollectionCard';
 import Icon from '../ui/Icon';
@@ -282,17 +283,14 @@ export default function CollectionPicker({
 
               {/* Create New Collection Button */}
               <View className="p-4 border-t border-gray-200 dark:border-gray-700">
-                <HapticTouchableOpacity
+                <BrandButton
+                  label="Create New Collection"
+                  icon="add"
                   onPress={() => {
                     onClose();
                     onCreateCollection();
                   }}
-                  className="px-4 py-3 rounded-lg flex-row items-center justify-center"
-                  style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-                >
-                  <Icon name={Icons.ADD} size={IconSizes.MD} color="white" accessibilityLabel="Create new collection" />
-                  <Text className="text-white font-semibold ml-2">Create New Collection</Text>
-                </HapticTouchableOpacity>
+                />
               </View>
 
       </View>

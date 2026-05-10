@@ -1,8 +1,10 @@
 // frontend/hooks/useRecent7DayPlates.ts
 // Group 10X-Cleanup — 7-day cooked-plate + green-vegetable summary for the
 // composer's "Eat the rainbow" hint banner.
+//
+// P5: migrated to React Query.
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { composedPlateApi } from '../lib/api';
 
 export interface UseRecent7DayPlatesResult {
@@ -11,31 +13,36 @@ export interface UseRecent7DayPlatesResult {
   isLoading: boolean;
 }
 
-export function useRecent7DayPlates(): UseRecent7DayPlatesResult {
-  const [totalPlatesThisWeek, setTotal] = useState(0);
-  const [greenVegCount, setGreenVegCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+const QUERY_KEY = ['composedPlate', 'weeklySummary'] as const;
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+interface Summary {
+  totalPlatesThisWeek: number;
+  greenVegCount: number;
+}
+
+const EMPTY: Summary = { totalPlatesThisWeek: 0, greenVegCount: 0 };
+
+export function useRecent7DayPlates(): UseRecent7DayPlatesResult {
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<Summary> => {
       try {
         const res = await composedPlateApi.weeklySummary();
-        if (cancelled) return;
-        setTotal(res.data?.totalPlatesThisWeek ?? 0);
-        setGreenVegCount(res.data?.greenVegCount ?? 0);
+        return {
+          totalPlatesThisWeek: res.data?.totalPlatesThisWeek ?? 0,
+          greenVegCount: res.data?.greenVegCount ?? 0,
+        };
       } catch {
-        if (cancelled) return;
-        setTotal(0);
-        setGreenVegCount(0);
-      } finally {
-        if (!cancelled) setIsLoading(false);
+        return EMPTY;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    },
+  });
 
-  return { totalPlatesThisWeek, greenVegCount, isLoading };
+  const summary = query.data ?? EMPTY;
+
+  return {
+    totalPlatesThisWeek: summary.totalPlatesThisWeek,
+    greenVegCount: summary.greenVegCount,
+    isLoading: query.isLoading,
+  };
 }

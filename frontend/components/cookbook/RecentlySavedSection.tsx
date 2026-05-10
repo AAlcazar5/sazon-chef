@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, FlatList, Pressable, StyleSheet, type ListRenderItem } from 'react-native';
+import { Image } from 'expo-image';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { Pastel } from '../../constants/Colors';
 
@@ -18,6 +19,39 @@ interface RecentlySavedSectionProps {
 const BG_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender];
 
 export function RecentlySavedSection({ recipes, onSort, onRecipePress }: RecentlySavedSectionProps) {
+  const renderItem = useCallback<ListRenderItem<SavedRecipe>>(
+    ({ item: recipe, index }) => (
+      <Pressable
+        testID={`saved-recipe-${recipe.id}`}
+        onPress={() => onRecipePress(recipe.id)}
+        style={styles.card}
+        accessibilityLabel={recipe.title}
+        accessibilityRole="button"
+      >
+        <View
+          style={[
+            styles.photoCircle,
+            { backgroundColor: BG_ROTATION[index % BG_ROTATION.length] },
+          ]}
+        >
+          {recipe.imageUrl && (
+            <Image
+              source={{ uri: recipe.imageUrl }}
+              style={styles.photo}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
+          )}
+        </View>
+        <Text style={styles.recipeName} numberOfLines={2}>{recipe.title}</Text>
+      </Pressable>
+    ),
+    [onRecipePress],
+  );
+
+  const keyExtractor = useCallback((r: SavedRecipe) => r.id, []);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -30,30 +64,18 @@ export function RecentlySavedSection({ recipes, onSort, onRecipePress }: Recentl
         </Pressable>
       </View>
 
-      <ScrollView
+      <FlatList
         horizontal
+        data={recipes}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         testID="recently-saved-scroll"
-      >
-        {recipes.map((recipe, i) => (
-          <Pressable
-            key={recipe.id}
-            testID={`saved-recipe-${recipe.id}`}
-            onPress={() => onRecipePress(recipe.id)}
-            style={styles.card}
-            accessibilityLabel={recipe.title}
-            accessibilityRole="button"
-          >
-            <View style={[styles.photoCircle, { backgroundColor: BG_ROTATION[i % BG_ROTATION.length] }]}>
-              {recipe.imageUrl && (
-                <Image source={{ uri: recipe.imageUrl }} style={styles.photo} />
-              )}
-            </View>
-            <Text style={styles.recipeName} numberOfLines={2}>{recipe.title}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+        initialNumToRender={6}
+        windowSize={5}
+        removeClippedSubviews
+      />
     </View>
   );
 }

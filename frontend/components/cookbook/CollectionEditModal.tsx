@@ -6,6 +6,7 @@ import { View, Text, Modal, TextInput, Dimensions, ScrollView, KeyboardAvoidingV
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -262,20 +263,14 @@ export default function CollectionEditModal({
               >
                 <Text className="font-semibold" style={{ color: isDark ? '#D1D5DB' : '#4B5563' }}>Cancel</Text>
               </HapticTouchableOpacity>
-              <HapticTouchableOpacity
-                onPress={handleSave}
-                className="flex-1 py-3 rounded-xl items-center"
-                style={{
-                  backgroundColor: name.trim()
-                    ? (isDark ? DarkColors.primary : Colors.primary)
-                    : (isDark ? '#374151' : '#E5E7EB'),
-                }}
-                disabled={!name.trim()}
-              >
-                <Text className="font-semibold" style={{ color: name.trim() ? '#FFFFFF' : '#9CA3AF' }}>
-                  {isEditMode ? 'Save' : 'Create'}
-                </Text>
-              </HapticTouchableOpacity>
+              <View className="flex-1">
+                <BrandButton
+                  label={isEditMode ? 'Save' : 'Create'}
+                  onPress={handleSave}
+                  disabled={!name.trim()}
+                  size="compact"
+                />
+              </View>
             </View>
           </Animated.View>
         </View>

@@ -16,6 +16,7 @@ import { useRef, useEffect, useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -320,16 +321,12 @@ export default function ImportFromUrlModal({
 
                   {/* Action buttons */}
                   <View className="pb-6 gap-2">
-                    <HapticTouchableOpacity
+                    <BrandButton
+                      label="Saved to Cookbook ✓"
                       onPress={handleDone}
                       hapticStyle="medium"
-                      className="py-3 rounded-xl items-center"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      <Text className="text-white font-semibold text-base">
-                        Saved to Cookbook ✓
-                      </Text>
-                    </HapticTouchableOpacity>
+                      variant="sage"
+                    />
 
                     <HapticTouchableOpacity
                       onPress={() => {

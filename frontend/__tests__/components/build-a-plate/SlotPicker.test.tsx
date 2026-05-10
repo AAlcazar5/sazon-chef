@@ -27,7 +27,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
 });
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import SlotPicker from '../../../components/build-a-plate/SlotPicker';
 import type { MealComponent } from '../../../lib/api';
 
@@ -142,5 +142,52 @@ describe('SlotPicker — affinity sort', () => {
     const options = getAllByTestId(/slot-picker-option-/);
     const ids = options.map((el) => el.props.testID.replace('slot-picker-option-', ''));
     expect(ids.indexOf('high')).toBeLessThan(ids.indexOf('low-fav'));
+  });
+});
+
+describe('SlotPicker — search + custom add', () => {
+  it('renders a search input', () => {
+    const { getByTestId } = render(<SlotPicker {...defaultProps} />);
+    expect(getByTestId('slot-picker-search-input')).toBeTruthy();
+  });
+
+  it('filters list by case-insensitive substring match on name', () => {
+    const { getByTestId, queryByTestId, getAllByTestId } = render(
+      <SlotPicker {...defaultProps} />
+    );
+    fireEvent.changeText(getByTestId('slot-picker-search-input'), 'sal');
+    const options = getAllByTestId(/slot-picker-option-/);
+    const ids = options.map((el) => el.props.testID.replace('slot-picker-option-', ''));
+    expect(ids).toContain('salmon');
+    expect(queryByTestId('slot-picker-option-tofu')).toBeNull();
+    expect(queryByTestId('slot-picker-option-chicken')).toBeNull();
+  });
+
+  it('shows custom-add CTA when no results match the query', () => {
+    const { getByTestId } = render(<SlotPicker {...defaultProps} />);
+    fireEvent.changeText(getByTestId('slot-picker-search-input'), 'avocado');
+    expect(getByTestId('slot-picker-custom-cta')).toBeTruthy();
+  });
+
+  it('does not show custom-add CTA when query is empty', () => {
+    const { queryByTestId } = render(<SlotPicker {...defaultProps} />);
+    expect(queryByTestId('slot-picker-custom-cta')).toBeNull();
+  });
+
+  it('calls onSelect with a custom component when custom CTA is pressed', () => {
+    const onSelect = jest.fn();
+    const { getByTestId } = render(
+      <SlotPicker {...defaultProps} onSelect={onSelect} />
+    );
+    fireEvent.changeText(getByTestId('slot-picker-search-input'), 'Avocado');
+    fireEvent.press(getByTestId('slot-picker-custom-cta'));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    const arg = onSelect.mock.calls[0][0];
+    expect(arg.id).toMatch(/^custom-/);
+    expect(arg.name).toBe('Avocado');
+    expect(arg.slot).toBe('protein');
+    expect(arg.caloriesPerPortion).toBe(0);
+    expect(arg.proteinG).toBe(0);
+    expect(arg.pantryCoveragePercent).toBe(0);
   });
 });

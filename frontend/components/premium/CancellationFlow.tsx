@@ -10,8 +10,8 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import { LogoMascot } from '../mascot';
 import Sazon from '../mascot/Sazon';
 import { stripeApi } from '../../lib/api';
@@ -199,20 +199,16 @@ function OfferStep({
             Pause for 1 month — your data stays safe and you can resume anytime. No charge while paused.
           </Text>
           {error && <ErrorMessage message={error} />}
-          <HapticTouchableOpacity
+          <BrandButton
             testID="accept-offer-button"
-            className="w-full py-4 rounded-2xl items-center mb-3"
-            style={{ backgroundColor: Colors.primary }}
+            label="Pause for 1 month"
             onPress={onAcceptOffer}
+            loading={loading}
             disabled={loading}
             hapticStyle="medium"
-          >
-            {loading ? (
-              <AnimatedActivityIndicator color="white" />
-            ) : (
-              <Text className="text-white font-bold text-base">Pause for 1 month</Text>
-            )}
-          </HapticTouchableOpacity>
+            variant="sky"
+            style={{ width: '100%', marginBottom: 12 }}
+          />
         </>
       )}
 
@@ -298,29 +294,24 @@ function ConfirmStep({
 
       {error && <ErrorMessage message={error} />}
 
-      <HapticTouchableOpacity
+      <BrandButton
         testID="confirm-cancel-button"
-        className="w-full py-4 rounded-2xl items-center mb-3 bg-red-500"
+        label="Cancel Subscription"
         onPress={onConfirm}
+        loading={loading}
         disabled={loading}
         hapticStyle="heavy"
-      >
-        {loading ? (
-          <AnimatedActivityIndicator color="white" />
-        ) : (
-          <Text className="text-white font-bold text-base">Cancel Subscription</Text>
-        )}
-      </HapticTouchableOpacity>
+        gradient={['#EF4444', '#BE123C']}
+        style={{ width: '100%', marginBottom: 12 }}
+      />
 
-      <HapticTouchableOpacity
+      <BrandButton
         testID="keep-subscription-button"
-        className="w-full py-4 rounded-2xl items-center mb-3"
-        style={{ backgroundColor: Colors.primary }}
+        label="Keep my subscription"
         onPress={onClose}
         hapticStyle="light"
-      >
-        <Text className="text-white font-bold text-base">Keep my subscription</Text>
-      </HapticTouchableOpacity>
+        style={{ width: '100%', marginBottom: 12 }}
+      />
 
       <HapticTouchableOpacity
         className="py-3 items-center"

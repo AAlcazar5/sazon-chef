@@ -10,9 +10,9 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Image,
   Animated,
 } from 'react-native';
+import { Image } from 'expo-image';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -197,6 +197,9 @@ export default function LogFoodSheet({
         <Image
           source={{ uri: food.imageUrl }}
           style={{ width: 44, height: 44, borderRadius: 12, marginRight: 12 }}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
         />
       ) : (
         <View

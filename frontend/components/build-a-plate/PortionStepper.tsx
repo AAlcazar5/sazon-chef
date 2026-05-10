@@ -60,7 +60,12 @@ export default function PortionStepper({ value, onChange, testID }: PortionStepp
             accessibilityLabel={`Portion ${labelFor(n)}${active ? ', selected' : ''}`}
             testID={testID ? `${testID}-chip-${n}` : undefined}
           >
-            <Text style={[styles.label, { color: active ? '#FFFFFF' : '#2E5931' }]}>
+            <Text
+              style={[
+                styles.label,
+                { color: active ? '#FFFFFF' : isDark ? '#A8DDA9' : '#2E5931' },
+              ]}
+            >
               {labelFor(n)}
             </Text>
           </HapticTouchableOpacity>

@@ -2,7 +2,8 @@
 // Collapsible weekly view showing all days with expandable details
 
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
+import { Image } from 'expo-image';
 import { optimizedImageUrl } from '../../utils/imageUtils';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -114,6 +115,9 @@ function CollapsibleWeekView({
                                 source={{ uri: optimizedImageUrl(meal.imageUrl) }}
                                 className="w-12 h-12 rounded-lg mr-3"
                                 style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}
+                                contentFit="cover"
+                                cachePolicy="memory-disk"
+                                transition={200}
                               />
                             ) : (
                               <View className="w-12 h-12 rounded-lg mr-3 items-center justify-center" style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}>

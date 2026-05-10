@@ -89,7 +89,7 @@ jest.mock('../../../components/mascot/Sazon', () => {
 });
 
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '../../test-utils/render';
 import StretchHomeCard from '../../../components/home/StretchHomeCard';
 
 const SALMON = {

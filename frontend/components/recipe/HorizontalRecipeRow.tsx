@@ -8,7 +8,9 @@
 // *how the row looks*.
 
 import React from 'react';
-import { View, Text, ScrollView, Image, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { cldUrl } from '../../lib/cloudinaryUrl';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import { useColorScheme } from 'nativewind';
@@ -85,9 +87,11 @@ export default function HorizontalRecipeRow({
           >
             {card.imageUrl ? (
               <Image
-                source={{ uri: card.imageUrl }}
+                source={{ uri: cldUrl(card.imageUrl, { width: 200, height: 110, dpr: 2 }) }}
                 style={styles.cardImage}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
               />
             ) : (
               <View style={[styles.cardImage, styles.cardImagePlaceholder]} />

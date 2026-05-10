@@ -5,7 +5,7 @@
 // HX7.1 — every chip tap is logged via homeSurfaceEvent.
 
 import React, { useCallback } from 'react';
-import { ScrollView, Text, StyleSheet } from 'react-native';
+import { FlatList, Text, StyleSheet, type ListRenderItem } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -91,46 +91,56 @@ export default function QuickActionRow({
     [handlerFor, recordTap]
   );
 
+  const renderItem = useCallback<ListRenderItem<ActionDef>>(
+    ({ item: action }) => (
+      <HapticTouchableOpacity
+        testID={`quick-action-${action.id}`}
+        onPress={() => handleChipPress(action.id)}
+        accessibilityLabel={action.a11y}
+        accessibilityRole="button"
+        pressedScale={0.96}
+        style={[
+          styles.chip,
+          {
+            backgroundColor: isDark
+              ? PastelTokens.dark[action.tint]
+              : PastelTokens.light[action.tint],
+          },
+        ]}
+      >
+        {/* Icon keeps the vivid accent (small enough that the saturation
+            reads as decoration). Label uses ink for AA-legible contrast on
+            the pastel chip — accent-on-pastel-of-same-hue was unreadable. */}
+        <Ionicons name={action.icon} size={16} color={AccentTokens[action.accent]} />
+        <Text
+          style={[
+            styles.label,
+            { color: isDark ? Ink.dark.primary : Ink.light.primary },
+          ]}
+          numberOfLines={1}
+        >
+          {action.label}
+        </Text>
+      </HapticTouchableOpacity>
+    ),
+    [handleChipPress, isDark],
+  );
+
+  const keyExtractor = useCallback((a: ActionDef) => a.id, []);
+
   return (
-    <ScrollView
+    <FlatList
       horizontal
+      data={sortedActions}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
       showsHorizontalScrollIndicator={false}
       style={styles.scroll}
       contentContainerStyle={styles.row}
-    >
-      {sortedActions.map((action) => (
-        <HapticTouchableOpacity
-          key={action.id}
-          testID={`quick-action-${action.id}`}
-          onPress={() => handleChipPress(action.id)}
-          accessibilityLabel={action.a11y}
-          accessibilityRole="button"
-          pressedScale={0.96}
-          style={[
-            styles.chip,
-            {
-              backgroundColor: isDark
-                ? PastelTokens.dark[action.tint]
-                : PastelTokens.light[action.tint],
-            },
-          ]}
-        >
-          {/* Icon keeps the vivid accent (small enough that the saturation
-              reads as decoration). Label uses ink for AA-legible contrast on
-              the pastel chip — accent-on-pastel-of-same-hue was unreadable. */}
-          <Ionicons name={action.icon} size={16} color={AccentTokens[action.accent]} />
-          <Text
-            style={[
-              styles.label,
-              { color: isDark ? Ink.dark.primary : Ink.light.primary },
-            ]}
-            numberOfLines={1}
-          >
-            {action.label}
-          </Text>
-        </HapticTouchableOpacity>
-      ))}
-    </ScrollView>
+      initialNumToRender={5}
+      windowSize={5}
+      removeClippedSubviews
+    />
   );
 }
 

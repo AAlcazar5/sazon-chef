@@ -1,12 +1,19 @@
 // frontend/hooks/useDailyPlateSeed.ts
 // Group 10X Phase 2 — daily seed: one permutation per calendar day, variety-aware.
+//
+// P5 (persister): hand-rolled in-mem + AsyncStorage seed cache replaced by
+// React Query. Date is in the queryKey so today's seed is naturally separate
+// from yesterday's; the persister hydrates from disk on cold start. The
+// AsyncStorage `YESTERDAY_PROTEIN_KEY` survives on its own (not a cache —
+// it's an *input* to the queryFn that drives variety) and is updated after
+// each successful fetch.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { mealComponentApi, type PermutationCandidate, type MealComponentSlot } from '../lib/api';
 
-const SEED_KEY = 'daily_plate_seed';
 const YESTERDAY_PROTEIN_KEY = 'daily_plate_seed_yesterday_protein';
 
 function todayString(): string {
@@ -17,18 +24,21 @@ function todayString(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-interface StoredSeed {
-  date: string;
-  permutation: PermutationCandidate;
-}
-
 interface DailyPlateSeedResult {
   seed: PermutationCandidate | null;
   isStale: boolean;
   reroll: () => Promise<void>;
 }
 
-async function fetchFreshSeed(yesterdayProteinId: string | null): Promise<PermutationCandidate | null> {
+async function pickSeed(): Promise<PermutationCandidate | null> {
+  let yesterdayProteinId: string | null = null;
+  try {
+    yesterdayProteinId = await AsyncStorage.getItem(YESTERDAY_PROTEIN_KEY);
+  } catch {
+    // AsyncStorage failure is non-fatal — variety filter just doesn't apply.
+  }
+
+  let chosen: PermutationCandidate | null;
   try {
     const res = await mealComponentApi.permutations({
       lockedSlots: [],
@@ -44,73 +54,51 @@ async function fetchFreshSeed(yesterdayProteinId: string | null): Promise<Permut
         const proteinComp = c.components.find((comp) => comp.slot === 'protein');
         return proteinComp?.component.id !== yesterdayProteinId;
       });
-      return varied ?? candidates[0];
+      chosen = varied ?? candidates[0];
+    } else {
+      chosen = candidates[0];
     }
-
-    return candidates[0];
   } catch {
     return null;
   }
-}
 
-async function persistSeed(permutation: PermutationCandidate): Promise<void> {
-  const stored: StoredSeed = { date: todayString(), permutation };
-  const proteinComp = permutation.components.find((c) => c.slot === 'protein');
-  await AsyncStorage.setItem(SEED_KEY, JSON.stringify(stored));
-  if (proteinComp) {
-    await AsyncStorage.setItem(YESTERDAY_PROTEIN_KEY, proteinComp.component.id);
+  // Record the chosen protein so tomorrow's call avoids it.
+  if (chosen) {
+    const proteinComp = chosen.components.find((c) => c.slot === 'protein');
+    if (proteinComp) {
+      await AsyncStorage.setItem(YESTERDAY_PROTEIN_KEY, proteinComp.component.id).catch(
+        () => undefined,
+      );
+    }
   }
+
+  return chosen;
 }
 
 export default function useDailyPlateSeed(): DailyPlateSeedResult {
-  const [seed, setSeed] = useState<PermutationCandidate | null>(null);
-  const [isStale, setIsStale] = useState(false);
+  const queryClient = useQueryClient();
+  const today = todayString();
 
-  useEffect(() => {
-    let active = true;
-
-    async function init() {
-      const today = todayString();
-      let stored: StoredSeed | null = null;
-      try {
-        const raw = await AsyncStorage.getItem(SEED_KEY);
-        if (raw) stored = JSON.parse(raw) as StoredSeed;
-      } catch {
-        await AsyncStorage.removeItem(SEED_KEY).catch(() => undefined);
-      }
-
-      if (stored && stored.date === today) {
-        if (active) {
-          setSeed(stored.permutation);
-          setIsStale(false);
-        }
-        return;
-      }
-      if (stored && active) setIsStale(true);
-
-      const yesterdayProteinId = await AsyncStorage.getItem(YESTERDAY_PROTEIN_KEY);
-      const fresh = await fetchFreshSeed(yesterdayProteinId);
-      if (fresh && active) {
-        setSeed(fresh);
-        setIsStale(false);
-        await persistSeed(fresh);
-      }
-    }
-
-    void init();
-    return () => { active = false; };
-  }, []);
+  const query = useQuery({
+    queryKey: ['dailyPlateSeed', today],
+    queryFn: pickSeed,
+    // The seed is intentionally stable across the day — staleTime through
+    // end-of-day is handled implicitly by the date-keyed cache plus the
+    // persister. Long staleTime so navigation back into the composer
+    // doesn't refetch.
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
   const reroll = useCallback(async () => {
-    const yesterdayProteinId = await AsyncStorage.getItem(YESTERDAY_PROTEIN_KEY);
-    const fresh = await fetchFreshSeed(yesterdayProteinId);
-    if (fresh) {
-      setSeed(fresh);
-      setIsStale(false);
-      await persistSeed(fresh);
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-  }, []);
+    await queryClient.invalidateQueries({ queryKey: ['dailyPlateSeed', today] });
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+  }, [queryClient, today]);
 
-  return { seed, isStale, reroll };
+  return {
+    seed: query.data ?? null,
+    // Date is in the queryKey, so a stale-prior-day cache entry can never
+    // surface as today's seed. Always false; preserved for shape compat.
+    isStale: false,
+    reroll,
+  };
 }

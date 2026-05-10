@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Alert, TextInput, Image } from 'react-native';
+import { View, Text, ScrollView, Alert, TextInput } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
@@ -24,6 +25,7 @@ import { CookbookLoadingStates } from '../../constants/LoadingStates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRecentCollectionIds, recordRecentCollections } from '../../lib/recentCollections';
 import { useWeatherSmartCollection } from '../../hooks/useWeatherSmartCollection';
+import { useSmartCollections } from '../../hooks/useSmartCollections';
 import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import { HeartBurstAnimation } from '../../components/celebrations';
 import Toast, { ToastType } from '../../components/ui/Toast';
@@ -105,8 +107,12 @@ export default function CookbookScreen() {
   // Multi-select: empty array => All
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<CookbookViewMode>('saved');
-  const [smartCollections, setSmartCollections] = useState<Array<{id: string; name: string; icon: string; description: string; count: number}>>([]);
-  const [smartCollectionsLoading, setSmartCollectionsLoading] = useState(false);
+  const { smartCollections, loading: smartCollectionsLoading } = useSmartCollections({
+    enabled: viewMode === 'collections',
+  }) as {
+    smartCollections: Array<{ id: string; name: string; icon: string; description: string; count: number }>;
+    loading: boolean;
+  };
   const [collectionsSearchQuery, setCollectionsSearchQuery] = useState('');
   const { collection: weatherCollection } = useWeatherSmartCollection();
   const [collapsedCategorySections, setCollapsedCategorySections] = useState<Set<string>>(new Set());
@@ -358,19 +364,7 @@ export default function CookbookScreen() {
     }, [viewMode])
   );
 
-  // Load smart collections when switching to the collections view
-  useEffect(() => {
-    if (viewMode !== 'collections') return;
-    let cancelled = false;
-    setSmartCollectionsLoading(true);
-    recipeApi.getSmartCollections()
-      .then((res: any) => {
-        if (!cancelled) setSmartCollections(res.data?.collections ?? []);
-      })
-      .catch(() => { /* silently fail — empty state handles it */ })
-      .finally(() => { if (!cancelled) setSmartCollectionsLoading(false); });
-    return () => { cancelled = true; };
-  }, [viewMode]);
+  // Smart collections are loaded by useSmartCollections({ enabled: viewMode === 'collections' }).
 
   // Also refresh when needsRefresh is triggered
   useEffect(() => {
@@ -1513,7 +1507,14 @@ export default function CookbookScreen() {
                   {previewImages.length > 0 && (
                     <View style={{ flexDirection: 'row', height: 72, overflow: 'hidden' }}>
                       {previewImages.map((uri, i) => (
-                        <Image key={i} source={{ uri }} style={{ flex: 1, height: 72 }} resizeMode="cover" />
+                        <Image
+                          key={i}
+                          source={{ uri }}
+                          style={{ flex: 1, height: 72 }}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                          transition={200}
+                        />
                       ))}
                       {Array.from({ length: Math.max(0, 3 - previewImages.length) }).map((_, i) => (
                         <View key={`ph-${i}`} style={{ flex: 1, height: 72, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} />

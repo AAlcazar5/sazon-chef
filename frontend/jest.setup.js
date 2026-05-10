@@ -45,10 +45,11 @@ jest.mock('expo-router', () => ({
   Stack: ({ children }: any) => children,
 }));
 
-// Mock expo-image (native module not available in tests)
-jest.mock('expo-image', () => ({
-  Image: function MockImage() { return null; },
-}));
+// Mock expo-image (native module not available in tests).
+// Manual mock lives at __mocks__/expo-image.js and forwards testID/a11y
+// props to a host View so consumer tests after the react-native-Image →
+// expo-image migration (P2) keep working.
+jest.mock('expo-image');
 
 // Mock expo-linear-gradient (native module not available in tests)
 jest.mock('expo-linear-gradient', () => ({

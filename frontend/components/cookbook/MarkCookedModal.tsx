@@ -5,6 +5,7 @@ import { View, Text, TextInput, Modal, Animated } from 'react-native';
 import { useRef, useEffect, useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -145,14 +146,12 @@ export default function MarkCookedModal({
             />
 
             {/* Confirm button */}
-            <HapticTouchableOpacity
+            <BrandButton
+              label="Mark as Cooked"
+              emoji="🍳"
               onPress={handleConfirm}
-              className="py-3 rounded-lg items-center flex-row justify-center"
-              style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-            >
-              <Text className="text-base font-semibold text-white mr-2">Mark as Cooked</Text>
-              <Text style={{ fontSize: 18 }}>🍳</Text>
-            </HapticTouchableOpacity>
+              variant="sage"
+            />
           </View>
         </Animated.View>
       </Animated.View>

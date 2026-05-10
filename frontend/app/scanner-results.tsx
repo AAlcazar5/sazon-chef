@@ -3,7 +3,8 @@
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 
-import { View, Text, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
+import { Image } from 'expo-image';
 import { useState, useCallback } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -105,7 +106,13 @@ export default function ScannerResultsScreen() {
       <ScrollView style={{ flex: 1 }}>
         <View style={{ padding: 16 }}>
           {imageUri && (
-            <Image source={{ uri: imageUri }} style={{ width: '100%', height: 200, borderRadius: 16, marginBottom: 16 }} resizeMode="cover" />
+            <Image
+              source={{ uri: imageUri }}
+              style={{ width: '100%', height: 200, borderRadius: 16, marginBottom: 16 }}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
           )}
 
           {/* Summary with full macros */}

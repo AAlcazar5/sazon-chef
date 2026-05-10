@@ -2,7 +2,7 @@
 // Tests the frosted glass sticky aisle section headers in in-store mode.
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render } from '../test-utils/render';
 import { Animated } from 'react-native';
 import ShoppingListScreen from '../../app/(tabs)/shopping-list';
 import { AISLE_ORDER } from '../../hooks/useShoppingList';

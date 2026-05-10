@@ -6,7 +6,7 @@ import { View, Text, Modal, Pressable, Animated } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import ModalBackdrop from '../ui/ModalBackdrop';
 import { Colors, DarkColors } from '../../constants/Colors';
 
@@ -71,17 +71,10 @@ export default function FiberTooltip() {
             We show fiber alongside protein, carbs, and fat because getting enough daily fiber is one
             of the highest-impact things you can do for long-term gut health.
           </Text>
-          <HapticTouchableOpacity
+          <BrandButton
+            label="Got it"
             onPress={dismiss}
-            style={{
-              backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-              borderRadius: 12,
-              paddingVertical: 12,
-              alignItems: 'center',
-            }}
-          >
-            <Text className="text-white font-semibold">Got it</Text>
-          </HapticTouchableOpacity>
+          />
         </Animated.View>
       </View>
     </Modal>

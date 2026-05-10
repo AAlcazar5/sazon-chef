@@ -1,106 +1,75 @@
 // frontend/hooks/usePersonalizedRecipes.ts
-// Custom hook for fetching personalized recipe data (liked recipes, recently viewed)
+// Recently-viewed recipe id list backed by AsyncStorage.
+//
+// P5 (cleanup): the original hook also fetched liked recipes from the API,
+// but the home screen never consumed that field — it ignored
+// `likedRecipes`, `loading`, and `refetch` from the destructure. Dropped
+// the API path; this hook is now strictly the recently-viewed list. If
+// liked-recipes need to surface again, prefer a separate `useQuery` so
+// the cache is shared with other surfaces.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { recipeApi } from '../lib/api';
-import type { SuggestedRecipe } from '../types';
 
 const RECENTLY_VIEWED_KEY = '@sazon_recently_viewed';
 const MAX_ITEMS = 5;
 
 interface UsePersonalizedRecipesOptions {
+  // Kept for shape compatibility with the prior call site; unused.
   userId?: string;
-  /** Pre-fetched liked recipes from consolidated home feed — skips API call if provided */
-  initialLikedRecipes?: SuggestedRecipe[];
+  initialLikedRecipes?: unknown;
 }
 
 interface UsePersonalizedRecipesReturn {
-  likedRecipes: SuggestedRecipe[];
   recentlyViewedIds: string[];
   loading: boolean;
-  refetch: () => Promise<void>;
   addRecentlyViewed: (recipeId: string) => Promise<void>;
 }
 
-export function usePersonalizedRecipes(options: UsePersonalizedRecipesOptions = {}): UsePersonalizedRecipesReturn {
-  const { userId, initialLikedRecipes } = options;
-
-  const [likedRecipes, setLikedRecipes] = useState<SuggestedRecipe[]>(initialLikedRecipes || []);
+export function usePersonalizedRecipes(
+  _options: UsePersonalizedRecipesOptions = {},
+): UsePersonalizedRecipesReturn {
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const loadPersonalizedData = useCallback(async () => {
-    if (!userId) return;
-
-    try {
-      setLoading(true);
-
-      // Only fetch liked recipes from API if not provided via initialData
-      if (!initialLikedRecipes || initialLikedRecipes.length === 0) {
-        const likedResponse = await recipeApi.getLikedRecipes();
-        const likedData = likedResponse.data;
-        // Handle both paginated { recipes: [] } and flat array responses
-        const recipes = Array.isArray(likedData) ? likedData : (likedData?.recipes || []);
-        if (recipes.length > 0) {
-          setLikedRecipes(recipes.slice(0, MAX_ITEMS));
-        }
-      }
-
-      // Always load recently viewed recipe IDs from AsyncStorage (local-only)
-      const recentViewed = await AsyncStorage.getItem(RECENTLY_VIEWED_KEY);
-      if (recentViewed) {
-        const recentIds = JSON.parse(recentViewed) as string[];
-        setRecentlyViewedIds(recentIds.slice(0, MAX_ITEMS));
-      }
-    } catch (error) {
-      console.error('❌ Error loading personalized data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, initialLikedRecipes]);
-
-  // Update liked recipes when initialData changes
+  // Hydrate from AsyncStorage on mount.
   useEffect(() => {
-    if (initialLikedRecipes && initialLikedRecipes.length > 0) {
-      setLikedRecipes(initialLikedRecipes);
-    }
-  }, [initialLikedRecipes]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(RECENTLY_VIEWED_KEY);
+        if (cancelled) return;
+        if (raw) {
+          const parsed = JSON.parse(raw) as string[];
+          setRecentlyViewedIds(parsed.slice(0, MAX_ITEMS));
+        }
+      } catch {
+        // Treat read failure as empty list — non-fatal for UX.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  // Add a recipe to recently viewed
   const addRecentlyViewed = useCallback(async (recipeId: string) => {
     try {
       const existing = await AsyncStorage.getItem(RECENTLY_VIEWED_KEY);
       let recentIds: string[] = existing ? JSON.parse(existing) : [];
-
-      // Remove if already exists (to move to front)
-      recentIds = recentIds.filter(id => id !== recipeId);
-
-      // Add to front
+      // Move-to-front semantics: drop existing entry, prepend, cap.
+      recentIds = recentIds.filter((id) => id !== recipeId);
       recentIds.unshift(recipeId);
-
-      // Keep only MAX_ITEMS
       recentIds = recentIds.slice(0, MAX_ITEMS);
-
       await AsyncStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(recentIds));
       setRecentlyViewedIds(recentIds);
-    } catch (error) {
-      console.error('❌ Error saving recently viewed:', error);
+    } catch {
+      // Persist failure is non-fatal; the in-memory list updates on next read.
     }
   }, []);
 
-  // Load on mount and when userId changes
-  useEffect(() => {
-    loadPersonalizedData();
-  }, [loadPersonalizedData]);
-
-  return {
-    likedRecipes,
-    recentlyViewedIds,
-    loading,
-    refetch: loadPersonalizedData,
-    addRecentlyViewed,
-  };
+  return { recentlyViewedIds, loading, addRecentlyViewed };
 }
 
 export default usePersonalizedRecipes;

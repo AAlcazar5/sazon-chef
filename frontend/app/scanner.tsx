@@ -3,7 +3,8 @@ import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
 // Scanner screen for ingredient scanning and food recognition (Phase 6, Group 13)
 
-import { View, Text, Alert, ScrollView, Image, Animated, StyleSheet, Platform } from 'react-native';
+import { View, Text, Alert, ScrollView, Animated, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MotiView } from 'moti';
@@ -613,7 +614,14 @@ export default function ScannerScreen() {
                   transition={{ type: 'spring', delay: 80, damping: 18, stiffness: 200 }}
                 >
                   <View style={{ position: 'relative' }}>
-                    <Image source={{ uri: imageUri }} className="w-full h-48 rounded-xl" style={Shadows.MD} resizeMode="cover" />
+                    <Image
+                      source={{ uri: imageUri }}
+                      className="w-full h-48 rounded-xl"
+                      style={Shadows.MD}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={200}
+                    />
                     {/* Floating glassmorphic labels */}
                     {mode === 'food' && 'foods' in result && (
                       <View style={{ position: 'absolute', bottom: 12, left: 12, right: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -830,7 +838,9 @@ export default function ScannerScreen() {
                         <Image
                           source={{ uri: result.imageUrl }}
                           className="w-full h-32 rounded-lg mb-2"
-                          resizeMode="contain"
+                          contentFit="contain"
+                          cachePolicy="memory-disk"
+                          transition={200}
                         />
                       )}
                     </View>

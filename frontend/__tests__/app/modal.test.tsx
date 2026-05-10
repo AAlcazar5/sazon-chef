@@ -2,7 +2,7 @@
 // Phase 5 Screen Inventory: Recipe Detail modal — hero, buttons, frosted header, ingredients, Start Cooking
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '../test-utils/render';
 import RecipeModal from '../../app/modal';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────

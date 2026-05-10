@@ -3,7 +3,9 @@
 // Displays icon, name, "Smart" badge, description, and recipe count.
 
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { cldUrl } from '../../lib/cloudinaryUrl';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Pastel, PastelDark, Accent } from '../../constants/Colors';
@@ -54,7 +56,15 @@ function SmartCollectionCard({ id, name, icon, description, count, previewImages
       {images.length > 0 && (
         <View style={styles.previewStrip}>
           {images.map((uri, i) => (
-            <Image key={i} source={{ uri }} style={styles.previewImage} resizeMode="cover" testID={`preview-image-${i}`} />
+            <Image
+              key={i}
+              source={{ uri: cldUrl(uri, { width: 120, height: 120, dpr: 2 }) }}
+              style={styles.previewImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+              testID={`preview-image-${i}`}
+            />
           ))}
           {Array.from({ length: Math.max(0, 3 - images.length) }).map((_, i) => (
             <View key={`ph-${i}`} style={[styles.previewImage, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }]} />

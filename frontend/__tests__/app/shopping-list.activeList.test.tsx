@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Animated } from 'react-native';
-import { render, waitFor, fireEvent } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '../test-utils/render';
 import ShoppingListScreen from '../../app/(tabs)/shopping-list';
 
 // ── Component stubs ───────────────────────────────────────────────────────────

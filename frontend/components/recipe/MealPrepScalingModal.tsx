@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton from '../ui/GradientButton';
+import BrandButton from '../ui/BrandButton';
 import ModalBackdrop from '../ui/ModalBackdrop';
 import { scaleRecipe, ScaledRecipe } from '../../utils/recipeScaling';
 import { mealPrepApi } from '../../lib/api';
@@ -742,42 +743,28 @@ export default function MealPrepScalingModal({
             <View className="p-4 border-t border-gray-200 dark:border-gray-700">
               {/* Save as Template Button */}
               {scaledRecipe && (
-                <HapticTouchableOpacity
+                <BrandButton
+                  label={savingTemplate ? 'Saving...' : existingTemplate ? 'Update Template' : 'Save as Template'}
                   onPress={handleSaveAsTemplate}
+                  loading={savingTemplate}
                   disabled={savingTemplate}
-                  className={`mb-3 py-2 px-4 bg-red-600 dark:bg-red-400 rounded-lg items-center flex-row justify-center ${savingTemplate ? 'opacity-50' : ''}`}
                   hapticStyle="light"
-                >
-                  <Ionicons 
-                    name={existingTemplate ? "checkmark-circle" : "bookmark-outline"} 
-                    size={18} 
-                    color="white" 
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text className="text-white font-semibold text-sm">
-                    {savingTemplate 
-                      ? 'Saving...' 
-                      : existingTemplate 
-                        ? 'Update Template' 
-                        : 'Save as Template'}
-                  </Text>
-                </HapticTouchableOpacity>
+                  icon={existingTemplate ? 'checkmark-circle' : 'bookmark-outline'}
+                  style={{ marginBottom: 12 }}
+                />
               )}
-              
+
               <View className="space-y-3">
                 {/* Add to Meal Plan Button */}
                 {scaledRecipe && (
-                  <HapticTouchableOpacity
+                  <BrandButton
+                    label="Add to Meal Plan"
                     onPress={handleAddToMealPlan}
                     disabled={!scaledRecipe || parseInt(totalServings) <= 0}
-                    className={`bg-green-500 dark:bg-green-600 py-3 px-4 rounded-lg items-center flex-row justify-center ${
-                      !scaledRecipe || parseInt(totalServings) <= 0 ? 'opacity-50' : ''
-                    }`}
                     hapticStyle="medium"
-                  >
-                    <Ionicons name="calendar-outline" size={18} color="white" style={{ marginRight: 6 }} />
-                    <Text className="text-white font-semibold">Add to Meal Plan</Text>
-                  </HapticTouchableOpacity>
+                    icon="calendar-outline"
+                    variant="sage"
+                  />
                 )}
                 
                 <View className="mt-4">

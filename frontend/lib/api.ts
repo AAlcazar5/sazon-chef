@@ -2482,6 +2482,37 @@ export interface AutoFitResult {
   gap?: { calories: number; protein: number };
 }
 
+// "Keep under" — upper-bound caps on any subset of macros (cal/p/c/f/fiber).
+// At least one cap must be specified; the solver returns the highest-quality
+// plate whose totals stay under every cap.
+export interface KeepUnderCaps {
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  fiber?: number;
+}
+
+export interface KeepUnderBody {
+  caps: KeepUnderCaps;
+  lockedSlots: AutoFitLockedSlot[];
+  slotsToFill: MealComponentSlot[];
+}
+
+export interface KeepUnderFilledSlot {
+  slot: MealComponentSlot;
+  component: MealComponent;
+  portionMultiplier: number;
+}
+
+export interface KeepUnderResult {
+  achievable: boolean;
+  filled: KeepUnderFilledSlot[];
+  totals: { calories: number; protein: number; carbs: number; fat: number; fiber: number };
+  /** Per-macro overage (positive numbers). Only present when achievable=false. */
+  exceeded?: Partial<Record<keyof KeepUnderCaps, number>>;
+}
+
 export const mealComponentApi = {
   list: (params?: { slot?: MealComponentSlot; dietary?: string; cuisine?: string; q?: string }) =>
     apiClient.get<{ components: MealComponent[] }>('/meal-components', { params }),
@@ -2650,6 +2681,9 @@ export const composedPlateApi = {
 
   autoFit: (body: AutoFitBody) =>
     apiClient.post<{ result: AutoFitResult }>('/composed-plates/auto-fit', body),
+
+  keepUnder: (body: KeepUnderBody) =>
+    apiClient.post<{ result: KeepUnderResult }>('/composed-plates/keep-under', body),
 
   fetchOfTheWeek: () =>
     apiClient.get<{ plate: PlateOfTheWeek | null }>('/composed-plates/of-the-week'),

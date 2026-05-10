@@ -1,16 +1,31 @@
-// frontend/__tests__/hooks/useSurfaceVisibility.test.ts
+// frontend/__tests__/hooks/useSurfaceVisibility.test.tsx
 // ROADMAP 4.0 N2.2 — first-7-days surface coordination hook test.
+// P5: wrapped renderHook in QueryClientProvider after migration.
 
 const mockCoverage = jest.fn();
 jest.mock('../../lib/api', () => ({
   todayApi: { coverage: (...args: unknown[]) => mockCoverage(...args) },
 }));
 
+import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useSurfaceVisibility,
   __helpers,
 } from '../../hooks/useSurfaceVisibility';
+
+function makeClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  });
+}
+
+function withClient(client: QueryClient) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  };
+}
 
 beforeEach(() => {
   mockCoverage.mockReset();
@@ -48,7 +63,9 @@ describe('N2.2 — buildVisibility (pure)', () => {
 describe('N2.2 — useSurfaceVisibility hook', () => {
   it('returns loading=true initially, then resolves to fetched tier', async () => {
     mockCoverage.mockResolvedValue({ data: { tier: 'mid' } });
-    const { result } = renderHook(() => useSurfaceVisibility());
+    const { result } = renderHook(() => useSurfaceVisibility(), {
+      wrapper: withClient(makeClient()),
+    });
     expect(result.current.loading).toBe(true);
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.tier).toBe('mid');
@@ -58,7 +75,9 @@ describe('N2.2 — useSurfaceVisibility hook', () => {
 
   it('falls back to cold tier on API error (graceful)', async () => {
     mockCoverage.mockRejectedValue(new Error('boom'));
-    const { result } = renderHook(() => useSurfaceVisibility());
+    const { result } = renderHook(() => useSurfaceVisibility(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.tier).toBe('cold');
     expect(result.current.visibility.today_hero).toBe(true);
@@ -67,7 +86,9 @@ describe('N2.2 — useSurfaceVisibility hook', () => {
 
   it('cold tier visibleSurfaceIds("today") matches the cold cohort', async () => {
     mockCoverage.mockResolvedValue({ data: { tier: 'cold' } });
-    const { result } = renderHook(() => useSurfaceVisibility());
+    const { result } = renderHook(() => useSurfaceVisibility(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
     const todaySurfaces = result.current.visibleSurfaceIds('today');
     expect(todaySurfaces).toContain('today_hero');
@@ -79,7 +100,9 @@ describe('N2.2 — useSurfaceVisibility hook', () => {
 
   it('mid tier unlocks the IG/use-it-up triad', async () => {
     mockCoverage.mockResolvedValue({ data: { tier: 'mid' } });
-    const { result } = renderHook(() => useSurfaceVisibility());
+    const { result } = renderHook(() => useSurfaceVisibility(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
     const todaySurfaces = result.current.visibleSurfaceIds('today');
     expect(todaySurfaces).toContain('use_it_up_strip');
@@ -90,7 +113,9 @@ describe('N2.2 — useSurfaceVisibility hook', () => {
   it('Sazon tab: chat is always visible regardless of tier', async () => {
     for (const tier of ['cold', 'mid', 'high'] as const) {
       mockCoverage.mockResolvedValue({ data: { tier } });
-      const { result } = renderHook(() => useSurfaceVisibility());
+      const { result } = renderHook(() => useSurfaceVisibility(), {
+        wrapper: withClient(makeClient()),
+      });
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.visibleSurfaceIds('sazon')).toContain('sazon_chat');
     }
@@ -98,8 +123,23 @@ describe('N2.2 — useSurfaceVisibility hook', () => {
 
   it('unknown tier from API → cold fallback', async () => {
     mockCoverage.mockResolvedValue({ data: {} });
-    const { result } = renderHook(() => useSurfaceVisibility());
+    const { result } = renderHook(() => useSurfaceVisibility(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.tier).toBe('cold');
+  });
+
+  it('shares one cache entry across multiple consumers (P5 dedup)', async () => {
+    mockCoverage.mockResolvedValue({ data: { tier: 'high' } });
+    const client = makeClient();
+    const wrapper = withClient(client);
+    const a = renderHook(() => useSurfaceVisibility(), { wrapper });
+    const b = renderHook(() => useSurfaceVisibility(), { wrapper });
+    await waitFor(() => {
+      expect(a.result.current.loading).toBe(false);
+      expect(b.result.current.loading).toBe(false);
+    });
+    expect(mockCoverage).toHaveBeenCalledTimes(1);
   });
 });

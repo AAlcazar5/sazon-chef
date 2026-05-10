@@ -12,12 +12,13 @@
 // keyed by surface id, alongside per-surface "has data" flags. The
 // caller decides which sources are populated; the strip decides which
 // cards to show and in what order.
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
-  ScrollView,
+  FlatList,
   StyleSheet,
-  type ScrollViewProps,
+  type FlatListProps,
+  type ListRenderItem,
 } from 'react-native';
 
 export type DiscoverySurfaceId =
@@ -46,8 +47,8 @@ export interface DiscoverySurface {
 
 interface DiscoveryStripProps {
   surfaces: ReadonlyArray<DiscoverySurface>;
-  /** Allows tests / parents to inject ScrollView props. */
-  scrollProps?: ScrollViewProps;
+  /** Allows tests / parents to inject FlatList props. */
+  scrollProps?: Partial<FlatListProps<DiscoverySurface>>;
 }
 
 const STABLE_DEFAULT_PRIORITY = 1000;
@@ -57,26 +58,34 @@ export const DiscoveryStrip: React.FC<DiscoveryStripProps> = ({
   scrollProps,
 }) => {
   const visible = filterAndSort(surfaces);
+
+  const renderItem = useCallback<ListRenderItem<DiscoverySurface>>(
+    ({ item: s }) => (
+      <View style={styles.cardSlot} testID={`discovery-card-${s.id}`}>
+        {s.node}
+      </View>
+    ),
+    [],
+  );
+
+  const keyExtractor = useCallback((s: DiscoverySurface) => s.id, []);
+
   if (visible.length === 0) return null;
 
   return (
-    <ScrollView
+    <FlatList
       horizontal
+      data={visible}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
       testID="discovery-strip"
+      initialNumToRender={3}
+      windowSize={5}
+      removeClippedSubviews
       {...scrollProps}
-    >
-      {visible.map((s) => (
-        <View
-          key={s.id}
-          style={styles.cardSlot}
-          testID={`discovery-card-${s.id}`}
-        >
-          {s.node}
-        </View>
-      ))}
-    </ScrollView>
+    />
   );
 };
 

@@ -35,11 +35,11 @@ function collectText(node: unknown): string {
 }
 
 describe('<FewSmallThingsMode />', () => {
-  it('renders the persona-grade label "A few small things"', () => {
+  it('renders the persona-grade label "Small plates"', () => {
     const { getByText } = render(
       <FewSmallThingsMode active={false} slotCount={3} onToggle={jest.fn()} />,
     );
-    expect(getByText(/A few small things/i)).toBeTruthy();
+    expect(getByText(/Small plates/i)).toBeTruthy();
   });
 
   it('exposes 4–6 slots when the archetype is active', () => {

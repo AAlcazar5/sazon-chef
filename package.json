@@ -9,5 +9,9 @@
     "@types/graceful-fs": "^4.1.9",
     "@types/jest": "^30.0.0",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@tanstack/query-async-storage-persister": "^5.100.9",
+    "@tanstack/react-query-persist-client": "^5.100.9"
   }
 }

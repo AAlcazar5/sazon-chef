@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Image, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
+import { cldUrl } from '../../lib/cloudinaryUrl';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
@@ -86,8 +88,11 @@ export function EditorialHeroBlock({ imageUrl, onBack, onShare, onSave, saved }:
         <View style={[styles.plateContainer, plateShadow]}>
           <Image
             testID="plate-photo"
-            source={{ uri: imageUrl }}
+            source={{ uri: cldUrl(imageUrl, { width: 240, height: 240, dpr: 2 }) }}
             style={[styles.platePhoto, { borderColor: plateBorderColor }]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
           />
         </View>
       )}

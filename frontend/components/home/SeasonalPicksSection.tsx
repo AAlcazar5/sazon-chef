@@ -2,7 +2,9 @@
 // "Right now" seasonal picks — horizontal scroll row.
 // Season determined by month, tag-matched against recipe categories.
 
-import { View, Text, ScrollView, Image } from 'react-native';
+import { useCallback } from 'react';
+import { View, Text, FlatList, type ListRenderItem } from 'react-native';
+import { Image } from 'expo-image';
 import { useColorScheme } from 'nativewind';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -58,6 +60,66 @@ export default function SeasonalPicksSection({ recipes }: SeasonalPicksSectionPr
 
   const seasonal = recipes.filter(r => matchesSeason(r, season)).slice(0, 10);
 
+  const renderItem = useCallback<ListRenderItem<SuggestedRecipe>>(
+    ({ item: recipe }) => (
+      <HapticTouchableOpacity
+        onPress={() => {
+          HapticPatterns.buttonPress();
+          router.push(`/recipe/${recipe.id}` as any);
+        }}
+        style={{
+          width: 160,
+          marginRight: 12,
+          borderRadius: 14,
+          overflow: 'hidden',
+          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.3 : 0.08,
+          shadowRadius: 6,
+          elevation: 3,
+        }}
+        accessibilityLabel={recipe.title}
+      >
+        {recipe.imageUrl ? (
+          <Image
+            source={{ uri: recipe.imageUrl }}
+            style={{ width: 160, height: 100 }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+          />
+        ) : (
+          <View
+            style={{
+              width: 160,
+              height: 100,
+              backgroundColor: isDark ? '#374151' : '#F3F4F6',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text className="text-2xl">{SEASON_EMOJI[season]}</Text>
+          </View>
+        )}
+        <View className="p-2.5">
+          <Text
+            className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+            numberOfLines={2}
+          >
+            {recipe.title}
+          </Text>
+          <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {recipe.cookTime}min · {recipe.calories}cal
+          </Text>
+        </View>
+      </HapticTouchableOpacity>
+    ),
+    [isDark, season],
+  );
+
+  const keyExtractor = useCallback((r: SuggestedRecipe) => r.id, []);
+
   if (seasonal.length < 2) return null;
 
   return (
@@ -71,65 +133,17 @@ export default function SeasonalPicksSection({ recipes }: SeasonalPicksSectionPr
         </Text>
       </View>
 
-      <ScrollView
+      <FlatList
         horizontal
+        data={seasonal}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
-      >
-        {seasonal.map((recipe) => (
-          <HapticTouchableOpacity
-            key={recipe.id}
-            onPress={() => {
-              HapticPatterns.buttonPress();
-              router.push(`/recipe/${recipe.id}` as any);
-            }}
-            style={{
-              width: 160,
-              marginRight: 12,
-              borderRadius: 14,
-              overflow: 'hidden',
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: isDark ? 0.3 : 0.08,
-              shadowRadius: 6,
-              elevation: 3,
-            }}
-            accessibilityLabel={recipe.title}
-          >
-            {recipe.imageUrl ? (
-              <Image
-                source={{ uri: recipe.imageUrl }}
-                style={{ width: 160, height: 100 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={{
-                  width: 160,
-                  height: 100,
-                  backgroundColor: isDark ? '#374151' : '#F3F4F6',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text className="text-2xl">{SEASON_EMOJI[season]}</Text>
-              </View>
-            )}
-            <View className="p-2.5">
-              <Text
-                className="text-sm font-semibold text-gray-900 dark:text-gray-100"
-                numberOfLines={2}
-              >
-                {recipe.title}
-              </Text>
-              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {recipe.cookTime}min · {recipe.calories}cal
-              </Text>
-            </View>
-          </HapticTouchableOpacity>
-        ))}
-      </ScrollView>
+        initialNumToRender={5}
+        windowSize={5}
+        removeClippedSubviews
+      />
     </View>
   );
 }

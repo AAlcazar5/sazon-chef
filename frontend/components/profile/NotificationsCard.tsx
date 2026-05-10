@@ -4,6 +4,7 @@
 import { View, Text, ScrollView, Switch, Modal, TextInput } from 'react-native';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import { useState, useRef, useEffect } from 'react';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -528,13 +529,12 @@ export default function NotificationsCard({
                   </View>
                 </View>
 
-                <HapticTouchableOpacity
+                <BrandButton
+                  label="Save"
                   onPress={handleSave}
-                  className="mt-2 py-2 px-4 rounded-lg"
-                  style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-                >
-                  <Text className="text-white font-medium text-center">Save</Text>
-                </HapticTouchableOpacity>
+                  size="compact"
+                  style={{ marginTop: 8 }}
+                />
               </View>
             )}
 

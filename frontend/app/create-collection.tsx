@@ -6,13 +6,13 @@ import {
   TextInput,
   Alert,
   ScrollView,
-  Image,
   Animated,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -196,7 +196,9 @@ export default function CreateCollectionScreen() {
                   <Image
                     source={{ uri: coverImageUrl }}
                     style={{ width: '100%', height: 160, borderRadius: 10, backgroundColor: borderColor }}
-                    resizeMode="cover"
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={200}
                   />
                   <HapticTouchableOpacity
                     onPress={() => setCoverImageUrl(null)}

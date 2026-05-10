@@ -11,11 +11,22 @@ jest.mock('../../../lib/api', () => ({
   },
 }));
 
+import React from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import useSkillTier from '../../../hooks/useSkillTier';
 import { mealComponentApi } from '../../../lib/api';
 
 const mockSkillTier = mealComponentApi.skillTier as jest.Mock;
+
+function makeWrapper() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+}
 
 describe('useSkillTier', () => {
   beforeEach(() => {
@@ -27,7 +38,7 @@ describe('useSkillTier', () => {
       data: { tier: 'cook', visibleSlots: ['protein', 'base', 'vegetable', 'sauce'] },
     });
 
-    const { result } = renderHook(() => useSkillTier());
+    const { result } = renderHook(() => useSkillTier(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.tier).toBe('cook'));
     expect(result.current.isSauceVisible).toBe(true);
@@ -39,7 +50,7 @@ describe('useSkillTier', () => {
       data: { tier: 'beginner', visibleSlots: ['protein', 'base', 'vegetable'] },
     });
 
-    const { result } = renderHook(() => useSkillTier());
+    const { result } = renderHook(() => useSkillTier(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.tier).toBe('beginner'));
     expect(result.current.isSauceVisible).toBe(false);
@@ -51,7 +62,7 @@ describe('useSkillTier', () => {
       data: { tier: 'chef', visibleSlots: ['protein', 'base', 'vegetable', 'sauce', 'garnish'] },
     });
 
-    const { result } = renderHook(() => useSkillTier());
+    const { result } = renderHook(() => useSkillTier(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.tier).toBe('chef'));
     expect(result.current.isSauceVisible).toBe(true);
@@ -61,7 +72,7 @@ describe('useSkillTier', () => {
   it('falls back to cook tier when API errors', async () => {
     mockSkillTier.mockRejectedValue(new Error('network'));
 
-    const { result } = renderHook(() => useSkillTier());
+    const { result } = renderHook(() => useSkillTier(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.tier).toBe('cook'));
     expect(result.current.isSauceVisible).toBe(true);

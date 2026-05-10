@@ -3,7 +3,8 @@
 // state respects MAX_COACH_ATTACHMENTS.
 
 import React from 'react';
-import { View, Image, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -40,6 +41,9 @@ export default function AttachmentBar({
             source={{ uri: att.uri }}
             style={styles.thumb}
             accessibilityLabel="Pending photo attachment"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
           />
           <HapticTouchableOpacity
             onPress={() => onRemove(att.id)}

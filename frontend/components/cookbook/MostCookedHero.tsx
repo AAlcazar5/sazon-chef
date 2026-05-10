@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useColorScheme } from 'nativewind';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { EditorialShadows } from '../../constants/Shadows';
@@ -42,7 +43,14 @@ export function MostCookedHero({ title, accentWord, imageUrl, cookCount }: MostC
         </View>
         {imageUrl && (
           <View style={[styles.photoContainer, plateShadow]}>
-            <Image source={{ uri: imageUrl }} style={[styles.photo, { borderColor: photoBorderColor }]} testID="most-cooked-photo" />
+            <Image
+              source={{ uri: imageUrl }}
+              style={[styles.photo, { borderColor: photoBorderColor }]}
+              testID="most-cooked-photo"
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
           </View>
         )}
       </View>

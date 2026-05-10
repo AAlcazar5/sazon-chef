@@ -2,7 +2,7 @@
 // Tests for recipe creation and editing flows (FAB, AI assist, fork, edit).
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '../../test-utils/render';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 

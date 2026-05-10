@@ -1,7 +1,7 @@
 // frontend/components/profile/AppearanceSection.tsx
 // Collapsible appearance section with dark mode toggle and theme mode selector
 
-import { View, Text, Switch, Animated, Easing } from 'react-native';
+import { View, Text, Switch, Animated, Easing, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useState, useRef } from 'react';
@@ -114,21 +114,6 @@ export default function AppearanceSection() {
               { mode: 'system' as const, icon: Icons.SYSTEM_MODE_OUTLINE, label: 'System' },
             ]).map(({ mode, icon, label }) => {
               const isActive = themeMode === mode;
-              const content = (
-                <View className="items-center">
-                  <Icon
-                    name={icon}
-                    size={IconSizes.XS}
-                    color={isActive ? '#FFFFFF' : (theme === 'dark' ? '#D1D5DB' : '#6B7280')}
-                    accessibilityLabel={label}
-                  />
-                  <Text className={`text-center font-medium mt-1 ${
-                    isActive ? 'text-white' : 'text-gray-700 dark:text-gray-100'
-                  }`}>
-                    {label}
-                  </Text>
-                </View>
-              );
               return (
                 <HapticTouchableOpacity
                   key={mode}
@@ -136,26 +121,40 @@ export default function AppearanceSection() {
                   // The active button uses the brand `primaryCTA` gradient
                   // (coral → deep coral) so the selected state reads as a
                   // brand action — matches the gradient FABs in the header
-                  // and the empty-state CTAs.
-                  className={`flex-1 rounded-lg border ${
+                  // and the empty-state CTAs. Padding/border live on the
+                  // outer container for all three buttons so active and
+                  // inactive states render at identical sizes.
+                  className={`flex-1 rounded-lg border py-2 px-3 overflow-hidden ${
                     isActive
-                      ? 'overflow-hidden'
-                      : 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 py-2 px-3'
+                      ? ''
+                      : 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600'
                   }`}
                   style={isActive ? { borderColor: 'transparent' } : undefined}
                 >
-                  {isActive ? (
+                  {isActive && (
                     <LinearGradient
                       colors={GradientPresets.primaryCTA}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
-                      style={{ paddingVertical: 8, paddingHorizontal: 12 }}
-                    >
-                      {content}
-                    </LinearGradient>
-                  ) : (
-                    content
+                      style={StyleSheet.absoluteFill}
+                    />
                   )}
+                  <View className="items-center">
+                    <Icon
+                      name={icon}
+                      size={IconSizes.XS}
+                      color={isActive ? '#FFFFFF' : (theme === 'dark' ? '#D1D5DB' : '#6B7280')}
+                      accessibilityLabel={label}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      className={`text-center font-medium mt-1 ${
+                        isActive ? 'text-white' : 'text-gray-700 dark:text-gray-100'
+                      }`}
+                    >
+                      {label}
+                    </Text>
+                  </View>
                 </HapticTouchableOpacity>
               );
             })}

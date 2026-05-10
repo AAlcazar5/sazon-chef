@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Animated } from 'react-native';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '../test-utils/render';
 import ShoppingListScreen from '../../app/(tabs)/shopping-list';
 
 // ── Module mocks ──────────────────────────────────────────────────────────────

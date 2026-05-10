@@ -2,7 +2,7 @@
 // Custom hook for managing quick meals (≤30 min) data and fetching
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ScrollView } from 'react-native';
+import { FlatList } from 'react-native';
 import { recipeApi } from '../lib/api';
 import type { SuggestedRecipe } from '../types';
 
@@ -25,7 +25,7 @@ interface UseQuickMealsReturn {
   currentIndex: number;
   refreshing: boolean;
   // Refs
-  scrollViewRef: React.RefObject<ScrollView | null>;
+  scrollViewRef: React.RefObject<FlatList<SuggestedRecipe> | null>;
   // Actions
   fetch: (refresh?: boolean) => Promise<void>;
   setCurrentIndex: React.Dispatch<React.SetStateAction<number>>;
@@ -46,7 +46,7 @@ export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsRetur
 
   // Refs for tracking current recipes and scroll position
   const recipesRef = useRef<SuggestedRecipe[]>([]);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<FlatList<SuggestedRecipe>>(null);
 
   // Auto-scroll refs
   const autoScrollIndexRef = useRef(0);
@@ -134,7 +134,7 @@ export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsRetur
       autoScrollIndexRef.current = 0;
       // Scroll to first card after a brief delay to ensure state is updated
       setTimeout(() => {
-        scrollViewRef.current?.scrollTo({ x: 0, animated: true });
+        scrollViewRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 100);
       console.log(`⚡ Found ${quickMeals.length} quick meals`);
     } catch (error) {
@@ -162,10 +162,10 @@ export function useQuickMeals(options: UseQuickMealsOptions): UseQuickMealsRetur
 
       if (next >= totalCards) {
         autoScrollIndexRef.current = 0;
-        scrollViewRef.current?.scrollTo({ x: 0, animated: false });
+        scrollViewRef.current?.scrollToOffset({ offset: 0, animated: false });
       } else {
         autoScrollIndexRef.current = next;
-        scrollViewRef.current?.scrollTo({ x: next * CARD_STEP, animated: true });
+        scrollViewRef.current?.scrollToOffset({ offset: next * CARD_STEP, animated: true });
       }
     }, DWELL_MS);
 

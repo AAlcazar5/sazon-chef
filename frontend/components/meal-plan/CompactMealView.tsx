@@ -2,7 +2,8 @@
 // Compact view grouping meals by type (breakfast, lunch, dinner, snacks)
 
 import React, { useCallback } from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay, withTiming, Easing, FadeInDown } from 'react-native-reanimated';
 import { optimizedImageUrl } from '../../utils/imageUtils';
 import { router } from 'expo-router';
@@ -131,6 +132,9 @@ function CompactMealView({
                             marginRight: 12,
                             backgroundColor: isDark ? '#374151' : '#E5E7EB',
                           }}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                          transition={200}
                         />
                       ) : (
                         <View style={{

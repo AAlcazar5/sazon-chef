@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
@@ -211,13 +212,13 @@ export default function RecipeRoulette({
                 </Text>
               </HapticTouchableOpacity>
             )}
-            <HapticTouchableOpacity
-              onPress={onClose}
-              accessibilityLabel="Close"
-              style={[styles.closeButton, { backgroundColor: isDark ? DarkColors.primary : Colors.primary, flex: 1 }]}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </HapticTouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <BrandButton
+                label="Close"
+                onPress={onClose}
+                accessibilityLabel="Close"
+              />
+            </View>
           </View>
         </View>
       </View>

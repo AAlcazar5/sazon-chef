@@ -1,7 +1,12 @@
 // frontend/hooks/usePopularSearches.ts
-// Fetch trending search queries from the backend
+// Fetch trending search queries from the backend.
+//
+// P5: migrated to React Query so multiple search surfaces share one cache
+// entry. `initialData` from the consolidated home feed populates the cache
+// without a network round-trip.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { searchApi } from '../lib/api';
 
 export interface PopularSearch {
@@ -20,37 +25,39 @@ interface UsePopularSearchesReturn {
   refresh: () => void;
 }
 
-export function usePopularSearches(options: UsePopularSearchesOptions = {}): UsePopularSearchesReturn {
+const QUERY_KEY = ['popularSearches'] as const;
+const EMPTY: PopularSearch[] = [];
+
+export function usePopularSearches(
+  options: UsePopularSearchesOptions = {},
+): UsePopularSearchesReturn {
   const { initialData } = options;
-  const [popularSearches, setPopularSearches] = useState<PopularSearch[]>(initialData || []);
-  const [loading, setLoading] = useState(!initialData);
+  const queryClient = useQueryClient();
+  const hasInitial = initialData != null && initialData.length > 0;
 
-  const fetchPopular = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await searchApi.getPopularSearches(5);
-      setPopularSearches(res.data?.popularSearches || []);
-    } catch {
-      setPopularSearches([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<PopularSearch[]> => {
+      try {
+        const res = await searchApi.getPopularSearches(5);
+        return res.data?.popularSearches ?? EMPTY;
+      } catch {
+        return EMPTY;
+      }
+    },
+    initialData: hasInitial ? initialData : undefined,
+    // When the home feed already gave us data, treat it as fresh so the
+    // hook doesn't auto-refetch. refresh() invalidates explicitly.
+    staleTime: hasInitial ? Infinity : 30_000,
+  });
 
-  // Update state when initialData changes
-  useEffect(() => {
-    if (initialData && initialData.length > 0) {
-      setPopularSearches(initialData);
-      setLoading(false);
-    }
-  }, [initialData]);
+  const refresh = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+  }, [queryClient]);
 
-  // Only fetch on mount if no initialData provided
-  useEffect(() => {
-    if (!initialData || initialData.length === 0) {
-      fetchPopular();
-    }
-  }, [fetchPopular, initialData]);
-
-  return { popularSearches, loading, refresh: fetchPopular };
+  return {
+    popularSearches: query.data ?? EMPTY,
+    loading: query.isLoading,
+    refresh,
+  };
 }

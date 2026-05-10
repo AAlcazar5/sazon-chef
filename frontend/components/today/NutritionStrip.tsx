@@ -9,8 +9,8 @@
 // Voice: discovery only — "today's plate hit 14 mg iron" never
 // "you're low on iron".
 
-import React from 'react';
-import { Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { Text, FlatList, StyleSheet, type ListRenderItem } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { PastelTokens, AccentTokens, Ink, Type, Radius, Space } from '../../constants/tokens';
@@ -43,30 +43,43 @@ export default function NutritionStrip({
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  if (!snapshot || density === 'minimal') return null;
+  // Hooks must run unconditionally; gates below decide whether to render.
+  const pills = snapshot
+    ? DAILY_TOP_NUTRIENTS.filter(key => typeof snapshot[key] === 'number')
+    : [];
 
-  const pills = DAILY_TOP_NUTRIENTS.filter(key => typeof snapshot[key] === 'number');
+  const renderItem = useCallback<ListRenderItem<typeof pills[number]>>(
+    ({ item: key }) => (
+      <Pill
+        nutrient={key}
+        value={snapshot![key] as number}
+        isDark={isDark}
+        onPress={onPress}
+      />
+    ),
+    [snapshot, isDark, onPress],
+  );
+
+  const keyExtractor = useCallback((k: typeof pills[number]) => String(k), []);
+
+  if (!snapshot || density === 'minimal') return null;
   // No nutrients today → render nothing rather than a placeholder line.
   // The strip reappears when the user logs their first meal.
   if (pills.length === 0) return null;
 
   return (
-    <ScrollView
+    <FlatList
       testID="nutrition-strip"
       horizontal
+      data={pills}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
-    >
-      {pills.map(key => (
-        <Pill
-          key={key}
-          nutrient={key}
-          value={snapshot[key] as number}
-          isDark={isDark}
-          onPress={onPress}
-        />
-      ))}
-    </ScrollView>
+      initialNumToRender={6}
+      windowSize={5}
+      removeClippedSubviews
+    />
   );
 }
 

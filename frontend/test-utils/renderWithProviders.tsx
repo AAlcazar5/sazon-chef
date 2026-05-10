@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { render, type RenderOptions, type RenderResult } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
@@ -52,10 +53,17 @@ interface AllProvidersProps {
 function AllProviders({ children, overrides }: AllProvidersProps) {
   const authValue: AuthValue = { ...defaultAuthValue, ...(overrides?.auth ?? {}) };
   const themeValue: ThemeValue = { ...defaultThemeValue, ...(overrides?.theme ?? {}) };
+  // P5: every test needs a QueryClient so any hook that uses useQuery
+  // (transitively through the rendered tree) finds a provider in context.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  });
   return (
-    <AuthContext.Provider value={authValue}>
-      <ThemeContext.Provider value={themeValue}>{children}</ThemeContext.Provider>
-    </AuthContext.Provider>
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider value={authValue}>
+        <ThemeContext.Provider value={themeValue}>{children}</ThemeContext.Provider>
+      </AuthContext.Provider>
+    </QueryClientProvider>
   );
 }
 

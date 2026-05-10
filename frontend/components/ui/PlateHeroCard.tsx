@@ -8,6 +8,7 @@ import { EditorialFontFamily, EditorialTypography } from '../../constants/Typogr
 import { EditorialShadows } from '../../constants/Shadows';
 import { triggerHaptic, ImpactStyle } from '../../constants/Haptics';
 import { HeroPlatesDark, DarkColors } from '../../constants/Colors';
+import { cldUrl } from '../../lib/cloudinaryUrl';
 
 interface PlateHeroRecipe {
   id: string;
@@ -103,7 +104,7 @@ export function PlateHeroCard({
 
         <View testID={testID ? `${testID}-photo` : 'hero-photo'} style={[styles.photo, plateShadow]}>
           <Image
-            source={{ uri: recipe.imageUrl }}
+            source={{ uri: cldUrl(recipe.imageUrl, { width: 144, height: 144, dpr: 2 }) }}
             style={styles.photoImage}
             contentFit="cover"
             cachePolicy="memory-disk"

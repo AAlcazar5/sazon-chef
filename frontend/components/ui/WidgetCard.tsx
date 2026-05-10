@@ -40,7 +40,7 @@ interface WidgetCardProps {
   testID?: string;
 }
 
-export default function WidgetCard({
+function WidgetCard({
   tint,
   tintDark,
   icon,
@@ -181,3 +181,8 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 });
+
+// P6: memoize. WidgetCard is rendered as a 2x2 grid of stat tiles on the
+// profile + cooking-stats screens; sibling stat changes shouldn't cascade
+// into all four cards re-rendering.
+export default React.memo(WidgetCard);

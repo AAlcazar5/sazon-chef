@@ -1,5 +1,6 @@
-// frontend/__tests__/hooks/useAffinityExamples.test.ts
+// frontend/__tests__/hooks/useAffinityExamples.test.tsx
 // Group 11 Phase 5 — N=1 empty-state polish hook tests.
+// P5: wrapped renderHook in QueryClientProvider after migration.
 
 const mockGetBrowseByFamily = jest.fn();
 jest.mock('../../lib/api', () => ({
@@ -8,8 +9,22 @@ jest.mock('../../lib/api', () => ({
   },
 }));
 
+import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAffinityExamples, formatAffinityHint } from '../../hooks/useAffinityExamples';
+
+function makeClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  });
+}
+
+function withClient(client: QueryClient) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  };
+}
 
 describe('formatAffinityHint', () => {
   it('returns empty string when there is no signal', () => {
@@ -46,7 +61,9 @@ describe('useAffinityExamples', () => {
 
   it('returns empty examples when no families are returned', async () => {
     mockGetBrowseByFamily.mockResolvedValueOnce({ data: { families: [] } });
-    const { result } = renderHook(() => useAffinityExamples());
+    const { result } = renderHook(() => useAffinityExamples(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.topCuisines).toEqual([]);
     expect(result.current.wildcard).toBeNull();
@@ -84,7 +101,9 @@ describe('useAffinityExamples', () => {
       },
     });
 
-    const { result } = renderHook(() => useAffinityExamples());
+    const { result } = renderHook(() => useAffinityExamples(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.topCuisines).toEqual(['Mexican', 'Salvadorean', 'Thai']);
@@ -114,10 +133,11 @@ describe('useAffinityExamples', () => {
       },
     });
 
-    const { result } = renderHook(() => useAffinityExamples());
+    const { result } = renderHook(() => useAffinityExamples(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // Wildcard should be the first unexplored cuisine in the SE Asian family
     expect(result.current.wildcard).toBe('Thai');
   });
 
@@ -137,20 +157,35 @@ describe('useAffinityExamples', () => {
       },
     });
 
-    const { result } = renderHook(() => useAffinityExamples());
+    const { result } = renderHook(() => useAffinityExamples(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.topCuisines).toEqual(['Thai']);
-    // Wildcard must skip Thai (already in topCuisines) and Vietnamese is the
-    // only other cuisine in the family — wildcard should land on Vietnamese.
     expect(result.current.wildcard).toBe('Vietnamese');
   });
 
   it('handles API rejection gracefully', async () => {
     mockGetBrowseByFamily.mockRejectedValueOnce(new Error('network'));
-    const { result } = renderHook(() => useAffinityExamples());
+    const { result } = renderHook(() => useAffinityExamples(), {
+      wrapper: withClient(makeClient()),
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.topCuisines).toEqual([]);
     expect(result.current.wildcard).toBeNull();
+  });
+
+  it('shares one cache entry across multiple consumers (P5 dedup)', async () => {
+    mockGetBrowseByFamily.mockResolvedValue({ data: { families: [] } });
+    const client = makeClient();
+    const wrapper = withClient(client);
+    const a = renderHook(() => useAffinityExamples(), { wrapper });
+    const b = renderHook(() => useAffinityExamples(), { wrapper });
+    await waitFor(() => {
+      expect(a.result.current.loading).toBe(false);
+      expect(b.result.current.loading).toBe(false);
+    });
+    expect(mockGetBrowseByFamily).toHaveBeenCalledTimes(1);
   });
 });

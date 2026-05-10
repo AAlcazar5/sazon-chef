@@ -14,7 +14,7 @@ export function StickyBottomBar({ children, fadeColor = '#FAF7F4', style, testID
   return (
     <View
       testID={testID}
-      style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }, style]}
+      style={[styles.container, { paddingBottom: Math.max(insets.bottom - 24, 6) }, style]}
       {...props}
     >
       <LinearGradient
@@ -49,8 +49,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 8,
     gap: 12,
-    backgroundColor: '#FAF7F4',
   },
 });

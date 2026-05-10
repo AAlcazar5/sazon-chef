@@ -69,7 +69,7 @@ jest.mock('../../../components/ui/BrandButton', () => {
 });
 
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '../../test-utils/render';
 import PlateOfWeekCard from '../../../components/home/PlateOfWeekCard';
 
 const MOCK_PLATE = {

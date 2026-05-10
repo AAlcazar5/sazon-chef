@@ -1,8 +1,8 @@
 // frontend/components/cookbook/CollectionCarousel.tsx
 // Horizontal carousel for a single collection's recipes (P6: purposeful motion)
 
-import React from 'react';
-import { View, Text, ScrollView, Dimensions } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, FlatList, Dimensions, type ListRenderItem } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -106,46 +106,102 @@ function CollectionCarousel({
       </View>
 
       {!isCollapsed && (
-        <ScrollView
-          horizontal
-          scrollEventThrottle={16}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 12 }}
-          decelerationRate={0.92}
-          snapToInterval={SNAP_INTERVAL}
-          snapToAlignment="start"
-          disableIntervalMomentum
-        >
-          {recipes.map((recipe, index) => {
-            const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-            const isFeedbackLoading = feedbackLoading === recipe.id;
-            const delay = Math.min(index * 80, 400);
-
-            return (
-              <Animated.View
-                key={recipe.id}
-                entering={FadeInRight.delay(delay).duration(350).springify()}
-                style={{ width: CARD_WIDTH, marginRight: CARD_GAP }}
-              >
-                <RecipeCard
-                  recipe={recipe as any}
-                  variant="carousel"
-                  onPress={onRecipePress}
-                  onLongPress={() => onRecipeLongPress(recipe)}
-                  onLike={onLike}
-                  onDislike={onDislike}
-                  onSave={onSave}
-                  feedback={feedback}
-                  isFeedbackLoading={isFeedbackLoading}
-                  isDark={isDark}
-                  showDescription={true}
-                />
-              </Animated.View>
-            );
-          })}
-        </ScrollView>
+        <CollectionFlatList
+          recipes={recipes}
+          userFeedback={userFeedback}
+          feedbackLoading={feedbackLoading}
+          onRecipePress={onRecipePress}
+          onRecipeLongPress={onRecipeLongPress}
+          onLike={onLike}
+          onDislike={onDislike}
+          onSave={onSave}
+          isDark={isDark}
+        />
       )}
     </View>
+  );
+}
+
+interface CollectionFlatListProps {
+  recipes: SavedRecipe[];
+  userFeedback: Record<string, RecipeFeedback>;
+  feedbackLoading: string | null;
+  onRecipePress: (recipeId: string) => void;
+  onRecipeLongPress: (recipe: SavedRecipe) => void;
+  onLike?: (recipeId: string) => void;
+  onDislike?: (recipeId: string) => void;
+  onSave?: (recipeId: string) => void;
+  isDark: boolean;
+}
+
+function CollectionFlatList({
+  recipes,
+  userFeedback,
+  feedbackLoading,
+  onRecipePress,
+  onRecipeLongPress,
+  onLike,
+  onDislike,
+  onSave,
+  isDark,
+}: CollectionFlatListProps) {
+  const renderItem = useCallback<ListRenderItem<SavedRecipe>>(
+    ({ item: recipe, index }) => {
+      const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
+      const isFeedbackLoading = feedbackLoading === recipe.id;
+      const delay = Math.min(index * 80, 400);
+      return (
+        <Animated.View
+          entering={FadeInRight.delay(delay).duration(350).springify()}
+          style={{ width: CARD_WIDTH, marginRight: CARD_GAP }}
+        >
+          <RecipeCard
+            recipe={recipe as any}
+            variant="carousel"
+            onPress={onRecipePress}
+            onLongPress={() => onRecipeLongPress(recipe)}
+            onLike={onLike}
+            onDislike={onDislike}
+            onSave={onSave}
+            feedback={feedback}
+            isFeedbackLoading={isFeedbackLoading}
+            isDark={isDark}
+            showDescription={true}
+          />
+        </Animated.View>
+      );
+    },
+    [
+      userFeedback,
+      feedbackLoading,
+      onRecipePress,
+      onRecipeLongPress,
+      onLike,
+      onDislike,
+      onSave,
+      isDark,
+    ],
+  );
+
+  const keyExtractor = useCallback((r: SavedRecipe) => r.id, []);
+
+  return (
+    <FlatList
+      horizontal
+      data={recipes}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      scrollEventThrottle={16}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 12 }}
+      decelerationRate={0.92}
+      snapToInterval={SNAP_INTERVAL}
+      snapToAlignment="start"
+      disableIntervalMomentum
+      initialNumToRender={3}
+      windowSize={5}
+      removeClippedSubviews
+    />
   );
 }
 

@@ -36,6 +36,7 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/__tests__/__fixtures__/',
+    '/__tests__/test-utils/',
     '/landing/',
     '/.claude/worktrees/',
   ],

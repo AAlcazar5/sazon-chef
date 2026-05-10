@@ -1,11 +1,10 @@
 // frontend/components/build-a-plate/FewSmallThingsMode.tsx
-// ROADMAP 4.0 Tier J17.2 — "A few small things" plate-mode toggle.
+// ROADMAP 4.0 Tier J17.2 — "Small plates" plate-mode toggle.
 //
 // A pill chip that flips Build-a-Plate from the standard 3-slot composition
 // to the 4–6 small-component archetype. Surfaced as a STYLE — izakaya /
 // mezze / banchan / antipasti — never a health pitch.
 //
-// Copy is locked to the persona thesis: "A few small things tonight?".
 // Banned-vocab discipline applies — see the matching test for the full
 // banned list.
 
@@ -43,7 +42,7 @@ export default function FewSmallThingsMode({
     <HapticTouchableOpacity
       testID="few-small-things-mode"
       onPress={onToggle}
-      accessibilityLabel={`A few small things — ${slotCount} slots`}
+      accessibilityLabel={`Small plates — ${slotCount} slots`}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityValue={{ now: slotCount }}
@@ -56,7 +55,7 @@ export default function FewSmallThingsMode({
         color={fg}
         style={styles.icon}
       />
-      <Text style={[styles.label, { color: fg }]}>A few small things</Text>
+      <Text style={[styles.label, { color: fg }]} numberOfLines={1}>Small plates</Text>
     </HapticTouchableOpacity>
   );
 }
@@ -65,16 +64,18 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 100,
     alignSelf: 'flex-start',
+    minWidth: 0,
   },
   icon: {
-    marginRight: 6,
+    marginRight: 5,
   },
   label: {
     fontFamily: EditorialFontFamily.body.semibold,
-    fontSize: 13,
+    fontSize: 11,
+    flexShrink: 1,
   },
 });

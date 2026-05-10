@@ -1,9 +1,11 @@
 // frontend/components/profile/ProfileHeader.tsx
 // Profile header with avatar, name, email, and edit name modal
 
-import { View, Text, Modal, TextInput, Image, Animated } from 'react-native';
+import { View, Text, Modal, TextInput, Animated } from 'react-native';
+import { Image } from 'expo-image';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import FrostedHeader from '../ui/FrostedHeader';
 import Sazon from '../mascot/Sazon';
 import { useState, useEffect, useRef } from 'react';
@@ -137,7 +139,13 @@ export default function ProfileHeader({
                 }}
               >
                 {profilePicture ? (
-                  <Image source={{ uri: profilePicture }} style={{ width: 72, height: 72, borderRadius: 36 }} />
+                  <Image
+                    source={{ uri: profilePicture }}
+                    style={{ width: 72, height: 72, borderRadius: 36 }}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={200}
+                  />
                 ) : (
                   <Text style={{ color: 'white', fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>
                     {profile.name.split(' ').map(n => n[0]).join('')}
@@ -340,18 +348,15 @@ export default function ProfileHeader({
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>
 
-              <HapticTouchableOpacity
-                onPress={handleSaveName}
-                disabled={updatingName || !editingName.trim()}
-                className={`flex-1 py-3 px-4 rounded-lg ${updatingName || !editingName.trim() ? 'opacity-50' : ''}`}
-                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                {updatingName ? (
-                  <AnimatedActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text className="text-white font-medium text-center">Save</Text>
-                )}
-              </HapticTouchableOpacity>
+              <View className="flex-1">
+                <BrandButton
+                  label="Save"
+                  onPress={handleSaveName}
+                  loading={updatingName}
+                  disabled={updatingName || !editingName.trim()}
+                  size="compact"
+                />
+              </View>
             </View>
           </View>
         </View>

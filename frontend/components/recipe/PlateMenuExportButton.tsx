@@ -69,7 +69,8 @@ export async function exportPlateMenuPdf(plate: PlateMenuPlate): Promise<boolean
       });
     }
     return true;
-  } catch {
+  } catch (err) {
+    if (__DEV__) console.warn('[exportPlateMenuPdf] failed:', err);
     return false;
   }
 }

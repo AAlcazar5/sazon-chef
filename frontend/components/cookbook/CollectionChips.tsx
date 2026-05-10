@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, Pressable, FlatList, StyleSheet, type ListRenderItem } from 'react-native';
 import { EditorialFontFamily } from '../../constants/Typography';
 
 interface CollectionChip {
@@ -15,33 +15,43 @@ interface CollectionChipsProps {
 }
 
 export function CollectionChips({ collections, activeId, onSelect }: CollectionChipsProps) {
+  const renderItem = useCallback<ListRenderItem<CollectionChip>>(
+    ({ item: col }) => {
+      const isActive = col.id === activeId;
+      return (
+        <Pressable
+          testID={`chip-${col.id}`}
+          onPress={() => onSelect(col.id)}
+          style={[styles.chip, isActive ? styles.chipActive : styles.chipInactive]}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: isActive }}
+        >
+          <Text style={[styles.chipText, isActive ? styles.chipTextActive : styles.chipTextInactive]}>
+            {col.count} {col.label}
+          </Text>
+          {isActive && <View style={styles.underline} />}
+        </Pressable>
+      );
+    },
+    [activeId, onSelect],
+  );
+
+  const keyExtractor = useCallback((c: CollectionChip) => c.id, []);
+
   return (
-    <ScrollView
+    <FlatList
       horizontal
+      data={collections}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
       style={styles.container}
       testID="collection-chips-scroll"
-    >
-      {collections.map((col) => {
-        const isActive = col.id === activeId;
-        return (
-          <Pressable
-            key={col.id}
-            testID={`chip-${col.id}`}
-            onPress={() => onSelect(col.id)}
-            style={[styles.chip, isActive ? styles.chipActive : styles.chipInactive]}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-          >
-            <Text style={[styles.chipText, isActive ? styles.chipTextActive : styles.chipTextInactive]}>
-              {col.count} {col.label}
-            </Text>
-            {isActive && <View style={styles.underline} />}
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+      initialNumToRender={6}
+      windowSize={5}
+      removeClippedSubviews
+    />
   );
 }
 

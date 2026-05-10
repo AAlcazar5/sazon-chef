@@ -3,8 +3,13 @@
 // matcher and Kitchen IQ ranker. Phase 2 wires `topAffinityIngredients`,
 // `rolling7dNutrientGaps`, `goalPhase`, and `last7DaysIngredients` from
 // `GET /api/user/affinity/snapshot` so all five matcher dimensions activate.
+//
+// P5: migrated to React Query so the affinity snapshot is cached across
+// every Food Intel surface that calls this hook (recipe modal, Kitchen tab,
+// recommender). Cache key is namespaced by userId.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import useSkillTier from './useSkillTier';
 import { useCookingJourney } from './useCookingJourney';
@@ -35,45 +40,44 @@ export function useFoodIntelUserState(): UserState {
   const { user } = useAuth();
   const { tier } = useSkillTier();
   const { stats } = useCookingJourney();
-  const [snapshot, setSnapshot] = useState<AffinitySnapshotState>(EMPTY_SNAPSHOT);
 
   const userId = user?.id ?? DEFAULT_USER_ID;
   const exploredCuisines = stats?.cuisinesExplored;
 
-  useEffect(() => {
-    const signal = { cancelled: false };
-    (async () => {
+  const { data: snapshot } = useQuery({
+    queryKey: ['affinitySnapshot', userId],
+    queryFn: async (): Promise<AffinitySnapshotState> => {
       try {
         const response = await userApi.getAffinitySnapshot();
-        if (signal.cancelled) return;
         const payload = response.data;
-        if (!payload) return;
-        setSnapshot({
+        if (!payload) return EMPTY_SNAPSHOT;
+        return {
           topAffinityIngredients: payload.topAffinityIngredients ?? [],
           rolling7dNutrientGaps: payload.rolling7dNutrientGaps ?? [],
           goalPhase: payload.goalPhase ?? DEFAULT_GOAL_PHASE,
           last7DaysIngredients: payload.last7DaysIngredients ?? [],
-        });
+        };
       } catch {
         // Defaults preserved on error — surfaces continue to work without N=1 depth.
+        return EMPTY_SNAPSHOT;
       }
-    })();
-    return () => {
-      signal.cancelled = true;
-    };
-  }, [userId]);
+    },
+    initialData: EMPTY_SNAPSHOT,
+  });
+
+  const resolved = snapshot ?? EMPTY_SNAPSHOT;
 
   return useMemo<UserState>(
     () => ({
       userId,
       cookHistory: { cuisines: exploredCuisines ?? (EMPTY_STRING_ARRAY as string[]) },
-      topAffinityIngredients: snapshot.topAffinityIngredients,
-      rolling7dNutrientGaps: snapshot.rolling7dNutrientGaps,
+      topAffinityIngredients: resolved.topAffinityIngredients,
+      rolling7dNutrientGaps: resolved.rolling7dNutrientGaps,
       skillTier: tier ?? DEFAULT_SKILL_TIER,
-      goalPhase: snapshot.goalPhase,
-      last7DaysIngredients: snapshot.last7DaysIngredients,
+      goalPhase: resolved.goalPhase,
+      last7DaysIngredients: resolved.last7DaysIngredients,
     }),
-    [userId, exploredCuisines, tier, snapshot],
+    [userId, exploredCuisines, tier, resolved],
   );
 }
 

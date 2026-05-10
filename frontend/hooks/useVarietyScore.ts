@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+// frontend/hooks/useVarietyScore.ts
+//
+// P5: migrated to React Query. Cache key includes mealPlanId so swapping
+// plans gives a fresh fetch; refetch on the same plan stays cached.
+
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { mealPlanApi } from '../lib/api';
 
 export interface VarietyScore {
@@ -17,33 +23,33 @@ export interface VarietyResult {
   nudgeMessage: string | null;
 }
 
-export function useVarietyScore(mealPlanId: string | null | undefined) {
-  const [result, setResult] = useState<VarietyResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const QUERY_KEY = ['varietyScore'] as const;
 
-  const refresh = useCallback(async () => {
-    if (!mealPlanId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await mealPlanApi.getVarietyScore(mealPlanId);
-      setResult({
+export function useVarietyScore(mealPlanId: string | null | undefined) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: [...QUERY_KEY, mealPlanId],
+    queryFn: async (): Promise<VarietyResult> => {
+      const res = await mealPlanApi.getVarietyScore(mealPlanId as string);
+      return {
         varietyScore: res.data.varietyScore,
         repetitiveMealIds: res.data.repetitiveMealIds,
         nudgeMessage: res.data.nudgeMessage,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load variety score';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [mealPlanId]);
+      };
+    },
+    enabled: !!mealPlanId,
+  });
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const refresh = useCallback(async () => {
+    if (!mealPlanId) return;
+    await queryClient.invalidateQueries({ queryKey: [...QUERY_KEY, mealPlanId] });
+  }, [mealPlanId, queryClient]);
 
-  return { result, loading, error, refresh };
+  return {
+    result: query.data ?? null,
+    loading: query.isFetching,
+    error: query.error instanceof Error ? query.error.message : query.error ? String(query.error) : null,
+    refresh,
+  };
 }

@@ -1,10 +1,13 @@
 // hooks/useWeatherSmartCollection.ts
 // Fetches the weather-aware smart collection using device location.
-// Caches result for 1 hour in AsyncStorage. Gracefully degrades when
-// location permission is denied or weather API is unavailable.
+//
+// P5 (persister): hand-rolled AsyncStorage cache replaced by React Query
+// + the global persister. The persister hydrates from disk on cold start;
+// `staleTime: 1h` preserves the original "cache for 1 hour" contract.
+// Gracefully degrades when location permission is denied or weather API
+// is unavailable.
 
-import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import { locationService } from '../utils/locationService';
 import { recipeApi } from '../lib/api';
 
@@ -28,8 +31,8 @@ interface UseWeatherSmartCollectionResult {
   loading: boolean;
 }
 
-const CACHE_KEY = '@sazon_weather_collection';
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const QUERY_KEY = ['weatherSmartCollection'] as const;
+const STALE_TIME_MS = 60 * 60 * 1000; // 1 hour
 
 function weatherIcon(condition: WeatherCondition): string {
   switch (condition) {
@@ -41,65 +44,37 @@ function weatherIcon(condition: WeatherCondition): string {
 }
 
 export function useWeatherSmartCollection(): UseWeatherSmartCollectionResult {
-  const [collection, setCollection] = useState<WeatherCollectionData | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      // Check cache first
-      try {
-        const cached = await AsyncStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const { data, expiresAt } = JSON.parse(cached);
-          if (Date.now() < expiresAt) {
-            if (!cancelled) setCollection(data);
-            return;
-          }
-        }
-      } catch {
-        // ignore cache read errors
-      }
-
-      setLoading(true);
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<WeatherCollectionData | null> => {
+      const coords = await locationService.getCurrentLocation();
+      if (!coords) return null;
 
       try {
-        const coords = await locationService.getCurrentLocation();
-        if (!coords || cancelled) return;
-
-        const res = await recipeApi.getWeatherSmartCollection(coords.latitude, coords.longitude);
+        const res = await recipeApi.getWeatherSmartCollection(
+          coords.latitude,
+          coords.longitude,
+        );
         const wrapper = res as unknown as {
           data?: { collection?: WeatherCollectionData };
           collection?: WeatherCollectionData;
         };
         const data: WeatherCollectionData | undefined =
           wrapper?.data?.collection ?? wrapper?.collection;
-        if (!data || cancelled) return;
-
-        // Override icon with condition-specific emoji
-        const enriched: WeatherCollectionData = {
+        if (!data) return null;
+        return {
           ...data,
           icon: weatherIcon(data.weather?.condition ?? 'mild'),
         };
-
-        setCollection(enriched);
-
-        // Cache result
-        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: enriched,
-          expiresAt: Date.now() + CACHE_TTL_MS,
-        }));
       } catch {
-        // Non-critical — silently degrade
-      } finally {
-        if (!cancelled) setLoading(false);
+        return null;
       }
-    }
+    },
+    staleTime: STALE_TIME_MS,
+  });
 
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  return { collection, loading };
+  return {
+    collection: query.data ?? null,
+    loading: query.isLoading,
+  };
 }

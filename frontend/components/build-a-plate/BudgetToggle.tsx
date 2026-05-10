@@ -30,6 +30,8 @@ export function BudgetToggle({ active, onToggle, testID }: BudgetToggleProps) {
 
   const handlePress = useCallback(() => onToggle(), [onToggle]);
 
+  const fg = active ? '#2C1810' : isDark ? '#F0D070' : '#8a6200';
+
   return (
     <HapticTouchableOpacity
       onPress={handlePress}
@@ -50,8 +52,8 @@ export function BudgetToggle({ active, onToggle, testID }: BudgetToggleProps) {
       accessibilityLabel={`Hit my budget, ${active ? 'on' : 'off'}`}
       testID={testID}
     >
-      <Ionicons name="cash-outline" size={14} color={active ? '#2C1810' : '#8a6200'} />
-      <Text style={[styles.label, { color: active ? '#2C1810' : '#8a6200' }]}>
+      <Ionicons name="cash-outline" size={14} color={fg} />
+      <Text style={[styles.label, { color: fg }]} numberOfLines={1}>
         Hit my budget
       </Text>
     </HapticTouchableOpacity>
@@ -64,15 +66,22 @@ interface CostPillProps {
 }
 
 export function CostPill({ totalCost, testID }: CostPillProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   if (totalCost <= 0) return null;
   const formatted = `$${totalCost.toFixed(2)}`;
   return (
     <View
-      style={styles.costPill}
+      style={[
+        styles.costPill,
+        { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : Pastel.golden },
+      ]}
       testID={testID}
       accessibilityLabel={`Plate cost ${formatted}`}
     >
-      <Text style={styles.costText}>{formatted}</Text>
+      <Text style={[styles.costText, { color: isDark ? '#F0D070' : '#8a6200' }]}>
+        {formatted}
+      </Text>
     </View>
   );
 }
@@ -83,17 +92,18 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: BorderRadius.full,
+    minWidth: 0,
   },
   label: {
     fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 11,
+    flexShrink: 1,
   },
   costPill: {
-    backgroundColor: Pastel.golden,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
@@ -101,6 +111,5 @@ const styles = StyleSheet.create({
   costText: {
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: 12,
-    color: '#8a6200',
   },
 });

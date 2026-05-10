@@ -84,10 +84,13 @@ import { useFilterActions } from '../../hooks/useFilterActions';
 import { usePaginationActions } from '../../hooks/usePaginationActions';
 import { useHomeFeed } from '../../hooks/useHomeFeed';
 import { useDarkFeed } from '../../hooks/useDarkFeed';
+import { useDailyNutrition } from '../../hooks/useDailyNutrition';
+import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
+import { useWeeklyRecap } from '../../hooks/useWeeklyRecap';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubscription } from '../../hooks/useSubscription';
 import PremiumUpsellCard from '../../components/premium/PremiumUpsellCard';
-import { searchApi, nutritionApi, cookingHistoryStatsApi, weeklyRecapApi, recipeApi, type DailyNutritionSnapshot, type WeeklyRecapPayload } from '../../lib/api';
+import { searchApi, recipeApi } from '../../lib/api';
 
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
@@ -123,52 +126,15 @@ export default function HomeScreen() {
   const [showQuickMealLog, setShowQuickMealLog] = useState(false);
 
   // ROADMAP 4.0 D14 — daily nutrient snapshot for the discovery strip.
-  const [dailyNutrition, setDailyNutrition] = useState<DailyNutritionSnapshot | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await nutritionApi.fetchDaily();
-        if (!cancelled) setDailyNutrition(res?.data?.snapshot ?? null);
-      } catch {
-        if (!cancelled) setDailyNutrition(null);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  const { snapshot: dailyNutrition } = useDailyNutrition();
 
   // ROADMAP 4.0 J11 — most-recent-cook cuisine for the first-of-day greeting.
-  const [lastCookCuisine, setLastCookCuisine] = useState<string>('');
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await cookingHistoryStatsApi.mostRecent();
-        const payload = (res?.data ?? res) as { mostRecent?: { recipe?: { cuisine?: string | null } | null } | null } | undefined;
-        if (!cancelled) setLastCookCuisine(payload?.mostRecent?.recipe?.cuisine ?? '');
-      } catch {
-        if (!cancelled) setLastCookCuisine('');
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  const { cuisine: lastCookCuisine } = useLastCookCuisine();
 
   // ROADMAP 4.0 J4 — Sunday Polaroid drop. Fetch C9 weekly recap; map onto the
   // SundayRecap shape (topCuisine, topMineral, discovery). The card itself
   // gates on local Sunday + dismissed-this-week, so we always fetch.
-  const [weeklyRecap, setWeeklyRecap] = useState<WeeklyRecapPayload | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await weeklyRecapApi.fetchThisWeek();
-        if (!cancelled) setWeeklyRecap((res?.data ?? null) as WeeklyRecapPayload | null);
-      } catch {
-        if (!cancelled) setWeeklyRecap(null);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  const { recap: weeklyRecap } = useWeeklyRecap();
   const sundayRecap = useMemo(() => {
     if (!weeklyRecap) return null;
     const topCuisine = weeklyRecap.topCuisine?.cuisine ?? '';

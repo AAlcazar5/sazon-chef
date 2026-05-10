@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
+import { cldUrl } from '../../lib/cloudinaryUrl';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { EditorialShadows } from '../../constants/Shadows';
 
@@ -19,7 +21,7 @@ interface MealSlotCardProps {
   onPress: () => void;
 }
 
-export function MealSlotCard({ time, mealType, recipe, onPress }: MealSlotCardProps) {
+function MealSlotCardComponent({ time, mealType, recipe, onPress }: MealSlotCardProps) {
   const shadowStyle = Platform.select({
     ios: EditorialShadows.cardRaised.ios,
     android: EditorialShadows.cardRaised.android,
@@ -49,7 +51,13 @@ export function MealSlotCard({ time, mealType, recipe, onPress }: MealSlotCardPr
         )}
       </View>
       {recipe?.imageUrl && (
-        <Image source={{ uri: recipe.imageUrl }} style={styles.photo} />
+        <Image
+          source={{ uri: cldUrl(recipe.imageUrl, { width: 72, height: 72, dpr: 2 }) }}
+          style={styles.photo}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
+        />
       )}
     </Pressable>
   );
@@ -104,3 +112,8 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 });
+
+// P6: memoize so re-renders only fire when this slot's own props change.
+// Without it, a parent state change re-renders every meal slot in the
+// week view even when only one slot's data shifted.
+export const MealSlotCard = React.memo(MealSlotCardComponent);

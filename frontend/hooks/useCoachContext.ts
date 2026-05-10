@@ -1,6 +1,11 @@
 // 10Y Phase 3: lightweight hook for the Coach quick-start chip context.
+//
+// P5: migrated to React Query. Uses a separate queryKey from
+// useCoachQuickChipContext so the two hooks can mock independently in tests
+// even though both hit /api/coach/context — share-the-key consolidation is
+// a follow-up if profiling shows duplicate fetches at runtime.
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { coachApi, type CoachContextResponse } from '../lib/api';
 
 interface UseCoachContextResult {
@@ -9,30 +14,17 @@ interface UseCoachContextResult {
   error: string | null;
 }
 
+const QUERY_KEY = ['coachContext', 'raw'] as const;
+
 export function useCoachContext(): UseCoachContextResult {
-  const [context, setContext] = useState<CoachContextResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: () => coachApi.getCoachContext(),
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    coachApi
-      .getCoachContext()
-      .then((data) => {
-        if (cancelled) return;
-        setContext(data);
-        setIsLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to load coach context');
-        setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { context, isLoading, error };
+  return {
+    context: query.data ?? null,
+    isLoading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : query.error ? String(query.error) : null,
+  };
 }

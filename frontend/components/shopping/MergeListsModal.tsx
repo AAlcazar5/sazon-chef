@@ -4,6 +4,7 @@
 import { View, Text, TextInput, ScrollView } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import BottomSheet from '../ui/BottomSheet';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -95,28 +96,21 @@ export default function MergeListsModal({
             <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
           </HapticTouchableOpacity>
 
-          <HapticTouchableOpacity
-            onPress={onConfirmMerge}
-            disabled={state.mergingLists || state.selectedListsForMerge.length < 2}
-            className={`flex-1 py-3 px-4 rounded-lg ${
-              (state.mergingLists || state.selectedListsForMerge.length < 2)
-                ? 'bg-gray-300 dark:bg-gray-600'
-                : ''
-            }`}
-            style={(state.mergingLists || state.selectedListsForMerge.length < 2) ? undefined : { backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-          >
-            <Text className={`font-medium text-center ${
-              (state.mergingLists || state.selectedListsForMerge.length < 2)
-                ? 'text-gray-500 dark:text-gray-200'
-                : 'text-white'
-            }`}>
-              {state.mergingLists
-                ? 'Merging...'
-                : state.selectedListsForMerge.length < 2
-                ? `Select ${2 - state.selectedListsForMerge.length} more list${2 - state.selectedListsForMerge.length !== 1 ? 's' : ''}`
-                : 'Merge Lists'}
-            </Text>
-          </HapticTouchableOpacity>
+          <View className="flex-1">
+            <BrandButton
+              label={
+                state.mergingLists
+                  ? 'Merging...'
+                  : state.selectedListsForMerge.length < 2
+                  ? `Select ${2 - state.selectedListsForMerge.length} more list${2 - state.selectedListsForMerge.length !== 1 ? 's' : ''}`
+                  : 'Merge Lists'
+              }
+              onPress={onConfirmMerge}
+              loading={state.mergingLists}
+              disabled={state.mergingLists || state.selectedListsForMerge.length < 2}
+              size="compact"
+            />
+          </View>
         </View>
       </View>
     </BottomSheet>

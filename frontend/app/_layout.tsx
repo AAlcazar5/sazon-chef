@@ -5,6 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createQueryClient } from '../lib/queryClient';
+import { createQueryPersister, QUERY_PERSISTER_DEFAULTS } from '../lib/queryPersister';
 import { Text } from 'react-native';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -22,7 +25,7 @@ import { Duration } from '../constants/Animations';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useBiometricLock } from '../hooks/useBiometricLock';
 import { useShoppingListAppOpenCleanup } from '../hooks/useShoppingListAppOpenCleanup';
-import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import BrandButton from '../components/ui/BrandButton';
 import LogoMascot from '../components/mascot/LogoMascot';
 import Sazon from '../components/mascot/Sazon';
 import { initSentry } from '../lib/sentry';
@@ -31,6 +34,18 @@ import '../global.css';
 
 // Initialize Sentry once at module load — runs before any component renders.
 initSentry();
+
+// P5: single QueryClient + AsyncStorage persister per app boot. Created at
+// module scope so they survive RootLayout re-renders and aren't recreated on
+// hot reload of the component body. The persister hydrates the query cache
+// from disk on cold start so frequently-accessed surfaces (recipe feed,
+// pantry, plate suggestions) populate before the network round-trip lands.
+const queryClient = createQueryClient();
+const queryPersister = createQueryPersister();
+const queryPersistOptions = {
+  persister: queryPersister,
+  maxAge: QUERY_PERSISTER_DEFAULTS.maxAge,
+};
 
 function RootLayoutNav() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
@@ -168,12 +183,11 @@ function RootLayoutNav() {
         <Text className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center px-8">
           Authenticate to unlock your recipes
         </Text>
-        <HapticTouchableOpacity
+        <BrandButton
+          label="Unlock"
           onPress={authenticate}
-          className="bg-emerald-500 px-8 py-3 rounded-full"
-        >
-          <Text className="text-white font-semibold text-base">Unlock</Text>
-        </HapticTouchableOpacity>
+          variant="sage"
+        />
       </View>
     );
   }
@@ -240,17 +254,22 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <ThemeProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <BottomSheetModalProvider>
-                <SazonSheetProvider>
-                  <RootLayoutNav />
-                </SazonSheetProvider>
-              </BottomSheetModalProvider>
-            </ToastProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={queryPersistOptions}
+        >
+          <ThemeProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <BottomSheetModalProvider>
+                  <SazonSheetProvider>
+                    <RootLayoutNav />
+                  </SazonSheetProvider>
+                </BottomSheetModalProvider>
+              </ToastProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

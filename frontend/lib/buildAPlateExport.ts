@@ -13,8 +13,8 @@ import type {
 
 interface MealComponentLite {
   id: string;
-  displayName: string;
-  baseGrams?: number | null;
+  name: string;
+  defaultPortionGrams?: number | null;
 }
 
 type SlotKey = 'protein' | 'base' | 'vegetable' | 'sauce' | 'garnish';
@@ -56,9 +56,11 @@ export function composerToMenuPlate(args: {
     if (!selection) continue;
     const variant: PlateMenuVariant = {
       id: selection.id,
-      name: selection.displayName,
+      name: selection.name,
       portionGrams:
-        typeof selection.baseGrams === 'number' ? selection.baseGrams : undefined,
+        typeof selection.defaultPortionGrams === 'number'
+          ? selection.defaultPortionGrams
+          : undefined,
     };
     components.push({
       slot,

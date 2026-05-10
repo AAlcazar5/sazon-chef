@@ -2,8 +2,8 @@
 // Group 10X Phase 1+6+9 — bottom sheet picker, horizontal scrolling pastel cards sorted by pantry coverage.
 // Phase 6: leftover strip + variant chips. Phase 9: nutrient badges + rainbow hint (vegetable).
 
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useMemo, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import BottomSheet from '../ui/BottomSheet';
@@ -92,15 +92,26 @@ export default function SlotPicker({
 }: SlotPickerProps) {
   const [activeDietary, setActiveDietary] = useState<string | null>(null);
   const [activeCuisine, setActiveCuisine] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const titleColor = isDark ? '#F9FAFB' : '#1F2937';
   const bodyColor = isDark ? '#9CA3AF' : '#6B7280';
 
+  const trimmedQuery = query.trim();
+
   const filtered = useMemo(() => {
     let list = components;
     if (activeDietary) list = list.filter((c) => c.dietaryTags.includes(activeDietary));
     if (activeCuisine) list = list.filter((c) => c.cuisineTags.includes(activeCuisine));
+    if (trimmedQuery.length > 0) {
+      const q = trimmedQuery.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.description?.toLowerCase().includes(q) ?? false),
+      );
+    }
     list = filterByPantryOnly(list, pantryOnly);
     return [...list].sort((a, b) => {
       const pantryDiff = b.pantryCoveragePercent - a.pantryCoveragePercent;
@@ -111,7 +122,29 @@ export default function SlotPicker({
       if (scoreDiff !== 0) return scoreDiff;
       return a.name.localeCompare(b.name);
     });
-  }, [components, activeDietary, activeCuisine, pantryOnly, scoresById]);
+  }, [components, activeDietary, activeCuisine, trimmedQuery, pantryOnly, scoresById]);
+
+  const handleAddCustom = useCallback(() => {
+    if (!slot || trimmedQuery.length === 0) return;
+    const custom: MealComponent = {
+      id: `custom-${Date.now()}`,
+      slot,
+      name: trimmedQuery,
+      defaultPortionGrams: 100,
+      caloriesPerPortion: 0,
+      proteinG: 0,
+      carbsG: 0,
+      fatG: 0,
+      fiberG: 0,
+      cuisineTags: [],
+      dietaryTags: [],
+      cookMethodHint: 'raw',
+      pantryIngredientNames: [],
+      pantryCoveragePercent: 0,
+    };
+    onSelect(custom);
+    setQuery('');
+  }, [slot, trimmedQuery, onSelect]);
 
   const dietaryChips = useMemo(() => uniqueTags(components, 'dietaryTags'), [components]);
   const cuisineChips = useMemo(() => uniqueTags(components, 'cuisineTags'), [components]);
@@ -123,6 +156,26 @@ export default function SlotPicker({
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title} snapPoints={['72%']} scrollable>
       <View style={[styles.tintBar, { backgroundColor: tint }]} testID={`${testID}-tint`} />
+
+      <View
+        style={[
+          styles.searchWrap,
+          { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' },
+        ]}
+      >
+        <Ionicons name="search" size={16} color={bodyColor} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder={slot ? `Search ${SLOT_LABEL[slot].toLowerCase()}s or type your own…` : 'Search…'}
+          placeholderTextColor={bodyColor}
+          style={[styles.searchInput, { color: titleColor }]}
+          testID={`${testID}-search-input`}
+          accessibilityLabel="Search components or type a custom item"
+          autoCorrect={false}
+          returnKeyType="done"
+        />
+      </View>
 
       {leftovers && leftovers.length > 0 && onSelectLeftover && (
         <LeftoverStrip
@@ -265,10 +318,47 @@ export default function SlotPicker({
             );
           })}
 
-          {filtered.length === 0 && !loading && (
+          {filtered.length === 0 && !loading && trimmedQuery.length === 0 && (
             <View style={styles.empty}>
               <Text style={[styles.emptyText, { color: bodyColor }]}>Nothing matches those filters yet.</Text>
             </View>
+          )}
+
+          {trimmedQuery.length > 0 && filtered.length === 0 && !loading && (
+            <View style={styles.empty}>
+              <Text style={[styles.emptyText, { color: bodyColor }]}>
+                Nothing in our list matches "{trimmedQuery}".
+              </Text>
+            </View>
+          )}
+
+          {trimmedQuery.length > 0 && (
+            <HapticTouchableOpacity
+              onPress={handleAddCustom}
+              hapticStyle="medium"
+              pressedScale={0.97}
+              style={[
+                styles.customCta,
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : Pastel.lavender },
+                Shadows.SM as any,
+              ]}
+              testID={`${testID}-custom-cta`}
+              accessibilityLabel={`Use "${trimmedQuery}" tonight as a custom ${slot ? SLOT_LABEL[slot].toLowerCase() : 'item'}`}
+            >
+              <Ionicons
+                name="add-circle"
+                size={18}
+                color={isDark ? '#D8B4DF' : '#6a2677'}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.customCtaTitle, { color: isDark ? '#D8B4DF' : '#6a2677' }]} numberOfLines={1}>
+                  Use "{trimmedQuery}" tonight
+                </Text>
+                <Text style={[styles.customCtaBody, { color: bodyColor }]} numberOfLines={2}>
+                  Adds it to this slot. Macros and pantry coverage won't be tracked for custom items.
+                </Text>
+              </View>
+            </HapticTouchableOpacity>
           )}
         </ScrollView>
       )}
@@ -414,5 +504,38 @@ const styles = StyleSheet.create({
   },
   nutrientBadgeWrap: {
     marginTop: 6,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.full,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 14,
+    padding: 0,
+  },
+  customCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: BorderRadius.card,
+    marginTop: 4,
+  },
+  customCtaTitle: {
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontSize: 15,
+  },
+  customCtaBody: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 12,
+    marginTop: 2,
   },
 });

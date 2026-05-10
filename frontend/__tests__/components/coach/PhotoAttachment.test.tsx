@@ -2,7 +2,7 @@
 // Pro tier opens the picker action sheet.
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '../../test-utils/render';
 import { ActionSheetIOS, Platform, Alert } from 'react-native';
 
 const mockSubscription = { tier: 'free', isPremium: false };

@@ -3,7 +3,7 @@
 // seeding the composer.
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '../test-utils/render';
 
 const mockSearchParams: { conversationId?: string; seedMessage?: string } = {};
 jest.mock('expo-router', () => ({

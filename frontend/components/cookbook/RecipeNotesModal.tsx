@@ -6,6 +6,7 @@ import { useRef, useEffect, useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -132,13 +133,13 @@ export default function RecipeNotesModal({
                   <Text className="text-sm font-semibold text-red-500 dark:text-red-400">Clear</Text>
                 </HapticTouchableOpacity>
               )}
-              <HapticTouchableOpacity
-                onPress={handleSave}
-                className="flex-1 py-3 rounded-lg items-center"
-                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                <Text className="text-sm font-semibold text-white">Save Notes</Text>
-              </HapticTouchableOpacity>
+              <View className="flex-1">
+                <BrandButton
+                  label="Save Notes"
+                  onPress={handleSave}
+                  size="compact"
+                />
+              </View>
             </View>
           </Animated.View>
         </Animated.View>

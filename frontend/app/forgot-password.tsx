@@ -8,7 +8,6 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -18,6 +17,7 @@ import ShakeAnimation from '../components/ui/ShakeAnimation';
 import LogoMascot from '../components/mascot/LogoMascot';
 import Sazon from '../components/mascot/Sazon';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import BrandButton from '../components/ui/BrandButton';
 import FormInput from '../components/ui/FormInput';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { Colors } from '../constants/Colors';
@@ -238,17 +238,13 @@ export default function ForgotPasswordScreen() {
                   />
                 </ShakeAnimation>
 
-                <HapticTouchableOpacity
-                  className={`bg-red-600 dark:bg-red-400 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
+                <BrandButton
+                  label="Send Reset Code"
                   onPress={handleRequestReset}
+                  loading={loading}
                   disabled={loading}
-                >
-                  {loading ? (
-                    <AnimatedActivityIndicator color="#fff" />
-                  ) : (
-                    <Text className="text-white text-base font-semibold">Send Reset Code</Text>
-                  )}
-                </HapticTouchableOpacity>
+                  style={{ marginTop: 8 }}
+                />
               </>
             ) : step === 'code' ? (
               <>
@@ -276,17 +272,13 @@ export default function ForgotPasswordScreen() {
                   />
                 </ShakeAnimation>
 
-                <HapticTouchableOpacity
-                  className={`bg-red-600 dark:bg-red-400 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
+                <BrandButton
+                  label="Verify Code"
                   onPress={handleVerifyCode}
+                  loading={loading}
                   disabled={loading}
-                >
-                  {loading ? (
-                    <AnimatedActivityIndicator color="#fff" />
-                  ) : (
-                    <Text className="text-white text-base font-semibold">Verify Code</Text>
-                  )}
-                </HapticTouchableOpacity>
+                  style={{ marginTop: 8 }}
+                />
 
                 <HapticTouchableOpacity
                   className="mt-4"
@@ -325,17 +317,13 @@ export default function ForgotPasswordScreen() {
                   />
                 </ShakeAnimation>
 
-                <HapticTouchableOpacity
-                  className={`bg-red-600 dark:bg-red-400 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
+                <BrandButton
+                  label="Reset Password"
                   onPress={handleResetPassword}
+                  loading={loading}
                   disabled={loading}
-                >
-                  {loading ? (
-                    <AnimatedActivityIndicator color="#fff" />
-                  ) : (
-                    <Text className="text-white text-base font-semibold">Reset Password</Text>
-                  )}
-                </HapticTouchableOpacity>
+                  style={{ marginTop: 8 }}
+                />
 
                 <HapticTouchableOpacity
                   className="mt-4"

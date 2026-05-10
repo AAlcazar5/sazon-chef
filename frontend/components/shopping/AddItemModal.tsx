@@ -2,7 +2,8 @@
 // Add item bottom sheet with tabs: Add New / Buy Again / Pantry
 // Edit quantity bottom sheet for inline editing
 
-import { View, Text, TextInput, Image, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, Alert, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
 import { useState, useMemo, useCallback } from 'react';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
@@ -806,6 +807,9 @@ export default function AddItemModal({
                       borderRadius: BorderRadius.md,
                       ...Shadows.MD,
                     }}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={200}
                   />
                 ) : null}
                 <HapticTouchableOpacity

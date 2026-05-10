@@ -5,7 +5,10 @@
 // users so the caller can mount the card unconditionally and let it
 // render-null. Backend rotates per (userId, dateKey) so refetching on
 // remount is fine — the same surface is returned until tomorrow.
-import { useEffect, useState } from 'react';
+//
+// P5: migrated to React Query.
+
+import { useQuery } from '@tanstack/react-query';
 import { todayApi, type ReverseDiscoveryResponse } from '../lib/api';
 
 interface UseReverseDiscoveryState {
@@ -15,31 +18,20 @@ interface UseReverseDiscoveryState {
 }
 
 const EMPTY: ReverseDiscoveryResponse = { candidate: null, copy: null };
+const QUERY_KEY = ['reverseDiscovery'] as const;
 
 export function useReverseDiscovery(): UseReverseDiscoveryState {
-  const [payload, setPayload] = useState<ReverseDiscoveryResponse>(EMPTY);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async (): Promise<ReverseDiscoveryResponse> => {
+      const res = await todayApi.reverseDiscovery();
+      return (res.data as ReverseDiscoveryResponse) ?? EMPTY;
+    },
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await todayApi.reverseDiscovery();
-        if (cancelled) return;
-        setPayload((res.data as ReverseDiscoveryResponse) ?? EMPTY);
-      } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setPayload(EMPTY);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { payload, loading, error };
+  return {
+    payload: query.data ?? EMPTY,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error : null,
+  };
 }

@@ -2,7 +2,8 @@
 // Draggable meal card with swipe actions and completion tracking
 
 import React, { useEffect } from 'react';
-import { View, Text, Image, Switch, Alert } from 'react-native';
+import { View, Text, Switch, Alert } from 'react-native';
+import { Image } from 'expo-image';
 import { optimizedImageUrl } from '../../utils/imageUtils';
 import { useColorScheme } from 'nativewind';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -420,7 +421,9 @@ function DraggableMealCard({
               <Image
                 source={{ uri: optimizedImageUrl(meal.imageUrl) }}
                 style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
                 accessibilityLabel={`${meal.name} image`}
               />
             </View>

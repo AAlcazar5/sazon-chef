@@ -1,8 +1,8 @@
 // frontend/components/home/RecipeCarouselSection.tsx
 // Reusable collapsible carousel section for recipe lists
 
-import React, { useCallback, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, Text, FlatList, Pressable, type ListRenderItem } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -52,7 +52,7 @@ interface RecipeCarouselSectionProps {
   onRefresh?: () => void;
   refreshPromptText?: string;
   // Optional scroll ref
-  scrollRef?: React.RefObject<ScrollView | null>;
+  scrollRef?: React.RefObject<FlatList<SuggestedRecipe> | null>;
   onScroll?: (event: any) => void;
   onMomentumScrollEnd?: (event: any) => void;
   // Slow auto-scroll (default false)
@@ -84,8 +84,8 @@ function RecipeCarouselSection({
   onMomentumScrollEnd,
   autoScroll = false,
 }: RecipeCarouselSectionProps) {
-  const internalScrollRef = useRef<ScrollView>(null);
-  const activeScrollRef = (scrollRef ?? internalScrollRef) as React.RefObject<ScrollView | null>;
+  const internalScrollRef = useRef<FlatList<SuggestedRecipe>>(null);
+  const activeScrollRef = (scrollRef ?? internalScrollRef) as React.RefObject<FlatList<SuggestedRecipe> | null>;
 
   // Auto-scroll refs
   const autoScrollIndexRef = useRef(0);
@@ -106,10 +106,10 @@ function RecipeCarouselSection({
 
       if (next >= recipes.length) {
         autoScrollIndexRef.current = 0;
-        activeScrollRef.current?.scrollTo({ x: 0, animated: false });
+        activeScrollRef.current?.scrollToOffset({ offset: 0, animated: false });
       } else {
         autoScrollIndexRef.current = next;
-        activeScrollRef.current?.scrollTo({ x: next * CARD_STEP, animated: true });
+        activeScrollRef.current?.scrollToOffset({ offset: next * CARD_STEP, animated: true });
       }
     }, DWELL_MS);
 
@@ -143,8 +143,8 @@ function RecipeCarouselSection({
             </View>
           </View>
         </View>
-        {/* Skeleton cards */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }} scrollEnabled={false}>
+        {/* Skeleton cards — fixed-count placeholder, no virtualization needed */}
+        <View style={{ flexDirection: 'row', paddingLeft: 16, paddingRight: 16 }}>
           {[1, 2, 3].map(i => (
             <View key={i} style={{ width: CARD_WIDTH, marginRight: CARD_MARGIN }}>
               <SkeletonLoader width={CARD_WIDTH} height={160} borderRadius={12} isDark={isDark} />
@@ -157,7 +157,7 @@ function RecipeCarouselSection({
               </View>
             </View>
           ))}
-        </ScrollView>
+        </View>
       </View>
     );
   }
@@ -192,123 +192,212 @@ function RecipeCarouselSection({
             }, 1000);
           }}
         >
-        <ScrollView
-          ref={activeScrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 16, paddingRight: 48 }}
-          decelerationRate="fast"
-          snapToInterval={CARD_STEP}
-          snapToAlignment="start"
-          onTouchStart={() => {
-            isUserScrollingRef.current = true;
-            if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
-          }}
-          onTouchEnd={() => {
-            resumeTimeoutRef.current = setTimeout(() => {
-              isUserScrollingRef.current = false;
-            }, 1500);
-          }}
-          onScrollBeginDrag={() => {
-            isUserScrollingRef.current = true;
-            if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
-          }}
-          onScrollEndDrag={(e) => {
-            autoScrollIndexRef.current = Math.round(e.nativeEvent.contentOffset.x / CARD_STEP);
-            resumeTimeoutRef.current = setTimeout(() => {
-              isUserScrollingRef.current = false;
-            }, 2000);
-          }}
+        <RecipeCarouselFlatList
+          activeScrollRef={activeScrollRef}
+          recipes={recipes}
+          userFeedback={userFeedback}
+          feedbackLoading={feedbackLoading}
+          onRecipePress={onRecipePress}
+          onRecipeLongPress={onRecipeLongPress}
+          onLike={onLike}
+          onDislike={onDislike}
+          onSave={onSave}
+          isUserScrollingRef={isUserScrollingRef}
+          resumeTimeoutRef={resumeTimeoutRef}
+          autoScrollIndexRef={autoScrollIndexRef}
           onScroll={onScroll}
-          scrollEventThrottle={100}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
-        >
-          {recipes.map((recipe, i) => {
-            const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-            const isFeedbackLoading = feedbackLoading === recipe.id;
-
-            return (
-              <View key={recipe.id} style={{ width: CARD_WIDTH, marginRight: CARD_MARGIN }}>
-                <EditorialRecipeCard
-                  recipe={recipe}
-                  bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
-                  titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
-                  feedback={feedback}
-                  isFeedbackLoading={isFeedbackLoading}
-                  onPress={onRecipePress}
-                  onLongPress={onRecipeLongPress}
-                  onLike={onLike}
-                  onDislike={onDislike}
-                  onSave={onSave}
-                  showDescription
-                />
-              </View>
-            );
-          })}
-
-          {/* Refresh prompt when on last recipe */}
-          {showRefreshPrompt && onRefresh && (
-            <View style={{ width: CARD_WIDTH, marginRight: CARD_MARGIN, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-              <View style={{
-                backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
-                borderRadius: 12,
-                padding: 16,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
-              }}>
-                <Ionicons
-                  name="refresh-outline"
-                  size={32}
-                  color={isDark ? DarkColors.primary : Colors.primary}
-                  style={{ marginBottom: 8 }}
-                />
-                <Text style={{
-                  fontSize: 14,
-                  fontFamily: 'PlusJakartaSans_600SemiBold',
-                  color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                  marginBottom: 4,
-                  textAlign: 'center',
-                }}>
-                  Want more recipes?
-                </Text>
-                <Text style={{
-                  fontSize: 12,
-                  color: isDark ? '#9CA3AF' : '#6B7280',
-                  marginBottom: 12,
-                  textAlign: 'center',
-                }}>
-                  {refreshPromptText}
-                </Text>
-                <HapticTouchableOpacity
-                  onPress={() => {
-                    HapticPatterns.buttonPress();
-                    onRefresh();
-                  }}
-                  disabled={refreshing}
-                  style={{
-                    backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                    paddingHorizontal: 20,
-                    paddingVertical: 10,
-                    borderRadius: 12,
-                    opacity: refreshing ? 0.7 : 1,
-                  }}
-                >
-                  {refreshing ? (
-                    <AnimatedActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
-                      Refresh Recipes
-                    </Text>
-                  )}
-                </HapticTouchableOpacity>
-              </View>
-            </View>
-          )}
-        </ScrollView>
+          handleMomentumScrollEnd={handleMomentumScrollEnd}
+          showRefreshPrompt={showRefreshPrompt}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+          refreshPromptText={refreshPromptText}
+          isDark={isDark}
+        />
         </Pressable>
       )}
     </View>
+  );
+}
+
+interface RecipeCarouselFlatListProps {
+  activeScrollRef: React.RefObject<FlatList<SuggestedRecipe> | null>;
+  recipes: SuggestedRecipe[];
+  userFeedback: Record<string, UserFeedback>;
+  feedbackLoading: string | null;
+  onRecipePress: (recipeId: string) => void;
+  onRecipeLongPress: (recipe: SuggestedRecipe) => void;
+  onLike: (recipeId: string) => void;
+  onDislike: (recipeId: string) => void;
+  onSave: (recipeId: string) => void;
+  isUserScrollingRef: React.MutableRefObject<boolean>;
+  resumeTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  autoScrollIndexRef: React.MutableRefObject<number>;
+  onScroll?: (event: any) => void;
+  handleMomentumScrollEnd: (event: any) => void;
+  showRefreshPrompt: boolean;
+  onRefresh?: () => void;
+  refreshing: boolean;
+  refreshPromptText: string;
+  isDark: boolean;
+}
+
+function RecipeCarouselFlatList({
+  activeScrollRef,
+  recipes,
+  userFeedback,
+  feedbackLoading,
+  onRecipePress,
+  onRecipeLongPress,
+  onLike,
+  onDislike,
+  onSave,
+  isUserScrollingRef,
+  resumeTimeoutRef,
+  autoScrollIndexRef,
+  onScroll,
+  handleMomentumScrollEnd,
+  showRefreshPrompt,
+  onRefresh,
+  refreshing,
+  refreshPromptText,
+  isDark,
+}: RecipeCarouselFlatListProps) {
+  const renderItem = useCallback<ListRenderItem<SuggestedRecipe>>(
+    ({ item: recipe, index: i }) => {
+      const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
+      const isFeedbackLoading = feedbackLoading === recipe.id;
+      return (
+        <View style={{ width: CARD_WIDTH, marginRight: CARD_MARGIN }}>
+          <EditorialRecipeCard
+            recipe={recipe}
+            bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
+            titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
+            feedback={feedback}
+            isFeedbackLoading={isFeedbackLoading}
+            onPress={onRecipePress}
+            onLongPress={onRecipeLongPress}
+            onLike={onLike}
+            onDislike={onDislike}
+            onSave={onSave}
+            showDescription
+          />
+        </View>
+      );
+    },
+    [
+      userFeedback,
+      feedbackLoading,
+      onRecipePress,
+      onRecipeLongPress,
+      onLike,
+      onDislike,
+      onSave,
+    ],
+  );
+
+  const keyExtractor = useCallback((r: SuggestedRecipe) => r.id, []);
+
+  const ListFooter = useMemo(() => {
+    if (!showRefreshPrompt || !onRefresh) return null;
+    return (
+      <View style={{ width: CARD_WIDTH, marginRight: CARD_MARGIN, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <View style={{
+          backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
+          borderRadius: 12,
+          padding: 16,
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
+        }}>
+          <Ionicons
+            name="refresh-outline"
+            size={32}
+            color={isDark ? DarkColors.primary : Colors.primary}
+            style={{ marginBottom: 8 }}
+          />
+          <Text style={{
+            fontSize: 14,
+            fontFamily: 'PlusJakartaSans_600SemiBold',
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
+            marginBottom: 4,
+            textAlign: 'center',
+          }}>
+            Want more recipes?
+          </Text>
+          <Text style={{
+            fontSize: 12,
+            color: isDark ? '#9CA3AF' : '#6B7280',
+            marginBottom: 12,
+            textAlign: 'center',
+          }}>
+            {refreshPromptText}
+          </Text>
+          <HapticTouchableOpacity
+            onPress={() => {
+              HapticPatterns.buttonPress();
+              onRefresh();
+            }}
+            disabled={refreshing}
+            style={{
+              backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 12,
+              opacity: refreshing ? 0.7 : 1,
+            }}
+          >
+            {refreshing ? (
+              <AnimatedActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
+                Refresh Recipes
+              </Text>
+            )}
+          </HapticTouchableOpacity>
+        </View>
+      </View>
+    );
+  }, [showRefreshPrompt, onRefresh, refreshing, refreshPromptText, isDark]);
+
+  return (
+    <FlatList<SuggestedRecipe>
+      ref={activeScrollRef}
+      horizontal
+      data={recipes}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      ListFooterComponent={ListFooter}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingLeft: 16, paddingRight: 48 }}
+      decelerationRate="fast"
+      snapToInterval={CARD_STEP}
+      snapToAlignment="start"
+      onTouchStart={() => {
+        isUserScrollingRef.current = true;
+        if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+      }}
+      onTouchEnd={() => {
+        resumeTimeoutRef.current = setTimeout(() => {
+          isUserScrollingRef.current = false;
+        }, 1500);
+      }}
+      onScrollBeginDrag={() => {
+        isUserScrollingRef.current = true;
+        if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+      }}
+      onScrollEndDrag={(e) => {
+        autoScrollIndexRef.current = Math.round(e.nativeEvent.contentOffset.x / CARD_STEP);
+        resumeTimeoutRef.current = setTimeout(() => {
+          isUserScrollingRef.current = false;
+        }, 2000);
+      }}
+      onScroll={onScroll}
+      scrollEventThrottle={100}
+      onMomentumScrollEnd={handleMomentumScrollEnd}
+      initialNumToRender={3}
+      windowSize={5}
+      removeClippedSubviews
+    />
   );
 }
 

@@ -40,8 +40,24 @@ jest.mock('../../lib/api', () => ({
   },
 }));
 
+import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFoodIntelUserState } from '../../hooks/useFoodIntelUserState';
+
+function makeClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0, staleTime: 0 },
+    },
+  });
+}
+
+function withClient(client: QueryClient) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -50,7 +66,7 @@ beforeEach(() => {
 describe('useFoodIntelUserState', () => {
   it('starts with empty defaults before the snapshot resolves', () => {
     mockGetAffinitySnapshot.mockReturnValue(new Promise(() => {})); // never resolves
-    const { result } = renderHook(() => useFoodIntelUserState());
+    const { result } = renderHook(() => useFoodIntelUserState(), { wrapper: withClient(makeClient()) });
 
     expect(result.current.userId).toBe('user_test');
     expect(result.current.skillTier).toBe('cook');
@@ -71,7 +87,7 @@ describe('useFoodIntelUserState', () => {
       },
     });
 
-    const { result } = renderHook(() => useFoodIntelUserState());
+    const { result } = renderHook(() => useFoodIntelUserState(), { wrapper: withClient(makeClient()) });
     await waitFor(() => {
       expect(result.current.topAffinityIngredients).toContain('chicken breast');
     });
@@ -84,7 +100,7 @@ describe('useFoodIntelUserState', () => {
 
   it('preserves safe defaults when the snapshot fetch errors', async () => {
     mockGetAffinitySnapshot.mockRejectedValue(new Error('network'));
-    const { result } = renderHook(() => useFoodIntelUserState());
+    const { result } = renderHook(() => useFoodIntelUserState(), { wrapper: withClient(makeClient()) });
 
     await waitFor(() => {
       // Hook resolves into a stable identity; defaults remain.
@@ -105,7 +121,7 @@ describe('useFoodIntelUserState', () => {
       },
     });
 
-    const { result, rerender } = renderHook(() => useFoodIntelUserState());
+    const { result, rerender } = renderHook(() => useFoodIntelUserState(), { wrapper: withClient(makeClient()) });
     await waitFor(() => expect(result.current.topAffinityIngredients).toContain('lentils'));
     expect(mockGetAffinitySnapshot).toHaveBeenCalledTimes(1);
 

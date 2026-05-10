@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, Text, Modal, TextInput, ScrollView } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -148,13 +149,13 @@ function MealNotesModal({
                   <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
                 </HapticTouchableOpacity>
 
-                <HapticTouchableOpacity
-                  onPress={onSave}
-                  className="flex-1 py-3 px-4 rounded-lg"
-                  style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-                >
-                  <Text className="text-white font-medium text-center">Save Notes</Text>
-                </HapticTouchableOpacity>
+                <View className="flex-1">
+                  <BrandButton
+                    label="Save Notes"
+                    onPress={onSave}
+                    size="compact"
+                  />
+                </View>
               </View>
             </View>
           </View>

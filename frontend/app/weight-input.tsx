@@ -8,7 +8,6 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import LoadingState from '../components/ui/LoadingState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import BrandButton from '../components/ui/BrandButton';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import { apiClient } from '../lib/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -247,17 +247,14 @@ export default function WeightInputScreen() {
             </View>
 
             {/* Save Button */}
-            <HapticTouchableOpacity
-              className={`bg-red-600 dark:bg-red-400 rounded-lg px-4 py-4 items-center justify-center mt-2 min-h-[50px] ${loading ? 'opacity-60' : ''}`}
+            <BrandButton
+              label="Save Weight"
               onPress={handleSave}
+              loading={loading}
               disabled={loading}
-            >
-              {loading ? (
-                <AnimatedActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-white text-base font-semibold">Save Weight</Text>
-              )}
-            </HapticTouchableOpacity>
+              variant="sage"
+              style={{ marginTop: 8 }}
+            />
 
             {/* Cancel Button */}
             <HapticTouchableOpacity

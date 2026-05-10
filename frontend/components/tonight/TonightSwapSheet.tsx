@@ -6,7 +6,8 @@
 // use BorderRadius.card (20).
 
 import React from 'react';
-import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { BorderRadius, Spacing } from '../../constants/Spacing';
 import type { Recipe } from '../../types';
@@ -48,7 +49,13 @@ export default function TonightSwapSheet({
             style={styles.card}
           >
             {recipe.imageUrl ? (
-              <Image source={{ uri: recipe.imageUrl }} style={styles.image} />
+              <Image
+                source={{ uri: recipe.imageUrl }}
+                style={styles.image}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
+              />
             ) : null}
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle}>{recipe.title}</Text>

@@ -1,8 +1,8 @@
 // frontend/components/home/RecipeSectionsGrid.tsx
 // Renders the contextual recipe sections with collapse/expand, grid/list/carousel views, and inline pagination
 
-import React from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, FlatList, Pressable, type ListRenderItem } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
@@ -68,7 +68,7 @@ interface RecipeSectionsGridProps {
   animatedRecipeIds: Set<string>;
   onAnimatedRecipeId: (id: string) => void;
   // Quick meals carousel
-  quickMealsScrollViewRef: React.RefObject<ScrollView | null>;
+  quickMealsScrollViewRef: React.RefObject<FlatList<SuggestedRecipe> | null>;
   quickMealsCurrentIndex: number;
   onQuickMealsIndexChange: (index: number) => void;
   refreshingQuickMeals: boolean;
@@ -207,107 +207,29 @@ function RecipeSectionsGrid({
                     onHoverIn={isQuickMeals ? onQuickMealsTouchStart : undefined}
                     onHoverOut={isQuickMeals ? onQuickMealsTouchEnd : undefined}
                   >
-                  <ScrollView
-                    ref={isQuickMeals ? quickMealsScrollViewRef : undefined}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={{ marginHorizontal: -16 }}
-                    contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
-                    decelerationRate="fast"
-                    snapToInterval={280}
-                    snapToAlignment="start"
-                    onTouchStart={isQuickMeals ? onQuickMealsTouchStart : undefined}
-                    onTouchEnd={isQuickMeals ? onQuickMealsTouchEnd : undefined}
-                    onScrollBeginDrag={isQuickMeals ? onQuickMealsScrollBeginDrag : undefined}
-                    onScrollEndDrag={isQuickMeals ? onQuickMealsScrollEndDrag : undefined}
-                    onScroll={(event) => {
-                      if (!isQuickMeals) return;
-                      const scrollPosition = event.nativeEvent.contentOffset.x;
-                      onQuickMealsIndexChange(Math.round(scrollPosition / (280 + 12)));
-                    }}
-                    scrollEventThrottle={100}
-                    onMomentumScrollEnd={(event) => {
-                      if (!isQuickMeals) return;
-                      const scrollPosition = event.nativeEvent.contentOffset.x;
-                      onQuickMealsIndexChange(Math.round(scrollPosition / (280 + 12)));
-                    }}
-                  >
-                    {section.recipes.map((recipe, i) => {
-                      const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
-                      return (
-                        <View key={recipe.id} style={{ width: 280, marginRight: 12 }}>
-                          <EditorialRecipeCard
-                            recipe={recipe}
-                            bg={cardBgRotation[i % cardBgRotation.length]}
-                            titleColor={cardTitleRotation[i % cardTitleRotation.length]}
-                            feedback={feedback}
-                            isFeedbackLoading={feedbackLoading === recipe.id}
-                            onPress={onRecipePress}
-                            onLongPress={onRecipeLongPress}
-                            onLike={onLike}
-                            onDislike={onDislike}
-                            onSave={onSave}
-                            showDescription
-                          />
-                        </View>
-                      );
-                    })}
-
-                    {/* Refresh prompt at end of quick meals carousel */}
-                    {isQuickMeals && quickMealsCurrentIndex >= section.recipes.length - 1 && section.recipes.length >= 5 && (
-                      <View style={{ width: 280, marginRight: 12, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                        <View style={{
-                          backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
-                          borderRadius: 12,
-                          padding: 16,
-                          alignItems: 'center',
-                          borderWidth: 1,
-                          borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
-                        }}>
-                          <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
-                          <Text style={{
-                            fontSize: 14,
-                            fontFamily: 'PlusJakartaSans_600SemiBold',
-                            color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                            marginBottom: 4,
-                            textAlign: 'center',
-                          }}>
-                            Want more recipes?
-                          </Text>
-                          <Text style={{
-                            fontSize: 12,
-                            color: isDark ? '#9CA3AF' : '#6B7280',
-                            marginBottom: 12,
-                            textAlign: 'center',
-                          }}>
-                            Swipe to refresh and get new quick meals
-                          </Text>
-                          <HapticTouchableOpacity
-                            onPress={() => {
-                              HapticPatterns.buttonPress();
-                              onRefreshQuickMeals();
-                            }}
-                            disabled={refreshingQuickMeals}
-                            style={{
-                              backgroundColor: isDark ? DarkColors.primary : Colors.primary,
-                              paddingHorizontal: 20,
-                              paddingVertical: 10,
-                              borderRadius: 12,
-                              opacity: refreshingQuickMeals ? 0.7 : 1,
-                            }}
-                          >
-                            {refreshingQuickMeals ? (
-                              <AnimatedActivityIndicator size="small" color="#FFFFFF" />
-                            ) : (
-                              <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
-                                Refresh Recipes
-                              </Text>
-                            )}
-                          </HapticTouchableOpacity>
-                        </View>
-                      </View>
-                    )}
-                  </ScrollView>
+                  <QuickMealsCarouselFlatList
+                    listRef={isQuickMeals ? quickMealsScrollViewRef : null}
+                    recipes={section.recipes}
+                    cardBgRotation={cardBgRotation}
+                    cardTitleRotation={cardTitleRotation}
+                    userFeedback={userFeedback}
+                    feedbackLoading={feedbackLoading}
+                    onRecipePress={onRecipePress}
+                    onRecipeLongPress={onRecipeLongPress}
+                    onLike={onLike}
+                    onDislike={onDislike}
+                    onSave={onSave}
+                    isQuickMeals={isQuickMeals}
+                    onQuickMealsTouchStart={onQuickMealsTouchStart}
+                    onQuickMealsTouchEnd={onQuickMealsTouchEnd}
+                    onQuickMealsScrollBeginDrag={onQuickMealsScrollBeginDrag}
+                    onQuickMealsScrollEndDrag={onQuickMealsScrollEndDrag}
+                    onQuickMealsIndexChange={onQuickMealsIndexChange}
+                    quickMealsCurrentIndex={quickMealsCurrentIndex}
+                    refreshingQuickMeals={refreshingQuickMeals}
+                    onRefreshQuickMeals={onRefreshQuickMeals}
+                    isDark={isDark}
+                  />
                   </Pressable>
 
                 ) : viewMode === 'grid' ? (
@@ -391,6 +313,182 @@ function RecipeSectionsGrid({
         );
       })}
     </View>
+  );
+}
+
+interface QuickMealsCarouselFlatListProps {
+  listRef: React.RefObject<FlatList<SuggestedRecipe> | null> | null;
+  recipes: SuggestedRecipe[];
+  cardBgRotation: string[];
+  cardTitleRotation: string[];
+  userFeedback: Record<string, { liked: boolean; disliked: boolean }>;
+  feedbackLoading: string | null;
+  onRecipePress: (recipeId: string) => void;
+  onRecipeLongPress: (recipe: SuggestedRecipe) => void;
+  onLike: (recipeId: string) => void;
+  onDislike: (recipeId: string) => void;
+  onSave: (recipeId: string) => void;
+  isQuickMeals: boolean;
+  onQuickMealsTouchStart?: () => void;
+  onQuickMealsTouchEnd?: () => void;
+  onQuickMealsScrollBeginDrag?: () => void;
+  onQuickMealsScrollEndDrag?: (event: any) => void;
+  onQuickMealsIndexChange: (index: number) => void;
+  quickMealsCurrentIndex: number;
+  refreshingQuickMeals: boolean;
+  onRefreshQuickMeals: () => void;
+  isDark: boolean;
+}
+
+function QuickMealsCarouselFlatList({
+  listRef,
+  recipes,
+  cardBgRotation,
+  cardTitleRotation,
+  userFeedback,
+  feedbackLoading,
+  onRecipePress,
+  onRecipeLongPress,
+  onLike,
+  onDislike,
+  onSave,
+  isQuickMeals,
+  onQuickMealsTouchStart,
+  onQuickMealsTouchEnd,
+  onQuickMealsScrollBeginDrag,
+  onQuickMealsScrollEndDrag,
+  onQuickMealsIndexChange,
+  quickMealsCurrentIndex,
+  refreshingQuickMeals,
+  onRefreshQuickMeals,
+  isDark,
+}: QuickMealsCarouselFlatListProps) {
+  const renderItem = useCallback<ListRenderItem<SuggestedRecipe>>(
+    ({ item: recipe, index: i }) => {
+      const feedback = userFeedback[recipe.id] || { liked: false, disliked: false };
+      return (
+        <View style={{ width: 280, marginRight: 12 }}>
+          <EditorialRecipeCard
+            recipe={recipe}
+            bg={cardBgRotation[i % cardBgRotation.length]}
+            titleColor={cardTitleRotation[i % cardTitleRotation.length]}
+            feedback={feedback}
+            isFeedbackLoading={feedbackLoading === recipe.id}
+            onPress={onRecipePress}
+            onLongPress={onRecipeLongPress}
+            onLike={onLike}
+            onDislike={onDislike}
+            onSave={onSave}
+            showDescription
+          />
+        </View>
+      );
+    },
+    [
+      cardBgRotation,
+      cardTitleRotation,
+      userFeedback,
+      feedbackLoading,
+      onRecipePress,
+      onRecipeLongPress,
+      onLike,
+      onDislike,
+      onSave,
+    ],
+  );
+
+  const keyExtractor = useCallback((r: SuggestedRecipe) => r.id, []);
+
+  const ListFooter = useMemo(() => {
+    if (!isQuickMeals || quickMealsCurrentIndex < recipes.length - 1 || recipes.length < 5) return null;
+    return (
+      <View style={{ width: 280, marginRight: 12, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <View style={{
+          backgroundColor: isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.05)',
+          borderRadius: 12,
+          padding: 16,
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.2)',
+        }}>
+          <Ionicons name="refresh-outline" size={32} color={isDark ? DarkColors.primary : Colors.primary} style={{ marginBottom: 8 }} />
+          <Text style={{
+            fontSize: 14,
+            fontFamily: 'PlusJakartaSans_600SemiBold',
+            color: isDark ? DarkColors.text.primary : Colors.text.primary,
+            marginBottom: 4,
+            textAlign: 'center',
+          }}>
+            Want more recipes?
+          </Text>
+          <Text style={{
+            fontSize: 12,
+            color: isDark ? '#9CA3AF' : '#6B7280',
+            marginBottom: 12,
+            textAlign: 'center',
+          }}>
+            Swipe to refresh and get new quick meals
+          </Text>
+          <HapticTouchableOpacity
+            onPress={() => {
+              HapticPatterns.buttonPress();
+              onRefreshQuickMeals();
+            }}
+            disabled={refreshingQuickMeals}
+            style={{
+              backgroundColor: isDark ? DarkColors.primary : Colors.primary,
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 12,
+              opacity: refreshingQuickMeals ? 0.7 : 1,
+            }}
+          >
+            {refreshingQuickMeals ? (
+              <AnimatedActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>
+                Refresh Recipes
+              </Text>
+            )}
+          </HapticTouchableOpacity>
+        </View>
+      </View>
+    );
+  }, [isQuickMeals, quickMealsCurrentIndex, recipes.length, refreshingQuickMeals, onRefreshQuickMeals, isDark]);
+
+  return (
+    <FlatList<SuggestedRecipe>
+      ref={listRef ?? undefined}
+      horizontal
+      data={recipes}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      ListFooterComponent={ListFooter}
+      showsHorizontalScrollIndicator={false}
+      style={{ marginHorizontal: -16 }}
+      contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
+      decelerationRate="fast"
+      snapToInterval={280}
+      snapToAlignment="start"
+      onTouchStart={isQuickMeals ? onQuickMealsTouchStart : undefined}
+      onTouchEnd={isQuickMeals ? onQuickMealsTouchEnd : undefined}
+      onScrollBeginDrag={isQuickMeals ? onQuickMealsScrollBeginDrag : undefined}
+      onScrollEndDrag={isQuickMeals ? onQuickMealsScrollEndDrag : undefined}
+      onScroll={(event) => {
+        if (!isQuickMeals) return;
+        const scrollPosition = event.nativeEvent.contentOffset.x;
+        onQuickMealsIndexChange(Math.round(scrollPosition / (280 + 12)));
+      }}
+      scrollEventThrottle={100}
+      onMomentumScrollEnd={(event) => {
+        if (!isQuickMeals) return;
+        const scrollPosition = event.nativeEvent.contentOffset.x;
+        onQuickMealsIndexChange(Math.round(scrollPosition / (280 + 12)));
+      }}
+      initialNumToRender={3}
+      windowSize={5}
+      removeClippedSubviews
+    />
   );
 }
 

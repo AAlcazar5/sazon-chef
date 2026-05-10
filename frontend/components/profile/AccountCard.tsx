@@ -2,8 +2,8 @@
 // Account actions: change password, sign out, delete account with modals
 
 import { View, Text, Modal, TextInput, Share, Alert, Switch } from 'react-native';
-import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import BrandButton from '../ui/BrandButton';
 import SettingsRow from '../ui/SettingsRow';
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -226,16 +226,15 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>
-              <HapticTouchableOpacity
-                onPress={handleConfirmPasswordChange}
-                disabled={changingPassword}
-                className={`flex-1 py-3 px-4 rounded-lg ${changingPassword ? 'opacity-50' : ''}`}
-                style={{ backgroundColor: isDark ? DarkColors.primary : Colors.primary }}
-              >
-                <Text className="text-white font-medium text-center">
-                  {changingPassword ? 'Changing...' : 'Change Password'}
-                </Text>
-              </HapticTouchableOpacity>
+              <View className="flex-1">
+                <BrandButton
+                  label={changingPassword ? 'Changing...' : 'Change Password'}
+                  onPress={handleConfirmPasswordChange}
+                  loading={changingPassword}
+                  disabled={changingPassword}
+                  size="compact"
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -277,18 +276,16 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
               >
                 <Text className="text-gray-700 dark:text-gray-100 font-medium text-center">Cancel</Text>
               </HapticTouchableOpacity>
-              <HapticTouchableOpacity
-                onPress={handleDeleteAccount}
-                disabled={deletingAccount || deleteAccountConfirmText.toLowerCase() !== 'delete'}
-                className={`flex-1 py-3 px-4 rounded-lg ${deletingAccount || deleteAccountConfirmText.toLowerCase() !== 'delete' ? 'opacity-50' : ''}`}
-                style={{ backgroundColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRed }}
-              >
-                {deletingAccount ? (
-                  <AnimatedActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text className="text-white font-medium text-center">Delete Account</Text>
-                )}
-              </HapticTouchableOpacity>
+              <View className="flex-1">
+                <BrandButton
+                  label="Delete Account"
+                  onPress={handleDeleteAccount}
+                  loading={deletingAccount}
+                  disabled={deletingAccount || deleteAccountConfirmText.toLowerCase() !== 'delete'}
+                  gradient={['#EF4444', '#BE123C']}
+                  size="compact"
+                />
+              </View>
             </View>
           </View>
         </View>

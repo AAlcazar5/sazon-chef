@@ -2,8 +2,8 @@
 // Inline horizontal animated chip row for filtering recipes by collection.
 // Replaces the modal-based collection picker for the primary selection flow.
 
-import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, FlatList, type ListRenderItem } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -102,35 +102,52 @@ export default function CollectionFilterRow({
   isDark,
   totalSavedCount,
 }: CollectionFilterRowProps) {
+  const renderItem = useCallback<ListRenderItem<Collection>>(
+    ({ item: collection }) => (
+      <CollectionChip
+        label={collection.name}
+        count={collection.recipeCount ?? undefined}
+        isSelected={selectedListId === collection.id}
+        isDark={isDark}
+        onPress={() => onSelectList(collection.id)}
+      />
+    ),
+    [selectedListId, isDark, onSelectList],
+  );
+
+  const keyExtractor = useCallback((c: Collection) => c.id, []);
+
+  const ListHeader = useCallback(
+    () => (
+      <CollectionChip
+        label="All"
+        count={totalSavedCount}
+        isSelected={selectedListId === null}
+        isDark={isDark}
+        onPress={() => onSelectList(null)}
+      />
+    ),
+    [totalSavedCount, selectedListId, isDark, onSelectList],
+  );
+
   if (collections.length === 0) return null;
 
   return (
     <View style={{
       backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
     }}>
-      <ScrollView
+      <FlatList
         horizontal
+        data={collections}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={ListHeader}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8, flexDirection: 'row' }}
-      >
-        <CollectionChip
-          label="All"
-          count={totalSavedCount}
-          isSelected={selectedListId === null}
-          isDark={isDark}
-          onPress={() => onSelectList(null)}
-        />
-        {collections.map((collection) => (
-          <CollectionChip
-            key={collection.id}
-            label={collection.name}
-            count={collection.recipeCount ?? undefined}
-            isSelected={selectedListId === collection.id}
-            isDark={isDark}
-            onPress={() => onSelectList(collection.id)}
-          />
-        ))}
-      </ScrollView>
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+        initialNumToRender={6}
+        windowSize={5}
+        removeClippedSubviews
+      />
     </View>
   );
 }

@@ -1,6 +1,12 @@
 // Group 10I: Cooking Journey hook — fetches stats + skill progress for the profile screen.
+//
+// P5: migrated from useEffect+useState to React Query so the profile screen
+// + any kitchen-iq surfaces share one cache entry. Mutations
+// (acceptLevelUp, seedJourney) invalidate the query so the next render
+// re-fetches both endpoints.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { userApi } from '../lib/api';
 
 export interface CookingStats {
@@ -39,49 +45,52 @@ export interface UseCookingJourneyState {
   seedJourney: (data: { seededCuisines?: string[]; cookingSkillLevel?: SkillLevel }) => Promise<void>;
 }
 
-export function useCookingJourney(): UseCookingJourneyState {
-  const [stats, setStats] = useState<CookingStats | null>(null);
-  const [progress, setProgress] = useState<SkillProgress | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const QUERY_KEY = ['cookingJourney'] as const;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+export function useCookingJourney(): UseCookingJourneyState {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async () => {
       const [statsRes, progressRes] = await Promise.all([
         userApi.getCookingStats(),
         userApi.getSkillProgress(),
       ]);
-      setStats(statsRes.data as CookingStats);
-      setProgress(progressRes.data as SkillProgress);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load cooking journey';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return {
+        stats: statsRes.data as CookingStats,
+        progress: progressRes.data as SkillProgress,
+      };
+    },
+  });
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+  }, [queryClient]);
 
   const acceptLevelUp = useCallback(
     async (newLevel: SkillLevel) => {
       await userApi.acceptSkillLevelUp(newLevel);
-      await load();
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },
-    [load],
+    [queryClient],
   );
 
   const seedJourney = useCallback(
     async (data: { seededCuisines?: string[]; cookingSkillLevel?: SkillLevel }) => {
       await userApi.seedCookingJourney(data);
-      await load();
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },
-    [load],
+    [queryClient],
   );
 
-  return { stats, progress, loading, error, refresh: load, acceptLevelUp, seedJourney };
+  return {
+    stats: query.data?.stats ?? null,
+    progress: query.data?.progress ?? null,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : query.error ? String(query.error) : null,
+    refresh,
+    acceptLevelUp,
+    seedJourney,
+  };
 }

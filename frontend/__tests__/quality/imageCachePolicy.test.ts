@@ -75,3 +75,45 @@ describe('expo-image cachePolicy (E2)', () => {
     expect(allViolations.length).toBe(0);
   });
 });
+
+// P2: no component file may import `Image` from `react-native`.
+// expo-image has built-in disk caching, faster decode, and the cachePolicy
+// guard above. react-native's bundled Image lacks all three.
+describe('Image source — react-native banned (P2)', () => {
+  it('no component file imports Image from react-native', () => {
+    const cmd =
+      `grep -rlE "from ['\\"]react-native['\\"]" ${SCAN_DIRS.join(' ')} ` +
+      `--include="*.tsx" --include="*.ts" 2>/dev/null || true`;
+    const candidates = execSync(cmd, { encoding: 'utf-8' })
+      .trim()
+      .split('\n')
+      .filter(Boolean);
+
+    const violators: string[] = [];
+    for (const file of candidates) {
+      const src = readFileSync(file, 'utf-8');
+      // Match `import { ..., Image, ... } from 'react-native'` (multi-line aware)
+      // but exclude `ImageBackground`, `ImageProps`, `ImageSourcePropType`, etc.
+      const importBlocks = src.match(
+        /import\s*\{[^}]*\}\s*from\s*['"]react-native['"]/gs,
+      );
+      if (!importBlocks) continue;
+      for (const block of importBlocks) {
+        // Strip ImageX identifiers, then look for a bare `Image`.
+        const stripped = block.replace(/Image[A-Za-z]+/g, '');
+        if (/\bImage\b/.test(stripped)) {
+          violators.push(path.relative(REPO_ROOT, file));
+          break;
+        }
+      }
+    }
+
+    if (violators.length > 0) {
+      throw new Error(
+        `${violators.length} file(s) import Image from react-native; migrate to 'expo-image':\n` +
+          violators.map(v => `  ${v}`).join('\n'),
+      );
+    }
+    expect(violators.length).toBe(0);
+  });
+});
