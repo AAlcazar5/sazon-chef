@@ -1972,10 +1972,16 @@ export const recipeController = {
         const bIsExact = b._isExactMatch === true;
         if (aIsExact && !bIsExact) return -1;
         if (!aIsExact && bIsExact) return 1;
-        
+
         // If both are same type (both exact, both similar, or neither marked), sort by score
         return b.score.total - a.score.total;
       });
+
+      // TB6.2 — diversify near-twins on the suggested-recipes recommendation
+      // surface. `home-feed` config (λ=0.7, k=2) since this drives the same
+      // home-screen ranking flow as getRecipes. Falls through to title-
+      // signature when Recipe.embedding is null.
+      filteredRecipes = diversifyForSurface(filteredRecipes as any, 'home-feed');
         const limit = 10;
         const perCuisineCap = 3;
         const selected: any[] = [];
@@ -4391,6 +4397,12 @@ export const recipeController = {
       const scoredMainRecipes = allMainRecipes.map(scoreRecipe);
       scoredMainRecipes.sort((a: any, b: any) => (b.score?.matchPercentage || 0) - (a.score?.matchPercentage || 0));
 
+      // TB6.2 — diversify near-twins before pagination. `home-feed` config
+      // (λ=0.7, k=2). Mutates in place via splice since `scoredMainRecipes`
+      // is a const binding. Falls through to title-signature when
+      // Recipe.embedding is null.
+      scoredMainRecipes.splice(0, scoredMainRecipes.length, ...diversifyForSurface(scoredMainRecipes as any, 'home-feed'));
+
       // Shuffle mode for pull-to-discover
       if (shuffle === 'true') {
         for (let i = scoredMainRecipes.length - 1; i > 0; i--) {
@@ -5267,7 +5279,7 @@ export const recipeController = {
 
       const { computePantryMatch } = await import('../../services/pantryMatchService');
 
-      const scored = candidates
+      const ranked = candidates
         .map((recipe: any) => {
           const match = computePantryMatch(recipe.ingredients || [], pantryNames);
           return { recipe, match };
@@ -5281,9 +5293,23 @@ export const recipeController = {
             return b.match.matchPercentage - a.match.matchPercentage;
           }
           return a.match.missing.length - b.match.missing.length;
-        })
+        });
+
+      // TB6.2 — diversify near-twins before slicing to limit. `recipe-sections`
+      // config (λ=0.5, k=3) since pantry-match is already topic-clustered by
+      // ingredient overlap. Falls through to title-signature when
+      // Recipe.embedding is null. Map embedding from recipe to top-level so
+      // diversifyByEmbedding can read it.
+      const rankedDecorated = ranked.map((r: any) => ({
+        ...r,
+        id: r.recipe?.id,
+        title: r.recipe?.title,
+        embedding: r.recipe?.embedding,
+      }));
+      const diversified = diversifyForSurface(rankedDecorated as any, 'recipe-sections');
+      const scored = diversified
         .slice(0, limit)
-        .map(({ recipe, match }) => ({
+        .map(({ recipe, match }: any) => ({
           id: recipe.id,
           title: recipe.title,
           description: recipe.description,
