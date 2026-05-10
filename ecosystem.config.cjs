@@ -91,5 +91,37 @@ module.exports = {
       out_file: '../logs/pm2-self-improvement-out.log',
       time: true,
     },
+    // Tier M4 — post-launch feeds (review scanner + coach patterns). Daily
+    // at 04:30 UTC. Pre-launch the cron lies dormant: AppFollow returns
+    // empty, Coach has no traffic → both surfaces report status=skipped.
+    {
+      name: 'self-improvement-post-launch-feeds',
+      cwd: './backend',
+      script: 'node_modules/.bin/ts-node',
+      args: '-r tsconfig-paths/register scripts/selfImprovement/runPostLaunchFeeds.ts',
+      autorestart: false,
+      cron_restart: '30 4 * * *',
+      watch: false,
+      env: { NODE_ENV: 'production' },
+      error_file: '../logs/pm2-self-improvement-error.log',
+      out_file: '../logs/pm2-self-improvement-out.log',
+      time: true,
+    },
+    // Tier M6 — quarterly self-audit (Opus). 1st of Jan/Apr/Jul/Oct at
+    // 07:00 UTC. Refuses to fire if the proposals-outcomes ledger has fewer
+    // than 8 measured rows — the gate is encoded in the service.
+    {
+      name: 'self-improvement-self-audit',
+      cwd: './backend',
+      script: 'node_modules/.bin/ts-node',
+      args: '-r tsconfig-paths/register scripts/selfImprovement/runSelfAudit.ts',
+      autorestart: false,
+      cron_restart: '0 7 1 1,4,7,10 *',
+      watch: false,
+      env: { NODE_ENV: 'production' },
+      error_file: '../logs/pm2-self-improvement-error.log',
+      out_file: '../logs/pm2-self-improvement-out.log',
+      time: true,
+    },
   ],
 };
