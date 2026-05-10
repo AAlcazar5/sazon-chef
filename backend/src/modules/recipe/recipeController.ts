@@ -11,6 +11,7 @@ import { getUserId, isAuthenticated } from '@/utils/authHelper';
 import { generateBatchCookingRecommendations } from '@/utils/batchCookingRecommendations';
 import { varyImageUrlsForPage } from '@/utils/runtimeImageVariation';
 import { diversifyByTitleSignature } from '@/utils/diversifyResults';
+import { diversifyForSurface } from '@/services/recommender/diversifyForSurface';
 import { recommendationCache } from '@/utils/recommendationCache';
 import { cacheService } from '@/utils/cacheService';
 import {
@@ -718,13 +719,11 @@ export const recipeController = {
 
       // Diversify near-duplicates (e.g., 4 "Soy-Honey Sesame Glazed…"
       // variants surfacing back-to-back because they all score within a
-      // hair of each other). Title-signature based; preserves score
-      // order globally and never drops recipes — only re-positions twins
-      // so no two share a signature within a 3-recipe window. When
-      // Recipe.embedding is populated, swap this for an embedding-cosine
-      // version (see services/dedupeScorer.ts). Mutates in place via
-      // splice since `allRecipesWithScores` is a const binding.
-      allRecipesWithScores.splice(0, allRecipesWithScores.length, ...diversifyByTitleSignature(allRecipesWithScores, 2));
+      // hair of each other). TB6.1+TB6.2: picks MMR over Recipe.embedding
+      // when present, falls through to title-signature when not. Surface
+      // config (λ, k, simThreshold) read from TB6.4 diversityConfig.
+      // Mutates in place via splice since `allRecipesWithScores` is const.
+      allRecipesWithScores.splice(0, allRecipesWithScores.length, ...diversifyForSurface(allRecipesWithScores as any, 'home-feed'));
 
       // Shuffle mode for pull-to-discover (Home Page 2.0)
       // Applies weighted randomization while still respecting scores
