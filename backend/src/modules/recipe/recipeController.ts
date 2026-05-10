@@ -1126,7 +1126,17 @@ export const recipeController = {
       }
       
       // Get offset/rotation parameter for pagination (to get different recipes on reload)
-      const offset = parseInt(req.query.offset as string) || 0;
+      //
+      // Tier L H7: cap the inbound offset so SQLite never scan-and-discards
+      // an unbounded prefix. With MAX_HOME_OFFSET=50 and the partition skip
+      // formula `Math.floor(offset * 10 * 0.7)`, the worst-case rows skipped
+      // per partition is ~350 — well within scan budget. Full cursor-based
+      // pagination is deferred post-launch: this endpoint shuffles and
+      // scores results, so `id: { gt: lastSeen }` doesn't fit the variety
+      // mechanism without a wider redesign.
+      const MAX_HOME_OFFSET = 50;
+      const rawOffset = parseInt(req.query.offset as string) || 0;
+      const offset = Math.min(Math.max(0, rawOffset), MAX_HOME_OFFSET);
       const recipesPerPage = 50; // Get more recipes to score and sort for variety
       
       // If there's a search term, fetch a broader set first (prioritize search results)
