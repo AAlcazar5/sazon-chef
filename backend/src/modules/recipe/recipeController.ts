@@ -24,6 +24,7 @@ import {
 import { recordAffinityEvent } from '@/services/slotAffinityService';
 import { recipeCollectionsController } from './recipeCollectionsController';
 import { recipeCookbookController } from './recipeCookbookController';
+import { MAX_UNPAGINATED_LIST_SIZE } from '@/utils/listLimits';
 
 // Note: Request.user type is declared in authMiddleware.ts
 // This ensures consistency across the application
@@ -2180,6 +2181,7 @@ export const recipeController = {
             where: whereClause,
             include: includeClause,
             orderBy: { savedDate: 'desc' },
+            take: MAX_UNPAGINATED_LIST_SIZE,
           });
         }
       } else {
@@ -2202,6 +2204,7 @@ export const recipeController = {
             where: whereClause,
             include: includeClause,
             orderBy: { savedDate: 'desc' },
+            take: MAX_UNPAGINATED_LIST_SIZE,
           });
         }
       }
@@ -2455,6 +2458,7 @@ export const recipeController = {
           where: whereClause,
           include: includeClause,
           orderBy: { createdAt: 'desc' },
+          take: MAX_UNPAGINATED_LIST_SIZE,
         });
       }
 
@@ -2661,6 +2665,7 @@ export const recipeController = {
           where: whereClause,
           include: includeClause,
           orderBy: { createdAt: 'desc' },
+          take: MAX_UNPAGINATED_LIST_SIZE,
         });
       }
 

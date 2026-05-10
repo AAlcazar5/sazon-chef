@@ -13,6 +13,7 @@ import { logger } from '../../utils/logger';
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/utils/authHelper';
+import { MAX_UNPAGINATED_LIST_SIZE } from '@/utils/listLimits';
 
 export const recipeCollectionsController = {
   /** GET /api/recipes/collections */
@@ -23,6 +24,7 @@ export const recipeCollectionsController = {
         where: { userId },
         orderBy: [{ isPinned: 'desc' }, { sortOrder: 'asc' }, { isDefault: 'desc' }, { name: 'asc' }],
         include: { _count: { select: { recipeCollections: true } } },
+        take: MAX_UNPAGINATED_LIST_SIZE,
       });
       const result = collections.map((c: any) => ({
         ...c,
