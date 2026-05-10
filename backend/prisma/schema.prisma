@@ -155,7 +155,41 @@ model User {
   tonightModeEnabled    Boolean   @default(false)
   tonightModePromptedAt DateTime?
 
+  // Tier L H2 — refresh-token relation (rotation + revocation tracking).
+  refreshTokens RefreshToken[]
+
   @@map("users")
+}
+
+// Tier L H2 — server-side refresh tokens enable short access-token TTLs
+// (15min) without forcing re-login every 15 minutes, plus give us a hook
+// for revocation (logout, password reset, account compromise).
+//
+// Storage: only the SHA-256 hash of the token is persisted. The plaintext
+// is returned to the client at issue time and never stored. This means a
+// DB leak doesn't compromise sessions, and the token is opaque (not a
+// JWT — no fields to tamper with).
+//
+// Rotation: every successful /auth/refresh issues a new refresh token and
+// revokes the previous one (single-use, replacedById links the chain).
+model RefreshToken {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // SHA-256 hex digest of the raw refresh token. Indexed for O(log n) lookup.
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  // When this token was rotated, the new token's id. Null until rotated.
+  replacedById String?
+  // Optional metadata for audit / "active sessions" UI later.
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 model UserPreferences {

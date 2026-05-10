@@ -10,6 +10,13 @@ import jwt from 'jsonwebtoken';
 import { encrypt, decrypt } from '@/utils/encryption';
 import { emailService } from '@/services/emailService';
 import { stripeService } from '@/services/stripeService';
+import {
+  issueTokenPair,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  revokeAllRefreshTokensForUser,
+  RefreshTokenError,
+} from '@/services/refreshTokenService';
 
 // Note: Request.user type is declared in authMiddleware.ts
 
@@ -128,15 +135,23 @@ export const authController = {
         name: decrypt(user.name)
       };
 
-      // Generate JWT token (use decrypted email)
-      const payload = { id: user.id, email: decryptedUser.email };
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+      // Tier L H2 — issue both access + refresh tokens. Legacy `token` field
+      // preserved for older mobile clients that haven't picked up the
+      // refresh flow yet; new clients should consume `accessToken`.
+      const pair = await issueTokenPair(
+        { id: user.id, email: decryptedUser.email },
+        { userAgent: req.headers?.['user-agent'] ?? null, ipAddress: req.ip ?? null },
+      );
 
       res.status(201).json({
         success: true,
         message: 'User registered successfully',
         user: decryptedUser,
-        token
+        token: pair.accessToken,
+        accessToken: pair.accessToken,
+        refreshToken: pair.refreshToken,
+        accessTokenExpiresAt: pair.accessTokenExpiresAt,
+        refreshTokenExpiresAt: pair.refreshTokenExpiresAt,
       });
 
       // Fire-and-forget: send welcome email + create Stripe customer
@@ -270,9 +285,13 @@ export const authController = {
       const decryptedEmail = user.emailEncrypted ? decrypt(user.email) : user.email;
       const decryptedName = user.nameEncrypted ? decrypt(user.name) : user.name;
 
-      // Generate JWT token (use decrypted email for token)
-      const payload = { id: user.id, email: decryptedEmail };
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+      // Tier L H2 — issue access + refresh pair. `token` is preserved for
+      // backwards compat with mobile clients that don't yet consume the
+      // refresh flow; new clients should read `accessToken` + `refreshToken`.
+      const pair = await issueTokenPair(
+        { id: user.id, email: decryptedEmail },
+        { userAgent: req.headers?.['user-agent'] ?? null, ipAddress: req.ip ?? null },
+      );
 
       // Remove password and encryption flags from response
       const { password: _, emailEncrypted: __, nameEncrypted: ___, ...userWithoutPassword } = user;
@@ -285,7 +304,11 @@ export const authController = {
           email: decryptedEmail,
           name: decryptedName
         },
-        token
+        token: pair.accessToken,
+        accessToken: pair.accessToken,
+        refreshToken: pair.refreshToken,
+        accessTokenExpiresAt: pair.accessTokenExpiresAt,
+        refreshTokenExpiresAt: pair.refreshTokenExpiresAt,
       });
     } catch (error: any) {
       logger.error({ err: error }, 'Login error:');
@@ -820,6 +843,85 @@ export const authController = {
     } catch (error: any) {
       logger.error({ err: error }, 'Email verification error:');
       res.status(500).json({ success: false, error: 'Verification failed. Please try again.' });
+    }
+  },
+
+  /**
+   * Tier L H2 — exchange a refresh token for a new (access, refresh) pair.
+   * The old refresh token is consumed (single-use rotation). If the same
+   * refresh token is presented twice, that's a replay signal and every
+   * refresh token for that user is revoked.
+   *
+   * POST /api/auth/refresh
+   * Body: { refreshToken: string }
+   */
+  async refreshSession(req: Request, res: Response) {
+    try {
+      const { refreshToken } = req.body ?? {};
+      if (!refreshToken || typeof refreshToken !== 'string') {
+        return res.status(400).json({ success: false, error: 'refreshToken is required' });
+      }
+
+      const pair = await rotateRefreshToken(refreshToken, {
+        userAgent: req.headers?.['user-agent'] ?? null,
+        ipAddress: req.ip ?? null,
+      });
+
+      return res.json({
+        success: true,
+        accessToken: pair.accessToken,
+        refreshToken: pair.refreshToken,
+        accessTokenExpiresAt: pair.accessTokenExpiresAt,
+        refreshTokenExpiresAt: pair.refreshTokenExpiresAt,
+      });
+    } catch (error: unknown) {
+      if (error instanceof RefreshTokenError) {
+        // 401 for any refresh-token failure — the client must redirect to
+        // login. The `code` lets the client distinguish replay (force a
+        // security alert) from plain expiry (silent re-login).
+        return res.status(401).json({
+          success: false,
+          code: error.code,
+          error: error.message,
+        });
+      }
+      logger.error({ err: error }, 'auth.refreshSession.failed');
+      return res.status(500).json({ success: false, error: 'Could not refresh session' });
+    }
+  },
+
+  /**
+   * Tier L H2 — invalidate a refresh token (logout from this device).
+   * Idempotent: returns 200 even when the token is unknown / already
+   * revoked, so a stale client logging out doesn't throw.
+   *
+   * Optional body field `everywhere: true` revokes every refresh token for
+   * the authenticated user (logout-all). That branch requires a valid
+   * access token via `req.user`.
+   *
+   * POST /api/auth/logout
+   * Body: { refreshToken?: string, everywhere?: boolean }
+   */
+  async logout(req: Request, res: Response) {
+    try {
+      const { refreshToken, everywhere } = req.body ?? {};
+
+      if (everywhere === true) {
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ success: false, error: 'Authentication required for logout-all' });
+        }
+        const count = await revokeAllRefreshTokensForUser(userId);
+        return res.json({ success: true, revoked: count });
+      }
+
+      if (typeof refreshToken === 'string' && refreshToken.length > 0) {
+        await revokeRefreshToken(refreshToken);
+      }
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      logger.error({ err: error }, 'auth.logout.failed');
+      return res.status(500).json({ success: false, error: 'Logout failed' });
     }
   }
 };

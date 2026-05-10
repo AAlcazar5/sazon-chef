@@ -20,7 +20,7 @@ type AuthenticatedUser = {
   email: string;
 };
 
-// Mock Prisma
+// Mock Prisma — Tier L H2 added refreshToken model used by issueTokenPair.
 jest.mock('../../src/lib/prisma', () => ({
   prisma: {
     user: {
@@ -30,6 +30,13 @@ jest.mock('../../src/lib/prisma', () => ({
       create: jest.fn(),
       update: jest.fn(),
     },
+    refreshToken: {
+      create: jest.fn().mockResolvedValue({}),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    $transaction: jest.fn(async (cb: any) => cb({})),
   },
 }));
 
@@ -39,9 +46,10 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
-// Mock jwt
+// Mock jwt — `decode` is needed by signAccessToken to read the exp claim.
 jest.mock('jsonwebtoken', () => ({
   sign: jest.fn(),
+  decode: jest.fn(() => ({ exp: Math.floor(Date.now() / 1000) + 900 })),
 }));
 
 describe('Auth Controller', () => {
@@ -347,6 +355,37 @@ describe('Auth Controller', () => {
           error: expect.stringContaining('social login'),
         })
       );
+    });
+
+    // Tier L H2 — refresh-token issuance is wired into login; assert that
+    // the response now exposes accessToken + refreshToken alongside the
+    // legacy `token` field so the mobile client can transition gradually.
+    it('login response includes accessToken + refreshToken (H2)', async () => {
+      mockReq.body = { email: 'test@example.com', password: 'password123' };
+      const user = {
+        id: 'user-h2',
+        email: 'encrypted_test@example.com',
+        name: 'encrypted_T',
+        password: 'hashed',
+        emailEncrypted: true,
+        nameEncrypted: true,
+        providerEmail: null,
+        emailVerified: true,
+      };
+      (prisma.user.findFirst as jest.Mock).mockResolvedValueOnce(null);
+      (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([user]);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (jwt.sign as jest.Mock).mockReturnValue('mockAccessToken');
+
+      await authController.login(mockReq as Request, mockRes as Response);
+
+      const responseBody = (mockRes.json as jest.Mock).mock.calls[0][0];
+      expect(responseBody.accessToken).toBe('mockAccessToken');
+      expect(typeof responseBody.refreshToken).toBe('string');
+      expect(responseBody.refreshToken.length).toBeGreaterThan(20);
+      expect(typeof responseBody.refreshTokenExpiresAt).toBe('number');
+      // Legacy field still populated for backwards compat.
+      expect(responseBody.token).toBe('mockAccessToken');
     });
 
     // Tier L H3 — email-verification gate. The flag is read at request time
@@ -661,6 +700,117 @@ describe('Auth Controller', () => {
           error: expect.stringMatching(/password.*8|short/i),
         })
       );
+    });
+  });
+
+  // Tier L H2 — refresh + logout endpoints.
+  describe('refreshSession', () => {
+    it('rejects missing refreshToken with 400', async () => {
+      mockReq.body = {};
+      await authController.refreshSession(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+    });
+
+    it('returns 401 with code NOT_FOUND when refresh token is unknown', async () => {
+      mockReq.body = { refreshToken: 'mystery-token' };
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValueOnce(null);
+
+      await authController.refreshSession(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'NOT_FOUND' }),
+      );
+    });
+
+    it('issues a fresh pair on a valid refresh token', async () => {
+      mockReq.body = { refreshToken: 'valid-raw-token' };
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValueOnce({
+        id: 'rt1',
+        userId: 'u1',
+        tokenHash: 'h',
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+        replacedById: null,
+      });
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({
+        id: 'u1',
+        email: 'encrypted_a@b.c',
+        emailEncrypted: true,
+      });
+      (jwt.sign as jest.Mock).mockReturnValue('newAccessToken');
+      (prisma.$transaction as jest.Mock).mockImplementationOnce(async (cb: any) =>
+        cb({
+          refreshToken: {
+            create: jest.fn().mockResolvedValue({ id: 'rt2', expiresAt: new Date(Date.now() + 60_000) }),
+            update: jest.fn(),
+          },
+        }),
+      );
+
+      await authController.refreshSession(mockReq as Request, mockRes as Response);
+
+      const body = (mockRes.json as jest.Mock).mock.calls[0][0];
+      expect(body.accessToken).toBe('newAccessToken');
+      expect(typeof body.refreshToken).toBe('string');
+      expect(body.refreshToken).not.toBe('valid-raw-token'); // rotated
+    });
+
+    it('returns 401 REPLAY_DETECTED when a revoked refresh token is presented', async () => {
+      mockReq.body = { refreshToken: 'replay-token' };
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValueOnce({
+        id: 'rt1',
+        userId: 'u1',
+        tokenHash: 'h',
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: new Date(),
+        replacedById: 'rt0',
+      });
+      (prisma.refreshToken.updateMany as jest.Mock).mockResolvedValueOnce({ count: 3 });
+
+      await authController.refreshSession(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'REPLAY_DETECTED' }),
+      );
+    });
+  });
+
+  describe('logout', () => {
+    it('revokes a single refresh token and returns 200', async () => {
+      mockReq.body = { refreshToken: 'some-token' };
+      (prisma.refreshToken.updateMany as jest.Mock).mockResolvedValueOnce({ count: 1 });
+
+      await authController.logout(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalled();
+    });
+
+    it('is idempotent on missing/empty refresh tokens', async () => {
+      mockReq.body = {};
+      await authController.logout(mockReq as Request, mockRes as Response);
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    });
+
+    it('with everywhere:true revokes every active token for the user', async () => {
+      mockReq.body = { everywhere: true };
+      (mockReq as any).user = { id: 'user-1' } as AuthenticatedUser;
+      (prisma.refreshToken.updateMany as jest.Mock).mockResolvedValueOnce({ count: 4 });
+
+      await authController.logout(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, revoked: 4 }),
+      );
+    });
+
+    it('with everywhere:true and no req.user returns 401', async () => {
+      mockReq.body = { everywhere: true };
+      mockReq.user = undefined;
+      await authController.logout(mockReq as Request, mockRes as Response);
+      expect(mockRes.status).toHaveBeenCalledWith(401);
     });
   });
 });

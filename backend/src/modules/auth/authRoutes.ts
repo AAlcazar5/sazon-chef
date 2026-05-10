@@ -17,6 +17,13 @@ router.post('/forgot-password', authLimiter, authController.requestPasswordReset
 router.post('/reset-password', authLimiter, authController.resetPassword);
 router.get('/verify-email/:token', authController.verifyEmail);
 
+// Tier L H2 — refresh-token rotation. Public because the access token may
+// be expired by definition; the refresh token in the body is the credential.
+router.post('/refresh', authLimiter, authController.refreshSession);
+// Logout invalidates the refresh token. Public so it works after access
+// token expiry; idempotent on unknown tokens.
+router.post('/logout', authLimiter, authController.logout);
+
 // Protected routes (authentication required)
 router.get('/profile', authenticateToken, authController.getProfile);
 router.put('/profile', authenticateToken, authController.updateProfile);

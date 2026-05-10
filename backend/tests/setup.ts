@@ -257,6 +257,18 @@ const createPrismaMock = () => ({
       count: jest.fn(),
       delete: jest.fn(),
     },
+    // Tier L H2 — refresh-token model used by issueTokenPair / rotateRefreshToken /
+    // revoke flows. Default `create` resolves to {} so legacy tests don't have to
+    // know about it.
+    refreshToken: {
+      create: jest.fn().mockResolvedValue({}),
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      delete: jest.fn(),
+    },
     // $transaction default: invoke the callback with the same prisma mock,
     // so services that use prisma.$transaction(async (tx) => {...}) work
     // against the unit-test mocks. Tests that need to override per-call can
