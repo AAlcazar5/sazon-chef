@@ -44,6 +44,17 @@ interface AnimatedEmptyStateProps {
   pastelTintDark?: string;
   /** Use predefined empty state config */
   config?: EmptyStateConfig;
+  /**
+   * Layout mode.
+   * - 'centered' (default): flex:1 + justifyContent:center. Empty state
+   *   floats in the middle of the available vertical space. Best when
+   *   the empty state owns the whole screen.
+   * - 'top': natural-height layout pinned near the top of the container
+   *   with a modest paddingTop. Best when the empty state sits below a
+   *   header / tab bar and centering it produces an awkward void above
+   *   the card.
+   */
+  layout?: 'centered' | 'top';
 }
 
 export default function AnimatedEmptyState({
@@ -60,6 +71,7 @@ export default function AnimatedEmptyState({
   pastelTint,
   pastelTintDark,
   config,
+  layout = 'centered',
 }: AnimatedEmptyStateProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -190,10 +202,15 @@ export default function AnimatedEmptyState({
     </>
   );
 
+  // Layout 'top' overrides the flex:1 + center pattern with a natural-
+  // height layout pinned near the top of the container. Eliminates the
+  // awkward void above a card when the empty state sits below a tab bar.
+  const containerStyle = layout === 'top' ? styles.containerTop : styles.container;
+
   // Wrap in tinted card if pastel tint is provided
   if (hasTint && tintBg) {
     return (
-      <View style={styles.container}>
+      <View style={containerStyle}>
         <View
           style={[
             styles.tintCard,
@@ -208,7 +225,7 @@ export default function AnimatedEmptyState({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       {content}
     </View>
   );
@@ -220,6 +237,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: ComponentSpacing.emptyState.padding,
+  },
+  // layout='top': natural height, pinned near the top of the parent
+  // container. Small paddingTop gives breathing room from the tab bar
+  // / section header above.
+  containerTop: {
+    alignItems: 'center',
+    paddingHorizontal: ComponentSpacing.emptyState.padding,
+    paddingTop: Spacing.lg,
+    paddingBottom: ComponentSpacing.emptyState.padding,
   },
   tintCard: {
     alignItems: 'center',

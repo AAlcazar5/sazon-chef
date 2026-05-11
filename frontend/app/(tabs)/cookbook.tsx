@@ -1577,6 +1577,7 @@ export default function CookbookScreen() {
             <AnimatedEmptyState
               config={CookbookEmptyStates.noSavedRecipes}
               title=""
+              layout="top"
               onAction={() => router.push('/')}
             />
           )}
@@ -1595,6 +1596,7 @@ export default function CookbookScreen() {
             <AnimatedEmptyState
               config={CookbookEmptyStates.noSavedRecipes}
               title=""
+              layout="top"
               description={
                 affinityHint
                   ? `Save recipes you love by tapping the bookmark — they'll live here. ${affinityHint}`
@@ -1607,6 +1609,7 @@ export default function CookbookScreen() {
             <AnimatedEmptyState
               config={CookbookEmptyStates.noLikedRecipes}
               title=""
+              layout="top"
               onAction={() => {
                 setViewMode('saved');
                 router.push('/');
@@ -1617,6 +1620,7 @@ export default function CookbookScreen() {
             <AnimatedEmptyState
               config={CookbookEmptyStates.noDislikedRecipes}
               title=""
+              layout="top"
               onAction={() => {
                 setViewMode('saved');
                 router.push('/');
