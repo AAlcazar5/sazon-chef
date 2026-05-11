@@ -35,7 +35,10 @@ import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
 import LazyMountBoundary from '../../components/home/LazyMountBoundary';
-import DiscoveryStrip, { type DiscoverySurface } from '../../components/today/DiscoveryStrip';
+// DiscoveryStrip import retained in the codebase under components/today/
+// for a future migration once NutritionStrip is refactored away from
+// horizontal-FlatList. Not currently mounted on Today — see comment
+// below at the discovery surfaces stack.
 import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
 import SoftFilterPill from '../../components/home/SoftFilterPill';
@@ -73,7 +76,9 @@ import {
 // Extracted hooks
 import { useViewMode } from '../../hooks/useViewMode';
 import { useMealPrepMode } from '../../hooks/useMealPrepMode';
-import { useCohortSocialProof } from '../../hooks/useCohortSocialProof';
+// useCohortSocialProof retained — the hook is shared between
+// CohortSocialProofPill (consumer) and any future DiscoveryStrip
+// re-migration that needs to precompute hasData.
 import { useTimeAwareMode } from '../../hooks/useTimeAwareMode';
 import { useRecipePagination } from '../../hooks/useRecipePagination';
 import { useRecipeInteractions } from '../../hooks/useRecipeInteractions';
@@ -215,11 +220,9 @@ export default function HomeScreen() {
     return () => scrollY.removeListener(sub);
   }, [scrollY]);
 
-  // HX3.2 follow-up: lifted cohort proof fetch so DiscoveryStrip can know
-  // hasData BEFORE the pill renders — otherwise the strip reserves an
-  // empty card slot for a pill that ultimately returns null, producing
-  // a visible gap between the hero and the next section on cold-start.
-  const { proof: cohortProof, loading: cohortProofLoading } = useCohortSocialProof();
+  // HX3.2 wiring reverted — the useCohortSocialProof hook still drives
+  // the pill (the pill imports + calls it directly); no need to call it
+  // from here until DiscoveryStrip wiring returns.
 
   // Recipe interactions (feedback, action menu) - using extracted hook
   const interactions = useRecipeInteractions();
@@ -1200,54 +1203,20 @@ export default function HomeScreen() {
             the re-roll affordance, and the rationale text was crowding the
             hero without earning the space. */}
 
-        {/* ROADMAP 4.0 HX3.2 — DiscoveryStrip consolidation. The 5 previously-
-            stacked discovery surfaces (SundayPolaroid, FirstOfDayNote,
-            NutritionStrip, CohortSocialProofPill, TodayDiscoveryCard) now
-            render in a single horizontal strip. hasData is computed per
-            surface here so empty cards are dropped entirely (no blank
-            slots in the scroll). CohortSocialProofPill self-manages its
-            data and may still render null internally — that's the
-            unavoidable case where the external can't precompute hasData.
-            Priority numbers control left-to-right ordering. */}
-        <DiscoveryStrip
-          surfaces={[
-            {
-              id: 'sundayPolaroid',
-              node: sundayRecap ? <SundayPolaroidCard recap={sundayRecap} /> : null,
-              hasData: !!sundayRecap,
-              priority: 10,
-            },
-            {
-              id: 'firstOfDay',
-              node: <FirstOfDayNote lastCookCuisine={lastCookCuisine} />,
-              hasData: !!lastCookCuisine?.trim(),
-              priority: 20,
-            },
-            {
-              id: 'nutrition',
-              node: <NutritionStrip snapshot={dailyNutrition} />,
-              hasData: !!dailyNutrition,
-              priority: 30,
-            },
-            {
-              id: 'cohortSocialProof',
-              // HX3.2 follow-up: hasData now reads from the lifted
-              // useCohortSocialProof hook so the strip skips this slot
-              // entirely on cold-start instead of reserving an empty
-              // 280-wide card. !cohortProofLoading prevents a flash
-              // during the initial fetch.
-              node: <CohortSocialProofPill />,
-              hasData: !cohortProofLoading && !!cohortProof,
-              priority: 40,
-            },
-            {
-              id: 'todayDiscovery',
-              node: <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />,
-              hasData: !!dailyDiscoveryTip,
-              priority: 50,
-            },
-          ] as DiscoverySurface[]}
-        />
+        {/* ROADMAP 4.0 HX3.2 — wiring reverted 2026-05-11 after diagnosis.
+            The horizontal DiscoveryStrip claimed ~400px of phantom vertical
+            height because NutritionStrip is itself a horizontal FlatList,
+            and nesting a horizontal FlatList inside any horizontal scroller
+            (FlatList OR ScrollView) hits a RN height-inheritance bug.
+            Surfaces are back to a vertical stack — the same layout as
+            pre-HX3.2. The DiscoveryStrip component + filterAndSort helper
+            stay in the codebase for a future migration after NutritionStrip
+            is refactored away from horizontal-FlatList. */}
+        {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}
+        <FirstOfDayNote lastCookCuisine={lastCookCuisine} />
+        <NutritionStrip snapshot={dailyNutrition} />
+        <CohortSocialProofPill />
+        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
 
         {/* ROADMAP 4.0 F1 — Friends feed (hidden when no follows / no shares) */}
         {/* HX3.3 — lazy-mount below the fold to skip the cold-start API call
