@@ -34,6 +34,8 @@ import type { DislikeReason } from '../../components/home';
 import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
 import HomeErrorState from '../../components/home/HomeErrorState';
+import LazyMountBoundary from '../../components/home/LazyMountBoundary';
+import DiscoveryStrip, { type DiscoverySurface } from '../../components/today/DiscoveryStrip';
 import HomeEmptyState from '../../components/home/HomeEmptyState';
 import NoResultsState from '../../components/home/NoResultsState';
 import SoftFilterPill from '../../components/home/SoftFilterPill';
@@ -197,6 +199,20 @@ export default function HomeScreen() {
 
   // Scroll position for parallax effect
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  // ROADMAP 4.0 HX3.3 — Throttled scroll-offset mirror + viewport height
+  // for LazyMountBoundary children. We mirror scrollY into React state in
+  // 100px buckets (cheaper than 60fps re-renders, and the lazy-mount
+  // primitive uses a 600px trigger so 100px resolution is plenty).
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  useEffect(() => {
+    const sub = scrollY.addListener(({ value }) => {
+      const bucket = Math.round(value / 100) * 100;
+      setScrollOffset((prev) => (prev === bucket ? prev : bucket));
+    });
+    return () => scrollY.removeListener(sub);
+  }, [scrollY]);
 
   // Recipe interactions (feedback, action menu) - using extracted hook
   const interactions = useRecipeInteractions();
@@ -1131,6 +1147,10 @@ export default function HomeScreen() {
           { useNativeDriver: false }
         )}
         scrollEventThrottle={16}
+        onLayout={(e) => {
+          // HX3.3 — capture viewport height for LazyMountBoundary children below.
+          setViewportHeight(e.nativeEvent.layout.height);
+        }}
       >
         {/* Meal Prep Mode Header */}
         {mealPrepMode && <MealPrepModeHeader />}
@@ -1173,40 +1193,66 @@ export default function HomeScreen() {
             the re-roll affordance, and the rationale text was crowding the
             hero without earning the space. */}
 
-        {/* ROADMAP 4.0 J4 — Sunday Polaroid drop (renders only on local Sunday) */}
-        {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}
-
-        {/* ROADMAP 4.0 J11 — first-of-day greeting note (renders once per local date)
-            HX1.3 — sole greeting moment per visit (EditorialGreeting deferred). */}
-        <FirstOfDayNote lastCookCuisine={lastCookCuisine} />
-
-        {/* ROADMAP 4.0 D14 — today's nutrient roll-up (top-6 with DV%).
-            HX1.2 — collapsed two nutrition strips into one; the placeholder
-            NutritionDiscoveryStrip with hardcoded zeros is gone. The
-            yesterday-summary header line lands when D-tier wires it. */}
-        <NutritionStrip snapshot={dailyNutrition} />
-
-        {/* ROADMAP 4.0 F1 — Friends feed (hidden when no follows / no shares) */}
-        <FriendsFeedSection
-          onSelect={(item) => {
-            if (item.shareSlug) {
-              router.push(`/shared-plate/${item.shareSlug}` as never);
-            }
-          }}
+        {/* ROADMAP 4.0 HX3.2 — DiscoveryStrip consolidation. The 5 previously-
+            stacked discovery surfaces (SundayPolaroid, FirstOfDayNote,
+            NutritionStrip, CohortSocialProofPill, TodayDiscoveryCard) now
+            render in a single horizontal strip. hasData is computed per
+            surface here so empty cards are dropped entirely (no blank
+            slots in the scroll). CohortSocialProofPill self-manages its
+            data and may still render null internally — that's the
+            unavoidable case where the external can't precompute hasData.
+            Priority numbers control left-to-right ordering. */}
+        <DiscoveryStrip
+          surfaces={[
+            {
+              id: 'sundayPolaroid',
+              node: sundayRecap ? <SundayPolaroidCard recap={sundayRecap} /> : null,
+              hasData: !!sundayRecap,
+              priority: 10,
+            },
+            {
+              id: 'firstOfDay',
+              node: <FirstOfDayNote lastCookCuisine={lastCookCuisine} />,
+              hasData: !!lastCookCuisine?.trim(),
+              priority: 20,
+            },
+            {
+              id: 'nutrition',
+              node: <NutritionStrip snapshot={dailyNutrition} />,
+              hasData: !!dailyNutrition,
+              priority: 30,
+            },
+            {
+              id: 'cohortSocialProof',
+              // Self-manages data fetch; renders null internally on cold start.
+              // hasData: true forces inclusion — accept potential empty slot.
+              node: <CohortSocialProofPill />,
+              hasData: true,
+              priority: 40,
+            },
+            {
+              id: 'todayDiscovery',
+              node: <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />,
+              hasData: !!dailyDiscoveryTip,
+              priority: 50,
+            },
+          ] as DiscoverySurface[]}
         />
 
-        {/* ROADMAP 4.0 F9 — Cohort social proof (hides on cold start) */}
-        <CohortSocialProofPill />
+        {/* ROADMAP 4.0 F1 — Friends feed (hidden when no follows / no shares) */}
+        {/* HX3.3 — lazy-mount below the fold to skip the cold-start API call
+            + render cost until the user actually scrolls toward it. */}
+        <LazyMountBoundary scrollY={scrollOffset} viewportHeight={viewportHeight}>
+          <FriendsFeedSection
+            onSelect={(item) => {
+              if (item.shareSlug) {
+                router.push(`/shared-plate/${item.shareSlug}` as never);
+              }
+            }}
+          />
+        </LazyMountBoundary>
 
         {/* ROADMAP 4.0 — Daily check-in moved to Kitchen (above Recently Saved). */}
-
-        {/* QuickActionRow now sits above the body switch (under FilterRow) —
-            mirrors KitchenModeBar's placement in the Kitchen tab. */}
-
-        {/* MoreForYouSection wrapper removed — the "More for you (N) / Show
-            less" toggle was redundant once SeasonalProduce + DidYouKnow
-            moved off Today. Render the remaining three cards inline. */}
-        <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
         {/* BAP1.1: StretchHomeCard + PlateOfWeekCard removed — their
             framings are now picked by useTodayPlateContext and rendered
             INSIDE TodayPlateHero above (variant resolution). */}
@@ -1255,18 +1301,27 @@ export default function HomeScreen() {
         {user?.id && (
           <>
             {/* Premium upsell card — only for free-tier users */}
-            {!subscription.isPremium && <PremiumUpsellCard testID="home-upsell-card" />}
+            {/* HX3.3 — lazy-mount: the upsell card sits below the fold and
+                isn't worth materializing before the user scrolls toward it. */}
+            {!subscription.isPremium && (
+              <LazyMountBoundary scrollY={scrollOffset} viewportHeight={viewportHeight}>
+                <PremiumUpsellCard testID="home-upsell-card" />
+              </LazyMountBoundary>
+            )}
           </>
         )}
 
         {/* ROADMAP 4.0 HX5.1 — almost-made-it sheet replaces the utilitarian
-            recipe-count footer with ranker provenance + invitation. */}
+            recipe-count footer with ranker provenance + invitation.
+            HX3.3 — lazy-mount: footer surface, defer until scrolled. */}
         {totalRecipes > 0 && !paginationInfo.hasMultiplePages && (
-          <AlmostMadeItSheet
-            cutCount={totalRecipes}
-            cutoff={Math.max(totalRecipes, RECIPES_PER_PAGE)}
-            onSelect={(id) => router.push(`../modal?id=${id}` as never)}
-          />
+          <LazyMountBoundary scrollY={scrollOffset} viewportHeight={viewportHeight}>
+            <AlmostMadeItSheet
+              cutCount={totalRecipes}
+              cutoff={Math.max(totalRecipes, RECIPES_PER_PAGE)}
+              onSelect={(id) => router.push(`../modal?id=${id}` as never)}
+            />
+          </LazyMountBoundary>
         )}
       </ScrollView>
       )}

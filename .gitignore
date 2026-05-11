@@ -318,6 +318,7 @@ backend/data/recommender/
 !frontend/docs/bundle-baseline.md
 !frontend/docs/a11y-audit-2026-05.md
 !frontend/docs/background-tasks-decision.md
+!frontend/docs/i18n-locale-review-flow.md
 !backend/docs/*.md
 !.github/pull_request_template.md
 plans/

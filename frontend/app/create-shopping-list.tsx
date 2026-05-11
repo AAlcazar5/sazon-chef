@@ -1,5 +1,9 @@
 // frontend/app/create-shopping-list.tsx
-// Screen for creating a new shopping list with items
+// Screen for creating a new shopping list with items.
+// ROADMAP 4.0 R15 — Sheet chrome extracted to <BottomSheetShell>.
+// useScrollView={false} because this screen needs a pinned bottom CTA
+// alongside the scrollable body — incompatible with the shell's default
+// "everything inside the ScrollView" layout.
 
 import {
   View,
@@ -8,19 +12,17 @@ import {
   ScrollView,
   Alert,
   Platform,
-  Animated,
-  TouchableWithoutFeedback,
   KeyboardAvoidingView,
-  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../components/ui/AnimatedActivityIndicator';
 import Icon from '../components/ui/Icon';
+import BottomSheetShell from '../components/ui/BottomSheetShell';
 import { Icons, IconSizes } from '../constants/Icons';
 import { Colors, DarkColors } from '../constants/Colors';
 import { shoppingListApi } from '../lib/api';
@@ -67,9 +69,6 @@ const detectCategory = (itemName: string): string => {
   return 'Other';
 };
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const SHEET_HEIGHT = Math.round(SCREEN_HEIGHT * 0.92);
-
 export default function CreateShoppingListScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -85,25 +84,6 @@ export default function CreateShoppingListScreen() {
   const [editingQuantity, setEditingQuantity] = useState('');
 
   const itemInputRef = useRef<TextInput>(null);
-  const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
-
-  useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: 0,
-      damping: 22,
-      stiffness: 220,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const handleClose = useCallback(() => {
-    Animated.spring(slideAnim, {
-      toValue: SHEET_HEIGHT,
-      damping: 22,
-      stiffness: 220,
-      useNativeDriver: true,
-    }).start(() => router.back());
-  }, [slideAnim]);
 
   // Generate unique ID for items
   const generateId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -228,37 +208,14 @@ export default function CreateShoppingListScreen() {
   const primaryColor = isDark ? DarkColors.primary : Colors.primary;
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      {/* Backdrop — tap to dismiss */}
-      <TouchableWithoutFeedback onPress={handleClose}>
-        <View style={{ flex: 1 }} />
-      </TouchableWithoutFeedback>
-
-      {/* Bottom sheet */}
-      <Animated.View
-        style={{
-          transform: [{ translateY: slideAnim }],
-          height: SHEET_HEIGHT,
-          backgroundColor: sheetBg,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          overflow: 'hidden',
-        }}
-      >
-        {/* Drag handle */}
-        <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: borderColor }} />
-        </View>
-
-        {/* Sheet header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-          <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: labelColor }}>Create Shopping List</Text>
-          <HapticTouchableOpacity onPress={handleClose} style={{ padding: 4 }}>
-            <Icon name={Icons.CLOSE} size={IconSizes.MD} color={subColor} accessibilityLabel="Close" />
-          </HapticTouchableOpacity>
-        </View>
-
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+    <BottomSheetShell
+      title="Create Shopping List"
+      onClose={() => router.back()}
+      heightFraction={0.92}
+      useScrollView={false}
+      testID="create-shopping-list-sheet"
+    >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
@@ -441,8 +398,7 @@ export default function CreateShoppingListScreen() {
               )}
             </HapticTouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </Animated.View>
-    </View>
+      </KeyboardAvoidingView>
+    </BottomSheetShell>
   );
 }
