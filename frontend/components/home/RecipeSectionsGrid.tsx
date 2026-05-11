@@ -135,11 +135,14 @@ function RecipeSectionsGrid({
   const cardTitleRotation = isDark ? TITLE_ROTATION_DARK : TITLE_ROTATION;
 
   return (
-    // mt-6 separates the contextual recipe rails from the editorial
-    // discovery cards above (PairingDiscoveryCard / StretchHomeCard /
-    // PlateOfWeekCard) — without it the section header sat flush against
-    // the previous card with only 8px of card-margin.
-    <View className="px-4 mt-6">
+    // mt-2 lets a small amount of breathing room exist between the hero
+    // (or the DiscoveryStrip when it renders) and the first section
+    // header. The original mt-6 (24px) was sized for the era where 2-3
+    // full-width editorial cards (PairingDiscoveryCard / StretchHomeCard /
+    // PlateOfWeekCard) sat above this grid; after BAP1.1 + HX3.2 those
+    // cards are gone or live in a horizontal strip, and the 24px gap
+    // looked excessive on cold-start (hero → empty → grid).
+    <View className="px-4 mt-2">
       {filtered.map((section) => {
         const isCollapsed = collapsedSections[section.key];
         const isQuickMeals = section.key === 'quick-meals';
