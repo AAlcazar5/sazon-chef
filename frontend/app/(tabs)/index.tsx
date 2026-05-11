@@ -1181,13 +1181,18 @@ export default function HomeScreen() {
             stays as Today's featured item. */}
         {/* HX1.4 — macro widgets hidden until real D14 data + macro goals
             are wired. Fake placeholder values were misleading users. */}
-        <EditorialHomeLayout
-          heroRecipe={recipeOfTheDay}
-          recipePool={recipesData ?? undefined}
-          savedIds={savedRecipeIds}
-          onRecipePress={handleRecipePress}
-          onToggleSave={handleSave}
-        />
+        {/* TEMP DEBUG — gap diagnosis. Borders trace what's actually
+            taking vertical real estate between hero and grid. Remove
+            after diagnosis. */}
+        <View style={{ borderWidth: 2, borderColor: 'red' }}>
+          <EditorialHomeLayout
+            heroRecipe={recipeOfTheDay}
+            recipePool={recipesData ?? undefined}
+            savedIds={savedRecipeIds}
+            onRecipePress={handleRecipePress}
+            onToggleSave={handleSave}
+          />
+        </View>
 
         {/* FirstCuisineBadge ("🌍 first time?") removed from under the hero.
             The cultural primer modal still fires from the cooking-complete
@@ -1209,6 +1214,7 @@ export default function HomeScreen() {
             data and may still render null internally — that's the
             unavoidable case where the external can't precompute hasData.
             Priority numbers control left-to-right ordering. */}
+        <View style={{ borderWidth: 2, borderColor: 'blue' }}>
         <DiscoveryStrip
           surfaces={[
             {
@@ -1248,10 +1254,12 @@ export default function HomeScreen() {
             },
           ] as DiscoverySurface[]}
         />
+        </View>
 
         {/* ROADMAP 4.0 F1 — Friends feed (hidden when no follows / no shares) */}
         {/* HX3.3 — lazy-mount below the fold to skip the cold-start API call
             + render cost until the user actually scrolls toward it. */}
+        <View style={{ borderWidth: 2, borderColor: 'green' }}>
         <LazyMountBoundary scrollY={scrollOffset} viewportHeight={viewportHeight}>
           <FriendsFeedSection
             onSelect={(item) => {
@@ -1261,6 +1269,7 @@ export default function HomeScreen() {
             }}
           />
         </LazyMountBoundary>
+        </View>
 
         {/* ROADMAP 4.0 — Daily check-in moved to Kitchen (above Recently Saved). */}
         {/* BAP1.1: StretchHomeCard + PlateOfWeekCard removed — their
