@@ -18,9 +18,9 @@ import { render, fireEvent } from '@testing-library/react-native';
 import PantryOnlyToggle from '../../../components/build-a-plate/PantryOnlyToggle';
 
 describe('<PantryOnlyToggle />', () => {
-  it('renders the locked label "Cook with what I have"', () => {
+  it('renders the locked label "Use my pantry"', () => {
     const { getByText } = render(<PantryOnlyToggle active={false} onToggle={jest.fn()} />);
-    expect(getByText(/Cook with what I have/i)).toBeTruthy();
+    expect(getByText(/Use my pantry/i)).toBeTruthy();
   });
 
   it('swaps the icon variant between off and on states', () => {

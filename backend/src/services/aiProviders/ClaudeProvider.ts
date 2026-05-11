@@ -80,14 +80,15 @@ export class ClaudeProvider extends AIProvider {
     // Strategy 1: Try parsing directly
     try {
       return JSON.parse(text.trim()) as GeneratedRecipe;
-    } catch (e1) {
+    } catch (_e1) {
+      // U9: intentional parse-strategy fallthrough — outer fn throws if all fail.
       // Strategy 2: Extract from markdown code blocks (with multiline support)
       const codeBlockMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
       if (codeBlockMatch && codeBlockMatch[1]) {
         try {
           const cleaned = this.cleanJSON(codeBlockMatch[1]);
           return JSON.parse(cleaned) as GeneratedRecipe;
-        } catch (e2) {
+        } catch (_e2) {
           // Continue to next strategy
         }
       }
@@ -101,12 +102,12 @@ export class ClaudeProvider extends AIProvider {
           // Clean up common JSON issues
           const cleaned = this.cleanJSON(jsonCandidate);
           return JSON.parse(cleaned) as GeneratedRecipe;
-        } catch (e3) {
+        } catch (_e3) {
           // Try with more aggressive cleaning
           try {
             const aggressivelyCleaned = this.cleanJSONAggressively(jsonCandidate);
             return JSON.parse(aggressivelyCleaned) as GeneratedRecipe;
-          } catch (e4) {
+          } catch (_e4) {
             // Continue to final error
           }
         }
@@ -118,12 +119,12 @@ export class ClaudeProvider extends AIProvider {
         try {
           const cleaned = this.cleanJSON(balancedMatch);
           return JSON.parse(cleaned) as GeneratedRecipe;
-        } catch (e5) {
+        } catch (_e5) {
           // Final attempt with aggressive cleaning
           try {
             const aggressivelyCleaned = this.cleanJSONAggressively(balancedMatch);
             return JSON.parse(aggressivelyCleaned) as GeneratedRecipe;
-          } catch (e6) {
+          } catch (_e6) {
             // All attempts failed
           }
         }

@@ -165,5 +165,22 @@
 
   "mealPlan.recurringManager.title": "Recurring Meals",
   "mealPlan.recurringManager.empty": "No Recurring Meals",
-  "mealPlan.recurringManager.paused": "Paused"
+  "mealPlan.recurringManager.paused": "Paused",
+
+  "alerts.image_load_failed.title": "Oops!",
+  "alerts.image_load_failed.body": "Couldn't load that image — try another one?",
+  "alerts.collection_name_required.title": "Oops!",
+  "alerts.collection_name_required.body": "Your collection needs a name first!",
+  "alerts.collection_create_failed.title": "Oops!",
+  "alerts.collection_create_failed.body": "Couldn't create the collection — try again?",
+  "alerts.bap_save_failed.title": "Hmm",
+  "alerts.bap_save_failed.body": "Sazon couldn't save your plate just yet — try again in a sec.",
+  "alerts.bap_cook_failed.title": "Hmm",
+  "alerts.bap_cook_failed.body": "Sazon couldn't fire up cooking mode just yet — try again.",
+  "alerts.bap_pick_slot_first.title": "Pick a slot first",
+  "alerts.bap_pick_slot_first.body": "Sazon needs at least one slot to balance the rest.",
+  "alerts.scanner_capture_failed.title": "Oops!",
+  "alerts.scanner_capture_failed.body": "Couldn't capture the photo — try again?",
+  "alerts.cook_complete_confirm.title": "All done?",
+  "alerts.cook_complete_confirm.body": "Mark this cook session complete?"
 }

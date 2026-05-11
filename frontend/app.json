@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "Sazon",
+    "slug": "sazon-chef",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

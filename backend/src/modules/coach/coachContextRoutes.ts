@@ -5,6 +5,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/utils/authHelper';
 import { getAdjacentCuisines } from '@/utils/cuisineAdjacency';
+import { userActionLimiter } from '@/middleware/rateLimiter';
 
 const EXPIRING_DAYS = 3;
 
@@ -16,6 +17,7 @@ function startOfTodayUTC(): Date {
 }
 
 export const coachContextRoutes = Router();
+coachContextRoutes.use(userActionLimiter);
 
 coachContextRoutes.get('/context', async (req: Request, res: Response) => {
   const userId = getUserId(req);

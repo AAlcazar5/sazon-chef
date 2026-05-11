@@ -254,7 +254,7 @@ export default function SlotPicker({
           <Ionicons name="basket-outline" size={28} color={Accent.peach} />
           <Text style={[styles.missingTitle, { color: titleColor }]}>Pantry coverage too low</Text>
           <Text style={[styles.missingBody, { color: bodyColor }]}>
-            Nothing in this slot is fully in your pantry. Turn off "Cook with what I have" to see all options.
+            Nothing in this slot is fully in your pantry. Turn off "Use my pantry" to see all options.
           </Text>
         </View>
       )}

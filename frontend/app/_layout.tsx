@@ -2,7 +2,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View } from 'react-native';
+import { View, Linking } from 'react-native';
+import { resolveDeepLink, isRecognizedDeepLink } from '../lib/deepLinkRouter';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
@@ -24,6 +25,11 @@ import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Duration } from '../constants/Animations';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useBiometricLock } from '../hooks/useBiometricLock';
+import { useForceUpgrade } from '../hooks/useForceUpgrade';
+import ForceUpgradeScreen from '../components/ui/ForceUpgradeScreen';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('Layout');
 import { useShoppingListAppOpenCleanup } from '../hooks/useShoppingListAppOpenCleanup';
 import BrandButton from '../components/ui/BrandButton';
 import LogoMascot from '../components/mascot/LogoMascot';
@@ -70,13 +76,46 @@ function RootLayoutNav() {
   // Register for push notifications when authenticated
   usePushNotifications();
 
+  // U2: Deep-link runtime handler.
+  // Every `sazon://...` URL (and universal https link) is resolved to an
+  // expo-router target and pushed. We ONLY push when the URL matches a
+  // recognized deep-link pattern (sazon:// scheme or https://sazonchef.app).
+  // Cold-start Expo dev URLs (exp://localhost:…) and arbitrary launch URLs
+  // fall through to the resolver's Today fallback — but we DON'T push to
+  // Today in that case, because the user just opened the app normally;
+  // the existing onboarding/auth routing will land them where they belong.
+  // Pushing on every cold-start caused an infinite remount loop.
+  useEffect(() => {
+    const handleUrl = (url: string | null) => {
+      if (!isRecognizedDeepLink(url)) return;
+      const target = resolveDeepLink(url as string);
+      const qp = new URLSearchParams(target.params).toString();
+      const dest = qp ? `${target.pathname}?${qp}` : target.pathname;
+      router.push(dest as never);
+    };
+    // Cold-start: app was launched by a deep link.
+    Linking.getInitialURL().then(handleUrl).catch(() => {});
+    // Warm: app already running.
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
+    return () => {
+      sub.remove();
+    };
+    // Empty deps: the listener registration is one-shot. router is a stable
+    // singleton in expo-router; including it in deps causes re-registration
+    // loops if any consumer mutates the router reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // App-open shopping list lifecycle cleanup (once per 24h)
   useShoppingListAppOpenCleanup();
 
   // Biometric lock
   const { isLocked, biometricEnabled, loading: biometricLoading, authenticate } = useBiometricLock();
 
-  console.log('[Layout] RootLayoutNav rendering with state:', { showSplash, isOnboardingComplete, isLoading, isAuthenticated, segments });
+  // U3: Force-upgrade gate — block stale builds before any other UI mounts.
+  const { mustUpgrade, floor: upgradeFloor, loading: upgradeLoading } = useForceUpgrade();
+
+  log.debug('RootLayoutNav rendering', { showSplash, isOnboardingComplete, isLoading, isAuthenticated, segments });
 
   useEffect(() => {
     checkOnboarding();
@@ -85,19 +124,19 @@ function RootLayoutNav() {
   const checkOnboarding = async () => {
     try {
       const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
-      console.log('[Layout] Onboarding status from storage:', onboardingComplete);
+      log.debug('Onboarding status from storage', onboardingComplete);
       // For Android testing, default to true if not set (dev bypass)
       const isComplete = onboardingComplete === 'true' || onboardingComplete === null;
       setIsOnboardingComplete(isComplete);
     } catch (error) {
-      console.error('Error checking onboarding status:', error);
+      log.error('Error checking onboarding status', error);
       setIsOnboardingComplete(true);
     }
   };
 
   useEffect(() => {
     if (isOnboardingComplete === null || isLoading) {
-      console.log('[Layout] Still loading:', { isOnboardingComplete, isLoading });
+      log.debug('Still loading', { isOnboardingComplete, isLoading });
       return;
     }
 
@@ -106,12 +145,12 @@ function RootLayoutNav() {
     const inTabs = segments[0] === '(tabs)';
     const inTonight = segments[0] === 'tonight';
 
-    console.log('[Layout] Navigation logic:', { isAuthenticated, isOnboardingComplete, inAuth, inOnboarding, inTabs });
+    log.debug('Navigation logic', { isAuthenticated, isOnboardingComplete, inAuth, inOnboarding, inTabs });
 
     // Check authentication first
     if (!isAuthenticated && !inAuth && !inOnboarding) {
       // User is not authenticated and not on auth/onboarding screens
-      console.log('[Layout] Redirecting to login');
+      log.debug('Redirecting to login');
       router.replace('/login');
       return;
     }
@@ -124,7 +163,7 @@ function RootLayoutNav() {
         const flagOn = (await AsyncStorage.getItem('tonight_mode_flag_on')) === '1';
         const prefOn = (await AsyncStorage.getItem('tonight_mode_pref_enabled')) === '1';
         if (flagOn && prefOn) {
-          console.log('[Layout] Redirecting to tonight mode');
+          log.debug('Redirecting to tonight mode');
           router.replace('/tonight');
         }
       })().catch(() => {});
@@ -134,7 +173,7 @@ function RootLayoutNav() {
 
     if (isAuthenticated && inAuth) {
       // User is authenticated but on auth screen, redirect to tabs
-      console.log('[Layout] Redirecting to tabs from auth screen');
+      log.debug('Redirecting to tabs from auth screen');
       router.replace('/(tabs)');
       return;
     }
@@ -142,7 +181,7 @@ function RootLayoutNav() {
     // Then check onboarding
     if (isAuthenticated && !isOnboardingComplete && !inOnboarding) {
       // User is authenticated but hasn't completed onboarding
-      console.log('[Layout] Redirecting to onboarding');
+      log.debug('Redirecting to onboarding');
       router.replace('/onboarding');
     } else if (isOnboardingComplete && inOnboarding && segments.length === 1) {
       // User has completed onboarding but is on onboarding screen (without edit param)
@@ -167,9 +206,14 @@ function RootLayoutNav() {
     );
   }
 
-  if (isOnboardingComplete === null || isLoading || biometricLoading) {
-    // Show loading screen while checking onboarding/authentication/biometric status
+  if (isOnboardingComplete === null || isLoading || biometricLoading || upgradeLoading) {
+    // Show loading screen while checking onboarding/authentication/biometric/upgrade status
     return null;
+  }
+
+  // U3: Block stale builds before any other UI mounts.
+  if (mustUpgrade) {
+    return <ForceUpgradeScreen floor={upgradeFloor} />;
   }
 
   // Biometric lock screen

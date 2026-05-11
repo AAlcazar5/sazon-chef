@@ -2,8 +2,10 @@
 
 import { Router } from 'express';
 import { shoppingAppController } from './shoppingAppController';
+import { userActionLimiter } from '@/middleware/rateLimiter';
 
 const router = Router();
+router.use(userActionLimiter);
 
 // Shopping app integration routes
 router.get('/supported', shoppingAppController.getSupportedApps);

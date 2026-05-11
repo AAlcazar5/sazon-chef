@@ -210,6 +210,87 @@ describe('QuickActionsSheet', () => {
     expect(screen.queryByText('Add Recipe')).toBeNull();
   });
 
+  // ─── BAP2.1: heroItem pin ─────────────────────────────────────────────
+  describe('BAP2.1: heroItem pin', () => {
+    const heroItem: ActionSheetItem = {
+      label: 'Build a plate',
+      icon: 'restaurant',
+      subtitle: "Compose tonight's meal",
+      onPress: jest.fn(),
+      tint: 'sage',
+    };
+
+    it('renders the hero card visually distinct from list rows when heroItem is provided', () => {
+      render(
+        <QuickActionsSheet
+          visible
+          onClose={jest.fn()}
+          heroItem={heroItem}
+          primaryItems={buildPrimary().slice(1)}
+          secondaryItems={[]}
+        />,
+      );
+      // Hero card is rendered at the testID, separate from the regular row items.
+      expect(screen.getByTestId('qa-hero-item')).toBeTruthy();
+      // Hero label + subtitle visible.
+      expect(screen.getByText('Build a plate')).toBeTruthy();
+      expect(screen.getByText("Compose tonight's meal")).toBeTruthy();
+    });
+
+    it('tapping the hero card fires its onPress AND dismisses the sheet', () => {
+      const press = jest.fn();
+      const onClose = jest.fn();
+      render(
+        <QuickActionsSheet
+          visible
+          onClose={onClose}
+          heroItem={{ ...heroItem, onPress: press }}
+          primaryItems={buildPrimary().slice(1)}
+          secondaryItems={[]}
+        />,
+      );
+      fireEvent.press(screen.getByTestId('qa-hero-item'));
+      expect(press).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to pre-BAP2.1 behavior (no hero) when heroItem prop is omitted', () => {
+      render(
+        <QuickActionsSheet
+          visible
+          onClose={jest.fn()}
+          primaryItems={buildPrimary()}
+          secondaryItems={buildSecondary()}
+        />,
+      );
+      // No hero testID — every primary item renders as a regular row.
+      expect(screen.queryByTestId('qa-hero-item')).toBeNull();
+      // Build a plate still visible as a list row.
+      expect(screen.getByText('Build a plate')).toBeTruthy();
+    });
+
+    it('secondary tier rendering is unaffected by the hero pin (hero hides on secondary)', () => {
+      render(
+        <QuickActionsSheet
+          visible
+          onClose={jest.fn()}
+          heroItem={heroItem}
+          primaryItems={buildPrimary().slice(1)}
+          secondaryItems={buildSecondary()}
+        />,
+      );
+      // On primary tier hero is visible.
+      expect(screen.getByTestId('qa-hero-item')).toBeTruthy();
+      // Swap to secondary.
+      fireEvent.press(screen.getByText('More actions'));
+      // Hero hides on secondary (it's a primary-tier surface).
+      expect(screen.queryByTestId('qa-hero-item')).toBeNull();
+      // Secondary items render normally.
+      expect(screen.getByText('Add Recipe')).toBeTruthy();
+      expect(screen.getByText('Back to main actions')).toBeTruthy();
+    });
+  });
+
   it('keeps the primary count at ≤6 items including the "More" row (9O verification metric)', () => {
     const { unmount } = render(
       <QuickActionsSheet

@@ -6,8 +6,9 @@ import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 import { encrypt, decrypt } from '@/utils/encryption';
+import { JWT_SECRET } from '@/utils/jwtConfig';
+import { hashEmailForLookup } from '@/utils/emailLookup';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 interface SocialAuthRequest extends Request {
@@ -89,12 +90,11 @@ export async function socialAuthCallback(req: SocialAuthRequest, res: Response) 
       });
     }
 
-    // If still not found, check by decrypting emails (for users who registered with email/password)
+    // U14: O(1) lookup for users who registered with email/password before
+    // switching to social. Was a findMany + decrypt loop.
     if (!user) {
-      const usersWithEncryptedEmails = await prisma.user.findMany({
-        where: {
-          emailEncrypted: true
-        },
+      user = await prisma.user.findUnique({
+        where: { emailLookupHash: hashEmailForLookup(email) },
         select: {
           id: true,
           email: true,
@@ -107,17 +107,6 @@ export async function socialAuthCallback(req: SocialAuthRequest, res: Response) 
           createdAt: true
         }
       });
-
-      for (const u of usersWithEncryptedEmails) {
-        try {
-          if (decrypt(u.email) === email) {
-            user = u;
-            break;
-          }
-        } catch {
-          continue;
-        }
-      }
     }
 
     if (user) {
@@ -166,7 +155,8 @@ export async function socialAuthCallback(req: SocialAuthRequest, res: Response) 
           providerEmail: email, // Keep unencrypted for OAuth lookups
           emailEncrypted: true,
           nameEncrypted: true,
-          password: null // No password for social login
+          password: null, // No password for social login
+          emailLookupHash: hashEmailForLookup(email), // U14: O(1) lookup hash
         },
         select: {
           id: true,

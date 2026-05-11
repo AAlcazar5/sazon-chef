@@ -5,8 +5,10 @@ import { shoppingListController } from './shoppingListController';
 import { shoppingListLifecycleController } from './shoppingListLifecycleController';
 import { shoppingListMergeController } from './shoppingListMergeController';
 import { shoppingListGenerationController } from './shoppingListGenerationController';
+import { userActionLimiter } from '@/middleware/rateLimiter';
 
 const router = Router();
+router.use(userActionLimiter);
 
 // Group 10Q-ListMgmt: lifecycle management endpoints (must come before /:id routes)
 router.post('/auto-archive-stale', shoppingListLifecycleController.autoArchiveStale);

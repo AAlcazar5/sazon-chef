@@ -17,10 +17,11 @@ import {
   revokeAllRefreshTokensForUser,
   RefreshTokenError,
 } from '@/services/refreshTokenService';
+import { JWT_SECRET } from '@/utils/jwtConfig';
+import { hashEmailForLookup } from '@/utils/emailLookup';
 
 // Note: Request.user type is declared in authMiddleware.ts
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 // H4: bcrypt cost factor — bumped 10 → 12 to match 2024 OWASP guidance.
@@ -63,32 +64,22 @@ export const authController = {
         });
       }
 
-      // Check if user already exists
-      // Check providerEmail first (unencrypted OAuth emails)
-      let existingUser = await prisma.user.findFirst({
-        where: { providerEmail: email }
+      // U14: O(1) lookup by deterministic email-hash. Was a findMany +
+      // decrypt-and-compare loop — fine at <1k users, a cliff at 100k.
+      const emailLookupHash = hashEmailForLookup(email);
+      let existingUser = await prisma.user.findUnique({
+        where: { emailLookupHash },
       });
 
-      // If not found, check encrypted emails
+      // Fall back to providerEmail (OAuth users may exist without a hash
+      // if they signed up before the U14 backfill and never set a password).
       if (!existingUser) {
-        const usersWithEncryptedEmails = await prisma.user.findMany({
-          where: { emailEncrypted: true },
-          select: { id: true, email: true, emailEncrypted: true }
+        existingUser = await prisma.user.findFirst({
+          where: { providerEmail: email },
         });
-
-        for (const u of usersWithEncryptedEmails) {
-          try {
-            if (decrypt(u.email) === email) {
-              existingUser = u as any;
-              break;
-            }
-          } catch {
-            continue;
-          }
-        }
       }
 
-      // Also check unencrypted emails (legacy)
+      // Legacy unencrypted users that pre-date U14: keep the cheap exact-match.
       if (!existingUser) {
         existingUser = await prisma.user.findFirst({
           where: { email, emailEncrypted: false }
@@ -116,7 +107,8 @@ export const authController = {
           name: encryptedName,
           password: hashedPassword,
           emailEncrypted: true,
-          nameEncrypted: true
+          nameEncrypted: true,
+          emailLookupHash, // U14: deterministic lookup hash for O(1) login.
         },
         select: {
           id: true,
@@ -197,46 +189,27 @@ export const authController = {
         emailVerified: true,
       } as const;
 
-      let user = await prisma.user.findFirst({
-        where: {
-          providerEmail: email // Check unencrypted OAuth email first
-        },
+      // U14: O(1) lookup by deterministic email-hash.
+      const emailLookupHash = hashEmailForLookup(email);
+      let user = await prisma.user.findUnique({
+        where: { emailLookupHash },
         select: userSelect,
       });
 
-      // If not found by providerEmail, search users with encrypted emails
+      // Fall back to providerEmail (OAuth users without a hash yet).
       if (!user) {
-        // Get all users with encrypted emails (most users will have this)
-        const usersWithEncryptedEmails = await prisma.user.findMany({
-          where: {
-            emailEncrypted: true
-          },
+        user = await prisma.user.findFirst({
+          where: { providerEmail: email },
           select: userSelect,
         });
+      }
 
-        // Decrypt and find matching email
-        for (const u of usersWithEncryptedEmails) {
-          try {
-            if (decrypt(u.email) === email) {
-              user = u;
-              break;
-            }
-          } catch {
-            // Skip if decryption fails
-            continue;
-          }
-        }
-
-        // If still not found, check unencrypted emails (legacy users)
-        if (!user) {
-          user = await prisma.user.findFirst({
-            where: {
-              email: email,
-              emailEncrypted: false
-            },
-            select: userSelect,
-          });
-        }
+      // Legacy unencrypted users pre-U14.
+      if (!user) {
+        user = await prisma.user.findFirst({
+          where: { email, emailEncrypted: false },
+          select: userSelect,
+        });
       }
 
       if (!user) {
@@ -405,40 +378,31 @@ export const authController = {
           });
         }
 
-        // Check if email is already taken by another user
-        // Need to check both encrypted and unencrypted emails
-        const allUsers = await prisma.user.findMany({
-          where: { id: { not: req.user.id } },
-          select: {
-            id: true,
-            email: true,
-            emailEncrypted: true,
-            providerEmail: true
-          }
+        // U14: O(1) uniqueness check via lookup hash.
+        const candidateHash = hashEmailForLookup(email);
+        const collision = await prisma.user.findFirst({
+          where: {
+            id: { not: req.user.id },
+            OR: [
+              { emailLookupHash: candidateHash },
+              { providerEmail: email },
+              { email, emailEncrypted: false }, // legacy unencrypted users
+            ],
+          },
+          select: { id: true },
         });
 
-        const emailExists = allUsers.some(u => {
-          if (u.providerEmail === email) return true;
-          if (u.emailEncrypted) {
-            try {
-              return decrypt(u.email) === email;
-            } catch {
-              return false;
-            }
-          }
-          return u.email === email;
-        });
-
-        if (emailExists) {
+        if (collision) {
           return res.status(409).json({
             error: 'Email already in use',
             message: 'This email is already associated with another account'
           });
         }
 
-        // Encrypt email for storage
+        // Encrypt email for storage + update lookup hash to match.
         updateData.email = encrypt(email);
         updateData.emailEncrypted = true;
+        updateData.emailLookupHash = candidateHash;
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -586,29 +550,16 @@ export const authController = {
         });
       }
 
-      // Find user by email (check encrypted and unencrypted)
-      let user = await prisma.user.findFirst({
-        where: { providerEmail: email }
+      // U14: O(1) lookup by deterministic email-hash.
+      const emailLookupHash = hashEmailForLookup(email);
+      let user = await prisma.user.findUnique({
+        where: { emailLookupHash },
       });
-
       if (!user) {
-        const usersWithEncryptedEmails = await prisma.user.findMany({
-          where: { emailEncrypted: true },
-          select: { id: true, email: true, emailEncrypted: true }
+        user = await prisma.user.findFirst({
+          where: { providerEmail: email },
         });
-
-        for (const u of usersWithEncryptedEmails) {
-          try {
-            if (decrypt(u.email) === email) {
-              user = u as any;
-              break;
-            }
-          } catch {
-            continue;
-          }
-        }
       }
-
       if (!user) {
         user = await prisma.user.findFirst({
           where: { email, emailEncrypted: false }
@@ -696,52 +647,29 @@ export const authController = {
         });
       }
 
-      // Find user by email
-      let user = await prisma.user.findFirst({
-        where: { providerEmail: email },
-        select: {
-          id: true,
-          email: true,
-          emailEncrypted: true,
-          resetCode: true,
-          resetCodeExpiry: true
-        }
+      // U14: O(1) lookup by deterministic email-hash.
+      const userSelect = {
+        id: true,
+        email: true,
+        emailEncrypted: true,
+        resetCode: true,
+        resetCodeExpiry: true,
+      } as const;
+      const emailLookupHash = hashEmailForLookup(email);
+      let user = await prisma.user.findUnique({
+        where: { emailLookupHash },
+        select: userSelect,
       });
-
       if (!user) {
-        const usersWithEncryptedEmails = await prisma.user.findMany({
-          where: { emailEncrypted: true },
-          select: {
-            id: true,
-            email: true,
-            emailEncrypted: true,
-            resetCode: true,
-            resetCodeExpiry: true
-          }
+        user = await prisma.user.findFirst({
+          where: { providerEmail: email },
+          select: userSelect,
         });
-
-        for (const u of usersWithEncryptedEmails) {
-          try {
-            if (decrypt(u.email) === email) {
-              user = u as any;
-              break;
-            }
-          } catch {
-            continue;
-          }
-        }
       }
-
       if (!user) {
         user = await prisma.user.findFirst({
           where: { email, emailEncrypted: false },
-          select: {
-            id: true,
-            email: true,
-            emailEncrypted: true,
-            resetCode: true,
-            resetCodeExpiry: true
-          }
+          select: userSelect,
         });
       }
 

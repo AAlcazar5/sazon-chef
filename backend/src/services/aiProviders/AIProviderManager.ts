@@ -5,6 +5,7 @@ import type { AITaskType, ModelRoute } from './AIProvider';
 import { ClaudeProvider } from './ClaudeProvider';
 import { GeminiProvider } from './GeminiProvider';
 import type { GeneratedRecipe } from '../aiRecipeService';
+import { captureException } from '@/utils/sentryCapture';
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 const SONNET_MODEL = 'claude-sonnet-4-6';
@@ -117,6 +118,10 @@ export class AIProviderManager {
         logger.info(`✅ [ProviderManager] Successfully generated recipe using ${provider.getName()}`);
         return recipe;
       } catch (error: any) {
+        captureException(error, {
+          tag: 'ai.provider.generateRecipe.fallback',
+          extra: { provider: provider.getName() },
+        });
         // Ensure error is normalized (providers should normalize, but check just in case)
         let normalizedError: AIProviderError;
         if (error.isQuotaError !== undefined || error.provider) {

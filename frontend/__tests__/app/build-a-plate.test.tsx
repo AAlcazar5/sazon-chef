@@ -315,10 +315,10 @@ describe('BuildAPlateScreen', () => {
     await waitFor(() => expect(getByTestId('add-missing-btn')).toBeTruthy());
   });
 
-  it('reads pantryOnly query param to pre-enable Cook with what I have', async () => {
+  it('reads pantryOnly query param to pre-enable Use my pantry', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ pantryOnly: 'true' });
     const { getByLabelText } = render(<BuildAPlateScreen />);
-    await waitFor(() => expect(getByLabelText('Cook with what I have, on')).toBeTruthy());
+    await waitFor(() => expect(getByLabelText('Use my pantry, on')).toBeTruthy());
   });
 });
 

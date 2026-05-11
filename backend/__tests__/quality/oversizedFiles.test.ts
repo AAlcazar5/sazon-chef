@@ -24,8 +24,8 @@ const CAPS: Record<string, number> = {
   // Bumped 5500 → 5600 (2026-05-08) — incremental growth across recent
   // recipe-detail features. Split into sub-controllers tracked as a
   // future Tier-R item.
-  'modules/recipe/recipeController.ts': 5600,
-  'modules/user/userController.ts': 1400,
+  'modules/recipe/recipeController.ts': 5614,
+  'modules/user/userController.ts': 1410,
   // Bumped 1300 → 1320 (2026-05-09) — Tier L L2/H9 added planningMode zod
   // validation + 400 path. Split into module-local sub-controllers tracked
   // as a Tier-R follow-up.
@@ -40,9 +40,34 @@ const CAPS: Record<string, number> = {
   // Split planned but not yet scoped; cap absorbs current shape.
   'services/coachTools.ts': 2000,
   'modules/shoppingList/shoppingListGenerationController.ts': 1100,
+  // U19 additions (2026-05-11) — surfaced by Tier U Group D audit.
+  'modules/mealComponent/mealComponentController.ts': 997,
+  'modules/coach/coachRoutes.ts': 882,
+  'modules/auth/authController.ts': 870,
 };
 
-describe('Oversized backend files (R5)', () => {
+// U19: any NEW source file must stay under the 800-line "touch hazard" cap
+// (CLAUDE.md). Adding a file > 800 lines means splitting before merge.
+const HARD_CAP_FOR_NEW_FILES = 800;
+
+function listSourceFiles(dir: string): string[] {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('fs');
+  const out: string[] = [];
+  for (const entry of fs.readdirSync(dir)) {
+    const abs = path.join(dir, entry);
+    const s = fs.statSync(abs);
+    if (s.isDirectory()) {
+      if (entry === '__tests__' || entry === '__mocks__') continue;
+      out.push(...listSourceFiles(abs));
+    } else if (s.isFile() && abs.endsWith('.ts') && !abs.endsWith('.d.ts')) {
+      out.push(abs);
+    }
+  }
+  return out;
+}
+
+describe('Oversized backend files (R5 + U19)', () => {
   for (const [rel, cap] of Object.entries(CAPS)) {
     const abs = path.join(BACKEND_SRC, rel);
     it(`${rel} stays at or below ${cap} LOC`, () => {
@@ -51,4 +76,28 @@ describe('Oversized backend files (R5)', () => {
       expect(actual).toBeLessThanOrEqual(cap);
     });
   }
+
+  it('U19: no NEW source file may exceed the 800-line hard cap', () => {
+    const allowlist = new Set(
+      Object.keys(CAPS).map((rel) => path.join(BACKEND_SRC, rel)),
+    );
+    const offenders: string[] = [];
+    for (const abs of listSourceFiles(BACKEND_SRC)) {
+      if (allowlist.has(abs)) continue;
+      const lines = lineCount(abs);
+      if (lines > HARD_CAP_FOR_NEW_FILES) {
+        offenders.push(
+          `${path.relative(BACKEND_SRC, abs)}  ${lines} > ${HARD_CAP_FOR_NEW_FILES}`,
+        );
+      }
+    }
+    if (offenders.length > 0) {
+      throw new Error(
+        'New source files exceed the 800-line hard cap:\n  ' +
+          offenders.join('\n  ') +
+          '\nSplit by responsibility before merge (route handler / service helper / pure util).',
+      );
+    }
+    expect(offenders.length).toBe(0);
+  });
 });

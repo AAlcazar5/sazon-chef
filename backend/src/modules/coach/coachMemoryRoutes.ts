@@ -6,8 +6,10 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/utils/authHelper';
 import { requireCoachPro } from '@/middleware/requireCoachPro';
+import { userActionLimiter } from '@/middleware/rateLimiter';
 
 export const coachMemoryRoutes = Router();
+coachMemoryRoutes.use(userActionLimiter);
 
 const patchSchema = z.object({
   content: z.string().min(1).max(280).optional(),

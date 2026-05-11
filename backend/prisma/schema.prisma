@@ -20,6 +20,13 @@ model User {
   // Encryption metadata
   emailEncrypted    Boolean   @default(false) // Whether email is encrypted
   nameEncrypted     Boolean   @default(false) // Whether name is encrypted
+  // ROADMAP 4.0 U14 — deterministic lookup hash for encrypted-email users.
+  // HMAC-SHA256 of normalized email with EMAIL_LOOKUP_HMAC_KEY. Unique +
+  // indexed so login / register / forgot-password do O(1) findUnique
+  // instead of the O(N) `findMany({ where: { emailEncrypted: true }})`
+  // scan-and-decrypt loop. Nullable for backfill compatibility; the
+  // backfill script populates it for every existing row.
+  emailLookupHash   String?   @unique
   // Password reset fields
   resetCode         String? // 6-digit code for password reset
   resetCodeExpiry   DateTime? // When the reset code expires

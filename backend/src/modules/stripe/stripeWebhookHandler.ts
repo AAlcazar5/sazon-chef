@@ -11,6 +11,7 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import { stripeService } from '@/services/stripeService';
 import { emailService } from '@/services/emailService';
+import { captureException } from '@/utils/sentryCapture';
 
 type SubscriptionWithMetadata = Stripe.Subscription;
 type InvoiceWithMetadata = Stripe.Invoice & {
@@ -74,7 +75,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
     );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'unknown';
-    logger.error({ err: message }, 'Stripe webhook signature verification failed:');
+    captureException(err, { tag: 'stripe.webhook.signatureVerification', extra: { message } });
     return res.status(400).json({ error: 'Webhook signature verification failed' });
   }
 
@@ -128,7 +129,10 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         break;
     }
   } catch (err) {
-    logger.error({ err: err }, `Error processing Stripe event ${event.type}:`);
+    captureException(err, {
+      tag: 'stripe.webhook.processEvent',
+      extra: { eventType: event.type, eventId: event.id, userId },
+    });
     // Return 200 anyway so Stripe doesn't retry infinitely for processing errors
   }
 

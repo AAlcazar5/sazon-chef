@@ -100,3 +100,41 @@ export const coachMessageLimiter = rateLimit({
   skip: () => isDevelopment,
 });
 
+/**
+ * U6: Per-user limiter for authenticated, route-level mutations.
+ * 120 requests per minute per user is generous enough not to throttle real
+ * usage (multi-tap, rapid scrolls, optimistic UI) but tight enough to stop
+ * a runaway client or stolen token from burning the DB.
+ * Falls back to IP when userId is missing (so unauth abuse still throttles).
+ */
+export const userActionLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: isDevelopment ? Number.MAX_SAFE_INTEGER : 120,
+  message: {
+    error: 'Too many requests',
+    message: 'You\'re moving fast — give it a beat and try again.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => req.user?.id || ipKeyGenerator(req.ip ?? '') || 'anonymous',
+  skip: () => isDevelopment,
+});
+
+/**
+ * U6: Strict per-IP limiter for unauthenticated, publicly-reachable routes
+ * (share-token imports, waitlist signup, etc.). 20 requests per 15 minutes
+ * is enough headroom for a legitimate burst-then-explore and tight enough
+ * to thwart enumeration / scraping.
+ */
+export const strictPublicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? Number.MAX_SAFE_INTEGER : 20,
+  message: {
+    error: 'Too many requests',
+    message: 'Too many requests from this IP — try again in a few minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isDevelopment,
+});
+

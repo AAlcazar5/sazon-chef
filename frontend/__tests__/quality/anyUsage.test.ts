@@ -32,6 +32,9 @@ describe('Frontend any usage cap (R8 baseline)', () => {
     // for Expo Router push paths (router.push('/coach' as never) is
     // the documented workaround for typed dynamic routes). Bumping to
     // 670 to accommodate.
-    expect(count).toBeLessThanOrEqual(670);
+    // 2026-05-11 (Tier U U24) — verified actual count = 667. Floor
+    // tightened from 670 → 667 to eliminate slack; new `any` usage must
+    // come with a paired removal or fail the ratchet.
+    expect(count).toBeLessThanOrEqual(667);
   });
 });

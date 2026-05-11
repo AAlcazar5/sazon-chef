@@ -18,6 +18,8 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { showPermissionDenied } from '../lib/permissionDeniedHelpers';
+import { sazonAlert, sazonAlertRaw } from '../lib/sazonAlert';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
@@ -64,7 +66,7 @@ export default function CreateCollectionScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to select a cover image.');
+        showPermissionDenied('photos');
         return;
       }
 
@@ -81,7 +83,7 @@ export default function CreateCollectionScreen() {
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Oops!', 'Couldn\'t load that image — try another one?');
+      sazonAlert('alerts.image_load_failed.title', 'alerts.image_load_failed.body');
     }
   };
 
@@ -90,7 +92,7 @@ export default function CreateCollectionScreen() {
       setShakeName(true);
       setTimeout(() => setShakeName(false), 500);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      Alert.alert('Oops!', 'Your collection needs a name first!');
+      sazonAlert('alerts.collection_name_required.title', 'alerts.collection_name_required.body');
       return;
     }
 
@@ -105,7 +107,11 @@ export default function CreateCollectionScreen() {
       handleClose();
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Oops!', error.message || 'Couldn\'t create the collection — try again?');
+      if (error?.message) {
+        sazonAlertRaw('Oops!', error.message);
+      } else {
+        sazonAlert('alerts.collection_create_failed.title', 'alerts.collection_create_failed.body');
+      }
     } finally {
       setLoading(false);
     }

@@ -12,6 +12,7 @@ import QuickActionsSheet from '../../components/action-sheet/QuickActionsSheet';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { scannerApi, shoppingListApi, mealPlanApi } from '../../lib/api';
+import { showPermissionDenied } from '../../lib/permissionDeniedHelpers';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -330,7 +331,11 @@ export default function TabLayout() {
                   if (elapsed >= LONG_PRESS_SAZON_MS) {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                     sazonFiredRef.current = true;
-                    openSazonForTab('today');
+                    // ROADMAP 4.0 BAP3.1 — Today's "context" is *what would I
+                    // cook tonight*, and the direct expression of that is
+                    // Build-a-Plate prefilled. Replaces the prior Sazon-thread
+                    // long-press; voice-composer at 1.0s threshold unaffected.
+                    router.push('/build-a-plate?seedFromToday=true' as never);
                   }
                 }}
                 onPress={(e: any) => onPress?.(e)}
@@ -344,7 +349,7 @@ export default function TabLayout() {
                 }}
                 delayLongPress={LONG_PRESS_VOICE_MS}
                 accessibilityLabel={focused ? 'Home tab, selected' : 'Home tab'}
-                accessibilityHint="Long press for voice; hold longer to ask Sazon"
+                accessibilityHint="Long press for voice; hold longer to compose tonight's plate"
                 accessibilityRole="button"
                 style={style as any}
               >
@@ -637,7 +642,12 @@ export default function TabLayout() {
       <QuickActionsSheet
         visible={showActionSheet}
         onClose={() => setShowActionSheet(false)}
-        primaryItems={primaryActions}
+        /* BAP2.1: Build-a-Plate is pinned as the larger gradient hero card
+           above the primary list (flagship N=1 surface gets visual priority
+           in the FAB sheet). The remaining primary items render as standard
+           rows below it. */
+        heroItem={primaryActions[0]}
+        primaryItems={primaryActions.slice(1)}
         secondaryItems={[]}
       />
 
@@ -883,7 +893,10 @@ function QuickCameraModal({
             <HapticTouchableOpacity
               onPress={async () => {
                 const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                if (status !== 'granted') return;
+                if (status !== 'granted') {
+                  showPermissionDenied('photos');
+                  return;
+                }
 
                 const result = await ImagePicker.launchImageLibraryAsync({
                   mediaTypes: ImagePicker.MediaTypeOptions.Images,

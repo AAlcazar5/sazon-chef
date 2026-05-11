@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
+import { sazonAlert } from '../lib/sazonAlert';
 import BrandButton from '../components/ui/BrandButton';
 import ScreenGradient from '../components/ui/ScreenGradient';
 import { StickyBottomBar } from '../components/ui/StickyBottomBar';
@@ -77,11 +78,20 @@ export default function BuildAPlateScreen() {
     seed?: string;
     preset?: string;
     subsCount?: string;
+    // BAP3.1: Today tab long-press deep-link. When 'true', the composer
+    // opens in pantry-aware mode and triggers an autoFit pass on mount to
+    // pre-seed slots from today's pantry coverage + macro gap. Missing /
+    // malformed values fall back to the default composer (cold-start).
+    seedFromToday?: string;
   }>();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const initialPantryOnly = params.pantryOnly === 'true';
+  // BAP3.1: Today long-press deep-link forces pantry-aware mode AND triggers
+  // an autoFit seed on mount (handled below). Explicit pantryOnly=true also
+  // toggles pantry mode — both paths converge on the same UI.
+  const seedFromToday = params.seedFromToday === 'true';
+  const initialPantryOnly = params.pantryOnly === 'true' || seedFromToday;
   const plateId = typeof params.plateId === 'string' ? params.plateId : undefined;
   const isBeginnerSeed = params.seed === 'beginner';
   const presetId = typeof params.preset === 'string' ? params.preset : undefined;
@@ -399,7 +409,7 @@ export default function BuildAPlateScreen() {
       }
     } catch {
       HapticPatterns.error();
-      Alert.alert('Hmm', 'Sazon couldn’t save your plate just yet — try again in a sec.');
+      sazonAlert('alerts.bap_save_failed.title', 'alerts.bap_save_failed.body');
     } finally {
       setSaving(false);
     }
@@ -421,7 +431,7 @@ export default function BuildAPlateScreen() {
       }
     } catch {
       HapticPatterns.error();
-      Alert.alert('Hmm', 'Sazon couldn’t fire up cooking mode just yet — try again.');
+      sazonAlert('alerts.bap_cook_failed.title', 'alerts.bap_cook_failed.body');
     } finally {
       setSaving(false);
     }
@@ -504,7 +514,7 @@ export default function BuildAPlateScreen() {
 
   const handleMacroFit = useCallback(async () => {
     if (composer.selectedSlotsCount === 0) {
-      Alert.alert('Pick a slot first', 'Sazon needs at least one slot to balance the rest.');
+      sazonAlert('alerts.bap_pick_slot_first.title', 'alerts.bap_pick_slot_first.body');
       return;
     }
     setMacroFitState('loading');
@@ -537,6 +547,41 @@ export default function BuildAPlateScreen() {
       HapticPatterns.error();
     }
   }, [composer, requiredSlotsForTier]);
+
+  // BAP3.1: when arriving via Today tab long-press, silently seed slots
+  // from pantry coverage + macro gap via autoFit. No user-facing alert on
+  // empty pantry — graceful fallback to a default empty composer. Fires
+  // exactly once on mount; user re-entry to the same screen without the
+  // param skips the seed.
+  const seedFromTodayFiredRef = useRef(false);
+  useEffect(() => {
+    if (!seedFromToday) return;
+    if (seedFromTodayFiredRef.current) return;
+    seedFromTodayFiredRef.current = true;
+    (async () => {
+      try {
+        const slotsToFill = requiredSlotsForTier;
+        const target = { calories: 600, protein: 30 };
+        const res = await composedPlateApi.autoFit({
+          target,
+          lockedSlots: [],
+          slotsToFill,
+        });
+        const result = res.data?.result;
+        if (result?.achievable) {
+          composer.applyAutoFit(result.filled);
+          setMacroFitState('fit');
+        }
+        // Unachievable seed = silent fallback (cold-start / empty pantry).
+      } catch {
+        // Network / API failure = silent fallback. User sees empty composer.
+      }
+    })();
+    // requiredSlotsForTier and composer are intentionally not in deps —
+    // we only want this to fire once when the screen mounts with the
+    // param set. The ref guards a re-fire on re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedFromToday]);
 
   const handleBudgetToggle = useCallback(() => {
     setBudgetMode((prev) => !prev);
@@ -659,13 +704,6 @@ export default function BuildAPlateScreen() {
               testID="keep-under-btn"
             />
           </View>
-          <View style={styles.headerPillSlot}>
-            <FewSmallThingsMode
-              active={fewSmallThingsActive}
-              slotCount={fewSmallThingsActive ? 5 : 3}
-              onToggle={() => setFewSmallThingsActive((prev) => !prev)}
-            />
-          </View>
         </ScrollView>
 
         <ScrollView
@@ -684,13 +722,12 @@ export default function BuildAPlateScreen() {
             />
           )}
 
-          <TechniqueChallengeBanner
-            title="Caramelize the onions"
-            body="Slow and low — 30 minutes turns onions into jam. A free flavor upgrade for any plate this week."
-            testID="technique-banner"
-          />
-
           <View style={styles.toggleRow}>
+            <FewSmallThingsMode
+              active={fewSmallThingsActive}
+              slotCount={fewSmallThingsActive ? 5 : 3}
+              onToggle={() => setFewSmallThingsActive((prev) => !prev)}
+            />
             <PantryOnlyToggle
               active={composer.pantryOnly}
               onToggle={composer.togglePantryOnly}
@@ -763,6 +800,12 @@ export default function BuildAPlateScreen() {
               <Text style={styles.garnishText}>+ Add a garnish (optional)</Text>
             </HapticTouchableOpacity>
           )}
+
+          <TechniqueChallengeBanner
+            title="Caramelize the onions"
+            body="Slow and low — 30 minutes turns onions into jam. A free flavor upgrade for any plate this week."
+            testID="technique-banner"
+          />
 
           <PlatePreview
             totals={composer.totals}

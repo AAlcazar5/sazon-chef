@@ -63,6 +63,7 @@ import { nutritionRoutes } from '@modules/nutrition/nutritionRoutes';
 import { followsRoutes } from '@modules/follows/followsRoutes';
 import { cuisineDessertRoutes } from '@modules/cuisineDessert/cuisineDessertRoutes';
 import { waitlistRoutes } from '@modules/waitlist/waitlistRoutes';
+import { minVersionRoutes } from '@modules/minVersion/minVersionRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 import { prisma } from '@/lib/prisma';
 import { cacheService } from '@/utils/cacheService';
@@ -105,8 +106,25 @@ const app = express();
 // Mounted FIRST so every downstream middleware error inherits the requestId.
 app.use(requestIdMiddleware);
 
-// Security headers
-app.use(helmet());
+// U21: Explicit helmet hardening. Defaults are reasonable but pinning the
+// posture here makes it reviewable + greppable. HSTS forces HTTPS for a
+// year (preload-list ready). Referrer-Policy ships no referrer to keep
+// user navigation private. CSP is disabled on this API server because the
+// JSON payloads aren't HTML — leaving it on would emit a useless header
+// + log spam. crossOriginEmbedderPolicy is disabled so image embed flows
+// (recipe thumbnails on third-party hosts) keep working.
+app.use(
+  helmet({
+    hsts: {
+      maxAge: 31536000, // 1 year, in seconds
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: 'no-referrer' },
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 
 // P1: response compression (gzip). Mounted before routes so every JSON
 // payload above 1KB is compressed when the client accepts gzip. ~60–80%
@@ -286,6 +304,8 @@ app.use('/api/follows', followsRoutes);
 app.use('/api/cuisine-desserts', cuisineDessertRoutes);
 // Pre-launch waitlist signup (public, no auth) — sazonchef.com landing page
 app.use('/api/waitlist', waitlistRoutes);
+// ROADMAP 4.0 U3 — force-upgrade gate (public, no auth: must work if DB is down)
+app.use('/api/app', minVersionRoutes);
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 

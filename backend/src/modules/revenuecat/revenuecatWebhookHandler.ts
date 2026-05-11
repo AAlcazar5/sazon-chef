@@ -21,6 +21,7 @@ import { logger } from '../../utils/logger';
 
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { captureException } from '@/utils/sentryCapture';
 
 interface RevenueCatEventBody {
   api_version?: string;
@@ -195,7 +196,10 @@ export async function handleRevenueCatWebhook(req: Request, res: Response) {
         break;
     }
   } catch (err) {
-    logger.error({ err: err }, `Error processing RevenueCat event ${event.type}:`);
+    captureException(err, {
+      tag: 'revenuecat.webhook.processEvent',
+      extra: { eventType: event.type, eventId: event.id, userId },
+    });
     // 200 anyway so RevenueCat doesn't infinite-retry processing errors.
   }
 

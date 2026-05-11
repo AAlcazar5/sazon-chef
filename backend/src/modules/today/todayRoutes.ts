@@ -8,11 +8,15 @@ import {
   getCoverageTier,
 } from './todayActivationController';
 import { getReverseDiscovery } from './reverseDiscoveryController';
+import { shortPrivateCache } from '../../middleware/cacheControl';
 
 const router = Router();
 
-router.get('/activation', getActivationSurface);
-router.get('/coverage', getCoverageTier);
-router.get('/reverse-discovery', getReverseDiscovery);
+// U8: short-lived per-user cache. Today's plate, activation surface, and
+// reverse-discovery are heavy reads that re-render on every app-open even
+// when nothing changed in the underlying user state.
+router.get('/activation', shortPrivateCache, getActivationSurface);
+router.get('/coverage', shortPrivateCache, getCoverageTier);
+router.get('/reverse-discovery', shortPrivateCache, getReverseDiscovery);
 
 export default router;

@@ -17,8 +17,8 @@ import { randomBytes, createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
+import { JWT_SECRET } from '@/utils/jwtConfig';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m';
 const REFRESH_TOKEN_EXPIRES_DAYS = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS || 7);
 

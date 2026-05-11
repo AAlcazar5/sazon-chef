@@ -1,5 +1,6 @@
 // frontend/components/build-a-plate/PantryOnlyToggle.tsx
-// Group 10X — "Cook with what I have" pantry-only filter.
+// Group 10X — "Use my pantry" pantry-only filter (renamed from "Cook with
+// what I have" so three toggle pills fit on a single row).
 //
 // On-state affordance is layered on purpose: filled-icon swap + checkmark
 // badge + scale spring on activation + saturated bg. Off-state is a neutral
@@ -67,7 +68,7 @@ export default function PantryOnlyToggle({ active, onToggle, testID }: PantryOnl
         testID={testID}
         accessibilityRole="switch"
         accessibilityState={{ selected: active }}
-        accessibilityLabel={`Cook with what I have, ${active ? 'on' : 'off'}`}
+        accessibilityLabel={`Use my pantry, ${active ? 'on' : 'off'}`}
       >
         <View testID={testID ? `${testID}-icon-${active ? 'on' : 'off'}` : undefined}>
           <Ionicons
@@ -77,7 +78,7 @@ export default function PantryOnlyToggle({ active, onToggle, testID }: PantryOnl
           />
         </View>
         <Text style={[styles.label, { color: fg }]} numberOfLines={1}>
-          Cook with what I have
+          Use my pantry
         </Text>
         {active && (
           <View

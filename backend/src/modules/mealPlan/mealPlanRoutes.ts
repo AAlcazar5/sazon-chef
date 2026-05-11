@@ -36,8 +36,10 @@ import {
   deleteRecurringMeal,
   applyRecurringMeals
 } from './mealPlanRecurringController';
+import { userActionLimiter } from '@/middleware/rateLimiter';
 
 const router = Router();
+router.use(userActionLimiter);
 
 // Recurring meal routes (must come before /:id routes)
 router.get('/recurring', getRecurringMeals);

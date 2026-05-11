@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scannerApi, shoppingListApi, foodApi } from '../lib/api';
 import * as ImagePicker from 'expo-image-picker';
+import { showPermissionDenied } from '../lib/permissionDeniedHelpers';
+import { sazonAlert } from '../lib/sazonAlert';
 import * as Haptics from 'expo-haptics';
 import LoadingState from '../components/ui/LoadingState';
 import LogoMascot from '../components/mascot/LogoMascot';
@@ -239,7 +241,7 @@ export default function ScannerScreen() {
     } catch (error: any) {
       console.error('❌ Camera error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Oops!', 'Couldn\'t capture the photo — try again?');
+      sazonAlert('alerts.scanner_capture_failed.title', 'alerts.scanner_capture_failed.body');
     } finally {
       setScanning(false);
     }
@@ -249,7 +251,7 @@ export default function ScannerScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant permission to access your photo library.');
+        showPermissionDenied('photos');
         return;
       }
 
@@ -266,7 +268,7 @@ export default function ScannerScreen() {
     } catch (error: any) {
       console.error('❌ Image picker error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Oops!', 'Couldn\'t load that image — try another one?');
+      sazonAlert('alerts.image_load_failed.title', 'alerts.image_load_failed.body');
     }
   };
 

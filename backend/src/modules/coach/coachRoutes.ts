@@ -39,6 +39,7 @@ import { coachMessageLimiter } from '@/middleware/rateLimiter';
 import { emit as emitAnalytics } from '@/services/coachAnalytics';
 import { recordTurnCacheUsage } from '@/services/coachCacheHealth';
 import { loadConversationHistory } from '@/services/coachHistoryService';
+import { captureException } from '@/utils/sentryCapture';
 import { selectLLMClient } from '@/services/llm';
 import { resolveLocaleForRequest } from '@/utils/coachLocaleResolver';
 import {
@@ -710,6 +711,10 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
           });
           toolResult = result;
         } catch (err) {
+          captureException(err, {
+            tag: 'coach.toolRun',
+            extra: { userId, conversationId, toolName: tu.name },
+          });
           toolResult = {
             error: err instanceof Error ? err.message : 'tool_error',
           };
@@ -799,6 +804,10 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
   } catch (err) {
     // Code#1: SSE-aware error path. Headers are already flushed at this point,
     // so we cannot send an HTTP error; emit an SSE `error` event and end.
+    captureException(err, {
+      tag: 'coach.stream',
+      extra: { userId, conversationId },
+    });
     emitAnalytics('coach_stream_error', {
       userId,
       conversationId,
@@ -857,6 +866,10 @@ coachRoutes.post(
       });
       res.status(200).json(result);
     } catch (err) {
+      captureException(err, {
+        tag: 'coach.visionExtractPantry',
+        extra: { userId, mediaType },
+      });
       const code =
         err instanceof CoachVisionError ? err.code : 'provider_error';
       const status = code === 'invalid_response' || code === 'refusal' ? 422 : 502;

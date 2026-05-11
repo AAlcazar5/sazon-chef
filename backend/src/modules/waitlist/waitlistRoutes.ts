@@ -2,6 +2,8 @@
 
 import { Router } from 'express';
 import { waitlistController } from './waitlistController';
+import { strictPublicLimiter } from '@/middleware/rateLimiter';
 
 export const waitlistRoutes = Router();
-waitlistRoutes.post('/', waitlistController.signup);
+// U6: unauthenticated public endpoint — strict per-IP limiter to thwart sign-up spam.
+waitlistRoutes.post('/', strictPublicLimiter, waitlistController.signup);

@@ -4,7 +4,7 @@
 import { useEffect, Dispatch, SetStateAction } from 'react';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
-import { mealPlanApi, aiRecipeApi, userApi, costTrackingApi } from '../lib/api';
+import { mealPlanApi, aiRecipeApi, userApi, costTrackingApi, recipeApi } from '../lib/api';
 import { HapticPatterns } from '../constants/Haptics';
 import { HapticChoreography } from '../utils/hapticChoreography';
 import type { HourData } from './useMealPlanUI';
@@ -997,20 +997,35 @@ export function useMealPlanActions({
   };
 
   // ─── Confirm time picker selection ────────────────────────────────────
-  const handleTimePickerConfirm = () => {
+  // U15: was shipping hardcoded calories=500 / prepTime="15 min" placeholders
+  // during the optimistic-add. Now fetches the recipe's real macros, prep
+  // time, and difficulty before inserting. If the fetch fails, we still
+  // optimistically insert the meal with the values we DO know (id + name);
+  // missing keys are left undefined so the cache can fill them.
+  const handleTimePickerConfirm = async () => {
     if (!recipeId || !recipeTitle) return;
+    const id = Array.isArray(recipeId) ? recipeId[0] : recipeId;
+    const title = Array.isArray(recipeTitle) ? recipeTitle[0] : recipeTitle;
 
-    // Add recipe to selected time
+    let recipe: any = null;
+    try {
+      const res = await recipeApi.getRecipe(id);
+      recipe = res?.data ?? null;
+    } catch {
+      // Network/auth failure — still insert with the minimum payload so the
+      // user sees their action take effect; the cache layer will reconcile.
+    }
+
     const newMeal = {
-      id: recipeId,
-      name: recipeTitle,
-      calories: 500, // TODO: Get from recipe data
-      protein: 25,
-      carbs: 50,
-      fat: 20,
-      description: "Delicious recipe added to your meal plan", // TODO: Get from recipe data
-      prepTime: "15 min", // TODO: Get from recipe data
-      difficulty: "Easy" // TODO: Get from recipe data
+      id,
+      name: title,
+      calories: typeof recipe?.calories === 'number' ? recipe.calories : 0,
+      protein: typeof recipe?.protein === 'number' ? recipe.protein : 0,
+      carbs: typeof recipe?.carbs === 'number' ? recipe.carbs : 0,
+      fat: typeof recipe?.fat === 'number' ? recipe.fat : 0,
+      description: typeof recipe?.description === 'string' ? recipe.description : '',
+      prepTime: typeof recipe?.cookTime === 'number' ? `${recipe.cookTime} min` : '',
+      difficulty: typeof recipe?.difficulty === 'string' ? recipe.difficulty : '',
     };
 
     setHourlyMeals(prev => ({
@@ -1021,7 +1036,7 @@ export function useMealPlanActions({
     updateDailyMacros(newMeal);
     setShowTimePickerModal(false);
 
-    Alert.alert('Success', `"${recipeTitle}" added to ${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`);
+    Alert.alert('Success', `"${title}" added to ${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`);
   };
 
   // ─── Calculate remaining macros for the day ───────────────────────────

@@ -5,6 +5,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Alert, Share } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { showPermissionDenied } from '../lib/permissionDeniedHelpers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import {
@@ -929,7 +930,7 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'We need access to your photos to set a profile picture.', [{ text: 'OK' }]);
+        showPermissionDenied('photos');
         return;
       }
 
@@ -971,7 +972,7 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
             onPress: async () => {
               const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
               if (cameraStatus !== 'granted') {
-                Alert.alert('Permission Required', 'We need camera access to take a photo.');
+                showPermissionDenied('camera');
                 return;
               }
               const result = await ImagePicker.launchCameraAsync({

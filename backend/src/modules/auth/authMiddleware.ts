@@ -4,6 +4,7 @@ import { logger } from '../../utils/logger';
 
 import { Request, Response, NextFunction } from 'express';
 import jwt, { type JwtPayload, type VerifyErrors } from 'jsonwebtoken';
+import { JWT_SECRET } from '@/utils/jwtConfig';
 
 // H10: typed JWT payload. Tokens are minted in authController.login /
 // register / socialAuth with `{ id, email }`. Centralizing the shape
@@ -22,14 +23,6 @@ function isSazonPayload(value: unknown): value is SazonJwtPayload {
     typeof (value as { email?: unknown }).email === 'string'
   );
 }
-
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-  throw new Error(
-    'JWT_SECRET env var is required and must be at least 32 characters. ' +
-    'Generate one via: openssl rand -base64 48'
-  );
-}
-const JWT_SECRET: string = process.env.JWT_SECRET;
 
 // Extend Express Request to include user
 declare global {

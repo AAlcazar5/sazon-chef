@@ -48,9 +48,16 @@ interface ActionSheetProps {
   onClose: () => void;
   items: ActionSheetItem[];
   title?: string;
+  /**
+   * Optional hero/header node rendered above the items list and below the
+   * title. Consumed by QuickActionsSheet's `heroItem` prop (BAP2.1) to
+   * pin Build-a-Plate as a larger card above the regular row items.
+   * Generic — any caller can render a custom node here.
+   */
+  headerSlot?: React.ReactNode;
 }
 
-export default function ActionSheet({ visible, onClose, items, title }: ActionSheetProps) {
+export default function ActionSheet({ visible, onClose, items, title, headerSlot }: ActionSheetProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
@@ -162,6 +169,7 @@ export default function ActionSheet({ visible, onClose, items, title }: ActionSh
                 showsVerticalScrollIndicator={false}
                 bounces={false}
               >
+                {headerSlot}
                 {items.map((item, index) => {
                   const resolvedTint: ActionSheetTint = item.tint ?? TINT_ROTATION[index % TINT_ROTATION.length];
                   const { bg: tintBg, fg: tintFg } = tintColors(resolvedTint, isDark);

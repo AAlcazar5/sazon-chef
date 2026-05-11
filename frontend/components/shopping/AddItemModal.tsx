@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { useState, useMemo, useCallback } from 'react';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
+import { showPermissionDenied } from '../../lib/permissionDeniedHelpers';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import BottomSheet from '../ui/BottomSheet';
@@ -145,7 +146,7 @@ export default function AddItemModal({
   const handlePickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo access to attach item photos.');
+      showPermissionDenied('photos');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
