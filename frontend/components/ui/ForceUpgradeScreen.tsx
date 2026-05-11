@@ -27,7 +27,7 @@ export default function ForceUpgradeScreen({ floor }: ForceUpgradeScreenProps) {
       accessibilityRole="alert"
       accessibilityLabel="App update required"
     >
-      <Sazon variant="orange" motion="wobble" fx={['sparkle']} size={192} />
+      <Sazon variant="orange" motion="wobble" fx={['sparkles']} size={192} />
       <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-6 mb-2 text-center">
         A fresh Sazon awaits
       </Text>

@@ -21,7 +21,11 @@ import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet, EditorialHomeLayout, StretchHomeCard, PlateOfWeekCard } from '../../components/home';
+import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet, TodayPlateHero } from '../../components/home';
+// ROADMAP 4.0 BAP0.1 + BAP1.1 — EditorialHomeLayout, StretchHomeCard,
+// PlateOfWeekCard, PantryPlateHeroCard replaced by TodayPlateHero.
+// Imports kept in tree (via index.ts) for any other consumer until they
+// migrate. recipeOfTheDay demotes into RecipeSectionsGrid below the hero.
 import type { DislikeReason } from '../../components/home';
 import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
@@ -1139,17 +1143,12 @@ export default function HomeScreen() {
         {/* IA2.6 — AskSazonHomeCard removed. The global SazonFAB next to
             the search bar replaces this card. */}
 
-        {/* Featured recipe (Today's hero) — sits directly under the Coach card
-            so the user lands on a cookable plate, not on supplementary widgets. */}
-        {/* HX1.4 — macro widgets hidden until real D14 data + macro goals
-            are wired. Fake placeholder values were misleading users. */}
-        <EditorialHomeLayout
-          heroRecipe={recipeOfTheDay}
-          recipePool={recipesData ?? undefined}
-          savedIds={savedRecipeIds}
-          onRecipePress={handleRecipePress}
-          onToggleSave={handleSave}
-        />
+        {/* ROADMAP 4.0 BAP0.1 — Today hero is now Build-a-Plate framed, not
+            a recipe-of-the-day card. recipeOfTheDay demotes into the
+            RecipeSectionsGrid below as the first card of its carousel.
+            useTodayPlateContext picks the right variant per visit (leftover
+            stretch / pantry plate / plate of the week / cold-start). */}
+        <TodayPlateHero />
 
         {/* FirstCuisineBadge ("🌍 first time?") removed from under the hero.
             The cultural primer modal still fires from the cooking-complete
@@ -1196,8 +1195,9 @@ export default function HomeScreen() {
             less" toggle was redundant once SeasonalProduce + DidYouKnow
             moved off Today. Render the remaining three cards inline. */}
         <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />
-        <StretchHomeCard />
-        <PlateOfWeekCard />
+        {/* BAP1.1: StretchHomeCard + PlateOfWeekCard removed — their
+            framings are now picked by useTodayPlateContext and rendered
+            INSIDE TodayPlateHero above (variant resolution). */}
 
         {/* Contextual Recipe Sections (below editorial fold) */}
         <RecipeSectionsGrid

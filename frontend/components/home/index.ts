@@ -37,4 +37,10 @@ export { EditorialHomeLayout } from './EditorialHomeLayout';
 export { default as PantryPlateHeroCard } from './PantryPlateHeroCard';
 export { default as StretchHomeCard } from './StretchHomeCard';
 export { default as PlateOfWeekCard } from './PlateOfWeekCard';
+// ROADMAP 4.0 BAP0.1 + BAP1.1 — Today plate hero (replaces the recipe
+// hero + the 3 legacy sub-cards). Old exports above are kept temporarily
+// until any downstream consumer has migrated to TodayPlateHero.
+export { default as TodayPlateHero } from './TodayPlateHero';
+export { default as TodayPlateCard } from './TodayPlateCard';
+export { default as PlateRationaleRibbon } from './PlateRationaleRibbon';
 export { default as VoiceComposerModal } from './VoiceComposerModal';
