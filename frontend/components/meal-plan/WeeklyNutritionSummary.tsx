@@ -9,7 +9,7 @@ import { Shadows } from '../../constants/Shadows';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { BorderRadius, Spacing } from '../../constants/Spacing';
 import AnimatedProgressBar from '../ui/AnimatedProgressBar';
-import { t } from '../../lib/i18n';
+import { t, getLocale } from '../../lib/i18n';
 
 interface WeeklyNutritionSummaryProps {
   weeklyNutrition: any;
@@ -201,7 +201,7 @@ export default function WeeklyNutritionSummary({
             <View className="flex-row justify-between items-center mb-2">
               <Text className="text-xs font-medium text-gray-700 dark:text-gray-200">{t('mealPlan.weekly.calories')}</Text>
               <Text className="text-xs text-gray-500 dark:text-gray-400">
-                {weeklyNutrition.totals.calories.toLocaleString()} / {weeklyNutrition.goals.weeklyCalories.toLocaleString()}
+                {weeklyNutrition.totals.calories.toLocaleString(getLocale())} / {weeklyNutrition.goals.weeklyCalories.toLocaleString(getLocale())}
               </Text>
             </View>
             <AnimatedProgressBar

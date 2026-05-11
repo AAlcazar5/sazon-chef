@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, StyleSheet } from 'react-native';
+import { getLocale } from '../lib/i18n';
 import ReAnimated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation, withSpring, runOnJS } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { MotiView } from 'moti';
@@ -1323,7 +1324,7 @@ export default function RecipeModal() {
               {recipe.nutritionalAnalysis.antioxidants.oracValue > 0 && (
                 <View className="mb-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
                   <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Antioxidants</Text>
-                  <Text className="text-xs text-gray-600 dark:text-gray-400">ORAC Value: {recipe.nutritionalAnalysis.antioxidants.oracValue.toLocaleString()}</Text>
+                  <Text className="text-xs text-gray-600 dark:text-gray-400">ORAC Value: {recipe.nutritionalAnalysis.antioxidants.oracValue.toLocaleString(getLocale())}</Text>
                   {recipe.nutritionalAnalysis.antioxidants.polyphenols > 0 && (
                     <Text className="text-xs text-gray-600 dark:text-gray-400">Polyphenols: {recipe.nutritionalAnalysis.antioxidants.polyphenols}mg</Text>
                   )}
