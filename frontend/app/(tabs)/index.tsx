@@ -1412,6 +1412,8 @@ Your feedback helps us learn your tastes and suggest better recipes!`}
             {/* design.md §7.1 — primary CTA pill, single coral accent */}
             <HapticTouchableOpacity
               onPress={handleCloseRoulette}
+              accessibilityLabel="Close roulette"
+              accessibilityRole="button"
               style={{
                 backgroundColor: isDark ? Brand.dark.base : Brand.light.base,
                 paddingHorizontal: 24,

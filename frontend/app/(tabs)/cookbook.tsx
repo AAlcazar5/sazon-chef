@@ -1777,6 +1777,9 @@ export default function CookbookScreen() {
                     <HapticTouchableOpacity
                       key={mode}
                       onPress={() => handleToggleDisplayMode(mode)}
+                      accessibilityLabel={`Show recipes as ${mode}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: displayMode === mode }}
                       className="px-2.5 py-1 rounded"
                       style={displayMode === mode ? { backgroundColor: isDark ? DarkColors.primary : Colors.primary } : undefined}
                     >
