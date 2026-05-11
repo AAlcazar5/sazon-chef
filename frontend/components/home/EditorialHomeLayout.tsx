@@ -160,7 +160,12 @@ const styles = StyleSheet.create({
   heroRow: {
     flexDirection: 'row',
     paddingTop: 18,
-    marginBottom: 28,
+    // HX3.2 follow-up: trimmed 28 → 16. The original 28 made sense when
+    // the recipe hero stacked above 5 full-width discovery cards; now
+    // that those discovery surfaces live in a horizontal DiscoveryStrip
+    // (often null on cold-start), 28 produced a visible gap between the
+    // hero and the next section. 16 matches standard card spacing.
+    marginBottom: 16,
   },
   heroCard: {
     flex: 1,

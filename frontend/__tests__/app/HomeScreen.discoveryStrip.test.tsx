@@ -67,12 +67,13 @@ describe('HX3.2: HomeScreen DiscoveryStrip wiring', () => {
     expect(raw).toMatch(/id:\s*['"]todayDiscovery['"][\s\S]*?hasData:\s*!!dailyDiscoveryTip/);
   });
 
-  it('cohortSocialProof is documented as the externally-opaque exception (hasData: true)', () => {
-    // The one surface where hasData can't be precomputed (the pill
-    // self-fetches). It must include the comment explaining why so future
-    // readers don't think this is a bug.
-    expect(raw).toMatch(/id:\s*['"]cohortSocialProof['"][\s\S]*?hasData:\s*true/);
-    expect(raw).toMatch(/Self-manages data fetch/);
+  it('cohortSocialProof reads hasData from the lifted useCohortSocialProof hook (no empty-slot reservation)', () => {
+    // HX3.2 follow-up: cohort proof fetch was hoisted into a shared
+    // hook so the strip can know hasData BEFORE the pill renders.
+    // Otherwise the strip reserves an empty 280-wide slot for a pill
+    // that returns null, producing a visible gap on cold-start.
+    expect(raw).toMatch(/useCohortSocialProof/);
+    expect(raw).toMatch(/id:\s*['"]cohortSocialProof['"][\s\S]*?hasData:\s*!cohortProofLoading\s*&&\s*!!cohortProof/);
   });
 
   it('legacy stacked surfaces are gone from the JSX (only the strip mounts them now)', () => {

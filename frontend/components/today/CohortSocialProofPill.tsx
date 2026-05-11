@@ -4,42 +4,24 @@
 // Compact pill on Today: "Persian is trending in your taste cluster." Hides
 // silently while loading and when the backend has no signal yet (cold start
 // + small cohorts).
+//
+// HX3.2 follow-up: data fetch lifted into useCohortSocialProof so the
+// parent DiscoveryStrip can read the SAME signal for hasData computation
+// — keeping the strip from reserving an empty card slot when the pill
+// will ultimately render null.
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
-import { cohortSocialProofApi, type CohortSocialProofPayload } from '../../lib/api';
-
-interface ProofState {
-  cuisine: string;
-  copy: string;
-}
+import { useCohortSocialProof } from '../../hooks/useCohortSocialProof';
 
 export default function CohortSocialProofPill() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const [proof, setProof] = useState<ProofState | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await cohortSocialProofApi.get();
-        const payload = (res?.data ?? res) as CohortSocialProofPayload | undefined;
-        if (!cancelled && payload?.proof) {
-          setProof({ cuisine: payload.proof.cuisine, copy: payload.proof.copy });
-        }
-      } catch {
-        // Best-effort — never block the Today screen on a missing signal.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { proof } = useCohortSocialProof();
 
   if (!proof) return null;
 

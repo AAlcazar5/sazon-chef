@@ -73,6 +73,7 @@ import {
 // Extracted hooks
 import { useViewMode } from '../../hooks/useViewMode';
 import { useMealPrepMode } from '../../hooks/useMealPrepMode';
+import { useCohortSocialProof } from '../../hooks/useCohortSocialProof';
 import { useTimeAwareMode } from '../../hooks/useTimeAwareMode';
 import { useRecipePagination } from '../../hooks/useRecipePagination';
 import { useRecipeInteractions } from '../../hooks/useRecipeInteractions';
@@ -213,6 +214,12 @@ export default function HomeScreen() {
     });
     return () => scrollY.removeListener(sub);
   }, [scrollY]);
+
+  // HX3.2 follow-up: lifted cohort proof fetch so DiscoveryStrip can know
+  // hasData BEFORE the pill renders — otherwise the strip reserves an
+  // empty card slot for a pill that ultimately returns null, producing
+  // a visible gap between the hero and the next section on cold-start.
+  const { proof: cohortProof, loading: cohortProofLoading } = useCohortSocialProof();
 
   // Recipe interactions (feedback, action menu) - using extracted hook
   const interactions = useRecipeInteractions();
@@ -1224,10 +1231,13 @@ export default function HomeScreen() {
             },
             {
               id: 'cohortSocialProof',
-              // Self-manages data fetch; renders null internally on cold start.
-              // hasData: true forces inclusion — accept potential empty slot.
+              // HX3.2 follow-up: hasData now reads from the lifted
+              // useCohortSocialProof hook so the strip skips this slot
+              // entirely on cold-start instead of reserving an empty
+              // 280-wide card. !cohortProofLoading prevents a flash
+              // during the initial fetch.
               node: <CohortSocialProofPill />,
-              hasData: true,
+              hasData: !cohortProofLoading && !!cohortProof,
               priority: 40,
             },
             {
