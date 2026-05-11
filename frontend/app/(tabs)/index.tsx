@@ -21,11 +21,15 @@ import RecipeActionMenu from '../../components/recipe/RecipeActionMenu';
 import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
-import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet, TodayPlateHero } from '../../components/home';
-// ROADMAP 4.0 BAP0.1 + BAP1.1 — EditorialHomeLayout, StretchHomeCard,
-// PlateOfWeekCard, PantryPlateHeroCard replaced by TodayPlateHero.
-// Imports kept in tree (via index.ts) for any other consumer until they
-// migrate. recipeOfTheDay demotes into RecipeSectionsGrid below the hero.
+import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet, EditorialHomeLayout } from '../../components/home';
+// ROADMAP 4.0 BAP0.1 reverted: the featured recipe-of-the-day hero is the
+// right top-of-Today surface. The QuickActionRow's "Build a plate" chip
+// already sits directly above it, so the BAP affordance is reachable
+// without sacrificing the recipe hero. <TodayPlateHero> remains in the
+// barrel for future use but is not mounted here.
+// BAP1.1 still applies: the 3 legacy sub-cards (StretchHomeCard,
+// PlateOfWeekCard, PantryPlateHeroCard) stay removed from this screen —
+// their variant logic is the merged TodayPlateCard's responsibility.
 import type { DislikeReason } from '../../components/home';
 import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
@@ -1143,12 +1147,20 @@ export default function HomeScreen() {
         {/* IA2.6 — AskSazonHomeCard removed. The global SazonFAB next to
             the search bar replaces this card. */}
 
-        {/* ROADMAP 4.0 BAP0.1 — Today hero is now Build-a-Plate framed, not
-            a recipe-of-the-day card. recipeOfTheDay demotes into the
-            RecipeSectionsGrid below as the first card of its carousel.
-            useTodayPlateContext picks the right variant per visit (leftover
-            stretch / pantry plate / plate of the week / cold-start). */}
-        <TodayPlateHero />
+        {/* Featured recipe (Today's hero) — sits directly under the Coach card
+            so the user lands on a cookable plate, not on supplementary widgets.
+            BAP0.1 revert: the QuickActionRow's "Build a plate" chip above this
+            hero already gives Build-a-Plate its visual seat; the recipe hero
+            stays as Today's featured item. */}
+        {/* HX1.4 — macro widgets hidden until real D14 data + macro goals
+            are wired. Fake placeholder values were misleading users. */}
+        <EditorialHomeLayout
+          heroRecipe={recipeOfTheDay}
+          recipePool={recipesData ?? undefined}
+          savedIds={savedRecipeIds}
+          onRecipePress={handleRecipePress}
+          onToggleSave={handleSave}
+        />
 
         {/* FirstCuisineBadge ("🌍 first time?") removed from under the hero.
             The cultural primer modal still fires from the cooking-complete
