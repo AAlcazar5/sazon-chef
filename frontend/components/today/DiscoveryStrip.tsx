@@ -12,14 +12,15 @@
 // keyed by surface id, alongside per-surface "has data" flags. The
 // caller decides which sources are populated; the strip decides which
 // cards to show and in what order.
-import React, { useCallback } from 'react';
-import {
-  View,
-  FlatList,
-  StyleSheet,
-  type FlatListProps,
-  type ListRenderItem,
-} from 'react-native';
+//
+// Implementation note: uses a horizontal ScrollView (not FlatList).
+// NutritionStrip is itself a horizontal FlatList; nesting a horizontal
+// FlatList inside another horizontal FlatList caused phantom ~400px of
+// intrinsic height on the outer FlatList (the outer couldn't measure
+// the inner's content and reserved a huge fallback). ScrollView sizes
+// to children correctly in the nested case.
+import React from 'react';
+import { View, ScrollView, StyleSheet, type ScrollViewProps } from 'react-native';
 
 export type DiscoverySurfaceId =
   | 'firstOfDay'
@@ -47,8 +48,8 @@ export interface DiscoverySurface {
 
 interface DiscoveryStripProps {
   surfaces: ReadonlyArray<DiscoverySurface>;
-  /** Allows tests / parents to inject FlatList props. */
-  scrollProps?: Partial<FlatListProps<DiscoverySurface>>;
+  /** Allows tests / parents to inject ScrollView props. */
+  scrollProps?: Partial<ScrollViewProps>;
 }
 
 const STABLE_DEFAULT_PRIORITY = 1000;
@@ -59,33 +60,26 @@ export const DiscoveryStrip: React.FC<DiscoveryStripProps> = ({
 }) => {
   const visible = filterAndSort(surfaces);
 
-  const renderItem = useCallback<ListRenderItem<DiscoverySurface>>(
-    ({ item: s }) => (
-      <View style={styles.cardSlot} testID={`discovery-card-${s.id}`}>
-        {s.node}
-      </View>
-    ),
-    [],
-  );
-
-  const keyExtractor = useCallback((s: DiscoverySurface) => s.id, []);
-
   if (visible.length === 0) return null;
 
   return (
-    <FlatList
+    <ScrollView
       horizontal
-      data={visible}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
       testID="discovery-strip"
-      initialNumToRender={3}
-      windowSize={5}
-      removeClippedSubviews
       {...scrollProps}
-    />
+    >
+      {visible.map((s) => (
+        <View
+          key={s.id}
+          style={styles.cardSlot}
+          testID={`discovery-card-${s.id}`}
+        >
+          {s.node}
+        </View>
+      ))}
+    </ScrollView>
   );
 };
 
