@@ -1,8 +1,8 @@
 // backend/__tests__/services/macroCapFitService.test.ts
-// "Keep under" solver — picks the highest-quality plate whose totals stay
-// under every user-supplied cap.
+// "Tune the plate" solver — picks the highest-quality plate whose totals stay
+// within every user-supplied bound (min, max, or both).
 
-import { fitPlateUnderCaps } from '../../src/services/macroCapFitService';
+import { fitPlateWithinBounds } from '../../src/services/macroCapFitService';
 import { prisma } from '../../src/lib/prisma';
 
 const mockPrisma = prisma as any;
@@ -38,12 +38,12 @@ beforeEach(() => {
   mockPrisma.mealComponent.findMany.mockResolvedValue([]);
 });
 
-describe('fitPlateUnderCaps', () => {
+describe('fitPlateWithinBounds', () => {
   describe('empty slotsToFill', () => {
     it('returns achievable=true with empty filled when no locked slots and no fill slots', async () => {
-      const result = await fitPlateUnderCaps({
+      const result = await fitPlateWithinBounds({
         userId: 'u1',
-        caps: { calories: 600 },
+        bounds: { calories: { max: 600 } },
         lockedSlots: [],
         slotsToFill: [],
       });
@@ -51,10 +51,10 @@ describe('fitPlateUnderCaps', () => {
       expect(result.achievable).toBe(true);
       expect(result.filled).toEqual([]);
       expect(result.totals).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
-      expect(result.exceeded).toBeUndefined();
+      expect(result.outOfBounds).toBeUndefined();
     });
 
-    it('returns achievable=false with exceeded when locked slots already exceed cap', async () => {
+    it('returns achievable=false with outOfBounds when locked slots exceed max', async () => {
       const heavyRow = buildRow({
         id: 'heavy-1',
         slot: 'protein',
@@ -65,21 +65,21 @@ describe('fitPlateUnderCaps', () => {
       });
       mockPrisma.mealComponent.findMany.mockResolvedValueOnce([heavyRow]);
 
-      const result = await fitPlateUnderCaps({
+      const result = await fitPlateWithinBounds({
         userId: 'u1',
-        caps: { calories: 500 },
+        bounds: { calories: { max: 500 } },
         lockedSlots: [{ slot: 'protein', componentId: 'heavy-1', portionMultiplier: 1 }],
         slotsToFill: [],
       });
 
       expect(result.achievable).toBe(false);
       expect(result.totals.calories).toBe(800);
-      expect(result.exceeded).toEqual({ calories: 300 });
+      expect(result.outOfBounds?.calories).toEqual({ type: 'over', amount: 300 });
     });
   });
 
-  describe('respects all caps when achievable', () => {
-    it('returns a combo whose totals are under every cap', async () => {
+  describe('max bounds (upper limit)', () => {
+    it('returns a combo whose totals are under every max bound', async () => {
       mockPrisma.mealComponent.findMany.mockImplementation((args: any) => {
         const slot = args.where?.slot;
         if (slot === 'protein') {
@@ -100,9 +100,9 @@ describe('fitPlateUnderCaps', () => {
         return Promise.resolve([]);
       });
 
-      const result = await fitPlateUnderCaps({
+      const result = await fitPlateWithinBounds({
         userId: 'u1',
-        caps: { calories: 600, fat: 30 },
+        bounds: { calories: { max: 600 }, fat: { max: 30 } },
         lockedSlots: [],
         slotsToFill: ['protein', 'base', 'vegetable'],
       });
@@ -111,10 +111,10 @@ describe('fitPlateUnderCaps', () => {
       expect(result.filled).toHaveLength(3);
       expect(result.totals.calories).toBeLessThanOrEqual(600);
       expect(result.totals.fat).toBeLessThanOrEqual(30);
-      expect(result.exceeded).toBeUndefined();
+      expect(result.outOfBounds).toBeUndefined();
     });
 
-    it('respects a fiber-only cap', async () => {
+    it('respects a fiber-only max bound', async () => {
       mockPrisma.mealComponent.findMany.mockImplementation((args: any) => {
         const slot = args.where?.slot;
         if (slot === 'protein') {
@@ -131,9 +131,9 @@ describe('fitPlateUnderCaps', () => {
         return Promise.resolve([]);
       });
 
-      const result = await fitPlateUnderCaps({
+      const result = await fitPlateWithinBounds({
         userId: 'u1',
-        caps: { fiber: 5 },
+        bounds: { fiber: { max: 5 } },
         lockedSlots: [],
         slotsToFill: ['protein', 'base'],
       });
@@ -143,35 +143,111 @@ describe('fitPlateUnderCaps', () => {
     });
   });
 
-  describe('returns closest combo when no candidate respects caps', () => {
-    it('returns achievable=false with exceeded showing each violated cap', async () => {
+  describe('min bounds (at least)', () => {
+    it('returns a combo with at least the required protein', async () => {
       mockPrisma.mealComponent.findMany.mockImplementation((args: any) => {
         const slot = args.where?.slot;
         if (slot === 'protein') {
           return Promise.resolve([
-            // Even at the smallest portion (0.5x = 400 cal) this exceeds the 300 cap.
-            buildRow({ id: 'p1', slot: 'protein', caloriesPerPortion: 800, proteinG: 50 }),
+            // Multiple proteins — solver should pick one that hits the min.
+            buildRow({ id: 'low', slot: 'protein', caloriesPerPortion: 100, proteinG: 8 }),
+            buildRow({ id: 'high', slot: 'protein', caloriesPerPortion: 200, proteinG: 32 }),
           ]);
         }
         return Promise.resolve([]);
       });
 
-      const result = await fitPlateUnderCaps({
+      const result = await fitPlateWithinBounds({
         userId: 'u1',
-        caps: { calories: 300 },
+        bounds: { protein: { min: 20 } },
+        lockedSlots: [],
+        slotsToFill: ['protein'],
+      });
+
+      expect(result.achievable).toBe(true);
+      expect(result.totals.protein).toBeGreaterThanOrEqual(20);
+    });
+
+    it('returns achievable=false with under violation when no combo can hit the min', async () => {
+      mockPrisma.mealComponent.findMany.mockImplementation((args: any) => {
+        const slot = args.where?.slot;
+        if (slot === 'protein') {
+          return Promise.resolve([
+            // Even at max portion (2x), only 5g * 2 = 10g protein.
+            buildRow({ id: 'tiny', slot: 'protein', caloriesPerPortion: 100, proteinG: 5 }),
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const result = await fitPlateWithinBounds({
+        userId: 'u1',
+        bounds: { protein: { min: 50 } },
         lockedSlots: [],
         slotsToFill: ['protein'],
       });
 
       expect(result.achievable).toBe(false);
-      expect(result.exceeded?.calories).toBeGreaterThan(0);
-      // Should still return the closest plate (using the smallest portion = 0.5)
-      expect(result.filled).toHaveLength(1);
+      expect(result.outOfBounds?.protein?.type).toBe('under');
+      expect(result.outOfBounds?.protein?.amount).toBeGreaterThan(0);
+    });
+  });
+
+  describe('mixed min and max bounds', () => {
+    it('respects both directions on different macros (max calories + min fiber)', async () => {
+      mockPrisma.mealComponent.findMany.mockImplementation((args: any) => {
+        const slot = args.where?.slot;
+        if (slot === 'protein') {
+          return Promise.resolve([
+            buildRow({ id: 'p1', slot: 'protein', caloriesPerPortion: 150, fiberG: 0 }),
+          ]);
+        }
+        if (slot === 'vegetable') {
+          return Promise.resolve([
+            buildRow({ id: 'high-fiber', slot: 'vegetable', caloriesPerPortion: 80, fiberG: 8 }),
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const result = await fitPlateWithinBounds({
+        userId: 'u1',
+        bounds: { calories: { max: 400 }, fiber: { min: 6 } },
+        lockedSlots: [],
+        slotsToFill: ['protein', 'vegetable'],
+      });
+
+      expect(result.achievable).toBe(true);
+      expect(result.totals.calories).toBeLessThanOrEqual(400);
+      expect(result.totals.fiber).toBeGreaterThanOrEqual(6);
+    });
+
+    it('respects a min-and-max on the same macro (range)', async () => {
+      mockPrisma.mealComponent.findMany.mockImplementation((args: any) => {
+        const slot = args.where?.slot;
+        if (slot === 'protein') {
+          return Promise.resolve([
+            buildRow({ id: 'p1', slot: 'protein', caloriesPerPortion: 200, proteinG: 25 }),
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const result = await fitPlateWithinBounds({
+        userId: 'u1',
+        bounds: { protein: { min: 20, max: 40 } },
+        lockedSlots: [],
+        slotsToFill: ['protein'],
+      });
+
+      expect(result.achievable).toBe(true);
+      expect(result.totals.protein).toBeGreaterThanOrEqual(20);
+      expect(result.totals.protein).toBeLessThanOrEqual(40);
     });
   });
 
   describe('locked slots are preserved', () => {
-    it('includes locked slots verbatim and adds fill slots that respect caps', async () => {
+    it('includes locked slots verbatim and adds fill slots that respect bounds', async () => {
       const lockedSalmon = buildRow({
         id: 'salmon',
         slot: 'protein',
@@ -180,16 +256,15 @@ describe('fitPlateUnderCaps', () => {
         carbsG: 0,
         fatG: 12,
       });
-      // First call: locked lookup. Subsequent: per-slot candidate fetch.
       mockPrisma.mealComponent.findMany
         .mockResolvedValueOnce([lockedSalmon])
         .mockResolvedValueOnce([
           buildRow({ id: 'rice', slot: 'base', caloriesPerPortion: 200, carbsG: 42 }),
         ]);
 
-      const result = await fitPlateUnderCaps({
+      const result = await fitPlateWithinBounds({
         userId: 'u1',
-        caps: { calories: 600 },
+        bounds: { calories: { max: 600 } },
         lockedSlots: [{ slot: 'protein', componentId: 'salmon', portionMultiplier: 1 }],
         slotsToFill: ['base'],
       });
@@ -198,7 +273,6 @@ describe('fitPlateUnderCaps', () => {
       const slots = result.filled.map((f) => f.slot);
       expect(slots).toContain('protein');
       expect(slots).toContain('base');
-      // Locked salmon must keep its portion multiplier
       const proteinSlot = result.filled.find((f) => f.slot === 'protein');
       expect(proteinSlot?.portionMultiplier).toBe(1);
     });
@@ -207,9 +281,9 @@ describe('fitPlateUnderCaps', () => {
       mockPrisma.mealComponent.findMany.mockResolvedValueOnce([]);
 
       await expect(
-        fitPlateUnderCaps({
+        fitPlateWithinBounds({
           userId: 'u1',
-          caps: { calories: 600 },
+          bounds: { calories: { max: 600 } },
           lockedSlots: [{ slot: 'protein', componentId: 'phantom', portionMultiplier: 1 }],
           slotsToFill: [],
         }),
@@ -218,12 +292,11 @@ describe('fitPlateUnderCaps', () => {
   });
 
   describe('quality score', () => {
-    it('prefers higher protein density when multiple combos respect every cap', async () => {
+    it('prefers higher protein density when multiple combos respect every bound', async () => {
       mockPrisma.mealComponent.findMany.mockImplementation((args: any) => {
         const slot = args.where?.slot;
         if (slot === 'protein') {
           return Promise.resolve([
-            // Low-protein vs high-protein. Cap is generous so both fit.
             buildRow({ id: 'p-low', slot: 'protein', caloriesPerPortion: 200, proteinG: 5, fiberG: 0 }),
             buildRow({ id: 'p-high', slot: 'protein', caloriesPerPortion: 200, proteinG: 30, fiberG: 0 }),
           ]);
@@ -231,9 +304,9 @@ describe('fitPlateUnderCaps', () => {
         return Promise.resolve([]);
       });
 
-      const result = await fitPlateUnderCaps({
+      const result = await fitPlateWithinBounds({
         userId: 'u1',
-        caps: { calories: 800 },
+        bounds: { calories: { max: 800 } },
         lockedSlots: [],
         slotsToFill: ['protein'],
       });

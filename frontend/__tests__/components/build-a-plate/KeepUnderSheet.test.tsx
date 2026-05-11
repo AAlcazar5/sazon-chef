@@ -1,5 +1,5 @@
 // frontend/__tests__/components/build-a-plate/KeepUnderSheet.test.tsx
-// "Keep under" cap-picker sheet — 5 toggleable rows, defaults from daily macros.
+// "Tune the plate" sheet — 5 toggleable rows, each with min/max mode and a value.
 
 jest.mock('../../../contexts/ThemeContext', () => ({
   useTheme: () => ({ theme: 'light', isDark: false, colors: { background: '#FFFFFF' } }),
@@ -13,8 +13,6 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
 }));
 
-// Mock the BottomSheet wrapper to render children inline so the test can
-// interact with rows without dealing with @gorhom internals.
 jest.mock('../../../components/ui/BottomSheet', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -37,7 +35,19 @@ describe('KeepUnderSheet', () => {
     expect(getByTestId('keep-under-row-fiber')).toBeTruthy();
   });
 
-  it('seeds inputs with 1/3 of daily macro goals (rounded)', () => {
+  it('seeds calories to 650 regardless of daily defaults (per-meal override)', () => {
+    const { getByTestId } = render(
+      <KeepUnderSheet
+        visible
+        onClose={jest.fn()}
+        onApply={jest.fn()}
+        dailyDefaults={{ calories: 2400 }}
+      />,
+    );
+    expect((getByTestId('keep-under-input-calories') as any).props.value).toBe('650');
+  });
+
+  it('seeds non-calorie inputs with 1/3 of daily macro goals (rounded)', () => {
     const { getByTestId } = render(
       <KeepUnderSheet
         visible
@@ -46,15 +56,13 @@ describe('KeepUnderSheet', () => {
         dailyDefaults={{ calories: 2100, protein: 150, carbs: 240, fat: 70, fiber: 30 }}
       />,
     );
-    // 2100 / 3 = 700; 150 / 3 = 50; 240 / 3 = 80; 70 / 3 ≈ 23; 30 / 3 = 10
-    expect((getByTestId('keep-under-input-calories') as any).props.value).toBe('700');
     expect((getByTestId('keep-under-input-protein') as any).props.value).toBe('50');
     expect((getByTestId('keep-under-input-carbs') as any).props.value).toBe('80');
     expect((getByTestId('keep-under-input-fat') as any).props.value).toBe('23');
     expect((getByTestId('keep-under-input-fiber') as any).props.value).toBe('10');
   });
 
-  it('disables the Apply button when no row is enabled', () => {
+  it('disables Apply when no row is enabled', () => {
     const onApply = jest.fn();
     const { getByTestId } = render(
       <KeepUnderSheet visible onClose={jest.fn()} onApply={onApply} />,
@@ -63,23 +71,69 @@ describe('KeepUnderSheet', () => {
     expect(onApply).not.toHaveBeenCalled();
   });
 
-  it('calls onApply with only the enabled caps', () => {
+  it('emits a max bound when calories row is enabled in default mode', () => {
+    const onApply = jest.fn();
+    const { getByTestId } = render(
+      <KeepUnderSheet visible onClose={jest.fn()} onApply={onApply} />,
+    );
+    fireEvent(getByTestId('keep-under-switch-calories'), 'valueChange', true);
+    fireEvent.press(getByTestId('keep-under-apply'));
+
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply.mock.calls[0][0]).toEqual({ calories: { max: 650 } });
+  });
+
+  it('emits a min bound when protein row is enabled (default mode for protein is min)', () => {
     const onApply = jest.fn();
     const { getByTestId } = render(
       <KeepUnderSheet
         visible
         onClose={jest.fn()}
         onApply={onApply}
-        dailyDefaults={{ calories: 1800, protein: 120, carbs: 200, fat: 60, fiber: 30 }}
+        dailyDefaults={{ protein: 120 }}
       />,
     );
-    // Enable calories + fiber, leave the others off.
+    fireEvent(getByTestId('keep-under-switch-protein'), 'valueChange', true);
+    fireEvent.press(getByTestId('keep-under-apply'));
+    expect(onApply.mock.calls[0][0]).toEqual({ protein: { min: 40 } });
+  });
+
+  it('switches mode from min to max for protein when user taps the ≤ chip', () => {
+    const onApply = jest.fn();
+    const { getByTestId } = render(
+      <KeepUnderSheet
+        visible
+        onClose={jest.fn()}
+        onApply={onApply}
+        dailyDefaults={{ protein: 120 }}
+      />,
+    );
+    fireEvent(getByTestId('keep-under-switch-protein'), 'valueChange', true);
+    fireEvent.press(getByTestId('keep-under-mode-max-protein'));
+    fireEvent.press(getByTestId('keep-under-apply'));
+    expect(onApply.mock.calls[0][0]).toEqual({ protein: { max: 40 } });
+  });
+
+  it('emits multiple bounds when several rows are enabled (mixed min/max)', () => {
+    const onApply = jest.fn();
+    const { getByTestId } = render(
+      <KeepUnderSheet
+        visible
+        onClose={jest.fn()}
+        onApply={onApply}
+        dailyDefaults={{ protein: 120, fiber: 30 }}
+      />,
+    );
     fireEvent(getByTestId('keep-under-switch-calories'), 'valueChange', true);
+    fireEvent(getByTestId('keep-under-switch-protein'), 'valueChange', true);
     fireEvent(getByTestId('keep-under-switch-fiber'), 'valueChange', true);
     fireEvent.press(getByTestId('keep-under-apply'));
 
-    expect(onApply).toHaveBeenCalledTimes(1);
-    expect(onApply.mock.calls[0][0]).toEqual({ calories: 600, fiber: 10 });
+    expect(onApply.mock.calls[0][0]).toEqual({
+      calories: { max: 650 },
+      protein: { min: 40 },
+      fiber: { min: 10 },
+    });
   });
 
   it('uses the latest typed value when the user overrides the default', () => {
@@ -89,23 +143,17 @@ describe('KeepUnderSheet', () => {
         visible
         onClose={jest.fn()}
         onApply={onApply}
-        dailyDefaults={{ calories: 1800 }}
       />,
     );
     fireEvent(getByTestId('keep-under-switch-calories'), 'valueChange', true);
     fireEvent.changeText(getByTestId('keep-under-input-calories'), '450');
     fireEvent.press(getByTestId('keep-under-apply'));
-    expect(onApply.mock.calls[0][0]).toEqual({ calories: 450 });
+    expect(onApply.mock.calls[0][0]).toEqual({ calories: { max: 450 } });
   });
 
   it('strips non-numeric characters from input', () => {
     const { getByTestId } = render(
-      <KeepUnderSheet
-        visible
-        onClose={jest.fn()}
-        onApply={jest.fn()}
-        dailyDefaults={{ calories: 1800 }}
-      />,
+      <KeepUnderSheet visible onClose={jest.fn()} onApply={jest.fn()} />,
     );
     fireEvent(getByTestId('keep-under-switch-calories'), 'valueChange', true);
     fireEvent.changeText(getByTestId('keep-under-input-calories'), '5o0abc');

@@ -18,26 +18,26 @@ import { render, fireEvent } from '@testing-library/react-native';
 import KeepUnderButton from '../../../components/build-a-plate/KeepUnderButton';
 
 describe('KeepUnderButton', () => {
-  it('renders idle state with "Keep under…" label', () => {
+  it('renders idle state with "Tune the plate…" label', () => {
     const { getByTestId, getByText } = render(
       <KeepUnderButton state="idle" onPress={jest.fn()} testID="keep-under-btn" />,
     );
     expect(getByTestId('keep-under-btn')).toBeTruthy();
-    expect(getByText(/Keep under/i)).toBeTruthy();
+    expect(getByText(/Tune the plate/i)).toBeTruthy();
   });
 
-  it('renders "fit" state with the under-caps label', () => {
+  it('renders "fit" state with the within-bounds label', () => {
     const { getByText } = render(
       <KeepUnderButton state="fit" onPress={jest.fn()} testID="keep-under-btn" />,
     );
-    expect(getByText(/Under your caps/i)).toBeTruthy();
+    expect(getByText(/Within bounds/i)).toBeTruthy();
   });
 
-  it('renders "impossible" state with the cannot-stay-under label', () => {
+  it('renders "impossible" state with the cannot-meet-bounds label', () => {
     const { getByText } = render(
       <KeepUnderButton state="impossible" onPress={jest.fn()} testID="keep-under-btn" />,
     );
-    expect(getByText(/Cannot stay under/i)).toBeTruthy();
+    expect(getByText(/Cannot meet bounds/i)).toBeTruthy();
   });
 
   it('shows the loading pulse element when state="loading"', () => {

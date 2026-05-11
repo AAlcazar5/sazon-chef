@@ -44,28 +44,23 @@ export default function QuickSwapButton({
 
   if (!topAlternative) return null;
 
-  const bg = isDark ? 'rgba(255,255,255,0.12)' : '#FFFFFF';
-  const fg = isDark ? '#F9FAFB' : '#1F2937';
-  const subFg = isDark ? '#9CA3AF' : '#6B7280';
+  // Saturated dark sage gives WCAG-AA contrast against every pastel slot
+  // tint (sage / golden / lavender / peach). Circular footprint avoids
+  // overlapping the slot card's macro chips on the right side.
+  const bg = isDark ? '#1F4022' : '#2E5931';
 
   return (
     <Animated.View style={animatedStyle}>
       <HapticTouchableOpacity
         onPress={handlePress}
         hapticStyle="light"
-        pressedScale={0.96}
-        style={[styles.button, { backgroundColor: bg }, Shadows.SM as any]}
+        pressedScale={0.92}
+        style={[styles.button, { backgroundColor: bg }, Shadows.MD as any]}
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={`Swap to ${topAlternative.name}`}
       >
-        <Ionicons name="swap-horizontal" size={14} color={fg} />
-        <View style={styles.textBlock}>
-          <Text style={[styles.eyebrow, { color: subFg }]}>SWAP</Text>
-          <Text style={[styles.name, { color: fg }]} numberOfLines={1}>
-            {topAlternative.name}
-          </Text>
-        </View>
+        <Ionicons name="swap-horizontal" size={20} color="#FFFFFF" />
       </HapticTouchableOpacity>
     </Animated.View>
   );
@@ -73,24 +68,10 @@ export default function QuickSwapButton({
 
 const styles = StyleSheet.create({
   button: {
-    flexDirection: 'row',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 100,
-    maxWidth: 130,
-  },
-  textBlock: {
-    flexShrink: 1,
-  },
-  eyebrow: {
-    fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 8,
-    letterSpacing: 1,
-  },
-  name: {
-    fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 11,
+    justifyContent: 'center',
   },
 });

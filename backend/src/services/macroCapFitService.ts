@@ -1,26 +1,33 @@
 // backend/src/services/macroCapFitService.ts
-// "Keep under" solver — pick the highest-quality plate whose totals stay under
-// every user-supplied cap (any subset of calories / protein / carbs / fat / fiber).
+// "Tune the plate" solver — pick the highest-quality plate whose totals stay
+// within user-supplied bounds (min, max, or both) for any subset of cal / p /
+// c / f / fiber.
 //
-// Sibling of macroAutoFitService.fitPlateToMacros (which targets ±10% of a goal).
-// This one is *upper-bound only* — caps that the user opts in to. When no
-// candidate respects every cap, returns the closest combo with `exceeded`
-// telling the caller which caps are over and by how much.
+// Sibling of macroAutoFitService.fitPlateToMacros (which targets ±10% of a
+// goal). This one is *bounded* — user opts in to upper or lower bounds per
+// macro. Common use:
+//   • protein/fiber → min ("at least 30g protein")
+//   • calories/carbs/fat → max ("under 600 cal")
+// When no candidate respects every bound, returns the closest combo with
+// `outOfBounds` telling the caller which bounds are violated and by how much.
 
 import { prisma } from '../lib/prisma';
 import type { ComponentSlot } from './mealComponentService';
 
-export interface MacroCaps {
-  calories?: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  fiber?: number;
+export type MacroKey = 'calories' | 'protein' | 'carbs' | 'fat' | 'fiber';
+
+export interface MacroBound {
+  /** Lower bound — totals[macro] must be >= min */
+  min?: number;
+  /** Upper bound — totals[macro] must be <= max */
+  max?: number;
 }
 
-export interface CapFitInput {
+export type MacroBounds = Partial<Record<MacroKey, MacroBound>>;
+
+export interface BoundsFitInput {
   userId: string;
-  caps: MacroCaps;
+  bounds: MacroBounds;
   lockedSlots: { slot: ComponentSlot; componentId: string; portionMultiplier: number }[];
   slotsToFill: ComponentSlot[];
 }
@@ -52,22 +59,25 @@ interface ComponentRow {
   imageUrl: string | null;
 }
 
-export interface CapFitFilledSlot {
+export interface BoundsFitFilledSlot {
   slot: ComponentSlot;
   component: ComponentRow;
   portionMultiplier: number;
 }
 
-export interface CapFitResult {
+export type BoundsViolation = { type: 'over' | 'under'; amount: number };
+
+export interface BoundsFitResult {
   achievable: boolean;
-  filled: CapFitFilledSlot[];
+  filled: BoundsFitFilledSlot[];
   totals: PlateTotals;
-  /** Only present when achievable=false. Per-macro overage (positive numbers). */
-  exceeded?: Partial<Record<keyof MacroCaps, number>>;
+  /** Per-macro violation. Only present when achievable=false. */
+  outOfBounds?: Partial<Record<MacroKey, BoundsViolation>>;
 }
 
 const PORTION_MULTIPLIERS = [0.5, 1, 1.5, 2] as const;
 const COMBO_CAP = 1000;
+const MACRO_KEYS: MacroKey[] = ['calories', 'protein', 'carbs', 'fat', 'fiber'];
 
 const computeTotals = (
   entries: { row: ComponentRow; portionMultiplier: number }[],
@@ -98,63 +108,62 @@ const cartesianCapped = <T>(arrays: T[][]): T[][] => {
   return result;
 };
 
-const exceededAmounts = (
+const outOfBoundsAmounts = (
   totals: PlateTotals,
-  caps: MacroCaps,
-): Partial<Record<keyof MacroCaps, number>> => {
-  const out: Partial<Record<keyof MacroCaps, number>> = {};
-  if (caps.calories !== undefined && totals.calories > caps.calories) {
-    out.calories = totals.calories - caps.calories;
-  }
-  if (caps.protein !== undefined && totals.protein > caps.protein) {
-    out.protein = totals.protein - caps.protein;
-  }
-  if (caps.carbs !== undefined && totals.carbs > caps.carbs) {
-    out.carbs = totals.carbs - caps.carbs;
-  }
-  if (caps.fat !== undefined && totals.fat > caps.fat) {
-    out.fat = totals.fat - caps.fat;
-  }
-  if (caps.fiber !== undefined && totals.fiber > caps.fiber) {
-    out.fiber = totals.fiber - caps.fiber;
+  bounds: MacroBounds,
+): Partial<Record<MacroKey, BoundsViolation>> => {
+  const out: Partial<Record<MacroKey, BoundsViolation>> = {};
+  for (const k of MACRO_KEYS) {
+    const b = bounds[k];
+    if (!b) continue;
+    const v = totals[k];
+    if (b.max !== undefined && v > b.max) {
+      out[k] = { type: 'over', amount: v - b.max };
+    } else if (b.min !== undefined && v < b.min) {
+      out[k] = { type: 'under', amount: b.min - v };
+    }
   }
   return out;
 };
 
-const respectsCaps = (totals: PlateTotals, caps: MacroCaps): boolean =>
-  Object.keys(exceededAmounts(totals, caps)).length === 0;
+const respectsBounds = (totals: PlateTotals, bounds: MacroBounds): boolean =>
+  Object.keys(outOfBoundsAmounts(totals, bounds)).length === 0;
 
 /**
- * Total normalized overage — sum of (overage / cap) for each violated cap.
- * Used to rank "closest" combos when no candidate respects every cap.
+ * Total normalized out-of-bounds — sum of (violation / reference) for each
+ * violated bound. Reference is the violated bound (max if over, min if under).
+ * Used to rank "closest" combos when no candidate respects every bound.
  */
-const totalOverageRatio = (totals: PlateTotals, caps: MacroCaps): number => {
-  const exceeded = exceededAmounts(totals, caps);
+const totalOutOfBoundsRatio = (totals: PlateTotals, bounds: MacroBounds): number => {
+  const violations = outOfBoundsAmounts(totals, bounds);
   let sum = 0;
-  if (exceeded.calories !== undefined && caps.calories) sum += exceeded.calories / caps.calories;
-  if (exceeded.protein !== undefined && caps.protein) sum += exceeded.protein / caps.protein;
-  if (exceeded.carbs !== undefined && caps.carbs) sum += exceeded.carbs / caps.carbs;
-  if (exceeded.fat !== undefined && caps.fat) sum += exceeded.fat / caps.fat;
-  if (exceeded.fiber !== undefined && caps.fiber) sum += exceeded.fiber / caps.fiber;
+  for (const k of MACRO_KEYS) {
+    const v = violations[k];
+    if (!v) continue;
+    const b = bounds[k]!;
+    const ref = v.type === 'over' ? b.max! : b.min!;
+    sum += v.amount / Math.max(ref, 1);
+  }
   return sum;
 };
 
 /**
  * Quality score for a respecting combo — higher = better.
  * Favors more protein + more fiber per calorie (the persona's "real food, lots
- * of nutrient density" preference). Tie-breaks on cal headroom utilization.
+ * of nutrient density" preference). When a calorie max is set, also rewards
+ * utilizing the headroom (don't return microscopic plates).
  */
-const qualityScore = (totals: PlateTotals, caps: MacroCaps): number => {
+const qualityScore = (totals: PlateTotals, bounds: MacroBounds): number => {
   const calForDensity = Math.max(totals.calories, 1);
   const proteinDensity = totals.protein / calForDensity;
   const fiberDensity = totals.fiber / calForDensity;
-  // Favor utilizing the calorie headroom (don't return microscopic plates).
-  const headroomUse = caps.calories ? totals.calories / caps.calories : 0.5;
+  const calMax = bounds.calories?.max;
+  const headroomUse = calMax ? totals.calories / calMax : 0.5;
   return proteinDensity * 100 + fiberDensity * 50 + headroomUse * 5;
 };
 
-export const fitPlateUnderCaps = async (input: CapFitInput): Promise<CapFitResult> => {
-  const { userId, caps, lockedSlots, slotsToFill } = input;
+export const fitPlateWithinBounds = async (input: BoundsFitInput): Promise<BoundsFitResult> => {
+  const { userId, bounds, lockedSlots, slotsToFill } = input;
 
   const lockedIds = lockedSlots.map((s) => s.componentId);
   const lockedRows =
@@ -184,17 +193,22 @@ export const fitPlateUnderCaps = async (input: CapFitInput): Promise<CapFitResul
 
   const lockedTotals = computeTotals(lockedEntries);
 
-  if (slotsToFill.length === 0) {
+  const buildLockedOnly = (): BoundsFitResult => {
+    const respects = respectsBounds(lockedTotals, bounds);
     return {
-      achievable: respectsCaps(lockedTotals, caps),
+      achievable: respects,
       filled: lockedEntries.map(({ slot, portionMultiplier, row }) => ({
         slot,
         component: row,
         portionMultiplier,
       })),
       totals: lockedTotals,
-      exceeded: respectsCaps(lockedTotals, caps) ? undefined : exceededAmounts(lockedTotals, caps),
+      outOfBounds: respects ? undefined : outOfBoundsAmounts(lockedTotals, bounds),
     };
+  };
+
+  if (slotsToFill.length === 0) {
+    return buildLockedOnly();
   }
 
   const candidatesBySlot = await Promise.all(
@@ -205,18 +219,8 @@ export const fitPlateUnderCaps = async (input: CapFitInput): Promise<CapFitResul
     ),
   );
 
-  // If any slot has zero candidates, return the locked-only state.
   if (candidatesBySlot.some((arr) => arr.length === 0)) {
-    return {
-      achievable: respectsCaps(lockedTotals, caps),
-      filled: lockedEntries.map(({ slot, portionMultiplier, row }) => ({
-        slot,
-        component: row,
-        portionMultiplier,
-      })),
-      totals: lockedTotals,
-      exceeded: respectsCaps(lockedTotals, caps) ? undefined : exceededAmounts(lockedTotals, caps),
-    };
+    return buildLockedOnly();
   }
 
   const combos = cartesianCapped(candidatesBySlot);
@@ -224,7 +228,7 @@ export const fitPlateUnderCaps = async (input: CapFitInput): Promise<CapFitResul
   let bestRespectingScore = -Infinity;
   let bestRespecting: { combo: ComponentRow[]; portions: number[]; totals: PlateTotals } | null = null;
 
-  let bestOverageRatio = Infinity;
+  let bestOutOfBoundsRatio = Infinity;
   let bestOverage: { combo: ComponentRow[]; portions: number[]; totals: PlateTotals } | null = null;
 
   for (const combo of combos) {
@@ -239,23 +243,23 @@ export const fitPlateUnderCaps = async (input: CapFitInput): Promise<CapFitResul
         fiber: lockedTotals.fiber + fillTotals.fiber,
       };
 
-      if (respectsCaps(totals, caps)) {
-        const score = qualityScore(totals, caps);
+      if (respectsBounds(totals, bounds)) {
+        const score = qualityScore(totals, bounds);
         if (score > bestRespectingScore) {
           bestRespectingScore = score;
           bestRespecting = { combo, portions: portionSet, totals };
         }
       } else {
-        const ratio = totalOverageRatio(totals, caps);
-        if (ratio < bestOverageRatio) {
-          bestOverageRatio = ratio;
+        const ratio = totalOutOfBoundsRatio(totals, bounds);
+        if (ratio < bestOutOfBoundsRatio) {
+          bestOutOfBoundsRatio = ratio;
           bestOverage = { combo, portions: portionSet, totals };
         }
       }
     }
   }
 
-  const buildFilled = (combo: ComponentRow[], portions: number[]): CapFitFilledSlot[] => [
+  const buildFilled = (combo: ComponentRow[], portions: number[]): BoundsFitFilledSlot[] => [
     ...lockedEntries.map(({ slot, portionMultiplier, row }) => ({
       slot,
       component: row,
@@ -281,19 +285,9 @@ export const fitPlateUnderCaps = async (input: CapFitInput): Promise<CapFitResul
       achievable: false,
       filled: buildFilled(bestOverage.combo, bestOverage.portions),
       totals: bestOverage.totals,
-      exceeded: exceededAmounts(bestOverage.totals, caps),
+      outOfBounds: outOfBoundsAmounts(bestOverage.totals, bounds),
     };
   }
 
-  // Truly nothing — return locked-only state.
-  return {
-    achievable: respectsCaps(lockedTotals, caps),
-    filled: lockedEntries.map(({ slot, portionMultiplier, row }) => ({
-      slot,
-      component: row,
-      portionMultiplier,
-    })),
-    totals: lockedTotals,
-    exceeded: respectsCaps(lockedTotals, caps) ? undefined : exceededAmounts(lockedTotals, caps),
-  };
+  return buildLockedOnly();
 };

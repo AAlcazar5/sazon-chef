@@ -36,7 +36,7 @@ composedPlateRoutes.get('/of-the-week', optionalAuth, mealComponentController.pl
 composedPlateRoutes.get('/weekly-summary', authenticateToken, mealComponentController.getWeeklyPlateSummary);
 composedPlateRoutes.post('/', authenticateToken, mealComponentController.createPlate);
 composedPlateRoutes.post('/auto-fit', authenticateToken, mealComponentController.autoFit);
-composedPlateRoutes.post('/keep-under', authenticateToken, mealComponentController.keepUnder);
+composedPlateRoutes.post('/within-bounds', authenticateToken, mealComponentController.withinBounds);
 composedPlateRoutes.post('/from-utterance', authenticateToken, mealComponentController.fromUtterance);
 composedPlateRoutes.post('/family', authenticateToken, mealComponentController.createFamilyMeal);
 composedPlateRoutes.post('/diverge', authenticateToken, mealComponentController.divergeFromBase);

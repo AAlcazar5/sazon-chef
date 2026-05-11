@@ -17,7 +17,7 @@ import {
 import { solveCookTimeline, ComponentTask } from '../../services/cookTimelineService';
 import { getTopComponentsForSlot, recordAffinityEvent } from '../../services/slotAffinityService';
 import { fitPlateToMacros } from '../../services/macroAutoFitService';
-import { fitPlateUnderCaps } from '../../services/macroCapFitService';
+import { fitPlateWithinBounds } from '../../services/macroCapFitService';
 import {
   addLeftoversFromPlate,
   consumeLeftoversForPlate,
@@ -105,24 +105,36 @@ const autoFitBodySchema = z.object({
   slotsToFill: z.array(slotEnum).max(5),
 });
 
-// "Keep under" caps — every field optional, at least one required. Caps are
-// upper bounds (the solver rejects combos that exceed any specified cap).
-const keepUnderBodySchema = z
+// "Tune the plate" bounds — each macro can have a min, max, or both. At least
+// one bound must be specified. The solver rejects combos that violate any
+// supplied bound and returns the closest combo when none respect them all.
+const macroBoundSchema = z
   .object({
-    caps: z
-      .object({
-        calories: z.number().positive().optional(),
-        protein: z.number().nonnegative().optional(),
-        carbs: z.number().nonnegative().optional(),
-        fat: z.number().nonnegative().optional(),
-        fiber: z.number().nonnegative().optional(),
-      })
-      .refine((c) => Object.values(c).some((v) => typeof v === 'number'), {
-        message: 'At least one cap must be specified',
-      }),
-    lockedSlots: z.array(lockedSlotWithMultiplierSchema).max(5),
-    slotsToFill: z.array(slotEnum).max(5),
+    min: z.number().nonnegative().optional(),
+    max: z.number().nonnegative().optional(),
+  })
+  .refine((b) => b.min !== undefined || b.max !== undefined, {
+    message: 'Each macro bound must specify at least min or max',
+  })
+  .refine((b) => b.min === undefined || b.max === undefined || b.min <= b.max, {
+    message: 'min must be <= max',
   });
+
+const withinBoundsBodySchema = z.object({
+  bounds: z
+    .object({
+      calories: macroBoundSchema.optional(),
+      protein:  macroBoundSchema.optional(),
+      carbs:    macroBoundSchema.optional(),
+      fat:      macroBoundSchema.optional(),
+      fiber:    macroBoundSchema.optional(),
+    })
+    .refine((b) => Object.values(b).some((v) => v !== undefined), {
+      message: 'At least one macro bound must be specified',
+    }),
+  lockedSlots: z.array(lockedSlotWithMultiplierSchema).max(5),
+  slotsToFill: z.array(slotEnum).max(5),
+});
 
 const leftoverInputSchema = z.object({
   componentId: z.string().min(1).max(128),
@@ -441,12 +453,12 @@ export const mealComponentController = {
     }
   },
 
-  async keepUnder(req: Request, res: Response) {
+  async withinBounds(req: Request, res: Response) {
     if (!isAuthenticated(req)) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const parsed = keepUnderBodySchema.safeParse(req.body);
+    const parsed = withinBoundsBodySchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
         error: 'Invalid request body',
@@ -456,9 +468,9 @@ export const mealComponentController = {
 
     try {
       const userId = getUserId(req);
-      const result = await fitPlateUnderCaps({
+      const result = await fitPlateWithinBounds({
         userId,
-        caps: parsed.data.caps,
+        bounds: parsed.data.bounds,
         lockedSlots: parsed.data.lockedSlots,
         slotsToFill: parsed.data.slotsToFill,
       });
@@ -468,8 +480,8 @@ export const mealComponentController = {
       if (/not found or not owned/i.test(message)) {
         return res.status(400).json({ error: message });
       }
-      logger.error({ err: error }, 'Error running keep-under solver:');
-      return res.status(500).json({ error: 'Failed to compute keep-under fit' });
+      logger.error({ err: error }, 'Error running within-bounds solver:');
+      return res.status(500).json({ error: 'Failed to compute within-bounds fit' });
     }
   },
 

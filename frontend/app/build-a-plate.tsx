@@ -50,7 +50,7 @@ import {
   type LeftoverInventoryItem,
   type ComponentVariantResponse,
   type TrackedNutrient,
-  type KeepUnderCaps,
+  type MacroBounds,
 } from '../lib/api';
 import type { ComponentVariant } from '../components/build-a-plate';
 import { Pastel, Accent } from '../constants/Colors';
@@ -547,7 +547,7 @@ export default function BuildAPlateScreen() {
   }, []);
 
   const handleKeepUnderApply = useCallback(
-    async (caps: KeepUnderCaps) => {
+    async (bounds: MacroBounds) => {
       setKeepUnderSheetOpen(false);
       setKeepUnderState('loading');
       try {
@@ -564,7 +564,7 @@ export default function BuildAPlateScreen() {
         const slotsToFill = requiredSlotsForTier.filter(
           (s) => !composer.locks[s] || !composer.selections[s],
         );
-        const res = await composedPlateApi.keepUnder({ caps, lockedSlots, slotsToFill });
+        const res = await composedPlateApi.withinBounds({ bounds, lockedSlots, slotsToFill });
         const result = res.data?.result;
         if (!result || result.filled.length === 0) {
           setKeepUnderState('impossible');
@@ -660,13 +660,6 @@ export default function BuildAPlateScreen() {
             />
           </View>
           <View style={styles.headerPillSlot}>
-            <BudgetToggle
-              active={budgetMode}
-              onToggle={handleBudgetToggle}
-              testID="budget-toggle"
-            />
-          </View>
-          <View style={styles.headerPillSlot}>
             <FewSmallThingsMode
               active={fewSmallThingsActive}
               slotCount={fewSmallThingsActive ? 5 : 3}
@@ -697,11 +690,16 @@ export default function BuildAPlateScreen() {
             testID="technique-banner"
           />
 
-          <View style={styles.pantryToggleWrap}>
+          <View style={styles.toggleRow}>
             <PantryOnlyToggle
               active={composer.pantryOnly}
               onToggle={composer.togglePantryOnly}
               testID="pantry-only-toggle"
+            />
+            <BudgetToggle
+              active={budgetMode}
+              onToggle={handleBudgetToggle}
+              testID="budget-toggle"
             />
           </View>
 
@@ -986,6 +984,15 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   pantryToggleWrap: {
+    marginBottom: 16,
+  },
+  // Pair PantryOnly + Budget toggles on the same row — both are on/off pills
+  // and reading them side-by-side reinforces "lifestyle filters" semantics.
+  toggleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 16,
   },
   garnishCta: {

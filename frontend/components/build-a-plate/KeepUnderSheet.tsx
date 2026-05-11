@@ -1,34 +1,47 @@
 // frontend/components/build-a-plate/KeepUnderSheet.tsx
-// "Keep under" cap picker — 5 toggleable rows (calories, protein, carbs, fat,
-// fiber). Each row has an enable switch + a numeric value. Defaults pulled
-// from the user's daily macro goals divided by 3 (one meal vs daily).
+// "Tune the plate" — min/max bounds picker. Each row has:
+//   • enable switch
+//   • mode toggle (≤ max  /  ≥ min)
+//   • numeric value
+// Defaults:
+//   • calories → 650, max mode (user override of the 1/3-daily rule)
+//   • carbs / fat → 1/3 daily, max mode
+//   • protein / fiber → 1/3 daily, min mode (typical "at least" use)
 //
-// On Apply, fires the `onApply(caps)` callback with only the enabled fields.
+// On Apply, fires `onApply(bounds)` with each enabled row turned into either
+// `{ min: value }` or `{ max: value }` depending on its mode.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, Switch, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Switch, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '../ui/BottomSheet';
 import BrandButton from '../ui/BrandButton';
 import { Pastel, Accent } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { useTheme } from '../../contexts/ThemeContext';
-import type { KeepUnderCaps } from '../../lib/api';
+import type { MacroBounds, MacroKey } from '../../lib/api';
+
+type BoundMode = 'max' | 'min';
 
 interface RowConfig {
-  key: keyof KeepUnderCaps;
+  key: MacroKey;
   label: string;
   unit: string;
   icon: keyof typeof Ionicons.glyphMap;
+  defaultMode: BoundMode;
 }
 
 const ROWS: RowConfig[] = [
-  { key: 'calories', label: 'Calories', unit: 'kcal', icon: 'flame-outline' },
-  { key: 'protein',  label: 'Protein',  unit: 'g',    icon: 'barbell-outline' },
-  { key: 'carbs',    label: 'Carbs',    unit: 'g',    icon: 'leaf-outline' },
-  { key: 'fat',      label: 'Fat',      unit: 'g',    icon: 'water-outline' },
-  { key: 'fiber',    label: 'Fiber',    unit: 'g',    icon: 'nutrition-outline' },
+  { key: 'calories', label: 'Calories', unit: 'kcal', icon: 'flame-outline',     defaultMode: 'max' },
+  { key: 'protein',  label: 'Protein',  unit: 'g',    icon: 'barbell-outline',   defaultMode: 'min' },
+  { key: 'carbs',    label: 'Carbs',    unit: 'g',    icon: 'leaf-outline',      defaultMode: 'max' },
+  { key: 'fat',      label: 'Fat',      unit: 'g',    icon: 'water-outline',     defaultMode: 'max' },
+  { key: 'fiber',    label: 'Fiber',    unit: 'g',    icon: 'nutrition-outline', defaultMode: 'min' },
 ];
+
+// Calorie default is fixed regardless of the user's daily macro target — this
+// is a per-meal ceiling that maps to the persona's "real food, lighter" intent.
+const CALORIES_DEFAULT_VALUE = 650;
 
 export interface DailyMacroDefaults {
   calories?: number;
@@ -41,19 +54,21 @@ export interface DailyMacroDefaults {
 interface KeepUnderSheetProps {
   visible: boolean;
   onClose: () => void;
-  onApply: (caps: KeepUnderCaps) => void;
-  /** Daily macro goals — divided by `mealFraction` to seed per-meal defaults. */
+  onApply: (bounds: MacroBounds) => void;
+  /** Daily macro goals — divided by `mealFraction` to seed per-meal defaults.
+   *  Calories are NOT seeded from this — they always default to 650. */
   dailyDefaults?: DailyMacroDefaults | null;
   /** Fraction of daily goal to seed (default 1/3 for ~one meal). */
   mealFraction?: number;
 }
 
-type RowState = { enabled: boolean; value: string };
+interface RowState {
+  enabled: boolean;
+  mode: BoundMode;
+  value: string;
+}
 
-const computeDefault = (
-  daily: number | undefined,
-  fraction: number,
-): string => {
+const computeDefault = (daily: number | undefined, fraction: number): string => {
   if (typeof daily !== 'number' || daily <= 0) return '';
   return Math.round(daily * fraction).toString();
 };
@@ -68,26 +83,24 @@ export default function KeepUnderSheet({
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const initialRows = useMemo<Record<keyof KeepUnderCaps, RowState>>(
+  const initialRows = useMemo<Record<MacroKey, RowState>>(
     () => ({
-      calories: { enabled: false, value: computeDefault(dailyDefaults?.calories, mealFraction) },
-      protein:  { enabled: false, value: computeDefault(dailyDefaults?.protein,  mealFraction) },
-      carbs:    { enabled: false, value: computeDefault(dailyDefaults?.carbs,    mealFraction) },
-      fat:      { enabled: false, value: computeDefault(dailyDefaults?.fat,      mealFraction) },
-      fiber:    { enabled: false, value: computeDefault(dailyDefaults?.fiber,    mealFraction) },
+      calories: { enabled: false, mode: 'max', value: String(CALORIES_DEFAULT_VALUE) },
+      protein:  { enabled: false, mode: 'min', value: computeDefault(dailyDefaults?.protein, mealFraction) },
+      carbs:    { enabled: false, mode: 'max', value: computeDefault(dailyDefaults?.carbs,   mealFraction) },
+      fat:      { enabled: false, mode: 'max', value: computeDefault(dailyDefaults?.fat,     mealFraction) },
+      fiber:    { enabled: false, mode: 'min', value: computeDefault(dailyDefaults?.fiber,   mealFraction) },
     }),
     [dailyDefaults, mealFraction],
   );
 
   const [rows, setRows] = useState(initialRows);
 
-  // Reset to defaults whenever the sheet opens — prevents stale values from
-  // a previous session when the user reopens after dismissing.
   useEffect(() => {
     if (visible) setRows(initialRows);
   }, [visible, initialRows]);
 
-  const setRow = useCallback((key: keyof KeepUnderCaps, patch: Partial<RowState>) => {
+  const setRow = useCallback((key: MacroKey, patch: Partial<RowState>) => {
     setRows((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
   }, []);
 
@@ -97,16 +110,16 @@ export default function KeepUnderSheet({
   );
 
   const handleApply = useCallback(() => {
-    const caps: KeepUnderCaps = {};
-    (Object.keys(rows) as (keyof KeepUnderCaps)[]).forEach((k) => {
+    const bounds: MacroBounds = {};
+    (Object.keys(rows) as MacroKey[]).forEach((k) => {
       const row = rows[k];
       const n = Number(row.value);
       if (row.enabled && Number.isFinite(n) && n > 0) {
-        caps[k] = n;
+        bounds[k] = row.mode === 'max' ? { max: n } : { min: n };
       }
     });
-    if (Object.keys(caps).length === 0) return;
-    onApply(caps);
+    if (Object.keys(bounds).length === 0) return;
+    onApply(bounds);
   }, [rows, onApply]);
 
   const accent = Accent.sky;
@@ -114,14 +127,18 @@ export default function KeepUnderSheet({
   const inkSecondary = isDark ? '#A8B2BD' : '#5A4534';
   const inputBg = isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF';
   const inputBorder = isDark ? 'rgba(255,255,255,0.12)' : Pastel.sky;
+  const modeChipActiveBg = accent;
+  const modeChipInactiveBg = isDark ? 'rgba(255,255,255,0.06)' : Pastel.sky;
+  const modeChipActiveFg = '#FFFFFF';
+  const modeChipInactiveFg = isDark ? '#A8CCEB' : '#1F4F7A';
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} snapPoints={['62%']}>
+    <BottomSheet visible={visible} onClose={onClose} snapPoints={['68%']}>
       <View style={styles.container} testID="keep-under-sheet">
-        <Text style={[styles.eyebrow, { color: accent }]}>SET YOUR CEILINGS</Text>
-        <Text style={[styles.title, { color: inkPrimary }]}>Keep this plate under…</Text>
+        <Text style={[styles.eyebrow, { color: accent }]}>SET YOUR BOUNDS</Text>
+        <Text style={[styles.title, { color: inkPrimary }]}>Tune this plate</Text>
         <Text style={[styles.subtitle, { color: inkSecondary }]}>
-          Pick any combination — Sazon will balance the rest within them.
+          Pin any macro — pick a max ceiling or an "at least" floor.
         </Text>
 
         <View style={styles.rows}>
@@ -141,6 +158,41 @@ export default function KeepUnderSheet({
                 </View>
 
                 <View style={styles.rowRight}>
+                  <View style={styles.modeToggle} testID={`keep-under-mode-${key}`}>
+                    <Pressable
+                      onPress={() => setRow(key, { mode: 'max' })}
+                      disabled={!row.enabled}
+                      accessibilityLabel={`${label} max mode`}
+                      accessibilityState={{ selected: row.mode === 'max' }}
+                      testID={`keep-under-mode-max-${key}`}
+                      style={[
+                        styles.modeChip,
+                        {
+                          backgroundColor: row.mode === 'max' ? modeChipActiveBg : modeChipInactiveBg,
+                          opacity: row.enabled ? 1 : 0.5,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.modeChipText, { color: row.mode === 'max' ? modeChipActiveFg : modeChipInactiveFg }]}>≤</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setRow(key, { mode: 'min' })}
+                      disabled={!row.enabled}
+                      accessibilityLabel={`${label} min mode`}
+                      accessibilityState={{ selected: row.mode === 'min' }}
+                      testID={`keep-under-mode-min-${key}`}
+                      style={[
+                        styles.modeChip,
+                        {
+                          backgroundColor: row.mode === 'min' ? modeChipActiveBg : modeChipInactiveBg,
+                          opacity: row.enabled ? 1 : 0.5,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.modeChipText, { color: row.mode === 'min' ? modeChipActiveFg : modeChipInactiveFg }]}>≥</Text>
+                    </Pressable>
+                  </View>
+
                   <TextInput
                     value={row.value}
                     onChangeText={(t) => setRow(key, { value: t.replace(/[^\d.]/g, '') })}
@@ -148,7 +200,7 @@ export default function KeepUnderSheet({
                     placeholderTextColor={inkSecondary}
                     keyboardType="decimal-pad"
                     editable={row.enabled}
-                    accessibilityLabel={`${label} cap value in ${unit}`}
+                    accessibilityLabel={`${label} ${row.mode === 'max' ? 'max' : 'min'} value in ${unit}`}
                     testID={`keep-under-input-${key}`}
                     style={[
                       styles.input,
@@ -164,7 +216,7 @@ export default function KeepUnderSheet({
                   <Switch
                     value={row.enabled}
                     onValueChange={(enabled) => setRow(key, { enabled })}
-                    accessibilityLabel={`Enable ${label} cap`}
+                    accessibilityLabel={`Enable ${label} bound`}
                     testID={`keep-under-switch-${key}`}
                     trackColor={{ false: '#D1D5DB', true: accent }}
                     thumbColor="#FFFFFF"
@@ -246,11 +298,26 @@ const styles = StyleSheet.create({
   rowRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  modeChip: {
+    width: 22,
+    height: 26,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeChipText: {
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontSize: 14,
   },
   input: {
-    width: 64,
-    paddingHorizontal: 10,
+    width: 56,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
@@ -261,7 +328,7 @@ const styles = StyleSheet.create({
   unit: {
     fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 12,
-    width: 30,
+    width: 28,
   },
   actions: {
     marginTop: 4,

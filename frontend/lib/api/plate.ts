@@ -108,35 +108,44 @@ export interface AutoFitResult {
   gap?: { calories: number; protein: number };
 }
 
-// "Keep under" — upper-bound caps on any subset of macros (cal/p/c/f/fiber).
-// At least one cap must be specified; the solver returns the highest-quality
-// plate whose totals stay under every cap.
-export interface KeepUnderCaps {
-  calories?: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  fiber?: number;
+// "Tune the plate" — min/max bounds on any subset of macros (cal/p/c/f/fiber).
+// At least one bound must be specified. The solver returns the highest-quality
+// plate whose totals stay within every bound (or the closest combo when no
+// candidate respects all of them).
+export type MacroKey = 'calories' | 'protein' | 'carbs' | 'fat' | 'fiber';
+
+export interface MacroBound {
+  /** Lower bound — totals[macro] must be >= min */
+  min?: number;
+  /** Upper bound — totals[macro] must be <= max */
+  max?: number;
 }
 
-export interface KeepUnderBody {
-  caps: KeepUnderCaps;
+export type MacroBounds = Partial<Record<MacroKey, MacroBound>>;
+
+export interface MacroBoundsBody {
+  bounds: MacroBounds;
   lockedSlots: AutoFitLockedSlot[];
   slotsToFill: MealComponentSlot[];
 }
 
-export interface KeepUnderFilledSlot {
+export interface MacroBoundsFilledSlot {
   slot: MealComponentSlot;
   component: MealComponent;
   portionMultiplier: number;
 }
 
-export interface KeepUnderResult {
+export interface BoundsViolation {
+  type: 'over' | 'under';
+  amount: number;
+}
+
+export interface MacroBoundsResult {
   achievable: boolean;
-  filled: KeepUnderFilledSlot[];
+  filled: MacroBoundsFilledSlot[];
   totals: { calories: number; protein: number; carbs: number; fat: number; fiber: number };
-  /** Per-macro overage (positive numbers). Only present when achievable=false. */
-  exceeded?: Partial<Record<keyof KeepUnderCaps, number>>;
+  /** Per-macro violation. Only present when achievable=false. */
+  outOfBounds?: Partial<Record<MacroKey, BoundsViolation>>;
 }
 
 export const mealComponentApi = {
@@ -308,8 +317,8 @@ export const composedPlateApi = {
   autoFit: (body: AutoFitBody) =>
     apiClient.post<{ result: AutoFitResult }>('/composed-plates/auto-fit', body),
 
-  keepUnder: (body: KeepUnderBody) =>
-    apiClient.post<{ result: KeepUnderResult }>('/composed-plates/keep-under', body),
+  withinBounds: (body: MacroBoundsBody) =>
+    apiClient.post<{ result: MacroBoundsResult }>('/composed-plates/within-bounds', body),
 
   fetchOfTheWeek: () =>
     apiClient.get<{ plate: PlateOfTheWeek | null }>('/composed-plates/of-the-week'),
