@@ -7,6 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../../utils/logger';
+import { recordPrivacyAudit } from '@/services/privacy/privacyAuditLog';
 import {
   computeCookingStats,
   computeSkillProgress,
@@ -1196,8 +1197,14 @@ export const userController = {
    * mobile clients can save it via the share sheet.
    */
   async exportData(req: Request, res: Response) {
+    const userId = getUserId(req);
+    recordPrivacyAudit({
+      event: 'data_export.requested',
+      userId,
+      ip: req.ip,
+      ua: req.headers['user-agent'],
+    });
     try {
-      const userId = getUserId(req);
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -1278,9 +1285,21 @@ export const userController = {
         'Content-Disposition',
         `attachment; filename="sazon-data-${userId}-${Date.now()}.json"`,
       );
+      recordPrivacyAudit({
+        event: 'data_export.succeeded',
+        userId,
+        ip: req.ip,
+        summary: { keys: Object.keys(payload.user).length },
+      });
       res.json(payload);
     } catch (error) {
       logger.error({ err: error }, 'Export data error:');
+      recordPrivacyAudit({
+        event: 'data_export.failed',
+        userId,
+        ip: req.ip,
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
       res.status(500).json({ error: 'Failed to export account data' });
     }
   },
@@ -1303,8 +1322,14 @@ export const userController = {
    * retention agreement (no manual deletion required).
    */
   async deleteAccount(req: Request, res: Response) {
+    const userId = getUserId(req);
+    recordPrivacyAudit({
+      event: 'account.delete.requested',
+      userId,
+      ip: req.ip,
+      ua: req.headers['user-agent'],
+    });
     try {
-      const userId = getUserId(req);
       const { confirm } = req.body ?? {};
 
       if (confirm !== 'DELETE') {
@@ -1336,14 +1361,50 @@ export const userController = {
         // Non-fatal — the row still gets deleted.
       }
 
-      // Cascade delete via Prisma. Every child relation declares
-      // onDelete: Cascade (verified at schema level), so this single
-      // call drops every owned row across the schema.
+      // Q10 — manual purge for the 8 orphan tables that carry `userId`
+      // but have no `user User @relation(...)` line in schema.prisma.
+      // Without this loop, deleteAccount leaves PII rows behind in those
+      // tables (GDPR right-to-erasure violation). Tracked in the paired
+      // privacyCompliance.test.ts ORPHAN_NO_RELATION_KNOWN list — when
+      // the schema migration adds the proper relation, the corresponding
+      // line here can be removed.
+      const orphanPurgeOps: Array<() => Promise<unknown>> = [
+        () => (prisma as any).adaptiveNotificationLog.deleteMany({ where: { userId } }),
+        () => (prisma as any).dailyCheckIn.deleteMany({ where: { userId } }),
+        () => (prisma as any).mergeDismissal.deleteMany({ where: { userId } }),
+        () => (prisma as any).missingIngredient.deleteMany({ where: { userId } }),
+        () => (prisma as any).nutritionCoverageSnapshot.deleteMany({ where: { userId } }),
+        () => (prisma as any).surfaceEvent.deleteMany({ where: { userId } }),
+        () => (prisma as any).userCuisineAdjacencyWeight.deleteMany({ where: { userId } }),
+        () => (prisma as any).userSignalSnapshot.deleteMany({ where: { userId } }),
+      ];
+      for (const op of orphanPurgeOps) {
+        try {
+          await op();
+        } catch (err) {
+          logger.warn({ err, userId }, 'privacy.orphanPurge.error');
+        }
+      }
+
+      // Cascade delete via Prisma. Every child relation that DOES declare
+      // onDelete: Cascade drops in this single call. Orphan-table rows
+      // were already purged above.
       await prisma.user.delete({ where: { id: userId } });
 
+      recordPrivacyAudit({
+        event: 'account.delete.succeeded',
+        userId,
+        ip: req.ip,
+      });
       res.json({ success: true, deletedAt: new Date().toISOString() });
     } catch (error) {
       logger.error({ err: error }, 'Delete account error:');
+      recordPrivacyAudit({
+        event: 'account.delete.failed',
+        userId,
+        ip: req.ip,
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
       res.status(500).json({ error: 'Failed to delete account' });
     }
   },
