@@ -172,16 +172,36 @@ export default function HomeScreen() {
   // Main content scroll ref (used for scroll-to-top on mascot press)
   const mainScrollRef = useRef<ScrollView>(null);
 
-  // ── ROADMAP 4.0 A1-c — Today rotating discovery tip (deterministic daily pick) ──
-  const dailyDiscoveryTip = useMemo(() => {
-    if (!FOOD_INTEL_TIPS || FOOD_INTEL_TIPS.length === 0) return null;
+  // ── ROADMAP 4.0 A1-c — Today rotating discovery tip ──
+  // Cold-start seed = deterministic day-of-year pick so first visit each
+  // day is consistent. After mount, each pull-to-refresh advances to a
+  // new random tip (avoiding immediate repeat), so the discovery /
+  // pairing recommendation feels fresh on every refresh.
+  const [discoveryTipIndex, setDiscoveryTipIndex] = useState<number>(() => {
+    if (!FOOD_INTEL_TIPS || FOOD_INTEL_TIPS.length === 0) return 0;
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 0);
     const diff = now.getTime() - start.getTime();
     const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const idx = dayOfYear % FOOD_INTEL_TIPS.length;
-    const t = FOOD_INTEL_TIPS[idx];
+    return dayOfYear % FOOD_INTEL_TIPS.length;
+  });
+
+  const dailyDiscoveryTip = useMemo(() => {
+    if (!FOOD_INTEL_TIPS || FOOD_INTEL_TIPS.length === 0) return null;
+    const t = FOOD_INTEL_TIPS[discoveryTipIndex];
+    if (!t) return null;
     return { id: t.id, category: t.category, title: t.title, body: t.body };
+  }, [discoveryTipIndex]);
+
+  const cycleDiscoveryTip = useCallback(() => {
+    if (!FOOD_INTEL_TIPS || FOOD_INTEL_TIPS.length <= 1) return;
+    setDiscoveryTipIndex((prev) => {
+      // Pick a random new index, avoiding repeat-of-previous so two
+      // consecutive refreshes always show different tips.
+      let next = Math.floor(Math.random() * FOOD_INTEL_TIPS.length);
+      if (next === prev) next = (prev + 1) % FOOD_INTEL_TIPS.length;
+      return next;
+    });
   }, []);
 
   const handleDiscoveryTipPress = useCallback((tipId: string) => {
@@ -697,6 +717,10 @@ export default function HomeScreen() {
     setRefreshing(true);
     setInitialRecipesLoaded(false); // Reset flag to allow reloading
     setCurrentPage(0);
+
+    // Rotate the discovery / pairing recommendation on each pull-to-refresh
+    // so the user sees a new tip every time. Cycle is local (no API call).
+    cycleDiscoveryTip();
 
     const filterParams = {
       page: 0,
