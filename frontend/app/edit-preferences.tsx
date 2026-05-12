@@ -1,10 +1,8 @@
-import { View, Text, TextInput, Alert, ScrollView, Animated } from 'react-native';
+import { View, Text, TextInput, Alert, Animated } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
-import ScreenGradient from '../components/ui/ScreenGradient';
+import EditScreenShell from '../components/edit/EditScreenShell';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useColorScheme } from 'nativewind';
 import { userApi } from '../lib/api';
@@ -246,52 +244,20 @@ export default function EditPreferencesScreen() {
 
   if (loadingData) {
     return (
-      <ScreenGradient>
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="settings-outline" size={56} color={sub} />
-            <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading preferences…</Text>
-          </View>
-        </SafeAreaView>
-      </ScreenGradient>
+      <EditScreenShell title="Culinary Preferences" noScroll>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="settings-outline" size={56} color={sub} />
+          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading preferences…</Text>
+        </View>
+      </EditScreenShell>
     );
   }
 
   return (
-    <ScreenGradient>
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <KeyboardAvoidingContainer>
-        {/* Header */}
-        <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <HapticTouchableOpacity
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="arrow-back" size={24} color={label} />
-          </HapticTouchableOpacity>
-          <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: label }}>Culinary Preferences</Text>
-          <HapticTouchableOpacity
-            onPress={handleSave}
-            disabled={loading}
-            accessibilityRole="button"
-            accessibilityLabel={loading ? 'Saving preferences' : 'Save preferences'}
-            accessibilityState={{ disabled: loading, busy: loading }}
-            style={{ padding: 4 }}
-          >
-            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_600SemiBold', color: loading ? sub : primaryColor }}>
-              {loading ? 'Saving…' : 'Save'}
-            </Text>
-          </HapticTouchableOpacity>
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+    <EditScreenShell
+      title="Culinary Preferences"
+      rightAction={{ label: 'Save', onPress: handleSave, loading, disabled: loading }}
+    >
           {/* ── Cuisine Preferences ─────────────────────────────────────────── */}
           <View style={{ backgroundColor: cardBg, borderRadius: 14, padding: 16, marginBottom: 14, ...Shadows.SM }}>
             <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: label, marginBottom: 4 }}>Favorite Cuisines</Text>
@@ -578,9 +544,6 @@ export default function EditPreferencesScreen() {
               </View>
             </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingContainer>
-    </SafeAreaView>
-    </ScreenGradient>
+    </EditScreenShell>
   );
 }

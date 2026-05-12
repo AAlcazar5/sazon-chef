@@ -1,17 +1,15 @@
 // frontend/app/edit-budget.tsx
+// Budget settings screen
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import BrandButton from '../components/ui/BrandButton';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
-import ScreenGradient from '../components/ui/ScreenGradient';
+import EditScreenShell from '../components/edit/EditScreenShell';
 import BudgetInputRow from '../components/budget/BudgetInputRow';
-// Budget settings screen
 
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, Alert } from 'react-native';
 import LoadingState from '../components/ui/LoadingState';
 import { useState, useEffect } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { costTrackingApi } from '../lib/api';
 import { BudgetSettings } from '../types';
 import * as Haptics from 'expo-haptics';
@@ -24,6 +22,8 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: '£',
   CAD: '$',
 };
+
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD'] as const;
 
 export default function EditBudgetScreen() {
   const { colorScheme } = useColorScheme();
@@ -48,7 +48,6 @@ export default function EditBudgetScreen() {
       setBudget(response.data);
     } catch (error: any) {
       console.error('Error loading budget:', error);
-      // Continue with defaults if error
     } finally {
       setLoading(false);
     }
@@ -57,9 +56,7 @@ export default function EditBudgetScreen() {
   const handleSave = async () => {
     try {
       setSaving(true);
-
       await costTrackingApi.updateBudget(budget);
-      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Budget settings saved!', [
         { text: 'OK', onPress: () => router.back() },
@@ -75,125 +72,101 @@ export default function EditBudgetScreen() {
 
   if (loading) {
     return (
-      <ScreenGradient>
-        <SafeAreaView className="flex-1 items-center justify-center" edges={['top']}>
+      <EditScreenShell title="Budget Settings" noScroll>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <LoadingState message="Loading your budget..." expression="thinking" />
-        </SafeAreaView>
-      </ScreenGradient>
+        </View>
+      </EditScreenShell>
     );
   }
 
+  const symbol = CURRENCY_SYMBOLS[budget.currency] ?? '$';
+
   return (
-    <ScreenGradient>
-    <SafeAreaView className="flex-1" edges={['top']}>
-      <KeyboardAvoidingContainer>
-      {/* Header */}
-      <View className="px-4 py-4" style={{
-        backgroundColor: isDark ? DarkColors.card : '#FFFFFF',
+    <EditScreenShell title="Budget Settings">
+      {/* Info Banner */}
+      <View className="p-4 rounded-2xl mb-6" style={{
+        backgroundColor: isDark ? `${Colors.secondaryRedLight}1A` : Colors.secondaryRedDark,
       }}>
-        <View className="flex-row items-center">
-          <HapticTouchableOpacity onPress={() => router.back()} className="mr-4">
-            <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.primary : Colors.text.primary} />
-          </HapticTouchableOpacity>
-          <Text className="text-2xl font-bold" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Budget Settings</Text>
+        <View className="flex-row items-start">
+          <Ionicons name="information-circle" size={24} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} />
+          <View className="ml-3 flex-1">
+            <Text className="font-semibold mb-1" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>Budget-Based Recommendations</Text>
+            <Text className="text-sm" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
+              Set your budget limits to filter recipes and get personalized recommendations that fit your budget.
+            </Text>
+          </View>
         </View>
       </View>
 
-      <ScrollView className="flex-1">
-        <View className="p-4">
-          {/* Info Banner */}
-          <View className="p-4 rounded-lg mb-6 border" style={{
-            backgroundColor: isDark ? `${Colors.secondaryRedLight}1A` : Colors.secondaryRedDark,
-            borderColor: isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark,
-          }}>
-            <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={24} color={isDark ? DarkColors.secondaryRed : '#FFFFFF'} />
-              <View className="ml-3 flex-1">
-                <Text className="font-semibold mb-1" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>Budget-Based Recommendations</Text>
-                <Text className="text-sm" style={{ color: isDark ? DarkColors.secondaryRed : '#FFFFFF' }}>
-                  Set your budget limits to filter recipes and get personalized recommendations that fit your budget.
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Currency Selection */}
-          <View className="mb-6">
-            <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Currency</Text>
-            <View className="flex-row space-x-2">
-              {['USD', 'EUR', 'GBP', 'CAD'].map((currency) => {
-                const isSelected = budget.currency === currency;
-                return (
-                  <HapticTouchableOpacity
-                    key={currency}
-                    onPress={() => setBudget({ ...budget, currency })}
-                    className="px-4 py-2 rounded-lg border-2"
-                    style={{
-                      backgroundColor: isSelected 
-                        ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark)
-                        : (isDark ? '#1F2937' : '#FFFFFF'),
-                      borderColor: isSelected 
-                        ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark)
-                        : (isDark ? DarkColors.border.light : Colors.border.light),
-                    }}
-                  >
-                    <Text className="font-semibold" style={{ 
-                      color: isSelected 
-                        ? 'white' 
-                        : (isDark ? DarkColors.text.primary : Colors.text.primary)
-                    }}>
-                      {currency}
-                    </Text>
-                  </HapticTouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {(() => {
-            const symbol = CURRENCY_SYMBOLS[budget.currency] ?? '$';
+      {/* Currency Selection */}
+      <View className="mb-6">
+        <Text className="text-lg font-semibold mb-2" style={{ color: isDark ? DarkColors.text.primary : Colors.text.primary }}>Currency</Text>
+        <View className="flex-row space-x-2">
+          {CURRENCIES.map((currency) => {
+            const isSelected = budget.currency === currency;
             return (
-              <>
-                <BudgetInputRow
-                  title={`Max Recipe Cost (${budget.currency})`}
-                  description="Maximum cost for a single recipe. Recipes exceeding this will be filtered out."
-                  currencySymbol={symbol}
-                  value={budget.maxRecipeCost}
-                  onChange={(v) => setBudget({ ...budget, maxRecipeCost: v })}
-                  isDark={isDark}
-                />
-                <BudgetInputRow
-                  title={`Max Meal Cost (${budget.currency})`}
-                  description="Maximum cost per meal. Useful for meal planning."
-                  currencySymbol={symbol}
-                  value={budget.maxMealCost}
-                  onChange={(v) => setBudget({ ...budget, maxMealCost: v })}
-                  isDark={isDark}
-                />
-                <BudgetInputRow
-                  title={`Daily Food Budget (${budget.currency})`}
-                  description="Maximum daily food spending. Helps track overall food costs."
-                  currencySymbol={symbol}
-                  value={budget.maxDailyFoodBudget}
-                  onChange={(v) => setBudget({ ...budget, maxDailyFoodBudget: v })}
-                  isDark={isDark}
-                />
-              </>
+              <HapticTouchableOpacity
+                key={currency}
+                onPress={() => setBudget({ ...budget, currency })}
+                accessibilityRole="button"
+                accessibilityLabel={`Set currency to ${currency}`}
+                accessibilityState={{ selected: isSelected }}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 100,
+                  backgroundColor: isSelected
+                    ? (isDark ? DarkColors.secondaryRed : Colors.secondaryRedDark)
+                    : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.8)'),
+                }}
+              >
+                <Text className="font-semibold" style={{
+                  color: isSelected
+                    ? 'white'
+                    : (isDark ? DarkColors.text.primary : Colors.text.primary),
+                }}>
+                  {currency}
+                </Text>
+              </HapticTouchableOpacity>
             );
-          })()}
-
-          {/* Save Button */}
-          <BrandButton
-            label="Save Budget Settings"
-            onPress={handleSave}
-            loading={saving}
-            disabled={saving}
-          />
+          })}
         </View>
-      </ScrollView>
-      </KeyboardAvoidingContainer>
-    </SafeAreaView>
-    </ScreenGradient>
+      </View>
+
+      <BudgetInputRow
+        title={`Max Recipe Cost (${budget.currency})`}
+        description="Maximum cost for a single recipe. Recipes exceeding this will be filtered out."
+        currencySymbol={symbol}
+        value={budget.maxRecipeCost}
+        onChange={(v) => setBudget({ ...budget, maxRecipeCost: v })}
+        isDark={isDark}
+      />
+      <BudgetInputRow
+        title={`Max Meal Cost (${budget.currency})`}
+        description="Maximum cost per meal. Useful for meal planning."
+        currencySymbol={symbol}
+        value={budget.maxMealCost}
+        onChange={(v) => setBudget({ ...budget, maxMealCost: v })}
+        isDark={isDark}
+      />
+      <BudgetInputRow
+        title={`Daily Food Budget (${budget.currency})`}
+        description="Maximum daily food spending. Helps track overall food costs."
+        currencySymbol={symbol}
+        value={budget.maxDailyFoodBudget}
+        onChange={(v) => setBudget({ ...budget, maxDailyFoodBudget: v })}
+        isDark={isDark}
+      />
+
+      {/* Save Button */}
+      <BrandButton
+        label="Save Budget Settings"
+        onPress={handleSave}
+        loading={saving}
+        disabled={saving}
+      />
+    </EditScreenShell>
   );
 }
 

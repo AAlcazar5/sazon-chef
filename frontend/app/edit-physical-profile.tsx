@@ -1,15 +1,12 @@
 import { View, Text, TextInput, Alert, StyleSheet } from 'react-native';
-import Animated from 'react-native-reanimated';
 import LoadingState from '../components/ui/LoadingState';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
-import ScreenGradient from '../components/ui/ScreenGradient';
+import EditScreenShell from '../components/edit/EditScreenShell';
 import BrandButton from '../components/ui/BrandButton';
 import { Brand } from '../constants/tokens';
 import HealthDisclaimer from '../components/legal/HealthDisclaimer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { userApi } from '../lib/api';
 import * as Haptics from 'expo-haptics';
@@ -194,13 +191,11 @@ export default function EditPhysicalProfileScreen() {
 
   if (loadingData) {
     return (
-      <ScreenGradient>
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <LoadingState message="Loading your profile..." expression="happy" />
-          </View>
-        </SafeAreaView>
-      </ScreenGradient>
+      <EditScreenShell title="Physical Profile" noScroll>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <LoadingState message="Loading your profile..." expression="happy" />
+        </View>
+      </EditScreenShell>
     );
   }
 
@@ -209,25 +204,7 @@ export default function EditPhysicalProfileScreen() {
   const placeholderColor = isDark ? DarkColors.text.tertiary : Colors.text.tertiary;
 
   return (
-    <ScreenGradient>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <KeyboardAvoidingContainer>
-          {/* Header */}
-          <View style={styles.header}>
-            <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 8 }} accessibilityLabel="Go back">
-              <Ionicons name="arrow-back" size={24} color={isDark ? DarkColors.text.primary : Colors.text.primary} />
-            </HapticTouchableOpacity>
-            <Text style={[styles.headerTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>
-              Physical Profile
-            </Text>
-            <View style={{ width: 40 }} />
-          </View>
-
-          <Animated.ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
+    <EditScreenShell title="Physical Profile">
             {/* ── Gender ── */}
             <View style={[styles.section, { backgroundColor: isDark ? PastelDark.lavender : Pastel.lavender }, Shadows.SM as any]}>
               <Text style={[styles.sectionEmoji]}>👤</Text>
@@ -521,25 +498,11 @@ export default function EditPhysicalProfileScreen() {
                 icon="checkmark-circle-outline"
               />
             </View>
-          </Animated.ScrollView>
-        </KeyboardAvoidingContainer>
-      </SafeAreaView>
-    </ScreenGradient>
+    </EditScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontSize: FontSize.xl,
-    fontFamily: 'PlusJakartaSans_700Bold',
-  },
   section: {
     borderRadius: 20,
     padding: 16,

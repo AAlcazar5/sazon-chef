@@ -8,12 +8,10 @@ import {
   Dimensions,
 } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
-import ScreenGradient from '../components/ui/ScreenGradient';
+import EditScreenShell from '../components/edit/EditScreenShell';
 import HealthDisclaimer from '../components/legal/HealthDisclaimer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { userApi } from '../lib/api';
 import type { MacroCalculations } from '../types';
@@ -265,46 +263,25 @@ export default function EditMacroGoalsScreen() {
   const label = isDark ? DarkColors.text.primary : Colors.text.primary;
   const sub = isDark ? '#9CA3AF' : '#6B7280';
   const inputBg = isDark ? '#374151' : '#F3F4F6';
-  const primaryColor = isDark ? Brand.dark.base : Brand.light.base;
 
   if (loadingData) {
     return (
-      <ScreenGradient>
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="fitness-outline" size={56} color={sub} />
-            <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading…</Text>
-          </View>
-        </SafeAreaView>
-      </ScreenGradient>
+      <EditScreenShell title="Macro Goals" noScroll>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="fitness-outline" size={56} color={sub} />
+          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading…</Text>
+        </View>
+      </EditScreenShell>
     );
   }
 
   const activeGoalData = EATING_GOALS.find(g => g.id === selectedGoal) ?? EATING_GOALS[0];
 
   return (
-    <ScreenGradient>
-    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <KeyboardAvoidingContainer>
-        {/* Header */}
-        <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <HapticTouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
-            <Ionicons name="arrow-back" size={24} color={label} />
-          </HapticTouchableOpacity>
-          <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: label }}>Macro Goals</Text>
-          <HapticTouchableOpacity onPress={handleSave} disabled={saving} style={{ padding: 4 }}>
-            <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_600SemiBold', color: saving ? sub : primaryColor }}>
-              {saving ? 'Saving…' : 'Save'}
-            </Text>
-          </HapticTouchableOpacity>
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+    <EditScreenShell
+      title="Macro Goals"
+      rightAction={{ label: 'Save', onPress: handleSave, loading: saving, disabled: saving }}
+    >
           <View style={{ marginBottom: 12 }}>
             <HealthDisclaimer eventKey="macro_goal_first_change" />
           </View>
@@ -462,9 +439,6 @@ export default function EditMacroGoalsScreen() {
               ))}
             </View>
           </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingContainer>
-    </SafeAreaView>
-    </ScreenGradient>
+    </EditScreenShell>
   );
 }

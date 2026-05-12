@@ -1,24 +1,19 @@
 // frontend/app/weight-input.tsx
+// Log weight entry — uses EditScreenShell for chrome consistency.
+
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Alert,
-  ScrollView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, Alert, Platform } from 'react-native';
 import LoadingState from '../components/ui/LoadingState';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import BrandButton from '../components/ui/BrandButton';
-import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
-import ScreenGradient from '../components/ui/ScreenGradient';
+import EditScreenShell from '../components/edit/EditScreenShell';
+import { Brand, Ink, Radius, Surface } from '../constants/tokens';
+import { Shadows } from '../constants/Shadows';
+import { Spacing } from '../constants/Spacing';
 import { apiClient } from '../lib/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useColorScheme } from 'nativewind';
@@ -33,25 +28,20 @@ export default function WeightInputScreen() {
   const [unit, setUnit] = useState<'kg' | 'lbs'>('lbs');
   const [loadingProfile, setLoadingProfile] = useState(true);
   const router = useRouter();
-  const { theme } = useTheme();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  // Load user's preferred unit from physical profile
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
         const response = await apiClient.get('/user/physical-profile');
-        // Infer unit from height/weight data (if heightCm is set, they probably use metric)
         const profile = response.data;
         if (profile && profile.heightCm) {
-          // If height is in cm, assume metric user
           setUnit('kg');
         } else {
           setUnit('lbs');
         }
       } catch (error) {
-        // Default to lbs if no profile
         setUnit('lbs');
       } finally {
         setLoadingProfile(false);
@@ -77,7 +67,6 @@ export default function WeightInputScreen() {
       return;
     }
 
-    // Convert to kg if needed (API expects kg)
     const weightInKg = unit === 'lbs' ? weightValue * 0.453592 : weightValue;
 
     setLoading(true);
@@ -92,12 +81,7 @@ export default function WeightInputScreen() {
       Alert.alert(
         'Success',
         'Weight logged successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back()
-          }
-        ]
+        [{ text: 'OK', onPress: () => router.back() }],
       );
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -107,12 +91,12 @@ export default function WeightInputScreen() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (d: Date) => {
+    return d.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
@@ -126,153 +110,176 @@ export default function WeightInputScreen() {
     );
   }
 
+  const inkPrimary = isDark ? Ink.dark.primary : Ink.light.primary;
+  const inkSecondary = isDark ? Ink.dark.secondary : Ink.light.secondary;
+  const inkTertiary = isDark ? Ink.dark.tertiary : Ink.light.tertiary;
+  const inputBg = isDark ? Surface.dark.raised : Surface.light.base;
+  const brandColor = isDark ? Brand.dark.base : Brand.light.base;
+
+  const labelStyle = { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: inkPrimary, marginBottom: 8 };
+  const fieldShadow = Shadows.SM;
+
   return (
-    <ScreenGradient>
-    <SafeAreaView className="flex-1" edges={['top']}>
-      <KeyboardAvoidingContainer>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
-          keyboardShouldPersistTaps="handled"
-        >
-        <View className="w-full max-w-md self-center">
-          {/* Back button */}
+    <EditScreenShell title="Log Weight">
+      <View style={{ width: '100%', maxWidth: 400, alignSelf: 'center' }}>
+        <Text style={{ fontSize: 15, color: inkSecondary, textAlign: 'center', marginBottom: Spacing.xl }}>
+          Track your weight progress
+        </Text>
+
+        {/* Date Picker */}
+        <View style={{ marginBottom: Spacing.lg + 4 }}>
+          <Text style={labelStyle}>Date</Text>
           <HapticTouchableOpacity
-            onPress={() => router.back()}
-            className="mb-4"
+            onPress={() => setShowDatePicker(true)}
             disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel={`Date: ${formatDate(date)}`}
           >
-            <View className="flex-row items-center">
-              <Ionicons name="arrow-back" size={24} color={theme === 'dark' ? '#fff' : '#000'} />
-              <Text className="ml-2 text-base text-gray-900 dark:text-gray-100">Back</Text>
+            <View style={[{
+              borderRadius: Radius.input,
+              paddingHorizontal: 12,
+              paddingVertical: 14,
+              backgroundColor: inputBg,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }, fieldShadow]}>
+              <Text style={{ fontSize: 16, color: inkPrimary }}>{formatDate(date)}</Text>
+              <Ionicons name="calendar-outline" size={20} color={inkTertiary} />
             </View>
           </HapticTouchableOpacity>
+        </View>
 
-          <Text className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2 text-center">
-            Log Weight
-          </Text>
-          <Text className="text-base text-gray-600 dark:text-gray-200 mb-8 text-center">
-            Track your weight progress
-          </Text>
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              if (selectedDate) {
+                setDate(selectedDate);
+              }
+            }}
+            maximumDate={new Date()}
+          />
+        )}
 
-          <View className="w-full">
-            {/* Date Picker */}
-            <View className="mb-5">
-              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Date</Text>
+        {/* Weight Input */}
+        <View style={{ marginBottom: Spacing.lg + 4 }}>
+          <Text style={labelStyle}>Weight ({unit})</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ShakeAnimation shake={shakeWeight}>
+              <TextInput
+                style={[{
+                  flex: 1,
+                  borderRadius: Radius.input,
+                  paddingHorizontal: 12,
+                  paddingVertical: 14,
+                  fontSize: 16,
+                  backgroundColor: inputBg,
+                  color: inkPrimary,
+                  minWidth: 200,
+                }, fieldShadow]}
+                placeholder={`Enter weight in ${unit}`}
+                placeholderTextColor={inkTertiary}
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="decimal-pad"
+                editable={!loading}
+                accessibilityLabel="Weight"
+              />
+            </ShakeAnimation>
+
+            {/* Unit Toggle */}
+            <View style={[{ flexDirection: 'row', borderRadius: Radius.input, overflow: 'hidden' }, fieldShadow]}>
               <HapticTouchableOpacity
-                onPress={() => setShowDatePicker(true)}
+                onPress={() => setUnit('lbs')}
                 disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Use pounds"
+                accessibilityState={{ selected: unit === 'lbs' }}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 14,
+                  backgroundColor: unit === 'lbs' ? brandColor : inputBg,
+                }}
               >
-                <View className=" rounded-lg px-3 py-3 bg-white dark:bg-gray-800 flex-row items-center justify-between">
-                  <Text className="text-base text-gray-900 dark:text-gray-100">
-                    {formatDate(date)}
-                  </Text>
-                  <Ionicons name="calendar-outline" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
-                </View>
+                <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: unit === 'lbs' ? Brand.light.ink : inkPrimary }}>
+                  lbs
+                </Text>
+              </HapticTouchableOpacity>
+              <HapticTouchableOpacity
+                onPress={() => setUnit('kg')}
+                disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Use kilograms"
+                accessibilityState={{ selected: unit === 'kg' }}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 14,
+                  backgroundColor: unit === 'kg' ? brandColor : inputBg,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: unit === 'kg' ? Brand.light.ink : inkPrimary }}>
+                  kg
+                </Text>
               </HapticTouchableOpacity>
             </View>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(Platform.OS === 'ios');
-                  if (selectedDate) {
-                    setDate(selectedDate);
-                  }
-                }}
-                maximumDate={new Date()}
-              />
-            )}
-
-            {/* Weight Input */}
-            <View className="mb-5">
-              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Weight ({unit})
-              </Text>
-              <View className="flex-row items-center" style={{ gap: 8 }}>
-                <ShakeAnimation shake={shakeWeight}>
-                  <TextInput
-                    className="flex-1  rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    placeholder={`Enter weight in ${unit}`}
-                    placeholderTextColor="#9CA3AF"
-                    value={weight}
-                    onChangeText={setWeight}
-                    keyboardType="decimal-pad"
-                    editable={!loading}
-                  />
-                </ShakeAnimation>
-
-                {/* Unit Toggle */}
-                <View className="flex-row  rounded-lg overflow-hidden">
-                  <HapticTouchableOpacity
-                    onPress={() => setUnit('lbs')}
-                    disabled={loading}
-                    className={`px-3 py-3 ${unit === 'lbs' ? 'bg-red-600 dark:bg-red-400' : 'bg-white dark:bg-gray-800'}`}
-                  >
-                    <Text className={`text-sm font-semibold ${unit === 'lbs' ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
-                      lbs
-                    </Text>
-                  </HapticTouchableOpacity>
-                  <HapticTouchableOpacity
-                    onPress={() => setUnit('kg')}
-                    disabled={loading}
-                    className={`px-3 py-3 ${unit === 'kg' ? 'bg-red-600 dark:bg-red-400' : 'bg-white dark:bg-gray-800'}`}
-                  >
-                    <Text className={`text-sm font-semibold ${unit === 'kg' ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
-                      kg
-                    </Text>
-                  </HapticTouchableOpacity>
-                </View>
-              </View>
-              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {unit === 'lbs' ? '1 lb = 0.45 kg' : '1 kg = 2.2 lbs'}
-              </Text>
-            </View>
-
-            {/* Notes (Optional) */}
-            <View className="mb-5">
-              <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Notes (Optional)
-              </Text>
-              <TextInput
-                className=" rounded-lg px-3 py-3 text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                placeholder="Add notes (e.g., morning weigh-in, after workout)"
-                placeholderTextColor="#9CA3AF"
-                value={notes}
-                onChangeText={setNotes}
-                multiline
-                numberOfLines={3}
-                editable={!loading}
-              />
-            </View>
-
-            {/* Save Button */}
-            <BrandButton
-              label="Save Weight"
-              onPress={handleSave}
-              loading={loading}
-              disabled={loading}
-              variant="sage"
-              style={{ marginTop: 8 }}
-            />
-
-            {/* Cancel Button */}
-            <HapticTouchableOpacity
-              className="mt-4"
-              onPress={() => router.back()}
-              disabled={loading}
-            >
-              <Text className="text-center text-gray-600 dark:text-gray-200 text-sm">
-                Cancel
-              </Text>
-            </HapticTouchableOpacity>
           </View>
+          <Text style={{ fontSize: 11, color: inkTertiary, marginTop: 6 }}>
+            {unit === 'lbs' ? '1 lb = 0.45 kg' : '1 kg = 2.2 lbs'}
+          </Text>
         </View>
-      </ScrollView>
-      </KeyboardAvoidingContainer>
-    </SafeAreaView>
-    </ScreenGradient>
+
+        {/* Notes (Optional) */}
+        <View style={{ marginBottom: Spacing.lg + 4 }}>
+          <Text style={labelStyle}>Notes (Optional)</Text>
+          <TextInput
+            style={[{
+              borderRadius: Radius.input,
+              paddingHorizontal: 12,
+              paddingVertical: 14,
+              fontSize: 16,
+              backgroundColor: inputBg,
+              color: inkPrimary,
+              minHeight: 80,
+              textAlignVertical: 'top',
+            }, fieldShadow]}
+            placeholder="Add notes (e.g., morning weigh-in, after workout)"
+            placeholderTextColor={inkTertiary}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            numberOfLines={3}
+            editable={!loading}
+            accessibilityLabel="Notes (optional)"
+          />
+        </View>
+
+        {/* Save Button */}
+        <BrandButton
+          label="Save Weight"
+          onPress={handleSave}
+          loading={loading}
+          disabled={loading}
+          variant="sage"
+          style={{ marginTop: 8 }}
+        />
+
+        {/* Cancel Button */}
+        <HapticTouchableOpacity
+          onPress={() => router.back()}
+          disabled={loading}
+          accessibilityRole="link"
+          accessibilityLabel="Cancel"
+          style={{ marginTop: Spacing.lg }}
+        >
+          <Text style={{ textAlign: 'center', color: inkSecondary, fontSize: 14 }}>
+            Cancel
+          </Text>
+        </HapticTouchableOpacity>
+      </View>
+    </EditScreenShell>
   );
 }
