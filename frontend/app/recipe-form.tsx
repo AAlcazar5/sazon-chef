@@ -1,6 +1,8 @@
 import { View, Text, ScrollView, TextInput, Alert, Modal, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import BrandButton from '../components/ui/BrandButton';
+import CollectionPickerModal from '../components/home/CollectionPickerModal';
+import AIQuickStartCard from '../components/recipe/AIQuickStartCard';
 import { Brand } from '../constants/tokens';
 import PulsingLoader from '../components/ui/PulsingLoader';
 import AIDescriptionAssist, { type GeneratedRecipeShape } from '../components/recipe/AIDescriptionAssist';
@@ -123,13 +125,6 @@ export default function RecipeFormScreen() {
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
 
-  // Animation values for collection picker modal
-  const pickerScale = useRef(new Animated.Value(0)).current;
-  const pickerOpacity = useRef(new Animated.Value(0)).current;
-
-  // Animation values for AI generation button
-  const generateButtonScale = useRef(new Animated.Value(1)).current;
-  const generateButtonOpacity = useRef(new Animated.Value(1)).current;
 
   // Section pills
   const SECTION_LABELS = ['Details', 'Ingredients', 'Instructions', 'Notes'] as const;
@@ -146,37 +141,6 @@ export default function RecipeFormScreen() {
     outputRange: [0, 500],
   });
 
-  // Animate collection picker modal
-  useEffect(() => {
-    if (pickerVisible) {
-      pickerScale.setValue(0);
-      pickerOpacity.setValue(0);
-      Animated.parallel([
-        Animated.spring(pickerScale, {
-          toValue: 1,
-          ...Spring.stiff,
-        }),
-        Animated.timing(pickerOpacity, {
-          toValue: 1,
-          duration: Duration.medium,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(pickerScale, {
-          toValue: 0,
-          duration: Duration.normal,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pickerOpacity, {
-          toValue: 0,
-          duration: Duration.normal,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [pickerVisible]);
 
   // Animate nutrition section expansion (spring for natural feel)
   useEffect(() => {
@@ -351,46 +315,6 @@ export default function RecipeFormScreen() {
     setInstructions(updated);
   };
 
-  // Animate AI generation button
-  useEffect(() => {
-    if (generatingAI) {
-      // Expanding pulse effect when generating
-      Animated.loop(
-        Animated.sequence([
-          Animated.parallel([
-            Animated.spring(generateButtonScale, {
-              toValue: 1.02,
-              friction: 4,
-              tension: 50,
-              useNativeDriver: true,
-            }),
-            Animated.timing(generateButtonOpacity, {
-              toValue: 0.9,
-              duration: 800,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.spring(generateButtonScale, {
-              toValue: 1,
-              friction: 4,
-              tension: 50,
-              useNativeDriver: true,
-            }),
-            Animated.timing(generateButtonOpacity, {
-              toValue: 1,
-              duration: 800,
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      ).start();
-    } else {
-      // Reset to normal state
-      generateButtonScale.setValue(1);
-      generateButtonOpacity.setValue(1);
-    }
-  }, [generatingAI]);
 
   const handleGenerateRandomRecipe = async () => {
     try {
@@ -731,64 +655,12 @@ export default function RecipeFormScreen() {
       >
         {/* Generate Recipe Button — Hero Card (only in create mode) */}
         {!isEditMode && (
-          <Animated.View
-            style={{
-              transform: [{ scale: generateButtonScale }],
-              opacity: generateButtonOpacity,
-              marginBottom: 16,
-              borderRadius: 16,
-              ...Shadows.MD,
-            }}
-          >
-            <LinearGradient
-              colors={isDark ? ['#7C3AED', '#DB2777'] : [Brand.light.base, '#EF4444']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ borderRadius: 16, padding: 16 }}
-            >
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="sparkles" size={18} color="white" style={{ marginRight: 6 }} />
-                <Text style={{ color: 'white', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', opacity: 0.9 }}>Quick Start</Text>
-              </View>
-              <HapticTouchableOpacity
-                onPress={handleGenerateRandomRecipe}
-                disabled={generatingAI}
-                hapticStyle="medium"
-                accessibilityRole="button"
-                accessibilityLabel={
-                  generatingAI
-                    ? `Generating ${title.trim() || 'random'} recipe`
-                    : `Generate ${title.trim() || 'a random'} recipe`
-                }
-                accessibilityState={{ disabled: generatingAI, busy: generatingAI }}
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  borderRadius: 12,
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {generatingAI ? (
-                  <>
-                    <PulsingLoader size={16} color="white" />
-                    <Text className="text-white font-semibold ml-3">
-                      {title.trim() ? `Generating "${title.trim()}" Recipe...` : 'Generating Random Recipe...'}
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Ionicons name="flash" size={20} color="white" style={{ marginRight: 8 }} />
-                    <Text style={{ color: 'white', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>
-                      {title.trim() ? `Generate "${title.trim()}" Recipe` : 'Generate Random Recipe'}
-                    </Text>
-                  </>
-                )}
-              </HapticTouchableOpacity>
-            </LinearGradient>
-          </Animated.View>
+          <AIQuickStartCard
+            title={title}
+            generating={generatingAI}
+            isDark={isDark}
+            onPress={handleGenerateRandomRecipe}
+          />
         )}
 
         {/* ── Details ──────────────────────────────────────────── */}
@@ -1303,87 +1175,24 @@ export default function RecipeFormScreen() {
       </ScrollView>
       
       {/* Collection Picker Modal */}
-      <Modal
+      <CollectionPickerModal
         visible={pickerVisible}
-        animationType="none"
-        transparent
-        onRequestClose={() => setPickerVisible(false)}
-      >
-        <Animated.View 
-          className="flex-1 bg-black/40 justify-center items-center px-4"
-          style={{ opacity: pickerOpacity }}
-        >
-          <Animated.View 
-            className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4 w-full max-w-sm max-h-[70%]`}
-            style={{
-              transform: [{ scale: pickerScale }],
-            }}
-          >
-            <Text className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-3`}>Select Collections</Text>
-            <ScrollView className="mb-3">
-              {collections.map((c) => (
-                <HapticTouchableOpacity
-                  key={c.id}
-                  onPress={() => {
-                    setSelectedCollectionIds(prev =>
-                      prev.includes(c.id)
-                        ? prev.filter(id => id !== c.id)
-                        : [...prev, c.id]
-                    );
-                  }}
-                  accessibilityRole="checkbox"
-                  accessibilityLabel={c.name}
-                  accessibilityState={{ checked: selectedCollectionIds.includes(c.id) }}
-                  className={`flex-row items-center py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}
-                >
-                  <View className={`w-5 h-5 mr-3 rounded border ${selectedCollectionIds.includes(c.id) ? 'bg-red-600 dark:bg-red-400 border-red-600 dark:border-red-400' : (isDark ? 'border-gray-600' : 'border-gray-300')}`}>
-                    {selectedCollectionIds.includes(c.id) && (
-                      <Ionicons name="checkmark" size={14} color="white" style={{ position: 'absolute', top: 1, left: 1 }} />
-                    )}
-                  </View>
-                  <Text className={`${isDark ? 'text-gray-100' : 'text-gray-900'} flex-1`}>{c.name}</Text>
-                </HapticTouchableOpacity>
-              ))}
-              {creatingCollection ? (
-                <View className="flex-row items-center py-3">
-                  <TextInput
-                    value={newCollectionName}
-                    onChangeText={setNewCollectionName}
-                    placeholder="New collection name"
-                    className={`flex-1 border ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-300'} rounded-lg px-3 py-2 mr-2`}
-                    placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
-                  />
-                  <BrandButton
-                    label="Create"
-                    onPress={handleCreateCollection}
-                    variant="brand"
-                    style={{ paddingVertical: 0, minWidth: 70 }}
-                  />
-                </View>
-              ) : (
-                <HapticTouchableOpacity
-                  onPress={() => setCreatingCollection(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Create new collection"
-                  className="py-3"
-                >
-                  <Text className="text-red-600 dark:text-red-400 font-medium">+ Create new collection</Text>
-                </HapticTouchableOpacity>
-              )}
-            </ScrollView>
-            <View className="flex-row justify-end space-x-3">
-              <HapticTouchableOpacity
-                onPress={() => setPickerVisible(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Done selecting collections"
-                className="px-4 py-3"
-              >
-                <Text className={isDark ? 'text-gray-300' : 'text-gray-700'}>Done</Text>
-              </HapticTouchableOpacity>
-            </View>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
+        collections={collections}
+        selectedCollectionIds={selectedCollectionIds}
+        creatingCollection={creatingCollection}
+        newCollectionName={newCollectionName}
+        isDark={isDark}
+        onClose={() => setPickerVisible(false)}
+        onToggleCollection={(id) =>
+          setSelectedCollectionIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+          )
+        }
+        onStartCreating={() => setCreatingCollection(true)}
+        onChangeNewName={setNewCollectionName}
+        onCreateCollection={handleCreateCollection}
+        onSave={() => setPickerVisible(false)}
+      />
 
       {/* Recipe Generation Success Modal */}
       <SuccessModal

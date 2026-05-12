@@ -4,6 +4,15 @@ import { Alert } from 'react-native';
 import RecipeFormScreen from '../../app/recipe-form';
 import { recipeApi, collectionsApi } from '../../lib/api';
 
+// CollectionPickerModal renders inside a @gorhom BottomSheet which requires
+// BottomSheetModalProvider in the tree. Tests render RecipeFormScreen
+// directly, so stub BottomSheet to a plain pass-through when visible.
+jest.mock('../../components/ui/BottomSheet', () => ({
+  __esModule: true,
+  default: (props: { visible?: boolean; children?: React.ReactNode }) =>
+    props.visible ? props.children : null,
+}));
+
 // Mock the API - must include all imports the component uses
 jest.mock('../../lib/api', () => ({
   recipeApi: {

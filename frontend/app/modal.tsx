@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, Animated, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Alert, Share, Platform, Modal, TextInput, StyleSheet } from 'react-native';
 import { getLocale } from '../lib/i18n';
-import ReAnimated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation, withSpring, runOnJS } from 'react-native-reanimated';
+import ReAnimated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { MotiView } from 'moti';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +13,8 @@ import BottomSheet from '../components/ui/BottomSheet';
 import LogoMascot from '../components/mascot/LogoMascot';
 import Sazon from '../components/mascot/Sazon';
 import MealPrepScalingModal from '../components/recipe/MealPrepScalingModal';
+import HealthifyResultsModal from '../components/recipe/HealthifyResultsModal';
+import CollectionPickerModal from '../components/home/CollectionPickerModal';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,13 +94,13 @@ export default function RecipeModal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Animation for modal expansion
-  const modalScale = useRef(new Animated.Value(0.8)).current;
-  const modalOpacity = useRef(new Animated.Value(0)).current;
-
-  // Animation for collection picker modal
-  const pickerScale = useRef(new Animated.Value(0)).current;
-  const pickerOpacity = useRef(new Animated.Value(0)).current;
+  // Animation for modal expansion (Reanimated)
+  const modalScale = useSharedValue(0.8);
+  const modalOpacity = useSharedValue(0);
+  const modalEnterStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: modalScale.value }],
+    opacity: modalOpacity.value,
+  }));
 
   // Scroll-driven hero parallax + collapsing header (Reanimated)
   const modalScrollY = useSharedValue(0);
@@ -227,54 +229,9 @@ export default function RecipeModal() {
 
   // Animate modal entrance
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(modalScale, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  // Animate collection picker modal
-  useEffect(() => {
-    if (pickerVisible) {
-      pickerScale.setValue(0);
-      pickerOpacity.setValue(0);
-      Animated.parallel([
-        Animated.spring(pickerScale, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pickerOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(pickerScale, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pickerOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [pickerVisible]);
+    modalScale.value = withSpring(1, { damping: 14, stiffness: 120 });
+    modalOpacity.value = withTiming(1, { duration: 300 });
+  }, [modalScale, modalOpacity]);
 
   // Fetch recipe data when modal opens (with module-level cache)
   useEffect(() => {
@@ -881,13 +838,7 @@ export default function RecipeModal() {
   // Loading state — skeleton that matches the modal layout for better perceived speed
   if (loading) {
     return (
-      <Animated.View
-        style={{
-          flex: 1,
-          transform: [{ scale: modalScale }],
-          opacity: modalOpacity,
-        }}
-      >
+      <ReAnimated.View style={[{ flex: 1 }, modalEnterStyle]}>
         <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
           <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <HapticTouchableOpacity
@@ -930,20 +881,14 @@ export default function RecipeModal() {
             </View>
           </ScrollView>
         </SafeAreaView>
-      </Animated.View>
+      </ReAnimated.View>
     );
   }
 
   // Error state
   if (error || !recipe) {
     return (
-      <Animated.View
-        style={{
-          flex: 1,
-          transform: [{ scale: modalScale }],
-          opacity: modalOpacity,
-        }}
-      >
+      <ReAnimated.View style={[{ flex: 1 }, modalEnterStyle]}>
         <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
         <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <HapticTouchableOpacity
@@ -975,20 +920,14 @@ export default function RecipeModal() {
           />
         </View>
       </SafeAreaView>
-      </Animated.View>
+      </ReAnimated.View>
     );
   }
 
   return (
     <BottomSheetModalProvider>
     <>
-    <Animated.View
-      style={{
-        flex: 1,
-        transform: [{ scale: modalScale }],
-        opacity: modalOpacity,
-      }}
-    >
+    <ReAnimated.View style={[{ flex: 1 }, modalEnterStyle]}>
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
       {/* Scrollable content with hero at top */}
       <ReAnimated.ScrollView
@@ -2300,306 +2239,32 @@ export default function RecipeModal() {
     </ReAnimated.View>
 
     {/* Collection Picker Modal */}
-    <BottomSheet
+    <CollectionPickerModal
       visible={pickerVisible}
+      collections={collections}
+      selectedCollectionIds={selectedCollectionIds}
+      creatingCollection={creatingCollection}
+      newCollectionName={newCollectionName}
+      isDark={isDark}
       onClose={() => setPickerVisible(false)}
-      title="Save to Collection"
-      snapPoints={['50%', '70%']}
-      scrollable
-    >
-      <View style={{ paddingHorizontal: 16, paddingBottom: 24 }}>
-        {collections.map((c) => (
-          <HapticTouchableOpacity
-            key={c.id}
-            onPress={() => {
-              setSelectedCollectionIds(prev =>
-                prev.includes(c.id)
-                  ? prev.filter(id => id !== c.id)
-                  : [...prev, c.id]
-              );
-            }}
-            accessibilityRole="checkbox"
-            accessibilityLabel={c.name}
-            accessibilityState={{ checked: selectedCollectionIds.includes(c.id) }}
-            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}
-          >
-            <View style={{
-              width: 22, height: 22, marginRight: 12, borderRadius: 6,
-              borderWidth: 1.5,
-              borderColor: selectedCollectionIds.includes(c.id) ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? '#4B5563' : '#D1D5DB'),
-              backgroundColor: selectedCollectionIds.includes(c.id) ? (isDark ? DarkColors.primary : Colors.primary) : 'transparent',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              {selectedCollectionIds.includes(c.id) && (
-                <Ionicons name="checkmark" size={14} color="white" />
-              )}
-            </View>
-            <Text style={{ flex: 1, fontSize: 16, color: isDark ? DarkColors.text.primary : Colors.text.primary }}>{c.name}</Text>
-          </HapticTouchableOpacity>
-        ))}
-        {creatingCollection ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}>
-            <TextInput
-              value={newCollectionName}
-              onChangeText={setNewCollectionName}
-              placeholder="New collection name"
-              style={{
-                flex: 1, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#D1D5DB',
-                borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8,
-                color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                backgroundColor: isDark ? DarkColors.card : '#F9FAFB',
-              }}
-              placeholderTextColor="#9CA3AF"
-            />
-            <GradientButton
-              label="Create"
-              onPress={handleCreateCollection}
-              colors={GradientPresets.brand}
-              style={{ paddingVertical: 0, minWidth: 70 }}
-            />
-          </View>
-        ) : (
-          <HapticTouchableOpacity
-            onPress={() => setCreatingCollection(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Create new collection"
-            style={{ paddingVertical: 14 }}
-          >
-            <Text style={{ color: isDark ? DarkColors.primary : Colors.primary, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 15 }}>+ Create new collection</Text>
-          </HapticTouchableOpacity>
-        )}
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
-          <HapticTouchableOpacity
-            onPress={() => setPickerVisible(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel collection selection"
-            style={{ paddingHorizontal: 16, paddingVertical: 12 }}
-          >
-            <Text style={{ color: isDark ? DarkColors.text.secondary : Colors.text.secondary }}>Cancel</Text>
-          </HapticTouchableOpacity>
-          <GradientButton
-            label="Save"
-            onPress={handleConfirmPicker}
-            style={{ paddingVertical: 10, paddingHorizontal: 16 }}
-          />
-        </View>
-      </View>
-    </BottomSheet>
+      onToggleCollection={(id) =>
+        setSelectedCollectionIds((prev) =>
+          prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+        )
+      }
+      onStartCreating={() => setCreatingCollection(true)}
+      onChangeNewName={setNewCollectionName}
+      onCreateCollection={handleCreateCollection}
+      onSave={handleConfirmPicker}
+    />
 
       {/* Healthify Results Modal */}
-      <Modal
+      <HealthifyResultsModal
         visible={showHealthifyModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowHealthifyModal(false)}
-      >
-        <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
-          {/* Header */}
-          <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <HapticTouchableOpacity
-              onPress={() => setShowHealthifyModal(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Close healthified recipe"
-              className="p-2"
-            >
-              <Ionicons name="close" size={24} color={isDark ? "#E5E7EB" : "#374151"} />
-            </HapticTouchableOpacity>
-            <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Healthified Recipe</Text>
-            <View className="w-8" />
-          </View>
-
-          {healthifiedRecipe && (
-            <ScrollView className="flex-1">
-              <View className="p-4">
-                {/* Title */}
-                <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                  {healthifiedRecipe.title}
-                </Text>
-                
-                {/* Description */}
-                <Text className="text-gray-600 dark:text-gray-300 mb-6">
-                  {healthifiedRecipe.description}
-                </Text>
-
-                {/* Nutrition Comparison */}
-                <View className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Nutrition Comparison</Text>
-                  
-                  {healthifiedRecipe.nutritionComparison && (
-                    <View>
-                      {/* Calories */}
-                      <View className="flex-row justify-between items-center mb-3">
-                        <Text className="text-gray-700 dark:text-gray-300 font-medium">Calories</Text>
-                        <View className="flex-row items-center">
-                          <Text className="text-gray-500 dark:text-gray-400 mr-2">{healthifiedRecipe.nutritionComparison.before.calories}</Text>
-                          <Ionicons name="arrow-forward" size={16} color={isDark ? "#9CA3AF" : "#6B7280"} />
-                          <Text className="text-green-600 dark:text-green-400 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.calories}</Text>
-                        </View>
-                      </View>
-                      
-                      {/* Protein */}
-                      <View className="flex-row justify-between items-center mb-3">
-                        <Text className="text-gray-700 dark:text-gray-300 font-medium">Protein</Text>
-                        <View className="flex-row items-center">
-                          <Text className="text-gray-500 dark:text-gray-400 mr-2">{healthifiedRecipe.nutritionComparison.before.protein}g</Text>
-                          <Ionicons name="arrow-forward" size={16} color={isDark ? "#9CA3AF" : "#6B7280"} />
-                          <Text className="text-green-600 dark:text-green-400 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.protein}g</Text>
-                        </View>
-                      </View>
-                      
-                      {/* Carbs */}
-                      <View className="flex-row justify-between items-center mb-3">
-                        <Text className="text-gray-700 dark:text-gray-300 font-medium">Carbs</Text>
-                        <View className="flex-row items-center">
-                          <Text className="text-gray-500 dark:text-gray-400 mr-2">{healthifiedRecipe.nutritionComparison.before.carbs}g</Text>
-                          <Ionicons name="arrow-forward" size={16} color={isDark ? "#9CA3AF" : "#6B7280"} />
-                          <Text className="text-green-600 dark:text-green-400 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.carbs}g</Text>
-                        </View>
-                      </View>
-                      
-                      {/* Fat */}
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-gray-700 dark:text-gray-300 font-medium">Fat</Text>
-                        <View className="flex-row items-center">
-                          <Text className="text-gray-500 dark:text-gray-400 mr-2">{healthifiedRecipe.nutritionComparison.before.fat}g</Text>
-                          <Ionicons name="arrow-forward" size={16} color={isDark ? "#9CA3AF" : "#6B7280"} />
-                          <Text className="text-green-600 dark:text-green-400 font-semibold ml-2">{healthifiedRecipe.nutritionComparison.after.fat}g</Text>
-                        </View>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                {/* Substitutions */}
-                {healthifiedRecipe.substitutions && healthifiedRecipe.substitutions.length > 0 && (
-                  <View className="mb-6">
-                    <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Smart Substitutions</Text>
-                    {healthifiedRecipe.substitutions.map((sub: any, index: number) => (
-                      <View key={index} className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                        <View className="flex-row items-start mb-2">
-                          <Ionicons name="swap-horizontal" size={20} color="#10B981" style={{ marginRight: 8, marginTop: 2 }} />
-                          <View className="flex-1">
-                            <Text className="text-gray-900 dark:text-gray-100 font-medium">
-                              <Text className="text-red-600 dark:text-red-400 line-through">{sub.original}</Text>
-                              {' → '}
-                              <Text className="text-green-600 dark:text-green-400">{sub.replacement}</Text>
-                            </Text>
-                            <Text className="text-gray-600 dark:text-gray-300 text-sm mt-1">{sub.reason}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* Improvements */}
-                {healthifiedRecipe.improvements && healthifiedRecipe.improvements.length > 0 && (
-                  <View className="mb-6">
-                    <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Health Improvements</Text>
-                    {healthifiedRecipe.improvements.map((improvement: any, index: number) => (
-                      <View key={index} className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <Text className="text-gray-900 dark:text-gray-100 font-medium mb-1">{improvement.aspect}</Text>
-                        <View className="flex-row items-center mb-1">
-                          <Text className="text-gray-500 dark:text-gray-400 text-sm">Before: {improvement.before}</Text>
-                        </View>
-                        <View className="flex-row items-center mb-1">
-                          <Text className="text-green-600 dark:text-green-400 text-sm font-semibold">After: {improvement.after}</Text>
-                        </View>
-                        <Text className="text-gray-600 dark:text-gray-300 text-sm mt-1">💡 {improvement.benefit}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* Ingredients */}
-                <View className="mb-6">
-                  <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Ingredients</Text>
-                  {healthifiedRecipe.ingredients && healthifiedRecipe.ingredients.map((ingredient: any, index: number) => (
-                    <MotiView
-                      key={index}
-                      from={{ opacity: 0, translateX: -12 }}
-                      animate={{ opacity: 1, translateX: 0 }}
-                      transition={{ type: 'spring', delay: index * 35, damping: 20, stiffness: 200 }}
-                    >
-                      <View className="flex-row items-center mb-2">
-                        <View className="w-2 h-2 bg-green-500 rounded-full mr-3" />
-                        <Text className="text-gray-700 dark:text-gray-300 flex-1">{getTextContent(ingredient)}</Text>
-                      </View>
-                    </MotiView>
-                  ))}
-                </View>
-
-                {/* Instructions */}
-                <View className="mb-6">
-                  <Text className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Instructions</Text>
-                  {healthifiedRecipe.instructions && healthifiedRecipe.instructions.map((instruction: any, index: number) => (
-                    <View key={index} className="flex-row mb-3">
-                      <Text className="font-bold text-green-500 dark:text-green-400 mr-3">{index + 1}.</Text>
-                      <Text className="flex-1 text-gray-700 dark:text-gray-300">{getTextContent(instruction)}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </ScrollView>
-          )}
-
-          {/* Action Buttons */}
-          <View className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <GradientButton
-              label="Save Healthified Recipe"
-              onPress={async () => {
-                if (!healthifiedRecipe) return;
-
-                try {
-                  const recipeData = {
-                    title: healthifiedRecipe.title,
-                    description: healthifiedRecipe.description,
-                    cuisine: healthifiedRecipe.cuisine,
-                    cookTime: healthifiedRecipe.cookTime,
-                    calories: healthifiedRecipe.calories,
-                    protein: healthifiedRecipe.protein,
-                    carbs: healthifiedRecipe.carbs,
-                    fat: healthifiedRecipe.fat,
-                    ingredients: healthifiedRecipe.ingredients.map((ing: any) =>
-                      typeof ing === 'string' ? ing : ing.text
-                    ),
-                    instructions: healthifiedRecipe.instructions.map((inst: any) =>
-                      typeof inst === 'string' ? inst : inst.text
-                    ),
-                  };
-
-                  await recipeApi.createRecipe(recipeData);
-
-                  Alert.alert(
-                    'Recipe Saved',
-                    'Your healthified recipe has been saved to your cookbook!',
-                    [
-                      { text: 'OK', onPress: () => {
-                        setShowHealthifyModal(false);
-                        router.back();
-                      }}
-                    ]
-                  );
-                } catch (error: any) {
-                  Alert.alert('Oops!', error.message || 'Couldn\'t save the recipe — try again?');
-                }
-              }}
-              colors={GradientPresets.fresh}
-              icon="leaf"
-              style={{ marginBottom: 8 }}
-            />
-            
-            <HapticTouchableOpacity
-              onPress={() => setShowHealthifyModal(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              className=" py-3 px-6 rounded-lg items-center"
-            >
-              <Text className="text-gray-700 dark:text-gray-300 font-semibold text-lg">Close</Text>
-            </HapticTouchableOpacity>
-      </View>
-    </SafeAreaView>
-      </Modal>
+        healthifiedRecipe={healthifiedRecipe}
+        isDark={isDark}
+        onClose={() => setShowHealthifyModal(false)}
+      />
 
       {/* 10K: Hit My Macros Sheet */}
       <HitMyMacrosSheet
@@ -2662,7 +2327,7 @@ export default function RecipeModal() {
           }}
         />
       )}
-    </Animated.View>
+    </ReAnimated.View>
     </>
     </BottomSheetModalProvider>
   );
