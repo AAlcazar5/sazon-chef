@@ -32,4 +32,4 @@ Until those land, the page renders gracefully with poster-only fallbacks and tin
 
 ## Form backend
 
-`app/api/waitlist/route.ts` is a stub that validates with Zod and returns 200. Wire it to the Sazon backend (`backend/src/`) when the `WaitlistSignup` Prisma model lands — see `plans/launch-marketing.md`.
+`app/api/waitlist/route.ts` is a stub that validates with Zod and returns 200. Wire it to the Sazon backend (`backend/src/`) when the `WaitlistSignup` Prisma model lands — see `plans/launch.md#launch-marketing`.

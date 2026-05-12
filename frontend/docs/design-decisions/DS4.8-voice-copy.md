@@ -80,5 +80,5 @@ files, no Sad mascot expressions.
 ## Source of truth
 
 Vocabulary: `__fixtures__/bannedVocabularyCorpus.ts`.
-Persona: `plans/persona.md` voice section.
+Persona: `plans/product.md#persona` voice section.
 Mascot rules: `constants/MascotForState.ts` (DS4.7).

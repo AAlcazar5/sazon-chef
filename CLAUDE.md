@@ -6,7 +6,7 @@ Sazon is **the lifestyle app for the eater who's past the spreadsheet.** Real fo
 
 The user has graduated from optimization (cut/bulk/maintain) to **enjoyment + nourishment + cultural curiosity.** They cook 4+ nights/week and enjoy it. They want delicious whole-food meals from around the world. They track macros AND micros — not obsessively, but as a discovery surface. They read Bon Appétit, follow Ottolenghi. They're past the diet-app phase.
 
-**Read `plans/persona.md` before any product decision.** It's the loud, opinionated manifesto for who Sazon serves and who it doesn't.
+**Read `plans/product.md#persona` before any product decision.** It's the loud, opinionated manifesto for who Sazon serves and who it doesn't.
 
 Four driving principles:
 
@@ -41,7 +41,7 @@ Four driving principles:
 - "Real-ingredient version" / "made with whole foods" (not "macro-friendly")
 - "Eat the world. Live well." / "Past the spreadsheet." (anti-positioning taglines)
 
-See `plans/persona.md` voice section + `plans/ia-spec.md` tab-name rationale for the full vocabulary map.
+See `plans/product.md#persona` voice section + `plans/product.md#ia-spec` tab-name rationale for the full vocabulary map.
 
 ## Role
 
@@ -92,7 +92,7 @@ Automatically switch role based on the file being modified — no explicit instr
 
 ## Sources — What to Use / Avoid
 - Check `skills/<name>/SKILL.md` **before** web search for any implementation pattern
-- Check `plans/` before designing any new feature architecture
+- Check `plans/` (founder strategy + specs) and `.claude/context/` (agent guards/specs/workflows) before designing any new feature architecture
 - **Don't** use general web search when the answer is derivable from the codebase or skills
 - **Don't** use Opus for UI tweaks or single-file changes — Sonnet only
 
@@ -143,7 +143,7 @@ See `docs/COMMAND-AGENT-MAP.md` for slash command → agent mappings.
 **Single source of truth for color, type, radius, shadow, and motion.** Generated reference doc at `frontend/docs/TOKENS.md` (regenerate with `npm run build:tokens`). Lock decisions live in `frontend/docs/design-decisions/`. Banned-pattern lint at `frontend/scripts/banned-patterns.ts`.
 
 ### Roadmap (`ROADMAP_4.0.md`)
-The active roadmap lives in the project root (gitignored, local-only). Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps. `plans/plan-archives/ROADMAP_3.0.md` is the **closed** completion record for everything shipped through Group 11 Phase 3 (sits next to `plans/plan-archives/ROADMAP_2.0.md` and `plans/plan-archives/ROADMAP_2.5.md`); pre-launch ops live in `plans/launch-marketing.md` + `plans/launch-checklist.md`. Other historical specs (REDESIGN_ROADMAP, ML/optimization post-mortems, recipe-DB architecture, meal-plan refactor, UNIQUE_IMAGES) live in `plans/plan-archives/` — read for historical context only.
+The active roadmap lives in the project root (gitignored, local-only). Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps. `plans/plan-archives/ROADMAP_3.0.md` is the **closed** completion record for everything shipped through Group 11 Phase 3 (sits next to `plans/plan-archives/ROADMAP_2.0.md` and `plans/plan-archives/ROADMAP_2.5.md`); pre-launch ops live in `plans/launch.md#launch-marketing` + `plans/launch.md#launch-checklist`. Other historical specs (REDESIGN_ROADMAP, ML/optimization post-mortems, recipe-DB architecture, meal-plan refactor, UNIQUE_IMAGES) live in `plans/plan-archives/` — read for historical context only.
 
 **Roadmap Hygiene — Non-Negotiable:**
 - Mark every `- [ ]` item as `- [x]` **immediately** when its implementation is complete — not at the end of a session, not in a batch later.
@@ -175,16 +175,23 @@ Rules:
 - Render in a fenced code block so the bars stay aligned in monospace.
 - Drop the report if no item flipped `[ ] → [x]` in the response (no progress = no need).
 
-### Plans (`plans/`)
-Check here before planning new features — prior architectural decisions may already be documented.
-- **[persona.md](plans/persona.md)** — *Read this before any product decision.* The loud, opinionated manifesto for who Sazon is for / who it isn't.
-- **[ia-spec.md](plans/ia-spec.md)** — *Read this before any Tier A IA work.* The 4-tab layout reference (Today / Week / Kitchen / Sazon + Profile sheet).
-- [build-a-plate.md](plans/build-a-plate.md) — Group 10X P0 spec (phases 1+2)
-- [backend-hardening.md](plans/backend-hardening.md) — pre-launch security audit (C1/C2/H2/H5 + controller split + logger migration)
-- [launch-marketing.md](plans/launch-marketing.md) — TikTok/Instagram, blog posts, Reddit, Discord, influencers, waitlist, beta, Product Hunt, launch playbook
-- [launch-checklist.md](plans/launch-checklist.md) — App Store Connect, Play Console, Ko-fi, Cloudflare/Upstash/UptimeRobot/staging/backups, Privacy/ToS hosting, ASO keywords
-- [5xUpgradeRoadmap.md](plans/plan-archives/5xUpgradeRoadmap.md) — local-only Pro 5x improvement queue (retired)
-- [tonight-tasks.md](plans/tonight-tasks.md) — overnight agent task queue (refill nightly)
+### Plans (`plans/`) — founder-facing strategy + specs
+Alex-facing strategy, specs, and launch ops. Consolidated into 4 files on 2026-05-12. Check here before planning new features — prior architectural decisions may already be documented.
+- **[product.md](plans/product.md)** — persona + IA spec + Build-a-Plate spec.
+  - `#persona` — *Read before any product decision.* Manifesto for who Sazon is for / who it isn't.
+  - `#ia-spec` — *Read before any Tier A IA work.* 4-tab layout (Today / Week / Kitchen / Sazon + Profile sheet).
+  - `#build-a-plate` — Group 10X P0 spec (phases 1+2).
+- **[strategy.md](plans/strategy.md)** — monetization, competitive landscape, competitor design ideas, i18n strategy, recipe-content strategy.
+- **[launch.md](plans/launch.md)** — launch checklist (store ops, RevenueCat, legal), launch-marketing playbook, beta-testing playbook, iOS privacy manifest, App Store copy.
+- **[runbooks.md](plans/runbooks.md)** — incident runbook (P0/P1 playbooks, kill switches) + support runbook (triage tags, reply templates).
+- [plan-archives/](plans/plan-archives/) — historical roadmaps + completed audits (read for context only; see `backend-hardening-COMPLETE.md` + `tier-l-launch-readiness-COMPLETE.md` for archived Tier U/L work)
+
+### Agent reference (`.claude/context/`) — internal, for Claude/agent consumption
+Living reference docs Claude consults during work. Not Alex-facing — Alex rarely opens these.
+- **guards/** — enforced on every change. [brand-voice.md](.claude/context/guards/brand-voice.md) (canonical voice + banned vocab), [peak-moments.md](.claude/context/guards/peak-moments.md) (joy-bar test), [DELETED_FEATURES.md](.claude/context/guards/DELETED_FEATURES.md) (pre-rejected patterns).
+- **specs/** — implementation references. [analytics-kpis.md](.claude/context/specs/analytics-kpis.md), [experimentation.md](.claude/context/specs/experimentation.md), [a11y-audit.md](.claude/context/specs/a11y-audit.md) (WCAG 2.1 AA), [performance-budgets.md](.claude/context/specs/performance-budgets.md), [self-improvement-engine.md](.claude/context/specs/self-improvement-engine.md) (Tier M architecture).
+- **workflows/** — operational playbooks. [claude-workflows.md](.claude/context/workflows/claude-workflows.md), [tools.md](.claude/context/workflows/tools.md) (what's already wired).
+- **queues/** — agent work queues. [tonight-tasks.md](.claude/context/queues/tonight-tasks.md) (overnight agent input), [tonight-tasks.candidates.md](.claude/context/queues/tonight-tasks.candidates.md) (auto-generated by `roadmap-scout`).
 
 ## Key Context
 
@@ -284,7 +291,7 @@ Agent 2 → /api/meal-components + /api/composed-plates endpoints
 Agent 3 → /build-a-plate screen + slot picker UI
 Agent 4 → permutations endpoint + "what if?" swap chips
 ```
-See `plans/build-a-plate.md` for the full spec.
+See `plans/product.md#build-a-plate` for the full spec.
 
 ## PM2 Services
 
