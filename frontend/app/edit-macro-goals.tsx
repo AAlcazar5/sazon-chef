@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
+import ScreenGradient from '../components/ui/ScreenGradient';
 import HealthDisclaimer from '../components/legal/HealthDisclaimer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { userApi } from '../lib/api';
 import type { MacroCalculations } from '../types';
 import * as Haptics from 'expo-haptics';
 import { Colors, DarkColors } from '../constants/Colors';
+import { Brand } from '../constants/tokens';
 import { useColorScheme } from 'nativewind';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -263,23 +265,26 @@ export default function EditMacroGoalsScreen() {
   const label = isDark ? DarkColors.text.primary : Colors.text.primary;
   const sub = isDark ? '#9CA3AF' : '#6B7280';
   const inputBg = isDark ? '#374151' : '#F3F4F6';
-  const primaryColor = isDark ? DarkColors.primary : Colors.primary;
+  const primaryColor = isDark ? Brand.dark.base : Brand.light.base;
 
   if (loadingData) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="fitness-outline" size={56} color={sub} />
-          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading…</Text>
-        </View>
-      </SafeAreaView>
+      <ScreenGradient>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="fitness-outline" size={56} color={sub} />
+            <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading…</Text>
+          </View>
+        </SafeAreaView>
+      </ScreenGradient>
     );
   }
 
   const activeGoalData = EATING_GOALS.find(g => g.id === selectedGoal) ?? EATING_GOALS[0];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
+    <ScreenGradient>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <KeyboardAvoidingContainer>
         {/* Header */}
         <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -378,7 +383,7 @@ export default function EditMacroGoalsScreen() {
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>protein</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#F97316' }}>{activeMacros.carbs}g</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: Brand.light.base }}>{activeMacros.carbs}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>carbs</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
@@ -394,13 +399,13 @@ export default function EditMacroGoalsScreen() {
             {/* Segmented bar */}
             <View style={{ height: 10, borderRadius: 5, overflow: 'hidden', flexDirection: 'row', backgroundColor: isDark ? '#374151' : '#F3F4F6' }}>
               <Animated.View style={{ width: proteinAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), backgroundColor: '#3B82F6' }} />
-              <Animated.View style={{ width: carbsAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), backgroundColor: '#F97316' }} />
+              <Animated.View style={{ width: carbsAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), backgroundColor: Brand.light.base }} />
               <Animated.View style={{ width: fatAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), backgroundColor: '#EAB308' }} />
             </View>
 
             {/* Legend */}
             <View style={{ flexDirection: 'row', gap: 16, marginTop: 8, justifyContent: 'center' }}>
-              {[['#3B82F6', 'Protein'], ['#F97316', 'Carbs'], ['#EAB308', 'Fat']].map(([color, name]) => (
+              {[['#3B82F6', 'Protein'], [Brand.light.base, 'Carbs'], ['#EAB308', 'Fat']].map(([color, name]) => (
                 <View key={name} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
                   <Text style={{ fontSize: 11, color: sub }}>{name}</Text>
@@ -460,5 +465,6 @@ export default function EditMacroGoalsScreen() {
         </ScrollView>
       </KeyboardAvoidingContainer>
     </SafeAreaView>
+    </ScreenGradient>
   );
 }

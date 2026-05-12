@@ -1,6 +1,6 @@
 // frontend/app/scanner.tsx
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import BrandButton from '../components/ui/BrandButton';
 // Scanner screen for ingredient scanning and food recognition (Phase 6, Group 13)
 
 import { View, Text, Alert, ScrollView, Animated, StyleSheet, Platform } from 'react-native';
@@ -440,10 +440,10 @@ export default function ScannerScreen() {
         <Text className="text-gray-600 text-center mb-6">
           We need access to your camera to scan ingredients and barcodes.
         </Text>
-        <GradientButton
+        <BrandButton
           label="Grant Permission"
           onPress={requestPermission}
-          colors={GradientPresets.brand}
+          variant="brand"
           icon="camera"
         />
       </SafeAreaView>
@@ -947,16 +947,17 @@ export default function ScannerScreen() {
                   </Text>
                 </HapticTouchableOpacity>
 
-                <GradientButton
+                <BrandButton
                   label="Find Recipes"
                   onPress={handleFindRecipes}
+                  variant="brand"
                   icon="search"
                 />
 
-                <GradientButton
+                <BrandButton
                   label="Scan Again"
                   onPress={reset}
-                  colors={GradientPresets.fire}
+                  variant="brand"
                   icon="scan"
                 />
                 <HapticTouchableOpacity

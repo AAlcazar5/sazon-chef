@@ -25,6 +25,7 @@ import Icon from '../components/ui/Icon';
 import BottomSheetShell from '../components/ui/BottomSheetShell';
 import { Icons, IconSizes } from '../constants/Icons';
 import { Colors, DarkColors } from '../constants/Colors';
+import { Brand } from '../constants/tokens';
 import { shoppingListApi } from '../lib/api';
 
 interface ShoppingItem {
@@ -205,7 +206,7 @@ export default function CreateShoppingListScreen() {
   const labelColor = isDark ? DarkColors.text.primary : Colors.text.primary;
   const subColor = isDark ? '#9CA3AF' : '#6B7280';
   const inputBg = isDark ? '#374151' : '#F3F4F6';
-  const primaryColor = isDark ? DarkColors.primary : Colors.primary;
+  const primaryColor = isDark ? Brand.dark.base : Brand.light.base;
 
   return (
     <BottomSheetShell

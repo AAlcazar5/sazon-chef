@@ -17,6 +17,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, DarkColors, DarkElevation } from '../../constants/Colors';
+import { Brand } from '../../constants/tokens';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Spacing, ComponentSpacing, Gap } from '../../constants/Spacing';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -270,7 +271,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#F97316',
+        tabBarActiveTintColor: Brand.light.base,
         tabBarInactiveTintColor: colors.text.secondary,
         tabBarStyle: {
           position: 'absolute',

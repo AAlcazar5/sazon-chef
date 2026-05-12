@@ -4,7 +4,8 @@ import LoadingState from '../components/ui/LoadingState';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
 import ScreenGradient from '../components/ui/ScreenGradient';
-import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import BrandButton from '../components/ui/BrandButton';
+import { Brand } from '../constants/tokens';
 import HealthDisclaimer from '../components/legal/HealthDisclaimer';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -423,8 +424,8 @@ export default function EditPhysicalProfileScreen() {
                         </Text>
                       </View>
                       {selected && (
-                        <View style={[styles.checkBadge, { backgroundColor: Colors.primary }]}>
-                          <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                        <View style={[styles.checkBadge, { backgroundColor: Brand.light.base }]}>
+                          <Ionicons name="checkmark" size={12} color={Brand.light.ink} />
                         </View>
                       )}
                     </HapticTouchableOpacity>
@@ -511,12 +512,12 @@ export default function EditPhysicalProfileScreen() {
 
             {/* Save button */}
             <View style={{ marginTop: 8 }}>
-              <GradientButton
+              <BrandButton
                 label={loading ? 'Saving...' : 'Save Profile'}
                 onPress={handleSave}
                 loading={loading}
                 disabled={loading}
-                colors={GradientPresets.brand}
+                variant="brand"
                 icon="checkmark-circle-outline"
               />
             </View>

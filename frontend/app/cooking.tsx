@@ -16,7 +16,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalSearchParams, router, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import BrandButton from '../components/ui/BrandButton';
+import { Brand } from '../constants/tokens';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -489,9 +490,10 @@ export default function CookingScreen() {
         <Text className="text-6xl mb-4">😕</Text>
         <Text className="text-white text-xl font-bold mb-2">Recipe not found</Text>
         <Text className="text-gray-400 text-center mb-6">{error || 'Could not load recipe'}</Text>
-        <GradientButton
+        <BrandButton
           label="Go Back"
           onPress={() => router.back()}
+          variant="brand"
         />
       </View>
     );
@@ -907,7 +909,7 @@ export default function CookingScreen() {
                           accessibilityState={{ disabled: isActive }}
                           className="flex-row items-center px-3 py-2 rounded-full border"
                           style={{
-                            borderColor: isActive ? '#4B5563' : '#F97316',
+                            borderColor: isActive ? '#4B5563' : Brand.light.base,
                             backgroundColor: isActive ? '#1F2937' : 'rgba(249,115,22,0.15)',
                             opacity: isActive ? 0.5 : 1,
                           }}
@@ -915,12 +917,12 @@ export default function CookingScreen() {
                           <Ionicons
                             name={isActive ? 'timer' : 'timer-outline'}
                             size={14}
-                            color={isActive ? '#6B7280' : '#F97316'}
+                            color={isActive ? '#6B7280' : Brand.light.base}
                             style={{ marginRight: 6 }}
                           />
                           <Text
                             className="text-sm font-semibold"
-                            style={{ color: isActive ? '#6B7280' : '#F97316' }}
+                            style={{ color: isActive ? '#6B7280' : Brand.light.base }}
                           >
                             {isActive ? `${label} running` : `${label} · ${minutes} min`}
                           </Text>
@@ -1029,12 +1031,12 @@ export default function CookingScreen() {
               <Ionicons
                 name={showIngredients ? 'list' : 'list-outline'}
                 size={18}
-                color={showIngredients ? '#F97316' : '#9CA3AF'}
+                color={showIngredients ? Brand.light.base : '#9CA3AF'}
                 style={{ marginRight: 8 }}
               />
               <Text
                 className="font-semibold text-sm"
-                style={{ color: showIngredients ? '#F97316' : '#9CA3AF' }}
+                style={{ color: showIngredients ? Brand.light.base : '#9CA3AF' }}
               >
                 {showIngredients ? 'Back to Steps' : `Ingredients (${ingredientStrings.length})`}
               </Text>
@@ -1185,11 +1187,11 @@ export default function CookingScreen() {
               </HapticTouchableOpacity>
 
               <View style={{ flex: 2 }}>
-                <GradientButton
+                <BrandButton
                   label={isLastStep ? "I'm Done!" : "Next"}
                   onPress={goNext}
-                  colors={isLastStep ? GradientPresets.fresh : GradientPresets.fire}
-                  icon={isLastStep ? "checkmark-circle" : "chevron-forward"}
+                  variant={isLastStep ? 'sage' : 'brand'}
+                  icon={isLastStep ? 'checkmark-circle' : 'chevron-forward'}
                 />
               </View>
             </View>

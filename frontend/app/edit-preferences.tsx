@@ -1,6 +1,7 @@
 import { View, Text, TextInput, Alert, ScrollView, Animated } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
+import ScreenGradient from '../components/ui/ScreenGradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +11,7 @@ import { userApi } from '../lib/api';
 import { DEFAULT_MEAL_HOURS, formatHour12, getMealHours, setMealHours, type MealHours } from '../lib/mealHourPrefs';
 import { SUPERFOOD_CATEGORIES } from '../constants/Superfoods';
 import { Colors, DarkColors } from '../constants/Colors';
+import { Brand } from '../constants/tokens';
 import { getCategoryColor } from '../constants/CategoryColors';
 import { Shadows } from '../constants/Shadows';
 import { HapticPatterns } from '../constants/Haptics';
@@ -240,21 +242,24 @@ export default function EditPreferencesScreen() {
   const label = isDark ? DarkColors.text.primary : Colors.text.primary;
   const sub = isDark ? '#9CA3AF' : '#6B7280';
   const inputBg = isDark ? '#374151' : '#F3F4F6';
-  const primaryColor = isDark ? DarkColors.primary : Colors.primary;
+  const primaryColor = isDark ? Brand.dark.base : Brand.light.base;
 
   if (loadingData) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="settings-outline" size={56} color={sub} />
-          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading preferences…</Text>
-        </View>
-      </SafeAreaView>
+      <ScreenGradient>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="settings-outline" size={56} color={sub} />
+            <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading preferences…</Text>
+          </View>
+        </SafeAreaView>
+      </ScreenGradient>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top']}>
+    <ScreenGradient>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <KeyboardAvoidingContainer>
         {/* Header */}
         <View style={{ backgroundColor: cardBg, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -576,5 +581,6 @@ export default function EditPreferencesScreen() {
         </ScrollView>
       </KeyboardAvoidingContainer>
     </SafeAreaView>
+    </ScreenGradient>
   );
 }

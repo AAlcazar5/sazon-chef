@@ -15,7 +15,7 @@ import { sazonAlert, sazonAlertRaw } from '../lib/sazonAlert';
 import { useTheme } from '../contexts/ThemeContext';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import BrandButton from '../components/ui/BrandButton';
 import BottomSheetShell from '../components/ui/BottomSheetShell';
 import { collectionsApi } from '../lib/api';
 import { useColorScheme } from 'nativewind';
@@ -165,12 +165,12 @@ export default function CreateCollectionScreen() {
       </View>
 
       {/* Create button */}
-      <GradientButton
+      <BrandButton
         label="Create Collection"
         onPress={handleCreate}
         disabled={loading}
         loading={loading}
-        colors={GradientPresets.brand}
+        variant="brand"
         icon="add-circle-outline"
       />
 

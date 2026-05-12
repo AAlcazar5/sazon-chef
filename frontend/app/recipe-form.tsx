@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, TextInput, Alert, Modal, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import BrandButton from '../components/ui/BrandButton';
+import { Brand } from '../constants/tokens';
 import PulsingLoader from '../components/ui/PulsingLoader';
 import AIDescriptionAssist, { type GeneratedRecipeShape } from '../components/recipe/AIDescriptionAssist';
 import SuccessModal from '../components/ui/SuccessModal';
@@ -740,7 +741,7 @@ export default function RecipeFormScreen() {
             }}
           >
             <LinearGradient
-              colors={isDark ? ['#7C3AED', '#DB2777'] : ['#F97316', '#EF4444']}
+              colors={isDark ? ['#7C3AED', '#DB2777'] : [Brand.light.base, '#EF4444']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ borderRadius: 16, padding: 16 }}
@@ -1253,7 +1254,7 @@ export default function RecipeFormScreen() {
                   accessibilityLabel="Add to collection"
                   className="p-2"
                 >
-                  <Ionicons name="add-circle" size={24} color="#F97316" />
+                  <Ionicons name="add-circle" size={24} color={Brand.light.base} />
                 </HapticTouchableOpacity>
               </View>
 
@@ -1352,10 +1353,10 @@ export default function RecipeFormScreen() {
                     className={`flex-1 border ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-300'} rounded-lg px-3 py-2 mr-2`}
                     placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
                   />
-                  <GradientButton
+                  <BrandButton
                     label="Create"
                     onPress={handleCreateCollection}
-                    colors={GradientPresets.brand}
+                    variant="brand"
                     style={{ paddingVertical: 0, minWidth: 70 }}
                   />
                 </View>

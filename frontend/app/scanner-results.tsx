@@ -1,7 +1,7 @@
 // frontend/app/scanner-results.tsx
 // Results screen for food recognition — 10M enhanced with macros + Log This Meal
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import BrandButton from '../components/ui/BrandButton';
 
 import { View, Text, ScrollView, Alert } from 'react-native';
 import { Image } from 'expo-image';
@@ -83,10 +83,10 @@ export default function ScannerResultsScreen() {
         <Text style={{ color: '#6B7280', textAlign: 'center', marginBottom: 24 }}>
           Unable to process the food recognition results.
         </Text>
-        <GradientButton
+        <BrandButton
           label="Go Back"
           onPress={() => router.back()}
-          colors={GradientPresets.brand}
+          variant="brand"
           icon="arrow-back"
         />
       </SafeAreaView>
@@ -223,10 +223,10 @@ export default function ScannerResultsScreen() {
               </Text>
             </HapticTouchableOpacity>
 
-            <GradientButton
+            <BrandButton
               label="Done"
               onPress={() => router.back()}
-              colors={GradientPresets.brand}
+              variant="brand"
               icon="checkmark-circle"
             />
           </View>

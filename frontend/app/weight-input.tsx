@@ -18,6 +18,7 @@ import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import BrandButton from '../components/ui/BrandButton';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
+import ScreenGradient from '../components/ui/ScreenGradient';
 import { apiClient } from '../lib/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useColorScheme } from 'nativewind';
@@ -126,7 +127,8 @@ export default function WeightInputScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['top']}>
+    <ScreenGradient>
+    <SafeAreaView className="flex-1" edges={['top']}>
       <KeyboardAvoidingContainer>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
@@ -271,5 +273,6 @@ export default function WeightInputScreen() {
       </ScrollView>
       </KeyboardAvoidingContainer>
     </SafeAreaView>
+    </ScreenGradient>
   );
 }

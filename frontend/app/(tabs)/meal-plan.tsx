@@ -17,6 +17,7 @@ import FrostedHeader from '../../components/ui/FrostedHeader';
 import { router, useLocalSearchParams } from 'expo-router';
 import { recipeApi, shoppingListApi, pantryApi } from '../../lib/api';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { Brand } from '../../constants/tokens';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { Spacing, ComponentSpacing } from '../../constants/Spacing';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -959,7 +960,7 @@ export default function MealPlanScreen() {
                       fontFamily: 'PlusJakartaSans_800ExtraBold',
                       fontSize: 11,
                       letterSpacing: 0.8,
-                      color: '#fa7e12',
+                      color: Brand.light.base,
                       textTransform: 'uppercase',
                     }}>
                       PLANNING…
@@ -970,7 +971,7 @@ export default function MealPlanScreen() {
                     fontFamily: 'PlusJakartaSans_800ExtraBold',
                     fontSize: 11,
                     letterSpacing: 0.8,
-                    color: '#fa7e12',
+                    color: Brand.light.base,
                     textTransform: 'uppercase',
                   }}>
                     AUTO-PLAN

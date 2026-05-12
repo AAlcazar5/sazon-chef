@@ -2,6 +2,7 @@
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import BrandButton from '../components/ui/BrandButton';
 import KeyboardAvoidingContainer from '../components/ui/KeyboardAvoidingContainer';
+import ScreenGradient from '../components/ui/ScreenGradient';
 import BudgetInputRow from '../components/budget/BudgetInputRow';
 // Budget settings screen
 
@@ -74,14 +75,17 @@ export default function EditBudgetScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? DarkColors.background : Colors.surface }} edges={['top']}>
-        <LoadingState message="Loading your budget..." expression="thinking" />
-      </SafeAreaView>
+      <ScreenGradient>
+        <SafeAreaView className="flex-1 items-center justify-center" edges={['top']}>
+          <LoadingState message="Loading your budget..." expression="thinking" />
+        </SafeAreaView>
+      </ScreenGradient>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: isDark ? DarkColors.background : Colors.surface }} edges={['top']}>
+    <ScreenGradient>
+    <SafeAreaView className="flex-1" edges={['top']}>
       <KeyboardAvoidingContainer>
       {/* Header */}
       <View className="px-4 py-4" style={{
@@ -189,6 +193,7 @@ export default function EditBudgetScreen() {
       </ScrollView>
       </KeyboardAvoidingContainer>
     </SafeAreaView>
+    </ScreenGradient>
   );
 }
 
