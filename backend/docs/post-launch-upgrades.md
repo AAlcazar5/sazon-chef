@@ -3,7 +3,7 @@
 Single source of truth for every roadmap item gated on **production
 traffic, launch volume, or post-launch dogfood data**. Items here can't
 be unblocked by writing more code pre-launch — each waits on a real-world
-signal. Compiled from ROADMAP_4.0.md on 2026-05-11; update both files
+signal. Compiled from plans/plan-archives/ROADMAP_4.0.md on 2026-05-11; update both files
 when an item ships or its gate changes.
 
 > **How to use this doc:** scan the section that matches the trigger

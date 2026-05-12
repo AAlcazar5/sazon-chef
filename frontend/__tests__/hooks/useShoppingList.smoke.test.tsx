@@ -6,7 +6,7 @@
 // instead asserts the **public export shape** via static inspection.
 // It catches: file failing to compile, accidental removal of the public
 // export, signature rename. Deeper happy-path coverage is tracked as
-// follow-up work — see ROADMAP_4.0.md Tier U U17.
+// follow-up work — see plans/plan-archives/ROADMAP_4.0.md Tier U U17.
 
 import { readFileSync } from 'fs';
 import path from 'path';

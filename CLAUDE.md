@@ -6,14 +6,14 @@ Sazon is **the lifestyle app for the eater who's past the spreadsheet.** Real fo
 
 The user has graduated from optimization (cut/bulk/maintain) to **enjoyment + nourishment + cultural curiosity.** They cook 4+ nights/week and enjoy it. They want delicious whole-food meals from around the world. They track macros AND micros — not obsessively, but as a discovery surface. They read Bon Appétit, follow Ottolenghi. They're past the diet-app phase.
 
-**Read `ROADMAP_4.0.md#persona` before any product decision.** It's the loud, opinionated manifesto for who Sazon serves and who it doesn't.
+**Read `plans/plan-archives/ROADMAP_4.0.md#persona` before any product decision.** It's the loud, opinionated manifesto for who Sazon serves and who it doesn't.
 
 Four driving principles:
 
 1. **Hypersonalization** — no two users see the same thing. Today's hero, Build-a-Plate slots, Kitchen ranking, recipe titles, even error copy all bend to who's looking. If a feature can be parameterized by user state, it must be.
 2. **Adaptive iteration** — every signal (cook, save, swap, rate, skip, scroll-past, pre-cook check-in, post-cook nutrition view) refines the next recommendation. The app should feel smarter today than yesterday. Static templates and "popular recipes" feeds are the antipattern.
 3. **Discovery, not optimization** — present nutrition data as a curiosity surface ("today's plate hit 18 ingredients, top mineral was magnesium"), never as a verdict ("you're under your iron target"). Lifestyle voice, not personal trainer.
-4. **Joy obsession** — utility is the floor, delight is the bar. Every feature must have a designed peak moment — a chef-kiss, a sparkle, a mascot beat, a witty line — that rewards the user for showing up. If a moment could be a screenshot a user sends to a friend, design it; if it can't, sharpen it. Toasts are not peaks. See `REDESIGN_PHILOSOPHY.md` peak-moment table + `ROADMAP_4.0.md` Tier J for the active backlog.
+4. **Joy obsession** — utility is the floor, delight is the bar. Every feature must have a designed peak moment — a chef-kiss, a sparkle, a mascot beat, a witty line — that rewards the user for showing up. If a moment could be a screenshot a user sends to a friend, design it; if it can't, sharpen it. Toasts are not peaks. See `REDESIGN_PHILOSOPHY.md` peak-moment table + `plans/plan-archives/ROADMAP_4.0.md` Tier J for the historical backlog (engineering complete).
 
 **How existing systems serve N=1:**
 - **Build-a-Plate (10X)** — the flagship N=1 surface. Slots filled by *this user's* taste/pantry/macros/leftovers, not a static template.
@@ -41,7 +41,7 @@ Four driving principles:
 - "Real-ingredient version" / "made with whole foods" (not "macro-friendly")
 - "Eat the world. Live well." / "Past the spreadsheet." (anti-positioning taglines)
 
-See `ROADMAP_4.0.md#persona` voice section + `ROADMAP_4.0.md#ia-spec` tab-name rationale for the full vocabulary map.
+See `plans/plan-archives/ROADMAP_4.0.md#persona` voice section + `plans/plan-archives/ROADMAP_4.0.md#ia-spec` tab-name rationale for the full vocabulary map.
 
 ## Role
 
@@ -61,7 +61,7 @@ Automatically switch role based on the file being modified — no explicit instr
 ## Ambiguity & Decision Boundaries
 - **Ambiguous request** → state interpretation, ask before touching scoring logic, Stripe, or the data model
 - **Confirm before:** Prisma schema changes, new API endpoints, removing features, modifying the 70/30 scoring algorithm, any migration
-- **Proceed without asking:** UI polish, bug fixes, tests, roadmap tasks already scoped in `ROADMAP_4.0.md`
+- **Proceed without asking:** UI polish, bug fixes, tests, roadmap tasks already scoped in `ROADMAP_TO_LAUNCH.md`
 
 ## TDD is the Default — No Exceptions
 
@@ -69,7 +69,7 @@ Automatically switch role based on the file being modified — no explicit instr
 
 ### When planning Roadmap sections (or any new feature)
 - **Every feature bullet MUST have a paired `**Test:**` line** describing what the test verifies. No bullet is "done" being planned until its test is written next to it.
-- For groups of related features, either inline `**Test:**` per bullet OR a dedicated `#### Tests` block at the end listing every file + case. Both patterns exist in `ROADMAP_4.0.md` — pick one and apply consistently within a section.
+- For groups of related features, either inline `**Test:**` per bullet OR a dedicated `#### Tests` block at the end listing every file + case. Both patterns exist in `ROADMAP_TO_LAUNCH.md` — pick one and apply consistently within a section.
 - Non-code sections (marketing, ops, launch) use `#### Verification & Metrics` instead of tests — define success criteria, metrics to track, and the measurement method.
 - If you write a roadmap entry with no testing guidance, you're not done. Stop and add it.
 
@@ -92,7 +92,7 @@ Automatically switch role based on the file being modified — no explicit instr
 
 ## Sources — What to Use / Avoid
 - Check `skills/<name>/SKILL.md` **before** web search for any implementation pattern
-- Check the `ROADMAP_4.0.md` appendices (founder strategy + specs — persona, IA, Build-a-Plate, monetization, competitive, i18n, recipe content, launch ops) and `.claude/context/` (agent guards/specs/workflows) before designing any new feature architecture. Runbooks (incident + support) live in `ROADMAP_POST_LAUNCH.md` appendix.
+- Check `ROADMAP_TO_LAUNCH.md` (active pre-launch tiers A–U + Tier Gated) for current backlog. Reference content (persona, IA, Build-a-Plate, monetization, competitive, i18n, recipe content, launch ops) lives in `plans/plan-archives/ROADMAP_4.0.md` (the archived engineering record). Runbooks (incident + support) live in `ROADMAP_POST_LAUNCH.md` appendix. Also check `.claude/context/` (agent guards/specs/workflows) before designing any new feature architecture.
 - **Don't** use general web search when the answer is derivable from the codebase or skills
 - **Don't** use Opus for UI tweaks or single-file changes — Sonnet only
 
@@ -142,8 +142,8 @@ See `docs/COMMAND-AGENT-MAP.md` for slash command → agent mappings.
 ### Design tokens (`frontend/constants/tokens.ts`, `frontend/docs/TOKENS.md`)
 **Single source of truth for color, type, radius, shadow, and motion.** Generated reference doc at `frontend/docs/TOKENS.md` (regenerate with `npm run build:tokens`). Lock decisions live in `frontend/docs/design-decisions/`. Banned-pattern lint at `frontend/scripts/banned-patterns.ts`.
 
-### Roadmap (`ROADMAP_4.0.md`)
-The active roadmap lives in the project root (gitignored, local-only). Check it before starting any new feature group — it tracks completed/pending tasks and defines the next steps. `plans/plan-archives/ROADMAP_3.0.md` is the **closed** completion record for everything shipped through Group 11 Phase 3 (sits next to `plans/plan-archives/ROADMAP_2.0.md` and `plans/plan-archives/ROADMAP_2.5.md`); pre-launch ops live in `ROADMAP_4.0.md#launch-marketing` + `ROADMAP_4.0.md#launch-checklist`. Other historical specs (REDESIGN_ROADMAP, ML/optimization post-mortems, recipe-DB architecture, meal-plan refactor, UNIQUE_IMAGES) live in `plans/plan-archives/` — read for historical context only.
+### Roadmap (`ROADMAP_TO_LAUNCH.md`)
+The active roadmap lives in the project root (gitignored, local-only). Check it before starting any new feature group — 21 active tiers (A–U) cover the launch surface: infrastructure, billing, store submissions, privacy manifest, marketing, beta testing, launch day, recipe catalog. Plus Tier 🔒 Gated for externally-blocked work (skip in incomplete-tier reports per memory). `plans/plan-archives/ROADMAP_4.0.md` is the **closed** engineering record (all engineering shipped through 2026-05-12) and holds the reference content (persona, IA, Build-a-Plate, monetization, competitive, etc.). `plans/plan-archives/ROADMAP_3.0.md` / `ROADMAP_2.5.md` / `ROADMAP_2.0.md` are earlier closed completion records. Other historical specs (REDESIGN_ROADMAP, ML/optimization post-mortems, recipe-DB architecture, meal-plan refactor, UNIQUE_IMAGES) live in `plans/plan-archives/` — read for historical context only.
 
 **Roadmap Hygiene — Non-Negotiable:**
 - Mark every `- [ ]` item as `- [x]` **immediately** when its implementation is complete — not at the end of a session, not in a batch later.
@@ -171,25 +171,37 @@ Rules:
 - 20-char-wide bars (`█` filled, `░` empty); each block = 5%.
 - Per-tier rollup at top level; per-sub-tier rows for any tier the user is actively working in or just finished.
 - `✓` suffix on any 100% row.
-- Source the counts by counting `^- \[x\]` vs `^- \[x\]|^- \[ \]` lines per `### A?` / `### B?` / `## Tier` block in `ROADMAP_4.0.md` — do not hand-tally from memory.
+- Source the counts by counting `^- \[x\]` vs `^- \[x\]|^- \[ \]` lines per `### A?` / `### B?` / `## Tier` block in `ROADMAP_TO_LAUNCH.md` — do not hand-tally from memory.
 - Render in a fenced code block so the bars stay aligned in monospace.
 - Drop the report if no item flipped `[ ] → [x]` in the response (no progress = no need).
 
-### Strategy + specs — folded into the roadmaps
-Founder-facing strategy and reference specs were folded into the two roadmaps on 2026-05-12 (previously lived as 4 files in `plans/`). Check the appendices before planning new features — prior architectural decisions may already be documented.
+### Strategy + specs — split across roadmaps
+On 2026-05-12 the strategy/spec docs (previously 4 files in `plans/`, then 3 appendices in `ROADMAP_4.0.md`) were re-split: actionable launch tiers carved into `ROADMAP_TO_LAUNCH.md`; reference content stays in the now-archived `plans/plan-archives/ROADMAP_4.0.md`. Check these before planning new features.
 
-**`ROADMAP_4.0.md` (pre-launch):**
-- **Appendix A — Product Spec** (`#persona`, `#ia-spec`, `#build-a-plate`)
-  - `#persona` — *Read before any product decision.* Manifesto for who Sazon is for / who it isn't.
-  - `#ia-spec` — *Read before any Tier A IA work.* 4-tab layout (Today / Week / Kitchen / Sazon + Profile sheet).
-  - `#build-a-plate` — Group 10X P0 spec (phases 1+2).
-- **Appendix B — Strategy** (`#monetization`, `#competitive-landscape`, `#competitor-design-ideas`, `#i18n-strategy`, `#recipe-content-strategy`)
-- **Appendix C — Launch Ops** (`#launch-checklist`, `#launch-marketing`, `#beta-testing-playbook`, `#privacy-manifest`, `#app-store-copy`)
+**`ROADMAP_TO_LAUNCH.md` (active pre-launch, 21 tiers):**
+- Tiers A–F: Infrastructure / Billing / Legal / Ko-fi / iOS submission / Android submission
+- Tier G: iOS Privacy Manifest (`PrivacyInfo.xcprivacy` snippet for `frontend/app.json`)
+- Tier H: App Store Copy & Metadata (subtitle, description, keywords, screenshots, preview video, press copy)
+- Tier I: ASO & Keyword Research
+- Tier J: Landing Page Polish + Vercel Deploy
+- Tiers K–P: Content marketing, community seeding, influencer outreach, waitlist drips, Product Hunt, pre-order
+- Tier Q: Beta Testing Program (TestFlight + Play internal, recruitment, gates, build cadence)
+- Tier R: Launch Day Playbook (T-week, T-day, launch morning, launch week)
+- Tiers S–T: Referral seed + Analytics foundation
+- Tier U: Recipe Content Catalog (MVP — 500 recipes / 20 cuisines)
+- Tier 🔒 Gated: externally-blocked work (i18n-OPS, I1.3/I1B.5, I3.4, G1.3, I2.5/I2.6, I3.2/I3.5, G3, G4, G5, G6, G7, G11) — skip in incomplete-tier reports per memory.
 
 **`ROADMAP_POST_LAUNCH.md`:**
+- Phases 1–4 — post-launch features gated on real user data + revenue.
 - **Appendix — Runbooks** (`#incident-runbook`, `#support-runbook`) — fires post-launch when things break or users report things.
 
-**Historical:** [plans/plan-archives/](plans/plan-archives/) — archived roadmaps + completed audits (read for context only; see `backend-hardening-COMPLETE.md` + `tier-l-launch-readiness-COMPLETE.md` for archived Tier U/L work).
+**Reference content (in `plans/plan-archives/ROADMAP_4.0.md`):**
+- `#persona` — *Read before any product decision.* Manifesto for who Sazon is for / who it isn't.
+- `#ia-spec` — 4-tab IA reference (Today / Week / Kitchen / Sazon + Profile sheet).
+- `#build-a-plate` — Group 10X P0 implementation spec (phases 1–10).
+- `#monetization`, `#competitive-landscape`, `#competitor-design-ideas`, `#i18n-strategy`, `#recipe-content-strategy` — strategy docs.
+
+**Historical:** [plans/plan-archives/](plans/plan-archives/) — archived roadmaps (2.0, 2.5, 3.0, 4.0) + completed audits (`backend-hardening-COMPLETE.md` + `tier-l-launch-readiness-COMPLETE.md`).
 
 ### Agent reference (`.claude/context/`) — internal, for Claude/agent consumption
 Living reference docs Claude consults during work. Not Alex-facing — Alex rarely opens these.
@@ -256,7 +268,7 @@ Living reference docs Claude consults during work. Not Alex-facing — Alex rare
 
 Run these before touching any code:
 1. `pm2 status` — confirm `sazon-backend-3001` is online
-2. Skim `ROADMAP_4.0.md` current tier — confirm active task and any blockers
+2. Skim `ROADMAP_TO_LAUNCH.md` current tier — confirm active task and any blockers
 3. `cd backend && npm test -- --passWithNoTests 2>&1 | tail -5` — confirm coverage baseline ≥85% before starting
 
 ## Definition of Done
@@ -265,7 +277,7 @@ A feature is done when ALL of the following are true:
 - [ ] Tests written first (RED → GREEN); test file exists
 - [ ] `cd backend && npm test` passes, coverage ≥85%
 - [ ] `typescript-reviewer` + `code-reviewer` agents run and issues addressed
-- [ ] ROADMAP_4.0.md `[ ]` items checked `[x]` immediately
+- [ ] ROADMAP_TO_LAUNCH.md `[ ]` items checked `[x]` immediately
 - [ ] No banned patterns introduced (see Banned Patterns above)
 - [ ] Both iOS and Android considered for any UI change
 - [ ] **Joy bar (UI features only):** the screen has a designed peak moment, not just a working state. Stop and ask: *would a user screenshot this and send it to a friend?* If no, sharpen it before shipping.
@@ -296,7 +308,7 @@ Agent 2 → /api/meal-components + /api/composed-plates endpoints
 Agent 3 → /build-a-plate screen + slot picker UI
 Agent 4 → permutations endpoint + "what if?" swap chips
 ```
-See `ROADMAP_4.0.md#build-a-plate` for the full spec.
+See `plans/plan-archives/ROADMAP_4.0.md#build-a-plate` for the full spec.
 
 ## PM2 Services
 

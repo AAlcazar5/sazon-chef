@@ -36,7 +36,7 @@ export const SEED_SLOT_COUNTS = {
  * rice vinegar marinade on cubed protein, finished in toaster oven or
  * skillet. The plate builder treats components carrying this tag as
  * interchangeable variants. Tier D recipe-DB generation should produce
- * additional recipes in this style (see ROADMAP_4.0.md tier D notes).
+ * additional recipes in this style (see plans/plan-archives/ROADMAP_4.0.md tier D notes).
  */
 export const GLAZED_BITE_STYLE_TAG = 'glazed_bite';
 

@@ -4,7 +4,7 @@
 // deferred | needs-data | rejected}/, preserves frontmatter, and (on
 // accepted) appends a one-liner to a tier-X-candidates.md scratch file
 // for paste-in to roadmap. Pattern-flagged rejections append to
-// plans/DELETED_FEATURES.md.
+// .claude/context/guards/DELETED_FEATURES.md.
 
 import fs from 'fs';
 import path from 'path';
@@ -90,7 +90,7 @@ export function appendTierCandidate(
   if (!tier) return undefined;
   const fp = path.join(plansRoot, `tier-${tier}-candidates.md`);
   const line = `- [ ] **${block.id} — ${block.slug}** (auto-triaged ${new Date().toISOString().slice(0, 10)})`;
-  const header = `# Tier ${tier} — Auto-triaged candidates\n\nLines below are queued for paste-in to ROADMAP_4.0.md → Tier ${tier}.\n\n`;
+  const header = `# Tier ${tier} — Auto-triaged candidates\n\nLines below are queued for paste-in to ROADMAP_TO_LAUNCH.md → Tier ${tier}.\n\n`;
   if (!fs.existsSync(fp)) {
     fs.writeFileSync(fp, header + line + '\n');
   } else {

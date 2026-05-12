@@ -6,7 +6,7 @@
 //   - dietary compatibility (30%) — plates with banned ingredients filter out
 //   - slot affinity overlap (20%) — friend's slot picks vs this user's
 //
-// MVP scope (post-launch polish noted in ROADMAP_4.0.md F1):
+// MVP scope (post-launch polish noted in plans/plan-archives/ROADMAP_4.0.md F1):
 //   - Suggested follows / discoverability — TBD.
 //   - Notifications when followed users share — TBD.
 //   - Privacy controls (block, mute, request-to-follow) — TBD.

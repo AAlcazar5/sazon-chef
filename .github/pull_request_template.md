@@ -43,7 +43,7 @@
 
 ## Roadmap
 
-<!-- Reference the ROADMAP_4.0.md item this PR closes, or "n/a" for hotfixes. -->
+<!-- Reference the ROADMAP_TO_LAUNCH.md item this PR closes, or "n/a" for hotfixes. -->
 
 ## Screenshots / video
 

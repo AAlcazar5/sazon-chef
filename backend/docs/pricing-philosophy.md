@@ -84,7 +84,7 @@ These tests are the contract. Loosening them requires updating *this doc* first,
 
 - Not a paywall copy spec (that lives in frontend).
 - Not a Stripe / RevenueCat configuration (that lives in `subscriptionTierService` ↔ webhooks).
-- Not a marketing positioning doc (that lives in `ROADMAP_4.0.md#persona`).
+- Not a marketing positioning doc (that lives in `plans/plan-archives/ROADMAP_4.0.md#persona`).
 
 ## Anti-goals
 

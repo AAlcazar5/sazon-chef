@@ -3,7 +3,7 @@
 **Status:** decided — **NO** to on-device background fetch for v1.0.
 **Owner:** Alex (full-stack)
 **Date:** 2026-05-11
-**Roadmap:** ROADMAP_4.0.md → Tier U → U12
+**Roadmap:** plans/plan-archives/ROADMAP_4.0.md → Tier U → U12
 
 ---
 
