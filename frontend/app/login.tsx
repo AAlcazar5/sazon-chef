@@ -1,8 +1,6 @@
 // frontend/app/login.tsx
-// ROADMAP 4.0 A7.1 — Login screen visual redesign.
-// Scaffold (gradient + mascot card + headline + form-error block + success
-// flash) extracted to <AuthScreenShell> per A7.3. This file owns the form
-// body + actions row + social buttons + footer link.
+// Login screen. Chrome from <AuthScreenShell>; canonical <BrandButton> CTA;
+// shared <SocialButtonRow>; all colors via tokens (DS0.2).
 
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
@@ -11,17 +9,17 @@ import { MotiView } from 'moti';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticateWithGoogle, authenticateWithApple } from '../utils/socialAuth';
 import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import AuthScreenShell from '../components/auth/AuthScreenShell';
+import SocialButtonRow from '../components/auth/SocialButtonRow';
 import FrostedCard from '../components/ui/FrostedCard';
 import ShakeAnimation from '../components/ui/ShakeAnimation';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
-import GradientButton, { GradientPresets } from '../components/ui/GradientButton';
+import BrandButton from '../components/ui/BrandButton';
 import FormInput from '../components/ui/FormInput';
-import { Colors, DarkColors } from '../constants/Colors';
-import { Shadows } from '../constants/Shadows';
+import { Brand, Ink } from '../constants/tokens';
 import { FontSize } from '../constants/Typography';
+import { Spacing } from '../constants/Spacing';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -37,6 +35,9 @@ export default function LoginScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+
+  const linkColor = isDark ? Brand.dark.base : Brand.light.base;
+  const mutedColor = isDark ? Ink.dark.secondary : Ink.light.secondary;
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
@@ -153,6 +154,8 @@ export default function LoginScreen() {
     }
   };
 
+  const socialDisabled = loading || socialLoading !== null;
+
   return (
     <AuthScreenShell
       headline="Welcome back"
@@ -169,176 +172,112 @@ export default function LoginScreen() {
           : undefined
       }
     >
-      {/* Form fields — grouped in FrostedCard */}
-              <MotiView
-                from={{ opacity: 0, translateY: 16 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'spring', delay: 160, damping: 20, stiffness: 180 }}
-              >
-                <FrostedCard style={{ padding: 16, marginBottom: 14 }}>
-                  <View style={{ gap: 4 }}>
-                    <ShakeAnimation shake={shakeEmail}>
-                      <FormInput
-                        label="Email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChangeText={handleEmailChange}
-                        error={errors.email}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        disabled={loading}
-                        leftIcon="mail-outline"
-                      />
-                    </ShakeAnimation>
+      <MotiView
+        from={{ opacity: 0, translateY: 16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'spring', delay: 160, damping: 20, stiffness: 180 }}
+      >
+        <FrostedCard style={{ padding: Spacing.lg, marginBottom: Spacing.md + 2 }}>
+          <View style={{ gap: 4 }}>
+            <ShakeAnimation shake={shakeEmail}>
+              <FormInput
+                label="Email"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={handleEmailChange}
+                error={errors.email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                disabled={loading}
+                leftIcon="mail-outline"
+              />
+            </ShakeAnimation>
 
-                    <ShakeAnimation shake={shakePassword}>
-                      <FormInput
-                        label="Password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChangeText={handlePasswordChange}
-                        error={errors.password}
-                        secureTextEntry={!showPassword}
-                        autoCapitalize="none"
-                        autoComplete="password"
-                        disabled={loading}
-                        leftIcon="lock-closed-outline"
-                        rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        onRightIconPress={() => setShowPassword(!showPassword)}
-                      />
-                    </ShakeAnimation>
-                  </View>
-                </FrostedCard>
-              </MotiView>
+            <ShakeAnimation shake={shakePassword}>
+              <FormInput
+                label="Password"
+                placeholder="Enter your password"
+                value={password}
+                onChangeText={handlePasswordChange}
+                error={errors.password}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                disabled={loading}
+                leftIcon="lock-closed-outline"
+                rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+              />
+            </ShakeAnimation>
+          </View>
+        </FrostedCard>
+      </MotiView>
 
-              {/* Forgot password + login button */}
-              <MotiView
-                from={{ opacity: 0, translateY: 14 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'spring', delay: 240, damping: 20, stiffness: 180 }}
-              >
-                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 14 }}>
-                  <HapticTouchableOpacity
-                    onPress={() => router.push('/forgot-password')}
-                    disabled={loading}
-                  >
-                    <Text style={{
-                      color: isDark ? '#F87171' : Colors.primary,
-                      fontSize: FontSize.sm,
-                      fontFamily: 'PlusJakartaSans_600SemiBold',
-                    }}>
-                      Forgot Password?
-                    </Text>
-                  </HapticTouchableOpacity>
-                </View>
+      <MotiView
+        from={{ opacity: 0, translateY: 14 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'spring', delay: 240, damping: 20, stiffness: 180 }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: Spacing.md + 2 }}>
+          <HapticTouchableOpacity
+            onPress={() => router.push('/forgot-password')}
+            disabled={loading}
+            accessibilityRole="link"
+            accessibilityLabel="Forgot password"
+          >
+            <Text style={{
+              color: linkColor,
+              fontSize: FontSize.sm,
+              fontFamily: 'PlusJakartaSans_600SemiBold',
+            }}>
+              Forgot Password?
+            </Text>
+          </HapticTouchableOpacity>
+        </View>
 
-                <GradientButton
-                  label="Sign In"
-                  onPress={handleLogin}
-                  loading={loading}
-                  disabled={loading}
-                  colors={GradientPresets.brand}
-                  icon="log-in-outline"
-                  style={{ minHeight: 50 }}
-                />
-              </MotiView>
+        <BrandButton
+          label="Sign In"
+          onPress={handleLogin}
+          loading={loading}
+          disabled={loading}
+          variant="brand"
+          icon="log-in-outline"
+        />
+      </MotiView>
 
-              {/* Divider + social buttons on white card */}
-              <MotiView
-                from={{ opacity: 0, translateY: 12 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'spring', delay: 320, damping: 20, stiffness: 180 }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#374151' : '#D1D5DB' }} />
-                  <Text style={{ marginHorizontal: 16, color: isDark ? '#9CA3AF' : '#6B7280', fontSize: FontSize.sm }}>
-                    OR
-                  </Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: isDark ? '#374151' : '#D1D5DB' }} />
-                </View>
+      <SocialButtonRow
+        onGoogle={() => handleSocialLogin('google')}
+        onApple={() => handleSocialLogin('apple')}
+        disabled={socialDisabled}
+        delay={320}
+      />
 
-                <View style={{ gap: 12 }}>
-                  <HapticTouchableOpacity
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-                      borderRadius: 14,
-                      paddingVertical: 14,
-                      paddingHorizontal: 16,
-                      minHeight: 50,
-                      ...(Shadows.SM as any),
-                    }}
-                    onPress={() => handleSocialLogin('google')}
-                    disabled={loading || socialLoading !== null}
-                    accessibilityLabel="Continue with Google"
-                  >
-                    <Ionicons name="logo-google" size={20} color="#4285F4" />
-                    <Text style={{
-                      marginLeft: 10,
-                      fontSize: FontSize.md,
-                      fontFamily: 'PlusJakartaSans_600SemiBold',
-                      color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                    }}>
-                      Continue with Google
-                    </Text>
-                  </HapticTouchableOpacity>
-
-                  <HapticTouchableOpacity
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-                      borderRadius: 14,
-                      paddingVertical: 14,
-                      paddingHorizontal: 16,
-                      minHeight: 50,
-                      ...(Shadows.SM as any),
-                    }}
-                    onPress={() => handleSocialLogin('apple')}
-                    disabled={loading || socialLoading !== null}
-                    accessibilityLabel="Continue with Apple"
-                  >
-                    <Ionicons name="logo-apple" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
-                    <Text style={{
-                      marginLeft: 10,
-                      fontSize: FontSize.md,
-                      fontFamily: 'PlusJakartaSans_600SemiBold',
-                      color: isDark ? DarkColors.text.primary : Colors.text.primary,
-                    }}>
-                      Continue with Apple
-                    </Text>
-                  </HapticTouchableOpacity>
-                </View>
-              </MotiView>
-
-              {/* Sign up link */}
-              <MotiView
-                from={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ type: 'timing', delay: 420, duration: 400 }}
-              >
-                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 24 }}>
-                  <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: FontSize.sm }}>
-                    Don't have an account?{' '}
-                  </Text>
-                  <HapticTouchableOpacity
-                    onPress={() => router.push('/register')}
-                    disabled={loading}
-                  >
-                    <Text style={{
-                      color: isDark ? '#F87171' : Colors.primary,
-                      fontSize: FontSize.sm,
-                      fontFamily: 'PlusJakartaSans_600SemiBold',
-                    }}>
-                      Sign Up
-                    </Text>
-                  </HapticTouchableOpacity>
-                </View>
-              </MotiView>
+      <MotiView
+        from={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ type: 'timing', delay: 420, duration: 400 }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.xl }}>
+          <Text style={{ color: mutedColor, fontSize: FontSize.sm }}>
+            Don't have an account?{' '}
+          </Text>
+          <HapticTouchableOpacity
+            onPress={() => router.push('/register')}
+            disabled={loading}
+            accessibilityRole="link"
+            accessibilityLabel="Sign up"
+          >
+            <Text style={{
+              color: linkColor,
+              fontSize: FontSize.sm,
+              fontFamily: 'PlusJakartaSans_600SemiBold',
+            }}>
+              Sign Up
+            </Text>
+          </HapticTouchableOpacity>
+        </View>
+      </MotiView>
     </AuthScreenShell>
   );
 }
