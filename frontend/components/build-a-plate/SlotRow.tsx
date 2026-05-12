@@ -71,6 +71,16 @@ export default function SlotRow({
                   ✓ In pantry
                 </Text>
               )}
+              {/* Build-a-Plate Phase 10: custom (estimated) component marker. */}
+              {selected.id.startsWith('custom-') && (
+                <Text
+                  style={[styles.macroChip, styles.estimatedChip]}
+                  testID={`${testID}-estimated-chip`}
+                  accessibilityLabel="Macros for this item were estimated"
+                >
+                  ✨ Estimated
+                </Text>
+              )}
             </View>
           )}
         </View>
@@ -137,6 +147,10 @@ const styles = StyleSheet.create({
   pantryChip: {
     backgroundColor: Accent.sage,
     color: '#FFFFFF',
+  },
+  estimatedChip: {
+    backgroundColor: '#E9D5F0',
+    color: '#5A2E73',
   },
   lockBadge: {
     width: 28,

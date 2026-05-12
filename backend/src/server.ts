@@ -69,6 +69,16 @@ const server = app.listen(PORT, HOST, async () => {
     logger.info(`🍳 Recipes API available at http://${HOST}:${PORT}/api/recipes`);
     logger.info(`👤 User API available at http://${HOST}:${PORT}/api/user`);
     logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Build-a-Plate Phase 10: surface a single warn if the USDA key is unset.
+    // The macro-estimation service silently falls back to LLM when the key is
+    // missing — fine, but a one-line startup warn means a misconfigured prod
+    // env isn't completely invisible.
+    if (!process.env.FDC_API_KEY) {
+      logger.warn(
+        '⚠️  FDC_API_KEY not set — macro estimation (POST /api/macros/estimate) will skip USDA and rely on LLM fallback only.',
+      );
+    }
     
   } catch (error) {
     logger.error({ data: error }, '❌ Failed to start server:');
