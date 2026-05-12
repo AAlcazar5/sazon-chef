@@ -2,7 +2,7 @@
 
 > **Decision:** Bottom tab bar — fixed 4 tabs (Today / Week / Kitchen /
 > Sazon) with a centered pill active indicator. Profile is a sheet, not
-> a tab (per `plans/product.md#ia-spec` and Tier A).
+> a tab (per `ROADMAP_4.0.md#ia-spec` and Tier A).
 
 ## Visual contract
 
