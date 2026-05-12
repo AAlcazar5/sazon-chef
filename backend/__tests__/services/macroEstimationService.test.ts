@@ -42,7 +42,7 @@ beforeEach(() => {
   jest.resetModules();
   mockAnthropicCreate.mockReset();
   global.fetch = jest.fn();
-  process.env.USDA_FDC_API_KEY = 'test-fdc-key';
+  process.env.FDC_API_KEY = 'test-fdc-key';
   process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
 });
 
@@ -183,7 +183,7 @@ describe('macroEstimationService — LLM bounds + fallback', () => {
   });
 
   it('returns fallback when neither USDA nor Anthropic are configured', async () => {
-    delete process.env.USDA_FDC_API_KEY;
+    delete process.env.FDC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
 
     const { estimateMacros } = loadService();

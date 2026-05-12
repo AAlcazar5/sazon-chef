@@ -20,7 +20,8 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { useSubscription } from '../../hooks/useSubscription';
+import { useSubscription, type PurchaseInterval } from '../../hooks/useSubscription';
+import { isLifetimeWindowOpen } from '../../constants/lifetimeOffer';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import GradientButton, { GradientPresets } from '../ui/GradientButton';
 import { LogoMascot } from '../mascot';
@@ -32,11 +33,17 @@ import { Pastel, PastelDark } from '../../constants/Colors';
 import { FontSize, FontWeight } from '../../constants/Typography';
 import { Shadows } from '../../constants/Shadows';
 
-const PREMIUM_FEATURES = [
-  { icon: '🗓', label: 'Unlimited AI meal plans', tint: Pastel.sage, tintDark: PastelDark.sage },
-  { icon: '🛒', label: 'Smart shopping list generation', tint: Pastel.sky, tintDark: PastelDark.sky },
-  { icon: '📊', label: 'Advanced nutrition insights', tint: Pastel.lavender, tintDark: PastelDark.lavender },
-  { icon: '🍳', label: 'Cooking mode with timers', tint: Pastel.peach, tintDark: PastelDark.peach },
+// Three highest-leverage value props (always visible). Persona-tuned: each one
+// answers "what does Sazon do that no macro app does?" — not a feature laundry list.
+const CORE_FEATURES = [
+  { icon: '🍽', label: 'Unlimited Build-a-Plate', tint: Pastel.sage, tintDark: PastelDark.sage },
+  { icon: '🧠', label: 'Personalization that learns you', tint: Pastel.lavender, tintDark: PastelDark.lavender },
+  { icon: '🗓', label: 'Smart meal plans + shopping list', tint: Pastel.sky, tintDark: PastelDark.sky },
+];
+
+// Surfaced behind a "See all features" tap so the paywall stays scannable.
+const EXTRA_FEATURES = [
+  { icon: '📊', label: 'Advanced nutrition insights', tint: Pastel.peach, tintDark: PastelDark.peach },
   { icon: '🧩', label: 'Pantry & expiry tracking', tint: Pastel.golden, tintDark: PastelDark.golden },
   { icon: '🔔', label: 'Smart reminders & alerts', tint: Pastel.blush, tintDark: PastelDark.blush },
 ];
@@ -58,12 +65,18 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
     showPremiumCelebration,
     dismissPremiumCelebration,
   } = useSubscription();
-  const [interval, setInterval] = useState<'month' | 'year'>('month');
+  const [interval, setInterval] = useState<PurchaseInterval>('year');
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   // Native: prefer RC's locale-formatted price strings. Web/fallback uses
   // the Stripe-side defaults so pricing isn't blank during dev.
   const monthlyPriceLabel = offerings.monthly?.product.priceString ?? '$9 / mo';
   const annualPriceLabel = offerings.annual?.product.priceString ?? '$60 / yr';
+  const lifetimePriceLabel = offerings.lifetime?.product.priceString ?? '$79.99';
+
+  // Third tile is double-gated: launch-window open AND the RC offering actually
+  // exists in the dashboard. Either gate falsy → 2-tile layout.
+  const lifetimeAvailable = isLifetimeWindowOpen() && offerings.lifetime !== null;
 
   // Shimmer animation for CTA
   const shimmerX = useSharedValue(-1);
@@ -134,8 +147,8 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
             animate={{ translateY: 0, opacity: 1 }}
             transition={{ type: 'spring', damping: 18, stiffness: 260, delay: 200 }}
           >
-            <Text style={styles.heroTitle}>Sazon Premium</Text>
-            <Text style={styles.heroSubtitle}>Your personal chef — unlocked</Text>
+            <Text style={styles.heroTitle} testID="paywall-headline">Past the spreadsheet.</Text>
+            <Text style={styles.heroSubtitle}>Real food. Made for you. From everywhere.</Text>
             <Text testID="paywall-trust-line" style={styles.trustLine}>
               Cancel anytime. No spam.
             </Text>
@@ -171,9 +184,9 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
           </View>
         )}
 
-        {/* Feature list — pastel-tinted icon badges */}
+        {/* Feature list — 3 core + collapsible "See all" extras (no laundry list). */}
         <View style={styles.featureList}>
-          {PREMIUM_FEATURES.map((f, i) => (
+          {CORE_FEATURES.map((f, i) => (
             <MotiView
               key={f.label}
               from={{ translateX: -24, opacity: 0 }}
@@ -188,6 +201,35 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
               <Text style={styles.featureCheck}>✓</Text>
             </MotiView>
           ))}
+
+          {showAllFeatures &&
+            EXTRA_FEATURES.map((f, i) => (
+              <MotiView
+                key={f.label}
+                from={{ translateX: -24, opacity: 0 }}
+                animate={{ translateX: 0, opacity: 1 }}
+                transition={{ type: 'spring', damping: 18, stiffness: 260, delay: i * 50 }}
+                style={styles.featureRow}
+              >
+                <View style={[styles.featureIconBadge, { backgroundColor: f.tint }]}>
+                  <Text style={styles.featureEmoji}>{f.icon}</Text>
+                </View>
+                <Text style={styles.featureLabel}>{f.label}</Text>
+                <Text style={styles.featureCheck}>✓</Text>
+              </MotiView>
+            ))}
+
+          <HapticTouchableOpacity
+            testID="paywall-see-all-features"
+            onPress={() => setShowAllFeatures((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={showAllFeatures ? 'Hide extra features' : 'See all features'}
+            style={styles.seeAllFeaturesButton}
+          >
+            <Text style={styles.seeAllFeaturesLabel}>
+              {showAllFeatures ? 'Show less' : 'See all features'}
+            </Text>
+          </HapticTouchableOpacity>
         </View>
 
         {/* Plan toggle + CTA */}
@@ -257,13 +299,48 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
                   </Text>
                 </HapticTouchableOpacity>
               </MotiView>
+
+              {lifetimeAvailable && (
+                <MotiView
+                  animate={{ scale: interval === 'lifetime' ? 1.02 : 0.98 }}
+                  transition={{ type: 'spring', damping: 14, stiffness: 300 }}
+                  style={{ flex: 1 }}
+                >
+                  <HapticTouchableOpacity
+                    testID="paywall-lifetime-option"
+                    style={[
+                      styles.pricingOption,
+                      interval === 'lifetime' && styles.pricingOptionActive,
+                    ]}
+                    onPress={() => setInterval('lifetime')}
+                  >
+                    <View style={styles.annualRow}>
+                      <Text style={[
+                        styles.pricingLabel,
+                        { color: interval === 'lifetime' ? '#FFFFFF' : '#9CA3AF' },
+                      ]}>
+                        Lifetime
+                      </Text>
+                      <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>Launch</Text>
+                      </View>
+                    </View>
+                    <Text style={[
+                      styles.pricingAmount,
+                      { color: interval === 'lifetime' ? '#FFB74D' : '#6B7280' },
+                    ]}>
+                      {lifetimePriceLabel}
+                    </Text>
+                  </HapticTouchableOpacity>
+                </MotiView>
+              )}
             </View>
 
             {/* CTA — shimmer every 3s */}
             <View style={styles.ctaContainer}>
               <View>
                 <GradientButton
-                  label="Start Free Trial"
+                  label={interval === 'lifetime' ? 'Unlock Lifetime' : 'Start Free Trial'}
                   onPress={() => purchase(interval)}
                   loading={checkoutLoading}
                   disabled={checkoutLoading}
@@ -284,8 +361,11 @@ export function PaywallScreen({ onClose }: PaywallScreenProps) {
                 </Animated.View>
               </View>
               <Text style={styles.legalText}>
-                No charge for 7 days. Cancel anytime in{' '}
-                {Platform.OS === 'ios' ? 'App Store' : 'Google Play'} settings.
+                {interval === 'lifetime'
+                  ? 'One payment. Yours forever — no renewals.'
+                  : `No charge for 7 days. Cancel anytime in ${
+                      Platform.OS === 'ios' ? 'App Store' : 'Google Play'
+                    } settings.`}
               </Text>
 
               {/* Restore Purchases — required by App Store guideline 3.1.1 */}
@@ -440,6 +520,18 @@ const styles = StyleSheet.create({
     color: '#34D399',
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: FontSize.md,
+  },
+  seeAllFeaturesButton: {
+    alignSelf: 'center',
+    marginTop: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  seeAllFeaturesLabel: {
+    color: 'rgba(255,255,255,0.65)',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: FontSize.sm,
+    textDecorationLine: 'underline',
   },
   pricingToggle: {
     marginHorizontal: 24,

@@ -32,7 +32,10 @@ export interface SubscriptionState {
 export interface SubscriptionOfferings {
   monthly: PurchasesPackage | null;
   annual: PurchasesPackage | null;
+  lifetime: PurchasesPackage | null;
 }
+
+export type PurchaseInterval = 'month' | 'year' | 'lifetime';
 
 const DEFAULT_STATE: SubscriptionState = {
   status: 'free',
@@ -44,16 +47,22 @@ const DEFAULT_STATE: SubscriptionState = {
   error: null,
 };
 
-const DEFAULT_OFFERINGS: SubscriptionOfferings = { monthly: null, annual: null };
+const DEFAULT_OFFERINGS: SubscriptionOfferings = { monthly: null, annual: null, lifetime: null };
 
-function pickPackage(packages: PurchasesPackage[], interval: 'month' | 'year'): PurchasesPackage | null {
+function pickPackage(packages: PurchasesPackage[], interval: PurchaseInterval): PurchasesPackage | null {
   // RC's package.identifier convention: $rc_monthly, $rc_annual, $rc_lifetime, …
-  const wanted = interval === 'month' ? '$rc_monthly' : '$rc_annual';
+  const wanted =
+    interval === 'month' ? '$rc_monthly' :
+    interval === 'year' ? '$rc_annual' :
+    '$rc_lifetime';
   const direct = packages.find(p => p.identifier === wanted);
   if (direct) return direct;
   // Fallback: match by product identifier substring (handles custom packages
   // like 'sazon_membership_annual' where the RC identifier was renamed).
-  const needle = interval === 'month' ? 'month' : 'annual';
+  const needle =
+    interval === 'month' ? 'month' :
+    interval === 'year' ? 'annual' :
+    'lifetime';
   return packages.find(p => p.product.identifier.toLowerCase().includes(needle)) ?? null;
 }
 
@@ -110,6 +119,7 @@ export function useSubscription() {
       setOfferings({
         monthly: pickPackage(packages, 'month'),
         annual: pickPackage(packages, 'year'),
+        lifetime: pickPackage(packages, 'lifetime'),
       });
     })();
     return () => {
@@ -123,11 +133,14 @@ export function useSubscription() {
    * Web:    open Stripe Checkout in the device browser.
    */
   const purchase = useCallback(
-    async (interval: 'month' | 'year' = 'month') => {
+    async (interval: PurchaseInterval = 'year') => {
       try {
         setCheckoutLoading(true);
         if (isNativePlatform()) {
-          const pkg = interval === 'month' ? offerings.monthly : offerings.annual;
+          const pkg =
+            interval === 'month' ? offerings.monthly :
+            interval === 'year' ? offerings.annual :
+            offerings.lifetime;
           if (!pkg) {
             setSubscription(prev => ({ ...prev, error: 'No offering available' }));
             return;
@@ -135,7 +148,11 @@ export function useSubscription() {
           await purchasePackage(pkg);
           await fetchSubscription();
         } else {
-          const res = await stripeApi.createCheckout(interval);
+          // Web (Stripe) only supports recurring intervals — lifetime is a native-only
+          // RevenueCat non-consumable. If a web user somehow lands here with 'lifetime',
+          // fall back to annual.
+          const webInterval: 'month' | 'year' = interval === 'month' ? 'month' : 'year';
+          const res = await stripeApi.createCheckout(webInterval);
           const { url } = res.data;
           if (url) {
             await Linking.openURL(url);
@@ -150,7 +167,7 @@ export function useSubscription() {
         setCheckoutLoading(false);
       }
     },
-    [offerings.monthly, offerings.annual, fetchSubscription],
+    [offerings.monthly, offerings.annual, offerings.lifetime, fetchSubscription],
   );
 
   /**

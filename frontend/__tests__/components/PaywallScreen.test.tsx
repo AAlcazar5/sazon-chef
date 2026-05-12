@@ -19,8 +19,14 @@ jest.mock('../../hooks/useSubscription', () => ({
     purchase: mockStartCheckout,
     openPortal: mockOpenPortal,
     // Empty offerings → component falls back to '$9 / mo' / '$60 / yr'.
-    offerings: {},
+    offerings: { monthly: null, annual: null, lifetime: null },
   })),
+}));
+
+// Default lifetime window: closed in tests unless a test overrides it.
+jest.mock('../../constants/lifetimeOffer', () => ({
+  isLifetimeWindowOpen: jest.fn(() => false),
+  LIFETIME_OFFER_END_DATE: new Date('2026-08-15T00:00:00Z'),
 }));
 
 jest.mock('../../components/ui/HapticTouchableOpacity', () => {
@@ -87,9 +93,9 @@ describe('PaywallScreen', () => {
   beforeEach(() => jest.clearAllMocks());
 
   describe('free-tier user', () => {
-    it('renders the "Sazon Premium" title', () => {
-      const { getByText } = render(<PaywallScreen />);
-      expect(getByText('Sazon Premium')).toBeTruthy();
+    it('renders the persona-aligned headline ("Past the spreadsheet.")', () => {
+      const { getByTestId } = render(<PaywallScreen />);
+      expect(getByTestId('paywall-headline').props.children).toBe('Past the spreadsheet.');
     });
 
     it('renders the celebrating mascot', () => {
@@ -97,14 +103,25 @@ describe('PaywallScreen', () => {
       expect(getByTestId('mascot-celebrating')).toBeTruthy();
     });
 
-    it('renders all 6 premium feature items', () => {
-      const { getByText } = render(<PaywallScreen />);
-      expect(getByText('Unlimited AI meal plans')).toBeTruthy();
-      expect(getByText('Smart shopping list generation')).toBeTruthy();
+    it('renders only the 3 core feature items by default (no laundry list)', () => {
+      const { getByText, queryByText } = render(<PaywallScreen />);
+      expect(getByText('Unlimited Build-a-Plate')).toBeTruthy();
+      expect(getByText('Personalization that learns you')).toBeTruthy();
+      expect(getByText('Smart meal plans + shopping list')).toBeTruthy();
+      // Extras collapsed:
+      expect(queryByText('Advanced nutrition insights')).toBeNull();
+      expect(queryByText('Pantry & expiry tracking')).toBeNull();
+      expect(queryByText('Smart reminders & alerts')).toBeNull();
+    });
+
+    it('reveals the 3 extra feature items when "See all features" is tapped', () => {
+      const { getByText, getByTestId } = render(<PaywallScreen />);
+      fireEvent.press(getByTestId('paywall-see-all-features'));
       expect(getByText('Advanced nutrition insights')).toBeTruthy();
-      expect(getByText('Cooking mode with timers')).toBeTruthy();
       expect(getByText('Pantry & expiry tracking')).toBeTruthy();
       expect(getByText('Smart reminders & alerts')).toBeTruthy();
+      // Toggle label flips
+      expect(getByText('Show less')).toBeTruthy();
     });
 
     it('renders monthly price (fallback when offerings undefined)', () => {
@@ -127,17 +144,17 @@ describe('PaywallScreen', () => {
       expect(getByText(/7-day free trial/)).toBeTruthy();
     });
 
-    it('calls startCheckout with "month" when CTA pressed with monthly selected', () => {
+    it('defaults to annual selection (anchors against monthly per persona pricing intent)', () => {
       const { getByText } = render(<PaywallScreen />);
-      fireEvent.press(getByText('Start Free Trial'));
-      expect(mockStartCheckout).toHaveBeenCalledWith('month');
-    });
-
-    it('calls startCheckout with "year" after selecting annual plan', () => {
-      const { getByText } = render(<PaywallScreen />);
-      fireEvent.press(getByText('Annual'));
       fireEvent.press(getByText('Start Free Trial'));
       expect(mockStartCheckout).toHaveBeenCalledWith('year');
+    });
+
+    it('calls startCheckout with "month" after switching to monthly plan', () => {
+      const { getByText } = render(<PaywallScreen />);
+      fireEvent.press(getByText('Monthly'));
+      fireEvent.press(getByText('Start Free Trial'));
+      expect(mockStartCheckout).toHaveBeenCalledWith('month');
     });
 
     it('calls onClose when close button pressed', () => {
@@ -150,6 +167,65 @@ describe('PaywallScreen', () => {
     it('does not render "Manage Subscription" for free-tier user', () => {
       const { queryByText } = render(<PaywallScreen />);
       expect(queryByText('Manage Subscription')).toBeNull();
+    });
+
+    it('does NOT render the Lifetime tile when the launch window is closed', () => {
+      // Default mock — isLifetimeWindowOpen returns false
+      const { queryByTestId } = render(<PaywallScreen />);
+      expect(queryByTestId('paywall-lifetime-option')).toBeNull();
+    });
+
+    it('does NOT render the Lifetime tile when window is open but RC offering is null', () => {
+      const { isLifetimeWindowOpen } = require('../../constants/lifetimeOffer');
+      (isLifetimeWindowOpen as jest.Mock).mockReturnValueOnce(true);
+      // offerings.lifetime is null by default — third tile must still be hidden
+      const { queryByTestId } = render(<PaywallScreen />);
+      expect(queryByTestId('paywall-lifetime-option')).toBeNull();
+    });
+
+    it('renders the Lifetime tile when window AND RC offering both present', () => {
+      const { isLifetimeWindowOpen } = require('../../constants/lifetimeOffer');
+      (isLifetimeWindowOpen as jest.Mock).mockReturnValueOnce(true);
+      const { useSubscription } = require('../../hooks/useSubscription');
+      useSubscription.mockReturnValueOnce({
+        subscription: { isPremium: false, status: 'inactive', loading: false },
+        checkoutLoading: false,
+        trialDaysLeft: null,
+        startCheckout: mockStartCheckout,
+        purchase: mockStartCheckout,
+        openPortal: mockOpenPortal,
+        offerings: {
+          monthly: null,
+          annual: null,
+          lifetime: { product: { priceString: '$79.99' } },
+        },
+      });
+      const { getByTestId, getByText } = render(<PaywallScreen />);
+      expect(getByTestId('paywall-lifetime-option')).toBeTruthy();
+      expect(getByText('$79.99')).toBeTruthy();
+    });
+
+    it('calls startCheckout with "lifetime" after selecting the lifetime tile', () => {
+      const { isLifetimeWindowOpen } = require('../../constants/lifetimeOffer');
+      (isLifetimeWindowOpen as jest.Mock).mockReturnValueOnce(true);
+      const { useSubscription } = require('../../hooks/useSubscription');
+      useSubscription.mockReturnValueOnce({
+        subscription: { isPremium: false, status: 'inactive', loading: false },
+        checkoutLoading: false,
+        trialDaysLeft: null,
+        startCheckout: mockStartCheckout,
+        purchase: mockStartCheckout,
+        openPortal: mockOpenPortal,
+        offerings: {
+          monthly: null,
+          annual: null,
+          lifetime: { product: { priceString: '$79.99' } },
+        },
+      });
+      const { getByTestId, getByText } = render(<PaywallScreen />);
+      fireEvent.press(getByTestId('paywall-lifetime-option'));
+      fireEvent.press(getByText('Unlock Lifetime'));
+      expect(mockStartCheckout).toHaveBeenCalledWith('lifetime');
     });
   });
 
@@ -222,7 +298,7 @@ describe('PaywallScreen', () => {
         offerings: {},
       });
       const { queryByText } = render(<PaywallScreen />);
-      expect(queryByText('Unlimited AI meal plans')).toBeNull();
+      expect(queryByText('Unlimited Build-a-Plate')).toBeNull();
     });
   });
 });

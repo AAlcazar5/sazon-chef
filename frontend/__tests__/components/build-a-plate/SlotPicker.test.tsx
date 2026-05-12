@@ -174,20 +174,17 @@ describe('SlotPicker — search + custom add', () => {
     expect(queryByTestId('slot-picker-custom-cta')).toBeNull();
   });
 
-  it('calls onSelect with a custom component when custom CTA is pressed', () => {
+  // Build-a-Plate Phase 10 — the custom-add CTA now opens CustomItemSheet
+  // instead of immediately adding a zero-macro component. The post-estimate
+  // happy path is exercised in CustomItemSheet.test.tsx.
+  it('does NOT immediately fire onSelect when custom CTA is pressed (opens sheet instead)', () => {
     const onSelect = jest.fn();
     const { getByTestId } = render(
       <SlotPicker {...defaultProps} onSelect={onSelect} />
     );
     fireEvent.changeText(getByTestId('slot-picker-search-input'), 'Avocado');
     fireEvent.press(getByTestId('slot-picker-custom-cta'));
-    expect(onSelect).toHaveBeenCalledTimes(1);
-    const arg = onSelect.mock.calls[0][0];
-    expect(arg.id).toMatch(/^custom-/);
-    expect(arg.name).toBe('Avocado');
-    expect(arg.slot).toBe('protein');
-    expect(arg.caloriesPerPortion).toBe(0);
-    expect(arg.proteinG).toBe(0);
-    expect(arg.pantryCoveragePercent).toBe(0);
+    // Zero-macros add path retired — the sheet must run an estimate first.
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

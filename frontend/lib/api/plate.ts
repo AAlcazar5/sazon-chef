@@ -148,6 +148,23 @@ export interface MacroBoundsResult {
   outOfBounds?: Partial<Record<MacroKey, BoundsViolation>>;
 }
 
+// Build-a-Plate Phase 10 — POST /api/macros/estimate response shape.
+// Server returns the EstimateResult shape directly (no envelope) — see
+// backend/src/modules/macros/macrosController.ts.
+export type MacroEstimateSource = 'usda' | 'ai' | 'fallback';
+export type MacroEstimateConfidence = 'high' | 'estimated' | 'unknown';
+
+export interface MacroEstimateResult {
+  caloriesPerPortion: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  fiberG: number;
+  source: MacroEstimateSource;
+  confidence: MacroEstimateConfidence;
+  matchedName?: string;
+}
+
 export const mealComponentApi = {
   list: (params?: { slot?: MealComponentSlot; dietary?: string; cuisine?: string; q?: string }) =>
     apiClient.get<{ components: MealComponent[] }>('/meal-components', { params }),
@@ -163,6 +180,8 @@ export const mealComponentApi = {
     apiClient.get<SkillTierResponse>('/meal-components/skill-tier'),
   variants: (componentId: string) =>
     apiClient.get<{ variants: ComponentVariantResponse[] }>(`/meal-components/${componentId}/variants`),
+  estimateMacros: (body: { name: string; portionGrams: number; slot: MealComponentSlot }) =>
+    apiClient.post<MacroEstimateResult>('/macros/estimate', body),
 };
 
 export interface LeftoverInventoryItem {

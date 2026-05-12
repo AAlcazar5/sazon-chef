@@ -2,13 +2,22 @@
 
 const mockUpsert = jest.fn();
 const mockCount = jest.fn();
+const mockFindUnique = jest.fn();
+const mockSendWaitlistConfirmation = jest.fn();
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     waitlistSignup: {
       upsert: (...a: unknown[]) => mockUpsert(...a),
       count: (...a: unknown[]) => mockCount(...a),
+      findUnique: (...a: unknown[]) => mockFindUnique(...a),
     },
+  },
+}));
+
+jest.mock('@/services/emailService', () => ({
+  emailService: {
+    sendWaitlistConfirmation: (...a: unknown[]) => mockSendWaitlistConfirmation(...a),
   },
 }));
 
@@ -46,6 +55,8 @@ beforeEach(() => {
     createdAt: new Date('2026-05-05T00:00:00Z'),
   });
   mockCount.mockResolvedValue(42);
+  mockFindUnique.mockResolvedValue(null);
+  mockSendWaitlistConfirmation.mockResolvedValue(true);
 });
 
 describe('waitlistController.signup', () => {

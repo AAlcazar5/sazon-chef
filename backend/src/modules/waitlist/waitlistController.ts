@@ -5,6 +5,7 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { emailService } from '@/services/emailService';
 import { logger } from '@/utils/logger';
 
 const waitlistSchema = z.object({
@@ -47,6 +48,9 @@ export const waitlistController = {
     const dietaryJson = JSON.stringify(dietary ?? []);
 
     try {
+      const existing = await prisma.waitlistSignup.findUnique({ where: { email } });
+      const isNewSignup = !existing;
+
       const row = await prisma.waitlistSignup.upsert({
         where: { email },
         create: {
@@ -65,6 +69,15 @@ export const waitlistController = {
       });
 
       const position = await prisma.waitlistSignup.count();
+
+      if (isNewSignup) {
+        // Fire-and-forget — a failed Resend call must not break signup.
+        void emailService
+          .sendWaitlistConfirmation(email, topCuisine ?? null)
+          .catch((emailErr: unknown) => {
+            logger.error({ err: emailErr, email }, 'waitlist confirmation email failed');
+          });
+      }
 
       return res.json({
         success: true,

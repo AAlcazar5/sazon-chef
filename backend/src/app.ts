@@ -36,6 +36,7 @@ import ingredientDiscoveryRoutes from '@modules/ingredientDiscovery/ingredientDi
 import todayRoutes from '@modules/today/todayRoutes';
 import pantryRoutes from '@modules/pantry/pantryRoutes';
 import { mealComponentRoutes, composedPlateRoutes, leftoverInventoryRoutes, sharedPlateRoutes, nutrientGapRoutes, householdRoutes } from '@modules/mealComponent/mealComponentRoutes';
+import { macrosRoutes } from '@modules/macros/macrosRoutes';
 import { kitchenIQRoutes } from '@modules/kitchenIQ/kitchenIQRoutes';
 import { coachRoutes } from '@modules/coach/coachRoutes';
 import { affinityRoutes } from '@modules/affinity/affinityRoutes';
@@ -290,6 +291,7 @@ app.use('/api/today', authenticateToken, todayRoutes);
 app.use('/api/pantry', authenticateToken, pantryRoutes);
 app.use('/api/meal-components', mealComponentRoutes);
 app.use('/api/composed-plates', composedPlateRoutes);
+app.use('/api/macros', macrosRoutes);
 app.use('/api/leftover-inventory', leftoverInventoryRoutes);
 app.use('/api/shared-plates', sharedPlateRoutes);
 app.use('/api/nutrient-gap', nutrientGapRoutes);

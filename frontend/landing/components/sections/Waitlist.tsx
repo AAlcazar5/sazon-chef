@@ -5,6 +5,7 @@ import { ArrowRight, Check } from 'lucide-react';
 import { useState } from 'react';
 import { Chip } from '@/components/ui/Chip';
 import { fadeUp, stagger, viewportOnce } from '@/lib/motion';
+import { WaitlistSuccessMascot } from './WaitlistSuccessMascot';
 
 const CUISINES = [
   { label: 'Italian', emoji: '🇮🇹' },
@@ -94,11 +95,7 @@ export function Waitlist() {
               transition={{ type: 'spring', stiffness: 220, damping: 14 }}
               className="mx-auto mb-6 grid h-24 w-24 place-items-center rounded-pill bg-pastel-peach shadow-soft"
             >
-              <img
-                src="/mascot/sazon-logo.svg"
-                alt="Sazon mascot welcoming you"
-                className="h-16 w-16"
-              />
+              <WaitlistSuccessMascot />
             </motion.div>
             <h2 className="font-display text-4xl tracking-tight text-surface-ink">
               Welcome.

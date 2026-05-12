@@ -13,6 +13,7 @@ import {
   paymentFailedTemplate,
   day3NudgeTemplate,
   day14TrialWarningTemplate,
+  waitlistConfirmationTemplate,
 } from '../emails/templates';
 
 const resend = process.env.RESEND_API_KEY
@@ -123,6 +124,14 @@ export const emailService = {
       to,
       subject: 'Your Sazon Chef trial ends in 3 days',
       html: day14TrialWarningTemplate(userName),
+    });
+  },
+
+  async sendWaitlistConfirmation(to: string, topCuisine: string | null): Promise<boolean> {
+    return this.send({
+      to,
+      subject: "You're in — Sazon's already learning 🌶️",
+      html: waitlistConfirmationTemplate(topCuisine),
     });
   },
 };

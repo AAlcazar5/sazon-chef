@@ -12,6 +12,7 @@ import LeftoverStrip, { type LeftoverInventoryItem } from './LeftoverStrip';
 import VariantChips, { type ComponentVariant } from './VariantChips';
 import NutrientBadge from './NutrientBadge';
 import RainbowHint from './RainbowHint';
+import CustomItemSheet from './CustomItemSheet';
 import { Pastel, Accent } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { BorderRadius } from '../../constants/Spacing';
@@ -124,27 +125,24 @@ export default function SlotPicker({
     });
   }, [components, activeDietary, activeCuisine, trimmedQuery, pantryOnly, scoresById]);
 
-  const handleAddCustom = useCallback(() => {
+  // Build-a-Plate Phase 10 — the "Use 'X' tonight" CTA now opens the
+  // CustomItemSheet so the user provides a portion + we run a macro estimate.
+  // Zero-macro custom items are no longer added to the composer.
+  const [customSheetVisible, setCustomSheetVisible] = useState(false);
+
+  const handleOpenCustomSheet = useCallback(() => {
     if (!slot || trimmedQuery.length === 0) return;
-    const custom: MealComponent = {
-      id: `custom-${Date.now()}`,
-      slot,
-      name: trimmedQuery,
-      defaultPortionGrams: 100,
-      caloriesPerPortion: 0,
-      proteinG: 0,
-      carbsG: 0,
-      fatG: 0,
-      fiberG: 0,
-      cuisineTags: [],
-      dietaryTags: [],
-      cookMethodHint: 'raw',
-      pantryIngredientNames: [],
-      pantryCoveragePercent: 0,
-    };
-    onSelect(custom);
-    setQuery('');
-  }, [slot, trimmedQuery, onSelect]);
+    setCustomSheetVisible(true);
+  }, [slot, trimmedQuery]);
+
+  const handleCustomAdd = useCallback(
+    (component: MealComponent) => {
+      onSelect(component);
+      setCustomSheetVisible(false);
+      setQuery('');
+    },
+    [onSelect],
+  );
 
   const dietaryChips = useMemo(() => uniqueTags(components, 'dietaryTags'), [components]);
   const cuisineChips = useMemo(() => uniqueTags(components, 'cuisineTags'), [components]);
@@ -334,7 +332,7 @@ export default function SlotPicker({
 
           {trimmedQuery.length > 0 && (
             <HapticTouchableOpacity
-              onPress={handleAddCustom}
+              onPress={handleOpenCustomSheet}
               hapticStyle="medium"
               pressedScale={0.97}
               style={[
@@ -343,25 +341,34 @@ export default function SlotPicker({
                 Shadows.SM as any,
               ]}
               testID={`${testID}-custom-cta`}
-              accessibilityLabel={`Use "${trimmedQuery}" tonight as a custom ${slot ? SLOT_LABEL[slot].toLowerCase() : 'item'}`}
+              accessibilityLabel={`Estimate macros for "${trimmedQuery}" as a custom ${slot ? SLOT_LABEL[slot].toLowerCase() : 'item'}`}
             >
               <Ionicons
-                name="add-circle"
+                name="sparkles"
                 size={18}
                 color={isDark ? '#D8B4DF' : '#6a2677'}
               />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.customCtaTitle, { color: isDark ? '#D8B4DF' : '#6a2677' }]} numberOfLines={1}>
-                  Use "{trimmedQuery}" tonight
+                  Use "{trimmedQuery}" — estimate its macros
                 </Text>
                 <Text style={[styles.customCtaBody, { color: bodyColor }]} numberOfLines={2}>
-                  Adds it to this slot. Macros and pantry coverage won't be tracked for custom items.
+                  Sazon checks USDA first, then estimates if it's a new one to us.
                 </Text>
               </View>
             </HapticTouchableOpacity>
           )}
         </ScrollView>
       )}
+
+      <CustomItemSheet
+        visible={customSheetVisible}
+        slot={slot}
+        initialName={trimmedQuery}
+        onAdd={handleCustomAdd}
+        onClose={() => setCustomSheetVisible(false)}
+        testID={`${testID}-custom-sheet`}
+      />
     </BottomSheet>
   );
 }

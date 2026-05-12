@@ -138,3 +138,22 @@ export const strictPublicLimiter = rateLimit({
   skip: () => isDevelopment,
 });
 
+/**
+ * Build-a-Plate Phase 10: per-user limiter for the macro-estimation endpoint.
+ * LLM-backed fallback path is not free — 30/min/user keeps legitimate
+ * custom-item adds fast (a user editing portions can replay) while capping
+ * runaway clients and stolen tokens.
+ */
+export const macroEstimateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: isDevelopment ? Number.MAX_SAFE_INTEGER : 30,
+  message: {
+    error: 'Too many estimation requests',
+    message: 'Slow down — too many macro estimates this minute.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => req.user?.id || ipKeyGenerator(req.ip ?? '') || 'anonymous',
+  skip: () => isDevelopment,
+});
+

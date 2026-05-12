@@ -109,7 +109,7 @@ function scaleToPortion(food: UsdaFood, grams: number) {
 }
 
 async function searchUSDA(name: string): Promise<UsdaFood | null> {
-  const apiKey = process.env.USDA_FDC_API_KEY;
+  const apiKey = process.env.FDC_API_KEY;
   if (!apiKey) return null;
 
   const params = new URLSearchParams({

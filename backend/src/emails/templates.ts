@@ -185,3 +185,24 @@ export function day14TrialWarningTemplate(userName: string): string {
     </p>
   `);
 }
+
+export function waitlistConfirmationTemplate(topCuisine: string | null): string {
+  const cuisineLine = topCuisine
+    ? `<p style="margin:0 0 16px;font-size:16px;color:${TEXT_COLOR};line-height:1.6;">
+         You told us <strong>${topCuisine}</strong> is what you cook most — so day one, that's where your feed starts. We're already lining up a starter plate built around it.
+       </p>`
+    : `<p style="margin:0 0 16px;font-size:16px;color:${TEXT_COLOR};line-height:1.6;">
+         Day one, your feed will already lean toward the cuisines and flavors you signaled. Tell us more in onboarding and it sharpens fast.
+       </p>`;
+
+  return baseLayout(`
+    <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:${TEXT_COLOR};">You're in.</h1>
+    <p style="margin:0 0 16px;font-size:18px;color:${TEXT_COLOR};line-height:1.5;">
+      Sazon's already learning.
+    </p>
+    ${cuisineLine}
+    <p style="margin:24px 0 0;font-size:14px;color:${MUTED_COLOR};">
+      We'll email once on launch day with your spot at the front of the line. Until then — go eat well.
+    </p>
+  `);
+}
