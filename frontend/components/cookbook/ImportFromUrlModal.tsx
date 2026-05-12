@@ -121,7 +121,7 @@ export default function ImportFromUrlModal({
       const message =
         error?.response?.data?.error ||
         error?.message ||
-        'Failed to import recipe. Please check the URL and try again.';
+        'Couldn\'t pull that recipe in — double-check the URL and give it another shot?';
       setErrorMsg(message);
     }
   }

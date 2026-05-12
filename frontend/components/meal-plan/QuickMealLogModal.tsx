@@ -87,7 +87,7 @@ export default function QuickMealLogModal({
       resetForm();
       onClose();
     } catch (err) {
-      setError('Failed to log meal. Please try again.');
+      setError('Couldn\'t log that meal — give it another shot?');
     } finally {
       setLoading(false);
     }

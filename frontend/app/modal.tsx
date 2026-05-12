@@ -385,7 +385,7 @@ export default function RecipeModal() {
           `${response.data.itemsAdded || 0} ingredients added to ${appName} shopping list`
         );
       } else {
-        throw new Error(response.data.message || 'Failed to sync');
+        throw new Error(response.data.message || 'Couldn\'t sync to your shopping app — give it another shot?');
       }
     } catch (error: any) {
       console.error('Error syncing recipe to app:', error);
@@ -545,7 +545,7 @@ export default function RecipeModal() {
         setShowHealthifyModal(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        throw new Error('Failed to healthify recipe');
+        throw new Error('Couldn\'t healthify this one — try again?');
       }
     } catch (error: any) {
       console.error('❌ Healthify error:', error);
@@ -905,7 +905,7 @@ export default function RecipeModal() {
         <View className="flex-1 items-center justify-center p-8">
           <Sazon variant="orange" motion="peek" fx={[]} size={192} />
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-4 text-center">
-            Failed to load recipe
+            Hmm, that recipe slipped away
           </Text>
           <Text className="text-gray-500 dark:text-gray-400 text-center mt-2">
             {error || 'Recipe not found'}

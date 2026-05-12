@@ -284,7 +284,7 @@ export default function ScannerScreen() {
         if (response.data.success && response.data.result) {
           setResult(response.data.result as FoodRecognitionResult);
         } else {
-          throw new Error('Failed to recognize food');
+          throw new Error('Couldn\'t quite read that — try a different angle?');
         }
       }
     } catch (error: any) {

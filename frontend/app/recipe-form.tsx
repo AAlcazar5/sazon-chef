@@ -402,7 +402,7 @@ export default function RecipeFormScreen() {
         });
         setShowSuccessModal(true);
       } else {
-        throw new Error('Failed to generate recipe');
+        throw new Error('Couldn\'t whip up a recipe just now — try again?');
       }
     } catch (error: any) {
       console.error('❌ AI Generate error:', error);
