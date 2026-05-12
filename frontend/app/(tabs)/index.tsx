@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Alert, Animated, Modal, Pressable } from 'react-native';
+import { View, Text, ScrollView, Alert, Modal, Pressable } from 'react-native';
+import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 // ScreenGradient removed — editorial v2 uses flat #FAF7F4 bg
@@ -170,7 +171,7 @@ export default function HomeScreen() {
   const lastSurpriseFiltersRef = useRef<SurpriseFilters>({});
 
   // Main content scroll ref (used for scroll-to-top on mascot press)
-  const mainScrollRef = useRef<ScrollView>(null);
+  const mainScrollRef = useRef<Animated.ScrollView>(null);
 
   // ── ROADMAP 4.0 A1-c — Today rotating discovery tip ──
   // Cold-start seed = deterministic day-of-year pick so first visit each
@@ -224,7 +225,12 @@ export default function HomeScreen() {
   }, []);
 
   // Scroll position for parallax effect
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
 
   // ROADMAP 4.0 HX3.3 — Throttled scroll-offset mirror + viewport height
   // for LazyMountBoundary children. We mirror scrollY into React state in
@@ -232,13 +238,14 @@ export default function HomeScreen() {
   // primitive uses a 600px trigger so 100px resolution is plenty).
   const [scrollOffset, setScrollOffset] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
-  useEffect(() => {
-    const sub = scrollY.addListener(({ value }) => {
-      const bucket = Math.round(value / 100) * 100;
-      setScrollOffset((prev) => (prev === bucket ? prev : bucket));
-    });
-    return () => scrollY.removeListener(sub);
-  }, [scrollY]);
+  useAnimatedReaction(
+    () => Math.round(scrollY.value / 100) * 100,
+    (bucket, prev) => {
+      if (bucket !== prev) {
+        runOnJS(setScrollOffset)(bucket);
+      }
+    },
+  );
 
   // HX3.2 wiring reverted — the useCohortSocialProof hook still drives
   // the pill (the pill imports + calls it directly); no need to call it
@@ -1165,7 +1172,7 @@ export default function HomeScreen() {
 
       {bodyState === 'content' && (
       /* Main content area */
-      <ScrollView
+      <Animated.ScrollView
         ref={mainScrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 200 }}
@@ -1176,10 +1183,7 @@ export default function HomeScreen() {
             onRefresh={onRefresh}
           />
         }
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
+        onScroll={scrollHandler}
         scrollEventThrottle={16}
         onLayout={(e) => {
           // HX3.3 — capture viewport height for LazyMountBoundary children below.
@@ -1326,7 +1330,7 @@ export default function HomeScreen() {
             />
           </LazyMountBoundary>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
       )}
 
       {/* Filter Modal */}

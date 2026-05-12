@@ -1,14 +1,24 @@
 // frontend/components/profile/ProfileHeader.tsx
 // Profile header with avatar, name, email, and edit name modal
 
-import { View, Text, Modal, TextInput, Animated } from 'react-native';
+import { View, Text, Modal, TextInput } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  interpolate,
+  Extrapolation,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import BrandButton from '../ui/BrandButton';
 import FrostedHeader from '../ui/FrostedHeader';
 import Sazon from '../mascot/Sazon';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '../ui/Icon';
 import AnimatedStatCounter from '../ui/AnimatedStatCounter';
 import ShimmerBadge from '../ui/ShimmerBadge';
@@ -34,7 +44,7 @@ interface ProfileHeaderProps {
   /** Show the shimmer premium badge */
   isPremium?: boolean;
   /** Scroll Y value for stats parallax effect */
-  scrollY?: Animated.Value;
+  scrollY?: SharedValue<number>;
 }
 
 export default function ProfileHeader({
@@ -49,31 +59,52 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const flameOpacity = useRef(new Animated.Value(1)).current;
+  const flameOpacity = useSharedValue(1);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [updatingName, setUpdatingName] = useState(false);
 
   // Subtle pulsing flame animation for streak indicator
   useEffect(() => {
-    if (!stats?.mealHistory) return;
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(flameOpacity, {
-          toValue: 0.5,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(flameOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
+    if (!stats?.mealHistory) {
+      flameOpacity.value = 1;
+      return;
+    }
+    flameOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.5, { duration: 800 }),
+        withTiming(1, { duration: 800 }),
+      ),
+      -1,
+      false,
     );
-    pulse.start();
-    return () => pulse.stop();
   }, [stats?.mealHistory, flameOpacity]);
+
+  const flameStyle = useAnimatedStyle(() => ({
+    opacity: flameOpacity.value,
+  }));
+
+  const statsParallaxStyle = useAnimatedStyle(() => {
+    if (!scrollY) return {};
+    return {
+      transform: [
+        {
+          translateY: interpolate(
+            scrollY.value,
+            [0, 120],
+            [0, -12],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+      opacity: interpolate(
+        scrollY.value,
+        [0, 100],
+        [1, 0.7],
+        Extrapolation.CLAMP,
+      ),
+    };
+  });
 
   const handleEditName = () => {
     setEditingName(profile.name);
@@ -234,20 +265,7 @@ export default function ProfileHeader({
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 },
-                scrollY ? {
-                  transform: [{
-                    translateY: scrollY.interpolate({
-                      inputRange: [0, 120],
-                      outputRange: [0, -12],
-                      extrapolate: 'clamp',
-                    }),
-                  }],
-                  opacity: scrollY.interpolate({
-                    inputRange: [0, 100],
-                    outputRange: [1, 0.7],
-                    extrapolate: 'clamp',
-                  }),
-                } : null,
+                statsParallaxStyle,
               ]}
             >
               <View style={{ alignItems: 'center', flex: 1 }}>
@@ -284,7 +302,7 @@ export default function ProfileHeader({
                     Cooked
                   </Text>
                   {stats.mealHistory > 0 && (
-                    <Animated.Text style={{ opacity: flameOpacity, fontSize: 11, marginLeft: 3 }}>🔥</Animated.Text>
+                    <Animated.Text style={[{ fontSize: 11, marginLeft: 3 }, flameStyle]}>🔥</Animated.Text>
                   )}
                 </View>
               </View>

@@ -33,7 +33,7 @@ describe('HX3.3: HomeScreen lazy-mount wiring', () => {
   it('tracks a state-mirrored scrollOffset (throttled mirror of Animated scrollY)', () => {
     expect(src).toMatch(/const\s+\[scrollOffset,\s*setScrollOffset\]\s*=\s*useState\(0\)/);
     // The mirror MUST be bucketed — un-throttled 60fps setState would re-render the home tree.
-    expect(src).toMatch(/Math\.round\(value\s*\/\s*100\)\s*\*\s*100/);
+    expect(src).toMatch(/Math\.round\([a-zA-Z.]+\s*\/\s*100\)\s*\*\s*100/);
   });
 
   it('tracks viewportHeight from the ScrollView onLayout', () => {
@@ -73,11 +73,11 @@ describe('HX3.3: HomeScreen lazy-mount wiring', () => {
     }
   });
 
-  it('the scrollY listener is removed in the cleanup return (no leak)', () => {
-    // Match the useEffect that subscribes + cleans up the scrollY listener.
-    // Without the removeListener the home screen leaks subscribers on
-    // every remount (tabs swap re-runs the effect).
-    expect(src).toMatch(/scrollY\.addListener/);
-    expect(src).toMatch(/scrollY\.removeListener\(sub\)/);
+  it('mirrors scrollY into scrollOffset via useAnimatedReaction (no manual listener teardown needed)', () => {
+    // After the Reanimated migration, scrollY is a shared value and the JS
+    // mirror is driven by useAnimatedReaction. The hook handles teardown
+    // automatically so there's no addListener/removeListener pair to leak.
+    expect(src).toMatch(/useAnimatedReaction\b/);
+    expect(src).toMatch(/runOnJS\(setScrollOffset\)/);
   });
 });

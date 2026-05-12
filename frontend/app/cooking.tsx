@@ -6,12 +6,20 @@ import {
   Text,
   TextInput,
   ScrollView,
-  Animated,
   Platform,
   StatusBar,
   Share,
   Alert,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalSearchParams, router, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -174,11 +182,23 @@ export default function CookingScreen() {
   }, [navigation]);
 
   // Step scale animation for spring entrance
-  const stepScale = useRef(new Animated.Value(1)).current;
+  const stepScale = useSharedValue(1);
 
-  // Slide animation for step transitions
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  // Slide animation for step transitions (-1 = off-screen left, 1 = right)
+  const slideAnim = useSharedValue(0);
   const stepRef = useRef(0);
+
+  const stepCardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(slideAnim.value, [-1, 0, 1], [-40, 0, 40], Extrapolation.CLAMP) },
+      { scale: stepScale.value },
+    ],
+    opacity: interpolate(slideAnim.value, [-1, -0.5, 0, 0.5, 1], [0, 0.5, 1, 0.5, 0], Extrapolation.CLAMP),
+  }));
+
+  const bumpStep = useCallback((delta: number) => {
+    setCurrentStep((s) => s + delta);
+  }, []);
 
   // --- Fetch Recipe ---
   useEffect(() => {
@@ -268,26 +288,30 @@ export default function CookingScreen() {
   }
 
   // --- Step Navigation ---
-  // True cross-fade: slide current content out, then slide new content in from the opposite side.
+  // Cross-fade: slide current content out, swap step at the midpoint, slide
+  // new content in from the opposite side. State change driven from JS
+  // (setTimeout) so the swap doesn't depend on the worklet completion
+  // callback firing under test runners.
+  const transitionStep = useCallback((direction: 1 | -1) => {
+    slideAnim.value = withTiming(-direction, { duration: 120 });
+    stepScale.value = withSequence(
+      withTiming(0.95, { duration: 120 }),
+      withSpring(1, { damping: 12, stiffness: 100 }),
+    );
+    setTimeout(() => {
+      bumpStep(direction);
+      slideAnim.value = direction;
+      slideAnim.value = withSpring(0, { damping: 14, stiffness: 200 });
+    }, 120);
+  }, [bumpStep, slideAnim, stepScale]);
+
   function goNext() {
     if (!recipe) return;
     if (currentStep < recipe.instructions.length - 1) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      // Flash step completion checkmark
       setStepCheckVisible(true);
       setTimeout(() => setStepCheckVisible(false), 400);
-      // Cross-fade with spring scale (0.95 → 1.0)
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: -1, duration: 120, useNativeDriver: true }),
-        Animated.timing(stepScale, { toValue: 0.95, duration: 120, useNativeDriver: true }),
-      ]).start(() => {
-        setCurrentStep((s) => s + 1);
-        slideAnim.setValue(1);
-        Animated.parallel([
-          Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }),
-          Animated.spring(stepScale, { toValue: 1, friction: 8, tension: 80, useNativeDriver: true }),
-        ]).start();
-      });
+      transitionStep(1);
     } else {
       handleDone();
     }
@@ -296,17 +320,7 @@ export default function CookingScreen() {
   function goPrev() {
     if (currentStep > 0) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
-        Animated.timing(stepScale, { toValue: 0.95, duration: 120, useNativeDriver: true }),
-      ]).start(() => {
-        setCurrentStep((s) => s - 1);
-        slideAnim.setValue(-1);
-        Animated.parallel([
-          Animated.spring(slideAnim, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }),
-          Animated.spring(stepScale, { toValue: 1, friction: 8, tension: 80, useNativeDriver: true }),
-        ]).start();
-      });
+      transitionStep(-1);
     }
   }
 
@@ -817,21 +831,7 @@ export default function CookingScreen() {
           <GestureDetector gesture={swipeGesture}>
             <Animated.View
               className="flex-1 px-6 justify-center"
-              style={{
-                transform: [
-                  {
-                    translateX: slideAnim.interpolate({
-                      inputRange: [-1, 0, 1],
-                      outputRange: [-40, 0, 40],
-                    }),
-                  },
-                  { scale: stepScale },
-                ],
-                opacity: slideAnim.interpolate({
-                  inputRange: [-1, -0.5, 0, 0.5, 1],
-                  outputRange: [0, 0.5, 1, 0.5, 0],
-                }),
-              }}
+              style={stepCardAnimatedStyle}
             >
               {/* Step completion checkmark flash */}
               {stepCheckVisible && (

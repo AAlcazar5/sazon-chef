@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, Linking, Animated } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, Text, ScrollView, Linking } from 'react-native';
+import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SettingsRow from '../../components/ui/SettingsRow';
@@ -44,7 +45,12 @@ export default function ProfileScreen() {
   const isDark = theme === 'dark';
   const [showCancellationFlow, setShowCancellationFlow] = useState(false);
 
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -169,10 +175,7 @@ export default function ProfileScreen() {
         refreshControl={
           <SazonRefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
         {/* Colorful stat widgets + activity calendar (9L) */}

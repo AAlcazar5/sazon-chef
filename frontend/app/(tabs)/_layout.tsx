@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, Modal, Animated, Dimensions, TextInput, ScrollView, Keyboard, Platform, Alert } from 'react-native';
+import { View, Text, Modal, Dimensions, TextInput, ScrollView, Keyboard, Platform, Alert } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
 import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SearchBar from '../../components/ui/SearchBar';
 import SazonFAB from '../../components/sazon/SazonFAB';
@@ -89,7 +90,10 @@ export default function TabLayout() {
   }, [fetchBadgeCounts]);
 
   // FAB (Floating Action Button) animations
-  const fabScale = useRef(new Animated.Value(1)).current;
+  const fabScale = useSharedValue(1);
+  const fabAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: fabScale.value }],
+  }));
 
 
   const lastSegment = segments[segments.length - 1] as string;
@@ -582,21 +586,10 @@ export default function TabLayout() {
               actions read as a pair. */}
           <HapticTouchableOpacity
             onPress={async () => {
-              Animated.sequence([
-                Animated.spring(fabScale, {
-                  toValue: 0.93,
-                  friction: 5,
-                  tension: 40,
-                  useNativeDriver: true,
-                }),
-                Animated.spring(fabScale, {
-                  toValue: 1,
-                  friction: 4,
-                  tension: 40,
-                  useNativeDriver: true,
-                }),
-              ]).start();
-
+              fabScale.value = withSequence(
+                withSpring(0.93, { damping: 12, stiffness: 220 }),
+                withSpring(1, { damping: 10, stiffness: 180 }),
+              );
               setShowActionSheet(true);
             }}
             activeOpacity={1}
@@ -606,13 +599,15 @@ export default function TabLayout() {
             style={{ padding: 4 }}
           >
             <Animated.View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                overflow: 'hidden',
-                transform: [{ scale: fabScale }],
-              }}
+              style={[
+                {
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  overflow: 'hidden',
+                },
+                fabAnimatedStyle,
+              ]}
             >
               {/* Coral→deep-coral gradient (`primaryCTA`) pairs with the
                   sage→deep-green Sazon FAB. Same 36×36 footprint, same

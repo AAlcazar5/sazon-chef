@@ -1,7 +1,7 @@
 // frontend/app/(tabs)/shopping-list.tsx
 // Shopping list screen - refactored to use extracted components and useShoppingList hook
 
-import { View, Text, ScrollView, SectionList, Animated, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, SectionList, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
