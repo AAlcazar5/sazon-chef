@@ -26,6 +26,7 @@ import {
   PhysicalProfileCard,
   WeightHistoryCard,
   MacroGoalsCard,
+  SazonIdentityCard,
   CulinaryPreferencesCard,
   KitchenIQSection,
   CoachMemoryCard,
@@ -97,7 +98,6 @@ export default function ProfileScreen() {
         </FrostedHeader>
         <View className="flex-1 items-center justify-center">
           <Icon name={Icons.ACCOUNT_OUTLINE} size={64} color="#9CA3AF" accessibilityLabel="Loading profile" />
-          <Text className="text-gray-500 dark:text-gray-200 mt-4">Loading profile...</Text>
         </View>
       </View></ScreenGradient>
     );
@@ -217,6 +217,12 @@ export default function ProfileScreen() {
 
         <StaggerItem index={5}>
           <MacroGoalsCard profile={profile} macroGoals={macroGoals} />
+        </StaggerItem>
+
+        {/* P1 retention — identity surface ("Sazon knows you as…").
+            Derives from cooking journey signals; auto-hides until any are loaded. */}
+        <StaggerItem index={6}>
+          <SazonIdentityCard />
         </StaggerItem>
 
         <StaggerItem index={6}>

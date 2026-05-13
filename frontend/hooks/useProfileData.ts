@@ -4,6 +4,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Alert, Share } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { sazonAlert } from '../lib/sazonAlert';
 import * as ImagePicker from 'expo-image-picker';
 import { showPermissionDenied } from '../lib/permissionDeniedHelpers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -634,7 +635,7 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
       console.error('📱 Profile: Notifications update error', error);
       setNotifications(previousNotifications);
       HapticPatterns.error();
-      Alert.alert('Error', 'Failed to save notification settings. Please try again.', [{ text: 'OK' }]);
+      sazonAlert('alerts.save_failed.title', 'alerts.save_failed.body');
     } finally {
       setUpdatingNotification(null);
     }
@@ -1057,7 +1058,7 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
       setRouletteRecipes(recipes);
     } catch (error) {
       console.error('Error fetching roulette recipes:', error);
-      Alert.alert('Error', 'Failed to load recipes. Please try again.');
+      sazonAlert('alerts.load_failed.title', 'alerts.load_failed.body');
     } finally {
       setRouletteLoading(false);
     }
@@ -1111,8 +1112,8 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
 
   const handleLogout = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      'Heads up',
+      'This\'ll sign you out — sure?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1145,7 +1146,7 @@ export function useProfileData({ user, logout }: UseProfileDataOptions) {
     } catch (error: any) {
       console.error('📱 Profile: Error deleting account', error);
       HapticPatterns.error();
-      Alert.alert('Error', error.message || 'Failed to delete account. Please try again or contact support.');
+      sazonAlert('alerts.delete_account_failed.title', 'alerts.delete_account_failed.body');
     }
   };
 

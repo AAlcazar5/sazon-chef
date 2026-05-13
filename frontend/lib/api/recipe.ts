@@ -357,6 +357,11 @@ export const recipeApi = {
         cookTime: number | null;
         imageUrl: string | null;
         score: number;
+        calories: number | null;
+        protein: number | null;
+        carbs: number | null;
+        fat: number | null;
+        fiber: number | null;
       }>;
     }>(`/recipes/${id}/similar`, { params: { k } });
   },
@@ -372,6 +377,14 @@ export const recipeApi = {
       totalCount: number;
       identityRedacted: boolean;
     }>(`/recipes/${id}/friend-cohort`, { params: { windowDays } });
+  },
+
+  // P4 retention — "N people with your taste cooked this" social proof.
+  getTasteCohort: (id: string) => {
+    return apiClient.get<{
+      cookerCount: number;
+      cohortLabel: string | null;
+    }>(`/recipes/${id}/taste-cohort`);
   },
 
   // ROADMAP 4.0 RD5.1 — "Cooked this and then…" cohort recommender.

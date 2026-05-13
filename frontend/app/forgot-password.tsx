@@ -158,9 +158,9 @@ export default function ForgotPasswordScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       Alert.alert(
-        'Success',
-        'Your password has been reset successfully. You can now log in with your new password.',
-        [{ text: 'OK', onPress: () => router.replace('/login') }],
+        'New password set',
+        'You can sign back in with it now.',
+        [{ text: 'Sign in', onPress: () => router.replace('/login') }],
       );
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

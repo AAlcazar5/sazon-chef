@@ -3,6 +3,7 @@
 
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
+import { sazonAlert } from '../lib/sazonAlert';
 import { recipeApi, collectionsApi } from '../lib/api';
 import { HapticPatterns } from '../constants/Haptics';
 import { analytics } from '../utils/analytics';
@@ -16,6 +17,7 @@ interface Collection {
 interface UseCollectionSaveOptions {
   userId?: string;
   source?: string;
+  onSaved?: (recipeId: string) => void;
 }
 
 interface UseCollectionSaveReturn {
@@ -39,7 +41,7 @@ interface UseCollectionSaveReturn {
 }
 
 export function useCollectionSave(options: UseCollectionSaveOptions = {}): UseCollectionSaveReturn {
-  const { userId, source = 'home_screen' } = options;
+  const { userId, source = 'home_screen', onSaved } = options;
 
   // Collections state
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -100,6 +102,7 @@ export function useCollectionSave(options: UseCollectionSaveOptions = {}): UseCo
         });
       }
 
+      onSaved?.(savePickerRecipeId);
       closeSavePicker();
       Alert.alert('Saved', 'Recipe saved to cookbook!');
     } catch (error: any) {
@@ -115,9 +118,10 @@ export function useCollectionSave(options: UseCollectionSaveOptions = {}): UseCo
         } else {
           Alert.alert('Already Saved', 'This recipe is already in your cookbook!');
         }
+        onSaved?.(savePickerRecipeId);
       } else {
         HapticPatterns.error();
-        Alert.alert('Error', error.message || 'Failed to save recipe');
+        sazonAlert('alerts.save_failed.title', 'alerts.save_failed.body');
       }
       closeSavePicker();
     }
@@ -139,7 +143,7 @@ export function useCollectionSave(options: UseCollectionSaveOptions = {}): UseCo
       }
     } catch (e: any) {
       HapticPatterns.error();
-      Alert.alert('Error', e?.message || 'Failed to create collection');
+      sazonAlert('alerts.collection_create_failed.title', 'alerts.collection_create_failed.body');
     }
   }, [newCollectionName]);
 

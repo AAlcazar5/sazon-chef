@@ -36,6 +36,32 @@ export interface ReverseDiscoveryResponse {
   copy: ReverseDiscoveryCopyPayload | null;
 }
 
+// P1 retention — cuisine-drought Today card payload.
+export interface CuisineDroughtPayload {
+  cuisine: string | null;
+  daysSince: number | null;
+}
+
+// P2 retention — iOS / Android home-screen widget payload.
+// Native widget reads this via a SharedDefaults bridge written from JS on
+// app foreground (see frontend/widgets/README.md for the bridge contract).
+export interface WidgetPayload {
+  recipeId: string | null;
+  title: string | null;
+  imageUrl: string | null;
+  cookTime: number | null;
+  cuisine: string | null;
+  eyebrow: string;
+  deepLink: string | null;
+}
+
+// P4 retention — cook-pattern card payload.
+export interface CookPatternPayload {
+  matchesToday: boolean;
+  dayName: string | null;
+  totalCooks: number;
+}
+
 export const todayApi = {
   activation: () =>
     apiClient.get<{ surface: ActivationSurface | null }>('/today/activation'),
@@ -52,6 +78,12 @@ export const todayApi = {
   // to add) and unsupported locales — surface auto-hides client-side.
   reverseDiscovery: () =>
     apiClient.get<ReverseDiscoveryResponse>('/today/reverse-discovery'),
+  // P1 retention — cuisine drought surface.
+  drought: () => apiClient.get<CuisineDroughtPayload>('/today/drought'),
+  // P2 retention — widget timeline source.
+  widget: () => apiClient.get<WidgetPayload>('/today/widget'),
+  // P4 retention — "you usually cook Tuesday nights" behavioral pattern.
+  cookPattern: () => apiClient.get<CookPatternPayload>('/today/cook-pattern'),
 };
 
 // ROADMAP 4.0 IG8.2 — "Try this ingredient" weekly cultural discovery.

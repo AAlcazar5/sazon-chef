@@ -269,7 +269,7 @@ export default function EditMacroGoalsScreen() {
       <EditScreenShell title="Macro Goals" noScroll>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="fitness-outline" size={56} color={sub} />
-          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading…</Text>
+          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Warming up…</Text>
         </View>
       </EditScreenShell>
     );

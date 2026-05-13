@@ -823,7 +823,7 @@ function FeedbackRow({ recipeId, isDark }: { recipeId: string; isDark: boolean }
     }}>
       <HapticTouchableOpacity
         onPress={handleSave}
-        accessibilityLabel={saved ? 'Remove from cookbook' : 'Save to cookbook'}
+        accessibilityLabel={saved ? 'Remove from your kitchen' : 'Save to your kitchen'}
         style={button(saved)}
       >
         <Ionicons

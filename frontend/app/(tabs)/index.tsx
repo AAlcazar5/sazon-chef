@@ -54,6 +54,13 @@ import QuickActionRow from '../../components/today/QuickActionRow';
 import { QuickMealLogModal } from '../../components/meal-plan';
 import TodayDiscoveryCard from '../../components/today/TodayDiscoveryCard';
 import FirstOfDayNote from '../../components/home/FirstOfDayNote';
+import CuisineDroughtCard from '../../components/today/CuisineDroughtCard';
+import CookPatternCard from '../../components/today/CookPatternCard';
+import SazonsPickCard from '../../components/today/SazonsPickCard';
+import { useSazonsPickReroll } from '../../hooks/useSazonsPickReroll';
+import { composeSazonsPickReason } from '../../lib/sazonsPickReason';
+import { deriveIdentity } from '../../lib/identityTags';
+import { useCookingJourney } from '../../hooks/useCookingJourney';
 import SundayPolaroidCard from '../../components/today/SundayPolaroidCard';
 import CohortSocialProofPill from '../../components/today/CohortSocialProofPill';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
@@ -136,6 +143,13 @@ export default function HomeScreen() {
   // Random recipe state managed by extracted hook (defined after filters)
 
   const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
+  // P2 retention — Sazon's Pick re-roll ritual. When rolls are exhausted,
+  // freeze the pick to the recipe shown at the moment of the failed roll
+  // so the moment stays special.
+  const sazonsPickReroll = useSazonsPickReroll();
+  const [lockedSazonsPick, setLockedSazonsPick] = useState<SuggestedRecipe | null>(null);
+  // P3 retention — identity tags drive the Sazon's Pick reason composition.
+  const sazonsPickJourney = useCookingJourney();
   // Quick meals and perfect matches state managed by extracted hooks (defined after filters/mealPrepMode)
   const [animatedRecipeIds, setAnimatedRecipeIds] = useState<Set<string>>(new Set());
   const [initialRecipesLoaded, setInitialRecipesLoaded] = useState(false); // Track if we've loaded initial recipes
@@ -397,7 +411,11 @@ export default function HomeScreen() {
   }, []);
 
   // Collections state for save to collection - using extracted hook
-  const collectionSave = useCollectionSave({ userId: user?.id, source: 'home_screen' });
+  const collectionSave = useCollectionSave({
+    userId: user?.id,
+    source: 'home_screen',
+    onSaved: (recipeId) => updateRecipeFeedback(recipeId, { liked: true, disliked: false }),
+  });
   const {
     collections,
     savePickerVisible,
@@ -728,6 +746,17 @@ export default function HomeScreen() {
     // Rotate the discovery / pairing recommendation on each pull-to-refresh
     // so the user sees a new tip every time. Cycle is local (no API call).
     cycleDiscoveryTip();
+
+    // P2 retention — pull-to-refresh as Sazon's Pick re-roll ritual.
+    // If a roll is available, clear any previous lock so the next render's
+    // suggestedRecipes[0] becomes the new pick (animation replays inside
+    // the card). If no roll is left, freeze the current pick.
+    const rolled = await sazonsPickReroll.consumeRoll();
+    if (rolled) {
+      setLockedSazonsPick(null);
+    } else if (!lockedSazonsPick && suggestedRecipes[0]) {
+      setLockedSazonsPick(suggestedRecipes[0]);
+    }
 
     const filterParams = {
       page: 0,
@@ -1242,6 +1271,32 @@ export default function HomeScreen() {
             is refactored away from horizontal-FlatList. */}
         {sundayRecap && <SundayPolaroidCard recap={sundayRecap} />}
         <FirstOfDayNote lastCookCuisine={lastCookCuisine} />
+        {/* P4 retention — fires only on the user's dominant cook weekday. */}
+        <CookPatternCard onPress={onRefresh} />
+        <CuisineDroughtCard />
+        {/* P1 retention — variable-reward daily pick. Sealed → tap reveals.
+            Reason: derived from lastCookCuisine; falls back to generic copy. */}
+        <SazonsPickCard
+          recipe={(() => {
+            const r = lockedSazonsPick ?? suggestedRecipes[0];
+            if (!r) return null;
+            return {
+              id: r.id,
+              title: r.title,
+              imageUrl: r.imageUrl ?? null,
+              cuisine: r.cuisine ?? null,
+            };
+          })()}
+          reason={composeSazonsPickReason({
+            pickCuisine: (lockedSazonsPick ?? suggestedRecipes[0])?.cuisine ?? null,
+            lastCookCuisine,
+            identityTags: deriveIdentity({
+              stats: sazonsPickJourney.stats,
+              progress: sazonsPickJourney.progress,
+            }).tags,
+          })}
+          onOpen={handleRecipePress}
+        />
         <NutritionStrip snapshot={dailyNutrition} />
         <CohortSocialProofPill />
         <TodayDiscoveryCard tip={dailyDiscoveryTip} onPress={handleDiscoveryTipPress} />

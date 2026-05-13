@@ -172,7 +172,7 @@ function EditorialRecipeCardComponent({
         <HapticTouchableOpacity
           onPress={handleSave}
           style={[styles.actionButton, { backgroundColor: actionBtnBg }]}
-          accessibilityLabel="Save to cookbook"
+          accessibilityLabel="Save to your kitchen"
         >
           <Ionicons name="bookmark-outline" size={16} color={actionIconInactiveColor} />
         </HapticTouchableOpacity>

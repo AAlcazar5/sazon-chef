@@ -1307,9 +1307,9 @@ export default function MealPlanScreen() {
                 ingredients: healthified.ingredients,
                 instructions: healthified.instructions,
               });
-              Alert.alert('Saved to cookbook', `${healthified.title} is ready to cook.`);
+              Alert.alert('On your shelf', `${healthified.title} is ready to cook.`);
             } catch (err) {
-              Alert.alert('Almost there', "Couldn't save to your cookbook — try again in a sec.");
+              Alert.alert('Almost there', "Couldn't tuck that onto your shelf — try again in a sec.");
             }
           }}
           onBrowseLighter={(suggestions) => {

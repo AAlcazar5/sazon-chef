@@ -172,7 +172,7 @@ function RecipeCard({ option, onAddToPlan, isDark }: { option: RecipeOption; onA
             alignItems: 'center',
             opacity: saving ? 0.7 : 1,
           }}
-          accessibilityLabel={`Save ${recipe.title} to cookbook`}
+          accessibilityLabel={`Save ${recipe.title} to your kitchen`}
         >
           <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: saved ? (isDark ? '#86EFAC' : '#16A34A') : textSecondary }}>
             {saved ? 'Saved' : 'Save to Cookbook'}

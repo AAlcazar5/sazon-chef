@@ -15,6 +15,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
@@ -24,6 +25,13 @@ export type CookCompleteIntensity = 'big' | 'medium' | 'quiet';
 interface CookCompleteCelebrationProps {
   tier: CookCompleteIntensity;
   recipeTitle: string;
+  /**
+   * Optional share callback. When provided AND tier === 'big', the
+   * share-prompt becomes a tappable button that fires this. When omitted
+   * the prompt is a non-interactive hint (preserves the original J14
+   * presentation-only behavior).
+   */
+  onSharePress?: () => void;
 }
 
 const TIER_COPY: Record<CookCompleteIntensity, { headline: string; sub: string }> = {
@@ -44,6 +52,7 @@ const TIER_COPY: Record<CookCompleteIntensity, { headline: string; sub: string }
 export default function CookCompleteCelebration({
   tier,
   recipeTitle,
+  onSharePress,
 }: CookCompleteCelebrationProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -144,25 +153,33 @@ export default function CookCompleteCelebration({
           {recipeTitle}
         </Text>
         <Text style={[styles.subline, { color: sub }]}>{copy.sub}</Text>
-        {/*
-          The share-prompt is a non-interactive label, not a button — the
-          actual share affordance lives in `<DailyPlateShareCard />` (J15)
-          rendered alongside this celebration. Keeping this as a hint reminds
-          the user that the share moment exists without duplicating the tap
-          target. Marked `accessibilityRole="text"` to avoid a dead-button trap
-          for screen readers.
-        */}
-        <View
-          testID="cook-complete-celebration-share-prompt"
-          accessibilityRole="text"
-          accessibilityLabel="Share today's plate is available"
-          style={[styles.sharePrompt, { backgroundColor: 'rgba(255,255,255,0.55)' }]}
-        >
-          <Ionicons name="share-outline" size={14} color={accent} />
-          <Text style={[styles.sharePromptLabel, { color: accent }]}>
-            Share today&apos;s plate
-          </Text>
-        </View>
+        {onSharePress ? (
+          <HapticTouchableOpacity
+            testID="cook-complete-celebration-share-prompt"
+            accessibilityRole="button"
+            accessibilityLabel="Send today's plate to a friend"
+            onPress={onSharePress}
+            hapticStyle="light"
+            style={[styles.sharePrompt, { backgroundColor: 'rgba(255,255,255,0.55)' }]}
+          >
+            <Ionicons name="share-outline" size={14} color={accent} />
+            <Text style={[styles.sharePromptLabel, { color: accent }]}>
+              Send it to a friend?
+            </Text>
+          </HapticTouchableOpacity>
+        ) : (
+          <View
+            testID="cook-complete-celebration-share-prompt"
+            accessibilityRole="text"
+            accessibilityLabel="Share today's plate is available"
+            style={[styles.sharePrompt, { backgroundColor: 'rgba(255,255,255,0.55)' }]}
+          >
+            <Ionicons name="share-outline" size={14} color={accent} />
+            <Text style={[styles.sharePromptLabel, { color: accent }]}>
+              Share today&apos;s plate
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );

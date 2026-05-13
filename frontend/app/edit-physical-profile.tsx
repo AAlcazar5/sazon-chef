@@ -178,8 +178,8 @@ export default function EditPhysicalProfileScreen() {
         setTdee(response.data.profile.tdee);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Saved!', 'Your physical profile has been updated.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert('Updated', "Sazon's recalibrating to you.", [
+        { text: 'Done', onPress: () => router.back() },
       ]);
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -411,10 +411,10 @@ export default function EditPhysicalProfileScreen() {
               </View>
             </View>
 
-            {/* ── Fitness Goal ── */}
+            {/* ── How you want to eat ── */}
             <View style={[styles.section, { backgroundColor: isDark ? PastelDark.blush : Pastel.blush }, Shadows.SM as any]}>
               <Text style={styles.sectionEmoji}>💪</Text>
-              <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>Fitness Goal</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? DarkColors.text.primary : Colors.text.primary }]}>How you want to eat</Text>
               <View style={styles.goalGrid}>
                 {FITNESS_GOALS.map((goal) => {
                   const selected = fitnessGoal === goal.value;

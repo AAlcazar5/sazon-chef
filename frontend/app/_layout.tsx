@@ -24,6 +24,7 @@ ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Duration } from '../constants/Animations';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useWidgetSync } from '../hooks/useWidgetSync';
 import { useBiometricLock } from '../hooks/useBiometricLock';
 import { useForceUpgrade } from '../hooks/useForceUpgrade';
 import ForceUpgradeScreen from '../components/ui/ForceUpgradeScreen';
@@ -75,6 +76,11 @@ function RootLayoutNav() {
 
   // Register for push notifications when authenticated
   usePushNotifications();
+
+  // P2 retention — sync the home-screen widget payload on app open + on
+  // every foreground transition. Native widget extension reads the cached
+  // payload via the SharedDefaults bridge (see frontend/widgets/README.md).
+  useWidgetSync();
 
   // U2: Deep-link runtime handler.
   // Every `sazon://...` URL (and universal https link) is resolved to an

@@ -27,9 +27,9 @@ export const MOODS: Mood[] = [
   },
   {
     id: 'healthy',
-    label: 'Healthy',
+    label: 'Veg-forward',
     emoji: '🥗',
-    description: 'Nutritious & balanced',
+    description: 'Real ingredients, plant-leaning',
     color: '#10B981', // green
   },
   {

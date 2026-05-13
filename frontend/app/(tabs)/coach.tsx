@@ -42,7 +42,9 @@ import { chipsFromCoachContext } from '../../components/coach/QuickStartChips';
 import CoachPaywallSheet, { type CoachPaywallReason } from '../../components/coach/CoachPaywallSheet';
 import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill';
 import SazonHeader from '../../components/coach/SazonHeader';
+import SazonDailyGreetingBanner from '../../components/coach/SazonDailyGreetingBanner';
 import { useCoachStream } from '../../hooks/useCoachStream';
+import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
 import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
 import { useCoachQuickChipContext } from '../../hooks/useCoachQuickChipContext';
@@ -133,6 +135,8 @@ export default function CoachScreen({
   );
 
   const chips = useMemo(() => chipsFromCoachContext(chipContext), [chipContext]);
+  // P2 retention — proactive Sazon greeting signal.
+  const { cuisine: lastCookCuisine } = useLastCookCuisine();
 
   const paywallReason: CoachPaywallReason | null =
     manualPaywallReason ?? stream.paywallReason ?? (stream.paywall ? 'cap' : null);
@@ -464,6 +468,11 @@ export default function CoachScreen({
               <Text style={[styles.introText, { color: subtle }]}>
                 Tell me what you're hungry for — I know your pantry, macros, and taste.
               </Text>
+              {/* P2 retention — once-per-day proactive greeting. */}
+              <SazonDailyGreetingBanner
+                signals={{ lastCookCuisine }}
+                onStart={(starter) => onSelectChip(starter)}
+              />
               <View style={styles.chipsWrap}>
                 <QuickStartChips chips={chips} onSelect={onSelectChip} />
               </View>

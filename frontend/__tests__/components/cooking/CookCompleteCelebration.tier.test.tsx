@@ -22,7 +22,7 @@ jest.mock('../../../contexts/ThemeContext', () => ({
 }));
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import CookCompleteCelebration from '../../../components/cooking/CookCompleteCelebration';
 
 beforeEach(() => {
@@ -39,6 +39,42 @@ describe('<CookCompleteCelebration />', () => {
       expect(getByTestId('cook-complete-celebration')).toBeTruthy();
       expect(getByTestId('cook-complete-celebration-big')).toBeTruthy();
       expect(getByTestId('cook-complete-celebration-share-prompt')).toBeTruthy();
+    });
+
+    it('share prompt is a non-interactive label when onSharePress is omitted', () => {
+      const { getByTestId } = render(
+        <CookCompleteCelebration tier="big" recipeTitle="Khoresh Fesenjan" />,
+      );
+      const prompt = getByTestId('cook-complete-celebration-share-prompt');
+      expect(prompt.props.accessibilityRole).toBe('text');
+    });
+
+    it('share prompt becomes a tappable button when onSharePress is provided', () => {
+      const onShare = jest.fn();
+      const { getByTestId } = render(
+        <CookCompleteCelebration
+          tier="big"
+          recipeTitle="Khoresh Fesenjan"
+          onSharePress={onShare}
+        />,
+      );
+      const prompt = getByTestId('cook-complete-celebration-share-prompt');
+      expect(prompt.props.accessibilityRole).toBe('button');
+      fireEvent.press(prompt);
+      expect(onShare).toHaveBeenCalledTimes(1);
+    });
+
+    it('share prompt copy reads as an invitation, not a banned-pattern phrase', () => {
+      const { getByTestId } = render(
+        <CookCompleteCelebration
+          tier="big"
+          recipeTitle="Khoresh Fesenjan"
+          onSharePress={() => {}}
+        />,
+      );
+      const a11y = getByTestId('cook-complete-celebration-share-prompt').props.accessibilityLabel;
+      expect(a11y).toMatch(/friend/i);
+      expect(a11y.toLowerCase()).not.toMatch(/streak|don't lose|hurry/);
     });
 
     it('exposes a big-tier accessibility label that announces the celebration kind', () => {

@@ -4595,6 +4595,22 @@ export const recipeController = {
     }
   },
 
+  // P4 retention — GET /api/recipes/:id/taste-cohort
+  // "N people with your taste cooked this" social proof. Uses the user's
+  // top cuisine as the overlap signal; surfaces only at count ≥3.
+  async getTasteCohort(req: Request, res: Response) {
+    try {
+      const userId = getUserId(req);
+      const recipeId = req.params.id;
+      const { getRecipeCohortProof } = require('@/services/recipeCohortProofService');
+      const result = await getRecipeCohortProof(userId, recipeId);
+      res.json(result);
+    } catch (error: any) {
+      logger.error({ data: error }, '❌ Error in getTasteCohort:');
+      res.json({ cookerCount: 0, cohortLabel: null });
+    }
+  },
+
   // ROADMAP 4.0 HX2.3 — GET /api/recipes/:id/friend-cohort
   // Friends-who-cooked-this overlay for Today's hero. Wraps
   // cohortInsightsService.getFriendCohort (N7.3) which honors N8.2 privacy.

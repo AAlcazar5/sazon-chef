@@ -742,8 +742,21 @@ export const shoppingListGenerationController = {
         },
       });
 
-      // Fire-and-forget: notify user their shopping list is ready
-      notificationTriggerService.onShoppingListReady(userId, items.length).catch((err: unknown) => logger.error({ err }, 'shoppingList.notify.failed'));
+      // Fire-and-forget: notify user their shopping list is ready.
+      // P1 retention — pass day name + dominant category for personalized preview.
+      const dayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date());
+      const categoryCounts = new Map<string, number>();
+      for (const it of items) {
+        const c = it.category?.trim();
+        if (!c) continue;
+        categoryCounts.set(c, (categoryCounts.get(c) ?? 0) + 1);
+      }
+      const dominantCategory = Array.from(categoryCounts.entries())
+        .sort((a, b) => b[1] - a[1])[0]?.[0];
+      notificationTriggerService.onShoppingListReady(userId, items.length, {
+        dayName,
+        dominantCategory,
+      }).catch((err: unknown) => logger.error({ err }, 'shoppingList.notify.failed'));
     } catch (error: any) {
       logger.error({ err: error }, 'Error generating shopping list from meal plan:');
       res.status(500).json({ error: 'Failed to generate shopping list from meal plan' });

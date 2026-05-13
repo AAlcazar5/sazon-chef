@@ -43,7 +43,6 @@ import {
   SimilarRecipesCarousel,
   CollectionCarousel,
   CollectionSavePicker,
-  StarRating,
   RecipeNotesModal,
   MarkCookedModal,
   ImportFromUrlModal,
@@ -681,21 +680,31 @@ export default function CookbookScreen() {
         const response = await recipeApi.getSimilarRecipes(baseRecipe.id, 10);
         const slim = response.data?.recipes ?? [];
         if (Array.isArray(slim) && slim.length > 0) {
-          // M10: the API returns a slim shape (id/title/cuisine/cookTime/
-          // imageUrl/score). Widen to SavedRecipe via zero-fill so the
-          // existing render code (calories/protein/etc.) still renders
-          // — placeholders read as N/A in the row UI.
-          const widened = slim.map((r) => ({
-            ...r,
-            description: '',
-            calories: 0,
-            protein: 0,
-            carbs: 0,
-            fat: 0,
-            ingredients: [],
-            instructions: [],
-            savedDate: '',
-          })) as unknown as SavedRecipe[];
+          // Backend now returns macros + 0-1 score; widen to SavedRecipe
+          // preserving real values so the card renders accurate macros
+          // + match% instead of all zeros.
+          const widened = slim.map((r) => {
+            const rawScore = typeof r.score === 'number' ? r.score : 0;
+            const matchPercentage = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
+            return {
+              ...r,
+              description: '',
+              calories: r.calories ?? 0,
+              protein: r.protein ?? 0,
+              carbs: r.carbs ?? 0,
+              fat: r.fat ?? 0,
+              fiber: r.fiber ?? 0,
+              ingredients: [],
+              instructions: [],
+              savedDate: '',
+              score: {
+                total: matchPercentage,
+                macroScore: 0,
+                tasteScore: 0,
+                matchPercentage,
+              },
+            };
+          }) as unknown as SavedRecipe[];
           rawSimilarRecipesRef.current = widened;
           setSimilarRecipes(applyFiltersToSimilarRecipes(widened));
         } else {
@@ -1020,7 +1029,7 @@ export default function CookbookScreen() {
       HapticPatterns.success();
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 1200);
-      showToast('Recipe saved to cookbook!', 'success');
+      showToast('Saved. Your shelf has it.', 'success');
 
       // Refresh recipes if in saved view
       if (viewMode === 'saved') {
@@ -1155,9 +1164,6 @@ export default function CookbookScreen() {
     return (
       <ScreenGradient><View style={{ flex: 1 }}>
         <CookbookHeader />
-        <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-          <Text className="text-gray-500 dark:text-gray-200">Loading saved recipes...</Text>
-        </View>
         <LoadingState config={CookbookLoadingStates.savedRecipes} fullScreen />
       </View></ScreenGradient>
     );
@@ -1823,7 +1829,7 @@ export default function CookbookScreen() {
           {(visibleCount < filteredAndSortedRecipes.length || loadingMore) && (
             <View className="py-3 items-center">
               <Text className="text-sm text-gray-500 dark:text-gray-400">
-                {loadingMore ? 'Loading more recipes...' : `Showing ${displayedRecipes.length} of ${filteredAndSortedRecipes.length}${serverHasMore ? `+ (${serverTotal} total)` : ''}`}
+                {loadingMore ? 'Pulling more in…' : `Showing ${displayedRecipes.length} of ${filteredAndSortedRecipes.length}${serverHasMore ? `+ (${serverTotal} total)` : ''}`}
               </Text>
             </View>
           )}

@@ -298,7 +298,7 @@ export default function ToolCallCard({ name, result }: ToolCallCardProps) {
       return (
         <View style={[styles.summary, Shadows.SM as object, { backgroundColor: surface }]}>
           <Text style={[styles.summaryHead, { color: text }]}>Macros</Text>
-          <Text style={[styles.summaryBody, { color: subText }]}>No goal set</Text>
+          <Text style={[styles.summaryBody, { color: subText }]}>Nothing locked in yet</Text>
         </View>
       );
     }

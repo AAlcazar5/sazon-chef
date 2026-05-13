@@ -263,11 +263,13 @@ describe('Onboarding (editorial revamp)', () => {
       expect(getByText('ONE MORE THING')).toBeTruthy();
     });
 
-    it('renders editorial title parts ("Build your first" + "plate")', async () => {
+    it('renders the final-step seed prompt ("Pick a few" + "cook tonight")', async () => {
       const { getByText, getByTestId } = render(<OnboardingScreen />);
       await advanceTo(getByTestId);
-      expect(getByText(/Build your first/)).toBeTruthy();
-      expect(getByText('plate')).toBeTruthy();
+      // P0 retention — final step seeds the recommender via /quick-start, not
+      // straight into build-a-plate. Copy reflects the pick-three ritual.
+      expect(getByText(/Pick a few/)).toBeTruthy();
+      expect(getByText('cook tonight')).toBeTruthy();
     });
 
     it('renders the primary "Build my first plate" CTA', async () => {
@@ -282,12 +284,12 @@ describe('Onboarding (editorial revamp)', () => {
       expect(getByTestId('onboarding-skip-plate')).toBeTruthy();
     });
 
-    it('tapping primary CTA navigates to /build-a-plate?seed=beginner', async () => {
+    it('tapping primary CTA routes to /quick-start (seeds recommender before /(tabs))', async () => {
       const { router } = require('expo-router');
       const { getByTestId } = render(<OnboardingScreen />);
       await advanceTo(getByTestId);
       fireEvent.press(getByTestId('onboarding-build-plate-cta'));
-      expect(router.push).toHaveBeenCalledWith('/build-a-plate?seed=beginner');
+      expect(router.replace).toHaveBeenCalledWith('/quick-start');
     });
 
     it('tapping skip emits skipped_first_plate analytics event and advances to home', async () => {

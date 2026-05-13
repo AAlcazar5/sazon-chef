@@ -79,9 +79,9 @@ export default function WeightInputScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        'Success',
-        'Weight logged successfully!',
-        [{ text: 'OK', onPress: () => router.back() }],
+        'Logged',
+        'In the books.',
+        [{ text: 'Done', onPress: () => router.back() }],
       );
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -104,7 +104,7 @@ export default function WeightInputScreen() {
     return (
       <LoadingState
         expression="thinking"
-        message="Loading your profile..."
+        message="Pulling your profile up…"
         fullScreen
       />
     );

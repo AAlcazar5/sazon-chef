@@ -5,6 +5,7 @@
 import { useReducer, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Alert, Animated } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { sazonAlert } from '../lib/sazonAlert';
 import { shoppingListApi, shoppingAppApi, mealPlanApi, pantryApi } from '../lib/api';
 import { shoppingListCache } from '../lib/shoppingListCache';
 import { useNetworkStatus } from './useNetworkStatus';
@@ -607,7 +608,7 @@ export function useShoppingList() {
         }
       } else {
         console.error('Error loading shopping lists:', error);
-        Alert.alert('Error', 'Failed to load shopping lists');
+        sazonAlert('alerts.load_failed.title', 'alerts.load_failed.body');
       }
     } finally {
       dispatch({ type: 'UPDATE', payload: { loading: false } });
@@ -949,7 +950,7 @@ export function useShoppingList() {
       HapticPatterns.success();
     } catch (error: any) {
       console.error('Error updating list name:', error);
-      Alert.alert('Error', 'Failed to update list name');
+      sazonAlert('alerts.update_failed.title', 'alerts.update_failed.body');
     } finally {
       dispatch({ type: 'UPDATE', payload: { updatingName: false } });
     }
@@ -973,7 +974,7 @@ export function useShoppingList() {
       HapticPatterns.success();
     } catch (error: any) {
       console.error('Error creating shopping list:', error);
-      Alert.alert('Error', 'Failed to create shopping list');
+      sazonAlert('alerts.create_failed.title', 'alerts.create_failed.body');
     } finally {
       dispatch({ type: 'UPDATE', payload: { creatingList: false } });
     }
@@ -998,7 +999,7 @@ export function useShoppingList() {
               HapticPatterns.success();
             } catch (error: any) {
               console.error('Error deleting shopping list:', error);
-              Alert.alert('Error', 'Failed to delete shopping list');
+              sazonAlert('alerts.delete_failed.title', 'alerts.delete_failed.body');
             }
           },
         },
@@ -1084,10 +1085,10 @@ export function useShoppingList() {
       await loadShoppingListDetails(newListId);
       dispatch({ type: 'RESET_MERGE' });
       HapticPatterns.success();
-      Alert.alert('Success', 'Lists merged successfully!');
+      Alert.alert('Done', 'Combined into one list.');
     } catch (error: any) {
       console.error('Error merging lists:', error);
-      Alert.alert('Error', 'Failed to merge lists');
+      sazonAlert('alerts.merge_failed.title', 'alerts.merge_failed.body');
     } finally {
       dispatch({ type: 'UPDATE', payload: { mergingLists: false } });
     }
@@ -1125,7 +1126,7 @@ export function useShoppingList() {
                 HapticPatterns.success();
               } catch (error: any) {
                 console.error('Error adding item:', error);
-                Alert.alert('Error', 'Failed to add item');
+                sazonAlert('alerts.add_failed.title', 'alerts.add_failed.body');
               }
             },
           },
@@ -1146,7 +1147,7 @@ export function useShoppingList() {
       HapticPatterns.success();
     } catch (error: any) {
       console.error('Error adding item:', error);
-      Alert.alert('Error', 'Failed to add item');
+      sazonAlert('alerts.add_failed.title', 'alerts.add_failed.body');
     }
   }, [state.selectedList, state.newItemName, state.newItemQuantity, currentItems, loadShoppingListDetails]);
 
@@ -1168,7 +1169,7 @@ export function useShoppingList() {
       HapticPatterns.success();
     } catch (error: any) {
       console.error('Error adding multiple items:', error);
-      Alert.alert('Error', 'Failed to add some items');
+      sazonAlert('alerts.add_failed.title', 'alerts.add_failed.body');
     }
   }, [state.selectedList, loadShoppingListDetails]);
 
@@ -1233,7 +1234,7 @@ export function useShoppingList() {
       HapticPatterns.success();
     } catch (error: any) {
       console.error('Error generating from meal plan:', error);
-      Alert.alert('Error', 'Failed to generate shopping list from meal plan');
+      sazonAlert('alerts.generate_failed.title', 'alerts.generate_failed.body');
       HapticPatterns.error();
     } finally {
       dispatch({ type: 'UPDATE', payload: { generatingFromMealPlan: false } });
@@ -1303,7 +1304,7 @@ export function useShoppingList() {
       } else {
         console.error('Error updating item:', error);
         await loadShoppingListDetails(state.selectedList.id);
-        Alert.alert('Error', 'Failed to update item');
+        sazonAlert('alerts.update_failed.title', 'alerts.update_failed.body');
       }
     }
   }, [state.selectedList, state.showUndoButton, state.isOffline, currentItems, loadShoppingListDetails]);
@@ -1328,7 +1329,7 @@ export function useShoppingList() {
       HapticPatterns.success();
     } catch (error: any) {
       console.error('Error updating item:', error);
-      Alert.alert('Error', 'Failed to update item');
+      sazonAlert('alerts.update_failed.title', 'alerts.update_failed.body');
     } finally {
       dispatch({ type: 'UPDATE', payload: { updatingQuantity: false } });
     }
@@ -1344,7 +1345,7 @@ export function useShoppingList() {
       }
     } catch (error) {
       console.error('Error uploading item photo:', error);
-      Alert.alert('Upload Failed', 'Could not upload the photo. Please try again.');
+      sazonAlert('alerts.upload_failed.title', 'alerts.upload_failed.body');
     } finally {
       dispatch({ type: 'UPDATE', payload: { uploadingPhoto: false } });
     }
@@ -1372,7 +1373,7 @@ export function useShoppingList() {
     } catch (error: any) {
       console.error('Error marking items as complete:', error);
       await loadShoppingListDetails(state.selectedList.id);
-      Alert.alert('Error', 'Failed to mark items as complete');
+      sazonAlert('alerts.update_failed.title', 'alerts.update_failed.body');
     } finally {
       dispatch({ type: 'UPDATE', payload: { bulkUpdating: false } });
     }
@@ -1410,7 +1411,7 @@ export function useShoppingList() {
       await loadShoppingListDetails(state.selectedList.id);
       dispatch({ type: 'CLEAR_UNDO' });
       if (error.code !== 'HTTP_404') {
-        Alert.alert('Error', 'Failed to mark all items as complete');
+        sazonAlert('alerts.update_failed.title', 'alerts.update_failed.body');
       }
     } finally {
       dispatch({ type: 'UPDATE', payload: { bulkUpdating: false } });
@@ -1448,7 +1449,7 @@ export function useShoppingList() {
       const response = await shoppingListApi.getShoppingList(state.selectedList.id);
       dispatch({ type: 'UPDATE', payload: { selectedList: response.data } });
       dispatch({ type: 'CLEAR_UNDO' });
-      Alert.alert('Error', 'Failed to undo mark all complete');
+      sazonAlert('alerts.update_failed.title', 'alerts.update_failed.body');
     } finally {
       dispatch({ type: 'UPDATE', payload: { bulkUpdating: false } });
     }
@@ -1472,7 +1473,7 @@ export function useShoppingList() {
               HapticPatterns.success();
             } catch (error: any) {
               console.error('Error deleting item:', error);
-              Alert.alert('Error', 'Failed to delete item');
+              sazonAlert('alerts.delete_failed.title', 'alerts.delete_failed.body');
             }
           },
         },
@@ -1489,7 +1490,7 @@ export function useShoppingList() {
     try {
       const response = await shoppingAppApi.syncToExternalApp(appName, state.selectedList.id);
       if (response.data.success) {
-        Alert.alert('Success', response.data.message || `Items synced to ${appName}`);
+        Alert.alert('Sent over', response.data.message || `Items in ${appName} now.`);
         HapticPatterns.success();
       } else {
         Alert.alert('Error', response.data.message || 'Failed to sync items');
@@ -1521,7 +1522,7 @@ export function useShoppingList() {
     } catch (error: any) {
       console.error('Error syncing bidirectionally:', error);
       HapticPatterns.error();
-      Alert.alert('Sync Failed', 'Failed to sync shopping list');
+      sazonAlert('alerts.sync_failed.title', 'alerts.sync_failed.body');
     }
   }, [state.selectedList, state.integrations]);
 
@@ -1651,10 +1652,10 @@ export function useShoppingList() {
 
       HapticPatterns.success();
       await loadShoppingListDetails(state.selectedList.id);
-      Alert.alert('Success', `Added ${itemsToAdd.length} items from last week.`);
+      Alert.alert('Stocked', `Pulled in ${itemsToAdd.length} from last week.`);
     } catch (error) {
       console.error('Error reordering last week:', error);
-      Alert.alert('Error', "Failed to reorder last week's items.");
+      sazonAlert('alerts.add_failed.title', 'alerts.add_failed.body');
       HapticPatterns.error();
     }
   }, [state.selectedList, currentItems, loadShoppingListDetails]);

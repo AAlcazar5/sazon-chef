@@ -13,6 +13,7 @@ import ProgressRing from '../ui/ProgressRing';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
+import { welcomeLine } from '../../lib/cuisineNeighbors';
 
 interface FirstCuisineStampProps {
   isFirstCook: boolean;
@@ -79,9 +80,18 @@ export default function FirstCuisineStamp({
           <Text style={[styles.title, { color: text }]} numberOfLines={2}>
             Your first {cuisineDisplay} plate.
           </Text>
-          <Text style={[styles.body, { color: subText }]} numberOfLines={2}>
-            The world map just expanded — {cuisinesCookedCount} / {totalCuisinesAvailable} cuisines cooked.
-          </Text>
+          {(() => {
+            const welcome = welcomeLine(cuisine);
+            return (
+              <Text
+                testID="first-cuisine-stamp-welcome"
+                style={[styles.body, { color: subText }]}
+                numberOfLines={2}
+              >
+                {welcome ?? `The world map just expanded — ${cuisinesCookedCount} / ${totalCuisinesAvailable} cuisines cooked.`}
+              </Text>
+            );
+          })()}
         </View>
       </View>
     </HapticTouchableOpacity>

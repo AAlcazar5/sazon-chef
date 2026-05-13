@@ -14,6 +14,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/utils/authHelper';
 import { recommendationCache } from '@/utils/recommendationCache';
 import { recordAffinityEvent } from '@/services/slotAffinityService';
+import { maybeFireCuisineUnlock } from '@/services/cuisineUnlockService';
 
 export const recipeCookbookController = {
   async getSavedMeta(req: Request, res: Response) {
@@ -172,6 +173,11 @@ export const recipeCookbookController = {
 
       // Invalidate behavioral cache so consumed recipe data is refreshed
       recommendationCache.invalidateUserCache(userId);
+
+      // P3 retention — if this was the user's first cook of the cuisine,
+      // seed a "Welcome to {Cuisine}" collection with 5 starter recipes.
+      // Fire-and-forget; errors are swallowed inside the service.
+      maybeFireCuisineUnlock(userId, id).catch(() => {});
 
       // Phase 4: fire affinity event for user-composed recipes
       const recipe = await prisma.recipe.findUnique({

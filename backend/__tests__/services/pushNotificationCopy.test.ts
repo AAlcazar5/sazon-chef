@@ -24,6 +24,58 @@ describe('pushNotificationCopy — i18n templates', () => {
       expect(out.body).toContain('1 item ');
     });
 
+    it('personalizes the title with the day name when provided', () => {
+      const out = pushCopy.shoppingListReady('en', {
+        itemCount: 14,
+        dayName: 'Tuesday',
+      });
+      expect(out.title).toBe("Tuesday's list");
+    });
+
+    it('personalizes the body with the dominant category when provided', () => {
+      const out = pushCopy.shoppingListReady('en', {
+        itemCount: 14,
+        dominantCategory: 'Produce',
+      });
+      expect(out.body).toContain('mostly produce');
+    });
+
+    it('renders the fully-personalized "Tuesday\'s list — 14 items, mostly produce" preview', () => {
+      const out = pushCopy.shoppingListReady('en', {
+        itemCount: 14,
+        dayName: 'Tuesday',
+        dominantCategory: 'Produce',
+      });
+      expect(out.title).toBe("Tuesday's list");
+      expect(out.body).toContain('14 items');
+      expect(out.body).toContain('mostly produce');
+    });
+
+    it('personalized variants localize in Spanish + Portuguese + French', () => {
+      const es = pushCopy.shoppingListReady('es', {
+        itemCount: 14,
+        dayName: 'Martes',
+        dominantCategory: 'Frutas',
+      });
+      expect(es.title.toLowerCase()).toContain('martes');
+      expect(es.body).toContain('14');
+      expect(es.body.toLowerCase()).toContain('frutas');
+
+      const pt = pushCopy.shoppingListReady('pt-BR', {
+        itemCount: 9,
+        dayName: 'Terça',
+        dominantCategory: 'Vegetais',
+      });
+      expect(pt.title.toLowerCase()).toContain('terça');
+      expect(pt.body.toLowerCase()).toContain('vegetais');
+
+      const fr = pushCopy.shoppingListReady('fr', {
+        itemCount: 5,
+        dominantCategory: 'Légumes',
+      });
+      expect(fr.body.toLowerCase()).toContain('légumes');
+    });
+
     it('renders in Spanish base', () => {
       const out = pushCopy.shoppingListReady('es', { itemCount: 7 });
       expect(out.title.toLowerCase()).toContain('compra');
@@ -59,9 +111,26 @@ describe('pushNotificationCopy — i18n templates', () => {
       const es = pushCopy.mealPlanReady('es');
       const pt = pushCopy.mealPlanReady('pt');
 
-      expect(en.title).toMatch(/meal plan/i);
+      expect(en.title).toMatch(/plan/i);
       expect(es.title.toLowerCase()).toMatch(/plan|comidas/);
       expect(pt.title.toLowerCase()).toMatch(/plano|refeições/);
+    });
+
+    it('personalizes body with day + cuisine counts when provided', () => {
+      const out = pushCopy.mealPlanReady('en', { dayCount: 7, cuisineCount: 5 });
+      expect(out.body).toContain('7 meals');
+      expect(out.body).toContain('5 cuisines');
+    });
+
+    it('omits personalization gracefully when counts are missing', () => {
+      const out = pushCopy.mealPlanReady('en', {});
+      expect(out.body).toMatch(/week at a glance/i);
+    });
+
+    it('singularizes cuisine label at cuisineCount=1', () => {
+      const out = pushCopy.mealPlanReady('en', { dayCount: 7, cuisineCount: 1 });
+      expect(out.body).toContain('1 cuisine');
+      expect(out.body).not.toContain('cuisines');
     });
   });
 
@@ -132,6 +201,20 @@ describe('pushNotificationCopy — i18n templates', () => {
       const plur = pushCopy.weeklyDigest('pt', { activityCount: 6 });
       expect(sing.body).toMatch(/1 refeição\b/);
       expect(plur.body).toMatch(/6 refeições\b/);
+    });
+
+    it('weaves topCuisine into the preview when provided', () => {
+      const out = pushCopy.weeklyDigest('en', {
+        activityCount: 7,
+        topCuisine: 'Persian',
+      });
+      expect(out.body).toContain('7 meals');
+      expect(out.body).toContain('mostly Persian');
+    });
+
+    it('falls back to the generic body when topCuisine is omitted', () => {
+      const out = pushCopy.weeklyDigest('en', { activityCount: 3 });
+      expect(out.body).toMatch(/Tap for your summary/);
     });
   });
 
@@ -208,8 +291,70 @@ describe('pushNotificationCopy — i18n templates', () => {
         'expiringSoon',
         'weeklyDigest',
         'coachWeeklyCheckin',
+        'preDinnerNudge',
+        'cuisineDrought',
+        'lapsedDay3',
+        'lapsedDay7',
       ];
       expect([...TEMPLATE_IDS].sort()).toEqual(expected.sort());
+    });
+  });
+
+  describe('preDinnerNudge', () => {
+    it('renders an en payload with cuisine + optional dish hint', () => {
+      const p = pushCopy.preDinnerNudge('en', { suggestedCuisine: 'Persian', dishHint: 'fesenjan' });
+      expect(p.title).toBe("What's cooking?");
+      expect(p.body).toContain('Persian');
+      expect(p.body).toContain('fesenjan');
+    });
+
+    it('falls back gracefully without dishHint', () => {
+      const p = pushCopy.preDinnerNudge('en', { suggestedCuisine: 'Yucatecan' });
+      expect(p.body).toContain('Yucatecan');
+      expect(p.body).not.toContain('undefined');
+    });
+
+    it('localizes for es-MX → es', () => {
+      const p = pushCopy.preDinnerNudge('es-MX', { suggestedCuisine: 'Coreano' });
+      expect(p.title).toBe('¿Qué se cocina?');
+      expect(p.body.toLowerCase()).toContain('coreano');
+    });
+  });
+
+  describe('cuisineDrought', () => {
+    it('reads as a curious nudge, not a verdict', () => {
+      const p = pushCopy.cuisineDrought('en', { cuisine: 'Persian', daysSince: 9 });
+      expect(p.title).toBe('Persian has been quiet');
+      expect(p.body).toContain('9 days');
+      // Never use banned vocab in drought push
+      expect(p.body.toLowerCase()).not.toMatch(/should|need to|don't forget/);
+    });
+
+    it('localizes the drought copy for pt', () => {
+      const p = pushCopy.cuisineDrought('pt-BR', { cuisine: 'Persa', daysSince: 12 });
+      expect(p.title).toContain('Persa');
+      expect(p.body).toContain('12');
+    });
+  });
+
+  describe('lapsedDay3 / lapsedDay7', () => {
+    it('uses topCuisine as the re-entry hook (day 3)', () => {
+      const p = pushCopy.lapsedDay3('en', { topCuisine: 'Italian' });
+      expect(p.title).toBe('Sazon missed you');
+      expect(p.body).toContain('Italian');
+    });
+
+    it('uses topCuisine as the re-entry hook (day 7)', () => {
+      const p = pushCopy.lapsedDay7('en', { topCuisine: 'Thai' });
+      expect(p.title).toContain("hasn't seen you");
+      expect(p.body).toContain('Thai');
+    });
+
+    it('never uses streak-guilt or scarcity in lapsed copy', () => {
+      const p3 = pushCopy.lapsedDay3('en', { topCuisine: 'Italian' });
+      const p7 = pushCopy.lapsedDay7('en', { topCuisine: 'Italian' });
+      const all = `${p3.title}${p3.body}${p7.title}${p7.body}`.toLowerCase();
+      expect(all).not.toMatch(/streak|don't lose|miss out|last chance|hurry|only \d+ left/);
     });
   });
 });

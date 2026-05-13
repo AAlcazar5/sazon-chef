@@ -44,6 +44,7 @@ import DailyCheckIn from '../components/today/DailyCheckIn';
 import { useDailyCheckInGate } from '../hooks/useDailyCheckInGate';
 import CookCompleteCelebration from '../components/cooking/CookCompleteCelebration';
 import CookRecapLine from '../components/cooking/CookRecapLine';
+import MidCookBeat from '../components/cooking/MidCookBeat';
 import DailyPlateShareCard from '../components/celebrations/DailyPlateShareCard';
 import { deriveTopMinerals, deriveIngredientCount } from '../utils/cookCompleteDerivations';
 import { matchAppliancesMilestoneFromList } from '../utils/discoveryMilestoneKeys';
@@ -125,6 +126,11 @@ export default function CookingScreen() {
 
   // Step state
   const [currentStep, setCurrentStep] = useState(0);
+
+  // P2 retention — mid-cook delight beat (1 random surprise per cook).
+  const [midCookBeatVisible, setMidCookBeatVisible] = useState(false);
+  const midCookBeatFiredRef = useRef(false);
+  const midCookBeatStepRef = useRef<number | null>(null);
   // 10I: techniques the user has already opened this session → don't re-prompt
   const [seenTechniques, setSeenTechniques] = useState<Set<string>>(new Set());
   const [showIngredients, setShowIngredients] = useState(false);
@@ -257,6 +263,30 @@ export default function CookingScreen() {
   useEffect(() => {
     if (!voiceMode) voice.stop();
   }, [voiceMode]);
+
+  // P2 retention — pick a random mid-recipe step to fire the delight beat at.
+  // Runs once per cook when the recipe loads.
+  useEffect(() => {
+    if (!recipe) return;
+    const total = recipe.instructions.length;
+    if (total < 3) return; // tiny recipes don't need mid-beats
+    if (midCookBeatStepRef.current !== null) return;
+    const minStep = 1;
+    const maxStep = Math.max(minStep + 1, total - 2);
+    midCookBeatStepRef.current =
+      minStep + Math.floor(Math.random() * (maxStep - minStep + 1));
+  }, [recipe]);
+
+  // Fire the beat the first time currentStep crosses the trigger.
+  useEffect(() => {
+    if (midCookBeatFiredRef.current) return;
+    if (midCookBeatStepRef.current === null) return;
+    if (currentStep < midCookBeatStepRef.current) return;
+    midCookBeatFiredRef.current = true;
+    setMidCookBeatVisible(true);
+    const hideTimer = setTimeout(() => setMidCookBeatVisible(false), 2400);
+    return () => clearTimeout(hideTimer);
+  }, [currentStep]);
 
   // --- Timer suggestions: derived from current step text, no state side-effects ---
   // Computed per-render so there's no useEffect that can run twice (Strict Mode safe).
@@ -571,6 +601,23 @@ export default function CookingScreen() {
           <CookCompleteCelebration
             tier={cookCompleteSignals?.intensity ?? 'quiet'}
             recipeTitle={recipe.title}
+            onSharePress={async () => {
+              try {
+                if (shareCardRef.current?.capture) {
+                  const uri = await shareCardRef.current.capture();
+                  if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(uri, {
+                      mimeType: 'image/png',
+                      dialogTitle: 'Send today\'s plate to a friend',
+                    });
+                    return;
+                  }
+                }
+                await Share.share({
+                  message: `🌶️ Just cooked ${recipe.title} with Sazon Chef!\n\n⏱️ Cook Time: ${recipe.cookTime} min\n🔥 ${recipe.calories} cal | 🥩 ${recipe.protein}g protein`,
+                });
+              } catch {}
+            }}
           />
 
           {/* ROADMAP 4.0 J2 — first-cook-of-cuisine passport stamp */}
@@ -708,11 +755,11 @@ export default function CookingScreen() {
             <HapticTouchableOpacity
               onPress={() => setShowTasteSurvey(true)}
               hapticStyle="light"
-              accessibilityLabel="Rate this meal"
+              accessibilityLabel="How was it?"
               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.15)' }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>⭐</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Rate This Meal</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 16, marginRight: 6 }}>💬</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold' }}>How was it?</Text>
             </HapticTouchableOpacity>
           </View>
         )}
@@ -777,6 +824,9 @@ export default function CookingScreen() {
       />
       <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+
+        {/* P2 retention — mid-cook delight beat (1 random surprise per cook). */}
+        <MidCookBeat visible={midCookBeatVisible} />
 
         {/* Progress bar */}
         <View className="h-1 bg-gray-800 mx-4 mt-1 rounded-full overflow-hidden">

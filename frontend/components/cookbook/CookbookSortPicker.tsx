@@ -13,7 +13,6 @@ type SortOption = 'recent' | 'alphabetical' | 'cuisine' | 'matchScore' | 'cookTi
 
 const SORT_OPTIONS: Array<{ value: SortOption; label: string; icon: string }> = [
   { value: 'recent', label: 'Recently Added', icon: Icons.TIME_OUTLINE },
-  { value: 'rating', label: 'My Rating', icon: Icons.STAR },
   { value: 'mostCooked', label: 'Most Cooked', icon: Icons.CHECKMARK_CIRCLE },
   { value: 'alphabetical', label: 'Alphabetical', icon: Icons.SHOPPING_LIST },
   { value: 'cuisine', label: 'By Cuisine', icon: Icons.GLOBE },

@@ -62,11 +62,14 @@ describe('<FirstCuisineStamp />', () => {
     expect(getAllByText(/first/i).length).toBeGreaterThan(0);
   });
 
-  it('shows the running cuisine fraction (N / total)', () => {
+  it('shows the running cuisine fraction (N / total) when no neighbor copy', () => {
+    // Use a cuisine NOT in the neighbors map so the fallback fraction copy renders.
+    // (For known cuisines like Persian the welcome line takes precedence — see the
+    // "welcome to fesenjan and friends" test below.)
     const { getByText } = render(
       <FirstCuisineStamp
         isFirstCook
-        cuisine="Persian"
+        cuisine="Glaswegian"
         cuisinesCookedCount={5}
         totalCuisinesAvailable={134}
         onPress={jest.fn()}
@@ -74,6 +77,39 @@ describe('<FirstCuisineStamp />', () => {
     );
     expect(getByText(/5/)).toBeTruthy();
     expect(getByText(/134/)).toBeTruthy();
+  });
+
+  it('renders "welcome to fesenjan and friends" when cuisine has neighbors', () => {
+    const { getByTestId } = render(
+      <FirstCuisineStamp
+        isFirstCook
+        cuisine="Persian"
+        cuisinesCookedCount={1}
+        totalCuisinesAvailable={134}
+        onPress={jest.fn()}
+      />,
+    );
+    const welcome = getByTestId('first-cuisine-stamp-welcome');
+    const text = welcome.props.children;
+    const flat = typeof text === 'string' ? text : Array.isArray(text) ? text.join('') : '';
+    expect(flat.toLowerCase()).toContain('fesenjan');
+    expect(flat.toLowerCase()).toContain('and friends');
+  });
+
+  it('falls back to the world-map fraction copy for unknown cuisines', () => {
+    const { getByTestId } = render(
+      <FirstCuisineStamp
+        isFirstCook
+        cuisine="Glaswegian"
+        cuisinesCookedCount={2}
+        totalCuisinesAvailable={134}
+        onPress={jest.fn()}
+      />,
+    );
+    const welcome = getByTestId('first-cuisine-stamp-welcome');
+    const text = welcome.props.children;
+    const flat = typeof text === 'string' ? text : Array.isArray(text) ? text.join('') : '';
+    expect(flat.toLowerCase()).toContain('world map');
   });
 
   it('fires onPress when tapped', () => {

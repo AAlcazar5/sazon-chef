@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 // frontend/components/cookbook/CookbookRecipeList.tsx
 // Grid and list views for cookbook recipes with staggered entrance animations
 
@@ -10,11 +10,9 @@ import { Spacing } from '../../constants/Spacing';
 import { EditorialRecipeCard } from '../home/EditorialRecipeCard';
 import { Pastel, EditorialColors } from '../../constants/Colors';
 import AnimatedRecipeCard from '../recipe/AnimatedRecipeCard';
-import StarRating from './StarRating';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
 import LogoMascot from '../mascot/LogoMascot';
-import Sazon from '../mascot/Sazon';
 import AnimatedEmptyState from '../ui/AnimatedEmptyState';
 import { CookbookEmptyStates } from '../../constants/EmptyStates';
 import SwipeableRecipeCard from './SwipeableRecipeCard';
@@ -96,31 +94,13 @@ function CookbookRecipeList({
   onSwipeNotes,
   onSwipeCollection,
 }: CookbookRecipeListProps) {
-  const [showChefKiss, setShowChefKiss] = useState(false);
-
-  const handleRate = useCallback((recipeId: string, rating: number | null) => {
-    if (rating === 5) {
-      setShowChefKiss(true);
-      setTimeout(() => setShowChefKiss(false), 1500);
-    }
-    onRate?.(recipeId, rating);
-  }, [onRate]);
-
   const RecipeMeta = useCallback(({ recipe }: { recipe: SavedRecipe }) => {
     const hasNotes = !!recipe.notes;
     const hasCookCount = (recipe.cookCount || 0) > 0;
-    const hasRating = recipe.rating != null;
-    if (!hasNotes && !hasCookCount && !hasRating && !onRate) return null;
+    if (!hasNotes && !hasCookCount) return null;
 
     return (
       <View className="flex-row items-center mt-1.5 px-1" style={{ gap: 8 }}>
-        <StarRating
-          rating={recipe.rating ?? null}
-          onRate={onRate ? (r) => handleRate(recipe.id, r) : undefined}
-          size="sm"
-          readonly={!onRate}
-          isDark={isDark}
-        />
         {hasNotes && (
           <Icon name={Icons.NOTE_OUTLINE} size={12} color={isDark ? '#9CA3AF' : '#6B7280'} />
         )}
@@ -131,7 +111,7 @@ function CookbookRecipeList({
         )}
       </View>
     );
-  }, [isDark, onRate, handleRate]);
+  }, [isDark]);
 
   const keyExtractor = useCallback((item: SavedRecipe) => item.id, []);
 
@@ -245,15 +225,6 @@ function CookbookRecipeList({
     );
   }
 
-  const chefKissMascot = showChefKiss ? (
-    <View
-      testID="chef-kiss-mascot"
-      pointerEvents="none"
-      style={{ position: 'absolute', alignSelf: 'center', top: '40%', zIndex: 99 }}
-    >
-      <Sazon variant="orange" motion="kiss" fx={['hearts']} size={192} />
-    </View>
-  ) : null;
 
   if (displayMode === 'grid') {
     return (
@@ -270,7 +241,6 @@ function CookbookRecipeList({
           windowSize={5}
           style={{ marginHorizontal: -Spacing.sm }}
         />
-        {chefKissMascot}
       </View>
     );
   }
@@ -288,7 +258,6 @@ function CookbookRecipeList({
         maxToRenderPerBatch={5}
         windowSize={5}
       />
-      {chefKissMascot}
     </View>
   );
 }

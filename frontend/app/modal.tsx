@@ -40,6 +40,7 @@ import { getIngredientEmoji } from '../constants/IngredientEmoji';
 import CookingStepsTimeline from '../components/recipe/CookingStepsTimeline';
 import VisualIngredientList from '../components/recipe/VisualIngredientList';
 import DrinkPairingFooter from '../components/recipe/DrinkPairingFooter';
+import TasteCohortPill from '../components/recipe/TasteCohortPill';
 import MacroPillsRow from '../components/recipe/MacroPillsRow';
 import RecipeNotesModal from '../components/cookbook/RecipeNotesModal';
 import IngredientSwapSheet from '../components/recipe/IngredientSwapSheet';
@@ -705,8 +706,8 @@ export default function RecipeModal() {
     if (!recipe) return;
     
     Alert.alert(
-      'Remove from Cookbook',
-      'Are you sure you want to remove this recipe from your cookbook?',
+      'Heads up',
+      'This\'ll pull the recipe off your shelf. You can save it again later.',
       [
       {
         text: 'Cancel',
@@ -810,8 +811,8 @@ export default function RecipeModal() {
     if (!recipe) return;
     
     Alert.alert(
-      'Delete Recipe',
-      'Are you sure you want to delete this recipe? This action cannot be undone.',
+      'Heads up',
+      'This\'ll permanently delete the recipe — no take-backs.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -821,7 +822,7 @@ export default function RecipeModal() {
             try {
               console.log('📱 Modal: Deleting recipe', recipe.id);
               await recipeApi.deleteRecipe(recipe.id);
-              Alert.alert('Success', 'Recipe deleted successfully!');
+              Alert.alert('Gone', 'Cleared from your shelf.');
               router.back();
             } catch (error: any) {
               console.error('📱 Modal: Delete error', error);
@@ -1017,6 +1018,9 @@ export default function RecipeModal() {
               </View>
             </View>
           )}
+
+          {/* P4 retention — taste-cohort social proof pill (auto-hides on <3 cookers). */}
+          <TasteCohortPill recipeId={recipe.id} />
 
           {/* "Why this recipe?" one-liner (only for home-feed recommendations) */}
           {!!(recipe as any).recommendationReason && (recipe as any).recommendationReason !== 'Picked for you by Sazon' && (
@@ -1893,7 +1897,7 @@ export default function RecipeModal() {
             borderRadius: 100,
           }}>
             <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14 }}>
-              Saved to cookbook!
+              Saved. Your shelf has it.
             </Text>
           </View>
         </MotiView>

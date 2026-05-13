@@ -26,9 +26,9 @@ export default function MacroGoalsCard({ profile, macroGoals }: MacroGoalsCardPr
       <View className="flex-row justify-between items-center mb-3">
         <View className="flex-row items-center">
           <View className="rounded-full p-2 mr-3" style={{ backgroundColor: isDark ? `${Colors.tertiaryGreenLight}33` : Colors.tertiaryGreenDark }}>
-            <Icon name={Icons.MACRO_GOALS} size={IconSizes.MD} color={isDark ? DarkColors.tertiaryGreen : '#FFFFFF'} accessibilityLabel="Macro goals" />
+            <Icon name={Icons.MACRO_GOALS} size={IconSizes.MD} color={isDark ? DarkColors.tertiaryGreen : '#FFFFFF'} accessibilityLabel="How you want to eat" />
           </View>
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Macro Goals</Text>
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">How you want to eat</Text>
         </View>
         <HapticTouchableOpacity onPress={() => router.push('/edit-macro-goals')}>
           <Icon name={Icons.EDIT_OUTLINE} size={IconSizes.MD} color="#6B7280" accessibilityLabel="Edit" />

@@ -292,7 +292,7 @@ export default function MealPrepScalingModal({
               <View className="p-4">
                 {!recipe ? (
                   <View className="items-center justify-center py-8">
-                    <Text className="text-gray-500 dark:text-gray-400">Loading recipe...</Text>
+                    <Text className="text-gray-500 dark:text-gray-400">Pulling it up…</Text>
                   </View>
                 ) : (
                   <>

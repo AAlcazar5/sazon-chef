@@ -4,6 +4,7 @@
 import { useEffect, Dispatch, SetStateAction } from 'react';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
+import { sazonAlert } from '../lib/sazonAlert';
 import { mealPlanApi, aiRecipeApi, userApi, costTrackingApi, recipeApi } from '../lib/api';
 import { HapticPatterns } from '../constants/Haptics';
 import { HapticChoreography } from '../utils/hapticChoreography';
@@ -804,7 +805,7 @@ export function useMealPlanActions({
       );
     } catch (error: any) {
       console.error('Error optimizing cost:', error);
-      Alert.alert('Error', 'Failed to optimize meal plan cost');
+      sazonAlert('alerts.update_failed.title', 'alerts.update_failed.body');
     }
   };
 
@@ -839,10 +840,10 @@ export function useMealPlanActions({
             try {
               // TODO: Implement adding recipe to specific meal
               console.log(`Adding recipe ${recipeId} to ${mealType}`);
-              Alert.alert('Success', `Recipe added to ${mealType}!`);
+              Alert.alert('Slotted in', `${mealType} is set.`);
               setShowAddRecipeModal(false);
             } catch (error) {
-              Alert.alert('Error', 'Failed to add recipe to meal plan');
+              sazonAlert('alerts.add_failed.title', 'alerts.add_failed.body');
             }
           },
         },
@@ -1036,7 +1037,7 @@ export function useMealPlanActions({
     updateDailyMacros(newMeal);
     setShowTimePickerModal(false);
 
-    Alert.alert('Success', `"${title}" added to ${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`);
+    Alert.alert('On the calendar', `"${title}" at ${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}.`);
   };
 
   // ─── Calculate remaining macros for the day ───────────────────────────
@@ -1532,7 +1533,7 @@ export function useMealPlanActions({
       setSuccessMessage({ title: 'Template Saved!', message: `"${name}" has been saved. You can apply it to any week.` });
     } catch (error) {
       console.error('Error saving template:', error);
-      Alert.alert('Error', 'Failed to save template');
+      sazonAlert('alerts.save_failed.title', 'alerts.save_failed.body');
       HapticPatterns.error();
     } finally {
       setSavingTemplate(false);
@@ -1562,7 +1563,7 @@ export function useMealPlanActions({
               setSuccessMessage({ title: 'Template Applied!', message: `"${templateName}" has been applied to this week.` });
             } catch (error) {
               console.error('Error applying template:', error);
-              Alert.alert('Error', 'Failed to apply template');
+              sazonAlert('alerts.apply_failed.title', 'alerts.apply_failed.body');
               HapticPatterns.error();
             } finally {
               setApplyingTemplate(false);
@@ -1592,7 +1593,7 @@ export function useMealPlanActions({
               HapticPatterns.success();
             } catch (error) {
               console.error('Error deleting template:', error);
-              Alert.alert('Error', 'Failed to delete template');
+              sazonAlert('alerts.delete_failed.title', 'alerts.delete_failed.body');
               HapticPatterns.error();
             }
           },
@@ -1713,7 +1714,7 @@ export function useMealPlanActions({
     } catch (error: any) {
       console.error('Error saving recurring rule:', error);
       HapticPatterns.error();
-      Alert.alert('Error', 'Failed to save recurring meal rule');
+      sazonAlert('alerts.save_failed.title', 'alerts.save_failed.body');
     }
   };
 
@@ -1726,7 +1727,7 @@ export function useMealPlanActions({
       } catch (error) {
         console.error('Error deleting recurring rule:', error);
         HapticPatterns.error();
-        Alert.alert('Error', 'Failed to delete recurring meal rule');
+        sazonAlert('alerts.delete_failed.title', 'alerts.delete_failed.body');
       }
     };
     doDelete();

@@ -6,6 +6,12 @@ import { prisma } from '@/lib/prisma';
 import { pushNotificationService } from './pushNotificationService';
 import { emailService } from './emailService';
 import { pushCopy } from './pushNotificationCopy';
+import { shouldSendNonCriticalPush } from './engagementGateService';
+import {
+  getUserCookHour,
+  shouldFireAtCurrentHour,
+} from './userCookHourService';
+import { getAdjacentCuisines } from '../utils/cuisineAdjacency';
 
 async function readUserLocale(userId: string): Promise<string | null> {
   const u = await prisma.user.findUnique({
@@ -21,8 +27,16 @@ export const notificationTriggerService = {
 
   /**
    * Fired when a shopping list is generated from a meal plan.
+   *
+   * `extras` is optional preview personalization (P1 retention) — passing
+   * day name + dominant category lets the lock-screen read as specific
+   * ("Tuesday's list — 14 items, mostly produce") instead of generic.
    */
-  async onShoppingListReady(userId: string, itemCount: number): Promise<void> {
+  async onShoppingListReady(
+    userId: string,
+    itemCount: number,
+    extras: { dayName?: string; dominantCategory?: string } = {},
+  ): Promise<void> {
     const settings = await prisma.notificationSettings.findUnique({
       where: { userId },
       select: { shoppingReminders: true },
@@ -31,7 +45,11 @@ export const notificationTriggerService = {
     if (!settings?.shoppingReminders) return;
 
     const locale = await readUserLocale(userId);
-    const copy = pushCopy.shoppingListReady(locale, { itemCount });
+    const copy = pushCopy.shoppingListReady(locale, {
+      itemCount,
+      dayName: extras.dayName,
+      dominantCategory: extras.dominantCategory,
+    });
     await pushNotificationService.sendToUser(userId, {
       title: copy.title,
       body: copy.body,
@@ -41,8 +59,14 @@ export const notificationTriggerService = {
 
   /**
    * Fired when a meal plan is generated via AI.
+   *
+   * `extras` lets the preview read "7 meals across 5 cuisines — tap to view."
+   * instead of the generic "Tap to see your week at a glance."
    */
-  async onMealPlanGenerated(userId: string): Promise<void> {
+  async onMealPlanGenerated(
+    userId: string,
+    extras: { dayCount?: number; cuisineCount?: number } = {},
+  ): Promise<void> {
     const settings = await prisma.notificationSettings.findUnique({
       where: { userId },
       select: { mealReminders: true },
@@ -51,7 +75,10 @@ export const notificationTriggerService = {
     if (!settings?.mealReminders) return;
 
     const locale = await readUserLocale(userId);
-    const copy = pushCopy.mealPlanReady(locale);
+    const copy = pushCopy.mealPlanReady(locale, {
+      dayCount: extras.dayCount,
+      cuisineCount: extras.cuisineCount,
+    });
     await pushNotificationService.sendToUser(userId, {
       title: copy.title,
       body: copy.body,
@@ -178,14 +205,25 @@ export const notificationTriggerService = {
 
       for (const { userId } of settings) {
         // Check if user was active this week (has cooking logs or meal history)
-        const activityCount = await prisma.cookingLog.count({
+        const weekLogs = await prisma.cookingLog.findMany({
           where: { userId, cookedAt: { gte: oneWeekAgo } },
+          select: { recipe: { select: { cuisine: true } } },
         });
-
+        const activityCount = weekLogs.length;
         if (activityCount === 0) continue;
 
+        // Compute top cuisine for the preview (P1 retention)
+        const cuisineCounts = new Map<string, number>();
+        for (const l of weekLogs) {
+          const c = l.recipe?.cuisine?.trim();
+          if (!c) continue;
+          cuisineCounts.set(c, (cuisineCounts.get(c) ?? 0) + 1);
+        }
+        const topCuisine = Array.from(cuisineCounts.entries())
+          .sort((a, b) => b[1] - a[1])[0]?.[0];
+
         const locale = await readUserLocale(userId);
-        const copy = pushCopy.weeklyDigest(locale, { activityCount });
+        const copy = pushCopy.weeklyDigest(locale, { activityCount, topCuisine });
         await pushNotificationService.sendToUser(userId, {
           title: copy.title,
           body: copy.body,
@@ -227,6 +265,229 @@ export const notificationTriggerService = {
       logger.info(`📬 [Triggers] checkTrialEnding: sent ${users.length} emails`);
     } catch (error) {
       logger.error({ err: error }, '❌ [Triggers] checkTrialEnding error:');
+    }
+  },
+
+  /**
+   * Pre-dinner push (P0 retention). Fires at server hour 18 (one tick).
+   *
+   * For each push-enabled user with at least one cook in the past 14 days:
+   * suggests an adjacent cuisine to their most recent cook ("Yesterday's
+   * plate was Persian — fancy fesenjan tonight?"). Voice guide canon:
+   * "You haven't had Persian flavors in a week. Fancy fesenjan?"
+   *
+   * Skips users who already cooked today (no point nudging dinner that
+   * happened) and respects mealReminders + quietHours settings.
+   */
+  async checkPreDinnerNudge(now: Date = new Date()): Promise<void> {
+    try {
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
+      const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+      const candidates = await prisma.pushToken.findMany({
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+
+      let sent = 0;
+      for (const { userId } of candidates) {
+        const settings = await prisma.notificationSettings.findUnique({
+          where: { userId },
+          select: { mealReminders: true },
+        });
+        if (!settings?.mealReminders) continue;
+
+        // P3 retention — suppress for heavy-engagement users.
+        if (!(await shouldSendNonCriticalPush(userId))) continue;
+
+        // P4 retention — only fire when the current server hour matches
+        // the user's learned dinner hour (± window). Users on different
+        // schedules get pinged at their hour instead of a fixed 18:00.
+        const userHour = await getUserCookHour(userId, prisma, now);
+        if (!shouldFireAtCurrentHour(userHour, now.getHours())) continue;
+
+        const alreadyCookedToday = await prisma.cookingLog.count({
+          where: { userId, cookedAt: { gte: startOfToday } },
+        });
+        if (alreadyCookedToday > 0) continue;
+
+        const lastCook = await prisma.cookingLog.findFirst({
+          where: { userId, cookedAt: { gte: fourteenDaysAgo } },
+          orderBy: { cookedAt: 'desc' },
+          select: { recipe: { select: { cuisine: true } } },
+        });
+        const lastCuisine = lastCook?.recipe?.cuisine?.trim();
+        if (!lastCuisine) continue;
+
+        const adjacents = getAdjacentCuisines(lastCuisine);
+        const suggested = adjacents[0]?.cuisine;
+        if (!suggested) continue;
+
+        const locale = await readUserLocale(userId);
+        const copy = pushCopy.preDinnerNudge(locale, { suggestedCuisine: suggested });
+        await pushNotificationService.sendToUser(userId, {
+          title: copy.title,
+          body: copy.body,
+          data: { screen: '/', source: 'preDinnerNudge' },
+        });
+        sent++;
+      }
+
+      logger.info(`🍽️  [Triggers] checkPreDinnerNudge: sent ${sent} pushes`);
+    } catch (error) {
+      logger.error({ err: error }, '❌ [Triggers] checkPreDinnerNudge error:');
+    }
+  },
+
+  /**
+   * Cuisine drought push (P0 retention). Fires daily at 11.
+   *
+   * For each push-enabled user: looks at their cooking history over the
+   * past 60 days. If they have a top-3 cuisine they cooked ≥3 times that
+   * hasn't been touched in 7+ days, nudges them: "Persian has been quiet
+   * — you haven't had Persian flavors in 9 days. Something tonight?"
+   * Max one drought push per user per 7-day window (debounced via the
+   * latest sent timestamp on `notificationSettings.lastDroughtPushAt`).
+   */
+  async checkCuisineDrought(now: Date = new Date()): Promise<void> {
+    try {
+      const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const candidates = await prisma.pushToken.findMany({
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+
+      let sent = 0;
+      for (const { userId } of candidates) {
+        const settings = await prisma.notificationSettings.findUnique({
+          where: { userId },
+          select: { mealReminders: true },
+        });
+        if (!settings?.mealReminders) continue;
+
+        // P3 retention — suppress for heavy-engagement users.
+        if (!(await shouldSendNonCriticalPush(userId))) continue;
+
+        const logs = await prisma.cookingLog.findMany({
+          where: { userId, cookedAt: { gte: sixtyDaysAgo } },
+          orderBy: { cookedAt: 'desc' },
+          select: { cookedAt: true, recipe: { select: { cuisine: true } } },
+        });
+
+        const cuisineStats = new Map<string, { count: number; latest: Date }>();
+        for (const log of logs) {
+          const c = log.recipe?.cuisine?.trim();
+          if (!c) continue;
+          const existing = cuisineStats.get(c);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            cuisineStats.set(c, { count: 1, latest: log.cookedAt });
+          }
+        }
+
+        const ranked = Array.from(cuisineStats.entries())
+          .filter(([, s]) => s.count >= 3)
+          .sort((a, b) => b[1].count - a[1].count)
+          .slice(0, 3)
+          .filter(([, s]) => s.latest < sevenDaysAgo);
+
+        if (ranked.length === 0) continue;
+        const [droughtCuisine, droughtStats] = ranked[0];
+        const daysSince = Math.floor(
+          (now.getTime() - droughtStats.latest.getTime()) / (24 * 60 * 60 * 1000),
+        );
+
+        const locale = await readUserLocale(userId);
+        const copy = pushCopy.cuisineDrought(locale, {
+          cuisine: droughtCuisine,
+          daysSince,
+        });
+        await pushNotificationService.sendToUser(userId, {
+          title: copy.title,
+          body: copy.body,
+          data: { screen: '/', source: 'cuisineDrought', cuisine: droughtCuisine },
+        });
+        sent++;
+      }
+
+      logger.info(`🌶  [Triggers] checkCuisineDrought: sent ${sent} pushes`);
+    } catch (error) {
+      logger.error({ err: error }, '❌ [Triggers] checkCuisineDrought error:');
+    }
+  },
+
+  /**
+   * Lapsed-user win-back push (P0 retention).
+   *
+   * Fires once when a user's most-recent `RecipeView` is exactly `daysAgo`
+   * days old (debounced by exact day-match, so a 3-day check won't re-fire
+   * tomorrow on the same user — Day 7 check picks them up next). Uses
+   * their top cuisine as the re-entry hook.
+   */
+  async checkLapsedUsers(
+    daysAgo: 3 | 7 | 14,
+    now: Date = new Date(),
+  ): Promise<void> {
+    try {
+      const target = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      const startOfDay = new Date(target);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(target);
+      endOfDay.setHours(23, 59, 59, 999);
+      const afterEndOfDay = new Date(endOfDay.getTime() + 1);
+
+      const candidates = await prisma.pushToken.findMany({
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+
+      let sent = 0;
+      for (const { userId } of candidates) {
+        const latestView = await prisma.recipeView.findFirst({
+          where: { userId },
+          orderBy: { viewedAt: 'desc' },
+          select: { viewedAt: true },
+        });
+        if (!latestView) continue;
+        if (latestView.viewedAt < startOfDay) continue;
+        if (latestView.viewedAt >= afterEndOfDay) continue;
+
+        const logs = await prisma.cookingLog.findMany({
+          where: { userId },
+          orderBy: { cookedAt: 'desc' },
+          take: 50,
+          select: { recipe: { select: { cuisine: true } } },
+        });
+        const counts = new Map<string, number>();
+        for (const log of logs) {
+          const c = log.recipe?.cuisine?.trim();
+          if (!c) continue;
+          counts.set(c, (counts.get(c) ?? 0) + 1);
+        }
+        const topCuisine = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0];
+        if (!topCuisine) continue;
+
+        const locale = await readUserLocale(userId);
+        // Day-3 and Day-14 both reuse the lighter "Sazon missed you" copy;
+        // Day-7 gets the slightly heavier "hasn't seen you in a while" line.
+        const copy = daysAgo === 7
+          ? pushCopy.lapsedDay7(locale, { topCuisine })
+          : pushCopy.lapsedDay3(locale, { topCuisine });
+        await pushNotificationService.sendToUser(userId, {
+          title: copy.title,
+          body: copy.body,
+          data: { screen: '/', source: `lapsedDay${daysAgo}` },
+        });
+        sent++;
+      }
+
+      logger.info(`👋 [Triggers] checkLapsedUsers(day${daysAgo}): sent ${sent} pushes`);
+    } catch (error) {
+      logger.error({ err: error, daysAgo }, '❌ [Triggers] checkLapsedUsers error:');
     }
   },
 

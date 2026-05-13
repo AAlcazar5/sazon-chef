@@ -47,33 +47,33 @@ interface ScreenErrorProps {
  */
 const errorConfigs: Record<ErrorType, { title: string; message: string; icon: keyof typeof Ionicons.glyphMap }> = {
   network: {
-    title: 'Connection Error',
-    message: 'Please check your internet connection and try again.',
+    title: 'Kitchen\'s quiet',
+    message: 'Looks like the line dropped — let me check the connection.',
     icon: 'wifi-outline',
   },
   server: {
-    title: 'Server Error',
-    message: 'Something went wrong on our end. Please try again later.',
+    title: 'Sazon\'s catching its breath',
+    message: 'The kitchen got chaotic for a sec — give it a moment and try again.',
     icon: 'server-outline',
   },
   notFound: {
-    title: 'Not Found',
-    message: 'The content you\'re looking for doesn\'t exist or has been removed.',
+    title: 'Looks like it walked away',
+    message: 'This one isn\'t here anymore. Let\'s find something else.',
     icon: 'search-outline',
   },
   unauthorized: {
-    title: 'Access Denied',
-    message: 'You don\'t have permission to view this content. Please log in again.',
+    title: 'Hold up',
+    message: 'You\'ll need to sign back in to see this.',
     icon: 'lock-closed-outline',
   },
   offline: {
-    title: 'You\'re Offline',
-    message: 'Connect to the internet to access this feature.',
+    title: 'No signal',
+    message: 'Reconnect and Sazon will pick right back up.',
     icon: 'cloud-offline-outline',
   },
   generic: {
-    title: 'Something Went Wrong',
-    message: 'An unexpected error occurred. Please try again.',
+    title: 'The kitchen got chaotic',
+    message: 'Something went sideways — want to try that again?',
     icon: 'warning-outline',
   },
 };

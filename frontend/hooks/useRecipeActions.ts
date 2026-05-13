@@ -4,6 +4,7 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
+import { sazonAlert } from '../lib/sazonAlert';
 import { recipeApi, mealPlanApi } from '../lib/api';
 import { HapticPatterns } from '../constants/Haptics';
 import type { SuggestedRecipe } from '../types';
@@ -55,7 +56,7 @@ export function useRecipeActions(options: UseRecipeActionsOptions): UseRecipeAct
     } catch (error: any) {
       console.error('Error adding to meal plan:', error);
       HapticPatterns.error();
-      Alert.alert('Error', error?.message || 'Failed to add recipe to meal plan');
+      sazonAlert('alerts.add_failed.title', 'alerts.add_failed.body');
     }
   }, [selectedRecipe, showToast]);
 
@@ -95,7 +96,7 @@ export function useRecipeActions(options: UseRecipeActionsOptions): UseRecipeAct
       }
     } catch (error) {
       console.error('Error fetching similar recipes:', error);
-      Alert.alert('Error', 'Failed to load similar recipes');
+      sazonAlert('alerts.load_failed.title', 'alerts.load_failed.body');
     }
   }, [selectedRecipe, showToast, onClose, onSimilarRecipesFound]);
 
@@ -116,7 +117,7 @@ export function useRecipeActions(options: UseRecipeActionsOptions): UseRecipeAct
     } catch (error: any) {
       console.error('Error healthifying recipe:', error);
       HapticPatterns.error();
-      Alert.alert('Error', error?.message || 'Failed to healthify recipe');
+      sazonAlert('alerts.generate_failed.title', 'alerts.generate_failed.body');
     }
   }, [selectedRecipe, showToast, onClose]);
 

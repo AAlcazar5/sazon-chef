@@ -19,6 +19,8 @@ export { default as ProfileStatWidgets } from './ProfileStatWidgets';
 export { default as CookingJourneyCard } from './CookingJourneyCard';
 export { default as KitchenIQSection } from './KitchenIQSection';
 export { default as CoachMemoryCard } from './CoachMemoryCard';
+// P1 retention — "Sazon knows you as…" identity surface
+export { default as SazonIdentityCard } from './SazonIdentityCard';
 
 // ROADMAP 4.0 Tier A0-a / A0-b — Profile-as-sheet
 export { default as ProfileSheet } from './ProfileSheet';

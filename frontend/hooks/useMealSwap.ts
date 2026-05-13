@@ -3,6 +3,7 @@
 
 import { useState, Dispatch, SetStateAction } from 'react';
 import { Alert } from 'react-native';
+import { sazonAlert } from '../lib/sazonAlert';
 import { mealPlanApi } from '../lib/api';
 
 interface Macros {
@@ -100,7 +101,7 @@ export function useMealSwap({
       setExpandedSwapMealId(mealId);
     } catch (error: any) {
       console.error('Error getting swap suggestions:', error);
-      Alert.alert('Error', 'Failed to get meal swap suggestions');
+      sazonAlert('alerts.load_failed.title', 'alerts.load_failed.body');
     } finally {
       setLoadingSwapSuggestions(null);
     }
@@ -215,10 +216,10 @@ export function useMealSwap({
         return updated;
       });
 
-      Alert.alert('Success', `Swapped to ${newRecipe.recipe.title}`);
+      Alert.alert('Swapped', `${newRecipe.recipe.title} is in.`);
     } catch (error: any) {
       console.error('Error swapping meal:', error);
-      Alert.alert('Error', 'Failed to swap meal');
+      sazonAlert('alerts.update_failed.title', 'alerts.update_failed.body');
     }
   };
 

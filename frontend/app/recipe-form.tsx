@@ -573,7 +573,7 @@ export default function RecipeFormScreen() {
     return (
       <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
         <View className="flex-1 items-center justify-center">
-          <Text className="text-gray-500">Loading recipe...</Text>
+          <Text className="text-gray-500">Pulling it up…</Text>
         </View>
       </SafeAreaView>
     );

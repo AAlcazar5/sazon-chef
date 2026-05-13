@@ -8,6 +8,9 @@ import {
   getCoverageTier,
 } from './todayActivationController';
 import { getReverseDiscovery } from './reverseDiscoveryController';
+import { getCuisineDrought } from './cuisineDroughtController';
+import { getWidgetPayload } from './widgetController';
+import { getCookPatternEndpoint } from './cookPatternController';
 import { shortPrivateCache } from '../../middleware/cacheControl';
 
 const router = Router();
@@ -18,5 +21,11 @@ const router = Router();
 router.get('/activation', shortPrivateCache, getActivationSurface);
 router.get('/coverage', shortPrivateCache, getCoverageTier);
 router.get('/reverse-discovery', shortPrivateCache, getReverseDiscovery);
+// P1 retention — Today companion card for the cuisine-drought push.
+router.get('/drought', shortPrivateCache, getCuisineDrought);
+// P2 retention — iOS / Android home-screen widget data layer.
+router.get('/widget', shortPrivateCache, getWidgetPayload);
+// P4 retention — "you usually cook Tuesday nights" behavioral pattern card.
+router.get('/cook-pattern', shortPrivateCache, getCookPatternEndpoint);
 
 export default router;

@@ -56,6 +56,38 @@ const JOBS: ScheduledJob[] = [
     shouldRun: (_day, hour) => hour === 10,
     run: () => notificationTriggerService.checkDay3Nudge(),
   },
+  {
+    name: 'preDinnerNudge',
+    // P4 retention — fires across the dinner window (17:00–19:00 server)
+    // so the per-user learned cook hour has a chance to match. The trigger
+    // itself rejects users whose learned hour doesn't match the current tick.
+    shouldRun: (_day, hour) => hour >= 17 && hour <= 19,
+    run: (now) => notificationTriggerService.checkPreDinnerNudge(now),
+  },
+  {
+    name: 'cuisineDrought',
+    // Daily at 11am (P0 retention)
+    shouldRun: (_day, hour) => hour === 11,
+    run: (now) => notificationTriggerService.checkCuisineDrought(now),
+  },
+  {
+    name: 'lapsedDay3',
+    // Daily at 10am (P0 retention)
+    shouldRun: (_day, hour) => hour === 10,
+    run: (now) => notificationTriggerService.checkLapsedUsers(3, now),
+  },
+  {
+    name: 'lapsedDay7',
+    // Daily at 10am (P0 retention)
+    shouldRun: (_day, hour) => hour === 10,
+    run: (now) => notificationTriggerService.checkLapsedUsers(7, now),
+  },
+  {
+    name: 'lapsedDay14',
+    // Daily at 10am (P3 retention — final win-back attempt)
+    shouldRun: (_day, hour) => hour === 10,
+    run: (now) => notificationTriggerService.checkLapsedUsers(14, now),
+  },
 ];
 
 /**

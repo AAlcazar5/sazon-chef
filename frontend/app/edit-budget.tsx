@@ -58,8 +58,8 @@ export default function EditBudgetScreen() {
       setSaving(true);
       await costTrackingApi.updateBudget(budget);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Budget settings saved!', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert('Locked in', "We'll keep the plate inside your number.", [
+        { text: 'Done', onPress: () => router.back() },
       ]);
     } catch (error: any) {
       console.error('Error saving budget:', error);

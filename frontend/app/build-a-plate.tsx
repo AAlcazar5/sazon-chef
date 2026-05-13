@@ -867,7 +867,7 @@ export default function BuildAPlateScreen() {
             loading={saving}
             disabled={composer.selectedSlotsCount === 0}
             style={{ flex: 1 }}
-            accessibilityLabel="Save to cookbook"
+            accessibilityLabel="Save to your kitchen"
             testID="save-to-cookbook-btn"
           />
           <BrandButton

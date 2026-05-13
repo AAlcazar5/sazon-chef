@@ -16,7 +16,12 @@ const SCOPES = ['app', 'components', 'hooks'];
 // Pin the floor (post-U16 initial sweep). Only ever decrease.
 // Inclusive of multi-line `Alert.alert(\n  'title', ...)` calls that the
 // audit-time `grep -E "Alert\.alert\(['\"]"` missed — true number is ~210.
-const RATCHET_MAX_RAW_ALERTS = 208;
+//
+// 2026-05-13 — brand-voice batch 1 migrated ~37 `Failed to ...` Alert.alert
+// sites across useShoppingList, useMealPlanActions, useProfileData,
+// useRecipeActions, useCollectionSave, useMealSwap, useFilterActions to
+// sazonAlert(...) with new generic on-brand keys. Floor 208 → 171.
+const RATCHET_MAX_RAW_ALERTS = 171;
 
 const ALERT_LITERAL_RE = /Alert\.alert\(\s*['"`]/g;
 

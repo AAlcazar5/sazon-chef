@@ -94,21 +94,43 @@ describe('imageService.searchFoodImage (with API key)', () => {
     expect(photo!.id).toBe('b');
   });
 
-  it('falls back to source.unsplash.com URL when Unsplash API throws', async () => {
+  it('returns null when Unsplash API throws', async () => {
     const svc = makeService('test_key');
-    mockedAxios.get.mockRejectedValueOnce(new Error('rate limited'));
+    mockedAxios.get.mockRejectedValue(new Error('rate limited'));
     const photo = await svc.searchFoodImage({ recipeName: 'pad thai', cuisine: 'Thai' });
-    expect(photo).toBeTruthy();
-    expect(photo!.url).toContain('source.unsplash.com');
-    expect(photo!.url.toLowerCase()).toContain('thai');
-    expect(photo!.id).toMatch(/^fallback-/);
+    expect(photo).toBeNull();
   });
 
-  it('falls back when results array is empty', async () => {
+  it('retries with a simplified query when primary search returns 0 results', async () => {
     const svc = makeService('test_key');
-    mockedAxios.get.mockResolvedValueOnce({ data: { results: [] } });
+    mockedAxios.get
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({
+        data: {
+          results: [
+            {
+              id: 'r1',
+              urls: { full: 'https://images.unsplash.com/photo-r1' },
+              links: { download_location: 'dl' },
+              user: { name: 'P', username: 'p' },
+            },
+          ],
+        },
+      });
+    const photo = await svc.searchFoodImage({
+      recipeName: 'Tamari-Honey-Sesame Glazed Tofu Bites',
+      cuisine: 'Asian',
+    });
+    expect(photo).toBeTruthy();
+    expect(photo!.id).toBe('r1');
+    expect(mockedAxios.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns null when every retry comes back empty', async () => {
+    const svc = makeService('test_key');
+    mockedAxios.get.mockResolvedValue({ data: { results: [] } });
     const photo = await svc.searchFoodImage({ recipeName: 'mystery dish' });
-    expect(photo!.id).toMatch(/^fallback-/);
+    expect(photo).toBeNull();
   });
 
   it('passes the right query + headers + page params to Unsplash', async () => {
@@ -120,7 +142,7 @@ describe('imageService.searchFoodImage (with API key)', () => {
       'https://api.unsplash.com/search/photos',
       expect.objectContaining({
         params: expect.objectContaining({
-          query: 'salmon Japanese food',
+          query: expect.stringContaining('salmon'),
           per_page: 30,
           page: 2,
           orientation: 'landscape',
@@ -132,21 +154,12 @@ describe('imageService.searchFoodImage (with API key)', () => {
   });
 });
 
-describe('imageService.searchFoodImage (no API key — fallback path)', () => {
-  it('skips the API call entirely and returns a fallback URL', async () => {
+describe('imageService.searchFoodImage (no API key)', () => {
+  it('skips the API call and returns null (no dead-URL fallback)', async () => {
     const svc = makeService(undefined);
     const photo = await svc.searchFoodImage({ recipeName: 'gnocchi', cuisine: 'Italian' });
     expect(mockedAxios.get).not.toHaveBeenCalled();
-    expect(photo!.url).toContain('source.unsplash.com');
-    expect(photo!.url.toLowerCase()).toContain('italian');
-    expect(photo!.url.toLowerCase()).toContain('gnocchi');
-  });
-
-  it('strips noise words ("the", "a", "an") from the recipe name keyword', async () => {
-    const svc = makeService(undefined);
-    const photo = await svc.searchFoodImage({ recipeName: 'the perfect risotto' });
-    // "the" must NOT show up in the keyword list
-    expect(photo!.url.split('?')[1]).not.toContain('the,');
+    expect(photo).toBeNull();
   });
 });
 

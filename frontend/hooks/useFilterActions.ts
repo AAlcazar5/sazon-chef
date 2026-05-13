@@ -4,6 +4,7 @@
 
 import { useCallback, type MutableRefObject } from 'react';
 import { Alert } from 'react-native';
+import { sazonAlert } from '../lib/sazonAlert';
 import type { FilterState } from '../lib/filterStorage';
 import { type RecipeFetchResult, type RecipeFetchParams } from './useRecipeFetcher';
 
@@ -145,7 +146,7 @@ export function useFilterActions(options: UseFilterActionsOptions): UseFilterAct
       applyFetchResult(result);
       console.log('✅ Filtered recipes loaded:', result.recipes.length, 'total:', result.total);
     } else {
-      Alert.alert('Error', 'Failed to apply filters. Please try again.');
+      sazonAlert('alerts.apply_failed.title', 'alerts.apply_failed.body');
     }
     setPaginationLoading(false);
   }, [filters, updateActiveFilters, saveFilters, closeFilterModal, isCravingSearch, onRerunCravingSearch, mealPrepMode, searchQuery, recipesPerPage, fetchRecipes, applyFetchResult, setPaginationLoading]);
@@ -167,7 +168,7 @@ export function useFilterActions(options: UseFilterActionsOptions): UseFilterAct
       applyFetchResult(result);
       console.log('✅ Filters cleared, original recipes loaded:', result.recipes.length, 'total:', result.total);
     } else {
-      Alert.alert('Error', 'Failed to clear filters. Please try again.');
+      sazonAlert('alerts.apply_failed.title', 'alerts.apply_failed.body');
     }
     setPaginationLoading(false);
   }, [resetFilters, mealPrepMode, searchQuery, recipesPerPage, fetchRecipes, applyFetchResult, setPaginationLoading]);

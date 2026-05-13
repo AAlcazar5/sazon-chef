@@ -168,7 +168,7 @@ export default function MealPrepScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: titleColor }]}>This week</Text>
             {sessionsLoading ? (
-              <Text style={[styles.sectionBody, { color: subtitleColor }]}>Loading…</Text>
+              <Text style={[styles.sectionBody, { color: subtitleColor }]}>Warming up…</Text>
             ) : sessions.length === 0 ? (
               <View
                 style={[styles.card, { backgroundColor: Pastel.sage }, Shadows.SM]}

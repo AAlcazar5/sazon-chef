@@ -56,37 +56,74 @@ export class ImageService {
     const resultIndex = params.resultIndex || 0;
 
     try {
-      // Build search query
-      const searchTerms = [params.recipeName];
-      if (params.cuisine) {
-        searchTerms.push(params.cuisine);
-      }
-      searchTerms.push('food'); // Always include 'food' to get relevant results
+      const cleanName = sanitizeForQuery(params.recipeName);
+      const primaryQuery = [cleanName, params.cuisine, 'food']
+        .filter(Boolean)
+        .join(' ');
 
-      const query = searchTerms.join(' ');
+      logger.info({ query: primaryQuery, page, resultIndex }, '🖼️  Searching for image');
 
-      logger.info({ query, page, resultIndex }, '🖼️  Searching for image');
-
-      // If no API key, use a fallback approach (less reliable)
       if (!this.unsplashAccessKey) {
-        logger.info('⚠️  No Unsplash API key - using fallback image URL');
-        return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
+        logger.info('⚠️  No Unsplash API key - no image returned');
+        return null;
       }
 
-      // Search Unsplash with API key (GUIDELINE #1: Use API endpoints)
-      // Fetch up to 30 results per page to have variety
+      const photo = await this.runSearch(primaryQuery, page, resultIndex);
+      if (photo) return photo;
+
+      // Retry with a simpler query: cuisine + main ingredient + food
+      const ingredient = extractMainIngredient(cleanName, params.mainIngredient);
+      const fallbackQuery = [params.cuisine, ingredient, 'food']
+        .filter(Boolean)
+        .join(' ');
+
+      if (fallbackQuery && fallbackQuery !== primaryQuery) {
+        logger.info({ query: fallbackQuery }, '🔁 Retrying with simplified query');
+        const retry = await this.runSearch(fallbackQuery, 1, 0);
+        if (retry) return retry;
+      }
+
+      if (params.cuisine) {
+        const cuisineQuery = `${params.cuisine} food`;
+        logger.info({ query: cuisineQuery }, '🔁 Retrying with cuisine only');
+        const cuisineRetry = await this.runSearch(cuisineQuery, 1, resultIndex);
+        if (cuisineRetry) return cuisineRetry;
+      }
+
+      // Last resort: ingredient + food, no cuisine (handles niche cuisines)
+      if (ingredient) {
+        const ingredientQuery = `${ingredient} food`;
+        logger.info({ query: ingredientQuery }, '🔁 Retrying with ingredient only');
+        const ingredientRetry = await this.runSearch(ingredientQuery, 1, 0);
+        if (ingredientRetry) return ingredientRetry;
+      }
+
+      logger.info('⚠️  No image found from any query');
+      return null;
+    } catch (error: any) {
+      logger.error({ data: error.message }, '❌ Error fetching image from Unsplash:');
+      return null;
+    }
+  }
+
+  private async runSearch(
+    query: string,
+    page: number,
+    resultIndex: number,
+  ): Promise<UnsplashPhoto | null> {
+    try {
       const response = await axios.get(`${this.baseUrl}/search/photos`, {
         params: {
           query,
-          per_page: 30, // Fetch multiple results per page
+          per_page: 30,
           page,
           orientation: 'landscape',
-          content_filter: 'high', // Family-friendly content only
+          content_filter: 'high',
         },
         headers: {
           Authorization: `Client-ID ${this.unsplashAccessKey}`,
         },
-        timeout: 3000, // 3 second timeout for faster response
+        timeout: 3000,
       });
 
       if (response.data.results && response.data.results.length > 0) {
@@ -126,11 +163,10 @@ export class ImageService {
         };
       }
 
-      logger.info('⚠️  No image found, using fallback');
-      return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
+      return null;
     } catch (error: any) {
-      logger.error({ data: error.message }, '❌ Error fetching image from Unsplash:');
-      return this.getFallbackPhoto(params.recipeName, params.cuisine, resultIndex);
+      logger.error({ data: error.message, query }, '❌ Unsplash search error:');
+      return null;
     }
   }
 
@@ -158,46 +194,55 @@ export class ImageService {
     }
   }
 
-  /**
-   * Get a fallback photo (no API key required)
-   * Returns minimal attribution data
-   */
-  private getFallbackPhoto(recipeName: string, cuisine?: string, resultIndex: number = 0): UnsplashPhoto | null {
-    // Unsplash Source provides random images based on keywords
-    // Format: https://source.unsplash.com/800x600/?food,pasta
-    const keywords = ['food'];
+}
 
-    if (cuisine) {
-      keywords.push(cuisine.toLowerCase());
-    }
+const QUALIFIER_WORDS = new Set([
+  'gluten-free', 'glutenfree', 'gluten', 'free',
+  'dairy-free', 'dairyfree', 'dairy',
+  'low-carb', 'lowcarb', 'keto',
+  'high-protein', 'highprotein',
+  'classic', 'authentic', 'modern',
+  'real-ingredient', 'realingredient', 'real',
+  'from-scratch', 'fromscratch',
+]);
 
-    // Add first word of recipe name as additional context
-    const firstWord = recipeName.split(' ')[0].toLowerCase();
-    if (firstWord && !['the', 'a', 'an'].includes(firstWord)) {
-      keywords.push(firstWord);
-    }
+export function sanitizeForQuery(title: string): string {
+  return title
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[-_/&]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-    const keywordString = keywords.join(',');
-    // Add resultIndex and timestamp to prevent caching and get variety
-    const randomSeed = Date.now() + resultIndex;
-    const fallbackUrl = `https://source.unsplash.com/800x600/?${keywordString}&sig=${randomSeed}`;
+const COMMON_PROTEINS = [
+  'tofu', 'tempeh', 'paneer', 'halloumi', 'seitan',
+  'salmon', 'shrimp', 'tuna', 'cod', 'tilapia', 'fish',
+  'chicken', 'turkey', 'beef', 'steak', 'pork', 'lamb',
+  'eggs', 'egg',
+  'mushroom', 'mushrooms',
+  'lentil', 'lentils', 'chickpeas', 'beans',
+];
 
-    logger.info({ data: fallbackUrl }, '🖼️  Using fallback image URL:');
+const COMMON_DISHES = [
+  'burrito', 'tacos', 'taco', 'pizza', 'pasta', 'noodles', 'ramen',
+  'curry', 'stir-fry', 'stirfry', 'salad', 'soup', 'stew',
+  'burger', 'sandwich', 'wrap', 'bowl', 'rice',
+  'pancakes', 'waffles', 'omelette', 'scramble',
+];
 
-    // Return minimal photo object
-    return {
-      id: `fallback-${randomSeed}`,
-      url: fallbackUrl,
-      downloadLocation: '',
-      photographer: {
-        name: 'Unsplash',
-        username: 'unsplash',
-        profileUrl: `https://unsplash.com?utm_source=${this.appName}&utm_medium=referral`,
-      },
-      attributionText: 'Photo from Unsplash',
-      unsplashUrl: `https://unsplash.com?utm_source=${this.appName}&utm_medium=referral`,
-    };
+export function extractMainIngredient(cleanTitle: string, hint?: string): string | undefined {
+  if (hint) return hint;
+  const lower = cleanTitle.toLowerCase();
+  for (const protein of COMMON_PROTEINS) {
+    if (lower.includes(protein)) return protein;
   }
+  for (const dish of COMMON_DISHES) {
+    if (lower.includes(dish)) return dish;
+  }
+  const meaningful = lower
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !QUALIFIER_WORDS.has(w));
+  return meaningful[meaningful.length - 1];
 }
 
 export const imageService = new ImageService();

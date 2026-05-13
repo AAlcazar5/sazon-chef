@@ -2,7 +2,7 @@
 // Phase 5: CookbookRecipeList — grid layout, image placeholder, star rating, chef-kiss flash
 
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import CookbookRecipeList from '../../components/cookbook/CookbookRecipeList';
 import type { SavedRecipe } from '../../types';
 
@@ -57,26 +57,6 @@ jest.mock('../../components/cookbook/SwipeableRecipeCard', () => {
 jest.mock('../../components/recipe/AnimatedRecipeCard', () => {
   return function MockAnimatedRecipeCard({ children }: any) {
     return children;
-  };
-});
-
-jest.mock('../../components/cookbook/StarRating', () => {
-  return function MockStarRating({ onRate, rating }: any) {
-    const { TouchableOpacity, Text, View } = require('react-native');
-    return (
-      <View testID="star-rating">
-        {[1, 2, 3, 4, 5].map((s) => (
-          <TouchableOpacity
-            key={s}
-            testID={`star-${s}`}
-            accessibilityLabel={`Rate ${s} star${s > 1 ? 's' : ''}`}
-            onPress={() => onRate?.(s)}
-          >
-            <Text>{s <= (rating ?? 0) ? '★' : '☆'}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
   };
 });
 
@@ -136,7 +116,6 @@ const defaultProps = {
   onLike: jest.fn(),
   onDislike: jest.fn(),
   onSave: jest.fn(),
-  onRate: jest.fn(),
 };
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -210,54 +189,14 @@ describe('CookbookRecipeList', () => {
     });
   });
 
-  describe('star rating', () => {
-    it('calls onRate with correct star value when star is tapped', () => {
-      const onRate = jest.fn();
-      const { getAllByTestId } = render(
-        <CookbookRecipeList {...defaultProps} onRate={onRate} />
-      );
-      // Each recipe card has star buttons; tap star-3 on first card's StarRating
-      fireEvent.press(getAllByTestId('star-3')[0]);
-      expect(onRate).toHaveBeenCalledWith('r1', 3);
-    });
-
-    it('calls onRate with each star value 1–5', () => {
-      const onRate = jest.fn();
-      const { getAllByTestId } = render(
-        <CookbookRecipeList {...defaultProps} onRate={onRate} />
-      );
-      for (let star = 1; star <= 5; star++) {
-        fireEvent.press(getAllByTestId(`star-${star}`)[0]);
-        expect(onRate).toHaveBeenCalledWith('r1', star);
-      }
-    });
+  it('does not render any star rating UI', () => {
+    const { queryAllByTestId } = render(<CookbookRecipeList {...defaultProps} />);
+    expect(queryAllByTestId('star-rating')).toHaveLength(0);
   });
 
-  describe('chef-kiss mascot flash', () => {
-    it('chef-kiss mascot is not shown before any rating', () => {
-      const { queryByTestId } = render(<CookbookRecipeList {...defaultProps} />);
-      expect(queryByTestId('chef-kiss-mascot')).toBeNull();
-    });
-
-    it('chef-kiss mascot appears after tapping 5-star', async () => {
-      const onRate = jest.fn();
-      const { getAllByTestId, queryByTestId } = render(
-        <CookbookRecipeList {...defaultProps} onRate={onRate} />
-      );
-      act(() => {
-        fireEvent.press(getAllByTestId('star-5')[0]);
-      });
-      await waitFor(() => expect(queryByTestId('chef-kiss-mascot')).toBeTruthy());
-    });
-
-    it('chef-kiss mascot does NOT appear after tapping star 1–4', () => {
-      const onRate = jest.fn();
-      const { getAllByTestId, queryByTestId } = render(
-        <CookbookRecipeList {...defaultProps} onRate={onRate} />
-      );
-      fireEvent.press(getAllByTestId('star-4')[0]);
-      expect(queryByTestId('chef-kiss-mascot')).toBeNull();
-    });
+  it('does not render the chef-kiss mascot', () => {
+    const { queryByTestId } = render(<CookbookRecipeList {...defaultProps} />);
+    expect(queryByTestId('chef-kiss-mascot')).toBeNull();
   });
 
   it('renders an empty list without crashing', () => {
@@ -265,10 +204,5 @@ describe('CookbookRecipeList', () => {
       <CookbookRecipeList {...defaultProps} recipes={[]} />
     );
     expect(toJSON()).toBeTruthy();
-  });
-
-  it('renders star ratings for each card', () => {
-    const { getAllByTestId } = render(<CookbookRecipeList {...defaultProps} />);
-    expect(getAllByTestId('star-rating').length).toBeGreaterThan(0);
   });
 });

@@ -304,8 +304,8 @@ export default function CreateShoppingListScreen() {
                   <HapticTouchableOpacity
                     onPress={() => {
                       Alert.alert(
-                        'Clear All Items',
-                        'Are you sure you want to remove all items?',
+                        'Heads up',
+                        'This\'ll wipe every item from this list. Cool?',
                         [
                           { text: 'Cancel', style: 'cancel' },
                           { text: 'Clear All', style: 'destructive', onPress: () => { setItems([]); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } },

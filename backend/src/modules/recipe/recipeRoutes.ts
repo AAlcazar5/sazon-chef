@@ -116,6 +116,7 @@ router.get('/:id/cooking-history', recipeController.getCookingHistory);
 router.get('/:id/similar', recipeController.getSimilarRecipes); // RD2.2 — anchor-recipe similarity
 router.get('/:id/cooked-next', recipeController.getCookedNext); // RD5.1 — cohort cookedNext
 router.get('/:id/friend-cohort', recipeController.getFriendCohort); // HX2.3 — hero friend cohort overlay
+router.get('/:id/taste-cohort', recipeController.getTasteCohort); // P4 retention — "N people with your taste cooked this"
 router.get('/leftover-bridge', recipeController.getLeftoverBridge); // RD4.1 — leftover-bridge nudge
 router.get('/:id', recipeController.getRecipe);
 

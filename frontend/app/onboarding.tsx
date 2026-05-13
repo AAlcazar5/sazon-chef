@@ -342,7 +342,10 @@ export default function OnboardingScreen() {
   };
 
   const handleBuildFirstPlate = () => {
-    router.push('/build-a-plate?seed=beginner' as any);
+    // P0 retention — route through the 3-recipe quick-start seed first
+    // so the recommender has recipe-level signal before /(tabs) opens.
+    // build-a-plate is still reachable from the Today tab.
+    router.replace('/quick-start' as any);
   };
 
   const handleSkipFirstPlate = () => {
@@ -665,7 +668,7 @@ export default function OnboardingScreen() {
             />
           </EditorialStep>
         );
-      // ROADMAP 4.0 A5 — final step: build first plate.
+      // ROADMAP 4.0 A5 — final step: seed the recommender with 3 picks.
       case 9:
         return (
           <EditorialStep
@@ -674,10 +677,10 @@ export default function OnboardingScreen() {
             isDark={isDark}
             eyebrow="One more thing"
             mascotExpression="excited"
-            titleLead="Build your first "
-            titleAccent="plate"
+            titleLead="Pick a few you'd "
+            titleAccent="cook tonight"
             terminator="."
-            subtitle="Mix a protein, a base, vegetables, and a sauce — Sazon does the rest. One tap and you've got dinner."
+            subtitle="Sazon learns from every tap. Pick up to three — your kitchen starts where you start."
           />
         );
       default:
@@ -748,12 +751,12 @@ export default function OnboardingScreen() {
           {currentStep === TOTAL_STEPS - 1 ? (
             <>
               <BrandButton
-                label="Build my first plate"
+                label="Show me a few to pick"
                 variant="sage"
                 icon="restaurant-outline"
                 onPress={handleBuildFirstPlate}
                 testID="onboarding-build-plate-cta"
-                accessibilityLabel="Build my first plate"
+                accessibilityLabel="Pick a few recipes to start"
               />
               <HapticTouchableOpacity
                 onPress={handleSkipFirstPlate}

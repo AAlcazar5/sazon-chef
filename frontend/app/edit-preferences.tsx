@@ -224,7 +224,7 @@ export default function EditPreferencesScreen() {
       });
       await setMealHours(mealHours);
       HapticPatterns.success();
-      Alert.alert('Success', 'Preferences updated successfully!');
+      Alert.alert('Got it', "Sazon's adjusting — tomorrow's plate will know.");
       router.back();
     } catch (error: any) {
       HapticPatterns.error();
@@ -247,7 +247,7 @@ export default function EditPreferencesScreen() {
       <EditScreenShell title="Culinary Preferences" noScroll>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="settings-outline" size={56} color={sub} />
-          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Loading preferences…</Text>
+          <Text style={{ color: sub, marginTop: 12, fontSize: 15 }}>Warming up…</Text>
         </View>
       </EditScreenShell>
     );

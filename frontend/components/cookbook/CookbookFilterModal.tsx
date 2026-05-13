@@ -176,7 +176,6 @@ export default function CookbookFilterModal({
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {[
             { value: 'recent' as const, label: 'Recent' },
-            { value: 'rating' as const, label: 'My Rating' },
             { value: 'mostCooked' as const, label: 'Most Cooked' },
             { value: 'alphabetical' as const, label: 'A–Z' },
             { value: 'cuisine' as const, label: 'Cuisine' },
