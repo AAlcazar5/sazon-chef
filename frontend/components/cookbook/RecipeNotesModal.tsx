@@ -118,7 +118,7 @@ export default function RecipeNotesModal({
                 style={{ minHeight: 120, maxHeight: 200 }}
                 autoFocus
               />
-              <Text className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-right">
+              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-right">
                 {notes.length}/{MAX_NOTES_LENGTH}
               </Text>
             </View>

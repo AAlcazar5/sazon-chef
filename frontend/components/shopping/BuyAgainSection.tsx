@@ -143,7 +143,7 @@ export default function BuyAgainSection({
         </ScrollView>
       )}
 
-      <Text className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+      <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
         Tap to add, long-press to favorite
       </Text>
     </View>

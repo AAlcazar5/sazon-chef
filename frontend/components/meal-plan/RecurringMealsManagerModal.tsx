@@ -78,7 +78,7 @@ export default function RecurringMealsManagerModal({
               <View className="items-center py-8">
                 <Icon name={Icons.REFRESH} size={48} color={isDark ? '#4B5563' : '#D1D5DB'} accessibilityLabel="No recurring meals" />
                 <Text className="text-base font-medium text-gray-500 dark:text-gray-400 mt-3">{t('mealPlan.recurringManager.empty')}</Text>
-                <Text className="text-sm text-gray-400 dark:text-gray-500 mt-1 text-center px-4">
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center px-4">
                   Long-press a meal card and tap "Set as Recurring" to repeat it automatically.
                 </Text>
               </View>
@@ -99,7 +99,7 @@ export default function RecurringMealsManagerModal({
                 {/* Inactive rules */}
                 {inactiveRules.length > 0 && (
                   <>
-                    <Text className="text-xs font-medium text-gray-400 dark:text-gray-500 mt-4 mb-2 uppercase tracking-wider">
+                    <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-4 mb-2 uppercase tracking-wider">
                       {t('mealPlan.recurringManager.paused')}
                     </Text>
                     {inactiveRules.map(rule => (

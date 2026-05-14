@@ -129,7 +129,7 @@ export default function ProfilePresetsCard({
         {presetsLoading ? (
           <AnimatedActivityIndicator size="small" color={isDark ? DarkColors.primary : Colors.primary} />
         ) : presets.length === 0 ? (
-          <Text className="text-sm text-gray-400 dark:text-gray-500 text-center py-3">
+          <Text className="text-sm text-gray-500 dark:text-gray-400 text-center py-3">
             No presets yet. Save your current settings to create one.
           </Text>
         ) : (
@@ -162,7 +162,7 @@ export default function ProfilePresetsCard({
                     {preset.description && (
                       <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{preset.description}</Text>
                     )}
-                    <Text className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {preset.calories} cal | {preset.protein}p / {preset.carbs}c / {preset.fat}f
                     </Text>
                   </View>
@@ -215,7 +215,7 @@ export default function ProfilePresetsCard({
               onChangeText={setPresetDescription}
             />
 
-            <Text className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+            <Text className="text-xs text-gray-500 dark:text-gray-400 mb-4">
               This will save your current macros, activity level, fitness goal, and budget settings.
             </Text>
 

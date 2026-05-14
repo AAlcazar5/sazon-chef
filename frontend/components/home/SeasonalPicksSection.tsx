@@ -128,7 +128,7 @@ export default function SeasonalPicksSection({ recipes }: SeasonalPicksSectionPr
         <Text className="text-lg font-bold text-gray-900 dark:text-gray-100">
           {SEASON_EMOJI[season]} {SEASON_LABELS[season]}
         </Text>
-        <Text className="text-xs text-gray-400 dark:text-gray-500 ml-2 mt-0.5">
+        <Text className="text-xs text-gray-500 dark:text-gray-400 ml-2 mt-0.5">
           Right now
         </Text>
       </View>

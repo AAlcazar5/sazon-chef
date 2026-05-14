@@ -110,7 +110,7 @@ export default function CollectionSavePicker({
             {hasRecent && (
               <Text
                 testID="recent-section-header"
-                className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 mt-1"
+                className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 mt-1"
               >
                 Recent
               </Text>
@@ -123,7 +123,7 @@ export default function CollectionSavePicker({
               return (
               <React.Fragment key={collection.id}>
                 {isFirstNonRecent && (
-                  <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 mt-3">
+                  <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1 mt-3">
                     All Collections
                   </Text>
                 )}

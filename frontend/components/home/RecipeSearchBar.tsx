@@ -232,7 +232,7 @@ export default function RecipeSearchBar({
                         isDark={isDark}
                       />
                       {s.metadata?.cuisine && s.type === 'recipe' && (
-                        <Text className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {s.metadata.cuisine}
                         </Text>
                       )}
@@ -251,7 +251,7 @@ export default function RecipeSearchBar({
             {(showHistory || showHistoryAndPopular) && (
               <>
                 <View className="flex-row items-center justify-between px-4 pt-3 pb-1">
-                  <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                  <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     {t('home.search.recent')}
                   </Text>
                   <HapticTouchableOpacity onPress={clearHistory}>
@@ -294,7 +294,7 @@ export default function RecipeSearchBar({
             {(showPopular || (showHistoryAndPopular && popularSearches.length > 0)) && (
               <>
                 <View className="px-4 pt-3 pb-1">
-                  <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                  <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     {t('home.search.popular')}
                   </Text>
                 </View>
@@ -321,7 +321,7 @@ export default function RecipeSearchBar({
             {/* Loading indicator */}
             {suggestionsLoading && value.trim().length >= 2 && suggestions.length === 0 && (
               <View className="px-4 py-4 items-center">
-                <Text className="text-sm text-gray-400 dark:text-gray-500">{t('home.search.searching')}</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">{t('home.search.searching')}</Text>
               </View>
             )}
           </ScrollView>

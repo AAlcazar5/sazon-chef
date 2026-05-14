@@ -69,7 +69,9 @@ const styles = StyleSheet.create({
     fontFamily: EditorialFontFamily.body.extrabold,
     fontSize: 11,
     letterSpacing: 0.8,
-    color: '#fa7e12',
+    // a11y: brand #fa7e12 scores 2.22:1 on Pastel.lavender (fails AA-large
+    // even). Darker amber-coral preserves the brand-family hue at 5.9:1.
+    color: '#8B4810',
     textTransform: 'uppercase',
     marginBottom: 10,
   },

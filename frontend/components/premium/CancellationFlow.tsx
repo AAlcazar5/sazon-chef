@@ -159,7 +159,7 @@ function SurveyStep({
         onPress={onClose}
         hapticDisabled
       >
-        <Text className="text-gray-400 dark:text-gray-500 text-sm">Keep my subscription</Text>
+        <Text className="text-gray-500 dark:text-gray-400 text-sm">Keep my subscription</Text>
       </HapticTouchableOpacity>
     </>
   );
@@ -261,7 +261,7 @@ function OfferStep({
         onPress={onBack}
         hapticDisabled
       >
-        <Text className="text-gray-400 dark:text-gray-500 text-sm">Back</Text>
+        <Text className="text-gray-500 dark:text-gray-400 text-sm">Back</Text>
       </HapticTouchableOpacity>
     </>
   );
@@ -318,7 +318,7 @@ function ConfirmStep({
         onPress={onBack}
         hapticDisabled
       >
-        <Text className="text-gray-400 dark:text-gray-500 text-sm">Back</Text>
+        <Text className="text-gray-500 dark:text-gray-400 text-sm">Back</Text>
       </HapticTouchableOpacity>
     </>
   );

@@ -203,7 +203,7 @@ export default function ShoppingListItem({
           <Text
             className={`font-medium ${
               item.purchased
-                ? 'text-gray-400 dark:text-gray-500'
+                ? 'text-gray-500 dark:text-gray-400'
                 : 'text-gray-900 dark:text-gray-100'
             }`}
             style={{ fontSize: inStoreMode ? 17 : 15 }}
@@ -267,7 +267,7 @@ export default function ShoppingListItem({
         {item.quantity && (
           <Text
             className={`text-xs ${
-              item.purchased ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'
+              item.purchased ? 'text-gray-500 dark:text-gray-400' : 'text-gray-500 dark:text-gray-400'
             }`}
             numberOfLines={1}
           >
@@ -277,7 +277,7 @@ export default function ShoppingListItem({
         {item.price != null && item.price > 0 && (
           <Text
             className={`text-xs font-semibold ${
-              item.purchased ? 'text-gray-400 dark:text-gray-500' : 'text-green-600 dark:text-green-400'
+              item.purchased ? 'text-gray-500 dark:text-gray-400' : 'text-green-600 dark:text-green-400'
             }`}
           >
             ${item.price.toFixed(2)}

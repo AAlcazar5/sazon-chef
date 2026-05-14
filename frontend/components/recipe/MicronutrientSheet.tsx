@@ -105,7 +105,7 @@ export default function MicronutrientSheet({ visible, nutrition, onDismiss }: Mi
                     <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: pctColor, marginRight: 4 }}>
                       {pct}%
                     </Text>
-                    <Text className="text-xs text-gray-400 dark:text-gray-500">
+                    <Text className="text-xs text-gray-500 dark:text-gray-400">
                       ({amount.toFixed(1)}{micro.unit})
                     </Text>
                   </View>

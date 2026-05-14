@@ -78,7 +78,7 @@ export default function PantrySection({
           <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             My Pantry
           </Text>
-          <Text className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+          <Text className="text-xs text-gray-500 dark:text-gray-400 ml-2">
             {pantryItems.length} items
           </Text>
         </View>
@@ -114,7 +114,7 @@ export default function PantrySection({
         </View>
       </ScrollView>
 
-      <Text className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+      <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1">
         Long-press to remove from pantry
       </Text>
     </View>

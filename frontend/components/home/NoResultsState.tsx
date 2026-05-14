@@ -57,7 +57,7 @@ export default function NoResultsState({
       {/* Section 1: Similar recipe titles */}
       {suggestions.length > 0 && (
         <View className="w-full mt-6">
-          <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+          <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
             {t('home.noResults.similar')}
           </Text>
           {suggestions.slice(0, 4).map((title, idx) => (

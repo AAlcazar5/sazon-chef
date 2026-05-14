@@ -58,6 +58,11 @@ function WidgetCard({
   const bgColor = isDark ? (tintDark || tint + '1F') : tint;
   const textPrimary = isDark ? Ink.dark.warm : Ink.light.primary;
   const textSecondary = isDark ? Ink.dark.secondary : Ink.light.secondary;
+  // a11y: AccentTokens.sage/blush fail AA body on light bg (~1.9:1). Use
+  // darker variants for the trend arrow + value text; flip to the bright
+  // accent tokens in dark mode where they sit on a darker pastel.
+  const trendUpColor = isDark ? AccentTokens.sage : '#15803D';
+  const trendDownColor = isDark ? AccentTokens.blush : '#9F1239';
 
   const content = (
     <View
@@ -92,7 +97,7 @@ function WidgetCard({
             <Text
               style={[
                 styles.trendArrow,
-                { color: trend.direction === 'up' ? AccentTokens.sage : AccentTokens.blush },
+                { color: trend.direction === 'up' ? trendUpColor : trendDownColor },
               ]}
             >
               {trend.direction === 'up' ? '↑' : '↓'}
@@ -100,7 +105,7 @@ function WidgetCard({
             <Text
               style={[
                 styles.trendValue,
-                { color: trend.direction === 'up' ? AccentTokens.sage : AccentTokens.blush },
+                { color: trend.direction === 'up' ? trendUpColor : trendDownColor },
               ]}
             >
               {trend.value}

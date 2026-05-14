@@ -47,7 +47,7 @@ export default function IngredientSpotlightCard({ onSearch }: IngredientSpotligh
             color={isDark ? DarkColors.primary : Colors.primary}
             style={{ marginRight: 8 }}
           />
-          <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+          <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             This Week
           </Text>
         </View>

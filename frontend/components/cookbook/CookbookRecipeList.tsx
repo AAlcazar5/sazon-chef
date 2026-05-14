@@ -107,7 +107,7 @@ function CookbookRecipeList({
           <Icon name={Icons.NOTE_OUTLINE} size={12} color={isDark ? '#9CA3AF' : '#6B7280'} />
         )}
         {hasCookCount && (
-          <Text className="text-xs text-gray-400 dark:text-gray-500">
+          <Text className="text-xs text-gray-500 dark:text-gray-400">
             {recipe.cookCount}x cooked
           </Text>
         )}

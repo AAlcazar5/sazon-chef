@@ -77,7 +77,7 @@ export default function WeekMacroBar({
       className="mx-4 mt-3 mb-2 rounded-2xl p-3"
       style={{ backgroundColor: isDark ? DarkColors.card : Colors.surface }}
     >
-      <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2.5">
+      <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2.5">
         Weekly Nutrition
       </Text>
       <View className="flex-row" style={{ gap: 6 }}>

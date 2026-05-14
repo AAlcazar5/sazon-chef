@@ -102,7 +102,7 @@ export default function OfflineBanner({
   if (cacheAge != null && cacheAge > 3600000) {
     return (
       <View className="mx-4 mt-1 mb-1">
-        <Text className="text-xs text-center text-gray-400 dark:text-gray-500">
+        <Text className="text-xs text-center text-gray-500 dark:text-gray-400">
           Last updated {formatCacheAge(cacheAge)}
         </Text>
       </View>
