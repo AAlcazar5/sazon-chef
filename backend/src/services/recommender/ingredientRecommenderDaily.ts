@@ -13,6 +13,7 @@
 
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../utils/logger';
+import { parseJsonColumn } from '../../utils/jsonColumns';
 
 /** Ingredient surfaces this rollup covers. Other surfaces are ignored. */
 const INGREDIENT_SURFACES = [
@@ -68,7 +69,7 @@ interface ParsedEvent {
 function parseEvent(row: { contextSnapshot: string }): ParsedEvent | null {
   let snap: any;
   try {
-    snap = JSON.parse(row.contextSnapshot);
+    snap = parseJsonColumn('contextSnapshot', row.contextSnapshot);
   } catch {
     return null;
   }

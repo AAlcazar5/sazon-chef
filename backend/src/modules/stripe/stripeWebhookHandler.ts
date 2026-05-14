@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma';
 import { stripeService } from '@/services/stripeService';
 import { emailService } from '@/services/emailService';
 import { captureException } from '@/utils/sentryCapture';
+import { serializeJsonColumnSafe } from '../../utils/jsonColumns';
 
 type SubscriptionWithMetadata = Stripe.Subscription;
 type InvoiceWithMetadata = Stripe.Invoice & {
@@ -95,7 +96,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
       stripeEventId: event.id,
       type: event.type,
       userId: userId || null,
-      data: JSON.stringify(event.data.object),
+      data: serializeJsonColumnSafe('data', event.data.object),
     },
   });
 

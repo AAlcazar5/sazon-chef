@@ -2,6 +2,7 @@ import { logger } from '../../utils/logger';
 // backend/src/modules/mealPlan/tasteFeedbackController.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
+import { serializeJsonColumnSafe } from '../../utils/jsonColumns';
 
 function getUserId(req: Request): string {
   return (req as any).user?.id || '';
@@ -50,7 +51,7 @@ export async function submitTasteFeedback(req: Request, res: Response) {
       where: { id: mealId },
       data: {
         tasteRating,
-        flavorTags: JSON.stringify(validTags),
+        flavorTags: serializeJsonColumnSafe('flavorTags', validTags),
       },
     });
 

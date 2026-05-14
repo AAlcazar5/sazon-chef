@@ -7,6 +7,7 @@
 
 import { randomBytes } from 'crypto';
 import { prisma } from '../lib/prisma';
+import { parseJsonColumn } from '../utils/jsonColumns';
 
 const SLUG_ADJECTIVES = ['cozy', 'bright', 'smoky', 'spicy', 'fresh', 'crisp', 'silky', 'hearty'];
 const SLUG_NOUNS = ['salmon', 'tomato', 'farro', 'tahini', 'broccoli', 'lemon', 'pepper', 'thyme'];
@@ -171,7 +172,7 @@ export const getPlateOfTheWeek = async (
   const platesWithParsedIds = plates.map((plate) => {
     let parsed: Array<{ slot?: string; componentId?: string }> = [];
     try {
-      const arr = JSON.parse(plate.componentIds);
+      const arr = parseJsonColumn('componentIds', plate.componentIds);
       if (Array.isArray(arr)) parsed = arr;
     } catch {
       /* skip plate */
@@ -205,13 +206,13 @@ export const getPlateOfTheWeek = async (
       let ings: string[] = [];
       let cuis: string[] = [];
       try {
-        const arr = JSON.parse(comp.pantryIngredientNames);
+        const arr = parseJsonColumn('pantryIngredientNames', comp.pantryIngredientNames);
         if (Array.isArray(arr)) ings = arr.filter((s): s is string => typeof s === 'string');
       } catch {
         /* skip */
       }
       try {
-        const arr = JSON.parse(comp.cuisineTags);
+        const arr = parseJsonColumn('cuisineTags', comp.cuisineTags);
         if (Array.isArray(arr)) cuis = arr.filter((s): s is string => typeof s === 'string');
       } catch {
         /* skip */

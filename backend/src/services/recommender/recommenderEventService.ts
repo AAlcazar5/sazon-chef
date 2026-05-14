@@ -7,6 +7,7 @@
 
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../utils/logger';
+import { serializeJsonColumnSafe } from '../../utils/jsonColumns';
 
 // ROADMAP 4.0 FX3.3 — sentinel embedded in `contextSnapshot` so zero-result
 // filter combos can be queried out of the same table until N1.1 introduces
@@ -37,8 +38,8 @@ export async function recordProposal(
       data: {
         userId: record.userId,
         asOf: record.asOf,
-        contextSnapshot: JSON.stringify(record.contextSnapshot),
-        candidateIds: JSON.stringify(record.candidateIds),
+        contextSnapshot: serializeJsonColumnSafe('contextSnapshot', record.contextSnapshot),
+        candidateIds: serializeJsonColumnSafe('candidateIds', record.candidateIds),
         pickedRecipeId: record.pickedRecipeId,
         confidence: record.confidence,
         copyLine: record.copyLine,
@@ -105,12 +106,12 @@ export async function recordZeroResultFilter(
       data: {
         userId: rec.userId,
         asOf: rec.asOf ?? new Date(),
-        contextSnapshot: JSON.stringify({
+        contextSnapshot: serializeJsonColumnSafe('contextSnapshot', {
           surface: ZERO_RESULT_FILTER_SURFACE,
           eventType: ZERO_RESULT_EVENT_TYPE,
           filters: sanitized,
         }),
-        candidateIds: JSON.stringify([]),
+        candidateIds: serializeJsonColumnSafe('candidateIds', []),
         pickedRecipeId: null,
         confidence: 0,
         copyLine: '',

@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { parseJsonColumn } from '../../utils/jsonColumns';
 
 const SHARE_URL_BASE = 'https://sazonchef.app/import/shopping-list';
 const SHARE_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -78,7 +79,7 @@ export const shoppingListShareController = {
         // exhausted) rather than silently resetting to zero.
         let importedByMap: Record<string, string> = {};
         try {
-          const parsed = JSON.parse(share.usedBy || '[]');
+          const parsed = parseJsonColumn('usedBy', share.usedBy);
           if (!Array.isArray(parsed)) {
             return { kind: 'corrupt' as const };
           }

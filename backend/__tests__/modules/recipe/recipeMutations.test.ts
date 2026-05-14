@@ -518,7 +518,7 @@ describe('recordCook', () => {
     p.cookingLog.create.mockResolvedValueOnce({});
     p.recipe.findUnique.mockResolvedValueOnce({ source: 'user-composed' });
     p.composedPlate.findFirst.mockResolvedValueOnce({
-      componentIds: JSON.stringify([{ componentId: 'comp-1' }, { componentId: 'comp-2' }]),
+      componentIds: JSON.stringify([{ slot: 'protein', componentId: 'comp-1' }, { slot: 'protein', componentId: 'comp-2' }]),
     });
     const req = buildReq({ params: { id: 'r1' }, body: {} });
     const res = buildRes();

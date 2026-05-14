@@ -22,6 +22,7 @@ import { logger } from '../../utils/logger';
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
 import { captureException } from '@/utils/sentryCapture';
+import { serializeJsonColumnSafe } from '../../utils/jsonColumns';
 
 interface RevenueCatEventBody {
   api_version?: string;
@@ -106,7 +107,7 @@ export async function handleRevenueCatWebhook(req: Request, res: Response) {
       revenueCatEventId: event.id,
       type: event.type,
       userId,
-      data: JSON.stringify(event),
+      data: serializeJsonColumnSafe('data', event),
     },
   });
 

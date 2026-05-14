@@ -4,6 +4,7 @@
 // "Eat the rainbow" hint banner.
 
 import { prisma } from '../lib/prisma';
+import { parseJsonColumn } from '../utils/jsonColumns';
 
 export interface WeeklyPlateSummary {
   totalPlatesThisWeek: number;
@@ -55,7 +56,7 @@ export const computeWeeklyPlateSummary = async (
   for (const plate of plates) {
     let parsed: PlateComponent[] = [];
     try {
-      parsed = JSON.parse(plate.componentIds);
+      parsed = parseJsonColumn('componentIds', plate.componentIds);
     } catch {
       continue;
     }

@@ -59,6 +59,7 @@ import {
   enqueueExtraction,
   topMemoriesForUser,
 } from '@/services/coachMemoryService';
+import { serializeJsonColumnSafe } from '../../utils/jsonColumns';
 
 // S17c — free daily cap bumped from 10 → 50. With S17 prompt caching + S17b
 // lean dynamic block, per-message cost on free tier is ~$0.0008 once warmed.
@@ -431,7 +432,7 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
   // Persist sanitized attachment record on the user message (no raw base64).
   const userAttachmentsJson =
     validated.length > 0
-      ? JSON.stringify({ attachments: sanitizeForPersistence(validated) })
+      ? serializeJsonColumnSafe('attachments', { attachments: sanitizeForPersistence(validated) })
       : '[]';
   await prisma.coachMessage.create({
     data: {
@@ -463,7 +464,7 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         userId,
         role: 'assistant',
         content: deflection,
-        attachments: JSON.stringify({ deflected: 'medical_claim' }),
+        attachments: serializeJsonColumnSafe('attachments', { deflected: 'medical_claim' }),
       },
     });
     await prisma.coachConversation.update({
@@ -751,7 +752,7 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         userId,
         role: 'assistant',
         content: assistantText,
-        attachments: JSON.stringify({ toolUses }),
+        attachments: serializeJsonColumnSafe('attachments', { toolUses }),
         modelUsed: lastModel,
         promptTokens: totalUsage.input_tokens,
         completionTokens: totalUsage.output_tokens,

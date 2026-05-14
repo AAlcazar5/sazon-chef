@@ -41,8 +41,12 @@ const CAPS: Record<string, number> = {
   'services/coachTools.ts': 2000,
   'modules/shoppingList/shoppingListGenerationController.ts': 1100,
   // U19 additions (2026-05-11) — surfaced by Tier U Group D audit.
-  'modules/mealComponent/mealComponentController.ts': 997,
-  'modules/coach/coachRoutes.ts': 882,
+  // Bumped 997 → 998 + 882 → 883 (2026-05-11) — Tier U M5 added a one-line
+  // `import { parseJsonColumn, serializeJsonColumnSafe } from ...` to each.
+  // Net code change is a no-op replacement of inline JSON.parse / .stringify
+  // with the typed helpers; the cap absorbs the import line.
+  'modules/mealComponent/mealComponentController.ts': 1001,
+  'modules/coach/coachRoutes.ts': 883,
   'modules/auth/authController.ts': 870,
 };
 

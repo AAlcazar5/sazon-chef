@@ -7,6 +7,7 @@
 // slot, so ≥3 of the original 4 (or 4 of 5) components remain.
 
 import { prisma } from '../lib/prisma';
+import { parseJsonColumn } from '../utils/jsonColumns';
 
 const MIN_COUNT = 1;
 const MAX_COUNT = 5;
@@ -83,12 +84,14 @@ export const generatePlateVariations = async (
 
   const cap = Math.max(MIN_COUNT, Math.min(MAX_COUNT, input.count));
 
-  let sourceComponents: SourceComponent[];
-  try {
-    sourceComponents = JSON.parse(plate.componentIds);
-  } catch {
-    return [];
-  }
+  const sourceComponents: SourceComponent[] = parseJsonColumn(
+    'componentIds',
+    plate.componentIds,
+  ).map((e) => ({
+    slot: e.slot,
+    componentId: e.componentId,
+    portionMultiplier: e.portionMultiplier ?? 1,
+  }));
   if (!Array.isArray(sourceComponents) || sourceComponents.length === 0) {
     return [];
   }

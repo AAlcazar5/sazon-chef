@@ -14,6 +14,7 @@
 // — this service emits structural signals + recipe pairing.
 
 import { prisma } from '../lib/prisma';
+import { parseJsonColumn } from '../utils/jsonColumns';
 import { getCulturalPrimer } from './culturalPrimerService';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -118,18 +119,14 @@ async function loadRecentDiscoverySuggestions(
   })) as RecentDiscoveryRow[];
   const out = new Set<string>();
   for (const r of rows) {
-    try {
-      const snap = JSON.parse(r.contextSnapshot) as {
-        surface?: string;
-        metadata?: { kind?: string; suggestedItem?: string };
-      };
-      if (snap.surface !== 'pantry_iq') continue;
-      if (snap.metadata?.kind !== 'cultural-discovery') continue;
-      const item = snap.metadata.suggestedItem;
-      if (item) out.add(item.toLowerCase());
-    } catch {
-      // malformed contextSnapshot — skip
-    }
+    const snap = parseJsonColumn('contextSnapshot', r.contextSnapshot) as {
+      surface?: string;
+      metadata?: { kind?: string; suggestedItem?: string };
+    };
+    if (snap.surface !== 'pantry_iq') continue;
+    if (snap.metadata?.kind !== 'cultural-discovery') continue;
+    const item = snap.metadata.suggestedItem;
+    if (item) out.add(item.toLowerCase());
   }
   return out;
 }

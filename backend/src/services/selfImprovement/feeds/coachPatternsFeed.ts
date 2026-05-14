@@ -18,6 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from '../../../utils/logger';
 import { FeedDeps, FeedRunResult } from './types';
+import { parseJsonColumn } from '../../../utils/jsonColumns';
 
 const FEED_ID = 'coach-patterns';
 
@@ -99,11 +100,13 @@ export async function defaultClusterer(queries: RawCoachQuery[]): Promise<CoachI
 export function hasAttachedRecipe(attachments: string | undefined): boolean {
   if (!attachments) return false;
   try {
-    const parsed = JSON.parse(attachments);
+    const parsed = parseJsonColumn('attachments', attachments);
     if (!Array.isArray(parsed)) return false;
-    return parsed.some(
-      (a) => a && typeof a === 'object' && (a.type === 'recipe' || a.kind === 'recipe' || a.recipeId),
-    );
+    return parsed.some((a) => {
+      if (!a || typeof a !== 'object') return false;
+      const att = a as { type?: unknown; kind?: unknown; recipeId?: unknown };
+      return att.type === 'recipe' || att.kind === 'recipe' || Boolean(att.recipeId);
+    });
   } catch {
     return false;
   }

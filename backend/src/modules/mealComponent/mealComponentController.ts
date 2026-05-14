@@ -56,6 +56,7 @@ import {
 } from '../../services/nutrientGapService';
 import { computeWeeklyPlateSummary } from '../../services/recentPlatesService';
 import { prisma } from '../../lib/prisma';
+import { parseJsonColumn } from '../../utils/jsonColumns';
 
 const slotEnum = z.enum(['protein', 'base', 'vegetable', 'sauce', 'garnish']);
 
@@ -328,12 +329,15 @@ export const mealComponentController = {
         return res.status(404).json({ error: 'Plate not found' });
       }
 
-      let componentEntries: Array<{ slot: string; componentId: string; portionMultiplier: number }> = [];
-      try {
-        componentEntries = JSON.parse(plate.componentIds);
-      } catch {
-        return res.status(500).json({ error: 'Failed to compute cook timeline' });
-      }
+      const componentEntries: Array<{
+        slot: string;
+        componentId: string;
+        portionMultiplier: number;
+      }> = parseJsonColumn('componentIds', plate.componentIds).map((e) => ({
+        slot: e.slot,
+        componentId: e.componentId,
+        portionMultiplier: e.portionMultiplier ?? 1,
+      }));
 
       const componentIds = componentEntries.map((e) => e.componentId);
       const rows = await prisma.mealComponent.findMany({
@@ -690,7 +694,7 @@ export const mealComponentController = {
 
       let parsed: { componentId: string }[] = [];
       try {
-        const arr = JSON.parse(plate.componentIds);
+        const arr = parseJsonColumn('componentIds', plate.componentIds);
         if (Array.isArray(arr)) parsed = arr;
       } catch {
         return res.json({ subsCount: 0 });
@@ -716,7 +720,7 @@ export const mealComponentController = {
         if (!comp) return count + 1;
         let ingredients: string[] = [];
         try {
-          const arr = JSON.parse(comp.pantryIngredientNames);
+          const arr = parseJsonColumn('pantryIngredientNames', comp.pantryIngredientNames);
           if (Array.isArray(arr)) ingredients = arr.filter((s): s is string => typeof s === 'string');
         } catch {
           /* fall through */

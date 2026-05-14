@@ -5,6 +5,7 @@ import { logger } from '../utils/logger';
 import { prisma } from '../lib/prisma';
 import { plateCoherenceScore, componentsClash } from './cuisineCoherence';
 import { recordAffinityEvent } from './slotAffinityService';
+import { serializeJsonColumnSafe } from '../utils/jsonColumns';
 
 export type ComponentSlot = 'protein' | 'base' | 'vegetable' | 'sauce' | 'garnish';
 
@@ -187,7 +188,7 @@ export const saveComposedPlate = async (
     data: {
       userId: params.userId,
       name: plateName,
-      componentIds: JSON.stringify(params.components),
+      componentIds: serializeJsonColumnSafe('componentIds', params.components),
       totalCalories: totals.cal,
       totalProtein: totals.protein,
       totalCarbs: totals.carbs,

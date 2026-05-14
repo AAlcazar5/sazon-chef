@@ -188,7 +188,7 @@ describe('updateSavedMeta', () => {
     p.savedRecipe.update.mockResolvedValueOnce({ id: 's1', notes: null, rating: 5 });
     p.recipe.findUnique.mockResolvedValueOnce({ source: 'user-composed' });
     p.composedPlate.findFirst.mockResolvedValueOnce({
-      componentIds: JSON.stringify([{ componentId: 'comp-1' }]),
+      componentIds: JSON.stringify([{ slot: 'protein', componentId: 'comp-1' }]),
     });
     const req = buildReq({ params: { id: 'r1' }, body: { rating: 5 } });
     const res = buildRes();

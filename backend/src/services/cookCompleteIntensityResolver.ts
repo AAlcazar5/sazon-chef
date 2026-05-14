@@ -11,7 +11,7 @@
 //                Earns a subtle haptic + checkmark only.
 //
 // Persona-aligned: not every cook is a peak, and that's what makes the peaks
-// matter. Anti-streak-guilt by design — see plans/peak-moments.md.
+// matter. Anti-streak-guilt by design — see .claude/context/guards/peak-moments.md.
 
 import { prisma } from '../lib/prisma';
 import { isFirstCookOfCuisine } from './culturalPrimerService';

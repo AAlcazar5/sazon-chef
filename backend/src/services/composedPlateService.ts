@@ -15,6 +15,7 @@
 
 import { logger } from '../utils/logger';
 import { prisma } from '../lib/prisma';
+import { serializeJsonColumnSafe } from '../utils/jsonColumns';
 
 export type PlateArchetype = 'few_small_things' | 'standard';
 
@@ -192,7 +193,7 @@ export async function generateFewSmallThingsPlate(
     data: {
       userId: input.userId,
       name: generatePlateName(picked),
-      componentIds: JSON.stringify(components),
+      componentIds: serializeJsonColumnSafe('componentIds', components),
       totalCalories: totals.cal,
       totalProtein: totals.protein,
       totalCarbs: totals.carbs,

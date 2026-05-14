@@ -4,6 +4,7 @@
 
 import { prisma } from '../lib/prisma';
 import { categorizeItem } from '../utils/aisleCategorizer';
+import { serializeJsonColumnSafe } from '../utils/jsonColumns';
 
 const TIER_THRESHOLD_DAYS = 90;
 
@@ -91,7 +92,7 @@ export async function tierArchivedList(listId: string): Promise<void> {
       where: { id: listId },
       data: {
         tier: 'older',
-        summaryStats: JSON.stringify(summaryStats),
+        summaryStats: serializeJsonColumnSafe('summaryStats', summaryStats),
       },
     });
   });

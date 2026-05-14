@@ -15,6 +15,7 @@
 
 import { prisma } from '../lib/prisma';
 import { logger } from '../utils/logger';
+import { serializeJsonColumnSafe } from '../utils/jsonColumns';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -114,13 +115,13 @@ export async function logHomeSurfaceEvent(
       data: {
         userId: input.userId,
         asOf: input.occurredAt ?? new Date(now),
-        contextSnapshot: JSON.stringify({
+        contextSnapshot: serializeJsonColumnSafe('contextSnapshot', {
           surface: `home_${input.surface}`,
           eventType: input.eventType,
           position: input.position ?? null,
           metadata: sanitizeMetadata(input.metadata),
         }),
-        candidateIds: JSON.stringify([]),
+        candidateIds: serializeJsonColumnSafe('candidateIds', []),
         pickedRecipeId: null,
         confidence: 0,
         copyLine: '',

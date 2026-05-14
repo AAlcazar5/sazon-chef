@@ -7,6 +7,7 @@
 // this service receives the resulting transcript.
 
 import { prisma } from '../lib/prisma';
+import { parseJsonColumn } from '../utils/jsonColumns';
 
 export type ComponentSlot = 'protein' | 'base' | 'vegetable' | 'sauce' | 'garnish';
 const ALL_SLOTS: ComponentSlot[] = ['protein', 'base', 'vegetable', 'sauce', 'garnish'];
@@ -115,7 +116,7 @@ const componentScore = (
   if (preferredCookMethod && comp.cookMethodHint === preferredCookMethod) bonus += 0.5;
   if (preferredCuisine) {
     try {
-      const tags = JSON.parse(comp.cuisineTags) as string[];
+      const tags = parseJsonColumn('cuisineTags', comp.cuisineTags);
       if (tags.includes(preferredCuisine)) bonus += 0.3;
     } catch {
       // ignore malformed tags

@@ -20,6 +20,7 @@
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../utils/logger';
+import { serializeJsonColumnSafe } from '../../utils/jsonColumns';
 
 /** Canonical surface families. New surfaces add their string here. */
 export const RECOMMENDER_SURFACES = [
@@ -211,8 +212,8 @@ export async function recordRecommenderEvent(
       data: {
         userId: event.userId,
         asOf: event.asOf ?? new Date(),
-        contextSnapshot: JSON.stringify(buildContextSnapshot(event)),
-        candidateIds: JSON.stringify([]),
+        contextSnapshot: serializeJsonColumnSafe('contextSnapshot', buildContextSnapshot(event)),
+        candidateIds: serializeJsonColumnSafe('candidateIds', []),
         pickedRecipeId: event.pickedRecipeId ?? null,
         confidence: event.confidence ?? 0,
         copyLine: event.copyLine ?? '',

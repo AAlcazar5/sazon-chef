@@ -7,6 +7,7 @@
 // per-plate divergent slots that adapt to *this* family member.
 
 import { prisma } from '../lib/prisma';
+import { serializeJsonColumnSafe } from '../utils/jsonColumns';
 
 export type AgeBand = 'toddler' | 'kid' | 'teen' | 'adult' | 'elder';
 
@@ -100,8 +101,8 @@ export const createHouseholdMember = async (
       displayName: input.displayName,
       ageBand: input.ageBand,
       pickinessLevel: input.pickinessLevel ?? 0,
-      dietaryFlags: JSON.stringify(input.dietaryFlags ?? []),
-      bannedComponentIds: JSON.stringify(input.bannedComponentIds ?? []),
+      dietaryFlags: serializeJsonColumnSafe('dietaryFlags', input.dietaryFlags ?? []),
+      bannedComponentIds: serializeJsonColumnSafe('bannedComponentIds', input.bannedComponentIds ?? []),
     },
   });
   return toRow(row);
@@ -131,8 +132,8 @@ export const updateHouseholdMember = async (
       displayName: merged.displayName,
       ageBand: merged.ageBand,
       pickinessLevel: merged.pickinessLevel,
-      dietaryFlags: JSON.stringify(merged.dietaryFlags ?? []),
-      bannedComponentIds: JSON.stringify(merged.bannedComponentIds ?? []),
+      dietaryFlags: serializeJsonColumnSafe('dietaryFlags', merged.dietaryFlags ?? []),
+      bannedComponentIds: serializeJsonColumnSafe('bannedComponentIds', merged.bannedComponentIds ?? []),
     },
   });
   return toRow(row);
