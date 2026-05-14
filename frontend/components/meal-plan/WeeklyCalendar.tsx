@@ -227,7 +227,7 @@ function WeeklyCalendar({
                 fontFamily: 'PlusJakartaSans_600SemiBold',
                 letterSpacing: 0.6,
                 textTransform: 'uppercase',
-                color: isDark ? DarkColors.text.tertiary : '#9CA3AF',
+                color: isDark ? DarkColors.text.tertiary : '#6B6B6B',
               }}
             >
               {dateRange}

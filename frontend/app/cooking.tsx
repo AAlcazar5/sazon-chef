@@ -564,10 +564,10 @@ export default function CookingScreen() {
       ? recipe.difficulty.charAt(0).toUpperCase() + recipe.difficulty.slice(1)
       : 'Medium';
     const cookingStats = [
-      { value: timeLabel, label: 'Cook Time', color: '#64B5F6', bgColor: '#E3F2FD' },
-      { value: `${totalSteps}/${totalSteps}`, label: 'Steps', color: '#81C784', bgColor: '#E8F5E9' },
-      { value: `${recipe.calories}`, label: 'Calories', color: '#FFB74D', bgColor: '#FFF3E0' },
-      { value: difficultyLabel, label: 'Difficulty', color: '#CE93D8', bgColor: '#F3E5F5' },
+      { value: timeLabel, label: 'Cook Time', color: '#1D4ED8', bgColor: '#E3F2FD' },
+      { value: `${totalSteps}/${totalSteps}`, label: 'Steps', color: '#15803D', bgColor: '#E8F5E9' },
+      { value: `${recipe.calories}`, label: 'Calories', color: '#9A3412', bgColor: '#FFF3E0' },
+      { value: difficultyLabel, label: 'Difficulty', color: '#6D28D9', bgColor: '#F3E5F5' },
     ];
 
     const nextMealCTA = nextMealName
@@ -1050,18 +1050,18 @@ export default function CookingScreen() {
               accessibilityState={{ selected: voiceMode }}
               className="flex-row items-center justify-center py-2.5 px-3 rounded-xl border"
               style={{
-                borderColor: voiceMode ? '#60A5FA' : '#374151',
-                backgroundColor: voiceMode ? 'rgba(96,165,250,0.12)' : 'transparent',
+                borderColor: voiceMode ? '#2563EB' : '#374151',
+                backgroundColor: voiceMode ? 'rgba(37,99,235,0.12)' : 'transparent',
               }}
             >
               <Ionicons
                 name={voiceMode ? 'volume-high' : 'volume-medium-outline'}
                 size={16}
-                color={voiceMode ? '#60A5FA' : '#9CA3AF'}
+                color={voiceMode ? '#2563EB' : '#9CA3AF'}
               />
               <Text
                 className="font-semibold text-xs ml-1.5"
-                style={{ color: voiceMode ? '#60A5FA' : '#9CA3AF' }}
+                style={{ color: voiceMode ? '#2563EB' : '#9CA3AF' }}
               >
                 {voiceMode ? 'Voice On' : 'Voice'}
               </Text>
@@ -1113,11 +1113,11 @@ export default function CookingScreen() {
                   style={{
                     width: 44, height: 44, borderRadius: 22,
                     alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: 'rgba(96,165,250,0.12)',
+                    backgroundColor: 'rgba(37,99,235,0.12)',
                     opacity: currentStep === 0 ? 0.3 : 1,
                   }}
                 >
-                  <Ionicons name="play-skip-back" size={18} color="#60A5FA" />
+                  <Ionicons name="play-skip-back" size={18} color="#2563EB" />
                 </HapticTouchableOpacity>
 
                 <HapticTouchableOpacity
@@ -1128,13 +1128,13 @@ export default function CookingScreen() {
                   style={{
                     width: 44, height: 44, borderRadius: 22,
                     alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: 'rgba(96,165,250,0.12)',
+                    backgroundColor: 'rgba(37,99,235,0.12)',
                     opacity: voice.engine === 'system' ? 0.3 : 1,
                   }}
                 >
                   <View style={{ alignItems: 'center' }}>
-                    <Ionicons name="play-back" size={16} color="#60A5FA" />
-                    <Text style={{ color: '#60A5FA', fontSize: 8, fontFamily: 'PlusJakartaSans_800ExtraBold', marginTop: -1 }}>5s</Text>
+                    <Ionicons name="play-back" size={16} color="#2563EB" />
+                    <Text style={{ color: '#2563EB', fontSize: 8, fontFamily: 'PlusJakartaSans_800ExtraBold', marginTop: -1 }}>5s</Text>
                   </View>
                 </HapticTouchableOpacity>
 
@@ -1143,10 +1143,10 @@ export default function CookingScreen() {
                     style={{
                       width: 52, height: 52, borderRadius: 26,
                       alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: 'rgba(96,165,250,0.25)',
+                      backgroundColor: 'rgba(37,99,235,0.25)',
                     }}
                   >
-                    <Ionicons name="ellipsis-horizontal" size={22} color="#60A5FA" />
+                    <Ionicons name="ellipsis-horizontal" size={22} color="#2563EB" />
                   </View>
                 ) : (
                   <HapticTouchableOpacity
@@ -1156,7 +1156,7 @@ export default function CookingScreen() {
                     style={{
                       width: 52, height: 52, borderRadius: 26,
                       alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: '#60A5FA',
+                      backgroundColor: '#2563EB',
                     }}
                   >
                     <Ionicons name={voice.isPaused ? 'play' : 'pause'} size={22} color="#fff" />
@@ -1165,10 +1165,10 @@ export default function CookingScreen() {
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <Text style={{ color: '#60A5FA', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', flex: 1 }}>
+                <Text style={{ color: '#2563EB', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', flex: 1 }}>
                   Speed
                 </Text>
-                <Text style={{ color: '#60A5FA', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                <Text style={{ color: '#2563EB', fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold' }}>
                   {voiceRate <= 0.6 ? 'Slow' : voiceRate >= 1.3 ? 'Fast' : 'Normal'}
                   {' '}({voiceRate.toFixed(1)}×)
                 </Text>
@@ -1200,13 +1200,13 @@ export default function CookingScreen() {
                           width: 28, height: 28, borderRadius: 14,
                           alignItems: 'center', justifyContent: 'center',
                           backgroundColor: Math.abs(voiceRate - rate) < 0.05
-                            ? '#60A5FA'
-                            : 'rgba(96,165,250,0.15)',
+                            ? '#2563EB'
+                            : 'rgba(37,99,235,0.15)',
                         }}
                       >
                         <Text style={{
                           fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold',
-                          color: Math.abs(voiceRate - rate) < 0.05 ? '#fff' : '#60A5FA',
+                          color: Math.abs(voiceRate - rate) < 0.05 ? '#fff' : '#2563EB',
                         }}>
                           {rate}×
                         </Text>

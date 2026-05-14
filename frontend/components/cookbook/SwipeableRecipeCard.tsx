@@ -40,9 +40,9 @@ export default function SwipeableRecipeCard({
     });
 
     const actions = [
-      onEdit && { label: 'Edit', icon: 'create-outline' as const, color: '#3B82F6', onPress: onEdit, a11y: 'Quick edit recipe' },
-      onNotes && { label: 'Notes', icon: 'document-text-outline' as const, color: '#F59E0B', onPress: onNotes, a11y: 'Edit notes' },
-      onCollection && { label: 'Move', icon: 'folder-outline' as const, color: '#8B5CF6', onPress: onCollection, a11y: 'Change collection' },
+      onEdit && { label: 'Edit', icon: 'create-outline' as const, color: '#1D4ED8', onPress: onEdit, a11y: 'Quick edit recipe' },
+      onNotes && { label: 'Notes', icon: 'document-text-outline' as const, color: '#B45309', onPress: onNotes, a11y: 'Edit notes' },
+      onCollection && { label: 'Move', icon: 'folder-outline' as const, color: '#6D28D9', onPress: onCollection, a11y: 'Change collection' },
     ].filter(Boolean) as Array<{ label: string; icon: string; color: string; onPress: () => void; a11y: string }>;
 
     return (

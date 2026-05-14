@@ -356,7 +356,7 @@ export default function EditMacroGoalsScreen() {
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>calories</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#3B82F6' }}>{activeMacros.protein}g</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#2563EB' }}>{activeMacros.protein}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>protein</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
@@ -364,7 +364,7 @@ export default function EditMacroGoalsScreen() {
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>carbs</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#EAB308' }}>{activeMacros.fat}g</Text>
+                <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#A16207' }}>{activeMacros.fat}g</Text>
                 <Text style={{ fontSize: 11, color: sub, marginTop: 1 }}>fat</Text>
               </View>
               <View style={{ alignItems: 'center' }}>

@@ -145,7 +145,7 @@ export default function TemplatePickerModal({
                               className="px-2 py-0.5 rounded-full"
                               style={{ backgroundColor: isDark ? '#1C2D1C' : '#F0FDF4' }}
                             >
-                              <Text className="text-xs font-medium" style={{ color: isDark ? '#86EFAC' : '#16A34A' }}>
+                              <Text className="text-xs font-medium" style={{ color: isDark ? '#86EFAC' : '#15803D' }}>
                                 {goalInfo.emoji} {goalInfo.label}
                               </Text>
                             </View>

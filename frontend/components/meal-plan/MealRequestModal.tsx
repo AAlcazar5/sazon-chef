@@ -309,7 +309,7 @@ export default function MealRequestModal({
                 {/* Remaining macros context banner */}
                 {(remainingCalories !== undefined || remainingProtein !== undefined) && (
                   <View style={{ backgroundColor: isDark ? '#1C2C1C' : '#F0FDF4', borderRadius: 12, padding: 12, marginBottom: 16 }}>
-                    <Text style={{ fontSize: 13, color: isDark ? '#86EFAC' : '#16A34A', fontFamily: 'PlusJakartaSans_500Medium' }}>
+                    <Text style={{ fontSize: 13, color: isDark ? '#86EFAC' : '#15803D', fontFamily: 'PlusJakartaSans_500Medium' }}>
                       {remainingCalories !== undefined && remainingProtein !== undefined
                         ? `You have ~${remainingCalories} calories and ${remainingProtein}g protein remaining today`
                         : remainingCalories !== undefined

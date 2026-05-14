@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_800ExtraBold',
   },
   statLabel: {
-    color: '#9CA3AF',
+    color: '#374151', // a11y: was #9CA3AF (2.27:1 on light pastel pill); #374151 gives 7.7:1
     fontSize: 11,
     marginTop: 4,
     fontFamily: 'PlusJakartaSans_600SemiBold',

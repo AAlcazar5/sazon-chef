@@ -763,8 +763,8 @@ export default function ShoppingListScreen() {
         : 'Your pantry is stocked. Ready to cook?'}
       expression="celebrating"
       stats={[
-        { value: String(progressStats.total), label: 'Items', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.15)' },
-        { value: `$${estimatedCost.toFixed(0)}`, label: 'Spent', color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.15)' },
+        { value: String(progressStats.total), label: 'Items', color: '#15803D', bgColor: 'rgba(16, 185, 129, 0.15)' },
+        { value: `$${estimatedCost.toFixed(0)}`, label: 'Spent', color: '#1D4ED8', bgColor: 'rgba(59, 130, 246, 0.15)' },
       ]}
       primaryCTA={{
         label: tonightsMeal ? `Cook ${tonightsMeal}` : "Let's cook",

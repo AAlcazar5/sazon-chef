@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   pantryText: {
     fontFamily: EditorialFontFamily.body.bold,
     fontSize: 10,
-    color: '#22C55E',
+    color: '#15803D',
     textTransform: 'uppercase',
   },
   quantity: {

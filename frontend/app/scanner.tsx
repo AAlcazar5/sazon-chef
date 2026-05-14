@@ -734,7 +734,7 @@ export default function ScannerScreen() {
                               ] as const).map(({ label, value, color }) => (
                                 <View key={label} style={{ alignItems: 'center' }}>
                                   <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: color.accent }}>{value}</Text>
-                                  <Text style={{ fontSize: 11, color: '#9CA3AF' }}>{label}</Text>
+                                  <Text style={{ fontSize: 11, color: '#6B6B6B' }}>{label}</Text>
                                 </View>
                               ))}
                             </View>
