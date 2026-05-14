@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
     marginTop: 6,
   },
 });

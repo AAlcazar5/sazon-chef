@@ -45,6 +45,6 @@ const styles = StyleSheet.create({
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 14,
     lineHeight: 20,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
   },
 });

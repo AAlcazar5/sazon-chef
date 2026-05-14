@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     fontFamily: EditorialFontFamily.body.semibold,
     fontSize: 10,
     letterSpacing: 0.5,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
     marginTop: 2,
   },
 });

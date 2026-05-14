@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   macroLabel: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 9,
-    color: '#9CA3AF',
+    color: '#6B6B6B', // a11y 2026-05-14: was #9CA3AF (2.56:1 on white, AA fail)
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     marginTop: 1,
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   macroProtein: { color: '#2563EB' },
   macroCarbs: { color: '#059669' },
   macroFat: { color: '#7C3AED' },
-  macroFiber: { color: '#10B981' },
+  macroFiber: { color: '#15803D' }, // a11y 2026-05-14: was #10B981 emerald-500 (2.9:1 on white, AA fail) → green-700
   description: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 12,

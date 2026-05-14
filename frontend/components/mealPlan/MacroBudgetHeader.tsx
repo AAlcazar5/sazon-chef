@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...EditorialTypography.eyebrow,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
   },
   badge: {
     backgroundColor: 'rgba(250,126,18,0.12)',

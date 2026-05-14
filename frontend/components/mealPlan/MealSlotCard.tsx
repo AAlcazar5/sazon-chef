@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   time: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
     marginBottom: 4,
   },
   mealType: {
@@ -97,12 +97,12 @@ const styles = StyleSheet.create({
   meta: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
   },
   placeholder: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 13,
-    color: '#D1D5DB',
+    color: '#6B6B6B',
     fontStyle: 'italic',
   },
   photo: {

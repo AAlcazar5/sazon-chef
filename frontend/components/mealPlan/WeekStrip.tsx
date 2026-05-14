@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   dayAbbrev: {
     fontFamily: EditorialFontFamily.body.semibold,
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
     textTransform: 'uppercase',
   },
   dayAbbrevActive: {
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   dateNumber: {
     fontFamily: EditorialFontFamily.body.bold,
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
   },
   dateNumberActive: {
     color: '#FFFFFF',

@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   count: {
     fontFamily: EditorialFontFamily.body.semibold,
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
   },
   card: {
     backgroundColor: '#FFFFFF',

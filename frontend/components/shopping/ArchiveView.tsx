@@ -306,10 +306,10 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   metaTextDark: {
-    color: '#9CA3AF',
+    color: '#6B6B6B',
   },
   metaDot: {
-    color: '#9CA3AF',
+    color: '#6B6B6B',
     fontSize: FontSize.xs,
   },
   olderBucket: {

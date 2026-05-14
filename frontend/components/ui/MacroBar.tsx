@@ -68,6 +68,6 @@ const styles = StyleSheet.create({
   valueGoal: {
     fontFamily: EditorialFontFamily.body.medium,
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#6B6B6B',
   },
 });

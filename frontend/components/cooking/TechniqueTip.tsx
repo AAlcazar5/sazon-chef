@@ -40,7 +40,7 @@ export default function TechniqueTip({ term, explanation, testID, onOpen }: Tech
         <Text style={{ color: '#FDBA74', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
           {open ? '—' : '?'} What’s {term.toLowerCase()}?
         </Text>
-        <Text style={{ color: '#9CA3AF', fontSize: 12 }}>{open ? 'Hide' : 'Show'}</Text>
+        <Text style={{ color: '#6B6B6B', fontSize: 12 }}>{open ? 'Hide' : 'Show'}</Text>
       </HapticTouchableOpacity>
 
       {open && (
