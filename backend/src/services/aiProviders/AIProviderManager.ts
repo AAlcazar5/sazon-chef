@@ -11,10 +11,12 @@ import { captureException } from '@/utils/sentryCapture';
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 const SONNET_MODEL = 'claude-sonnet-4-6';
-// Path B — Gemini Flash-Lite is the cheap-tier primary. ~$0.075/M input,
-// ~$0.30/M output → ~$0.001/recipe. Override the literal here when a
-// newer Flash-Lite SKU appears or set GOOGLE_AI_MODEL to bypass per-call.
-const GEMINI_FLASH_LITE_MODEL = 'gemini-2.0-flash-lite';
+// Path B — DeepSeek-V3 is the cheap-tier primary. ~$0.27/M input,
+// ~$1.10/M output → ~$0.0025/recipe. Hosted in China; PII is stripped
+// before send via `aiRecipeService.buildSanitizedRecipePrompt`, so the
+// only thing the API ever sees is non-personally-identifying (cuisine,
+// meal type, cook-time cap). Override via DEEPSEEK_MODEL env.
+const DEEPSEEK_MODEL = 'deepseek-chat';
 
 /**
  * Path A — tier-aware model routing.
@@ -32,11 +34,11 @@ const GEMINI_FLASH_LITE_MODEL = 'gemini-2.0-flash-lite';
 const MODEL_ROUTES: Record<AITaskType, Record<UserTier, ModelRoute>> = {
   recipe_generation: {
     free: {
-      model: GEMINI_FLASH_LITE_MODEL,
-      provider: 'gemini',
-      providerOrder: ['gemini', 'claude'],
+      model: DEEPSEEK_MODEL,
+      provider: 'deepseek',
+      providerOrder: ['deepseek', 'claude'],
       requiresPiiStripping: true,
-      reasoning: 'Path B: Gemini Flash-Lite primary (~$0.001/recipe) with Claude Haiku fallback. PII stripped from prompt before send — caller must use buildSanitizedRecipePrompt.',
+      reasoning: 'Path B: DeepSeek-V3 primary (~$0.0025/recipe) with Claude Haiku fallback. PII stripped from prompt before send — caller MUST use buildSanitizedRecipePrompt. DeepSeek hosted in China; the prompt-sanitization guard is what makes that acceptable: the API only ever sees non-personally-identifying fields (cuisine, mealType, cookTime cap).',
     },
     premium: {
       model: HAIKU_MODEL,

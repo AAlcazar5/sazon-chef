@@ -116,15 +116,15 @@ describe('AIProviderManager.routeToModel', () => {
     });
   });
 
-  describe('Path B — recipe_generation free tier routes through Gemini Flash-Lite + PII strip', () => {
-    it('free tier model is gemini-2.0-flash-lite', () => {
+  describe('Path B — recipe_generation free tier routes through DeepSeek + PII strip', () => {
+    it('free tier model is deepseek-chat (DeepSeek-V3)', () => {
       const route = manager.routeToModel('recipe_generation', 'free');
-      expect(route.model).toBe('gemini-2.0-flash-lite');
-      expect(route.provider).toBe('gemini');
+      expect(route.model).toBe('deepseek-chat');
+      expect(route.provider).toBe('deepseek');
     });
-    it('free tier carries providerOrder = [gemini, claude] for fallback', () => {
+    it('free tier carries providerOrder = [deepseek, claude] for fallback', () => {
       const route = manager.routeToModel('recipe_generation', 'free');
-      expect(route.providerOrder).toEqual(['gemini', 'claude']);
+      expect(route.providerOrder).toEqual(['deepseek', 'claude']);
     });
     it('free tier flags requiresPiiStripping = true so callers must sanitize', () => {
       const route = manager.routeToModel('recipe_generation', 'free');
@@ -148,7 +148,7 @@ describe('AIProviderManager.routeToModel', () => {
     it('routeToModel without an explicit tier defaults to free', () => {
       // Backwards compat: old callers that just pass taskType get the
       // free route. For recipe_generation that's the Path B Gemini lane.
-      expect(manager.routeToModel('recipe_generation').provider).toBe('gemini');
+      expect(manager.routeToModel('recipe_generation').provider).toBe('deepseek');
       expect(manager.routeToModel('healthify_craving').model).toBe(HAIKU_MODEL);
     });
   });
