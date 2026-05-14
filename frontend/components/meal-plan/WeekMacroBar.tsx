@@ -144,7 +144,7 @@ export default function WeekMacroBar({
               <Text
                 style={{
                   fontSize: 9,
-                  color: isDark ? '#6B7280' : '#9CA3AF',
+                  color: isDark ? '#909090' : '#6B6B6B',
                 }}
               >
                 /{Math.round(m.target / days)}{m.unit}

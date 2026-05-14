@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { Ionicons } from '@expo/vector-icons';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { triggerHaptic, ImpactStyle } from '../../constants/Haptics';
@@ -19,6 +20,12 @@ interface ShoppingItemRowProps {
 }
 
 export function ShoppingItemRow({ item, onToggle, showDivider }: ShoppingItemRowProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  // a11y: 10%-green-tinted bg → composited over screen lands very dark in dark
+  // mode (#0A0A0A) and pale in light mode. Text must flip to maintain ≥4.5:1.
+  const pantryColor = isDark ? '#4ADE80' : '#15803D';
+
   const handlePress = () => {
     triggerHaptic('impact', ImpactStyle.light);
     onToggle();
@@ -43,8 +50,8 @@ export function ShoppingItemRow({ item, onToggle, showDivider }: ShoppingItemRow
         <Text style={[styles.name, item.checked && styles.nameChecked]}>{item.name}</Text>
         {item.inPantry && (
           <View style={styles.pantryBadge} testID={`pantry-badge-${item.id}`}>
-            <Ionicons name="checkmark-circle" size={12} color="#22C55E" />
-            <Text style={styles.pantryText}>In pantry</Text>
+            <Ionicons name="checkmark-circle" size={12} color={pantryColor} />
+            <Text style={[styles.pantryText, { color: pantryColor }]}>In pantry</Text>
           </View>
         )}
         <Text style={styles.quantity}>{item.quantity}</Text>

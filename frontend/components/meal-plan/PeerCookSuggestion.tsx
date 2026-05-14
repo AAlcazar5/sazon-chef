@@ -10,7 +10,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { Colors, Pastel, PastelDark, Accent } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark, Accent } from '../../constants/Colors';
 import { FontSize } from '../../constants/Typography';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { Shadows } from '../../constants/Shadows';
@@ -46,8 +46,8 @@ function PeerCookSuggestion({
 
   const tint = isDark ? PastelDark.lavender : Pastel.lavender;
   const accent = Accent.lavender;
-  const textColor = isDark ? Colors.text.inverse : Colors.text.primary;
-  const subTextColor = isDark ? Colors.text.tertiary : Colors.text.secondary;
+  const textColor = isDark ? DarkColors.text.primary : Colors.text.primary;
+  const subTextColor = isDark ? DarkColors.text.secondary : Colors.text.secondary;
 
   const speaker = suggestion.friendOptedInToShare
     ? suggestion.friendName

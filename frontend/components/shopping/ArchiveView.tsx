@@ -106,13 +106,13 @@ function ArchiveRow({ list, onRestorePress, isDark }: RowProps) {
           <Text style={[styles.metaText, isDark ? styles.metaTextDark : styles.metaTextLight]}>
             {dateLabel}
           </Text>
-          <Text style={styles.metaDot}> · </Text>
+          <Text style={[styles.metaDot, isDark && styles.metaDotDark]}> · </Text>
           <Text style={[styles.metaText, isDark ? styles.metaTextDark : styles.metaTextLight]}>
             {itemCount} {itemCount === 1 ? 'item' : 'items'}
           </Text>
           {spentLabel ? (
             <>
-              <Text style={styles.metaDot}> · </Text>
+              <Text style={[styles.metaDot, isDark && styles.metaDotDark]}> · </Text>
               <Text style={[styles.metaText, isDark ? styles.metaTextDark : styles.metaTextLight]}>
                 {spentLabel}
               </Text>
@@ -306,11 +306,14 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   metaTextDark: {
-    color: '#6B6B6B',
+    color: '#909090',
   },
   metaDot: {
     color: '#6B6B6B',
     fontSize: FontSize.xs,
+  },
+  metaDotDark: {
+    color: '#909090',
   },
   olderBucket: {
     marginTop: Spacing.md,

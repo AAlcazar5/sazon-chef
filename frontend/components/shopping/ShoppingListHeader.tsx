@@ -345,7 +345,7 @@ export default function ShoppingListHeader({
                           }}>
                             {list.name}
                           </Text>
-                          <Text style={{ fontSize: 12, color: isDark ? '#6B7280' : '#9CA3AF', marginTop: 2 }}>
+                          <Text style={{ fontSize: 12, color: isDark ? '#909090' : '#6B6B6B', marginTop: 2 }}>
                             {list.items?.length || 0} items
                           </Text>
                         </View>

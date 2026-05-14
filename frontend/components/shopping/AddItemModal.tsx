@@ -543,7 +543,7 @@ export default function AddItemModal({
                               {formatItemName(item.itemName)}
                             </Text>
                             {item.lastPrice != null && item.lastPrice > 0 && (
-                              <Text style={{ fontSize: 11, marginLeft: 4, color: isDark ? '#6B7280' : '#9CA3AF' }}>
+                              <Text style={{ fontSize: 11, marginLeft: 4, color: isDark ? '#909090' : '#6B6B6B' }}>
                                 ${item.lastPrice.toFixed(2)}
                               </Text>
                             )}
@@ -584,7 +584,7 @@ export default function AddItemModal({
                               {formatItemName(item.itemName)}
                             </Text>
                             {item.lastPrice != null && item.lastPrice > 0 && (
-                              <Text style={{ fontSize: 11, marginLeft: 4, color: isDark ? '#6B7280' : '#9CA3AF' }}>
+                              <Text style={{ fontSize: 11, marginLeft: 4, color: isDark ? '#909090' : '#6B6B6B' }}>
                                 ${item.lastPrice.toFixed(2)}
                               </Text>
                             )}
@@ -607,7 +607,7 @@ export default function AddItemModal({
                     </View>
                   )}
 
-                  <Text style={{ fontSize: 11, color: isDark ? '#4B5563' : '#9CA3AF', textAlign: 'center', marginTop: 4 }}>
+                  <Text style={{ fontSize: 11, color: isDark ? '#909090' : '#6B6B6B', textAlign: 'center', marginTop: 4 }}>
                     Tap to add, long-press to favorite
                   </Text>
                 </View>
@@ -676,7 +676,7 @@ export default function AddItemModal({
                       </HapticTouchableOpacity>
                     ))}
                   </View>
-                  <Text style={{ fontSize: 11, color: isDark ? '#4B5563' : '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
+                  <Text style={{ fontSize: 11, color: isDark ? '#909090' : '#6B6B6B', textAlign: 'center', marginTop: 12 }}>
                     Long-press to remove from pantry
                   </Text>
                 </View>

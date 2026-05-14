@@ -1634,7 +1634,7 @@ export default function RecipeModal() {
                   </View>
                 )}
                 {!loadingFlavorBoosts && flavorBoosts.length === 0 && (
-                  <Text style={{ fontSize: 13, color: isDark ? '#6B7280' : '#9CA3AF', paddingVertical: 8 }}>
+                  <Text style={{ fontSize: 13, color: isDark ? '#909090' : '#6B6B6B', paddingVertical: 8 }}>
                     No flavor boosts available right now.
                   </Text>
                 )}

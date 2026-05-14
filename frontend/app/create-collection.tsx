@@ -159,7 +159,7 @@ export default function CreateCollectionScreen() {
           >
             <Ionicons name="image-outline" size={36} color={subColor} />
             <Text style={{ color: subColor, fontSize: 14, marginTop: 8 }}>Tap to select image</Text>
-            <Text style={{ color: isDark ? '#6B7280' : '#9CA3AF', fontSize: 12, marginTop: 3 }}>Recommended: 16:9 ratio</Text>
+            <Text style={{ color: isDark ? '#909090' : '#6B6B6B', fontSize: 12, marginTop: 3 }}>Recommended: 16:9 ratio</Text>
           </HapticTouchableOpacity>
         )}
       </View>

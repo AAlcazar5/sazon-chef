@@ -1558,7 +1558,7 @@ export default function CookbookScreen() {
                         <Text style={{ flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: isDark ? '#9CA3AF' : '#6B7280', letterSpacing: 0.6, textTransform: 'uppercase' }}>
                           {section.label}
                         </Text>
-                        <Text style={{ fontSize: 12, color: isDark ? '#6B7280' : '#9CA3AF', marginRight: 4 }}>
+                        <Text style={{ fontSize: 12, color: isDark ? '#909090' : '#6B6B6B', marginRight: 4 }}>
                           {sectionCols.length}
                         </Text>
                         <Ionicons

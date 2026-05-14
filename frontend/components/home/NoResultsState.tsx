@@ -147,7 +147,7 @@ export default function NoResultsState({
 
       {/* Clear search fallback */}
       <HapticTouchableOpacity onPress={onClearSearch} className="mt-5 py-2">
-        <Text className="text-sm font-medium" style={{ color: isDark ? '#6B7280' : '#9CA3AF' }}>
+        <Text className="text-sm font-medium" style={{ color: isDark ? '#909090' : '#6B6B6B' }}>
           {t('home.noResults.clearSearch')}
         </Text>
       </HapticTouchableOpacity>

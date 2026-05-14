@@ -84,7 +84,7 @@ export default function PantryPlateHeroCard({ plate }: PantryPlateHeroCardProps)
   const eyebrowColor = isDark ? Accent.sage : '#2E5931';
   const titleColor = isDark ? '#F9FAFB' : '#1F2937';
   const subtitleColor = isDark ? '#9CA3AF' : '#6B7280';
-  const macroColor = isDark ? '#6B7280' : '#9CA3AF';
+  const macroColor = isDark ? '#909090' : '#6B6B6B';
   const accentOrange = '#FB923C';
 
   return (

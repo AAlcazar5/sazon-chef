@@ -11,7 +11,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
-import { Colors } from '../../constants/Colors';
+import { Colors, DarkColors } from '../../constants/Colors';
 import { FontSize } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -29,8 +29,8 @@ function MealRationaleRibbon({ rationale, expanded }: MealRationaleRibbonProps) 
 
   if (!rationale) return null;
 
-  const textColor = isDark ? Colors.text.tertiary : Colors.text.secondary;
-  const expandedColor = isDark ? Colors.text.inverse : Colors.text.primary;
+  const textColor = isDark ? DarkColors.text.secondary : Colors.text.secondary;
+  const expandedColor = isDark ? DarkColors.text.primary : Colors.text.primary;
 
   return (
     <View>

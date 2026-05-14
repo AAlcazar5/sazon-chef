@@ -397,7 +397,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
             <Text style={{ 
               marginTop: 8,
               fontSize: 12,
-              color: isDark ? '#6B7280' : '#9CA3AF',
+              color: isDark ? '#909090' : '#6B6B6B',
               fontFamily: 'PlusJakartaSans_500Medium',
             }}>
               {recipe.cuisine}
@@ -613,7 +613,7 @@ const RecipeCardComponent: React.FC<RecipeCardProps> = ({
             justifyContent: 'center',
           }}>
             <Icon name={Icons.RESTAURANT} size={40} color={isDark ? '#6B7280' : '#9CA3AF'} accessibilityLabel="Recipe image placeholder" />
-            <Text style={{ marginTop: 8, fontSize: 11, color: isDark ? '#6B7280' : '#9CA3AF', fontFamily: 'PlusJakartaSans_500Medium' }}>
+            <Text style={{ marginTop: 8, fontSize: 11, color: isDark ? '#909090' : '#6B6B6B', fontFamily: 'PlusJakartaSans_500Medium' }}>
               {recipe.cuisine}
             </Text>
           </View>
