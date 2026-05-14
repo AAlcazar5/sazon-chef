@@ -22,6 +22,14 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
 }));
 
+// BottomSheetScrollView reaches into the parent BottomSheet's internal
+// context. In standalone unit tests we render ProfileSheet without that
+// parent, so swap it for a plain ScrollView with the same props.
+jest.mock('@gorhom/bottom-sheet', () => {
+  const { ScrollView } = require('react-native');
+  return { BottomSheetScrollView: ScrollView };
+});
+
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import ProfileSheet from '../../../components/profile/ProfileSheet';

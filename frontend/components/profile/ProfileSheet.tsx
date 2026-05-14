@@ -8,7 +8,9 @@
 // settings + secondary destinations.
 
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch } from 'react-native';
+import { View, Text, StyleSheet, Switch } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -113,6 +115,7 @@ export default function ProfileSheet({
 }: ProfileSheetProps) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
 
   const handleToggleDarkMode = React.useCallback(() => {
     void toggleTheme();
@@ -170,10 +173,17 @@ export default function ProfileSheet({
         </HapticTouchableOpacity>
       </View>
 
-      <ScrollView
+      <BottomSheetScrollView
         testID="profile-sheet-menu"
         accessibilityRole="menu"
-        contentContainerStyle={styles.menu}
+        contentContainerStyle={[
+          styles.menu,
+          // Add the home-indicator inset on top of the design padding so
+          // the last row (Sign out) clears the safe-area on phones with a
+          // home indicator. Without this, the legal links + sign-out are
+          // unreachable inside a snap-locked sheet.
+          { paddingBottom: styles.menu.paddingBottom + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Activity — destinations the tab bar doesn't surface directly. */}
@@ -313,7 +323,7 @@ export default function ProfileSheet({
           destructive
           tint="peach"
         />
-      </ScrollView>
+      </BottomSheetScrollView>
     </View>
   );
 }

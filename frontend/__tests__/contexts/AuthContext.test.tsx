@@ -15,6 +15,8 @@ jest.mock('../../lib/api', () => ({
   },
   setAuthToken: jest.fn(),
   setLogoutCallback: jest.fn(),
+  setRefreshToken: jest.fn(),
+  setRefreshPersistCallback: jest.fn(),
   notificationsApi: {
     registerToken: jest.fn(),
     unregisterToken: jest.fn(),

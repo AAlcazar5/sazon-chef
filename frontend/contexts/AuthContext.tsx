@@ -3,7 +3,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { api, setAuthToken, setLogoutCallback, notificationsApi } from '../lib/api';
+import {
+  api,
+  setAuthToken,
+  setLogoutCallback,
+  setRefreshToken,
+  setRefreshPersistCallback,
+  notificationsApi,
+} from '../lib/api';
 import { analytics } from '../utils/analytics';
 
 interface User {
@@ -29,6 +36,7 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USER_KEY = 'auth_user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -39,6 +47,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load stored auth data on mount
   useEffect(() => {
     loadStoredAuth();
+  }, []);
+
+  // Wire the silent-refresh persistence hook once. When the API client
+  // mints a new (access, refresh) pair via /auth/refresh, this writes the
+  // pair back to SecureStore so the next cold start picks them up.
+  useEffect(() => {
+    setRefreshPersistCallback(async ({ accessToken, refreshToken }) => {
+      try {
+        await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
+        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+        setToken(accessToken);
+      } catch {
+        /* best-effort — in-memory state still has the new pair */
+      }
+    });
+    return () => setRefreshPersistCallback(null);
   }, []);
 
   const loadStoredAuth = async () => {
@@ -92,6 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(storedToken);
         setUser(userData);
         setAuthToken(storedToken);
+        // Hydrate the refresh token so silent /auth/refresh works on
+        // cold start. Best-effort — older installs may not have it
+        // stored yet; they'll get one on the next login.
+        const storedRefresh = await getWithTimeout(REFRESH_TOKEN_KEY);
+        setRefreshToken(storedRefresh ?? null);
 
         // Skip analytics init during load - can be slow
         // Initialize analytics in background
@@ -150,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearStoredAuth = async () => {
     try {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
       await SecureStore.deleteItemAsync(USER_KEY);
     } catch (error) {
       console.error('Error clearing stored auth:', error);
@@ -157,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
     setAuthToken(null); // Clear API client token
+    setRefreshToken(null);
   };
 
   const login = async (email: string, password: string) => {
@@ -165,15 +196,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.data?.token && response.data?.user) {
         const authToken = response.data.token;
+        const refreshToken: string | undefined = response.data.refreshToken;
         const userData = response.data.user;
 
         // Store token and user
         await SecureStore.setItemAsync(TOKEN_KEY, authToken);
         await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+        if (refreshToken) {
+          await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+        }
 
         setToken(authToken);
         setUser(userData);
         setAuthToken(authToken); // Update API client token
+        setRefreshToken(refreshToken ?? null);
 
         // Initialize analytics
         if (userData?.id) {
@@ -206,15 +242,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.data?.token && response.data?.user) {
         const authToken = response.data.token;
+        const refreshToken: string | undefined = response.data.refreshToken;
         const userData = response.data.user;
 
         // Store token and user
         await SecureStore.setItemAsync(TOKEN_KEY, authToken);
         await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+        if (refreshToken) {
+          await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+        }
 
         setToken(authToken);
         setUser(userData);
         setAuthToken(authToken); // Update API client token
+        setRefreshToken(refreshToken ?? null);
 
         // Initialize analytics
         if (userData?.id) {
@@ -285,15 +326,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.data?.token && response.data?.user) {
         const authToken = response.data.token;
+        const refreshToken: string | undefined = response.data.refreshToken;
         const userData = response.data.user;
 
         // Store token and user
         await SecureStore.setItemAsync(TOKEN_KEY, authToken);
         await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+        if (refreshToken) {
+          await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+        }
 
         setToken(authToken);
         setUser(userData);
         setAuthToken(authToken); // Update API client token
+        setRefreshToken(refreshToken ?? null);
       } else {
         throw new Error('Invalid response from server');
       }

@@ -201,7 +201,7 @@ api.interceptors.response.use(
 
     return response;
   },
-  (error) => {
+  async (error) => {
     // Silently pass through aborted/cancelled requests — no logging needed
     const isCancelled = error?.code === 'ERR_CANCELED' ||
       error?.name === 'AbortError' ||
@@ -217,7 +217,14 @@ api.interceptors.response.use(
       // Don't surface noisy errors for benign conflicts (already saved) or expected 404s
       const statusCode = error.response?.status;
       const raw = error.response?.data;
-      const rawMessage: string | undefined = raw?.error || raw?.message || raw?.msg;
+      // Build the pattern haystack from every diagnostic field on the payload
+      // — backends commonly send a short `error` code ("Unauthorized") alongside
+      // a human `message` ("No authentication token provided…"). Inspecting
+      // only the first one made the more-informative one invisible to the
+      // expected-error matchers below.
+      const rawMessage: string = [raw?.error, raw?.message, raw?.msg]
+        .filter((v): v is string => typeof v === 'string' && v.length > 0)
+        .join(' ');
       const isAlreadySaved = statusCode === 409 || /already\s*saved/i.test(String(rawMessage || ''));
       const isExpected404 = statusCode === 404 && (
         /no price data found/i.test(String(rawMessage || '')) ||
@@ -245,10 +252,25 @@ api.interceptors.response.use(
       // path and we always want the offending URL visible in the console.
       const isExpectedUserError = statusCode === 400 || statusCode === 404;
 
+      // Auth-bootstrap 401s: missing token (cold start race) or expired
+      // session. Both already trigger the auto-logout path (which logs its
+      // own WARN with the offending URL), so the additional ❌ error here
+      // is pure noise. Real session-tamper 401s (signature mismatch,
+      // malformed token, etc.) still fall through and log loudly.
+      const isAuthBootstrap401 = statusCode === 401 && (
+        /no authentication token/i.test(String(rawMessage || '')) ||
+        /no token provided/i.test(String(rawMessage || '')) ||
+        /please login first/i.test(String(rawMessage || '')) ||
+        /session has expired/i.test(String(rawMessage || '')) ||
+        /please log in again/i.test(String(rawMessage || '')) ||
+        /token expired/i.test(String(rawMessage || '')) ||
+        /jwt expired/i.test(String(rawMessage || ''))
+      );
+
       // Network errors (no response received) are handled gracefully below — no need to log
       const isNetworkError = !error.response && !!error.request;
 
-      if (!isAlreadySaved && !isExpected404 && !isQuotaError && !isExpectedUserError && !isNetworkError && !isAIGenerationError) {
+      if (!isAlreadySaved && !isExpected404 && !isQuotaError && !isExpectedUserError && !isNetworkError && !isAIGenerationError && !isAuthBootstrap401) {
         console.error('❌ Response Error:', raw || error.message);
       } else if (isAlreadySaved) {
         console.log('ℹ️  Response Conflict (already saved)');
@@ -260,6 +282,9 @@ api.interceptors.response.use(
       } else if (isExpectedUserError) {
         // Silently handle expected user errors (wrong credentials, validation errors)
         // These are displayed to the user via the UI, no need to log them
+      } else if (isAuthBootstrap401) {
+        // Silently handle 401s from missing/expired tokens — the auto-logout
+        // path already logs a WARN with the offending URL.
       }
     }
 
@@ -310,8 +335,39 @@ api.interceptors.response.use(
             : 'You do not have permission to perform this action.';
         }
 
+        // Silent refresh — try to mint a new access token before deciding
+        // to logout. Skip on auth endpoints (login/register/refresh itself)
+        // and on requests that already attempted a retry, to avoid loops.
+        const isRefreshEndpoint = error.config?.url?.includes('/auth/refresh');
+        const alreadyRetried = (error.config as any)?._retriedAfterRefresh === true;
+        const canRefresh =
+          statusCode === 401 &&
+          !isAuthEndpoint &&
+          !isRefreshEndpoint &&
+          !alreadyRetried &&
+          !!currentRefreshToken &&
+          !!error.config;
+        if (canRefresh) {
+          const newAccess = await attemptTokenRefresh();
+          if (newAccess) {
+            // Replay the original request with the new token. The request
+            // interceptor reads `currentAuthToken` so we just need to mark
+            // the config as retried + bump the Authorization header.
+            const cfg = error.config as AxiosRequestConfig & {
+              _retriedAfterRefresh?: boolean;
+            };
+            cfg._retriedAfterRefresh = true;
+            (cfg.headers as Record<string, string>) = {
+              ...((cfg.headers as Record<string, string> | undefined) ?? {}),
+              Authorization: `Bearer ${newAccess}`,
+            };
+            return api.request(cfg);
+          }
+        }
+
         // Automatically logout on authentication errors (but NOT on auth
-        // endpoints, NOT on the bootstrap verify call).
+        // endpoints, NOT on the bootstrap verify call). Reached only when
+        // the silent refresh above declined or failed.
         if (logoutCallback && !isAuthEndpoint && !skipAuthAutoLogout) {
           // Log which URL forced the auto-logout — invaluable for debugging
           // "session expired despite logging back in" loops.
@@ -430,7 +486,19 @@ api.interceptors.response.use(
 // This is called synchronously in the interceptor, so we need to handle it carefully
 // For now, we'll use a module-level variable that gets updated by AuthContext
 let currentAuthToken: string | null = null;
+let currentRefreshToken: string | null = null;
 let logoutCallback: (() => Promise<void>) | null = null;
+// Persistence hook — AuthContext registers a function that writes both
+// tokens (and the access-token expiry) back to SecureStore after a refresh
+// succeeds, so a cold start picks up the new pair.
+let refreshPersistCallback:
+  | ((tokens: { accessToken: string; refreshToken: string; accessTokenExpiresAt?: number }) => Promise<void>)
+  | null = null;
+// Single-flight guard for the refresh request. Concurrent 401s share one
+// in-flight refresh — the rest queue on this promise + retry once it
+// resolves. Prevents N parallel /auth/refresh calls + token-replay
+// detection on the backend (rotateRefreshToken treats reuse as theft).
+let refreshInFlight: Promise<string | null> | null = null;
 // Module-level guard: ensures only ONE "Session Expired" alert is visible
 // at any time. Concurrent 401s (e.g., 3 background cleanup POSTs all firing
 // at app boot before auth) otherwise stack 3 alerts on top of each other,
@@ -456,6 +524,75 @@ export function setLogoutCallback(callback: (() => Promise<void>) | null) {
 
 export function getAuthToken(): string | null {
   return currentAuthToken;
+}
+
+/** Set the current refresh token (called from AuthContext on login/restore). */
+export function setRefreshToken(token: string | null): void {
+  currentRefreshToken = token;
+}
+
+export function getRefreshToken(): string | null {
+  return currentRefreshToken;
+}
+
+/**
+ * Register a persistence hook so a successful refresh writes the new
+ * (access, refresh) pair back to SecureStore. Without this, the new tokens
+ * live only in memory and the next cold start kicks the user to login.
+ */
+export function setRefreshPersistCallback(
+  callback:
+    | ((tokens: { accessToken: string; refreshToken: string; accessTokenExpiresAt?: number }) => Promise<void>)
+    | null,
+): void {
+  refreshPersistCallback = callback;
+}
+
+/**
+ * Exchange the stored refresh token for a fresh access+refresh pair.
+ * Single-flight: concurrent callers share one in-flight network request.
+ * Returns the new access token, or `null` if refresh failed (the caller
+ * should then fall back to auto-logout).
+ */
+async function attemptTokenRefresh(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const refreshToken = currentRefreshToken;
+    if (!refreshToken) return null;
+    try {
+      // Use a fresh axios call so we don't recurse through this interceptor.
+      const baseUrl = api.defaults.baseURL ?? getBaseURL();
+      const response = await axios.post(
+        `${baseUrl}/auth/refresh`,
+        { refreshToken },
+        { headers: { 'Content-Type': 'application/json' }, timeout: 10000 },
+      );
+      const data = response?.data ?? {};
+      const newAccess: string | undefined = data.accessToken;
+      const newRefresh: string | undefined = data.refreshToken;
+      if (!newAccess || !newRefresh) return null;
+
+      currentAuthToken = newAccess;
+      currentRefreshToken = newRefresh;
+      if (refreshPersistCallback) {
+        await refreshPersistCallback({
+          accessToken: newAccess,
+          refreshToken: newRefresh,
+          accessTokenExpiresAt: data.accessTokenExpiresAt,
+        }).catch(() => undefined);
+      }
+      return newAccess;
+    } catch {
+      // Any failure (refresh expired, replay-detected, network) means we
+      // can't silently recover — caller will fall through to auto-logout.
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
 }
 
 // Helper function to get user-friendly error messages based on HTTP status

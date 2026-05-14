@@ -69,7 +69,10 @@ export interface AuthScreenShellProps {
   animatedGradient?: boolean;
 }
 
-const HERO_MASCOT_SIZE = 120;
+// Logo paired with the "Sazon Chef" wordmark in the brand row. Smaller
+// than the legacy HERO_MASCOT_SIZE (which sat alone in a card) so the
+// mascot reads as the start of the wordmark, not as a hero illustration.
+const BRAND_MASCOT_SIZE = 64;
 
 export default function AuthScreenShell({
   headline,
@@ -86,7 +89,6 @@ export default function AuthScreenShell({
   const isDark = theme === 'dark';
   const headlineColor = isDark ? DarkColors.text.primary : Colors.primary;
   const subheadColor = isDark ? DarkColors.text.secondary : Colors.text.secondary;
-  const mascotBg = isDark ? PastelDark.peach : Pastel.orange;
   const errorBg = isDark ? PastelDark.red : Pastel.red;
   const errorText = isDark ? '#F87171' : '#B91C1C';
 
@@ -122,27 +124,31 @@ export default function AuthScreenShell({
             testID={testID}
           >
             <View style={styles.column}>
-              {/* Mascot (optional) */}
+              {/* Mascot + brand title (optional). Matches HomeHeader pattern —
+                  logo flush with "Sazon Chef" wordmark, no card or shadow. */}
               {mascot ? (
                 <MotiView
                   from={{ opacity: 0, translateY: -20, scale: 0.7 }}
                   animate={{ opacity: 1, translateY: 0, scale: 1 }}
                   transition={{ type: 'spring', delay: 0, damping: 14, stiffness: 200 }}
                 >
-                  <View
-                    testID="auth-shell-mascot"
-                    style={[
-                      styles.mascotCard,
-                      { backgroundColor: mascotBg },
-                      Shadows.SM as any,
-                    ]}
-                  >
+                  <View testID="auth-shell-mascot" style={styles.brandRow}>
                     <Sazon
                       variant={mascot.variant ?? 'orange'}
                       motion={mascot.motion ?? 'idle'}
                       fx={mascot.fx ?? []}
-                      size={mascot.size ?? HERO_MASCOT_SIZE}
+                      size={mascot.size ?? BRAND_MASCOT_SIZE}
                     />
+                    <Text
+                      accessibilityRole="header"
+                      accessibilityLabel="Sazon Chef"
+                      style={[styles.brandTitle, { color: headlineColor }]}
+                    >
+                      Sazon{' '}
+                      <Text style={[styles.brandTitleAccent, { color: headlineColor }]}>
+                        Chef
+                      </Text>
+                    </Text>
                   </View>
                 </MotiView>
               ) : null}
@@ -233,11 +239,24 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     alignSelf: 'center',
   },
-  mascotCard: {
+  brandRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    borderRadius: 24,
-    paddingVertical: 20,
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  brandTitle: {
+    fontFamily: 'Fraunces_700Bold',
+    fontSize: 40,
+    lineHeight: 40 * 1.04,
+    letterSpacing: -1.6,
+  },
+  brandTitleAccent: {
+    fontFamily: 'Fraunces_700Bold_Italic',
+    fontStyle: 'italic',
+    fontSize: 40,
+    letterSpacing: -1.6,
   },
   headline: {
     fontSize: FontSize['3xl'],
