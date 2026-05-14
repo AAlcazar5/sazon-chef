@@ -2,7 +2,7 @@
 // Custom hook for managing recipe search state and URL param search (regular + craving)
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import type { FilterState } from '../lib/filterStorage';
 import { type RecipeFetchResult, type RecipeFetchParams } from './useRecipeFetcher';
 import type { ToastType } from '../components/ui/Toast';
@@ -95,9 +95,29 @@ export function useRecipeSearch(options: UseRecipeSearchOptions): UseRecipeSearc
       };
       runSearch();
     } else if (searchQuery && !searchParam && !cravingParam) {
+      // URL params just cleared while a search was active — reset local state
+      // and re-fetch the default feed so the user doesn't stay stuck on stale
+      // search results. Active filters are preserved (they live in component
+      // state, not URL params) and applied to the refetch.
       lastProcessedSearch.current = undefined;
       setSearchQuery('');
       setIsCravingSearch(false);
+
+      const refetchDefault = async () => {
+        setLoadingFromFilters(true);
+        const result = await fetchRecipes({
+          page: 0,
+          limit: recipesPerPage,
+          cuisines: filters.cuisines.length > 0 ? filters.cuisines : undefined,
+          dietaryRestrictions: filters.dietaryRestrictions.length > 0 ? filters.dietaryRestrictions : undefined,
+          maxCookTime: filters.maxCookTime || undefined,
+          difficulty: filters.difficulty.length > 0 ? filters.difficulty[0] : undefined,
+          mealPrepMode: mealPrepMode,
+        });
+        if (result) applyFetchResult(result);
+        setLoadingFromFilters(false);
+      };
+      refetchDefault();
     }
   }, [searchParam, filtersLoaded, recipesPerPage, filters, mealPrepMode, fetchRecipes, applyFetchResult, showToast, setLoadingFromFilters]);
 
@@ -167,6 +187,11 @@ export function useRecipeSearch(options: UseRecipeSearchOptions): UseRecipeSearc
     lastProcessedSearch.current = undefined;
     lastProcessedCraving.current = undefined;
     resetPage();
+    // Clearing local state without resetting URL params leaves the param
+    // effect short-circuited (lastProcessedSearch already matches); the
+    // refetch-on-clear branch above only runs when the URL clears. Reset
+    // both URL params so the user lands on the default filter view.
+    router.setParams({ search: '', craving: '' });
   }, [resetPage]);
 
   // Reset the craving dedup key so the effect re-fires with updated filters

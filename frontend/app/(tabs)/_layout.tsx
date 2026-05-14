@@ -127,6 +127,16 @@ export default function TabLayout() {
     }
   }, [isOnHomeTab]);
 
+  // Clear the URL search/craving params so the home tab refetches its
+  // default (filter-only) view instead of staying stuck on stale search
+  // results. Filters live in component state on the home tab and are
+  // preserved across this call.
+  const clearSearchParams = useCallback(() => {
+    if (isOnHomeTab) {
+      router.setParams({ search: '', craving: '' });
+    }
+  }, [isOnHomeTab]);
+
   // Debounced instant search - triggers as user types (keeps keyboard open)
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text);
@@ -135,12 +145,17 @@ export default function TabLayout() {
       clearTimeout(debounceRef.current);
     }
 
-    if (text.trim().length >= 3) {
+    const trimmed = text.trim();
+    if (trimmed.length >= 3) {
       debounceRef.current = setTimeout(() => {
         executeLiveSearch(text);
       }, 800);
+    } else if (trimmed.length === 0) {
+      // Emptying the bar mid-typing should also reset the URL so the home
+      // feed doesn't stay frozen on the prior search.
+      clearSearchParams();
     }
-  }, [executeLiveSearch]);
+  }, [executeLiveSearch, clearSearchParams]);
 
   // Clean up debounce on unmount
   useEffect(() => {
@@ -495,6 +510,7 @@ export default function TabLayout() {
               onClear={() => {
                 setSearchQuery('');
                 if (debounceRef.current) clearTimeout(debounceRef.current);
+                clearSearchParams();
               }}
               placeholder="Search recipes..."
               onFocus={() => setIsSearchFocused(true)}
