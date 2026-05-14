@@ -12,14 +12,15 @@ import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { recipeApi } from '../../lib/api';
-import { Pastel, EditorialColors } from '../../constants/Colors';
+import { Pastel, PastelDark } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { EditorialShadows } from '../../constants/Shadows';
 import { HapticPatterns } from '../../constants/Haptics';
 import { EditorialSectionHeader } from './EditorialSectionHeader';
 import HomeLoadingState from './HomeLoadingState';
 
-const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const PASTEL_ROTATION_LIGHT = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const PASTEL_ROTATION_DARK = [PastelDark.peach, PastelDark.sage, PastelDark.lavender, PastelDark.sky, PastelDark.golden, PastelDark.blush];
 
 export interface FamilyEntry {
   family: string;
@@ -102,7 +103,8 @@ export function BrowseByFamilySection({
         contentContainerStyle={styles.scrollContent}
       >
         {families.map((entry, idx) => {
-          const bg = PASTEL_ROTATION[idx % PASTEL_ROTATION.length];
+          const rotation = isDark ? PASTEL_ROTATION_DARK : PASTEL_ROTATION_LIGHT;
+          const bg = rotation[idx % rotation.length];
           return (
             <FamilyCard
               key={entry.family}
@@ -154,12 +156,15 @@ function FamilyCard({ entry, bg, isDark, onPress }: FamilyCardProps) {
 
         {entry.hasNewForYou ? (
           <View
-            style={styles.badge}
+            style={[
+              styles.badge,
+              { backgroundColor: isDark ? 'rgba(245,239,230,0.18)' : 'rgba(255,255,255,0.7)' },
+            ]}
             accessibilityLabel="New for you badge"
             testID={`new-for-you-badge-${entry.family}`}
           >
-            <Ionicons name="sparkles" size={10} color="#5B4636" />
-            <Text style={styles.badgeText}>New for you</Text>
+            <Ionicons name="sparkles" size={10} color={isDark ? '#F5EFE6' : '#5B4636'} />
+            <Text style={[styles.badgeText, { color: isDark ? '#F5EFE6' : '#5B4636' }]}>New for you</Text>
           </View>
         ) : null}
       </View>
@@ -174,8 +179,8 @@ function FamilyCard({ entry, bg, isDark, onPress }: FamilyCardProps) {
 
       {entry.isExplored ? (
         <View style={styles.exploredRow} accessibilityLabel="Explored cuisines">
-          <Ionicons name="checkmark-circle" size={12} color="#5B4636" />
-          <Text style={styles.exploredText}>
+          <Ionicons name="checkmark-circle" size={12} color={isDark ? '#F5EFE6' : '#5B4636'} />
+          <Text style={[styles.exploredText, { color: isDark ? '#F5EFE6' : '#5B4636' }]}>
             {entry.exploredCuisines.length} cooked
           </Text>
         </View>

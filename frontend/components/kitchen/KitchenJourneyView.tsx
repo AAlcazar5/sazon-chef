@@ -13,6 +13,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCookingJourney } from '../../hooks/useCookingJourney';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
+import { ComponentSpacing } from '../../constants/Spacing';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { Shadows } from '../../constants/Shadows';
 import CookingJourneyCard from '../profile/CookingJourneyCard';
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 80,
+    paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom,
     gap: 16,
   },
   quiet: {

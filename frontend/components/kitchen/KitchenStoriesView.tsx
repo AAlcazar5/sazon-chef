@@ -13,6 +13,7 @@ import WeeklyRecapCard from './WeeklyRecapCard';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { Shadows } from '../../constants/Shadows';
+import { ComponentSpacing } from '../../constants/Spacing';
 import { t } from '../../lib/i18n';
 
 interface KitchenStoriesViewProps {
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 0,
     paddingTop: 8,
-    paddingBottom: 80,
+    paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom,
     gap: 16,
   },
   eyebrow: {

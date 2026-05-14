@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Spacing } from '../../constants/Spacing';
 import { EditorialRecipeCard } from '../home/EditorialRecipeCard';
-import { Pastel, EditorialColors } from '../../constants/Colors';
+import { Pastel, PastelDark, EditorialColors } from '../../constants/Colors';
 import AnimatedRecipeCard from '../recipe/AnimatedRecipeCard';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
@@ -64,8 +64,9 @@ interface CookbookRecipeListProps {
 
 const DEFAULT_FEEDBACK = { liked: false, disliked: false };
 
-const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
-const TITLE_ROTATION = [
+const PASTEL_ROTATION_LIGHT = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const PASTEL_ROTATION_DARK = [PastelDark.peach, PastelDark.sage, PastelDark.lavender, PastelDark.sky, PastelDark.golden, PastelDark.blush];
+const TITLE_ROTATION_LIGHT = [
   EditorialColors.pastelTitle.peach,
   EditorialColors.pastelTitle.sage,
   EditorialColors.pastelTitle.lavender,
@@ -73,6 +74,7 @@ const TITLE_ROTATION = [
   EditorialColors.pastelTitle.golden,
   EditorialColors.pastelTitle.blush,
 ];
+const TITLE_ROTATION_DARK = ['#FFD9B0', '#C8E6CA', '#E1BEE7', '#BBDEFB', '#FFECB3', '#F8BBD0'];
 
 function CookbookRecipeList({
   recipes,
@@ -145,8 +147,8 @@ function CookbookRecipeList({
         )}
         <EditorialRecipeCard
           recipe={recipe as any}
-          bg={PASTEL_ROTATION[index % PASTEL_ROTATION.length]}
-          titleColor={TITLE_ROTATION[index % TITLE_ROTATION.length]}
+          bg={(isDark ? PASTEL_ROTATION_DARK : PASTEL_ROTATION_LIGHT)[index % PASTEL_ROTATION_LIGHT.length]}
+          titleColor={(isDark ? TITLE_ROTATION_DARK : TITLE_ROTATION_LIGHT)[index % TITLE_ROTATION_LIGHT.length]}
           onPress={onRecipePress}
           onLongPress={() => onRecipeLongPress(recipe)}
           onLike={selectionMode ? undefined : onLike}
@@ -198,8 +200,8 @@ function CookbookRecipeList({
             <View style={{ flex: 1, marginBottom: Spacing.lg }}>
               <EditorialRecipeCard
                 recipe={recipe as any}
-                bg={PASTEL_ROTATION[index % PASTEL_ROTATION.length]}
-                titleColor={TITLE_ROTATION[index % TITLE_ROTATION.length]}
+                bg={(isDark ? PASTEL_ROTATION_DARK : PASTEL_ROTATION_LIGHT)[index % PASTEL_ROTATION_LIGHT.length]}
+                titleColor={(isDark ? TITLE_ROTATION_DARK : TITLE_ROTATION_LIGHT)[index % TITLE_ROTATION_LIGHT.length]}
                 onPress={onRecipePress}
                 onLongPress={() => onRecipeLongPress(recipe)}
                 onLike={selectionMode ? undefined : onLike}

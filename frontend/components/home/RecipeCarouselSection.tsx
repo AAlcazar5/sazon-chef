@@ -8,14 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { EditorialSectionHeader } from './EditorialSectionHeader';
 import { EditorialRecipeCard } from './EditorialRecipeCard';
-import { Colors, DarkColors, Pastel, EditorialColors } from '../../constants/Colors';
+import { Colors, DarkColors, Pastel, PastelDark, EditorialColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import SkeletonLoader from '../ui/SkeletonLoader';
 import type { SuggestedRecipe } from '../../types';
 
-const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
-const TITLE_ROTATION = [
+const PASTEL_ROTATION_LIGHT = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const PASTEL_ROTATION_DARK = [PastelDark.peach, PastelDark.sage, PastelDark.lavender, PastelDark.sky, PastelDark.golden, PastelDark.blush];
+const TITLE_ROTATION_LIGHT = [
   EditorialColors.pastelTitle.peach,
   EditorialColors.pastelTitle.sage,
   EditorialColors.pastelTitle.lavender,
@@ -23,6 +24,7 @@ const TITLE_ROTATION = [
   EditorialColors.pastelTitle.golden,
   EditorialColors.pastelTitle.blush,
 ];
+const TITLE_ROTATION_DARK = ['#FFD9B0', '#C8E6CA', '#E1BEE7', '#BBDEFB', '#FFECB3', '#F8BBD0'];
 import type { UserFeedback } from '../../utils/recipeUtils';
 
 const CARD_WIDTH = 280;
@@ -270,8 +272,8 @@ function RecipeCarouselFlatList({
         <View style={{ width: CARD_WIDTH, marginRight: CARD_MARGIN }}>
           <EditorialRecipeCard
             recipe={recipe}
-            bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
-            titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
+            bg={(isDark ? PASTEL_ROTATION_DARK : PASTEL_ROTATION_LIGHT)[i % PASTEL_ROTATION_LIGHT.length]}
+            titleColor={(isDark ? TITLE_ROTATION_DARK : TITLE_ROTATION_LIGHT)[i % TITLE_ROTATION_LIGHT.length]}
             feedback={feedback}
             isFeedbackLoading={isFeedbackLoading}
             onPress={onRecipePress}

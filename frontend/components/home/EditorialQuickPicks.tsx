@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Pastel } from '../../constants/Colors';
+import { useColorScheme } from 'nativewind';
+import { Pastel, PastelDark } from '../../constants/Colors';
 import { EditorialColors } from '../../constants/Colors';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { EditorialCard } from '../ui/EditorialCard';
@@ -22,23 +23,30 @@ interface EditorialQuickPicksProps {
   onSeeAll: () => void;
 }
 
-const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky];
-const TITLE_ROTATION = [
+const PASTEL_ROTATION_LIGHT = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky];
+const PASTEL_ROTATION_DARK = [PastelDark.peach, PastelDark.sage, PastelDark.lavender, PastelDark.sky];
+const TITLE_ROTATION_LIGHT = [
   EditorialColors.pastelTitle.peach,
   EditorialColors.pastelTitle.sage,
   EditorialColors.pastelTitle.lavender,
   EditorialColors.pastelTitle.sky,
 ];
+const TITLE_ROTATION_DARK = ['#FFD9B0', '#C8E6CA', '#E1BEE7', '#BBDEFB'];
 
 export function EditorialQuickPicks({ recipes, savedIds, onRecipePress, onToggleSave, onSeeAll }: EditorialQuickPicksProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const displayRecipes = recipes.slice(0, 4);
+  const headerColor = isDark ? '#F5EFE6' : '#111827';
+  const rotation = isDark ? PASTEL_ROTATION_DARK : PASTEL_ROTATION_LIGHT;
+  const titleRotation = isDark ? TITLE_ROTATION_DARK : TITLE_ROTATION_LIGHT;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { color: headerColor }]}>
           Quick{' '}
-          <Text style={styles.sectionAccent}>picks</Text>
+          <Text style={[styles.sectionAccent, { color: headerColor }]}>picks</Text>
         </Text>
         <Pressable onPress={onSeeAll} accessibilityRole="link" testID="see-all">
           <Text style={styles.seeAll}>SEE ALL →</Text>
@@ -50,8 +58,8 @@ export function EditorialQuickPicks({ recipes, savedIds, onRecipePress, onToggle
           <View key={recipe.id} style={styles.gridItem}>
             <EditorialCard
               recipe={recipe}
-              bg={PASTEL_ROTATION[i % PASTEL_ROTATION.length]}
-              titleColor={TITLE_ROTATION[i % TITLE_ROTATION.length]}
+              bg={rotation[i % rotation.length]}
+              titleColor={titleRotation[i % titleRotation.length]}
               saved={savedIds.has(recipe.id)}
               onToggleSave={() => onToggleSave(recipe.id)}
               onPress={() => onRecipePress(recipe.id)}

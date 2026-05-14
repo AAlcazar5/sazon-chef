@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ViewProps, Platform } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { EditorialFontFamily } from '../../constants/Typography';
@@ -25,6 +26,12 @@ interface EditorialCardProps extends ViewProps {
 }
 
 export function EditorialCard({ recipe, bg, titleColor, saved, onToggleSave, onPress, testID, ...props }: EditorialCardProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  // Theme-aware text/icon colors so the card stays legible when the caller
+  // passes a dark-pastel bg in dark mode.
+  const metaColor = isDark ? 'rgba(245,239,230,0.78)' : '#6B6B6B';
+  const saveIconInactive = isDark ? 'rgba(245,239,230,0.7)' : '#9CA3AF';
   const shadowStyle = Platform.select({
     ios: EditorialShadows.cardRaised.ios,
     android: EditorialShadows.cardRaised.android,
@@ -55,7 +62,7 @@ export function EditorialCard({ recipe, bg, titleColor, saved, onToggleSave, onP
         <Ionicons
           name={saved ? 'heart' : 'heart-outline'}
           size={20}
-          color={saved ? '#EF4444' : '#9CA3AF'}
+          color={saved ? '#EF4444' : saveIconInactive}
         />
       </Pressable>
 
@@ -72,7 +79,7 @@ export function EditorialCard({ recipe, bg, titleColor, saved, onToggleSave, onP
         {recipe.title}
       </Text>
 
-      <Text style={styles.meta}>
+      <Text style={[styles.meta, { color: metaColor }]}>
         {recipe.cookTime} min · {recipe.calories} cal · {recipe.matchScore}%
       </Text>
     </Pressable>

@@ -15,6 +15,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { Shadows } from '../../constants/Shadows';
+import { ComponentSpacing } from '../../constants/Spacing';
 import { NewToYouSection } from '../home/NewToYouSection';
 import { BrowseByFamilySection, type FamilyEntry } from '../home/BrowseByFamilySection';
 import DidYouKnowCard from '../home/DidYouKnowCard';
@@ -156,7 +157,9 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 80,
+    // Canonical tab-bar + search-bar overlay clearance (was 80; Browse by Region
+    // got cut off because 80 only cleared the tab bar, not the search overlay).
+    paddingBottom: ComponentSpacing.tabBar.scrollPaddingBottom,
     gap: 16,
   },
   flagshipTile: {

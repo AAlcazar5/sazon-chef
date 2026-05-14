@@ -13,7 +13,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { recipeApi } from '../../lib/api';
-import { Pastel, EditorialColors } from '../../constants/Colors';
+import { Pastel, PastelDark, EditorialColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { EditorialSectionHeader } from './EditorialSectionHeader';
 import { EditorialRecipeCard } from './EditorialRecipeCard';
@@ -21,14 +21,26 @@ import HomeLoadingState from './HomeLoadingState';
 import type { SuggestedRecipe } from '../../types';
 import type { UserFeedback } from '../../utils/recipeUtils';
 
-const PASTEL_ROTATION = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
-const TITLE_ROTATION = [
+const PASTEL_ROTATION_LIGHT = [Pastel.peach, Pastel.sage, Pastel.lavender, Pastel.sky, Pastel.golden, Pastel.blush];
+const PASTEL_ROTATION_DARK = [PastelDark.peach, PastelDark.sage, PastelDark.lavender, PastelDark.sky, PastelDark.golden, PastelDark.blush];
+// Dark-mode title colors — light variants that pop on the muted-jewel-dark
+// PastelDark bgs. Mirrors the light-mode `pastelTitle` (dark colors on light
+// pastels) so each cuisine still carries a hue identity.
+const TITLE_ROTATION_LIGHT = [
   EditorialColors.pastelTitle.peach,
   EditorialColors.pastelTitle.sage,
   EditorialColors.pastelTitle.lavender,
   EditorialColors.pastelTitle.sky,
   EditorialColors.pastelTitle.golden,
   EditorialColors.pastelTitle.blush,
+];
+const TITLE_ROTATION_DARK = [
+  '#FFD9B0', // warm peach ivory on PastelDark.peach
+  '#C8E6CA', // sage tint
+  '#E1BEE7', // lavender tint
+  '#BBDEFB', // sky tint
+  '#FFECB3', // golden tint
+  '#F8BBD0', // blush tint
 ];
 
 export interface NewToYouRecipe extends SuggestedRecipe {
@@ -131,8 +143,10 @@ export function NewToYouSection({
         accessibilityLabel="New to you recipes scroll"
       >
         {feed.recipes.map((recipe, idx) => {
-          const bg = PASTEL_ROTATION[idx % PASTEL_ROTATION.length];
-          const titleColor = TITLE_ROTATION[idx % TITLE_ROTATION.length];
+          const rotation = isDark ? PASTEL_ROTATION_DARK : PASTEL_ROTATION_LIGHT;
+          const titleRotation = isDark ? TITLE_ROTATION_DARK : TITLE_ROTATION_LIGHT;
+          const bg = rotation[idx % rotation.length];
+          const titleColor = titleRotation[idx % titleRotation.length];
           return (
             <View key={recipe.id} style={styles.cardWrapper}>
               <EditorialRecipeCard
@@ -148,7 +162,10 @@ export function NewToYouSection({
                 onSave={onSave}
                 footer={
                   <View
-                    style={styles.reasonRow}
+                    style={[
+                      styles.reasonRow,
+                      { backgroundColor: isDark ? 'rgba(245,239,230,0.10)' : 'rgba(255,255,255,0.55)' },
+                    ]}
                     accessibilityLabel={`Reason: ${recipe.personalizationReason}`}
                   >
                     <Ionicons
@@ -191,7 +208,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.55)',
     borderRadius: 12,
     marginTop: 8,
   },
