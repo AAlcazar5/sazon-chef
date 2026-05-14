@@ -11,6 +11,10 @@ import { captureException } from '@/utils/sentryCapture';
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 const SONNET_MODEL = 'claude-sonnet-4-6';
+// Path B — Gemini Flash-Lite is the cheap-tier primary. ~$0.075/M input,
+// ~$0.30/M output → ~$0.001/recipe. Override the literal here when a
+// newer Flash-Lite SKU appears or set GOOGLE_AI_MODEL to bypass per-call.
+const GEMINI_FLASH_LITE_MODEL = 'gemini-2.0-flash-lite';
 
 /**
  * Path A — tier-aware model routing.
@@ -28,9 +32,11 @@ const SONNET_MODEL = 'claude-sonnet-4-6';
 const MODEL_ROUTES: Record<AITaskType, Record<UserTier, ModelRoute>> = {
   recipe_generation: {
     free: {
-      model: HAIKU_MODEL,
-      provider: 'claude',
-      reasoning: 'Free tier: Haiku — structured JSON + nutrition math hold, 6× cheaper than Sonnet.',
+      model: GEMINI_FLASH_LITE_MODEL,
+      provider: 'gemini',
+      providerOrder: ['gemini', 'claude'],
+      requiresPiiStripping: true,
+      reasoning: 'Path B: Gemini Flash-Lite primary (~$0.001/recipe) with Claude Haiku fallback. PII stripped from prompt before send — caller must use buildSanitizedRecipePrompt.',
     },
     premium: {
       model: HAIKU_MODEL,
@@ -101,6 +107,12 @@ const MODEL_ROUTES: Record<AITaskType, Record<UserTier, ModelRoute>> = {
 export class AIProviderManager {
   private providers: AIProvider[] = [];
   private providerOrder: string[] = [];
+  /**
+   * Lowercase-key → provider instance map. Built alongside `providers` so
+   * Path B can resolve `request.providerOrder = ['gemini', 'claude']` to
+   * the right instances per-request.
+   */
+  private providersByKey: Map<string, AIProvider> = new Map();
   private lastUsedProvider: string | null = null;
 
   constructor() {
@@ -150,11 +162,15 @@ export class AIProviderManager {
       ollama: new OllamaProvider(),
     };
 
-    // Add providers in configured order, only if they're available
+    // Add providers in configured order, only if they're available.
+    // Also populate the by-key map so Path B per-request providerOrder
+    // overrides can resolve to instances at call time.
     for (const providerKey of this.providerOrder) {
-      const provider = allProviders[providerKey.toLowerCase()];
+      const key = providerKey.toLowerCase();
+      const provider = allProviders[key];
       if (provider && provider.isAvailable()) {
         this.providers.push(provider);
+        this.providersByKey.set(key, provider);
         logger.info(`✅ [ProviderManager] ${provider.getName()} initialized and available`);
       } else {
         logger.info(`⚠️  [ProviderManager] ${providerKey} is not configured or unavailable`);
@@ -177,7 +193,34 @@ export class AIProviderManager {
     const errors: Array<{ provider: string; error: AIProviderError }> = [];
     let lastError: AIProviderError | null = null;
 
-    for (const provider of this.providers) {
+    // Path B — per-request provider chain. When `request.providerOrder` is
+    // set, resolve those keys to instances and try them in that order.
+    // Unknown / unavailable keys are silently skipped (logged) so a stale
+    // override doesn't break the call. Falls back to the constructor-time
+    // order when omitted (Path A behavior).
+    const chain: AIProvider[] = (() => {
+      if (!request.providerOrder || request.providerOrder.length === 0) {
+        return this.providers;
+      }
+      const resolved: AIProvider[] = [];
+      const seen = new Set<AIProvider>();
+      for (const key of request.providerOrder) {
+        const p = this.providersByKey.get(key.toLowerCase());
+        if (!p) {
+          logger.info(`⚠️  [ProviderManager] requested provider '${key}' is not available — skipping`);
+          continue;
+        }
+        if (seen.has(p)) continue;
+        seen.add(p);
+        resolved.push(p);
+      }
+      // If every requested provider is unavailable, fall back to the
+      // default order rather than erroring with "no providers" — the
+      // caller's intent was a chain, not an exclusion list.
+      return resolved.length > 0 ? resolved : this.providers;
+    })();
+
+    for (const provider of chain) {
       try {
         logger.info(`🔄 [ProviderManager] Attempting generation with ${provider.getName()}...`);
         const recipe = await provider.generateRecipe(request);

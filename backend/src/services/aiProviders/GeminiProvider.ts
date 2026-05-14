@@ -16,9 +16,7 @@ export class GeminiProvider extends AIProvider {
   }
 
   checkConfiguration(): boolean {
-    // Gemini API key exists but models are not accessible (404 errors)
-    // Disabling until account has proper access
-    return false; // Changed from: !!process.env.GOOGLE_AI_API_KEY
+    return !!process.env.GOOGLE_AI_API_KEY;
   }
 
   async generateRecipe(request: RecipeGenerationRequest): Promise<GeneratedRecipe> {
@@ -27,10 +25,12 @@ export class GeminiProvider extends AIProvider {
     }
 
     try {
-      // Use gemini-1.5-flash-latest or gemini-pro (more widely available)
-      // gemini-1.5-pro might not be available in all regions/API versions
-      const model = this.genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash-latest', // More widely available, fast and cost-effective
+      // Precedence: per-request override (Path A/B routing) → GOOGLE_AI_MODEL
+      // env (per-deploy override) → default. The default stays Flash so
+      // legacy callers and seed scripts keep their previous behavior.
+      const modelName = request.model ?? process.env.GOOGLE_AI_MODEL ?? 'gemini-2.5-flash';
+      const model = this.genAI.getGenerativeModel({
+        model: modelName,
         generationConfig: {
           temperature: Math.min(request.temperature || 1.1, 2.0), // Gemini allows up to 2.0
           maxOutputTokens: request.maxTokens || 8192,

@@ -129,17 +129,24 @@ export class AIRecipeService {
         previousFailures: previousFailures.length,
       }, '🤖 AI Recipe Generation: Starting with params');
 
-      // Build prompt with feedback from previous failures
-      let prompt = this.buildRecipePrompt(params);
-      if (previousFailures.length > 0) {
-        prompt += `\n\n⚠️ CRITICAL: Previous attempt(s) failed because:\n${previousFailures.map(f => `- ${f}`).join('\n')}\n\nYou MUST create a recipe that does NOT have any of these issues. Double-check all ingredients against banned ingredients list.`;
-      }
-      
-      const systemPrompt = this.getSystemPrompt();
-      
-      // Use provider manager with automatic fallback
-      // Path A — route to the right Claude model for this user's tier.
+      // Path A — route to the right model for this user's tier.
+      // Path B — when the route requires PII stripping, build the prompt
+      // from the sanitized allow-list so the cheap provider never sees
+      // pantry / allergens / macros / cooking history / physical profile.
       const route = this.providerManager.routeToModel('recipe_generation', params.tier ?? 'free');
+      const useSanitizedPrompt = route.requiresPiiStripping === true;
+      let prompt = useSanitizedPrompt
+        ? this.buildSanitizedRecipePrompt(params)
+        : this.buildRecipePrompt(params);
+      if (previousFailures.length > 0) {
+        prompt += `\n\n⚠️ CRITICAL: Previous attempt(s) failed because:\n${previousFailures.map(f => `- ${f}`).join('\n')}\n\nYou MUST create a recipe that does NOT have any of these issues.${useSanitizedPrompt ? '' : ' Double-check all ingredients against banned ingredients list.'}`;
+      }
+
+      const systemPrompt = this.getSystemPrompt();
+
+      // Use provider manager with automatic fallback. Forward the route's
+      // provider chain so free tier hits Gemini → Claude (Path B) while
+      // premium / chef stay on Claude only (Path A).
       const recipe = await this.providerManager.generateRecipe({
         prompt,
         systemPrompt,
@@ -147,6 +154,7 @@ export class AIRecipeService {
         temperature: retryCount > 0 ? 1.2 : 1.1, // Slightly higher temperature on retries for more variation
         maxTokens: 2000,
         model: route.model,
+        providerOrder: route.providerOrder,
       });
 
       logger.info({ data: recipe.title }, '✅ AI Recipe Generated:');
@@ -275,13 +283,21 @@ Your task: turn this free-text description into a complete, realistic recipe.
 Return JSON only.`;
 
     try {
-      const route = this.providerManager.routeToModel('recipe_generation', tier);
+      // Path B guard: free-text descriptions can contain arbitrary user
+      // PII (e.g., "my grandma's recipe for my diabetic dad"). The
+      // sanitization layer only knows how to strip structured fields,
+      // not free-text content. So `generateFromDescription` always stays
+      // on Claude even for free-tier users — better to pay Haiku than
+      // leak free-text PII to a third party.
+      const safeTier = tier === 'free' ? 'premium' : tier;
+      const route = this.providerManager.routeToModel('recipe_generation', safeTier);
       const recipe = await this.providerManager.generateRecipe({
         prompt,
         systemPrompt,
         temperature: 0.8,
         maxTokens: 2000,
         model: route.model,
+        providerOrder: route.providerOrder,
       });
       return this.validateAndNormalizeRecipe(recipe);
     } catch (error: any) {
@@ -500,6 +516,69 @@ Return JSON only.`;
   /**
    * Build the recipe generation prompt
    */
+  /**
+   * Path B — PII-stripped recipe prompt for cheap-tier providers.
+   *
+   * Builds the SAME user-facing recipe-generation prompt as
+   * `buildRecipePrompt`, but using ONLY non-PII fields. Allowed:
+   *
+   *   - recipeTitle           (explicit dish, not a user attribute)
+   *   - mealType              (breakfast / lunch / dinner / snack / dessert)
+   *   - cuisineOverride       (cuisine name)
+   *   - maxCookTimeForMeal    (numeric duration cap)
+   *
+   * Explicitly NOT used:
+   *
+   *   - userPreferences (cuisines / dietary restrictions / banned ingredients)
+   *   - macroGoals, physicalProfile (age, gender, weight, activity, fitness goal)
+   *   - previousMeals / userFeedback (cooking history)
+   *   - maxDailyBudget / remainingBudget (financial)
+   *   - userId, dayDate (identifying)
+   *
+   * If a route flags `requiresPiiStripping`, callers MUST use this builder
+   * — sending `buildRecipePrompt` output to a non-Anthropic provider is a
+   * privacy posture violation per ROADMAP_TO_LAUNCH.md Tier V.
+   */
+  buildSanitizedRecipePrompt(params: RecipeGenerationParams): string {
+    const parts: string[] = [];
+
+    if (params.recipeTitle) {
+      parts.push(
+        `Create a recipe for: "${params.recipeTitle}"`,
+        '',
+        'Generate a complete, detailed recipe for this dish. Include all ingredients, step-by-step instructions, and accurate nutrition information.',
+        '',
+      );
+    }
+
+    if (params.mealType && params.mealType !== 'any') {
+      if (params.recipeTitle) {
+        parts.push(`This is a ${params.mealType} recipe.`);
+      } else if (params.mealType === 'dessert') {
+        parts.push('Generate a dessert recipe (sweet treats like cakes, cookies, pies, ice cream, etc.).');
+      } else if (params.mealType === 'snack') {
+        parts.push('Generate a healthy snack recipe (light, nutritious options suitable for between meals — NOT desserts).');
+      } else {
+        parts.push(`Generate a ${params.mealType} recipe.`);
+      }
+    } else if (!params.recipeTitle) {
+      parts.push('Generate a delicious recipe.');
+    }
+
+    if (params.cuisineOverride && params.cuisineOverride.trim().length > 0) {
+      const safe = sanitizeCuisineForPrompt(params.cuisineOverride);
+      if (safe) parts.push(`Cuisine: ${safe}.`);
+    }
+
+    if (typeof params.maxCookTimeForMeal === 'number' && params.maxCookTimeForMeal > 0) {
+      parts.push(`Total cook time must not exceed ${params.maxCookTimeForMeal} minutes.`);
+    }
+
+    parts.push('Return JSON only — title, description, cuisine, cookTime, difficulty, servings, ingredients[], instructions[], nutrition (calories, protein, carbs, fat).');
+
+    return parts.join('\n');
+  }
+
   private buildRecipePrompt(params: RecipeGenerationParams): string {
     const parts: string[] = [];
 

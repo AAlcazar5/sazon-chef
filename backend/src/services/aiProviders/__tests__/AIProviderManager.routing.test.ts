@@ -39,15 +39,19 @@ const ALWAYS_HAIKU_TASKS: AITaskType[] = [
 
 // These tasks were Sonnet for everyone pre-Path-A. Now they're Haiku on
 // free + premium (the "cost relief" half of Path A), Sonnet on chef.
+//
+// Note: `recipe_generation` is excluded here because Path B owns the
+// free-tier route for that task (Gemini Flash-Lite + PII stripping).
+// Premium / chef behavior for recipe_generation is asserted separately
+// below alongside the Path B contract pins.
 const CHEF_UPGRADE_TASKS: AITaskType[] = [
-  'recipe_generation',
   'photo_meal_recognition',
   'utterance_composition',
   'craving_natural_language',
   'healthify_craving',
 ];
 
-const ALL_TASK_TYPES: AITaskType[] = [...ALWAYS_HAIKU_TASKS, ...CHEF_UPGRADE_TASKS];
+const ALL_TASK_TYPES: AITaskType[] = [...ALWAYS_HAIKU_TASKS, ...CHEF_UPGRADE_TASKS, 'recipe_generation'];
 
 describe('AIProviderManager.routeToModel', () => {
   let manager: AIProviderManager;
@@ -61,11 +65,23 @@ describe('AIProviderManager.routeToModel', () => {
     delete process.env.ANTHROPIC_API_KEY;
   });
 
-  describe('provider is always claude (PII guard)', () => {
-    it.each(ALL_TASK_TYPES)('routeToModel(%s) returns provider "claude"', (taskType) => {
-      const route = manager.routeToModel(taskType);
-      expect(route.provider).toBe('claude');
+  describe('PII guard — provider is claude for every task except Path B free recipe_generation', () => {
+    // Path B intentionally relaxes the PII guard for one specific route
+    // (recipe_generation × free tier) by routing to Gemini Flash-Lite, but
+    // ONLY after the prompt is stripped of PII via buildSanitizedRecipePrompt.
+    // Every other (task × tier) cell must still land on claude.
+    it.each(ALL_TASK_TYPES)('routeToModel(%s, premium) returns provider "claude"', (taskType) => {
+      expect(manager.routeToModel(taskType, 'premium').provider).toBe('claude');
     });
+    it.each(ALL_TASK_TYPES)('routeToModel(%s, chef) returns provider "claude"', (taskType) => {
+      expect(manager.routeToModel(taskType, 'chef').provider).toBe('claude');
+    });
+    it.each(ALL_TASK_TYPES.filter((t) => t !== 'recipe_generation'))(
+      'routeToModel(%s, free) returns provider "claude"',
+      (taskType) => {
+        expect(manager.routeToModel(taskType, 'free').provider).toBe('claude');
+      },
+    );
   });
 
   describe('reasoning is always non-empty', () => {
@@ -100,11 +116,39 @@ describe('AIProviderManager.routeToModel', () => {
     });
   });
 
+  describe('Path B — recipe_generation free tier routes through Gemini Flash-Lite + PII strip', () => {
+    it('free tier model is gemini-2.0-flash-lite', () => {
+      const route = manager.routeToModel('recipe_generation', 'free');
+      expect(route.model).toBe('gemini-2.0-flash-lite');
+      expect(route.provider).toBe('gemini');
+    });
+    it('free tier carries providerOrder = [gemini, claude] for fallback', () => {
+      const route = manager.routeToModel('recipe_generation', 'free');
+      expect(route.providerOrder).toEqual(['gemini', 'claude']);
+    });
+    it('free tier flags requiresPiiStripping = true so callers must sanitize', () => {
+      const route = manager.routeToModel('recipe_generation', 'free');
+      expect(route.requiresPiiStripping).toBe(true);
+    });
+    it('premium tier stays on claude Haiku (no Path B leakage)', () => {
+      const route = manager.routeToModel('recipe_generation', 'premium');
+      expect(route.provider).toBe('claude');
+      expect(route.model).toBe(HAIKU_MODEL);
+      expect(route.requiresPiiStripping).toBeFalsy();
+    });
+    it('chef tier upgrades to claude Sonnet', () => {
+      const route = manager.routeToModel('recipe_generation', 'chef');
+      expect(route.provider).toBe('claude');
+      expect(route.model).toBe(SONNET_MODEL);
+      expect(route.requiresPiiStripping).toBeFalsy();
+    });
+  });
+
   describe('default tier behavior', () => {
-    it('routeToModel without an explicit tier defaults to free (Haiku)', () => {
+    it('routeToModel without an explicit tier defaults to free', () => {
       // Backwards compat: old callers that just pass taskType get the
-      // cheapest route — which is also the safest fall-back.
-      expect(manager.routeToModel('recipe_generation').model).toBe(HAIKU_MODEL);
+      // free route. For recipe_generation that's the Path B Gemini lane.
+      expect(manager.routeToModel('recipe_generation').provider).toBe('gemini');
       expect(manager.routeToModel('healthify_craving').model).toBe(HAIKU_MODEL);
     });
   });

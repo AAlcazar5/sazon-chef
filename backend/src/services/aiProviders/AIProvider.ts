@@ -26,10 +26,35 @@ export type AITaskType =
  */
 export type UserTier = 'free' | 'premium' | 'chef';
 
+/**
+ * Set of providers a route is allowed to flow through. Single-provider
+ * routes (Path A) keep `provider: 'claude'` so the PII guard reads
+ * obviously from the type. Multi-provider routes (Path B) set
+ * `providerOrder`, and `requiresPiiStripping: true` forces the
+ * prompt-sanitization step before the request leaves Anthropic infra.
+ */
+export type RouteProvider = 'claude' | 'gemini' | 'groq' | 'deepseek' | 'openai_compat' | 'ollama';
+
 export interface ModelRoute {
-  model: string;      // e.g., 'claude-haiku-4-5-20251001' or 'claude-sonnet-4-6'
-  provider: 'claude'; // PII never leaves Anthropic — only Claude routes are supported
-  reasoning: string;  // human-readable why
+  /** Model identifier for the primary provider. */
+  model: string;
+  /** Primary provider (used when `providerOrder` is unset). */
+  provider: RouteProvider;
+  /**
+   * Optional ordered fallback chain. When set, AIProviderManager iterates
+   * these providers in order on a per-request basis. Defaults to
+   * [provider] when omitted.
+   */
+  providerOrder?: RouteProvider[];
+  /**
+   * Path B guardrail. When true, aiRecipeService must run the prompt
+   * through `buildSanitizedRecipePrompt` before sending so PII (pantry,
+   * allergens, macros, weight, health conditions) never leaves Anthropic.
+   * Single-provider Claude routes leave this undefined.
+   */
+  requiresPiiStripping?: boolean;
+  /** Human-readable why. */
+  reasoning: string;
 }
 
 export interface RecipeGenerationRequest {
@@ -45,6 +70,13 @@ export interface RecipeGenerationRequest {
    * keeps single-provider tests + script callers working unchanged.
    */
   model?: string;
+  /**
+   * Path B — per-request provider chain override. When set,
+   * AIProviderManager iterates these providers in order instead of the
+   * constructor-time `this.providerOrder`. Lets the free tier route
+   * through `['gemini', 'claude']` while premium stays on `['claude']`.
+   */
+  providerOrder?: RouteProvider[];
 }
 
 export interface AIProviderError extends Error {
