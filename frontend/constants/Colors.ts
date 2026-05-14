@@ -158,7 +158,7 @@ export const Colors: ColorPalette = {
   text: {
     primary: '#111827', // gray-900 (legacy — Ink.light.primary is #0A0A0A; preserved for AA contrast on existing surfaces)
     secondary: '#6B7280', // gray-500
-    tertiary: '#9CA3AF', // gray-400
+    tertiary: '#6B6B6B', // darkened 2026-05-14 from #9CA3AF (gray-400 = 2.56:1 fail) to clear AA body on canvas
     inverse: _t.Ink.light.inverse,
   },
 
@@ -236,7 +236,7 @@ export const DarkColors: ColorPalette = {
   text: {
     primary: _t.Ink.dark.warm, // warm ivory, never pure white (Ink.dark.warm = #F5EFE6)
     secondary: '#B8A99A', // inkMuted — warm taupe (legacy)
-    tertiary: '#7A6A5C', // inkSoft — eyebrows / labels (legacy)
+    tertiary: '#A89888', // lightened 2026-05-14 from #7A6A5C (3.5:1 fail on warm-dark) to clear AA body
     inverse: _t.Canvas.warmDark, // text on accent / on ivory surfaces
   },
 

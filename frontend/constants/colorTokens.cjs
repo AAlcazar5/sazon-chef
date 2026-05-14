@@ -63,8 +63,12 @@ const AccentTokens = {
 };
 
 const Ink = {
-  light: { primary: '#0A0A0A', secondary: '#525252', tertiary: '#8A8A8A', inverse: '#FFFFFF', warm: '#1d1d1f' },
-  dark: { primary: '#F5F5F5', secondary: '#A8A8A8', tertiary: '#6B6B6B', inverse: '#0A0A0A', warm: '#F5EFE6' },
+  // tertiary darkened (light) / lightened (dark) on 2026-05-14 so body text
+  // at tertiary tier clears WCAG AA 4.5:1 on canvas + canvas-warm. Prior
+  // values (#8A8A8A / #6B6B6B) scored ~3.5:1 and were a documented "large
+  // text only" hazard; failing rows in docs/CONTRAST.md drove the call.
+  light: { primary: '#0A0A0A', secondary: '#525252', tertiary: '#6B6B6B', inverse: '#FFFFFF', warm: '#1d1d1f' },
+  dark: { primary: '#F5F5F5', secondary: '#A8A8A8', tertiary: '#909090', inverse: '#0A0A0A', warm: '#F5EFE6' },
 };
 
 const Hairline = {
