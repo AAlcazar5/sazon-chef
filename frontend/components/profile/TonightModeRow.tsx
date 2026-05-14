@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   soft: {
     marginTop: 6,
     fontSize: 12,
-    color: '#A47A4A',
+    color: '#6F4F2A', // a11y 2026-05-14: was #A47A4A (~2.84:1 on warm tan, AA fail)
   },
   switch: {
     width: 52,

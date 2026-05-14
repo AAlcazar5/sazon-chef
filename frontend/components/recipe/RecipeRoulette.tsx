@@ -419,7 +419,7 @@ function RecipeCardContent({
             </View>
             <View style={styles.macroItem}>
               <Text style={[styles.macroLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Protein</Text>
-              <Text style={[styles.macroValue, { color: '#3B82F6' }]}>{recipe.protein}g</Text>
+              <Text style={[styles.macroValue, { color: '#2563EB' }]}>{recipe.protein}g</Text>
             </View>
             <View style={styles.macroItem}>
               <Text style={[styles.macroLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Carbs</Text>
@@ -429,7 +429,7 @@ function RecipeCardContent({
             </View>
             <View style={styles.macroItem}>
               <Text style={[styles.macroLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Fat</Text>
-              <Text style={[styles.macroValue, { color: '#F59E0B' }]}>{recipe.fat}g</Text>
+              <Text style={[styles.macroValue, { color: '#B45309' }]}>{recipe.fat}g</Text>
             </View>
           </View>
         </View>

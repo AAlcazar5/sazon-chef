@@ -322,7 +322,7 @@ export default function ProfileScreen() {
                     />
                   </View>
                 }
-                labelStyle={{ color: '#EF4444' }}
+                labelStyle={{ color: '#DC2626' }}
                 onPress={() => setShowCancellationFlow(true)}
                 showBorder={false}
               />

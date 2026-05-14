@@ -37,7 +37,7 @@ export default function TechniqueTip({ term, explanation, testID, onOpen }: Tech
         testID={`${testID}-toggle`}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
       >
-        <Text style={{ color: '#FDBA74', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
+        <Text style={{ color: '#C2410C', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
           {open ? '—' : '?'} What’s {term.toLowerCase()}?
         </Text>
         <Text style={{ color: '#6B6B6B', fontSize: 12 }}>{open ? 'Hide' : 'Show'}</Text>
@@ -46,7 +46,7 @@ export default function TechniqueTip({ term, explanation, testID, onOpen }: Tech
       {open && (
         <Text
           testID={`${testID}-explanation`}
-          style={{ color: '#E5E7EB', fontSize: 13, marginTop: 8, lineHeight: 18 }}
+          style={{ color: '#1F1B16', fontSize: 13, marginTop: 8, lineHeight: 18 }}
         >
           {explanation}
         </Text>
