@@ -8,11 +8,11 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import FilterSheet from '../ui/FilterSheet';
 import FilterSection from '../ui/FilterSection';
 import FilterPill from '../ui/FilterPill';
+import CuisinePicker from '../ui/CuisinePicker';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { HapticPatterns } from '../../constants/Haptics';
 import { FilterState } from '../../lib/filterStorage';
 import {
-  CUISINE_OPTIONS,
   DIETARY_OPTIONS,
   DIFFICULTY_OPTIONS,
 } from '../../utils/filterUtils';
@@ -180,23 +180,18 @@ export default function FilterModal({
         </FilterSection>
       )}
 
-      {/* Cuisine */}
+      {/* Cuisine — region-grouped picker (tap a region to see its cuisines) */}
       <FilterSection
         title="Cuisine"
         icon="restaurant-outline"
         activeCount={filters.cuisines.length}
+        maxContentHeight={900}
       >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {CUISINE_OPTIONS.map((cuisine) => (
-            <FilterPill
-              key={cuisine}
-              label={cuisine}
-              active={filters.cuisines.includes(cuisine)}
-              onPress={() => onFilterChange('cuisines', cuisine)}
-              categoryName={cuisine}
-            />
-          ))}
-        </View>
+        <CuisinePicker
+          selectedCuisines={filters.cuisines}
+          onToggle={(cuisine) => onFilterChange('cuisines', cuisine)}
+          onReplace={(next) => onFilterChange('cuisines', next)}
+        />
       </FilterSection>
 
       {/* Dietary */}

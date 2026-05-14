@@ -10,6 +10,7 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { DarkElevation } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
@@ -38,6 +39,7 @@ export default function BottomSheet({
   const ref = useRef<BottomSheetModal>(null);
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
   // Elevated surface: in dark mode use lighter background so sheet lifts above the page
   const sheetBackground = isDark ? DarkElevation.dp4 : colors.background;
   const snapPoints = useMemo(() => snapPointsProp ?? ['50%'], [snapPointsProp]);
@@ -79,6 +81,7 @@ export default function BottomSheet({
     <BottomSheetModal
       ref={ref}
       snapPoints={snapPoints}
+      topInset={insets.top}
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       handleComponent={Handle}

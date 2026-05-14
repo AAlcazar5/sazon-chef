@@ -211,12 +211,13 @@ export function getQuickFilterParams(activeFilters: string[]): {
 }
 
 /**
- * Cuisine options for filter modal
+ * Cuisine options for filter modal — flat list of every canonical cuisine
+ * across all regions. The filter UI groups these by region via the
+ * hierarchical CuisinePicker; callers that need a simple flat list (label
+ * lookups, search) can iterate this array directly.
  */
-export const CUISINE_OPTIONS = [
-  'Mediterranean', 'Asian', 'Mexican', 'Italian', 'American',
-  'Indian', 'Thai', 'French', 'Japanese', 'Chinese'
-];
+import { ALL_CUISINES } from './cuisineTaxonomy';
+export const CUISINE_OPTIONS: readonly string[] = ALL_CUISINES;
 
 /**
  * Dietary restriction options for filter modal

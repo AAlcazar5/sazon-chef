@@ -22,6 +22,9 @@ interface FilterSectionProps {
   activeCount?: number;
   /** Start expanded (default: true if activeCount > 0) */
   defaultExpanded?: boolean;
+  /** Maximum content height in px when fully expanded. Default 500.
+   *  Bump for sections with hierarchical / drilldown content (Cuisine). */
+  maxContentHeight?: number;
   children: React.ReactNode;
 }
 
@@ -32,6 +35,7 @@ export default function FilterSection({
   icon,
   activeCount = 0,
   defaultExpanded,
+  maxContentHeight = 500,
   children,
 }: FilterSectionProps) {
   const { theme, colors } = useTheme();
@@ -52,7 +56,7 @@ export default function FilterSection({
 
   const contentStyle = useAnimatedStyle(() => ({
     opacity: heightProgress.value,
-    maxHeight: heightProgress.value * 500, // enough for content
+    maxHeight: heightProgress.value * maxContentHeight,
     overflow: 'hidden' as const,
   }));
 
