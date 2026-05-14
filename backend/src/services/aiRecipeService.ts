@@ -71,6 +71,12 @@ interface RecipeGenerationParams {
   maxDailyBudget?: number; // Maximum daily budget in dollars
   remainingBudget?: number; // Remaining budget for the day
   dayDate?: string; // ISO date for this meal's day — used for weekday/weekend cook time awareness
+  /**
+   * Path A — user subscription tier. Controls which Claude model the
+   * provider manager routes to. Defaults to 'free' (Haiku) when omitted
+   * so legacy callers / seed scripts keep their cheap behavior.
+   */
+  tier?: import('./aiProviders/AIProvider').UserTier;
 }
 
 export interface GeneratedRecipe {
@@ -132,14 +138,17 @@ export class AIRecipeService {
       const systemPrompt = this.getSystemPrompt();
       
       // Use provider manager with automatic fallback
+      // Path A — route to the right Claude model for this user's tier.
+      const route = this.providerManager.routeToModel('recipe_generation', params.tier ?? 'free');
       const recipe = await this.providerManager.generateRecipe({
         prompt,
         systemPrompt,
         mealType: params.mealType,
         temperature: retryCount > 0 ? 1.2 : 1.1, // Slightly higher temperature on retries for more variation
         maxTokens: 2000,
+        model: route.model,
       });
-      
+
       logger.info({ data: recipe.title }, '✅ AI Recipe Generated:');
       
       // Validate and normalize the recipe
@@ -239,7 +248,10 @@ export class AIRecipeService {
    * Returns for user review — does NOT persist. The user may edit everything
    * before saving through the normal createRecipe flow.
    */
-  async generateFromDescription(description: string): Promise<GeneratedRecipe> {
+  async generateFromDescription(
+    description: string,
+    tier: import('./aiProviders/AIProvider').UserTier = 'free',
+  ): Promise<GeneratedRecipe> {
     const trimmed = (description || '').trim();
     if (trimmed.length < 3) {
       throw new Error('Description is too short to generate a recipe');
@@ -263,11 +275,13 @@ Your task: turn this free-text description into a complete, realistic recipe.
 Return JSON only.`;
 
     try {
+      const route = this.providerManager.routeToModel('recipe_generation', tier);
       const recipe = await this.providerManager.generateRecipe({
         prompt,
         systemPrompt,
         temperature: 0.8,
         maxTokens: 2000,
+        model: route.model,
       });
       return this.validateAndNormalizeRecipe(recipe);
     } catch (error: any) {

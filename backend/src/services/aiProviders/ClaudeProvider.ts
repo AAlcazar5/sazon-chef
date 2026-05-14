@@ -28,8 +28,11 @@ export class ClaudeProvider extends AIProvider {
       // Claude temperature range is 0-1, clamp it
       const claudeTemperature = Math.max(0, Math.min(1, request.temperature || 1.1));
       
+      // Honor a routed model override (Path A tier routing). Default
+      // stays on Haiku so single-provider tests + legacy callers keep
+      // their previous behavior.
       const message = await this.anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+        model: request.model ?? 'claude-haiku-4-5-20251001',
         max_tokens: request.maxTokens || 4000,
         temperature: claudeTemperature,
         system: [

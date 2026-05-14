@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
 import { aiRecipeService } from '../../services/aiRecipeService';
+import { resolveUserTier } from '../../services/userTierService';
 import { CUISINE_ADJACENCY } from '../../utils/recipeSimilarity';
 
 interface MacroRange {
@@ -187,10 +188,13 @@ export const findRecipes = async (req: Request, res: Response) => {
 
     if (results.length < body.count) {
       const needed = body.count - results.length;
+      // Path A — resolve the tier once for this batch.
+      const tier = await resolveUserTier(userId);
       const aiPromises = Array.from({ length: needed }, async () => {
         try {
           const generated = await aiRecipeService.generateRecipe({
             userId,
+            tier,
             mealType: (body.mealType as any) ?? 'any',
             cuisineOverride: body.cuisines?.[0],
             macroGoals: {

@@ -13,6 +13,19 @@ export type AITaskType =
   | 'healthify_craving'        // → Sonnet (subjective swap reasoning)
   | 'simple_chat';             // → Haiku
 
+/**
+ * User subscription tier — controls model selection per task type.
+ *
+ *   free    — current default. Lightweight model + same PII guard.
+ *   premium — paid baseline ("Sazon Membership"). Same model as free today;
+ *             Path B (post-launch) shifts free → cheap multi-provider chain
+ *             with PII stripping, premium stays on Claude Haiku.
+ *   chef    — future top tier. Uses Sonnet for richer recipe quality.
+ *             IAP wiring deferred — env flag CHEF_TIER_ENABLED gates real
+ *             routing today.
+ */
+export type UserTier = 'free' | 'premium' | 'chef';
+
 export interface ModelRoute {
   model: string;      // e.g., 'claude-haiku-4-5-20251001' or 'claude-sonnet-4-6'
   provider: 'claude'; // PII never leaves Anthropic — only Claude routes are supported
@@ -25,6 +38,13 @@ export interface RecipeGenerationRequest {
   mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'any';
   temperature?: number;
   maxTokens?: number;
+  /**
+   * Optional model override. When set, the provider uses this exact model
+   * instead of its hardcoded default. AIProviderManager populates it from
+   * `routeToModel(task, tier)`. Falling through to the provider default
+   * keeps single-provider tests + script callers working unchanged.
+   */
+  model?: string;
 }
 
 export interface AIProviderError extends Error {

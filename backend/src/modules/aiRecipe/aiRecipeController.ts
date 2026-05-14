@@ -5,6 +5,7 @@ import { aiRecipeService } from '../../services/aiRecipeService';
 import { serializeAIRecipeResponse } from '../../services/aiRecipeResponseShape';
 import { prisma } from '../../lib/prisma';
 import { getUserId } from '../../utils/authHelper';
+import { resolveUserTier } from '../../services/userTierService';
 
 export class AIRecipeController {
   /**
@@ -168,9 +169,15 @@ export class AIRecipeController {
         targetCalories: macroGoals ? Math.round(macroGoals.calories * mealPortion) : 'N/A',
       }, '🎲 Randomization');
 
+      // Path A — resolve the user's tier so the provider manager routes
+      // to the right Claude model (Haiku for free/premium today, Sonnet
+      // for chef when CHEF_TIER_ENABLED is on).
+      const tier = await resolveUserTier(userId);
+
       // Generate recipe with AI
       const recipe = await aiRecipeService.generateRecipe({
         userId,
+        tier,
         recipeTitle: recipeTitle, // Pass recipe title if provided
         userPreferences: preferences
           ? {

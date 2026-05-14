@@ -25,7 +25,11 @@ jest.mock('../GeminiProvider', () => ({
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 const SONNET_MODEL = 'claude-sonnet-4-6';
 
-const HAIKU_TASKS: AITaskType[] = [
+// Path A — tier-aware routing.
+// Free + Premium share Haiku as the baseline; Chef gets Sonnet on
+// recipe-quality-sensitive tasks. The 5 tasks below are Haiku for all
+// three tiers (binary classification / lookup / extraction style).
+const ALWAYS_HAIKU_TASKS: AITaskType[] = [
   'safety_check',
   'craving_keyword_mapping',
   'ingredient_substitution',
@@ -33,8 +37,9 @@ const HAIKU_TASKS: AITaskType[] = [
   'simple_chat',
 ];
 
-// Note: healthify_craving is excluded from HAIKU_TASKS per spec — it routes to Sonnet
-const SONNET_TASKS: AITaskType[] = [
+// These tasks were Sonnet for everyone pre-Path-A. Now they're Haiku on
+// free + premium (the "cost relief" half of Path A), Sonnet on chef.
+const CHEF_UPGRADE_TASKS: AITaskType[] = [
   'recipe_generation',
   'photo_meal_recognition',
   'utterance_composition',
@@ -42,7 +47,7 @@ const SONNET_TASKS: AITaskType[] = [
   'healthify_craving',
 ];
 
-const ALL_TASK_TYPES: AITaskType[] = [...HAIKU_TASKS, ...SONNET_TASKS];
+const ALL_TASK_TYPES: AITaskType[] = [...ALWAYS_HAIKU_TASKS, ...CHEF_UPGRADE_TASKS];
 
 describe('AIProviderManager.routeToModel', () => {
   let manager: AIProviderManager;
@@ -71,71 +76,36 @@ describe('AIProviderManager.routeToModel', () => {
     });
   });
 
-  describe('Haiku tasks → claude-haiku-4-5-20251001', () => {
-    it.each(HAIKU_TASKS)('routeToModel(%s) returns Haiku model', (taskType) => {
-      const route = manager.routeToModel(taskType);
-      expect(route.model).toBe(HAIKU_MODEL);
+  describe('always-Haiku tasks (binary / lookup / extraction)', () => {
+    it.each(ALWAYS_HAIKU_TASKS)('routeToModel(%s) returns Haiku for free tier', (taskType) => {
+      expect(manager.routeToModel(taskType, 'free').model).toBe(HAIKU_MODEL);
+    });
+    it.each(ALWAYS_HAIKU_TASKS)('routeToModel(%s) returns Haiku for premium tier', (taskType) => {
+      expect(manager.routeToModel(taskType, 'premium').model).toBe(HAIKU_MODEL);
+    });
+    it.each(ALWAYS_HAIKU_TASKS)('routeToModel(%s) returns Haiku for chef tier', (taskType) => {
+      expect(manager.routeToModel(taskType, 'chef').model).toBe(HAIKU_MODEL);
     });
   });
 
-  describe('Sonnet tasks → claude-sonnet-4-6', () => {
-    it.each(SONNET_TASKS)('routeToModel(%s) returns Sonnet model', (taskType) => {
-      const route = manager.routeToModel(taskType);
-      expect(route.model).toBe(SONNET_MODEL);
+  describe('chef-upgrade tasks — Haiku for free + premium, Sonnet for chef', () => {
+    it.each(CHEF_UPGRADE_TASKS)('routeToModel(%s, free) returns Haiku', (taskType) => {
+      expect(manager.routeToModel(taskType, 'free').model).toBe(HAIKU_MODEL);
+    });
+    it.each(CHEF_UPGRADE_TASKS)('routeToModel(%s, premium) returns Haiku', (taskType) => {
+      expect(manager.routeToModel(taskType, 'premium').model).toBe(HAIKU_MODEL);
+    });
+    it.each(CHEF_UPGRADE_TASKS)('routeToModel(%s, chef) returns Sonnet', (taskType) => {
+      expect(manager.routeToModel(taskType, 'chef').model).toBe(SONNET_MODEL);
     });
   });
 
-  describe('specific task routing spot-checks', () => {
-    it('safety_check routes to Haiku', () => {
-      const route = manager.routeToModel('safety_check');
-      expect(route.model).toBe(HAIKU_MODEL);
-      expect(route.provider).toBe('claude');
-    });
-
-    it('recipe_generation routes to Sonnet', () => {
-      const route = manager.routeToModel('recipe_generation');
-      expect(route.model).toBe(SONNET_MODEL);
-      expect(route.provider).toBe('claude');
-    });
-
-    it('photo_meal_recognition routes to Sonnet', () => {
-      const route = manager.routeToModel('photo_meal_recognition');
-      expect(route.model).toBe(SONNET_MODEL);
-    });
-
-    it('craving_keyword_mapping routes to Haiku', () => {
-      const route = manager.routeToModel('craving_keyword_mapping');
-      expect(route.model).toBe(HAIKU_MODEL);
-    });
-
-    it('ingredient_substitution routes to Haiku', () => {
-      const route = manager.routeToModel('ingredient_substitution');
-      expect(route.model).toBe(HAIKU_MODEL);
-    });
-
-    it('nutrition_label_parse routes to Haiku', () => {
-      const route = manager.routeToModel('nutrition_label_parse');
-      expect(route.model).toBe(HAIKU_MODEL);
-    });
-
-    it('utterance_composition routes to Sonnet', () => {
-      const route = manager.routeToModel('utterance_composition');
-      expect(route.model).toBe(SONNET_MODEL);
-    });
-
-    it('craving_natural_language routes to Sonnet', () => {
-      const route = manager.routeToModel('craving_natural_language');
-      expect(route.model).toBe(SONNET_MODEL);
-    });
-
-    it('healthify_craving routes to Sonnet', () => {
-      const route = manager.routeToModel('healthify_craving');
-      expect(route.model).toBe(SONNET_MODEL);
-    });
-
-    it('simple_chat routes to Haiku', () => {
-      const route = manager.routeToModel('simple_chat');
-      expect(route.model).toBe(HAIKU_MODEL);
+  describe('default tier behavior', () => {
+    it('routeToModel without an explicit tier defaults to free (Haiku)', () => {
+      // Backwards compat: old callers that just pass taskType get the
+      // cheapest route — which is also the safest fall-back.
+      expect(manager.routeToModel('recipe_generation').model).toBe(HAIKU_MODEL);
+      expect(manager.routeToModel('healthify_craving').model).toBe(HAIKU_MODEL);
     });
   });
 

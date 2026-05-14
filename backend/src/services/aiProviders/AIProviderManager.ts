@@ -1,65 +1,100 @@
 import { logger } from '../../utils/logger';
 // AI Provider Manager - Handles automatic fallback between providers
 import { AIProvider, RecipeGenerationRequest, AIProviderError } from './AIProvider';
-import type { AITaskType, ModelRoute } from './AIProvider';
+import type { AITaskType, ModelRoute, UserTier } from './AIProvider';
 import { ClaudeProvider } from './ClaudeProvider';
 import { GeminiProvider } from './GeminiProvider';
+import { OpenAICompatProvider } from './OpenAICompatProvider';
+import { OllamaProvider } from './OllamaProvider';
 import type { GeneratedRecipe } from '../aiRecipeService';
 import { captureException } from '@/utils/sentryCapture';
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 const SONNET_MODEL = 'claude-sonnet-4-6';
 
-const MODEL_ROUTES: Record<AITaskType, ModelRoute> = {
+/**
+ * Path A — tier-aware model routing.
+ *
+ * Free + Premium → Haiku (today). Chef → Sonnet for recipe-style tasks
+ * where Sonnet's structured-output quality is worth the 6× premium.
+ *
+ * The PII guard from the original routing table stays: every tier returns
+ * provider 'claude'. Path B / Path C in the launch roadmap relax that
+ * for the free tier (with PII stripping or third-party DPAs in place).
+ *
+ * Adding a tier: append it to `UserTier` in AIProvider.ts + add a column
+ * here. The compiler enforces exhaustiveness.
+ */
+const MODEL_ROUTES: Record<AITaskType, Record<UserTier, ModelRoute>> = {
   recipe_generation: {
-    model: SONNET_MODEL,
-    provider: 'claude',
-    reasoning: 'Requires structured JSON output with accurate nutrition math — Sonnet quality needed',
+    free: {
+      model: HAIKU_MODEL,
+      provider: 'claude',
+      reasoning: 'Free tier: Haiku — structured JSON + nutrition math hold, 6× cheaper than Sonnet.',
+    },
+    premium: {
+      model: HAIKU_MODEL,
+      provider: 'claude',
+      reasoning: 'Premium tier: Haiku — same baseline as free today; Path B differentiates later.',
+    },
+    chef: {
+      model: SONNET_MODEL,
+      provider: 'claude',
+      reasoning: 'Chef tier: Sonnet — richer prose + tighter nutrition math worth the premium.',
+    },
   },
   safety_check: {
-    model: HAIKU_MODEL,
-    provider: 'claude',
-    reasoning: 'Simple binary classification; Haiku is sufficient and ~3x cheaper',
+    free: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Binary classification — Haiku across all tiers.' },
+    premium: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Binary classification — Haiku across all tiers.' },
+    chef: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Binary classification — Haiku across all tiers.' },
   },
   craving_keyword_mapping: {
-    model: HAIKU_MODEL,
-    provider: 'claude',
-    reasoning: 'Keyword extraction is a lookup-style task; Haiku handles it well',
+    free: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Keyword extraction — Haiku across all tiers.' },
+    premium: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Keyword extraction — Haiku across all tiers.' },
+    chef: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Keyword extraction — Haiku across all tiers.' },
   },
   ingredient_substitution: {
-    model: HAIKU_MODEL,
-    provider: 'claude',
-    reasoning: 'Lookup-style substitution with limited reasoning depth needed',
+    free: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Lookup-style swap — Haiku across all tiers.' },
+    premium: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Lookup-style swap — Haiku across all tiers.' },
+    chef: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Lookup-style swap — Haiku across all tiers.' },
   },
   nutrition_label_parse: {
-    model: HAIKU_MODEL,
-    provider: 'claude',
-    reasoning: 'Structured field extraction from a known schema; Haiku is sufficient',
+    free: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Structured extraction — Haiku across all tiers.' },
+    premium: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Structured extraction — Haiku across all tiers.' },
+    chef: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Structured extraction — Haiku across all tiers.' },
   },
   photo_meal_recognition: {
-    model: SONNET_MODEL,
-    provider: 'claude',
-    reasoning: 'Requires vision + multi-step reasoning to identify meals accurately',
+    free: {
+      model: HAIKU_MODEL,
+      provider: 'claude',
+      reasoning: 'Free tier: Haiku vision (4.5 supports it) — accuracy slight drop vs Sonnet, acceptable.',
+    },
+    premium: {
+      model: HAIKU_MODEL,
+      provider: 'claude',
+      reasoning: 'Premium tier: Haiku vision today; Chef gets Sonnet for tougher photo cases.',
+    },
+    chef: { model: SONNET_MODEL, provider: 'claude', reasoning: 'Chef tier: Sonnet vision for multi-step photo reasoning.' },
   },
   utterance_composition: {
-    model: SONNET_MODEL,
-    provider: 'claude',
-    reasoning: 'Group 10X voice tone requires nuanced language generation',
+    free: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Free tier: Haiku — voice quality acceptable.' },
+    premium: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Premium tier: Haiku today.' },
+    chef: { model: SONNET_MODEL, provider: 'claude', reasoning: 'Chef tier: Sonnet — Group 10X tone benefits from the heavier model.' },
   },
   craving_natural_language: {
-    model: SONNET_MODEL,
-    provider: 'claude',
-    reasoning: 'Complex NL understanding of free-form craving descriptions',
+    free: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Free tier: Haiku — most cravings parse cleanly.' },
+    premium: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Premium tier: Haiku today.' },
+    chef: { model: SONNET_MODEL, provider: 'claude', reasoning: 'Chef tier: Sonnet — long-tail craving NL is where Sonnet earns its rate.' },
   },
   healthify_craving: {
-    model: SONNET_MODEL,
-    provider: 'claude',
-    reasoning: 'Subjective swap reasoning across health and taste dimensions',
+    free: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Free tier: Haiku — swap suggestions stay reasonable.' },
+    premium: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'Premium tier: Haiku today.' },
+    chef: { model: SONNET_MODEL, provider: 'claude', reasoning: 'Chef tier: Sonnet — subjective health/taste tradeoffs.' },
   },
   simple_chat: {
-    model: HAIKU_MODEL,
-    provider: 'claude',
-    reasoning: 'General-purpose chat with no complex reasoning requirement',
+    free: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'General chat — Haiku across all tiers.' },
+    premium: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'General chat — Haiku across all tiers.' },
+    chef: { model: HAIKU_MODEL, provider: 'claude', reasoning: 'General chat — Haiku across all tiers.' },
   },
 };
 
@@ -77,10 +112,42 @@ export class AIProviderManager {
     const defaultOrder = ['claude', 'gemini'];
     this.providerOrder = configuredOrder.length > 0 ? configuredOrder : defaultOrder;
 
-    // Initialize all available providers
+    // Initialize all available providers.
+    //
+    // Live-inference policy (AIProvider.ts): user-facing requests stay on
+    // `claude`. The other providers (`gemini`, `groq`, `deepseek`,
+    // `openai_compat`, `ollama`) are intended for seed / batch / admin
+    // pipelines where the prompt contains no user PII. Gate them via
+    // AI_PROVIDER_ORDER at run time.
     const allProviders: { [key: string]: AIProvider } = {
       claude: new ClaudeProvider(),
       gemini: new GeminiProvider(),
+      // Groq — Llama 3.3 70B via OpenAI-compatible API. Set GROQ_API_KEY
+      // (get one at https://console.groq.com/keys, no ID verification).
+      groq: new OpenAICompatProvider({
+        label: 'Groq (Llama 3.3 70B)',
+        envKey: 'GROQ_API_KEY',
+        envBaseUrl: 'GROQ_BASE_URL',
+        envModel: 'GROQ_MODEL',
+        defaultBaseUrl: 'https://api.groq.com/openai/v1',
+        defaultModel: 'llama-3.3-70b-versatile',
+      }),
+      // DeepSeek — DeepSeek-V3 via its own OpenAI-compatible API. Set
+      // DEEPSEEK_API_KEY (get one at https://platform.deepseek.com/api_keys).
+      // Override DEEPSEEK_BASE_URL to point at DeepInfra/Together if you
+      // prefer hosted-elsewhere routing.
+      deepseek: new OpenAICompatProvider({
+        label: 'DeepSeek-V3',
+        envKey: 'DEEPSEEK_API_KEY',
+        envBaseUrl: 'DEEPSEEK_BASE_URL',
+        envModel: 'DEEPSEEK_MODEL',
+        defaultBaseUrl: 'https://api.deepseek.com/v1',
+        defaultModel: 'deepseek-chat',
+      }),
+      // Generic OpenAI-compat slot — for any other host (Together, DeepInfra,
+      // OpenRouter, Fireworks, vLLM). Configured via OPENAI_COMPAT_* env.
+      openai_compat: new OpenAICompatProvider(),
+      ollama: new OllamaProvider(),
     };
 
     // Add providers in configured order, only if they're available
@@ -224,13 +291,20 @@ export class AIProviderManager {
   }
 
   /**
-   * Return the optimal (model, provider, reasoning) for a given task type.
+   * Return the optimal (model, provider, reasoning) for a given task +
+   * user tier.
    *
    * PII guard: all routes return provider 'claude' — user PII (weight, age,
-   * health conditions) never leaves Anthropic infrastructure.
+   * health conditions) never leaves Anthropic infrastructure. Path B / C
+   * (launch roadmap) relax that for the free tier with PII stripping or
+   * third-party DPAs in place.
+   *
+   * `tier` defaults to 'free' so callers that haven't been migrated yet
+   * still receive the cheapest route, which is also the safest fall-back.
    */
-  routeToModel(taskType: AITaskType): ModelRoute {
-    return MODEL_ROUTES[taskType];
+  routeToModel(taskType: AITaskType, tier: UserTier = 'free'): ModelRoute {
+    const routesForTask = MODEL_ROUTES[taskType];
+    return routesForTask[tier] ?? routesForTask.free;
   }
 
   /**
