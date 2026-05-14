@@ -68,6 +68,8 @@ import { useHomeFilterRowChips } from '../../hooks/useFilterRowChips';
 import { useFilterChipRanking } from '../../hooks/useFilterChipRanking';
 import { countAllActiveFilters } from '../../utils/filterUtils';
 import { FOOD_INTEL_TIPS } from '../../lib/foodIntelTips';
+import { getTipSearchQuery } from '../../lib/foodIntelAction';
+import { recordTipEngagement } from '../../lib/foodIntelMatcher';
 import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
 import RandomRecipeModal from '../../components/home/RandomRecipeModal';
 // PantryMatchCard removed — editorial v2 absorbs pantry info into subtitle
@@ -220,9 +222,22 @@ export default function HomeScreen() {
   }, []);
 
   const handleDiscoveryTipPress = useCallback((tipId: string) => {
-    // ROADMAP 4.0 A1-c — engagement record will land with C10 cultural primer wiring
-    void tipId;
-  }, []);
+    const tipEntry = FOOD_INTEL_TIPS.find((t) => t.id === tipId);
+    if (!tipEntry) return;
+    // Record engagement regardless of action (matcher learns from every tap).
+    if (user?.id) {
+      void recordTipEngagement(user.id, tipId, 'expanded');
+    }
+    // Searchable categories (superfood / nutrient / pairing / ingredient)
+    // route to a recipe search seeded with the tip's primary ingredient so
+    // the user can immediately find a recipe to cook. Other categories
+    // (technique / myth_bust / cultural / arc) stay no-op for now — a
+    // detail-view expansion can take over later without re-wiring this.
+    const query = getTipSearchQuery(tipEntry);
+    if (query) {
+      router.setParams({ search: query, craving: '' });
+    }
+  }, [user?.id]);
 
   // ── ROADMAP 4.0 A1-d — Today quick-action chip handlers ──
   const handleQuickActionBuildAPlate = useCallback(() => {

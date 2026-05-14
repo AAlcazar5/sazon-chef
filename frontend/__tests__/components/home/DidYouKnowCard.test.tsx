@@ -168,6 +168,39 @@ describe('DidYouKnowCard', () => {
     });
   });
 
+  it('tapping a searchable tip routes to home search with the trigger as query', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { router } = require('expo-router');
+    router.push.mockClear();
+    // TIP_A.trigger = 'turmeric' — superfood category is searchable.
+    const { findByTestId } = render(<DidYouKnowCard testID="dyk-card" />);
+    const body = await findByTestId('dyk-card-body');
+    await act(async () => {
+      fireEvent.press(body);
+    });
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledWith('/?search=turmeric');
+    });
+  });
+
+  it('tapping a non-searchable tip does not navigate', async () => {
+    const TIP_TECH = { ...TIP_A, id: 'tech-1', category: 'technique' as const, trigger: 'searing' };
+    mockMatchFoodIntelTips.mockResolvedValue([TIP_TECH]);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { router } = require('expo-router');
+    router.push.mockClear();
+    const { findByTestId } = render(<DidYouKnowCard testID="dyk-card" />);
+    const body = await findByTestId('dyk-card-body');
+    await act(async () => {
+      fireEvent.press(body);
+    });
+    // Engagement still records but no navigation fires.
+    await waitFor(() => {
+      expect(mockRecordTipEngagement).toHaveBeenCalled();
+    });
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
   it('mounts and renders without crashing under the animation system (fade-in smoke)', async () => {
     const { findByTestId } = render(<DidYouKnowCard testID="dyk-card" />);
     expect(await findByTestId('dyk-card')).toBeTruthy();

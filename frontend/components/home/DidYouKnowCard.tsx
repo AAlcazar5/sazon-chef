@@ -5,12 +5,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useColorScheme } from 'nativewind';
+import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useFoodIntelUserState } from '../../hooks/useFoodIntelUserState';
 import {
   matchFoodIntelTips,
   recordTipEngagement,
 } from '../../lib/foodIntelMatcher';
+import { getTipSearchQuery } from '../../lib/foodIntelAction';
 import type { FoodIntelTip } from '../../lib/foodIntelTips';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { Pastel, PastelDark, EditorialColors } from '../../constants/Colors';
@@ -61,6 +63,13 @@ export default function DidYouKnowCard({ testID, onDismiss }: DidYouKnowCardProp
   const handleExpand = useCallback(() => {
     if (!tip || !userState) return;
     void recordTipEngagement(userState.userId, tip.id, 'expanded');
+    // Searchable tips (superfood / nutrient / pairing / ingredient) route to
+    // the home tab's recipe search seeded with the tip's primary ingredient.
+    // Non-searchable categories stay engagement-only — future detail expansion.
+    const query = getTipSearchQuery(tip);
+    if (query) {
+      router.push(`/?search=${encodeURIComponent(query)}` as never);
+    }
   }, [tip, userState]);
 
   if (!tip || dismissed) return null;
