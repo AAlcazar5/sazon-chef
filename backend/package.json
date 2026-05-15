@@ -20,6 +20,7 @@
     "seed:tier-d-gap": "ts-node -r tsconfig-paths/register scripts/seed-tier-d-gap-fill.ts",
     "seed:500-newer": "ts-node -r tsconfig-paths/register scripts/seed-500-newer-cuisines.ts",
     "seed:500-newer-dedup": "ts-node -r tsconfig-paths/register scripts/seed-500-newer-cuisines-dedup.ts",
+    "seed:1000-newer-dedup": "ts-node -r tsconfig-paths/register scripts/seed-1000-newer-cuisines-dedup.ts",
     "recipes:detect-dupes": "ts-node -r tsconfig-paths/register scripts/detect-duplicate-recipes.ts",
     "recipes:dedupe": "ts-node -r tsconfig-paths/register scripts/dedupe-recipes-post-run.ts",
     "seed:100": "ts-node -r tsconfig-paths/register scripts/seed-100-recipes.ts",
