@@ -21,10 +21,10 @@
 //
 // Cost-aware. Defaults to DRY_RUN — set DRY_RUN=0 to execute.
 //
-// Provider selection (SEED_PROVIDER env, default 'groq'):
-//   groq           Default. Llama 3.3 70B. ~$1.50 for 500. Fastest (~250 tok/s,
+// Provider selection (SEED_PROVIDER env, default 'deepseek'):
+//   groq           Llama 3.3 70B. ~$1.50 for 500. Fastest (~250 tok/s,
 //                  ~100 min total). Requires GROQ_API_KEY (no ID verification).
-//   deepseek       DeepSeek-V3. ~$1.80 for 500. Slightly stronger structured
+//   deepseek       Default. DeepSeek-V3. ~$1.80 for 500. Slightly stronger structured
 //                  JSON than Llama. Requires DEEPSEEK_API_KEY.
 //   gemini         ~$0.66 for 500 with Flash-Lite. Requires GOOGLE_AI_API_KEY
 //                  (note: Google may require account-ID verification).
@@ -36,7 +36,7 @@
 //                  Set OLLAMA_MODEL (default llama3.1:70b). ~7 hrs for 500.
 //
 // Default provider chain when SEED_PROVIDER is a FOSS option (groq/deepseek/
-// openai_compat/ollama) is `groq,deepseek` — Groq primary, DeepSeek fallback.
+// openai_compat/ollama) is `deepseek,groq` — DeepSeek primary, Groq fallback.
 // Closed providers (gemini/claude) are NOT auto-appended; set
 // AI_PROVIDER_ORDER yourself if you want to mix.
 //
@@ -63,7 +63,7 @@ type SeedProvider =
   | 'openai_compat'
   | 'ollama';
 
-const SEED_PROVIDER = (process.env.SEED_PROVIDER ?? 'groq') as SeedProvider;
+const SEED_PROVIDER = (process.env.SEED_PROVIDER ?? 'deepseek') as SeedProvider;
 const DEFAULT_COST_BY_PROVIDER: Record<SeedProvider, number> = {
   groq: 0.003,
   deepseek: 0.0036,
