@@ -318,6 +318,12 @@ api.interceptors.response.use(
                             error.config?.url?.includes('/auth/forgot-password') ||
                             error.config?.url?.includes('/auth/reset-password');
 
+      // Telemetry endpoints are fire-and-forget analytics — a 401 on one of
+      // these should NEVER pop the "Session Expired" alert or log the user
+      // out. If the token really is dead, the next real user action will
+      // hit a 401 on a meaningful endpoint and trigger logout there.
+      const isTelemetryEndpoint = error.config?.url?.includes('/telemetry/');
+
       // Bootstrap-time verify call (AuthContext.loadStoredAuth) handles its
       // own 401 — opt-out of the auto-logout Alert so we don't double-fire
       // logout while the user is mid-relogin.
@@ -368,7 +374,7 @@ api.interceptors.response.use(
         // Automatically logout on authentication errors (but NOT on auth
         // endpoints, NOT on the bootstrap verify call). Reached only when
         // the silent refresh above declined or failed.
-        if (logoutCallback && !isAuthEndpoint && !skipAuthAutoLogout) {
+        if (logoutCallback && !isAuthEndpoint && !skipAuthAutoLogout && !isTelemetryEndpoint) {
           // Log which URL forced the auto-logout — invaluable for debugging
           // "session expired despite logging back in" loops.
           console.warn(

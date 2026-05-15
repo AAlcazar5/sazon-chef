@@ -113,8 +113,47 @@ describe('recipeUtils', () => {
     });
 
     it('should keep all unique recipes', () => {
-      const recipes = [makeRecipe({ id: 'a' }), makeRecipe({ id: 'b' }), makeRecipe({ id: 'c' })];
+      const recipes = [
+        makeRecipe({ id: 'a', title: 'Alpha' }),
+        makeRecipe({ id: 'b', title: 'Bravo' }),
+        makeRecipe({ id: 'c', title: 'Charlie' }),
+      ];
       expect(deduplicateRecipes(recipes)).toHaveLength(3);
+    });
+
+    it('collapses different-id recipes that share a normalized title', () => {
+      // The reported case: three rows for "Argentinian Chimichurri Steak with
+      // Grilled Vegetables" arriving back-to-back. Different IDs (from the
+      // seed catalog regional variants) but the same title.
+      const recipes = [
+        makeRecipe({ id: 'r1', title: 'Argentinian Chimichurri Steak with Grilled Vegetables' }),
+        makeRecipe({ id: 'r2', title: 'Argentinian Chimichurri Steak with Grilled Vegetables' }),
+        makeRecipe({ id: 'r3', title: 'Argentinian Chimichurri Steak with Grilled Vegetables' }),
+        makeRecipe({ id: 'r4', title: 'Sicilian Pasta Puttanesca' }),
+      ];
+      const result = deduplicateRecipes(recipes);
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('r1'); // first occurrence wins
+      expect(result[1].id).toBe('r4');
+    });
+
+    it('normalizes title for dedup (case, whitespace, punctuation)', () => {
+      const recipes = [
+        makeRecipe({ id: 'r1', title: 'Sicilian Pasta Puttanesca' }),
+        makeRecipe({ id: 'r2', title: 'sicilian pasta puttanesca' }),
+        makeRecipe({ id: 'r3', title: '  Sicilian   Pasta Puttanesca!  ' }),
+      ];
+      expect(deduplicateRecipes(recipes)).toHaveLength(1);
+    });
+
+    it('does NOT collapse recipes with empty/missing titles purely by title', () => {
+      const recipes = [
+        makeRecipe({ id: 'r1', title: '' }),
+        makeRecipe({ id: 'r2', title: '' }),
+      ];
+      // Empty titles aren't a meaningful dedup key — both should be kept
+      // (id dedup already handled the duplicate-row case).
+      expect(deduplicateRecipes(recipes)).toHaveLength(2);
     });
   });
 

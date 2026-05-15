@@ -46,21 +46,50 @@ export function initializeFeedbackState(recipes: SuggestedRecipe[]): Record<stri
 }
 
 /**
- * Deduplicate recipes by ID
- * Logs warnings for duplicates found
+ * Normalize a recipe title for dedup comparison: lowercase, trim, collapse
+ * internal whitespace, drop trailing punctuation. Keeps the user-visible
+ * title untouched — only the comparison key changes.
+ */
+function normalizeTitleKey(title: string | undefined | null): string {
+  if (!title) return '';
+  return title
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '') // strip combining accents
+    .replace(/[^\p{L}\p{N}\s]/gu, '')  // strip punctuation/symbols
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Deduplicate recipes by ID first, then by normalized title.
+ *
+ * Two passes because the backend recommender + search occasionally surfaces
+ * the same dish under multiple recipe rows (e.g., the seed catalog contains
+ * regional variants that share a title). Title-only dedup catches those;
+ * ID dedup catches the more common "same row scored into multiple slots"
+ * case. The first occurrence wins — callers sort by score before passing
+ * the list in, so this preserves the highest-ranked entry.
  */
 export function deduplicateRecipes(recipes: SuggestedRecipe[]): SuggestedRecipe[] {
-  const seen = new Set<string>();
+  const seenIds = new Set<string>();
+  const seenTitleKeys = new Set<string>();
   return recipes.filter(recipe => {
     if (!recipe || !recipe.id) {
       console.warn('⚠️ Found recipe without ID:', recipe);
       return false;
     }
-    if (seen.has(recipe.id)) {
-      console.warn('⚠️ Duplicate recipe found:', recipe.id, recipe.title);
+    if (seenIds.has(recipe.id)) {
+      console.warn('⚠️ Duplicate recipe id:', recipe.id, recipe.title);
       return false;
     }
-    seen.add(recipe.id);
+    const titleKey = normalizeTitleKey(recipe.title);
+    if (titleKey && seenTitleKeys.has(titleKey)) {
+      console.warn('⚠️ Duplicate recipe title:', recipe.title, `(id=${recipe.id})`);
+      return false;
+    }
+    seenIds.add(recipe.id);
+    if (titleKey) seenTitleKeys.add(titleKey);
     return true;
   });
 }
