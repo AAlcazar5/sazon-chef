@@ -101,10 +101,64 @@ const RECIPE_BUDGET = Number(process.env.RECIPE_BUDGET ?? 500);
 const COST_PER_RECIPE_USD = Number(
   process.env.COST_PER_RECIPE_USD ?? DEFAULT_COST_BY_PROVIDER[SEED_PROVIDER] ?? 0.12,
 );
+// Retry-on-dup (#1): how many extra generations a slot gets when it collides
+// with an existing title before it's abandoned. Each retry feeds the colliding
+// title back so the model is pushed off the prototypical dish.
+const DUP_RETRIES = Number(process.env.DUP_RETRIES ?? 3);
+// Diversity axis (#3): rotating window of already-covered same-cuisine titles
+// fed into every first attempt; AVOID_CAP bounds the list as retries grow it.
+const AVOID_WINDOW = Number(process.env.AVOID_WINDOW ?? 12);
+const AVOID_CAP = Number(process.env.AVOID_CAP ?? 16);
+
+// Progress reporting. This run is frequently piped to a background-task
+// output file rather than an interactive terminal, so a naive `\r` redraw
+// bar smears into one giant line. Detect TTY and only redraw in place when
+// interactive; otherwise emit a newline'd progress line every
+// PROGRESS_EVERY processed slots (plus always on the final slot).
+const IS_TTY = !!process.stdout.isTTY;
+const PROGRESS_EVERY = Number(process.env.PROGRESS_EVERY ?? 25);
+
+interface ProgressCounters {
+  saved: number;
+  dup: number;
+  fail: number;
+}
+
+// `done` = slots attempted so far (i + 1), denominator = plan.length. The
+// saved/dup/fail breakdown is what happened to those attempts — dup/fail
+// rows were generated then discarded, NOT seeded, so they're framed as a
+// breakdown of "attempted", never folded into a "seeded" total.
+function renderProgress(
+  done: number,
+  total: number,
+  c: ProgressCounters,
+  label: string,
+  opts: { final?: boolean } = {},
+): void {
+  const line =
+    `[${done}/${total} attempted] ` +
+    `✓${c.saved} ⊘${c.dup} ✗${c.fail}` +
+    (label ? ` · ${label}` : '');
+  if (IS_TTY) {
+    // \r + clear-to-EOL redraws the single bar in place; newline only when done.
+    process.stdout.write(`\r\x1b[K${line}${opts.final ? '\n' : ''}`);
+  } else if (opts.final || done === total || done % PROGRESS_EVERY === 0) {
+    console.log(line);
+  }
+}
+
+// Discrete dup/fail events stay newline'd in both modes (rare + worth
+// keeping in the log). In TTY mode, break the in-place bar with a newline
+// first so the event isn't clobbered by the next redraw.
+function logEvent(message: string): void {
+  if (IS_TTY) process.stdout.write('\n');
+  console.log(message);
+}
 
 import { PrismaClient } from '@prisma/client';
 import { aiRecipeService } from '../src/services/aiRecipeService';
 import { normalizeRecipeTitleKey } from '../src/utils/recipeTitleKey';
+import { buildAvoidContext, appendAvoid } from './seedDiversity';
 
 const prisma = new PrismaClient();
 
@@ -310,60 +364,112 @@ async function main(): Promise<void> {
   // ── Dedup guard — preload every existing normalized title key ──────────
   // One query up front beats a findFirst per recipe. The set grows as the
   // run generates new recipes so an intra-run collision (two jobs yielding
-  // the same dish) is also caught without a DB round-trip.
-  const existingTitles = await prisma.recipe.findMany({ select: { title: true } });
+  // the same dish) is also caught without a DB round-trip. cuisine is pulled
+  // alongside so the diversity axis can hand each job its own cuisine's
+  // already-covered titles as an avoid list.
+  const existingTitles = await prisma.recipe.findMany({
+    select: { title: true, cuisine: true },
+  });
   const seenTitleKeys = new Set<string>();
-  for (const { title } of existingTitles) {
+  const knownTitlesByCuisine = new Map<string, string[]>();
+  for (const { title, cuisine } of existingTitles) {
     const key = normalizeRecipeTitleKey(title);
     if (key) seenTitleKeys.add(key);
+    if (cuisine) {
+      const list = knownTitlesByCuisine.get(cuisine);
+      if (list) list.push(title);
+      else knownTitlesByCuisine.set(cuisine, [title]);
+    }
   }
   console.log(`  Dedup guard:            ${seenTitleKeys.size} existing title keys loaded`);
+  console.log(`  Diversity axis:         window ${AVOID_WINDOW}, ${DUP_RETRIES} retries/slot`);
   console.log('');
 
   let succeeded = 0;
   let failed = 0;
   let skippedDuplicate = 0;
+  let recoveredByRetry = 0;
+  let retriesUsed = 0;
+  let apiCalls = 0;
+  // Per-cuisine job counter — rotates the avoid window so successive jobs for
+  // the same cuisine suppress different prototypes instead of the same head.
+  const cuisineJobIndex = new Map<string, number>();
   const startedAt = Date.now();
 
   for (let i = 0; i < plan.length; i += 1) {
     const job = plan[i];
     const label = `${job.cuisine} ${job.mealType}`;
-    process.stdout.write(`[${i + 1}/${plan.length}] ${label}… `);
-    try {
-      const recipe = await aiRecipeService.generateRecipe({
-        userId: null,
-        cuisineOverride: job.cuisine,
-        mealType: job.mealType,
-      });
 
-      // ── Dedup guard ──────────────────────────────────────────────────
-      // Generation already cost the API call, but skipping the DB write
-      // (and its image fetch) is what actually prevents the duplicate row.
-      const titleKey = normalizeRecipeTitleKey(recipe.title);
-      if (titleKey && seenTitleKeys.has(titleKey)) {
-        skippedDuplicate += 1;
-        console.log(`⊘ dup "${recipe.title.slice(0, 48)}"`);
-        continue;
+    const jobIndex = cuisineJobIndex.get(job.cuisine) ?? 0;
+    cuisineJobIndex.set(job.cuisine, jobIndex + 1);
+    const known = knownTitlesByCuisine.get(job.cuisine) ?? [];
+    let avoid = buildAvoidContext(known, { windowSize: AVOID_WINDOW, jobIndex });
+
+    let slotDone = false;
+    for (let attempt = 0; attempt <= DUP_RETRIES && !slotDone; attempt += 1) {
+      try {
+        apiCalls += 1;
+        const recipe = await aiRecipeService.generateRecipe({
+          userId: null,
+          cuisineOverride: job.cuisine,
+          mealType: job.mealType,
+          previousMeals: avoid.length > 0 ? avoid : undefined,
+        });
+
+        // ── Dedup guard ────────────────────────────────────────────────
+        // Generation already cost the API call, but skipping the DB write
+        // (and its image fetch) is what actually prevents the duplicate row.
+        const titleKey = normalizeRecipeTitleKey(recipe.title);
+        if (titleKey && seenTitleKeys.has(titleKey)) {
+          if (attempt < DUP_RETRIES) {
+            retriesUsed += 1;
+            avoid = appendAvoid(avoid, recipe.title, AVOID_CAP);
+            continue; // retry this slot with the collision fed back
+          }
+          skippedDuplicate += 1;
+          logEvent(`⊘ dup "${recipe.title.slice(0, 48)}" (${label}, after ${attempt} retries)`);
+          slotDone = true;
+          break;
+        }
+
+        await aiRecipeService.saveGeneratedRecipe(recipe, null);
+        if (titleKey) {
+          seenTitleKeys.add(titleKey);
+          known.push(recipe.title);
+          knownTitlesByCuisine.set(job.cuisine, known);
+        }
+        succeeded += 1;
+        if (attempt > 0) recoveredByRetry += 1;
+        slotDone = true;
+      } catch (err) {
+        // generateRecipe already retries its own internal failures; a throw
+        // here is terminal for the slot — don't burn dup-retries on it.
+        failed += 1;
+        const msg = err instanceof Error ? err.message : String(err);
+        logEvent(`✗ ${label}: ${msg.slice(0, 80)}`);
+        slotDone = true;
       }
-
-      await aiRecipeService.saveGeneratedRecipe(recipe, null);
-      if (titleKey) seenTitleKeys.add(titleKey);
-      succeeded += 1;
-      console.log('✓');
-    } catch (err) {
-      failed += 1;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.log(`✗ ${msg.slice(0, 80)}`);
     }
+
+    renderProgress(
+      i + 1,
+      plan.length,
+      { saved: succeeded, dup: skippedDuplicate, fail: failed },
+      label,
+      { final: i + 1 === plan.length },
+    );
   }
 
   const elapsedMin = ((Date.now() - startedAt) / 60_000).toFixed(1);
+  if (IS_TTY) process.stdout.write('\n');
   console.log('');
   console.log(`Done in ${elapsedMin}m.`);
-  console.log(`  ✓ ${succeeded}/${plan.length} saved`);
-  console.log(`  ⊘ ${skippedDuplicate}/${plan.length} skipped (duplicate title)`);
-  console.log(`  ✗ ${failed}/${plan.length} failed`);
-  console.log(`  Approx spend: $${((succeeded + skippedDuplicate) * COST_PER_RECIPE_USD).toFixed(2)}`);
+  console.log(`  ${plan.length} slots attempted — breakdown:`);
+  console.log(`    ✓ ${succeeded} saved        (${recoveredByRetry} recovered via retry)`);
+  console.log(`    ⊘ ${skippedDuplicate} discarded     (duplicate title, retries exhausted — generated, not seeded)`);
+  console.log(`    ✗ ${failed} failed`);
+  console.log(`  ↻ ${retriesUsed} dup-retries used across ${apiCalls} API calls`);
+  console.log(`  Approx spend: $${(apiCalls * COST_PER_RECIPE_USD).toFixed(2)}`);
 }
 
 main()

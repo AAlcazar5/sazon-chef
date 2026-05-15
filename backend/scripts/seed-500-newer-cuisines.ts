@@ -94,6 +94,36 @@ const COST_PER_RECIPE_USD = Number(
   process.env.COST_PER_RECIPE_USD ?? DEFAULT_COST_BY_PROVIDER[SEED_PROVIDER] ?? 0.12,
 );
 
+// Progress reporting. This run is frequently piped to a background-task
+// output file rather than an interactive terminal, so a naive `\r` redraw
+// bar smears into one giant line. Detect TTY and only redraw in place when
+// interactive; otherwise emit a newline'd progress line every
+// PROGRESS_EVERY processed slots (plus always on the final slot).
+const IS_TTY = !!process.stdout.isTTY;
+const PROGRESS_EVERY = Number(process.env.PROGRESS_EVERY ?? 25);
+
+// `done` = slots attempted so far (i + 1), denominator = plan.length.
+// saved/fail is the breakdown of those attempts.
+function renderProgress(
+  done: number,
+  total: number,
+  c: { saved: number; fail: number },
+  label: string,
+  opts: { final?: boolean } = {},
+): void {
+  const line = `[${done}/${total} attempted] ✓${c.saved} ✗${c.fail}` + (label ? ` · ${label}` : '');
+  if (IS_TTY) {
+    process.stdout.write(`\r\x1b[K${line}${opts.final ? '\n' : ''}`);
+  } else if (opts.final || done === total || done % PROGRESS_EVERY === 0) {
+    console.log(line);
+  }
+}
+
+function logEvent(message: string): void {
+  if (IS_TTY) process.stdout.write('\n');
+  console.log(message);
+}
+
 import { PrismaClient } from '@prisma/client';
 import { aiRecipeService } from '../src/services/aiRecipeService';
 
@@ -115,86 +145,99 @@ const prisma = new PrismaClient();
 // Established cuisines (American, Italian, Japanese, …) stay out of scope —
 // this is widening, not deepening.
 const CUISINE_TARGETS: Record<string, number> = {
+  // Established-but-thin (added 2026-05-14): these globally popular cuisines
+  // were excluded from earlier passes because they had a head start (28-85
+  // recipes vs the long-tail's 0-12). The long-tail has since lapped them,
+  // so bring them to floor so users tapping East Asia → Chinese don't see
+  // a thinner result than East Asia → Mongolian.
+  Italian: 118,
+  Chinese: 118,
+  Japanese: 118,
+  Korean: 118,
+  Thai: 118,
+  Filipino: 118,
+  Indian: 118,
+
   // Europe
-  French: 46,
-  Spanish: 46,
-  Greek: 46,
-  Portuguese: 46,
-  British: 46,
-  Scandinavian: 46,
-  Balkan: 46,
-  German: 46,
-  Austrian: 46,
-  Hungarian: 46,
-  Polish: 46,
-  Russian: 46,
-  Ukrainian: 46,
-  Georgian: 46,
+  French: 118,
+  Spanish: 118,
+  Greek: 118,
+  Portuguese: 118,
+  British: 118,
+  Scandinavian: 118,
+  Balkan: 118,
+  German: 118,
+  Austrian: 118,
+  Hungarian: 118,
+  Polish: 118,
+  Russian: 118,
+  Ukrainian: 118,
+  Georgian: 118,
 
   // MENA
-  Levantine: 46,
-  Lebanese: 46,
-  Persian: 46,
-  Turkish: 46,
-  Moroccan: 46,
-  Tunisian: 46,
-  Egyptian: 46,
-  Yemeni: 46,
-  Israeli: 46,
+  Levantine: 118,
+  Lebanese: 118,
+  Persian: 118,
+  Turkish: 118,
+  Moroccan: 118,
+  Tunisian: 118,
+  Egyptian: 118,
+  Yemeni: 118,
+  Israeli: 118,
 
   // Sub-Saharan Africa
-  Ethiopian: 46,
-  Eritrean: 46,
-  Nigerian: 46,
-  Ghanaian: 46,
-  Senegalese: 46,
-  Ivorian: 46,
-  'South African': 46,
-  Kenyan: 46,
-  Somali: 46,
+  Ethiopian: 118,
+  Eritrean: 118,
+  Nigerian: 118,
+  Ghanaian: 118,
+  Senegalese: 118,
+  Ivorian: 118,
+  'South African': 118,
+  Kenyan: 118,
+  Somali: 118,
 
-  // East Asia (skip Chinese/Japanese/Korean — healthy)
-  Mongolian: 46,
-  Tibetan: 46,
+  // East Asia (Chinese, Japanese, Korean added to established-but-thin block above)
+  Mongolian: 118,
+  Tibetan: 118,
 
-  // SE Asia (skip Thai/Filipino — healthy)
-  Vietnamese: 46,
-  Indonesian: 46,
-  Malaysian: 46,
-  Singaporean: 46,
-  Burmese: 46,
-  Lao: 46,
-  Khmer: 46,
+  // SE Asia (Thai, Filipino added to established-but-thin block above)
+  Vietnamese: 118,
+  Indonesian: 118,
+  Malaysian: 118,
+  Singaporean: 118,
+  Burmese: 118,
+  Lao: 118,
+  Khmer: 118,
 
-  // South Asia (skip Indian — healthy)
-  Pakistani: 46,
-  'Sri Lankan': 46,
-  Nepali: 46,
+  // South Asia (Indian added to established-but-thin block above)
+  Pakistani: 118,
+  'Sri Lankan': 118,
+  Nepali: 118,
 
   // Latin America (skip Mexican — healthy)
-  Peruvian: 46,
-  Brazilian: 46,
-  Colombian: 46,
-  Argentinian: 46,
-  Chilean: 46,
-  Cuban: 46,
-  'Puerto Rican': 46,
-  Dominican: 46,
-  Salvadorean: 46,
-  Guatemalan: 46,
-  Venezuelan: 46,
-  Trinidadian: 46,
-  Jamaican: 46,
+  Peruvian: 118,
+  Brazilian: 118,
+  Colombian: 118,
+  Argentinian: 118,
+  Chilean: 118,
+  Cuban: 118,
+  'Puerto Rican': 118,
+  Dominican: 118,
+  Salvadorean: 118,
+  Guatemalan: 118,
+  Venezuelan: 118,
+  Trinidadian: 118,
+  Jamaican: 118,
 
   // North America (skip American — healthy)
-  'American Southern': 46,
-  Cajun: 46,
-  Hawaiian: 46,
-  Canadian: 46,
+  'American Southern': 118,
+  Cajun: 118,
+  Hawaiian: 118,
+  Canadian: 118,
 
   // Oceania
-  Australian: 46,
-  'Pacific Islander': 46,
+  Australian: 118,
+  'Pacific Islander': 118,
 };
 
 // Even meal-type rotation so each cuisine ships breakfast/lunch/dinner/snack
@@ -292,7 +335,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < plan.length; i += 1) {
     const job = plan[i];
     const label = `${job.cuisine} ${job.mealType}`;
-    process.stdout.write(`[${i + 1}/${plan.length}] ${label}… `);
     try {
       const recipe = await aiRecipeService.generateRecipe({
         userId: null,
@@ -301,19 +343,27 @@ async function main(): Promise<void> {
       });
       await aiRecipeService.saveGeneratedRecipe(recipe, null);
       succeeded += 1;
-      console.log('✓');
     } catch (err) {
       failed += 1;
       const msg = err instanceof Error ? err.message : String(err);
-      console.log(`✗ ${msg.slice(0, 80)}`);
+      logEvent(`✗ ${label}: ${msg.slice(0, 80)}`);
     }
+    renderProgress(
+      i + 1,
+      plan.length,
+      { saved: succeeded, fail: failed },
+      label,
+      { final: i + 1 === plan.length },
+    );
   }
 
   const elapsedMin = ((Date.now() - startedAt) / 60_000).toFixed(1);
+  if (IS_TTY) process.stdout.write('\n');
   console.log('');
   console.log(`Done in ${elapsedMin}m.`);
-  console.log(`  ✓ ${succeeded}/${plan.length} succeeded`);
-  console.log(`  ✗ ${failed}/${plan.length} failed`);
+  console.log(`  ${plan.length} slots attempted — breakdown:`);
+  console.log(`    ✓ ${succeeded} saved`);
+  console.log(`    ✗ ${failed} failed`);
   console.log(`  Approx spend: $${(succeeded * COST_PER_RECIPE_USD).toFixed(2)}`);
 }
 
