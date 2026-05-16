@@ -5,6 +5,7 @@
 import {
   buildAvoidContext,
   appendAvoid,
+  pickDiversityAxis,
   type AvoidMeal,
 } from '../../scripts/seedDiversity';
 
@@ -74,5 +75,58 @@ describe('appendAvoid', () => {
     expect(ctx).toHaveLength(5);
     expect(ctx[ctx.length - 1].title).toBe('Dish 19');
     expect(ctx[0].title).toBe('Dish 15');
+  });
+});
+
+describe('pickDiversityAxis', () => {
+  const meals = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+
+  it('returns a non-empty positive steer for every meal type and index', () => {
+    for (const m of meals) {
+      for (let i = 0; i < 100; i += 1) {
+        const s = pickDiversityAxis(m, i);
+        expect(typeof s).toBe('string');
+        expect(s.trim().length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('is deterministic for the same (mealType, jobIndex)', () => {
+    expect(pickDiversityAxis('dinner', 17)).toBe(pickDiversityAxis('dinner', 17));
+  });
+
+  it('rotates with jobIndex so successive same-cuisine jobs get a different steer', () => {
+    expect(pickDiversityAxis('dinner', 0)).not.toBe(pickDiversityAxis('dinner', 1));
+  });
+
+  it('explores broadly — ≥30 distinct steers across 70 jobs (breaks the ~70-100/cuisine ceiling)', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 70; i += 1) seen.add(pickDiversityAxis('dinner', i));
+    expect(seen.size).toBeGreaterThanOrEqual(30);
+  });
+
+  it('breakfast steers stay breakfast-appropriate (no braised stews at 8am)', () => {
+    for (let i = 0; i < 40; i += 1) {
+      const s = pickDiversityAxis('breakfast', i);
+      expect(s).toMatch(/breakfast|morning|brunch/i);
+      expect(s).not.toMatch(/braised|stew/i);
+    }
+  });
+
+  it('snack steers read as snacks, not mains', () => {
+    for (let i = 0; i < 30; i += 1) {
+      expect(pickDiversityAxis('snack', i)).toMatch(/snack|bite|nibble|finger/i);
+    }
+  });
+
+  it('rotation includes explicit anti-iconic steers (not every nudge, but they recur)', () => {
+    // Sweep a full archetype cycle so the nudge index spans all 5 values;
+    // at least the "regional/lesser-known" and "sub-region/not the most
+    // famous" nudges must surface — those are the explicit anti-iconic ones.
+    const sweep = Array.from({ length: 16 * 5 }, (_, i) => pickDiversityAxis('dinner', i));
+    const antiIconic = sweep.filter((s) =>
+      /not the (most )?(iconic|obvious|famous)|lesser-known|regional|sub-region/i.test(s),
+    );
+    expect(antiIconic.length).toBeGreaterThan(0);
   });
 });

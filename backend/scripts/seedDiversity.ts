@@ -25,6 +25,89 @@ export interface AvoidMeal {
   mainProtein?: string;
 }
 
+export type SeedMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+// Positive diversity axis. {cuisine, mealType} prompting + negative
+// title-avoidance asymptotes at ~70-100 distinct dishes/cuisine — the model
+// keeps reaching for the iconic dish. A rotating POSITIVE steer (archetype ×
+// specificity nudge) pushes it across the cuisine's breadth instead. Each
+// archetype phrase carries its own meal token so a breakfast slot never gets
+// a braised stew.
+const BREAKFAST_ARCHETYPES = [
+  'a hearty traditional breakfast',
+  'a light morning dish',
+  'a breakfast pastry or baked morning item',
+  'a savory egg-based breakfast',
+  'a morning porridge or breakfast grain bowl',
+  'a street-style breakfast',
+  'a celebratory weekend brunch dish',
+  'a savory breakfast flatbread or stuffed morning bread',
+  'a fresh fruit-and-dairy morning dish',
+  'a fried or griddled breakfast',
+];
+
+const SNACK_ARCHETYPES = [
+  'a savory hand-held snack',
+  'a fried or crispy snack bite',
+  'a sweet-leaning snack nibble',
+  'a dip or spread snack with something to dip',
+  'a roasted or toasted snack mix',
+  'a street-vendor snack',
+  'a baked savory snack pastry',
+  'a finger-food party snack',
+];
+
+const MAIN_ARCHETYPES = [
+  'a slow-braised or stewed main',
+  'a grilled or charred main',
+  'a soup or brothy bowl',
+  'a rice or grain-based main',
+  'a noodle or dumpling dish',
+  'a flatbread, wrap, or stuffed-bread main',
+  'a legume or bean-forward dish',
+  'a roasted or oven-baked main',
+  'a fresh, raw, or cured preparation (only if authentic to the cuisine)',
+  'a festive or celebration centerpiece dish',
+  'a vegetable-forward main',
+  'a one-pot rustic home-style dish',
+  'a fried or crisp-textured main',
+  'a skewered or kebab-style dish',
+  'a curry or sauce-simmered dish',
+  'a substantial composed salad or cold plate',
+];
+
+const SPECIFICITY_NUDGES = [
+  'regional and lesser-known, not the iconic dish',
+  'a rustic everyday home-style version',
+  'a festive or holiday version',
+  'a modern lighter take grounded in tradition',
+  'drawn from a specific sub-region, not the most famous national dish',
+];
+
+// Record forces exhaustiveness at declaration — a new SeedMealType value
+// becomes a compile error here instead of silently falling to MAIN.
+const ARCHETYPES_BY_MEAL: Record<SeedMealType, string[]> = {
+  breakfast: BREAKFAST_ARCHETYPES,
+  lunch: MAIN_ARCHETYPES,
+  dinner: MAIN_ARCHETYPES,
+  snack: SNACK_ARCHETYPES,
+};
+
+/**
+ * Deterministic per-job positive steer. archetype rotates fastest (by
+ * jobIndex); the specificity nudge advances once the archetype list wraps —
+ * so the first archetypes×nudges jobs for a cuisine are all distinct before
+ * anything repeats (e.g. 16×5 = 80 unique steers for dinner).
+ */
+export function pickDiversityAxis(mealType: SeedMealType, jobIndex: number): string {
+  const archetypes = ARCHETYPES_BY_MEAL[mealType];
+  const i = ((jobIndex % archetypes.length) + archetypes.length) % archetypes.length;
+  // Math.abs keeps the dividend ≥ 0, so the nudge index is already in range —
+  // no negative-modulo guard needed (unlike `i`, which uses raw jobIndex).
+  const n = Math.floor(Math.abs(jobIndex) / archetypes.length) % SPECIFICITY_NUDGES.length;
+  return `${archetypes[i]} — ${SPECIFICITY_NUDGES[n]}`;
+}
+
 function dedupeByTitleKey(titles: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];

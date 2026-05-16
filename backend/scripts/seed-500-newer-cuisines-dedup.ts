@@ -96,19 +96,37 @@ if (SEED_PROVIDER === 'ollama' && !process.env.OLLAMA_ENABLED) {
   process.env.OLLAMA_ENABLED = '1';
 }
 
+// Env numbers: fall back to the default when unset OR set to a non-numeric
+// string (Number('abc') → NaN would silently corrupt every downstream
+// comparison). Validation at the system boundary.
+function numEnv(name: string, def: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === '') return def;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : def;
+}
+
 const DRY_RUN = process.env.DRY_RUN !== '0'; // default DRY — explicit opt-in to spend
-const RECIPE_BUDGET = Number(process.env.RECIPE_BUDGET ?? 500);
-const COST_PER_RECIPE_USD = Number(
-  process.env.COST_PER_RECIPE_USD ?? DEFAULT_COST_BY_PROVIDER[SEED_PROVIDER] ?? 0.12,
+const RECIPE_BUDGET = numEnv('RECIPE_BUDGET', 500);
+const COST_PER_RECIPE_USD = numEnv(
+  'COST_PER_RECIPE_USD',
+  DEFAULT_COST_BY_PROVIDER[SEED_PROVIDER] ?? 0.12,
 );
 // Retry-on-dup (#1): how many extra generations a slot gets when it collides
 // with an existing title before it's abandoned. Each retry feeds the colliding
 // title back so the model is pushed off the prototypical dish.
-const DUP_RETRIES = Number(process.env.DUP_RETRIES ?? 3);
+const DUP_RETRIES = numEnv('DUP_RETRIES', 3);
 // Diversity axis (#3): rotating window of already-covered same-cuisine titles
 // fed into every first attempt; AVOID_CAP bounds the list as retries grow it.
-const AVOID_WINDOW = Number(process.env.AVOID_WINDOW ?? 12);
-const AVOID_CAP = Number(process.env.AVOID_CAP ?? 16);
+const AVOID_WINDOW = numEnv('AVOID_WINDOW', 12);
+const AVOID_CAP = numEnv('AVOID_CAP', 16);
+// Target-saved mode: TARGET_SAVED=N keeps generating until N recipes are
+// actually SAVED (dups/fails don't count). MAX_ATTEMPTS hard-caps spend;
+// it defaults to TARGET_SAVED × ATTEMPT_MULTIPLIER. TARGET_SAVED unset →
+// legacy fixed-RECIPE_BUDGET behavior, unchanged.
+const TARGET_SAVED = numEnv('TARGET_SAVED', 0);
+const MAX_ATTEMPTS = numEnv('MAX_ATTEMPTS', 0);
+const ATTEMPT_MULTIPLIER = numEnv('ATTEMPT_MULTIPLIER', 5);
 
 // Progress reporting. This run is frequently piped to a background-task
 // output file rather than an interactive terminal, so a naive `\r` redraw
@@ -116,7 +134,7 @@ const AVOID_CAP = Number(process.env.AVOID_CAP ?? 16);
 // interactive; otherwise emit a newline'd progress line every
 // PROGRESS_EVERY processed slots (plus always on the final slot).
 const IS_TTY = !!process.stdout.isTTY;
-const PROGRESS_EVERY = Number(process.env.PROGRESS_EVERY ?? 25);
+const PROGRESS_EVERY = numEnv('PROGRESS_EVERY', 25);
 
 interface ProgressCounters {
   saved: number;
@@ -133,12 +151,18 @@ function renderProgress(
   total: number,
   c: ProgressCounters,
   label: string,
+  startedAt: number,
   opts: { final?: boolean } = {},
 ): void {
-  const line =
-    `[${done}/${total} attempted] ` +
-    `✓${c.saved} ⊘${c.dup} ✗${c.fail}` +
-    (label ? ` · ${label}` : '');
+  const line = formatProgressBar({
+    done,
+    total,
+    saved: c.saved,
+    dup: c.dup,
+    fail: c.fail,
+    elapsedMs: Date.now() - startedAt,
+    label,
+  });
   if (IS_TTY) {
     // \r + clear-to-EOL redraws the single bar in place; newline only when done.
     process.stdout.write(`\r\x1b[K${line}${opts.final ? '\n' : ''}`);
@@ -158,7 +182,9 @@ function logEvent(message: string): void {
 import { PrismaClient } from '@prisma/client';
 import { aiRecipeService } from '../src/services/aiRecipeService';
 import { normalizeRecipeTitleKey } from '../src/utils/recipeTitleKey';
-import { buildAvoidContext, appendAvoid } from './seedDiversity';
+import { buildAvoidContext, appendAvoid, pickDiversityAxis } from './seedDiversity';
+import { formatProgressBar } from './seedProgress';
+import { resolveRunBudget, evaluateStop } from './seedBudget';
 
 const prisma = new PrismaClient();
 
@@ -206,6 +232,7 @@ const CUISINE_TARGETS: Record<string, number> = {
   Russian: 118,
   Ukrainian: 118,
   Georgian: 118,
+  Belgian: 118,
 
   // MENA
   Levantine: 118,
@@ -285,7 +312,7 @@ interface PlannedJob {
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 }
 
-async function buildPlan(): Promise<PlannedJob[]> {
+async function buildPlan(cap: number): Promise<PlannedJob[]> {
   const plan: PlannedJob[] = [];
 
   // Fetch existing counts for all targeted cuisines in one query
@@ -323,7 +350,9 @@ async function buildPlan(): Promise<PlannedJob[]> {
   }
 
   // Enforce overall budget — preserve priority order
-  return plan.slice(0, RECIPE_BUDGET);
+  // In target-saved mode `cap` is MAX_ATTEMPTS (large), giving the loop
+  // enough legitimate cuisine slots to keep going until the save goal.
+  return plan.slice(0, cap);
 }
 
 function renderBreakdown(plan: PlannedJob[]): void {
@@ -341,16 +370,34 @@ async function main(): Promise<void> {
   console.log('▶ Tier U seed run — 500 recipes across newer / thin cuisines');
   console.log('');
 
-  const plan = await buildPlan();
-  const projectedCost = (plan.length * COST_PER_RECIPE_USD).toFixed(2);
+  const runBudget = resolveRunBudget({
+    recipeBudget: RECIPE_BUDGET,
+    targetSaved: TARGET_SAVED > 0 ? TARGET_SAVED : null,
+    maxAttempts: MAX_ATTEMPTS > 0 ? MAX_ATTEMPTS : null,
+    attemptMultiplier: ATTEMPT_MULTIPLIER,
+  });
+  const plan = await buildPlan(runBudget.planCap);
 
   console.log(`  Provider (primary):     ${SEED_PROVIDER}`);
   console.log(`  Provider order:         ${process.env.AI_PROVIDER_ORDER}`);
-  console.log(`  Planned recipes:        ${plan.length}`);
-  console.log(`  Recipe budget cap:      ${RECIPE_BUDGET}`);
-  console.log(`  Per-recipe cost (est):  $${COST_PER_RECIPE_USD.toFixed(4)}`);
-  console.log(`  Total projected cost:   ~$${projectedCost}`);
-  console.log(`  Mode:                   ${DRY_RUN ? 'DRY RUN (no API calls)' : 'LIVE'}`);
+  if (runBudget.targetSaved != null) {
+    // Target-saved mode: stop at N actual saves; dups/fails don't count.
+    const expected = (runBudget.targetSaved * COST_PER_RECIPE_USD).toFixed(2);
+    const ceiling = (runBudget.maxAttempts * COST_PER_RECIPE_USD).toFixed(2);
+    console.log(`  Mode:                   TARGET-SAVED (dups/fails don't count)`);
+    console.log(`  Target saved recipes:   ${runBudget.targetSaved}`);
+    console.log(`  Attempt cap (spend):    ${runBudget.maxAttempts}  (×${ATTEMPT_MULTIPLIER})`);
+    console.log(`  Plan slots available:   ${plan.length}`);
+    console.log(`  Per-recipe cost (est):  $${COST_PER_RECIPE_USD.toFixed(4)}`);
+    console.log(`  Cost: ~$${expected} expected · up to $${ceiling} at the attempt cap`);
+  } else {
+    const projectedCost = (plan.length * COST_PER_RECIPE_USD).toFixed(2);
+    console.log(`  Planned recipes:        ${plan.length}`);
+    console.log(`  Recipe budget cap:      ${RECIPE_BUDGET}`);
+    console.log(`  Per-recipe cost (est):  $${COST_PER_RECIPE_USD.toFixed(4)}`);
+    console.log(`  Total projected cost:   ~$${projectedCost}`);
+  }
+  console.log(`  Run mode:               ${DRY_RUN ? 'DRY RUN (no API calls)' : 'LIVE'}`);
   console.log('');
 
   renderBreakdown(plan);
@@ -395,8 +442,23 @@ async function main(): Promise<void> {
   // the same cuisine suppress different prototypes instead of the same head.
   const cuisineJobIndex = new Map<string, number>();
   const startedAt = Date.now();
+  let stopReason: 'target_reached' | 'max_attempts' | 'plan_exhausted' = 'plan_exhausted';
 
   for (let i = 0; i < plan.length; i += 1) {
+    // Stop the moment the save goal is met (dups/fails never counted) or the
+    // spend cap is hit — checked before spending another API call.
+    const decision = evaluateStop({
+      succeeded,
+      targetSaved: runBudget.targetSaved,
+      attempts: i,
+      maxAttempts: runBudget.maxAttempts,
+      planExhausted: false,
+    });
+    if (decision.stop) {
+      stopReason = decision.reason ?? 'max_attempts';
+      break;
+    }
+
     const job = plan[i];
     const label = `${job.cuisine} ${job.mealType}`;
 
@@ -409,10 +471,15 @@ async function main(): Promise<void> {
     for (let attempt = 0; attempt <= DUP_RETRIES && !slotDone; attempt += 1) {
       try {
         apiCalls += 1;
+        // Positive steer rotates per attempt too — a retry that shifts the
+        // dish archetype escapes a collision far better than re-rolling the
+        // same one with only the avoid-list grown.
+        const styleHint = pickDiversityAxis(job.mealType, jobIndex + attempt);
         const recipe = await aiRecipeService.generateRecipe({
           userId: null,
           cuisineOverride: job.cuisine,
           mealType: job.mealType,
+          styleHint,
           previousMeals: avoid.length > 0 ? avoid : undefined,
         });
 
@@ -435,8 +502,9 @@ async function main(): Promise<void> {
         await aiRecipeService.saveGeneratedRecipe(recipe, null);
         if (titleKey) {
           seenTitleKeys.add(titleKey);
-          known.push(recipe.title);
-          knownTitlesByCuisine.set(job.cuisine, known);
+          // Immutable: replace the cuisine's list, never mutate the array
+          // already held by the Map (project rule + matches appendAvoid).
+          knownTitlesByCuisine.set(job.cuisine, [...known, recipe.title]);
         }
         succeeded += 1;
         if (attempt > 0) recoveredByRetry += 1;
@@ -451,24 +519,46 @@ async function main(): Promise<void> {
       }
     }
 
+    // Target-saved mode tracks progress toward the SAVE goal (succeeded /
+    // target) so the bar + ETA reflect real recipes, not burned attempts.
+    // Legacy mode tracks attempts (i+1 / plan length) as before.
+    const done = runBudget.targetSaved != null ? succeeded : i + 1;
+    const total = runBudget.targetSaved != null ? runBudget.targetSaved : plan.length;
     renderProgress(
-      i + 1,
-      plan.length,
+      done,
+      total,
       { saved: succeeded, dup: skippedDuplicate, fail: failed },
       label,
-      { final: i + 1 === plan.length },
+      startedAt,
+      { final: done >= total },
     );
   }
+
+  // Closing frame so the bar lands at its true final state even when the run
+  // stopped early (target met or attempt cap) rather than exhausting the plan.
+  const finalDone = runBudget.targetSaved != null ? succeeded : apiCalls;
+  const finalTotal = runBudget.targetSaved != null ? runBudget.targetSaved : plan.length;
+  renderProgress(
+    finalDone,
+    finalTotal,
+    { saved: succeeded, dup: skippedDuplicate, fail: failed },
+    stopReason,
+    startedAt,
+    { final: true },
+  );
 
   const elapsedMin = ((Date.now() - startedAt) / 60_000).toFixed(1);
   if (IS_TTY) process.stdout.write('\n');
   console.log('');
-  console.log(`Done in ${elapsedMin}m.`);
-  console.log(`  ${plan.length} slots attempted — breakdown:`);
+  console.log(`Done in ${elapsedMin}m — stopped: ${stopReason}.`);
+  console.log(`  ${apiCalls} generation attempts — breakdown:`);
   console.log(`    ✓ ${succeeded} saved        (${recoveredByRetry} recovered via retry)`);
   console.log(`    ⊘ ${skippedDuplicate} discarded     (duplicate title, retries exhausted — generated, not seeded)`);
   console.log(`    ✗ ${failed} failed`);
   console.log(`  ↻ ${retriesUsed} dup-retries used across ${apiCalls} API calls`);
+  if (runBudget.targetSaved != null) {
+    console.log(`  Target was ${runBudget.targetSaved} saved — ${succeeded >= runBudget.targetSaved ? 'MET ✓' : `short by ${runBudget.targetSaved - succeeded}`}`);
+  }
   console.log(`  Approx spend: $${(apiCalls * COST_PER_RECIPE_USD).toFixed(2)}`);
 }
 
