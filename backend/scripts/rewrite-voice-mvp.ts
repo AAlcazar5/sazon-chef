@@ -34,7 +34,12 @@ import {
   rewriteCopy,
   type RewriteCopyDeps,
 } from '../src/services/recipeBackfillRunners';
-import { MVP_CUISINES, summarize, type ScoredRecipe } from './voiceGrade';
+import {
+  summarize,
+  parseCuisineMode,
+  cuisineWhere,
+  type ScoredRecipe,
+} from './voiceGrade';
 import {
   pickBestAttempt,
   formatRewriteReport,
@@ -64,6 +69,7 @@ const MAX_ATTEMPTS = Math.max(
 // Deepseek-V3 (Anthropic-balance-independent). Unset/'claude' → default
 // Anthropic path. The Deepseek client is built once and injected into the
 // existing MessageCreator seam on both voice services.
+const CUISINE_MODE = parseCuisineMode(process.env.CUISINES);
 const PROVIDER = (process.env.PROVIDER ?? 'claude').toLowerCase();
 const voiceClient: MessageCreator | undefined =
   PROVIDER === 'deepseek' ? deepseekMessageCreator() : undefined;
@@ -209,7 +215,7 @@ function buildDeps(recipe: Recipe): RewriteCopyDeps {
 async function main(): Promise<void> {
   console.log('▶ Tier U voice rewrite pass — MVP-20 (<4 → rewrite/discard)');
   console.log(`  Mode: ${DRY_RUN ? 'DRY RUN (no writes)' : 'LIVE (persist + discard)'}`);
-  console.log(`  Provider: ${PROVIDER}`);
+  console.log(`  Provider: ${PROVIDER} · cuisines: ${CUISINE_MODE}`);
   console.log(
     `  Concurrency: ${CONCURRENCY} · attempts ${MAX_ATTEMPTS}` +
       (LIMIT ? ` · LIMIT ${LIMIT}` : ''),
@@ -217,7 +223,7 @@ async function main(): Promise<void> {
   console.log('');
 
   const recipes = (await prisma.recipe.findMany({
-    where: { cuisine: { in: [...MVP_CUISINES] }, deletedAt: null },
+    where: { cuisine: cuisineWhere(CUISINE_MODE), deletedAt: null },
     select: { id: true, title: true, description: true, cuisine: true },
   })) as Recipe[];
 
@@ -343,7 +349,7 @@ async function main(): Promise<void> {
   const afterRows: ScoredRecipe[] = [];
   if (!DRY_RUN) {
     const live = await prisma.recipe.findMany({
-      where: { cuisine: { in: [...MVP_CUISINES] }, deletedAt: null },
+      where: { cuisine: cuisineWhere(CUISINE_MODE), deletedAt: null },
       select: { id: true, cuisine: true },
     });
     const liveCuisine = new Map(live.map((r) => [r.id, r.cuisine]));

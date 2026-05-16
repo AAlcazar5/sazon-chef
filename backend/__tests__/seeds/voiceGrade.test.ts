@@ -7,8 +7,41 @@ import {
   bucketGrade,
   summarize,
   formatReport,
+  parseCuisineMode,
+  cuisineWhere,
   type ScoredRecipe,
 } from '../../scripts/voiceGrade';
+
+describe('parseCuisineMode', () => {
+  it('defaults to mvp when unset or unrecognized', () => {
+    expect(parseCuisineMode(undefined)).toBe('mvp');
+    expect(parseCuisineMode('')).toBe('mvp');
+    expect(parseCuisineMode('garbage')).toBe('mvp');
+  });
+
+  it('parses non-mvp (and the nonmvp alias), case-insensitively', () => {
+    expect(parseCuisineMode('non-mvp')).toBe('non-mvp');
+    expect(parseCuisineMode('NONMVP')).toBe('non-mvp');
+  });
+
+  it('parses all', () => {
+    expect(parseCuisineMode('ALL')).toBe('all');
+  });
+});
+
+describe('cuisineWhere', () => {
+  it('mvp → an `in` filter of the launch roster', () => {
+    expect(cuisineWhere('mvp')).toEqual({ in: [...MVP_CUISINES] });
+  });
+
+  it('non-mvp → a `notIn` filter (the complement)', () => {
+    expect(cuisineWhere('non-mvp')).toEqual({ notIn: [...MVP_CUISINES] });
+  });
+
+  it('all → undefined (no cuisine constraint)', () => {
+    expect(cuisineWhere('all')).toBeUndefined();
+  });
+});
 
 describe('MVP_CUISINES', () => {
   it('is the 20-cuisine Tier U launch roster', () => {
