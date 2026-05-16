@@ -28,9 +28,10 @@ import {
   type FailureReason,
 } from '../src/services/recipeQualityScoreService';
 import {
-  MVP_CUISINES,
   summarize,
   formatReport,
+  parseCuisineMode,
+  cuisineWhere,
   type ScoredRecipe,
 } from './voiceGrade';
 
@@ -39,6 +40,7 @@ const prisma = new PrismaClient();
 // PROVIDER=deepseek routes the tone classifier through Deepseek-V3 so a
 // re-grade is independent of the Anthropic balance. Unset/'claude' →
 // default Anthropic path.
+const CUISINE_MODE = parseCuisineMode(process.env.CUISINES);
 const PROVIDER = (process.env.PROVIDER ?? 'claude').toLowerCase();
 const voiceClient: MessageCreator | undefined =
   PROVIDER === 'deepseek' ? deepseekMessageCreator() : undefined;
@@ -90,12 +92,12 @@ async function runPool<T>(
 async function main(): Promise<void> {
   console.log('▶ Tier U voice-grade pass — MVP-20 cuisines');
   console.log(`  Mode: ${DRY_RUN ? 'DRY RUN (no persist)' : 'LIVE (persist)'}`);
-  console.log(`  Provider: ${PROVIDER}`);
+  console.log(`  Provider: ${PROVIDER} · cuisines: ${CUISINE_MODE}`);
   console.log(`  Concurrency: ${CONCURRENCY}${LIMIT ? ` · LIMIT ${LIMIT}` : ''}`);
   console.log('');
 
   const recipes = await prisma.recipe.findMany({
-    where: { cuisine: { in: [...MVP_CUISINES] }, deletedAt: null },
+    where: { cuisine: cuisineWhere(CUISINE_MODE), deletedAt: null },
     select: { id: true, title: true, description: true, cuisine: true },
   });
 

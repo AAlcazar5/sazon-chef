@@ -39,6 +39,33 @@ export const MVP_CUISINES: readonly string[] = [
   'Cajun',
 ];
 
+/**
+ * Which slice of the catalog a grade/rewrite pass targets.
+ *   mvp      — the 20 launch cuisines (default; current behaviour).
+ *   non-mvp  — everything else (the post-launch backlog).
+ *   all      — the whole catalog, no cuisine constraint.
+ */
+export type CuisineMode = 'mvp' | 'non-mvp' | 'all';
+
+export function parseCuisineMode(raw: string | undefined): CuisineMode {
+  const v = (raw ?? 'mvp').toLowerCase();
+  if (v === 'non-mvp' || v === 'nonmvp') return 'non-mvp';
+  if (v === 'all') return 'all';
+  return 'mvp';
+}
+
+/**
+ * Prisma `cuisine` filter for the mode. `all` → undefined so the field is
+ * omitted from the where clause entirely (no constraint).
+ */
+export function cuisineWhere(
+  mode: CuisineMode,
+): { in: string[] } | { notIn: string[] } | undefined {
+  if (mode === 'mvp') return { in: [...MVP_CUISINES] };
+  if (mode === 'non-mvp') return { notIn: [...MVP_CUISINES] };
+  return undefined;
+}
+
 export type GradeBucket = 'ship' | 'rewrite' | 'discard';
 
 export interface ScoredRecipe {
