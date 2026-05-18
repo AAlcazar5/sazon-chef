@@ -36,6 +36,7 @@ const MEAL_TYPES = [
   { key: 'lunch', label: 'Lunch', icon: '☀️' },
   { key: 'dinner', label: 'Dinner', icon: '🌙' },
   { key: 'snack', label: 'Snack', icon: '🍎' },
+  { key: 'sauce', label: 'Sauce', icon: '🥣' },
 ];
 
 const COOK_TIMES = [

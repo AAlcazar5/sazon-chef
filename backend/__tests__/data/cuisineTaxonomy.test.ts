@@ -71,6 +71,7 @@ describe('regional spec — load-bearing canonicals + sub-cuisines', () => {
     expect(slugs).toContain('roman');
     expect(slugs).toContain('sicilian');
     expect(slugs).toContain('sardinian');
+    expect(slugs).not.toContain('italian_american');
   });
 
   it('Chinese has 6 sub-cuisines including Sichuan + Cantonese', () => {
@@ -86,13 +87,15 @@ describe('regional spec — load-bearing canonicals + sub-cuisines', () => {
     expect(indian!.subCuisines).toHaveLength(8);
   });
 
-  it('American has 8 sub-cuisines (Soul Food / Cajun-Creole / Tex-Mex / etc.)', () => {
+  it('American has 10 sub-cuisines (Soul Food / Cajun-Creole / Tex-Mex / Southern / Italian-American / etc.)', () => {
     const american = findByCanonical('american');
-    expect(american!.subCuisines).toHaveLength(8);
+    expect(american!.subCuisines).toHaveLength(10);
     const slugs = american!.subCuisines.map((s) => s.slug);
     expect(slugs).toContain('soul_food');
     expect(slugs).toContain('cajun_creole');
     expect(slugs).toContain('tex_mex');
+    expect(slugs).toContain('southern');
+    expect(slugs).toContain('italian_american');
   });
 
   it('Levantine carries Lebanese + Syrian + Palestinian + Jordanian as subs (not separate canonicals)', () => {
@@ -179,6 +182,40 @@ describe('resolveCuisine', () => {
       subCuisine: null,
       deprecated: true,
     });
+  });
+
+  it('resolves "Cajun" → american + cajun_creole (sub alias)', () => {
+    expect(resolveCuisine('Cajun')).toEqual({
+      canonical: 'american',
+      subCuisine: 'cajun_creole',
+      deprecated: false,
+    });
+  });
+
+  it('resolves "Italian-American" → american + italian_american (US regional style, not europe)', () => {
+    expect(resolveCuisine('Italian-American')).toEqual({
+      canonical: 'american',
+      subCuisine: 'italian_american',
+      deprecated: false,
+    });
+    expect(resolveCuisine('Italian American')!.canonical).toBe('american');
+  });
+
+  it('resolves "American Southern" → american + southern (sub alias)', () => {
+    expect(resolveCuisine('American Southern')).toEqual({
+      canonical: 'american',
+      subCuisine: 'southern',
+      deprecated: false,
+    });
+  });
+
+  it('resolves "Belgian" → belgian canonical (own bucket, not folded into french)', () => {
+    expect(resolveCuisine('Belgian')).toEqual({
+      canonical: 'belgian',
+      subCuisine: null,
+      deprecated: false,
+    });
+    expect(resolveCuisine('Belgium')!.canonical).toBe('belgian');
   });
 
   it('returns null for genuinely unknown input', () => {

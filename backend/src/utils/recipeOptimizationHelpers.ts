@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { mealTypeWhereClause } from './mealTypeFilter';
 // backend/src/utils/recipeOptimizationHelpers.ts
 // Helper functions for optimized recipe fetching and scoring
 
@@ -156,10 +157,10 @@ export async function fetchRecipesOptimized(
   // TIER 1: Build optimized WHERE clause
   const where = buildOptimizedWhereClause(prefs);
 
-  // Add optional filters
-  if (filters?.mealType) {
-    where.mealType = filters.mealType;
-  }
+  // Add optional filters. mealTypeWhereClause excludes sauces from the
+  // generic candidate pool unless the caller explicitly asked for a mealType
+  // (sauces are a browsable catalog category, not a servable plate).
+  where.mealType = mealTypeWhereClause(filters?.mealType);
 
   if (filters?.maxCookTime) {
     where.cookTime = {

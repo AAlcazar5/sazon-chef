@@ -66,6 +66,7 @@ import { cuisineDessertRoutes } from '@modules/cuisineDessert/cuisineDessertRout
 import { waitlistRoutes } from '@modules/waitlist/waitlistRoutes';
 import { minVersionRoutes } from '@modules/minVersion/minVersionRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
+import { isStripeWebhookPath } from './utils/stripeWebhookPath';
 import { prisma } from '@/lib/prisma';
 import { cacheService } from '@/utils/cacheService';
 import { logger } from '@/utils/logger';
@@ -162,8 +163,11 @@ app.use(cors({
 // HTTP logging
 app.use(morgan('combined'));
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
+// Body parsing. The Stripe webhook is excluded so its route-level
+// express.raw() receives the untouched body for signature verification.
+const jsonParser = express.json({ limit: '10mb' });
+app.use((req, res, next) =>
+  isStripeWebhookPath(req.path) ? next() : jsonParser(req, res, next));
 app.use(express.urlencoded({ extended: true }));
 
 // Static uploads (profile pictures, etc.) — P7: long-lived immutable cache.

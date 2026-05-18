@@ -2,9 +2,11 @@ import { logger } from '../utils/logger';
 // backend/src/services/aiRecipeService.ts
 import { prisma } from '@lib/prisma';
 import { imageService } from './imageService';
+import { sanitizeUserContent } from './coachSafetyService';
 import { AIProviderManager } from './aiProviders/AIProviderManager';
 import { getHealthPromptAddendum } from '../utils/cuisineHealthTier';
 import { getAdjacentCuisines } from '../utils/cuisineAdjacency';
+import { assertCaloriesPerServing } from '../utils/calorieRange';
 
 const SAFE_CUISINE_PATTERN = /^[A-Za-z][A-Za-z '-]{0,63}$/;
 
@@ -17,7 +19,7 @@ export const sanitizeCuisineForPrompt = (raw: unknown): string | null => {
   return trimmed;
 };
 
-interface RecipeGenerationParams {
+export interface RecipeGenerationParams {
   userId: string | null;
   recipeTitle?: string; // Optional: specific recipe title to generate
   userPreferences?: {
@@ -45,8 +47,13 @@ interface RecipeGenerationParams {
     activityLevel: string;
     fitnessGoal: string;
   };
-  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'any';
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'sauce' | 'any';
   cuisineOverride?: string;
+  // Positive diversity steer (e.g. "a slow-braised regional dish, not the
+  // iconic one"). Used by the catalog seed to push generation across a
+  // cuisine's breadth instead of repeatedly hitting the prototypical dish.
+  // Ignored when recipeTitle is set — an explicit dish wins.
+  styleHint?: string;
   previousMeals?: Array<{
     title: string;
     cuisine: string;
@@ -83,7 +90,7 @@ export interface GeneratedRecipe {
   title: string;
   description: string;
   cuisine: string;
-  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert';
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'sauce';
   cookTime: number;
   difficulty: 'easy' | 'medium' | 'hard';
   servings: number;
@@ -160,7 +167,7 @@ export class AIRecipeService {
       logger.info({ data: recipe.title }, '✅ AI Recipe Generated:');
       
       // Validate and normalize the recipe
-      const validated = this.validateAndNormalizeRecipe(recipe);
+      const validated = this.validateAndNormalizeRecipe(recipe, params.mealType);
 
       // Ensure mealType from params is set (override if provided, exclude 'any')
       if (params.mealType && params.mealType !== 'any') {
@@ -517,6 +524,16 @@ Return JSON only.`;
    * Build the recipe generation prompt
    */
   /**
+   * Positive diversity steer, shared by both prompt builders so the wording
+   * can't drift between Path A and Path B. Empty when not applicable
+   * (no styleHint, or an explicit recipeTitle that must win).
+   */
+  private styleHintLine(params: RecipeGenerationParams): string {
+    if (!params.styleHint || params.recipeTitle) return '';
+    return `Make this specifically ${params.styleHint}. Do NOT default to the single most iconic/obvious dish — explore the breadth of this cuisine.`;
+  }
+
+  /**
    * Path B — PII-stripped recipe prompt for cheap-tier providers.
    *
    * Builds the SAME user-facing recipe-generation prompt as
@@ -525,6 +542,7 @@ Return JSON only.`;
    *   - recipeTitle           (explicit dish, not a user attribute)
    *   - mealType              (breakfast / lunch / dinner / snack / dessert)
    *   - cuisineOverride       (cuisine name)
+   *   - styleHint             (catalog-seed diversity steer, no user identity)
    *   - maxCookTimeForMeal    (numeric duration cap)
    *
    * Explicitly NOT used:
@@ -544,7 +562,7 @@ Return JSON only.`;
 
     if (params.recipeTitle) {
       parts.push(
-        `Create a recipe for: "${params.recipeTitle}"`,
+        `Create a recipe for: "${sanitizeUserContent(params.recipeTitle)}"`,
         '',
         'Generate a complete, detailed recipe for this dish. Include all ingredients, step-by-step instructions, and accurate nutrition information.',
         '',
@@ -558,6 +576,8 @@ Return JSON only.`;
         parts.push('Generate a dessert recipe (sweet treats like cakes, cookies, pies, ice cream, etc.).');
       } else if (params.mealType === 'snack') {
         parts.push('Generate a healthy snack recipe (light, nutritious options suitable for between meals — NOT desserts).');
+      } else if (params.mealType === 'sauce') {
+        parts.push('Generate a sauce, condiment, dressing, or dip recipe (e.g., tzatziki, chimichurri, harissa) — a flavor accompaniment, NOT a standalone meal.');
       } else {
         parts.push(`Generate a ${params.mealType} recipe.`);
       }
@@ -569,6 +589,9 @@ Return JSON only.`;
       const safe = sanitizeCuisineForPrompt(params.cuisineOverride);
       if (safe) parts.push(`Cuisine: ${safe}.`);
     }
+
+    const sanitizedHint = this.styleHintLine(params);
+    if (sanitizedHint) parts.push(sanitizedHint);
 
     if (typeof params.maxCookTimeForMeal === 'number' && params.maxCookTimeForMeal > 0) {
       parts.push(`Total cook time must not exceed ${params.maxCookTimeForMeal} minutes.`);
@@ -585,7 +608,7 @@ Return JSON only.`;
     // If recipe title is provided, use it as the primary instruction
     if (params.recipeTitle) {
       parts.push(
-        `Create a recipe for: "${params.recipeTitle}"`,
+        `Create a recipe for: "${sanitizeUserContent(params.recipeTitle)}"`,
         ``,
         `Generate a complete, detailed recipe for this dish. Include all ingredients, step-by-step instructions, and accurate nutrition information.`,
         ``
@@ -601,6 +624,8 @@ Return JSON only.`;
           parts.push(`Generate a dessert recipe (sweet treats like cakes, cookies, pies, ice cream, etc.).`);
         } else if (params.mealType === 'snack') {
           parts.push(`Generate a healthy snack recipe (light, nutritious options suitable for between meals - NOT desserts). Examples: yogurt with fruit, cheese and crackers, protein bars, trail mix, etc.`);
+        } else if (params.mealType === 'sauce') {
+          parts.push(`Generate a sauce, condiment, dressing, or dip recipe (a flavor accompaniment, NOT a standalone meal). Examples: tzatziki, chimichurri, harissa, romesco, nuoc cham, tahini sauce, etc.`);
         } else {
           parts.push(`Generate a ${params.mealType} recipe.`);
         }
@@ -609,11 +634,16 @@ Return JSON only.`;
       parts.push('Generate a delicious recipe.');
     }
 
+    // POSITIVE DIVERSITY AXIS: steer toward an under-explored part of the
+    // cuisine instead of the prototypical dish (catalog seed uses this).
+    const fullHint = this.styleHintLine(params);
+    if (fullHint) parts.push(fullHint);
+
     // VARIATION ENFORCEMENT: Avoid repeating previous meals
     if (params.previousMeals && params.previousMeals.length > 0) {
       parts.push(`\nIMPORTANT - ENSURE VARIETY: You have already generated these meals today:`);
       params.previousMeals.forEach((meal, idx) => {
-        parts.push(`  ${idx + 1}. ${meal.title} (${meal.cuisine} cuisine${meal.mainProtein ? ', ' + meal.mainProtein : ''})`);
+        parts.push(`  ${idx + 1}. ${sanitizeUserContent(meal.title)} (${meal.cuisine} cuisine${meal.mainProtein ? ', ' + meal.mainProtein : ''})`);
       });
       parts.push(`\nThe NEW recipe MUST be completely different:`);
       parts.push(`- Use a DIFFERENT cuisine than: ${[...new Set(params.previousMeals.map(m => m.cuisine))].join(', ')}`);
@@ -929,7 +959,10 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
   /**
    * Comprehensive recipe validation and normalization
    */
-  private validateAndNormalizeRecipe(recipe: GeneratedRecipe): GeneratedRecipe {
+  private validateAndNormalizeRecipe(
+    recipe: GeneratedRecipe,
+    intendedMealType?: string,
+  ): GeneratedRecipe {
     // Ensure required fields
     if (!recipe.title || !recipe.description || !recipe.ingredients || !recipe.instructions) {
       throw new Error('Generated recipe is missing required fields');
@@ -1013,12 +1046,11 @@ Rules: Accurate macros, clear steps, delicious taste, match nutrition targets (�
       };
     });
 
-    // Validate nutritional reasonableness
-    // Allow up to 2500 cal per serving to accommodate larger remaining meals
+    // Validate nutritional reasonableness. Up to 2500 cal/serving for larger
+    // remaining meals; the lower bound is dropped for sauces (a tablespoon of
+    // condiment is legitimately near-zero) — see assertCaloriesPerServing.
     const caloriesPerServing = recipe.calories / recipe.servings;
-    if (caloriesPerServing < 10 || caloriesPerServing > 2500) {
-      throw new Error(`Calories per serving (${Math.round(caloriesPerServing)}) is outside reasonable range (10-2500)`);
-    }
+    assertCaloriesPerServing(caloriesPerServing, intendedMealType);
 
     // Validate macro ratios are reasonable (not all zero, not extreme)
     const totalMacros = recipe.protein + recipe.carbs + recipe.fat;

@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "test": "node scripts/ci/validate-commands.js && node tests/run-all.js"
+    "test": "node scripts/ci/validate-commands.js && node tests/run-all.js",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",

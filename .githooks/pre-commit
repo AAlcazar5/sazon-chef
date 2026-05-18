@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Sazon pre-commit secret/sensitive-file guard.
+#
+# Why: the repo is public. The 2026-05-18 audit found it clean (no secrets
+# ever committed, seed scripts use process.env only) — this hook keeps it
+# that way by refusing to stage credential strings or sensitive file types.
+#
+# Wired via `git config core.hooksPath .githooks` (set by the root
+# package.json "prepare" script, so `npm install` re-arms it for everyone).
+# Dependency-free: bash + grep only. Bypass for a vetted false positive with
+# `git commit --no-verify` (use sparingly).
+
+set -euo pipefail
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACM || true)
+[ -z "$staged_files" ] && exit 0
+
+fail=0
+
+# 1) Block sensitive file TYPES from being tracked. .env.example/.sample are
+#    intentional templates and allowed.
+sensitive=$(printf '%s\n' "$staged_files" | grep -nE \
+  '(^|/)\.env($|\.)|\.(db|sqlite3?|pem|key|p12|pfx|keystore|dump|bak|backup)$|(^|/)id_rsa' \
+  | grep -viE '\.env\.example$|\.env\.sample$' || true)
+if [ -n "$sensitive" ]; then
+  echo "✖ pre-commit: refusing to track sensitive file type(s):"
+  printf '    %s\n' "$sensitive"
+  fail=1
+fi
+
+# 2) Scan the staged DIFF (added lines only) for high-signal secret patterns.
+#    Multiple simple -e patterns (POSIX classes, no nested quote classes) so
+#    it works under BSD grep (macOS) and GNU grep alike.
+# Exclude .githooks/ itself — the scanner's own pattern ruleset contains
+# the very strings it greps for and must not self-match.
+added=$(git diff --cached -U0 --diff-filter=ACM -- . ':(exclude).githooks/**' \
+  | grep -E '^[+]' | grep -vE '^[+][+][+]' || true)
+# Interval-free (no {n,}) so it works across BSD/GNU grep builds. The vendor
+# prefixes (sk_live_, AKIA, ghp_, AIza, BEGIN PRIVATE KEY, …) are themselves
+# high-signal; the benign-context grep below removes the common false hits.
+secret_hits=$(printf '%s\n' "$added" \
+  | grep -nIE \
+    -e 'sk-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]+' \
+    -e 'sk_(live|test)_[A-Za-z0-9]+' \
+    -e 'AKIA[0-9A-Z][0-9A-Z]+' \
+    -e 'AIza[0-9A-Za-z_-][0-9A-Za-z_-]+' \
+    -e 'ghp_[A-Za-z0-9][A-Za-z0-9]+' \
+    -e 'xox[baprs]-[0-9A-Za-z-]+' \
+    -e '-----BEGIN [A-Z ]*PRIVATE KEY-----' \
+    -e '(SECRET|API[_-]?KEY|ACCESS[_-]?TOKEN|PASSWORD)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9/+=_-][A-Za-z0-9/+=_-][A-Za-z0-9/+=_-][A-Za-z0-9/+=_-]+' \
+  | grep -viE 'process\.env|example|placeholder|YOUR_|xxxxxx|dummy|fake|test-key|<[a-z_]+>' || true)
+if [ -n "$secret_hits" ]; then
+  echo "✖ pre-commit: possible secret in staged changes:"
+  printf '    %s\n' "$secret_hits"
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "Blocked. Move secrets to env vars (.env is gitignored) and unstage the file(s)."
+  echo "If this is a verified false positive: git commit --no-verify"
+  exit 1
+fi
+exit 0

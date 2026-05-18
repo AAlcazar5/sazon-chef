@@ -29,6 +29,7 @@ export interface SubCuisine {
   slug: string;
   displayName: string;
   parentCanonical: string;
+  aliases?: readonly string[];
 }
 
 export interface Cuisine {
@@ -44,10 +45,16 @@ const sub = (
   parent: string,
   slug: string,
   displayName: string,
-): SubCuisine => ({ slug, displayName, parentCanonical: parent });
+  aliases?: readonly string[],
+): SubCuisine => ({
+  slug,
+  displayName,
+  parentCanonical: parent,
+  ...(aliases ? { aliases } : {}),
+});
 
 // ──────────────────────────────────────────────────────────────────────────
-// EUROPE — 15 canonicals, 33 sub-cuisines
+// EUROPE — 16 canonicals, 33 sub-cuisines
 // ──────────────────────────────────────────────────────────────────────────
 const EUROPE: Cuisine[] = [
   {
@@ -154,6 +161,7 @@ const EUROPE: Cuisine[] = [
   { canonical: 'russian', region: 'europe', displayName: 'Russian', aliases: ['russia'], subCuisines: [] },
   { canonical: 'ukrainian', region: 'europe', displayName: 'Ukrainian', aliases: ['ukraine'], subCuisines: [] },
   { canonical: 'georgian', region: 'europe', displayName: 'Georgian', aliases: ['georgia (caucasus)'], subCuisines: [] },
+  { canonical: 'belgian', region: 'europe', displayName: 'Belgian', aliases: ['belgium'], subCuisines: [] },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -400,7 +408,7 @@ const LATIN_AMERICA: Cuisine[] = [
 ];
 
 // ──────────────────────────────────────────────────────────────────────────
-// NORTH AMERICA — 3 canonicals, 10 sub-cuisines
+// NORTH AMERICA — 3 canonicals, 12 sub-cuisines
 // ──────────────────────────────────────────────────────────────────────────
 const NORTH_AMERICA: Cuisine[] = [
   {
@@ -410,7 +418,9 @@ const NORTH_AMERICA: Cuisine[] = [
     aliases: ['united states', 'usa', 'us'],
     subCuisines: [
       sub('american', 'soul_food', 'Soul Food'),
-      sub('american', 'cajun_creole', 'Cajun/Creole'),
+      sub('american', 'cajun_creole', 'Cajun/Creole', ['cajun']),
+      sub('american', 'southern', 'Southern', ['american southern']),
+      sub('american', 'italian_american', 'Italian-American', ['italian american']),
       sub('american', 'tex_mex', 'Tex-Mex'),
       sub('american', 'new_england', 'New England'),
       sub('american', 'pacific_northwest', 'Pacific Northwest'),
@@ -539,6 +549,7 @@ const indexByKey: Map<string, ResolveResult> = (() => {
       };
       m.set(normalize(s.slug), subResult);
       m.set(normalize(s.displayName), subResult);
+      for (const a of s.aliases ?? []) m.set(normalize(a), subResult);
     }
   }
   return m;
