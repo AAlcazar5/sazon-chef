@@ -43,6 +43,10 @@ const A11Y_LABEL_RE = /accessibilityLabel\s*[=:]/;
 const A11Y_ROLE_RE = /accessibilityRole\s*[=:]/;
 const COLORS_IMPORT_RE = /from\s+['"][./\w-]*constants\/(Colors|DarkColors)['"]/;
 const TOKENS_IMPORT_RE = /from\s+['"][./\w-]*constants\/tokens['"]/;
+// W-D1 no-recipe-count law (D-7) — user-facing catalog counts / paginator
+// denominators. High-signal only, to avoid FP on unrelated numeric copy.
+export const CATALOG_COUNT_RE =
+  /\bOF \d+ RECIPES\b|Found \d+ recipes?\b|\bof \d+ (?:recipes?|pages?)\b|\d+ recipes? (?:matching|found|available)\b/i;
 
 const ALLOWED_DIRS_FOR_LITERAL = new Set([
   'constants/colorTokens.cjs',
@@ -122,6 +126,16 @@ function scanFile(file: string, repoRoot: string): Violation[] {
         file: rel,
         line: i + 1,
         rule: 'brand-coral-literal',
+        excerpt: line.trim(),
+      });
+    }
+
+    // Rule 1b — W-D1 no-recipe-count (D-7): user-facing catalog counts.
+    if (CATALOG_COUNT_RE.test(line)) {
+      violations.push({
+        file: rel,
+        line: i + 1,
+        rule: 'recipe-count-user-copy',
         excerpt: line.trim(),
       });
     }

@@ -491,8 +491,8 @@ export default function HomeScreen() {
       applyFetchResult(result);
       showToast(
         result.recipes.length > 0
-          ? `Found ${result.recipes.length} recipes matching "${query.trim()}"`
-          : `No recipes found for "${query.trim()}"`,
+          ? `Recipes matching "${query.trim()}"`
+          : `Nothing matched "${query.trim()}" — try a tweak`,
         result.recipes.length > 0 ? 'success' : 'error',
         2000,
       );
