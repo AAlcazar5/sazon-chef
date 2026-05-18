@@ -60,6 +60,10 @@ import {
   topMemoriesForUser,
 } from '@/services/coachMemoryService';
 import { serializeJsonColumnSafe } from '../../utils/jsonColumns';
+import {
+  applyCookIntents,
+  detectCookIntents,
+} from '@/services/coachCookWriteback';
 
 // S17c — free daily cap bumped from 10 → 50. With S17 prompt caching + S17b
 // lean dynamic block, per-message cost on free tier is ~$0.0008 once warmed.
@@ -799,6 +803,26 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         { role: 'assistant', content: assistantText },
       ]);
     }
+
+    // W-B1 — Cook Mode in chat. Detect cook events in the user's turn and
+    // append them to the Cook Log via the same detect→apply writeback
+    // pattern as memory writeback. Free-tier inclusive (cooking is not
+    // Pro-gated). Non-blocking + stream-safe: a Cook Log write must never
+    // break the response. recipeId is null here — a chat cook is the §9a
+    // no-recipe path until an explicit recipe context is threaded.
+    void (async () => {
+      try {
+        const cookIntents = detectCookIntents(sanitizedMessage);
+        if (cookIntents.length > 0) {
+          await applyCookIntents(userId, null, cookIntents);
+        }
+      } catch (cookErr) {
+        captureException(cookErr, {
+          tag: 'coach.cookWriteback',
+          extra: { userId, conversationId },
+        });
+      }
+    })();
 
     res.write('event: done\ndata: {}\n\n');
     res.end();
