@@ -61,6 +61,37 @@ const NORMALIZATION_MAP: Record<string, string> = {
   'Salvadoran': 'Salvadorean',
   'Salvadorian': 'Salvadorean',
   'Southern American': 'American Southern',
+  // 4K run strays (2026-05-14).
+  'Swedish': 'Scandinavian',
+  // 6K run strays (2026-05-14).
+  'Polynesian': 'Pacific Islander',
+  // 7K run strays (2026-05-14).
+  'Balkan-inspired Italian': 'Balkan',
+  // Newer-cuisines dedup run strays (2026-05-15) — sub-region qualifiers.
+  // Strip to the country canonical; the region is just provenance copy.
+  'Brazilian (Minas Gerais)': 'Brazilian',
+  'Chilean (Central Valley)': 'Chilean',
+  'French (Provence)': 'French',
+  'Georgian (Adjara)': 'Georgian',
+  // Orphan vague label, no country canonical — assigned to Peruvian
+  // (thinner category; quinoa/black-bean dish reads Andean).
+  'Latin-Inspired': 'Peruvian',
+  // Macro-bucket consolidation (2026-05-15). Whole-bucket folds where
+  // every recipe maps cleanly to one canonical; mixed buckets (Asian,
+  // the Jamaican slice of Caribbean) were peeled per-recipe beforehand.
+  'North African': 'Moroccan',
+  'Southern': 'American Southern',
+  'Soul Food': 'American Southern',
+  'Middle Eastern': 'Levantine',
+  'Latin Caribbean': 'Caribbean',
+  // 7.5K run strays (2026-05-15) — sub-region qualifiers, strip to country.
+  'Nigerian (Yoruba-influenced savoury breakfast)': 'Nigerian',
+  'Pakistani (Kashmiri)': 'Pakistani',
+  'Yemeni (Tihama)': 'Yemeni',
+  // 8K run strays (2026-05-15) — sub-region qualifiers, strip to country.
+  'Burmese/Shan': 'Burmese',
+  'German (Bavarian)': 'German',
+  'German (Swabian)': 'German',
 };
 
 async function main(): Promise<void> {

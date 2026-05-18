@@ -14,7 +14,7 @@ import { useReverseDiscovery } from '../../hooks/useReverseDiscovery';
 import { openSazonWithSeed } from '../../lib/sazonTabShortcut';
 import type { SuggestedRecipe } from '../../types';
 
-const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Dessert'];
+const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Dessert', 'Sauces'];
 
 function getDefaultCategoryForHour(hour: number): string {
   if (hour >= 4 && hour < 11) return 'Breakfast';

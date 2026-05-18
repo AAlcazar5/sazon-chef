@@ -60,7 +60,7 @@ export interface ModelRoute {
 export interface RecipeGenerationRequest {
   prompt: string;
   systemPrompt: string;
-  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'any';
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'sauce' | 'any';
   temperature?: number;
   maxTokens?: number;
   /**
