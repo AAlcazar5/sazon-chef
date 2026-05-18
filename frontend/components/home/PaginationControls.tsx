@@ -31,7 +31,6 @@ interface PaginationControlsProps {
 function PaginationControls({
   currentPage,
   totalItems,
-  itemsShown,
   paginationInfo,
   isLoading,
   onPrevPage,
@@ -44,8 +43,6 @@ function PaginationControls({
     return null;
   }
 
-  const startItem = currentPage * itemsShown + 1;
-  const endItem = Math.min(currentPage * itemsShown + itemsShown, totalItems);
   const shadow = Platform.OS === 'ios' ? EditorialShadows.cardRaised.ios : EditorialShadows.cardRaised.android;
 
   const prevDisabled = paginationInfo.isFirstPage || isLoading;
@@ -53,10 +50,9 @@ function PaginationControls({
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.eyebrow}>
-        {startItem}–{endItem} OF {totalItems} RECIPES
-      </Text>
-
+      {/* W-D1 no-recipe-count law: the "N–M OF {total} RECIPES" eyebrow is
+          removed — recipes are a like-signal store, not a countable catalog
+          (Claude-class tooling ⇒ unlimited on-demand recipes). */}
       <View style={[styles.card, { backgroundColor: isDark ? '#1F2937' : Pastel.peach }, shadow]}>
         <HapticTouchableOpacity
           onPress={onPrevPage}
@@ -81,7 +77,6 @@ function PaginationControls({
           ) : (
             <Text style={[styles.pageText, isDark && styles.pageTextDark]}>
               Page {currentPage + 1}
-              <Text style={styles.pageTextAccent}> of {paginationInfo.totalPages}</Text>
             </Text>
           )}
         </View>

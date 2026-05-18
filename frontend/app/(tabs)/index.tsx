@@ -744,14 +744,18 @@ export default function HomeScreen() {
   // We intentionally do NOT overwrite filtered/paginated results with `/recipes/suggested`.
   // Historically this caused grid mode to "randomly" drop back to ~10 recipes after applying filters.
 
-  // Handle errors
+  // Handle errors. An expired-session 401 is already handled by the central
+  // auto-logout flow (lib/api/core.ts) — a scary error haptic + a
+  // misleading "pull down to try again" alert on top is wrong (pulling down
+  // can't fix an expired session) and the console.error is the exact noise
+  // repeatedly flagged. Suppress all of that for the auth case.
   useEffect(() => {
-    if (error) {
-      console.error('📱 HomeScreen: API Error', error);
-      HapticPatterns.error();
-      Alert.alert('Oops!', 'Couldn\'t load recipes — pull down to try again!');
-    }
-  }, [error]);
+    if (!error) return;
+    if (errorCode === 'HTTP_401') return; // auth flow owns this
+    console.error('📱 HomeScreen: API Error', error);
+    HapticPatterns.error();
+    Alert.alert('Oops!', 'Couldn\'t load recipes — pull down to try again!');
+  }, [error, errorCode]);
 
   const onRefresh = async () => {
     setRefreshing(true);

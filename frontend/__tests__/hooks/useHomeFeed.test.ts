@@ -107,6 +107,34 @@ describe('useHomeFeed', () => {
     expect(result.current.suggestedRecipes).toEqual([]);
   });
 
+  it('classifies an expired-session 401 as auth (errorCode HTTP_401), not a hard error', async () => {
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    mockGetHomeFeed.mockRejectedValueOnce({
+      code: 'HTTP_401',
+      message: 'Your session has expired. Please log in again.',
+    });
+
+    const { result } = renderHook(() => useHomeFeed());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // errorCode is normalized to HTTP_401 so the screen can suppress the
+    // misleading "pull down to try again" alert (auth flow owns it).
+    expect(result.current.errorCode).toBe('HTTP_401');
+    // It must NOT be console.error'd (the repeatedly-flagged noise) — the
+    // auth case logs at info level instead.
+    const erroredHomeFeed = errSpy.mock.calls.some((c) =>
+      String(c[0]).includes('Home feed fetch failed'),
+    );
+    expect(erroredHomeFeed).toBe(false);
+    expect(
+      logSpy.mock.calls.some((c) => String(c[0]).includes('session expired')),
+    ).toBe(true);
+
+    errSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+
   it('should set generic error message when error has no message', async () => {
     mockGetHomeFeed.mockRejectedValueOnce({});
 

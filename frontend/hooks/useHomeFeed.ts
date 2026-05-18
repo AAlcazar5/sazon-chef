@@ -158,13 +158,25 @@ export function useHomeFeed(params: HomeFeedParams = {}): UseHomeFeedReturn {
         err?.code && `code=${err.code}`,
         err?.method && err?.url && `${err.method} ${err.url}`,
       ].filter(Boolean).join(' ');
+      // An expired-session 401 is an EXPECTED state already handled by the
+      // central auto-logout path in lib/api/core.ts — it must not be logged
+      // as a hard error (it's the exact noisy line repeatedly flagged) nor
+      // treated like a recipe-load failure.
+      const isAuthExpired =
+        err?.code === 'HTTP_401' ||
+        err?.status === 401 ||
+        /session has expired|log ?in again|unauthorized/i.test(
+          String(err?.message ?? ''),
+        );
       if (cls === 'offline') {
         console.log(`📡 Home feed unavailable — offline${diag ? ` [${diag}]` : ''}`);
+      } else if (isAuthExpired) {
+        console.log(`🔐 Home feed: session expired — auth flow handling it${diag ? ` [${diag}]` : ''}`);
       } else {
         console.error(`❌ Home feed fetch failed${diag ? ` [${diag}]` : ''}: ${err?.message ?? err}`);
       }
       setError(err?.message || 'Failed to fetch home feed');
-      setErrorCode(err?.code || null);
+      setErrorCode(isAuthExpired ? 'HTTP_401' : err?.code || null);
       setFailureClass(cls);
       return null;
     } finally {
