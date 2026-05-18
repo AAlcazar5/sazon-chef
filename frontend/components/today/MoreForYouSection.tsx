@@ -102,7 +102,7 @@ export default function MoreForYouSection({
               { color: isDark ? DarkColors.primary : Colors.primary },
             ]}
           >
-            {expanded ? `Show less` : `${label} (${hidden.length})`}
+            {expanded ? `Show less` : label}
           </Text>
           <Icon
             name={expanded ? Icons.CHEVRON_UP : Icons.CHEVRON_DOWN}

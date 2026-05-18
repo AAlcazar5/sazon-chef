@@ -39,8 +39,11 @@ describe('MoreForYouSection', () => {
     expect(queryByText('Card 4')).toBeNull();
   });
 
-  it('renders the toggle with the hidden count', async () => {
-    const { findByText } = render(
+  // W-D1 — no-recipe-count law: the collapsed toggle shows the label only,
+  // never a "(N)" count. Recipes are a like-signal store, not a countable
+  // catalog; surfacing a count signals the commoditized layer.
+  it('renders the toggle label WITHOUT a recipe count', async () => {
+    const { findByText, queryByText } = render(
       <MoreForYouSection>
         <Text>Card 1</Text>
         <Text>Card 2</Text>
@@ -48,7 +51,9 @@ describe('MoreForYouSection', () => {
         <Text>Card 4</Text>
       </MoreForYouSection>,
     );
-    expect(await findByText(/More for you \(2\)/)).toBeTruthy();
+    expect(await findByText('More for you')).toBeTruthy();
+    expect(queryByText(/\(\d+\)/)).toBeNull(); // no "(2)" / any count
+    expect(queryByText(/More for you \(\d+\)/)).toBeNull();
   });
 
   it('expands when toggle pressed; reveals all children', async () => {
@@ -122,14 +127,15 @@ describe('MoreForYouSection', () => {
     expect(queryByText('Card 3')).toBeNull();
   });
 
-  it('respects label override on toggle', async () => {
-    const { findByText } = render(
+  it('respects label override on toggle (still no count)', async () => {
+    const { findByText, queryByText } = render(
       <MoreForYouSection label="Discovery">
         <Text>Card 1</Text>
         <Text>Card 2</Text>
         <Text>Card 3</Text>
       </MoreForYouSection>,
     );
-    expect(await findByText(/Discovery \(1\)/)).toBeTruthy();
+    expect(await findByText('Discovery')).toBeTruthy();
+    expect(queryByText(/\(\d+\)/)).toBeNull();
   });
 });
