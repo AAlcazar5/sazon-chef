@@ -64,6 +64,13 @@ const createPrismaMock = () => ({
       update: jest.fn(),
       upsert: jest.fn()
     },
+    cookEvent: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn()
+    },
     bannedIngredient: {
       deleteMany: jest.fn()
     },

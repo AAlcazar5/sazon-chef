@@ -3,7 +3,9 @@ import { logger } from '../../utils/logger';
 import { Router } from 'express';
 import { recipeController } from './recipeController';
 import { newToYouController } from './newToYouController';
+import { scaleRecipeController } from './scaleRecipeController';
 import { aiLimiter } from '../../middleware/rateLimiter';
+import { authenticateToken } from '../auth/authMiddleware';
 import { shortPrivateCache, mediumPrivateCache } from '../../middleware/cacheControl';
 
 const router = Router();
@@ -27,6 +29,7 @@ router.get('/home-feed', shortPrivateCache, recipeController.getHomeFeed); // Co
 router.post('/filter-yields', recipeController.getFilterYields); // FX3.2 — per-filter yield deltas for "Relax this filter" rows
 router.get('/home/almost-made-it', recipeController.getAlmostMadeIt); // HX5.1 — next-5 candidates past the cut
 router.post('/hero/reroll', recipeController.heroReroll); // HX2.1 — next-ranked candidate from the same retrieval
+router.post('/:id/scale', authenticateToken, scaleRecipeController.scaleRecipeEndpoint); // W-A1b — deterministic scale + byproduct Cook Log capture
 router.get('/recipe-of-the-day', mediumPrivateCache, recipeController.getRecipeOfTheDay); // Home Page 2.0 (U8 cached)
 router.get('/new-to-you', newToYouController.getNewToYou); // 11.5: personalized adjacency feed
 router.get('/browse-by-family', newToYouController.getBrowseByFamily); // 11.5: cuisine-family ranking by user affinity
