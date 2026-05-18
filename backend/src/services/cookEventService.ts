@@ -7,6 +7,7 @@
 // established serializeJsonColumnSafe pattern).
 
 import { prisma } from '../lib/prisma';
+import { feedAffinityFromCookEvent } from './cookEventAffinity';
 
 export type CookEventType =
   | 'scale'
@@ -42,9 +43,13 @@ function safeParsePayload(raw: string): Record<string, unknown> {
   }
 }
 
-/** Append one immutable Cook Log event. */
+/**
+ * Append one immutable Cook Log event, then feed it into the affinity loop
+ * (W-A3) as a best-effort byproduct. The feed is awaited but non-throwing —
+ * a loop-feed failure must never deny the captured event.
+ */
 export async function recordCookEvent(input: RecordCookEventInput) {
-  return prisma.cookEvent.create({
+  const created = await prisma.cookEvent.create({
     data: {
       userId: input.userId,
       recipeId: input.recipeId ?? null,
@@ -52,6 +57,15 @@ export async function recordCookEvent(input: RecordCookEventInput) {
       payload: JSON.stringify(input.payload ?? {}),
     },
   });
+
+  await feedAffinityFromCookEvent({
+    type: input.type,
+    userId: input.userId,
+    recipeId: input.recipeId ?? null,
+    payload: input.payload ?? {},
+  });
+
+  return created;
 }
 
 /**
