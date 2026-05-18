@@ -59,6 +59,7 @@ model User {
   savedRecipes            SavedRecipe[]
   collections             Collection[]
   feedback                RecipeFeedback[]
+  cookEvents              CookEvent[]
   mealHistory             MealHistory[]
   mealPlans               MealPlan[]
   shoppingLists           ShoppingList[]
@@ -446,6 +447,7 @@ model Recipe {
 
   // Relationships
   feedback          RecipeFeedback[]
+  cookEvents        CookEvent[]
   savedRecipes      SavedRecipe[]
   mealHistory       MealHistory[]
   meals             Meal[]
@@ -560,6 +562,31 @@ model RecipeFeedback {
   @@index([userId, liked])
   @@index([userId, disliked])
   @@map("recipe_feedback")
+}
+
+// W-A1 — Cook Log. Append-only event stream (one row per scale/swap/made-it/
+// note/outcome), unlike RecipeFeedback's one-row-per-(recipe,user) state.
+// recipeId is nullable + SetNull so a cook can be logged without a Sazon
+// recipe (the §9a path: organize a Claude-assisted cook session) and survive
+// recipe deletion. This is the moat substrate — see
+// plans/office-hours/cooking-mode.md.
+model CookEvent {
+  id       String  @id @default(cuid())
+  userId   String
+  recipeId String?
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe   Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  type    String // 'scale' | 'swap' | 'made_it' | 'note' | 'outcome'
+  payload String // JSON-serialized detail (SQLite has no Json type — see
+  // cookEventService for the (de)serialize helpers; matches the codebase's
+  // serializeJsonColumnSafe pattern)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, recipeId])
+  @@map("cook_events")
 }
 
 model SavedRecipe {
