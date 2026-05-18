@@ -3,6 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import { EditorialMacroWidgets } from './EditorialMacroWidgets';
 import { VerticalCategoryRail } from '../ui/VerticalCategoryRail';
 import { PlateHeroCard } from '../ui/PlateHeroCard';
+import MemoryMirrorLead from '../today/MemoryMirrorLead';
+import { FEATURE_FLAGS } from '../../constants/featureFlags';
 import HeroCohortOverlay from './HeroCohortOverlay';
 import PantryPlateHeroCard from './PantryPlateHeroCard';
 import KitchenIQPromoCard from './KitchenIQPromoCard';
@@ -85,6 +87,10 @@ export function EditorialHomeLayout({
 
   return (
     <>
+      {/* W-D P2/D-3 — memory-mirror lead ABOVE the hero (flag-gated;
+          renders nothing when there's no cook history). */}
+      {FEATURE_FLAGS.todayMemoryMirror && <MemoryMirrorLead />}
+
       {/* Hero: plate-on-pastel + vertical category rail */}
       {displayedHero && (
         <View style={styles.heroRow}>
