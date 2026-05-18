@@ -74,10 +74,18 @@ export async function recordCookEvent(input: RecordCookEventInput) {
  */
 export async function getCookLog(
   userId: string,
-  opts: { limit?: number } = {},
+  opts: { limit?: number; cursor?: string } = {},
 ): Promise<CookLogEntry[]> {
+  // cursor = createdAt ISO of the last seen item; fetch strictly older.
+  // Invalid/empty cursor is ignored (no throw — read path stays resilient).
+  const cursorDate = opts.cursor ? new Date(opts.cursor) : null;
+  const validCursor =
+    cursorDate && !Number.isNaN(cursorDate.getTime()) ? cursorDate : null;
   const rows = await prisma.cookEvent.findMany({
-    where: { userId },
+    where: {
+      userId,
+      ...(validCursor ? { createdAt: { lt: validCursor } } : {}),
+    },
     orderBy: { createdAt: 'desc' },
     ...(opts.limit && opts.limit > 0 ? { take: opts.limit } : {}),
   });
