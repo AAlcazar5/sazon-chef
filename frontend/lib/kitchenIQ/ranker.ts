@@ -17,7 +17,7 @@ export function scoreCard(card: KitchenIQCard, userState: UserState): number {
   // NOTE: `rolling7dNutrientGaps` and `topAffinityIngredients` are stubbed
   // empty in `useFoodIntelUserState` until 10R-phase2 wires them. Until then
   // these dimensions contribute 0 to the ranker (60 + 20 = 80 of 120 points).
-  // See `plans/ROADMAP_3.0.md` §10R-Phase2 for the closed completion record (wire-up shipped 2026-05-04).
+  // See `plans/plan-archives/ROADMAP_3.0.md` §10R-Phase2 for the closed completion record (wire-up shipped 2026-05-04).
   const gaps = new Set(userState.rolling7dNutrientGaps);
   if (keys.nutrient.some((n) => gaps.has(n))) {
     score += NUTRIENT_GAP_WEIGHT;

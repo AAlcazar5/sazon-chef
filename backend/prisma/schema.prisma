@@ -2144,7 +2144,7 @@ model RecipeDeletion {
 // Composite (0-100) + 6 axis scores (each 0-5, nullable) + JSON failure
 // reasons. One row per recipe; idempotent upsert via `recipeId @unique`.
 // Engagement signals deliberately excluded — content-only scoring protects
-// breadth (see ROADMAP_4.0.md Tier D preamble).
+// breadth (see plans/plan-archives/ROADMAP_4.0.md Tier D preamble).
 // ──────────────────────────────────────────────────────────────────────────
 
 model RecipeQualityScore {

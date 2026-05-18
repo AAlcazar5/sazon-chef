@@ -1,7 +1,7 @@
 // backend/__tests__/utils/superfoodDetection.global.test.ts
 // Group 11 Phase 3 — global cuisine superfood expansion.
 // Each test maps to one of the explicit Phase 3 acceptance bullets in
-// `plans/ROADMAP_3.0.md` (closed completion record; "Plantain detected in Nigerian jollof rice", etc.).
+// `plans/plan-archives/ROADMAP_3.0.md` (closed completion record; "Plantain detected in Nigerian jollof rice", etc.).
 
 import {
   detectSuperfoods,
