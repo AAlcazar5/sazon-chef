@@ -36,11 +36,13 @@ export function EditorialSectionHeader({
   rightSlot,
 }: EditorialSectionHeaderProps) {
   const { lead, accent } = splitTitleForAccent(title);
-  const meta =
-    subtitle ??
-    (typeof count === 'number'
-      ? `${count} recipe${count === 1 ? '' : 's'}`
-      : undefined);
+  // W-D1 — no-recipe-count law: never render "N recipes" under a section
+  // header. Recipes are a like-signal store, not a countable catalog
+  // (Claude-class tooling ⇒ unlimited on-demand recipes). `count` stays in
+  // the prop API for callers/layout but is no longer surfaced; only an
+  // explicit `subtitle` shows.
+  void count;
+  const meta = subtitle;
 
   const Inner = (
     <View style={styles.row}>
