@@ -23,6 +23,8 @@ import MoodSelector from '../../components/ui/MoodSelector';
 
 // Extracted components and utilities
 import { FilterModal, HomeHeader, ParallaxHeroSection, MealPrepModeHeader, RecipeSectionsGrid, DislikeReasonSheet, EditorialHomeLayout } from '../../components/home';
+import BrowseAllSection from '../../components/home/BrowseAllSection';
+import { FEATURE_FLAGS } from '../../constants/featureFlags';
 // ROADMAP 4.0 BAP0.1 reverted: the featured recipe-of-the-day hero is the
 // right top-of-Today surface. The QuickActionRow's "Build a plate" chip
 // already sits directly above it, so the BAP affordance is reachable
@@ -1338,6 +1340,10 @@ export default function HomeScreen() {
             framings are now picked by useTodayPlateContext and rendered
             INSIDE TodayPlateHero above (variant resolution). */}
 
+        {/* W-D P2/D-4 — catalog browse de-emphasized behind an opt-in
+            affordance when the memory-mirror reframe is on (flag-gated,
+            A/B-safe rollback). */}
+        <BrowseAllSection enabled={FEATURE_FLAGS.todayMemoryMirror}>
         {/* Contextual Recipe Sections (below editorial fold) */}
         <RecipeSectionsGrid
           sections={recipeSections}
@@ -1373,6 +1379,7 @@ export default function HomeScreen() {
           onNextPage={handleNextPage}
           darkFeed={darkFeed}
         />
+        </BrowseAllSection>
 
         {/* ROADMAP 4.0 A1-f — NewToYou + BrowseByFamily relocated to Kitchen → Discover.
             Premium upsell card stays on Today as a contextual nudge.
