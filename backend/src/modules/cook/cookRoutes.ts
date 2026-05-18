@@ -7,5 +7,6 @@ import { cookController } from './cookController';
 const router = Router();
 
 router.get('/log', cookController.getCookLog);
+router.post('/event', cookController.logCookEvent); // D-6 — log a Claude-assisted cook
 
 export { router as cookRoutes };

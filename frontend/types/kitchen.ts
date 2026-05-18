@@ -10,7 +10,8 @@ export type CookbookViewMode =
   | 'collections'
   | 'discover'
   | 'journey'
-  | 'stories';
+  | 'stories'
+  | 'cooklog'; // W-D P1/D-2 — Cook Log (flag-gated: FEATURE_FLAGS.cookLog)
 
 // Aliased name kept for backwards compatibility with existing imports of
 // `ViewMode` from `components/cookbook/CookbookFilterModal`.
