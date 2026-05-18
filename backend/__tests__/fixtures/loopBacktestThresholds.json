@@ -1,0 +1,7 @@
+{
+  "_comment": "PRE-REGISTERED W-A4 Phase-1 thresholds. Set before running; do not edit to fit a result. A run below these routes to the S fallback per plans/office-hours/loop-value-measurement.md decision table. Phase-1 proves mechanism only — never human value.",
+  "topN": 10,
+  "trainCooks": 6,
+  "minPersonaPassRate": 0.7,
+  "minMeanLift": 0.1
+}

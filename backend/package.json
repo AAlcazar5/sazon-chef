@@ -22,6 +22,7 @@
     "seed:500-newer-dedup": "ts-node -r tsconfig-paths/register scripts/seed-500-newer-cuisines-dedup.ts",
     "seed:target": "DRY_RUN=0 TARGET_SAVED=500 OLLAMA_ENABLED=1 OLLAMA_MODEL=llama3.1:8b AI_PROVIDER_ORDER=deepseek,ollama AVOID_WINDOW=6 ts-node -r tsconfig-paths/register scripts/seed-500-newer-cuisines-dedup.ts",
     "seed:1000-newer-dedup": "ts-node -r tsconfig-paths/register scripts/seed-1000-newer-cuisines-dedup.ts",
+    "loop:backtest": "ts-node -r tsconfig-paths/register scripts/run-loop-backtest.ts",
     "seed:snacks-desserts": "AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER:-deepseek,groq} ts-node -r tsconfig-paths/register scripts/seed-snacks-desserts.ts",
     "seed:intl-snacks": "AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER:-deepseek,groq} ts-node -r tsconfig-paths/register scripts/seed-international-snacks.ts",
     "seed:intl-desserts": "AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER:-deepseek,groq} ts-node -r tsconfig-paths/register scripts/seed-international-desserts.ts",

@@ -16,9 +16,12 @@ export type AffinityEvent =
 const SCORE_MIN = -2;
 const SCORE_MAX = 2;
 
-const clamp = (v: number): number => Math.max(SCORE_MIN, Math.min(SCORE_MAX, v));
+// Exported (W-A4) so the loop-value backtest reuses the EXACT production
+// delta math — faithful by construction, guarded by
+// slotAffinity.deltaCharacterization.test.ts. Behavior unchanged.
+export const clamp = (v: number): number => Math.max(SCORE_MIN, Math.min(SCORE_MAX, v));
 
-const deltaForEvent = (event: AffinityEvent): number | null => {
+export const deltaForEvent = (event: AffinityEvent): number | null => {
   switch (event.type) {
     case 'plate_saved': return 0.1;
     case 'plate_cooked': return 0.2;
