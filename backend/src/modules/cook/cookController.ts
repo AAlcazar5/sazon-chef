@@ -8,10 +8,21 @@
 
 import { Request, Response } from 'express';
 import { getUserId } from '@/utils/authHelper';
-import { getCookLog } from '@/services/cookEventService';
+import {
+  getCookLog,
+  recordCookEvent,
+  type CookEventType,
+} from '@/services/cookEventService';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const ALLOWED_TYPES: readonly CookEventType[] = [
+  'scale',
+  'swap',
+  'made_it',
+  'note',
+  'outcome',
+];
 
 export const cookController = {
   async getCookLog(req: Request, res: Response): Promise<Response> {
@@ -36,5 +47,35 @@ export const cookController = {
         : null;
 
     return res.json({ entries, nextCursor });
+  },
+
+  // D-6 — log a cook the user did with help elsewhere (the §9a
+  // "complement Claude" path). User is the AUTHED user only (IDOR). type
+  // defaults to made_it; recipeId optional (no Sazon recipe required).
+  // recordCookEvent also feeds the affinity loop (non-blocking).
+  async logCookEvent(req: Request, res: Response): Promise<Response> {
+    const userId = getUserId(req);
+    const body = (req.body ?? {}) as {
+      type?: string;
+      recipeId?: string | null;
+      payload?: Record<string, unknown>;
+    };
+
+    const type = (body.type ?? 'made_it') as CookEventType;
+    if (!ALLOWED_TYPES.includes(type)) {
+      return res.status(400).json({ error: `unknown cook event type: ${body.type}` });
+    }
+    const payload =
+      body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload)
+        ? body.payload
+        : {};
+
+    const created = await recordCookEvent({
+      userId,
+      recipeId: body.recipeId ?? null,
+      type,
+      payload,
+    });
+    return res.json({ id: created.id });
   },
 };

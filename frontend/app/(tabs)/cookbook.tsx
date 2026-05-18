@@ -62,6 +62,8 @@ import type { CookbookViewMode } from '../../types/kitchen';
 import KitchenDiscoverView from '../../components/kitchen/KitchenDiscoverView';
 import KitchenJourneyView from '../../components/kitchen/KitchenJourneyView';
 import KitchenStoriesView from '../../components/kitchen/KitchenStoriesView';
+import KitchenCookLogView from '../../components/kitchen/KitchenCookLogView';
+import { FEATURE_FLAGS } from '../../constants/featureFlags';
 import FilterRow, { DEFAULT_FILTER_CHIPS } from '../../components/ui/FilterRow';
 import { useCookbookFilterRowChips } from '../../hooks/useFilterRowChips';
 import { useSurfaceTracking } from '../../hooks/useSurfaceTracking';
@@ -243,6 +245,7 @@ export default function CookbookScreen() {
     if (
       viewParam === 'journey' ||
       viewParam === 'stories' ||
+      (viewParam === 'cooklog' && FEATURE_FLAGS.cookLog) ||
       viewParam === 'discover' ||
       viewParam === 'collections' ||
       viewParam === 'saved'
@@ -1893,6 +1896,15 @@ export default function CookbookScreen() {
       {viewMode === 'stories' && (
         <View testID="kitchen-view-stories" style={{ flex: 1 }}>
           <KitchenStoriesView isDark={isDark} />
+        </View>
+      )}
+
+      {/* W-D P1/D-2 — Cook Log, behind FEATURE_FLAGS.cookLog (reversible
+          kill-flag; reachable via ?view=cooklog deep-link/long-press-seed.
+          Visible switcher-chip placement rides the Kitchen-reframe). */}
+      {viewMode === 'cooklog' && FEATURE_FLAGS.cookLog && (
+        <View testID="kitchen-view-cooklog" style={{ flex: 1 }}>
+          <KitchenCookLogView isDark={isDark} />
         </View>
       )}
 

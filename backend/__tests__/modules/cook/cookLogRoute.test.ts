@@ -8,7 +8,7 @@ import { cookController } from '../../../src/modules/cook/cookController';
 import { prisma } from '../../../src/lib/prisma';
 
 const cookEvent = (prisma as unknown as {
-  cookEvent: { findMany: jest.Mock };
+  cookEvent: { findMany: jest.Mock; create: jest.Mock };
 }).cookEvent;
 
 interface FakeRes {
@@ -102,5 +102,59 @@ describe('GET /api/cook/log', () => {
     await cookController.getCookLog(req(), res as any);
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ entries: [], nextCursor: null });
+  });
+});
+
+describe('POST /api/cook/event (D-6 — log a Claude-assisted cook)', () => {
+  const postReq = (body: any, userId = 'u1') =>
+    ({ body, user: { id: userId } } as any);
+
+  beforeEach(() => {
+    cookEvent.create.mockReset();
+    cookEvent.create.mockResolvedValue({ id: 'ce-new', recipeId: null });
+  });
+
+  it('records a made_it event for the AUTHED user (IDOR: ignores body.userId)', async () => {
+    const res = makeRes();
+    await cookController.logCookEvent(
+      postReq({ userId: 'victim', type: 'made_it', payload: { source: 'elsewhere' } }, 'attacker'),
+      res as any,
+    );
+    expect(res.statusCode).toBe(200);
+    const data = cookEvent.create.mock.calls[0][0].data;
+    expect(data.userId).toBe('attacker');
+    expect(data.userId).not.toBe('victim');
+    expect(data.type).toBe('made_it');
+    expect(data.recipeId).toBeNull(); // §9a: no Sazon recipe required
+    expect(JSON.parse(data.payload)).toEqual({ source: 'elsewhere' });
+    expect(res.body.id).toBe('ce-new');
+  });
+
+  it('rejects an unknown event type (400, nothing written)', async () => {
+    const res = makeRes();
+    await cookController.logCookEvent(
+      postReq({ type: 'exfiltrate', payload: {} }),
+      res as any,
+    );
+    expect(res.statusCode).toBe(400);
+    expect(cookEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('defaults missing type to made_it and tolerates absent payload', async () => {
+    const res = makeRes();
+    await cookController.logCookEvent(postReq({}), res as any);
+    expect(res.statusCode).toBe(200);
+    const data = cookEvent.create.mock.calls[0][0].data;
+    expect(data.type).toBe('made_it');
+    expect(data.payload).toBe('{}');
+  });
+
+  it('passes a provided recipeId through', async () => {
+    const res = makeRes();
+    await cookController.logCookEvent(
+      postReq({ type: 'made_it', recipeId: 'r42', payload: {} }),
+      res as any,
+    );
+    expect(cookEvent.create.mock.calls[0][0].data.recipeId).toBe('r42');
   });
 });

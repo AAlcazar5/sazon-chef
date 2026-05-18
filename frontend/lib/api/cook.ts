@@ -21,4 +21,12 @@ export const cookApi = {
   getCookLog: (
     opts: { cursor?: string; limit?: number } = {},
   ): Promise<CookLogPage> => apiClient.get('/cook/log', { params: opts }),
+
+  // D-6 — log a cook done with help elsewhere (§9a "complement Claude").
+  // type defaults server-side to made_it; recipeId optional.
+  logCookEvent: (body: {
+    type?: string;
+    recipeId?: string | null;
+    payload?: Record<string, unknown>;
+  }): Promise<{ id: string }> => apiClient.post('/cook/event', body),
 };
