@@ -3,7 +3,9 @@
 // Tier L H2 — refresh-token issuance, rotation, and revocation.
 //
 // Design:
-// - Access token: short-lived JWT (15 min default; ACCESS_TOKEN_EXPIRES_IN env).
+// - Access token: short-lived JWT in prod (15 min; ACCESS_TOKEN_EXPIRES_IN
+//   env). In dev it's long-lived (365d) so local work isn't interrupted by
+//   logouts every 15 min — see resolveAccessTokenExpiry.
 // - Refresh token: opaque random 256-bit string (base64url-encoded). Only the
 //   SHA-256 hash is stored server-side; the plaintext goes to the client and
 //   is never persisted. A DB leak alone cannot mint sessions.
@@ -19,7 +21,28 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 import { JWT_SECRET } from '@/utils/jwtConfig';
 
-const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m';
+/**
+ * Access-token lifetime. Prod stays short (15m) — refresh-token rotation
+ * covers long sessions. Any other NODE_ENV (dev/test) gets a year so local
+ * work isn't interrupted by logouts every 15 minutes. An explicit
+ * ACCESS_TOKEN_EXPIRES_IN ALWAYS wins, so prod can never be silently
+ * loosened (and can be tightened anywhere). Refresh token (7d) and
+ * verification are unchanged — this only affects how long a fresh access
+ * token is valid before the client must refresh.
+ */
+export function resolveAccessTokenExpiry(opts: {
+  envValue?: string;
+  nodeEnv?: string;
+}): string {
+  const explicit = opts.envValue?.trim();
+  if (explicit) return explicit;
+  return opts.nodeEnv === 'production' ? '15m' : '365d';
+}
+
+const ACCESS_TOKEN_EXPIRES_IN = resolveAccessTokenExpiry({
+  envValue: process.env.ACCESS_TOKEN_EXPIRES_IN,
+  nodeEnv: process.env.NODE_ENV,
+});
 const REFRESH_TOKEN_EXPIRES_DAYS = Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS || 7);
 
 export interface IssuedTokenPair {
