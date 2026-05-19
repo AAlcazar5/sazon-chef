@@ -7,7 +7,7 @@
 // facts) and the hero leads as before. W-D1: zero counts.
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useCookLog } from '../../hooks/useCookLog';
 import { Brand, PastelTokens } from '../../constants/tokens';
 
@@ -29,8 +29,8 @@ function deriveFact(types: Set<string>): string | null {
 }
 
 export default function MemoryMirrorLead() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { entries, loading } = useCookLog();
 
   // No fabricated memory: nothing to mirror yet → render nothing.

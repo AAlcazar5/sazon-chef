@@ -3,6 +3,13 @@
 // there's no history (no fabricated memory). useCookLog mocked.
 
 jest.mock('../../../hooks/useCookLog', () => ({ useCookLog: jest.fn() }));
+// Theme comes from the app's ThemeContext (the single source — it wraps
+// NativeWind internally). Mirrors the cooking-component tests; using the
+// real source here is what would have caught the nativewind-undefined
+// runtime crash.
+jest.mock('../../../contexts/ThemeContext', () => ({
+  useTheme: () => ({ theme: 'light', colors: { text: { primary: '#111' } } }),
+}));
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
