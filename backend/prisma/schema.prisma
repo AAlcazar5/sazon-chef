@@ -520,6 +520,14 @@ model RecipeIngredient {
   text     String
   order    Int
 
+  // Tier Y-1a — structured-ingredient seam. Additive + nullable: AI-gen
+  // recipes populate these (aiRecipeService emits structured); legacy /
+  // imported rows leave them null and fall back to parseIngredientQuantity.
+  // No backfill. Enables exact Cooking Mode rescale (rescaleStepText).
+  name   String?
+  amount Float?
+  unit   String?
+
   // Cost tracking (Phase 6, Group 13)
   estimatedCost Float? // Estimated cost for this ingredient
   unitCost      Float? // Cost per unit (e.g., per lb, per cup)

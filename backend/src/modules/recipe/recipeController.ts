@@ -1,4 +1,5 @@
 import { logger } from '../../utils/logger';
+import { buildIngredientRow } from '../../utils/structuredIngredients';
 // backend/src/modules/recipe/recipeController.simple.ts
 import { Request, Response } from 'express';
 import { prisma } from '@/lib/prisma';
@@ -3018,18 +3019,10 @@ export const recipeController = {
 
       // Normalize ingredients to text + order
       const ingredientsInput: any[] = Array.isArray(data.ingredients) ? data.ingredients : [];
-      const ingredientsCreate = ingredientsInput.map((ing: any, index: number) => {
-        if (typeof ing === 'string') return { text: ing, order: index + 1 };
-        if (ing && typeof ing === 'object') {
-          if ('text' in ing) return { text: String(ing.text), order: index + 1 };
-          const amount = ing.amount ? String(ing.amount) : '';
-          const unit = ing.unit ? String(ing.unit) : '';
-          const name = ing.name ? String(ing.name) : '';
-          const combined = `${amount}${unit ? ' ' + unit : ''} ${name}`.trim();
-          return { text: combined, order: index + 1 };
-        }
-        return { text: String(ing), order: index + 1 };
-      });
+      // Tier Y-1a — keep structured columns alongside `text` for exact rescale.
+      const ingredientsCreate = ingredientsInput.map(
+        (ing: any, index: number) => buildIngredientRow(ing, index),
+      );
 
       // Normalize instructions to text + step
       const instructionsInput: any[] = Array.isArray(data.instructions) ? data.instructions : [];
@@ -3144,18 +3137,13 @@ export const recipeController = {
       // Optionally replace ingredients
       if (Array.isArray(data.ingredients)) {
         await prisma.recipeIngredient.deleteMany({ where: { recipeId: id } });
-        const ingredientsCreate = data.ingredients.map((ing: any, index: number) => {
-          if (typeof ing === 'string') return { text: ing, order: index + 1, recipeId: id };
-          if (ing && typeof ing === 'object') {
-            if ('text' in ing) return { text: String(ing.text), order: index + 1, recipeId: id };
-            const amount = ing.amount ? String(ing.amount) : '';
-            const unit = ing.unit ? String(ing.unit) : '';
-            const name = ing.name ? String(ing.name) : '';
-            const combined = `${amount}${unit ? ' ' + unit : ''} ${name}`.trim();
-            return { text: combined, order: index + 1, recipeId: id };
-          }
-          return { text: String(ing), order: index + 1, recipeId: id };
-        });
+        // Tier Y-1a — structured columns + recipeId for createMany.
+        const ingredientsCreate = data.ingredients.map(
+          (ing: any, index: number) => ({
+            ...buildIngredientRow(ing, index),
+            recipeId: id,
+          }),
+        );
         await prisma.recipeIngredient.createMany({ data: ingredientsCreate });
       }
 
