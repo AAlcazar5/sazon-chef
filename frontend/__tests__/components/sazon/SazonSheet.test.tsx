@@ -22,11 +22,26 @@ jest.mock('../../../contexts/ThemeContext', () => ({
 // CoachScreen has its own dedicated tests.
 jest.mock('../../../app/(tabs)/coach', () => {
   const { Text } = require('react-native');
-  return function MockCoachScreen({ mode, seedMessage }: { mode?: string; seedMessage?: string }) {
+  return function MockCoachScreen({
+    mode,
+    seedMessage,
+    onClose,
+  }: {
+    mode?: string;
+    seedMessage?: string;
+    onClose?: () => void;
+  }) {
     return (
-      <Text testID="mock-coach-screen">
-        {mode}|{seedMessage ?? ''}
-      </Text>
+      <>
+        <Text testID="mock-coach-screen">
+          {mode}|{seedMessage ?? ''}
+        </Text>
+        {/* Proxy for CoachScreen's own header close button — proves
+            SazonSheet delegates close to it (no sheet-owned overlay). */}
+        <Text testID="mock-coach-onclose" onPress={() => onClose?.()}>
+          x
+        </Text>
+      </>
     );
   };
 });
@@ -51,10 +66,16 @@ describe('SazonSheet', () => {
     expect(mock.props.children.join('')).toMatch(/^sheet/);
   });
 
-  it('renders the close button + fires onClose (chat view)', () => {
+  it('chat view has NO sheet-owned overlay X — close is delegated to CoachScreen', () => {
     const onClose = jest.fn();
-    const { getByLabelText } = render(<SazonSheet visible={true} onClose={onClose} />);
-    fireEvent.press(getByLabelText('Close Sazon sheet'));
+    const { queryByLabelText, getByTestId } = render(
+      <SazonSheet visible={true} onClose={onClose} />,
+    );
+    // The old floating "Close Sazon sheet" overlay is gone (it darkened
+    // nothing and sat in its own row above the control bar).
+    expect(queryByLabelText('Close Sazon sheet')).toBeNull();
+    // onClose is wired through to CoachScreen's own header close button.
+    fireEvent.press(getByTestId('mock-coach-onclose'));
     expect(onClose).toHaveBeenCalled();
   });
 

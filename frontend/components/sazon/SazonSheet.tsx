@@ -25,7 +25,6 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
-import { Shadows } from '../../constants/Shadows';
 import { BorderRadius, Spacing } from '../../constants/Spacing';
 import { useTheme } from '../../contexts/ThemeContext';
 import { coachApi } from '../../lib/api';
@@ -106,11 +105,13 @@ export default function SazonSheet({ visible, onClose, contextSeed }: SazonSheet
       testID="sazon-sheet"
     >
       <TouchableWithoutFeedback onPress={onClose}>
+        {/* Transparent — tap-to-dismiss only. No dim/scrim or shadow: it
+            darkened the app title header peeking above the 90% sheet. */}
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
 
       <View
-        style={[styles.sheet, { backgroundColor: screenBg }, Shadows.LG]}
+        style={[styles.sheet, { backgroundColor: screenBg }]}
         accessibilityRole="none"
         accessibilityLabel="Sazon chat sheet"
       >
@@ -151,23 +152,9 @@ export default function SazonSheet({ visible, onClose, contextSeed }: SazonSheet
           </View>
         )}
 
-        {/* Floating close X — chat view's CoachScreen has its own history
-            and TTS buttons in its header; we just need a way to dismiss. */}
-        {view === 'chat' && (
-          <HapticTouchableOpacity
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Close Sazon sheet"
-            style={styles.chatCloseOverlay}
-          >
-            <Icon
-              name={Icons.CLOSE}
-              size={IconSizes.SM}
-              color={titleColor as string}
-              accessibilityLabel=""
-            />
-          </HapticTouchableOpacity>
-        )}
+        {/* Chat view's close X lives in CoachScreen's own header row
+            (next to the TTS toggle), so the control bar sits directly
+            under the app title — no floating overlay here. */}
 
         {/* Body */}
         <TouchableWithoutFeedback onPress={view === 'history' ? Keyboard.dismiss : undefined}>
@@ -256,7 +243,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    // No dim — a scrim here darkened the app title header visible above
+    // the 90% sheet. Stays present only as a tap-to-dismiss target.
+    backgroundColor: 'transparent',
   },
   sheet: {
     position: 'absolute',
@@ -300,18 +289,6 @@ const styles = StyleSheet.create({
   },
   chatBody: {
     flex: 1,
-  },
-  chatCloseOverlay: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    zIndex: 5,
   },
   intro: {
     fontSize: 15,
