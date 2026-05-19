@@ -77,4 +77,30 @@ describe('selectLLMClient', () => {
     expect(selectLLMClient('free').providerId).toBe('gemini-direct');
     expect(selectLLMClient('premium').providerId).toBe('gemini-direct');
   });
+
+  // ─── W-C1 — DeepSeek (free-tier cook provider) ────────────────────────
+  it('free routes to DeepSeek when COACH_FREE_PROVIDER=deepseek + DEEPSEEK_API_KEY set', () => {
+    process.env.COACH_FREE_PROVIDER = 'deepseek';
+    process.env.DEEPSEEK_API_KEY = 'ds-test';
+    expect(selectLLMClient('free').providerId).toBe('deepseek');
+  });
+
+  it('DeepSeek falls back to Anthropic when DEEPSEEK_API_KEY missing', () => {
+    process.env.COACH_FREE_PROVIDER = 'deepseek';
+    delete process.env.DEEPSEEK_API_KEY;
+    expect(selectLLMClient('free').providerId).toBe('anthropic');
+  });
+
+  it('premium with COACH_FREE_PROVIDER=deepseek still routes to Anthropic', () => {
+    process.env.COACH_FREE_PROVIDER = 'deepseek';
+    process.env.DEEPSEEK_API_KEY = 'ds-test';
+    expect(selectLLMClient('premium').providerId).toBe('anthropic');
+  });
+
+  it('COACH_LLM_PROVIDER=deepseek forces DeepSeek regardless of tier (with key)', () => {
+    process.env.COACH_LLM_PROVIDER = 'deepseek';
+    process.env.DEEPSEEK_API_KEY = 'ds-test';
+    expect(selectLLMClient('free').providerId).toBe('deepseek');
+    expect(selectLLMClient('premium').providerId).toBe('deepseek');
+  });
 });

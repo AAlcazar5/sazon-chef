@@ -86,7 +86,7 @@ export interface LLMStreamHandle {
 
 export interface LLMClient {
   /** Stable id for telemetry / logging. */
-  providerId: 'anthropic' | 'openrouter-gemini' | 'gemini-direct';
+  providerId: 'anthropic' | 'openrouter-gemini' | 'gemini-direct' | 'deepseek';
   /** Begin a streamed completion. */
   startStream(call: LLMStreamCall): LLMStreamHandle;
 }

@@ -14,17 +14,20 @@ import { logger } from '../../utils/logger';
 import { anthropicAdapter } from './anthropicAdapter';
 import { openRouterAdapter } from './openRouterAdapter';
 import { geminiAdapter } from './geminiAdapter';
+import { deepseekAdapter } from './deepseekAdapter';
 import type { LLMClient } from './types';
 
 export type CoachLLMProviderId =
   | 'anthropic'
   | 'openrouter-gemini'
-  | 'gemini-direct';
+  | 'gemini-direct'
+  | 'deepseek';
 
 const PROVIDER_IDS: ReadonlySet<string> = new Set([
   'anthropic',
   'openrouter-gemini',
   'gemini-direct',
+  'deepseek',
 ]);
 
 function resolveProviderForTier(tier: CoachTier): CoachLLMProviderId {
@@ -60,8 +63,18 @@ export function selectLLMClient(tier: CoachTier): LLMClient {
     }
     return geminiAdapter;
   }
+  if (id === 'deepseek') {
+    if (!process.env.DEEPSEEK_API_KEY) {
+      logger.warn(
+        { tier },
+        'COACH_FREE_PROVIDER=deepseek but DEEPSEEK_API_KEY not set — falling back to Anthropic',
+      );
+      return anthropicAdapter;
+    }
+    return deepseekAdapter;
+  }
   return anthropicAdapter;
 }
 
-export { anthropicAdapter, openRouterAdapter, geminiAdapter };
+export { anthropicAdapter, openRouterAdapter, geminiAdapter, deepseekAdapter };
 export * from './types';
