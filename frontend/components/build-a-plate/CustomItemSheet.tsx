@@ -10,7 +10,7 @@ import { View, Text, StyleSheet, TextInput } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import BottomSheet from '../ui/BottomSheet';
 import LoadingState from '../ui/LoadingState';
-import { Pastel, Accent } from '../../constants/Colors';
+import { Pastel, Colors, DarkColors } from '../../constants/Colors';
 import { Shadows } from '../../constants/Shadows';
 import { BorderRadius } from '../../constants/Spacing';
 import {
@@ -240,7 +240,7 @@ export default function CustomItemSheet({
                   styles.unitChip,
                   {
                     backgroundColor: active
-                      ? Accent.coral
+                      ? (isDark ? DarkColors.primary : Colors.primary)
                       : isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6',
                   },
                 ]}
@@ -270,7 +270,7 @@ export default function CustomItemSheet({
           disabled={!canEstimate}
           style={[
             styles.estimateBtn,
-            { backgroundColor: canEstimate ? Accent.coral : (isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB') },
+            { backgroundColor: canEstimate ? (isDark ? DarkColors.primary : Colors.primary) : (isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB') },
             Shadows.SM as any,
           ]}
           testID={`${testID}-estimate-btn`}
@@ -316,7 +316,7 @@ export default function CustomItemSheet({
                 accessibilityLabel={editingMacros ? 'Use estimated macros' : 'Adjust macros manually'}
                 accessibilityState={{ selected: editingMacros }}
               >
-                <Text style={[styles.adjustToggleLabel, { color: Accent.coral }]}>
+                <Text style={[styles.adjustToggleLabel, { color: (isDark ? DarkColors.primary : Colors.primary) }]}>
                   {editingMacros ? 'Use estimate' : 'Adjust'}
                 </Text>
               </HapticTouchableOpacity>
@@ -357,7 +357,7 @@ export default function CustomItemSheet({
               onPress={handleAdd}
               hapticStyle="medium"
               pressedScale={0.97}
-              style={[styles.addBtn, { backgroundColor: Accent.coral }, Shadows.SM as any]}
+              style={[styles.addBtn, { backgroundColor: (isDark ? DarkColors.primary : Colors.primary) }, Shadows.SM as any]}
               testID={`${testID}-add-btn`}
               accessibilityLabel="Add to plate"
               accessibilityRole="button"

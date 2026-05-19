@@ -16,7 +16,10 @@ import { Shadows } from '../../constants/Shadows';
 interface CoachContextLike {
   pantryExpiringSoon: string[];
   remainingMacros: { calories: number; protein: number; carbs: number; fat: number } | null;
-  leftoverInventory: Array<{ name?: string; componentId?: string }>;
+  // `name` is `string | null` on CoachContextResponse (server may send
+  // null) — accept it so the response is assignable; the resolver only
+  // reads names defensively.
+  leftoverInventory: Array<{ name?: string | null; componentId?: string }>;
   topAdjacentCuisine: string | null;
 }
 
