@@ -318,7 +318,10 @@ export default function CoachScreen({
   const voice = useVoiceInput({
     continuous: false,
     onIntent: (parsed) => {
-      const finalText = parsed?.original ?? '';
+      // ParsedVoiceIntent's transcript is `rawText` (base VoiceIntent) —
+      // `.original` never existed, so the final spoken text silently
+      // never reached the composer.
+      const finalText = parsed?.rawText ?? '';
       if (finalText) setComposerText(finalText);
     },
   });
