@@ -41,8 +41,6 @@ const FILTERS: FilterState = {
   dietaryRestrictions: ['Gluten-Free'],
   maxCookTime: 30,
   difficulty: ['Easy'],
-  ingredients: [],
-  excludeIngredients: [],
 };
 
 function makeOptions(overrides: Partial<Parameters<typeof useRecipeSearch>[0]> = {}) {
