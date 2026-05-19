@@ -10,7 +10,7 @@ import ShareCardCapture from '../../../components/celebrations/ShareCardCapture'
 jest.mock('react-native-view-shot', () => {
   const RN = require('react-native');
   const ReactInner = require('react');
-  return ReactInner.forwardRef((props, _ref) =>
+  return ReactInner.forwardRef((props: any, _ref: any) =>
     ReactInner.createElement(RN.View, {}, props.children),
   );
 });
@@ -19,7 +19,7 @@ jest.mock('expo-image', () => {
   const RN = require('react-native');
   const ReactInner = require('react');
   return {
-    Image: (props) => ReactInner.createElement(RN.View, { style: props.style, testID: props.testID }),
+    Image: (props: any) => ReactInner.createElement(RN.View, { style: props.style, testID: props.testID }),
   };
 });
 
@@ -27,7 +27,7 @@ jest.mock('expo-linear-gradient', () => {
   const RN = require('react-native');
   const ReactInner = require('react');
   return {
-    LinearGradient: (props) =>
+    LinearGradient: (props: any) =>
       ReactInner.createElement(RN.View, { style: props.style }, props.children),
   };
 });

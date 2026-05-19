@@ -85,8 +85,12 @@ describe('DS1.1 — Contrast pairing table', () => {
     });
 
     it('Ink.primary on Canvas passes AA in both themes (the most-used pair)', () => {
-      const lightPrimaryOnCanvas = matrix.light.find((r) => r.ink === 'primary' && r.surface === 'canvas');
-      const darkPrimaryOnCanvas = matrix.dark.find((r) => r.ink === 'primary' && r.surface === 'canvas');
+      const lightPrimaryOnCanvas = matrix.light.find(
+        (r: (typeof matrix.light)[number]) => r.ink === 'primary' && r.surface === 'canvas',
+      );
+      const darkPrimaryOnCanvas = matrix.dark.find(
+        (r: (typeof matrix.dark)[number]) => r.ink === 'primary' && r.surface === 'canvas',
+      );
       expect(lightPrimaryOnCanvas?.body).toBe(true);
       expect(darkPrimaryOnCanvas?.body).toBe(true);
     });

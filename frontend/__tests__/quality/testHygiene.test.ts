@@ -22,7 +22,7 @@ const TEST_ROOT = path.join(FRONTEND_ROOT, '__tests__');
 
 const TEST_FILE_FLOOR = 400;
 
-const walkTests = (dir, out) => {
+const walkTests = (dir: string, out: string[]) => {
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
