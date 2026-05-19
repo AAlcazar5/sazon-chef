@@ -572,33 +572,59 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
   // degrade message and end the turn here, BEFORE selectLLMClient. The cook
   // keeps the deterministic surface (W-B2 step card / W-A2 scale) client-side.
   // Scoped to cook turns only — every other path keeps its existing behavior.
-  if (detectCookIntents(sanitizedMessage).length > 0) {
-    const cookBudget = await selectModelWithBudget({
-      userId,
-      defaultModel: COACH_MODELS.free,
-      tier,
+  // Decide the degrade BEFORE writing anything. Any failure here
+  // (DB/budget hiccup) must NEVER throw pre-headers and break the turn —
+  // it falls through to the normal stream. This block is outside the
+  // Code#1 SSE try by necessity (it owns its own headers), so it must be
+  // self-defending.
+  let cookDegrade: { text: string; inputUsage: number; outputUsage: number } | null =
+    null;
+  try {
+    if (detectCookIntents(sanitizedMessage).length > 0) {
+      const cookBudget = await selectModelWithBudget({
+        userId,
+        defaultModel: COACH_MODELS.free,
+        tier,
+      });
+      const decision = cookCeilingDecision({
+        tier,
+        isCookTurn: true,
+        overBudget: cookBudget.overBudget,
+      });
+      if (decision.degrade) {
+        cookDegrade = {
+          text: decision.text,
+          inputUsage: cookBudget.usage.input,
+          outputUsage: cookBudget.usage.output,
+        };
+      }
+    }
+  } catch (cookErr) {
+    captureException(cookErr, {
+      tag: 'coach.cookCeiling',
+      extra: { userId, conversationId },
     });
-    const decision = cookCeilingDecision({
-      tier,
-      isCookTurn: true,
-      overBudget: cookBudget.overBudget,
-    });
-    if (decision.degrade) {
-      res.status(200);
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.flushHeaders?.();
-      res.write(
-        `event: cook_ceiling_degrade\ndata: ${JSON.stringify({ reason: 'cook_ceiling' })}\n\n`,
-      );
-      res.write(`data: ${decision.text}\n\n`);
+    // fall through to the normal stream — the cook-ceiling check is never
+    // allowed to break a turn.
+  }
+
+  if (cookDegrade) {
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+    res.write(
+      `event: cook_ceiling_degrade\ndata: ${JSON.stringify({ reason: 'cook_ceiling' })}\n\n`,
+    );
+    res.write(`data: ${cookDegrade.text}\n\n`);
+    try {
       await prisma.coachMessage.create({
         data: {
           conversationId,
           userId,
           role: 'assistant',
-          content: decision.text,
+          content: cookDegrade.text,
           attachments: serializeJsonColumnSafe('attachments', {
             degraded: 'cook_ceiling',
           }),
@@ -612,13 +638,20 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         userId,
         conversationId,
         surface: 'cook',
-        inputUsage: cookBudget.usage.input,
-        outputUsage: cookBudget.usage.output,
+        inputUsage: cookDegrade.inputUsage,
+        outputUsage: cookDegrade.outputUsage,
       });
-      res.write('event: done\ndata: {}\n\n');
-      res.end();
-      return;
+    } catch (persistErr) {
+      // Persist failed — the user still got the degrade message; just
+      // close the stream cleanly rather than hang the socket.
+      captureException(persistErr, {
+        tag: 'coach.cookCeiling.persist',
+        extra: { userId, conversationId },
+      });
     }
+    res.write('event: done\ndata: {}\n\n');
+    res.end();
+    return;
   }
 
   res.status(200);
