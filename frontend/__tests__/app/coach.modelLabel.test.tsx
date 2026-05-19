@@ -124,21 +124,26 @@ describe('CoachScreen header model label (S1.3)', () => {
     (coachApi.streamMessage as jest.Mock).mockImplementation(fakeStream);
   });
 
-  it('free user renders "Haiku 4.5"', async () => {
+  // Inverted from S1.3 (founder, 2026-05-19): §9c invisible-AI — the
+  // header must not surface any model / version string. `flags.modelLabel`
+  // is still derived internally (intent routing / telemetry); only the
+  // RENDER is removed. The intent→label mapping is still covered by
+  // __tests__/lib/coachClient.test.ts.
+
+  it('free user — "Haiku" / version strings never appear in the header', async () => {
     setSubscription('free', false);
-    const { findByText } = render(<CoachScreen />);
-    expect(await findByText('Haiku 4.5')).toBeTruthy();
+    const { findByText, queryByText } = render(<CoachScreen />);
+    expect(await findByText('Sazon')).toBeTruthy(); // header mounted
+    expect(queryByText(/Haiku/i)).toBeNull();
+    expect(queryByText(/4\.5/)).toBeNull();
   });
 
-  it('premium chat user renders "Sonnet 4.6 ✦ chat" by default', async () => {
+  it('premium user — "Sonnet" / "✦ chat" never appear in the header', async () => {
     setSubscription('premium', true);
-    const { findByText } = render(<CoachScreen />);
-    expect(await findByText('Sonnet 4.6 ✦ chat')).toBeTruthy();
+    const { findByText, queryByText } = render(<CoachScreen />);
+    expect(await findByText('Sazon')).toBeTruthy();
+    expect(queryByText(/Sonnet/i)).toBeNull();
+    expect(queryByText(/✦/)).toBeNull();
+    expect(queryByText(/chat\b/)).toBeNull();
   });
-
-  // Note: deep-plan intent label updates after the user sends a deep-plan
-  // message — the screen tracks `lastSentText`, not live composer text.
-  // The intent → label mapping itself is exercised in
-  // __tests__/lib/coachClient.test.ts (free + chat + deep_plan branches).
-  // This screen test only verifies the default-render labels per tier.
 });

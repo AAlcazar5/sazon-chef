@@ -411,9 +411,8 @@ export default function CoachScreen({
             <Text style={[styles.headerTitle, { color: text }]} numberOfLines={1}>
               Sazon
             </Text>
-            <Text style={[styles.headerModel, { color: subtle }]} numberOfLines={1}>
-              {flags.modelLabel}
-            </Text>
+            {/* Model label intentionally removed — §9c invisible-AI: no
+                AI/model indication in user copy. */}
           </View>
           <View style={styles.headerRight}>
             <HapticTouchableOpacity
@@ -484,7 +483,8 @@ export default function CoachScreen({
 
           {stream.messages.length === 0 && (
             <View testID="mascot" style={styles.intro}>
-              <AnimatedLogoMascot expression="curious" size="medium" />
+              {/* Mascot is already in the app title header above —
+                  duplicating it here was decorative noise. */}
               <Text style={[styles.introText, { color: subtle }]}>
                 Tell me what you're hungry for — I know your pantry, macros, and taste.
               </Text>
