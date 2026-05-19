@@ -112,7 +112,7 @@ export default function KitchenCookLogView({ isDark }: KitchenCookLogViewProps) 
         useMascot
         mascotExpression="sleepy"
         title="Couldn’t reach your cook log"
-        subtitle="Give it a moment and pull to refresh — your cooking history is safe."
+        description="Give it a moment and pull to refresh — your cooking history is safe."
       />
     );
   } else if (entries.length === 0) {
@@ -121,7 +121,7 @@ export default function KitchenCookLogView({ isDark }: KitchenCookLogViewProps) 
         useMascot
         mascotExpression="curious"
         title="Your cooking story starts here"
-        subtitle="Cook something tonight — or log one you made with help elsewhere — and Sazon starts learning how you cook."
+        description="Cook something tonight — or log one you made with help elsewhere — and Sazon starts learning how you cook."
       />
     );
   } else {
@@ -180,10 +180,13 @@ export default function KitchenCookLogView({ isDark }: KitchenCookLogViewProps) 
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: ComponentSpacing.screenPadding ?? 16, paddingBottom: 48 },
+  content: {
+    padding: ComponentSpacing.screen.paddingHorizontal,
+    paddingBottom: 48,
+  },
   group: { marginBottom: 20 },
   groupLabel: {
-    fontFamily: EditorialFontFamily.heading,
+    fontFamily: EditorialFontFamily.display.semibold,
     fontSize: 14,
     letterSpacing: 1,
     textTransform: 'uppercase',

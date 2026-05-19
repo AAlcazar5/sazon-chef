@@ -18,15 +18,24 @@ export interface CookLogPage {
 }
 
 export const cookApi = {
-  getCookLog: (
+  getCookLog: async (
     opts: { cursor?: string; limit?: number } = {},
-  ): Promise<CookLogPage> => apiClient.get('/cook/log', { params: opts }),
+  ): Promise<CookLogPage> => {
+    // Must unwrap `.data` — apiClient returns the raw AxiosResponse.
+    // Returning the response (the prior bug) made useCookLog's
+    // `pageData.entries` undefined → MemoryMirrorLead crash (PR #32).
+    const res = await apiClient.get('/cook/log', { params: opts });
+    return res.data as CookLogPage;
+  },
 
   // D-6 — log a cook done with help elsewhere (§9a "complement Claude").
   // type defaults server-side to made_it; recipeId optional.
-  logCookEvent: (body: {
+  logCookEvent: async (body: {
     type?: string;
     recipeId?: string | null;
     payload?: Record<string, unknown>;
-  }): Promise<{ id: string }> => apiClient.post('/cook/event', body),
+  }): Promise<{ id: string }> => {
+    const res = await apiClient.post('/cook/event', body);
+    return res.data as { id: string };
+  },
 };
