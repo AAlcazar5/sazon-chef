@@ -255,7 +255,9 @@ const styles = StyleSheet.create({
     height: '90%',
     borderTopLeftRadius: BorderRadius.sheet ?? 28,
     borderTopRightRadius: BorderRadius.sheet ?? 28,
-    paddingTop: 12,
+    // No top padding here — CoachScreen's header (sheet mode) owns its
+    // own top spacing, so a sheet-level pad compounded into a visible
+    // gap between the app title and the control row.
   },
   header: {
     flexDirection: 'row',

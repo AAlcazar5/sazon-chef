@@ -164,12 +164,18 @@ export default function SazonDailyGreetingBanner({
           onStart(greeting.starter);
         }}
         hapticStyle="light"
-        style={[styles.starterPill, { backgroundColor: 'rgba(255,255,255,0.55)' }]}
+        style={[
+          styles.starterPill,
+          // High-contrast theme-aware pill so the starter copy actually
+          // reads on the lavender card (the previous translucent white +
+          // lavender text was washed out, esp. in dark mode).
+          { backgroundColor: isDark ? 'rgba(0,0,0,0.45)' : '#FFFFFF' },
+        ]}
       >
-        <Text style={[styles.starterLabel, { color: accent }]} numberOfLines={2}>
+        <Text style={[styles.starterLabel, { color: text }]} numberOfLines={2}>
           {greeting.starter}
         </Text>
-        <Ionicons name="arrow-forward" size={14} color={accent} />
+        <Ionicons name="arrow-forward" size={14} color={text} />
       </HapticTouchableOpacity>
     </View>
   );
