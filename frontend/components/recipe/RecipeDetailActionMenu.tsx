@@ -56,7 +56,10 @@ export default function RecipeDetailActionMenu({
 
   const close = () => setOpen(false);
 
-  const rows: MenuRow[] = [
+  // Annotate the literal (not the post-filter result) so each `icon`
+  // is checked against MenuRow's glyph union instead of widening to
+  // `string` through `.filter`.
+  const allRows: MenuRow[] = [
     {
       id: 'edit',
       icon: 'create-outline',
@@ -107,7 +110,8 @@ export default function RecipeDetailActionMenu({
         onSaveToCollection?.();
       },
     },
-  ].filter((r) => r.show);
+  ];
+  const rows = allRows.filter((r) => r.show);
 
   if (rows.length === 0) return null;
 
