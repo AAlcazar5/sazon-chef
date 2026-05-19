@@ -388,7 +388,13 @@ export default function CoachScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[styles.flex, { backgroundColor: screenBg }]}
       >
-        <View style={[styles.header, { backgroundColor: screenBg }]}>
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: screenBg },
+            mode === 'sheet' && styles.headerSheet,
+          ]}
+        >
           <HapticTouchableOpacity
             onPress={onBack}
             accessibilityLabel="View conversation history"
@@ -426,6 +432,17 @@ export default function CoachScreen({
               conversationTitle={activeTitle}
               isPremium={subscription.isPremium}
             />
+            {onClose && (
+              <HapticTouchableOpacity
+                onPress={onClose}
+                accessibilityLabel="Close Sazon"
+                accessibilityRole="button"
+                style={styles.headerBtn}
+                testID="coach-close-button"
+              >
+                <Ionicons name="close" size={24} color={text} />
+              </HapticTouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -490,7 +507,13 @@ export default function CoachScreen({
           )}
         </ScrollView>
 
-        <View style={[styles.composerBar, { backgroundColor: screenBg }]}>
+        <View
+          style={[
+            styles.composerBar,
+            { backgroundColor: screenBg },
+            mode === 'sheet' && styles.composerBarSheet,
+          ]}
+        >
           {stream.attachmentError && (
             <Text style={[styles.errorText, { color: isDark ? DarkColors.error : Colors.error }]}>
               {stream.attachmentError}
@@ -684,6 +707,12 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 56 : 24,
     paddingBottom: 12,
   },
+  // Sheet mode sits below the app title header (no device notch under
+  // it) — drop the big safe-area top pad so the control bar sits right
+  // under the title.
+  headerSheet: {
+    paddingTop: 12,
+  },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
@@ -754,6 +783,12 @@ const styles = StyleSheet.create({
     // composer's background doesn't paint OVER the search bar — we just
     // shift the whole bar up to sit cleanly above it.
     marginBottom: ComponentSpacing.tabBar.scrollPaddingBottom + 8,
+  },
+  // Sheet mode has no tab bar — the composer reaches the sheet bottom
+  // instead of leaving the ~140px tab-bar gap. 16 clears the home
+  // indicator (sheet bottom = screen bottom).
+  composerBarSheet: {
+    marginBottom: 16,
   },
   composerInner: {
     flexDirection: 'row',
