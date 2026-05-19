@@ -13,6 +13,8 @@ import {
   navigateStep,
   serveCookOperation,
   planCookTurn,
+  cookCeilingDecision,
+  COOK_CEILING_DEGRADE_TEXT,
 } from '../../src/services/coachCookMode';
 
 const ORIGINAL_ENV = process.env.COACH_LLM_PROVIDER;
@@ -159,5 +161,38 @@ describe('planCookTurn — cost-ceiling degrade', () => {
         op: { kind: 'freeform', text: 'swap idea?' },
       }),
     ).toEqual({ mode: 'provider', order: ['deepseek', 'anthropic'] });
+  });
+});
+
+describe('cookCeilingDecision — live-route wiring contract', () => {
+  it('cook turn + ceiling tripped → degrade (skip the provider)', () => {
+    expect(
+      cookCeilingDecision({ tier: 'free', isCookTurn: true, overBudget: true }),
+    ).toEqual({ degrade: true, text: COOK_CEILING_DEGRADE_TEXT });
+  });
+
+  it('cook turn under budget → do NOT degrade (normal turn)', () => {
+    expect(
+      cookCeilingDecision({ tier: 'free', isCookTurn: true, overBudget: false }),
+    ).toEqual({ degrade: false });
+  });
+
+  it('non-cook turn never degrades, even over budget (existing path owns it)', () => {
+    expect(
+      cookCeilingDecision({
+        tier: 'premium',
+        isCookTurn: false,
+        overBudget: true,
+      }),
+    ).toEqual({ degrade: false });
+  });
+
+  it('the degrade copy is brand-safe (no trainer/error vocab, points to the local surface)', () => {
+    expect(COOK_CEILING_DEGRADE_TEXT.length).toBeGreaterThan(0);
+    expect(COOK_CEILING_DEGRADE_TEXT).not.toMatch(
+      /error|failed|invalid|over your|under your|limit reached/i,
+    );
+    // tells the cook the deterministic surface still works
+    expect(COOK_CEILING_DEGRADE_TEXT).toMatch(/step|scale/i);
   });
 });

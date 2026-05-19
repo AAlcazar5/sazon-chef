@@ -165,6 +165,39 @@ export type CookTurnPlan =
   | { mode: 'deterministic'; reason: 'cook-op' | 'ceiling-degrade' }
   | { mode: 'provider'; order: CookProviderId[] };
 
+// ── Live-route wiring contract ───────────────────────────────────────────
+
+// Brand voice: not a trainer, not an error. The cook still has the local
+// step-nav + scale surface (W-B2 CookStepCard / W-A2 scale) — only freeform
+// chat rests until tomorrow. No banned vocab ("over/under your", "limit").
+export const COOK_CEILING_DEGRADE_TEXT =
+  "I'm resting my voice for the day — but keep cooking: step through the recipe and scale it right here, and I'll be back to chat tomorrow.";
+
+export interface CookCeilingInput {
+  tier: CoachTier;
+  isCookTurn: boolean;
+  overBudget: boolean;
+}
+
+export type CookCeilingDecision =
+  | { degrade: true; text: string }
+  | { degrade: false };
+
+/**
+ * The single decision the live coach route asks: should this turn skip the
+ * provider entirely and degrade to the deterministic cook surface? Only a
+ * cook turn that has tripped the daily ceiling degrades — every other turn
+ * keeps its existing path (premium model-downgrade etc. is unchanged).
+ */
+export function cookCeilingDecision(
+  input: CookCeilingInput,
+): CookCeilingDecision {
+  if (input.isCookTurn && input.overBudget) {
+    return { degrade: true, text: COOK_CEILING_DEGRADE_TEXT };
+  }
+  return { degrade: false };
+}
+
 export function planCookTurn(input: CookTurnInput): CookTurnPlan {
   if (isDeterministicCookOp(input.op)) {
     // Step-nav / scale never need a model — ceiling state is irrelevant.

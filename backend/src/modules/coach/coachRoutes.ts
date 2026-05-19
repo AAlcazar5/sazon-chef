@@ -64,6 +64,7 @@ import {
   applyCookIntents,
   detectCookIntents,
 } from '@/services/coachCookWriteback';
+import { cookCeilingDecision } from '@/services/coachCookMode';
 
 // S17c — free daily cap bumped from 10 → 50. With S17 prompt caching + S17b
 // lean dynamic block, per-message cost on free tier is ~$0.0008 once warmed.
@@ -563,6 +564,60 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         inputUsage: budgetCheck.usage.input,
         outputUsage: budgetCheck.usage.output,
       });
+    }
+  }
+
+  // W-C1 — cost-ceiling cook degrade. A cook turn that has tripped the daily
+  // token ceiling does NOT spend a provider call: we emit a brand-voice
+  // degrade message and end the turn here, BEFORE selectLLMClient. The cook
+  // keeps the deterministic surface (W-B2 step card / W-A2 scale) client-side.
+  // Scoped to cook turns only — every other path keeps its existing behavior.
+  if (detectCookIntents(sanitizedMessage).length > 0) {
+    const cookBudget = await selectModelWithBudget({
+      userId,
+      defaultModel: COACH_MODELS.free,
+      tier,
+    });
+    const decision = cookCeilingDecision({
+      tier,
+      isCookTurn: true,
+      overBudget: cookBudget.overBudget,
+    });
+    if (decision.degrade) {
+      res.status(200);
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders?.();
+      res.write(
+        `event: cook_ceiling_degrade\ndata: ${JSON.stringify({ reason: 'cook_ceiling' })}\n\n`,
+      );
+      res.write(`data: ${decision.text}\n\n`);
+      await prisma.coachMessage.create({
+        data: {
+          conversationId,
+          userId,
+          role: 'assistant',
+          content: decision.text,
+          attachments: serializeJsonColumnSafe('attachments', {
+            degraded: 'cook_ceiling',
+          }),
+        },
+      });
+      await prisma.coachConversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: new Date() },
+      });
+      emitAnalytics('coach_cost_ceiling', {
+        userId,
+        conversationId,
+        surface: 'cook',
+        inputUsage: cookBudget.usage.input,
+        outputUsage: cookBudget.usage.output,
+      });
+      res.write('event: done\ndata: {}\n\n');
+      res.end();
+      return;
     }
   }
 
