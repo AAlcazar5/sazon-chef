@@ -1,10 +1,13 @@
-// frontend/components/today/MemoryMirrorLead.tsx
-//
 // W-D P2 / D-3 — Today's lead is a *memory mirror*: what the app knows
 // about how YOU cook, derived from the Cook Log, shown ABOVE the hero so
 // the suggestion reads as the output of visible memory (asteroid §5).
 // Honest: if there's no history yet it renders nothing (no fabricated
 // facts) and the hero leads as before. W-D1: zero counts.
+//
+// This is an OPTIONAL enhancement surface. It must never crash the Today
+// screen or surface an error to the user — a class boundary makes any
+// render/hook/data failure fail CLOSED (render nothing, silently). Same
+// user-visible outcome as "no history yet", so degrading is invisible.
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -28,13 +31,13 @@ function deriveFact(types: Set<string>): string | null {
   return null;
 }
 
-export default function MemoryMirrorLead() {
+function MemoryMirrorLeadInner() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { entries, loading } = useCookLog();
 
   // No fabricated memory: nothing to mirror yet → render nothing.
-  if (loading || entries.length === 0) return null;
+  if (loading || !Array.isArray(entries) || entries.length === 0) return null;
 
   const fact = deriveFact(new Set(entries.map((e) => e.type)));
   if (!fact) return null;
@@ -51,6 +54,29 @@ export default function MemoryMirrorLead() {
       <Text style={[styles.fact, isDark && styles.factDark]}>{fact}</Text>
     </View>
   );
+}
+
+// Silent fail-closed boundary. An optional surface failing must be
+// invisible — NOT logged (the global ErrorBoundary's errorLogger is the
+// console noise we're eliminating) and NOT propagated.
+export default class MemoryMirrorLead extends React.Component<
+  Record<string, never>,
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  // Intentionally swallow — degrading this surface is a no-op for the
+  // user (same as "no cook history yet"); never surface or log it.
+  componentDidCatch(): void {}
+
+  render(): React.ReactNode {
+    if (this.state.failed) return null;
+    return <MemoryMirrorLeadInner />;
+  }
 }
 
 const styles = StyleSheet.create({

@@ -50,4 +50,21 @@ describe('MemoryMirrorLead', () => {
     mockHook.mockReturnValue({ ...base, entries: [e('note')] });
     expect(render(<MemoryMirrorLead />).queryByText('YOUR KITCHEN KNOWS')).toBeNull();
   });
+
+  it('FAILS CLOSED: an inner hook/render error renders null, never propagates', () => {
+    // The exact production failure mode: useCookLog throwing during render.
+    mockHook.mockImplementation(() => {
+      throw new Error('cook log boom');
+    });
+    let result: ReturnType<typeof render>;
+    expect(() => {
+      result = render(<MemoryMirrorLead />);
+    }).not.toThrow(); // boundary swallows it — never crashes the screen
+    expect(result!.queryByText('YOUR KITCHEN KNOWS')).toBeNull();
+  });
+
+  it('FAILS CLOSED: entries undefined does not throw', () => {
+    mockHook.mockReturnValue({ ...base, entries: undefined });
+    expect(() => render(<MemoryMirrorLead />)).not.toThrow();
+  });
 });
