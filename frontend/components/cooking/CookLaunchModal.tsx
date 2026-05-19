@@ -11,10 +11,10 @@ import {
   Modal,
   View,
   Text,
-  Image,
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -69,7 +69,12 @@ export default function CookLaunchModal({
           {images.length > 0 ? (
             <View style={styles.collage}>
               {images.map((uri) => (
-                <Image key={uri} source={{ uri }} style={styles.thumb} />
+                <Image
+                  key={uri}
+                  source={{ uri }}
+                  style={styles.thumb}
+                  cachePolicy="memory-disk"
+                />
               ))}
             </View>
           ) : null}

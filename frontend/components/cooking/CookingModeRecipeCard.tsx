@@ -13,7 +13,8 @@
 // borders), pastel surface, tokens single-source, Haptic + a11y.
 
 import React, { useState } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { ServingStepper } from '../ui/ServingStepper';
@@ -85,7 +86,12 @@ export default function CookingModeRecipeCard({
       {images.length > 0 ? (
         <View style={styles.collage}>
           {images.map((uri) => (
-            <Image key={uri} source={{ uri }} style={styles.thumb} />
+            <Image
+              key={uri}
+              source={{ uri }}
+              style={styles.thumb}
+              cachePolicy="memory-disk"
+            />
           ))}
         </View>
       ) : null}

@@ -29,7 +29,8 @@ export interface Violation {
     | 'card-radius-8'
     | 'touchable-without-press'
     | 'mixed-colors-and-brand'
-    | 'touchable-without-a11y-label';
+    | 'touchable-without-a11y-label'
+    | 'recipe-count-user-copy';
   excerpt: string;
 }
 
