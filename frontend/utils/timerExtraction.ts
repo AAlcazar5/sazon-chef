@@ -75,6 +75,62 @@ export function extractTimers(stepText: string): ExtractedTimer[] {
   return results;
 }
 
+/**
+ * Tier Y-2 — positional variant of extractTimers. Same DURATION_PATTERNS /
+ * ACTION_WORDS (no duplicated regex), but also returns where each duration
+ * sits in the text so the step renderer can splice an inline tappable
+ * timer chip exactly there (Claude's "▶ 30:00" mid-sentence). Overlapping
+ * matches are dropped left-to-right so a region is chipped at most once.
+ */
+export interface TimerSpan {
+  label: string;
+  minutes: number;
+  index: number;
+  length: number;
+  text: string;
+}
+
+export function extractTimerSpans(stepText: string): TimerSpan[] {
+  const found: TimerSpan[] = [];
+  const seen = new Set<number>();
+
+  for (const { re, toMinutes } of DURATION_PATTERNS) {
+    const globalRe = new RegExp(
+      re.source,
+      re.flags.includes('g') ? re.flags : re.flags + 'g',
+    );
+    let match: RegExpExecArray | null;
+    while ((match = globalRe.exec(stepText)) !== null) {
+      const minutes = toMinutes(match);
+      if (minutes < 1 || minutes > 480 || seen.has(minutes)) continue;
+      seen.add(minutes);
+      const prefix = stepText.substring(
+        Math.max(0, match.index - 60),
+        match.index,
+      );
+      const actionMatch = prefix.match(ACTION_WORDS);
+      found.push({
+        label: actionMatch ? capitalize(actionMatch[0]) : 'Timer',
+        minutes,
+        index: match.index,
+        length: match[0].length,
+        text: match[0],
+      });
+    }
+  }
+
+  found.sort((a, b) => a.index - b.index);
+  const kept: TimerSpan[] = [];
+  let lastEnd = -1;
+  for (const s of found) {
+    if (s.index >= lastEnd) {
+      kept.push(s);
+      lastEnd = s.index + s.length;
+    }
+  }
+  return kept;
+}
+
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
