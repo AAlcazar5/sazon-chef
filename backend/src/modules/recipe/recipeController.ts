@@ -4908,6 +4908,14 @@ export const recipeController = {
         const unit = ing.unit ? String(ing.unit) : '';
         return `${amount}${unit ? ' ' + unit : ''} ${ing.name}`.trim();
       });
+      // Tier Y live-wiring — also expose the structured ingredient shape so
+      // CookingModeRecipeCard can rescale (rescaleStepText needs amount/unit
+      // tokens). Additive; existing callers still get `ingredients: string[]`.
+      const ingredientsStructured = (generated.ingredients || []).map((ing) => ({
+        name: ing.name,
+        amount: Number(ing.amount),
+        unit: String(ing.unit ?? ''),
+      }));
       const instructions = (generated.instructions || []).map((i) => i.instruction);
 
       res.json({
@@ -4927,6 +4935,7 @@ export const recipeController = {
             fat: generated.fat,
             fiber: generated.fiber,
             ingredients,
+            ingredientsStructured,
             instructions,
             tips: generated.tips || [],
             tags: generated.tags || [],

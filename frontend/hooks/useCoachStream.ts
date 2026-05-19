@@ -11,6 +11,11 @@ import {
   type CoachMessage,
   type CoachPaywallInfo,
 } from '../lib/api';
+import { detectRecipeAsk } from '../lib/coach/detectRecipeAsk';
+import {
+  findOrGenerateRecipe,
+  type RecipeCardPayload,
+} from '../lib/coach/findOrGenerateRecipe';
 
 export type CoachPaywallReason =
   | 'cap'
@@ -60,6 +65,11 @@ export interface CoachUiMessage {
   role: 'user' | 'assistant';
   content: string;
   toolUses?: CoachToolUse[];
+  /** Tier Y live-wiring — when set, renderer shows CookingModeRecipeCard
+   *  instead of MessageBubble (the founder wants recipe asks rendered as
+   *  the rich card, never as paragraph prose). */
+  kind?: 'recipe-card';
+  recipe?: RecipeCardPayload;
 }
 
 export interface CoachMedicalDeflectionState {
@@ -171,6 +181,35 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
       { id: assistantId, role: 'assistant', content: '', toolUses: [] },
     ]);
     setIsStreaming(true);
+
+    // Tier Y live-wiring — recipe asks bypass the LLM entirely. Deterministic
+    // recipe fetch → render CookingModeRecipeCard inline. Same principle as
+    // W-C1's cook-op deterministic path: the model isn't the right tool for
+    // structured-recipe rendering, and the founder wants the card EVERY time.
+    const ask = detectRecipeAsk(trimmed);
+    if (ask) {
+      try {
+        const recipe = await findOrGenerateRecipe(ask.query);
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === assistantId
+              ? { ...m, kind: 'recipe-card', recipe, content: '' }
+              : m,
+          ),
+        );
+      } catch (err) {
+        const msg =
+          err instanceof Error && err.message
+            ? `Hmm, couldn't pull up that recipe — try a tweak?`
+            : `Hmm, couldn't pull up that recipe — try a tweak?`;
+        setMessages(prev =>
+          prev.map(m => (m.id === assistantId ? { ...m, content: msg } : m)),
+        );
+      } finally {
+        setIsStreaming(false);
+      }
+      return;
+    }
 
     let convoId = conversationId;
     try {

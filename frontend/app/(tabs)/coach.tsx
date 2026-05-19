@@ -43,6 +43,7 @@ import CoachPaywallSheet, { type CoachPaywallReason } from '../../components/coa
 import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill';
 import SazonHeader from '../../components/coach/SazonHeader';
 import SazonDailyGreetingBanner from '../../components/coach/SazonDailyGreetingBanner';
+import CookingModeRecipeCard from '../../components/cooking/CookingModeRecipeCard';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
@@ -499,9 +500,26 @@ export default function CoachScreen({
             </View>
           )}
 
-          {stream.messages.map(m => (
-            <MessageBubble key={m.id} role={m.role} content={m.content} />
-          ))}
+          {stream.messages.map(m => {
+            // Tier Y live-wiring — recipe asks render the rich card,
+            // never paragraph prose.
+            if (m.kind === 'recipe-card' && m.recipe) {
+              return (
+                <CookingModeRecipeCard
+                  key={m.id}
+                  title={m.recipe.title}
+                  description={m.recipe.description}
+                  imageUrls={m.recipe.imageUrls}
+                  baseServings={m.recipe.baseServings}
+                  ingredients={m.recipe.ingredients}
+                  steps={m.recipe.steps}
+                  macros={m.recipe.macros}
+                  notes={m.recipe.notes}
+                />
+              );
+            }
+            return <MessageBubble key={m.id} role={m.role} content={m.content} />;
+          })}
 
           {stream.error && !stream.paywall && (
             <Text style={[styles.errorText, { color: isDark ? DarkColors.error : Colors.error }]}>
