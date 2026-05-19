@@ -24,55 +24,22 @@ export interface ApiError {
   method?: string;
 }
 
-export type NetworkFailureClass =
-  | 'offline'           // No network connectivity (or DNS unreachable)
-  | 'timeout'           // Server didn't respond within axios.timeout
-  | 'server_unreachable'// Server actively refused (ECONNREFUSED) or TLS failure
-  | 'canceled'          // AbortController.abort() — silent expected cancel
-  | 'unknown_transport';// `error.request` present but code didn't match above
-
-/**
- * Pure classifier — given an axios error's `code` / `message` / `name`,
- * returns the failure class, machine-readable code, and human-readable
- * message. Extracted from the response interceptor so it's directly
- * unit-testable without spinning up axios.
- */
-export function classifyNetworkFailure(args: {
-  axiosCode?: string;
-  message?: string;
-  name?: string;
-}): { failureClass: NetworkFailureClass; code: string; message: string } {
-  const { axiosCode, message, name } = args;
-  if (axiosCode === 'ECONNABORTED' || axiosCode === 'ETIMEDOUT' || /timeout/i.test(message ?? '')) {
-    return {
-      failureClass: 'timeout',
-      code: 'TIMEOUT',
-      message: "The server is taking longer than expected. Give it a moment and try again.",
-    };
-  }
-  if (axiosCode === 'ERR_CANCELED' || name === 'CanceledError') {
-    return { failureClass: 'canceled', code: 'CANCELED', message: 'Request canceled.' };
-  }
-  if (axiosCode === 'ECONNREFUSED' || axiosCode === 'EHOSTUNREACH' || axiosCode === 'ECONNRESET') {
-    return {
-      failureClass: 'server_unreachable',
-      code: 'SERVER_UNREACHABLE',
-      message: "We can't reach the kitchen right now. We're on it — try again in a moment.",
-    };
-  }
-  if (axiosCode === 'ERR_NETWORK' || axiosCode === 'ENETUNREACH' || axiosCode === 'ENOTFOUND') {
-    return {
-      failureClass: 'offline',
-      code: 'OFFLINE',
-      message: "You're offline. Reconnect and we'll pick up where you left off.",
-    };
-  }
-  return {
-    failureClass: 'unknown_transport',
-    code: 'NETWORK_ERROR',
-    message: 'Unable to reach the server. Please try again.',
-  };
-}
+// Pure error classifiers live in ../apiErrorClassification (keeps this
+// file ≤600 and outside the lib/api domain-file contract). Re-exported
+// here so `lib/api` / `lib/api/core` import sites + tests stay stable.
+import {
+  classifyNetworkFailure,
+  classifyApiError,
+} from '../apiErrorClassification';
+import type { NetworkFailureClass } from '../apiErrorClassification';
+export {
+  classifyNetworkFailure,
+  classifyApiError,
+} from '../apiErrorClassification';
+export type {
+  NetworkFailureClass,
+  ApiErrorCategory,
+} from '../apiErrorClassification';
 
 // Create axios instance with default configuration
 // Android emulator uses 10.0.2.2 to access host localhost
@@ -225,67 +192,23 @@ api.interceptors.response.use(
       const rawMessage: string = [raw?.error, raw?.message, raw?.msg]
         .filter((v): v is string => typeof v === 'string' && v.length > 0)
         .join(' ');
-      const isAlreadySaved = statusCode === 409 || /already\s*saved/i.test(String(rawMessage || ''));
-      const isExpected404 = statusCode === 404 && (
-        /no price data found/i.test(String(rawMessage || '')) ||
-        /meal plan not found/i.test(String(rawMessage || '')) ||
-        /No active meal plan/i.test(String(rawMessage || '')) ||
-        /template not found/i.test(String(rawMessage || '')) ||
-        /no meal prep template exists/i.test(String(rawMessage || '')) ||
-        /item not found/i.test(String(rawMessage || '')) || // Shopping list items that were deleted
-        /shopping list.*not found/i.test(String(rawMessage || ''))
-      );
-      const isQuotaError = statusCode === 429 ||
-        statusCode === 503 ||
-        /quota.*exceeded/i.test(String(rawMessage || '')) ||
-        /too many requests/i.test(String(rawMessage || '')) ||
-        /insufficient_quota/i.test(String(rawMessage || '')) ||
-        /API quota exceeded/i.test(String(rawMessage || ''));
+      const category = classifyApiError({
+        statusCode,
+        rawMessage,
+        rawCode: typeof raw?.code === 'string' ? raw.code : undefined,
+        hasResponse: !!error.response,
+        hasRequest: !!error.request,
+      });
 
-      // AI generation failures bubble up as 500/GENERATION_ERROR — they're handled by
-      // the calling screen with a user-friendly retry dialog, so suppress the raw log.
-      const isAIGenerationError = (raw?.code === 'GENERATION_ERROR') ||
-        /failed to generate (recipe|daily meal plan)/i.test(String(rawMessage || ''));
-
-      // Don't log expected user errors (bad credentials, validation, not found).
-      // 401/403 are intentionally NOT silenced — they trigger the auto-logout
-      // path and we always want the offending URL visible in the console.
-      const isExpectedUserError = statusCode === 400 || statusCode === 404;
-
-      // Auth-bootstrap 401s: missing token (cold start race) or expired
-      // session. Both already trigger the auto-logout path (which logs its
-      // own WARN with the offending URL), so the additional ❌ error here
-      // is pure noise. Real session-tamper 401s (signature mismatch,
-      // malformed token, etc.) still fall through and log loudly.
-      const isAuthBootstrap401 = statusCode === 401 && (
-        /no authentication token/i.test(String(rawMessage || '')) ||
-        /no token provided/i.test(String(rawMessage || '')) ||
-        /please login first/i.test(String(rawMessage || '')) ||
-        /session has expired/i.test(String(rawMessage || '')) ||
-        /please log in again/i.test(String(rawMessage || '')) ||
-        /token expired/i.test(String(rawMessage || '')) ||
-        /jwt expired/i.test(String(rawMessage || ''))
-      );
-
-      // Network errors (no response received) are handled gracefully below — no need to log
-      const isNetworkError = !error.response && !!error.request;
-
-      if (!isAlreadySaved && !isExpected404 && !isQuotaError && !isExpectedUserError && !isNetworkError && !isAIGenerationError && !isAuthBootstrap401) {
+      if (category === 'unexpected') {
         console.error('❌ Response Error:', raw || error.message);
-      } else if (isAlreadySaved) {
+      } else if (category === 'already-saved') {
         console.log('ℹ️  Response Conflict (already saved)');
-      } else if (isExpected404) {
-        // Silently handle expected 404s (no price data, no meal plan, etc.)
-      } else if (isQuotaError) {
-        // Silently handle quota/rate limit errors - these are expected when API limits are reached
-        // The UI will handle these gracefully by showing fallback content
-      } else if (isExpectedUserError) {
-        // Silently handle expected user errors (wrong credentials, validation errors)
-        // These are displayed to the user via the UI, no need to log them
-      } else if (isAuthBootstrap401) {
-        // Silently handle 401s from missing/expired tokens — the auto-logout
-        // path already logs a WARN with the offending URL.
       }
+      // Every other category is an expected condition the UI already
+      // handles — intentionally silent. In particular `auth-credential`
+      // (wrong password / dup signup) is the user's to fix and the auth
+      // form shows it; it must never become console noise.
     }
 
     // Handle different error types
