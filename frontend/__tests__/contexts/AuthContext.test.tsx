@@ -88,7 +88,12 @@ describe('AuthContext', () => {
       expect(SecureStore.getItemAsync).toHaveBeenCalledWith('auth_user');
     });
 
-    it('should clear invalid stored token', async () => {
+    // DEV-DISABLED 2026-05-20 (founder ask, Telegram msg 365): bootstrap
+    // 401 used to clear stored auth, but that was kicking the founder
+    // out of dev sessions repeatedly. Auto-clear is suppressed until
+    // launch. Test inverted to pin the disabled behavior — when the
+    // ROADMAP_TO_LAUNCH AUTH-G1 gate fires, flip the assertions back.
+    it('does NOT clear stored token on bootstrap 401 (dev-disabled until launch — see ROADMAP AUTH-G1)', async () => {
       const storedToken = 'invalid-token';
       const storedUser = JSON.stringify({ id: 'user-1', email: 'test@example.com', name: 'Test' });
 
@@ -106,21 +111,14 @@ describe('AuthContext', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // Wait for the clearStoredAuth to complete
-      await waitFor(() => {
-        expect(SecureStore.deleteItemAsync).toHaveBeenCalled();
-      }, { timeout: 3000 });
-
-      // After clearing invalid token, user should not be authenticated
-      await waitFor(() => {
-        expect(result.current.isAuthenticated).toBe(false);
-      });
-      
-      expect(result.current.user).toBeNull();
-      expect(result.current.token).toBeNull();
-      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_token');
-      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_user');
-      expect(mockSetAuthToken).toHaveBeenCalledWith(null);
+      // Auto-clear suppressed → stored token + user remain on disk.
+      expect(SecureStore.deleteItemAsync).not.toHaveBeenCalledWith('auth_token');
+      expect(SecureStore.deleteItemAsync).not.toHaveBeenCalledWith('auth_user');
+      // User stays "authenticated" from the in-memory perspective; the
+      // 401 surfaces to whatever code triggered the next protected call,
+      // but no auto-logout is performed.
+      expect(result.current.user).toEqual(JSON.parse(storedUser));
+      expect(result.current.token).toBe(storedToken);
     });
   });
 

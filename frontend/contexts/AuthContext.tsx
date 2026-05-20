@@ -151,10 +151,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error: any) {
           const status = error?.response?.status;
           if (status === 401 || status === 403) {
-            console.log('[Auth] Token rejected (401/403), clearing auth');
-            if (!didTimeout) {
-              await clearStoredAuth();
-            }
+            // ────────────────────────────────────────────────────────────
+            // DEV-DISABLED 2026-05-20 (founder ask, Telegram msg 365):
+            // Bootstrap-time 401 was clearing stored auth on every cold
+            // start, kicking the founder back to login. Companion of the
+            // core.ts auto-logout disable. Keep the token regardless of
+            // verify outcome until launch.
+            //
+            // RESTORE BEFORE LAUNCH: uncomment `clearStoredAuth()` below.
+            // Tracked in ROADMAP_TO_LAUNCH.md → Tier 🔒 Gated.
+            // ────────────────────────────────────────────────────────────
+            console.log('[Auth] Token rejected (401/403) — clearStoredAuth() suppressed (dev)');
+            // if (!didTimeout) {
+            //   await clearStoredAuth();
+            // }
           } else {
             console.log(
               '[Auth] Token verification skipped (network/timeout, keeping token):',
