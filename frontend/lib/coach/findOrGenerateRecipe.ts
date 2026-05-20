@@ -34,6 +34,10 @@ export interface RecipeCardPayload {
    *  Picked-because rationale. Missing for AI-gen recipes when the model
    *  doesn't tag one. */
   cuisine?: string;
+  /** Catalog/AI-gen difficulty label. Fuels the ranker's skill-tier
+   *  bonus (at-or-below user's skill → small upranking). Unknown +
+   *  missing values are neutral (no bonus, no penalty). */
+  difficulty?: 'easy' | 'medium' | 'hard';
   baseServings: number;
   ingredients: ScalableIngredientLite[];
   steps: string[];
@@ -104,6 +108,7 @@ interface CatalogRecipe {
   title?: string;
   description?: string;
   cuisine?: string | null;
+  difficulty?: string | null;
   servings?: number;
   ingredients?: Array<CatalogIngredient | string>;
   instructions?: Array<CatalogInstruction | string>;
@@ -145,6 +150,13 @@ function mapStep(s: CatalogInstruction | string): string | null {
   return null;
 }
 
+function normalizeDifficulty(d: unknown): 'easy' | 'medium' | 'hard' | undefined {
+  if (typeof d !== 'string') return undefined;
+  const lc = d.trim().toLowerCase();
+  if (lc === 'easy' || lc === 'medium' || lc === 'hard') return lc;
+  return undefined;
+}
+
 function mapCatalogRecipe(r: CatalogRecipe): RecipeCardPayload | null {
   if (!r.title) return null;
   const ingredients = (r.ingredients ?? [])
@@ -162,6 +174,7 @@ function mapCatalogRecipe(r: CatalogRecipe): RecipeCardPayload | null {
     title: r.title,
     description: r.description ?? '',
     cuisine: typeof r.cuisine === 'string' && r.cuisine.length > 0 ? r.cuisine : undefined,
+    difficulty: normalizeDifficulty(r.difficulty),
     baseServings: r.servings && r.servings > 0 ? r.servings : 4,
     ingredients,
     steps,
@@ -208,6 +221,8 @@ async function fetchCatalogCandidates(
 interface GeneratedRecipeShape {
   title?: string;
   description?: string;
+  cuisine?: string;
+  difficulty?: string;
   servings?: number;
   ingredientsStructured?: Array<{ name: string; amount: number; unit: string }>;
   instructions?: string[];
@@ -254,6 +269,11 @@ async function generateViaAi(query: string): Promise<RecipeCardPayload> {
   return {
     title: recipe.title ?? 'Untitled recipe',
     description: recipe.description ?? '',
+    cuisine:
+      typeof recipe.cuisine === 'string' && recipe.cuisine.length > 0
+        ? recipe.cuisine
+        : undefined,
+    difficulty: normalizeDifficulty(recipe.difficulty),
     baseServings:
       typeof recipe.servings === 'number' && recipe.servings > 0
         ? recipe.servings
