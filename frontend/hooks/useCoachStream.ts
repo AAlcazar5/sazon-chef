@@ -197,18 +197,18 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
               : m,
           ),
         );
-      } catch (err) {
-        const msg =
-          err instanceof Error && err.message
-            ? `Hmm, couldn't pull up that recipe — try a tweak?`
-            : `Hmm, couldn't pull up that recipe — try a tweak?`;
-        setMessages(prev =>
-          prev.map(m => (m.id === assistantId ? { ...m, content: msg } : m)),
-        );
-      } finally {
         setIsStreaming(false);
+        return;
+      } catch {
+        // Wedge failed (typo, network, AI gen). Fall through to the LLM
+        // SSE with the original message — the LLM has world knowledge
+        // (auto-corrects typos like "Margarita" → "Margherita") and stays
+        // in conversation context for follow-ups. The previous behavior
+        // showed "couldn't pull up that recipe — try a tweak?" which
+        // sounded like an offer but was a dead-end error; the user's
+        // "Sure" then hit the SSE with zero context → generic greeting.
+        // The empty assistant placeholder stays put; SSE streams into it.
       }
-      return;
     }
 
     let convoId = conversationId;
