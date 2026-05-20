@@ -77,4 +77,34 @@ describe('detectRecipeAsk — chat questions are NOT recipe asks', () => {
   it('non-string → null', () => {
     expect(detectRecipeAsk(null as unknown as string)).toBeNull();
   });
+
+  // Y-Live-8 founder bug 2026-05-19: multi-word greetings/openers
+  // matched the bare-food 2–5-word heuristic and triggered the wedge
+  // ("Hi coach" → recipe fetch). Single-word greetings were already null
+  // (wordCount < 2 filter), but compound openers fell through.
+  it.each([
+    'Hi coach',
+    'hello there',
+    'good morning',
+    'good afternoon',
+    'good evening',
+    'hey coach',
+    'hey there',
+    'sup coach',
+    'howdy partner',
+    'thanks coach',
+    'thank you',
+    'bye for now',
+    'yo Sazon',
+  ])('greeting/opener "%s" → null', (input) => {
+    expect(detectRecipeAsk(input)).toBeNull();
+  });
+
+  it('greeting mixed with a recipe phrase still finds the ask via explicit pattern', () => {
+    // Explicit patterns run BEFORE the bare-food/greeting filter; a
+    // legitimate "give me X" inside a multi-word phrase that starts with
+    // the verb still matches. The new greeting filter only blocks the
+    // bare-food fallback (which is where false positives live).
+    expect(detectRecipeAsk('give me a pizza recipe')).toEqual({ query: 'pizza' });
+  });
 });
