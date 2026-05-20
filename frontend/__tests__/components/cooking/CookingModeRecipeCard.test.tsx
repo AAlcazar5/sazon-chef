@@ -104,4 +104,57 @@ describe('<CookingModeRecipeCard />', () => {
     );
     expect(getByText('Roasted Potatoes')).toBeTruthy();
   });
+
+  // Y-Live-4 — kitchen-mode "ruler" units menu: As written / US / Metric.
+  // Only affects the ingredient list display; step prose keeps the
+  // original base units (so rescaleStepText/Y-1 still anchors).
+  describe('units toggle (Y-Live-4)', () => {
+    it('renders a labelled units button; menu opens on tap', () => {
+      const { getByLabelText, queryByLabelText } = render(
+        <CookingModeRecipeCard {...PROPS} />,
+      );
+      // Menu is closed initially.
+      expect(queryByLabelText(/^As written$/)).toBeNull();
+      const trigger = getByLabelText('Change units');
+      expect(trigger.props.accessibilityRole).toBe('button');
+      fireEvent.press(trigger);
+      // 3 options now visible.
+      expect(getByLabelText(/^As written$/)).toBeTruthy();
+      expect(getByLabelText(/^US$/)).toBeTruthy();
+      expect(getByLabelText(/^Metric$/)).toBeTruthy();
+    });
+
+    it('selecting Metric converts the ingredient list (step prose untouched)', () => {
+      const { getByLabelText, getByText, queryByText, getAllByText } = render(
+        <CookingModeRecipeCard {...PROPS} />,
+      );
+      // Initially "2 pounds potatoes…" appears in BOTH the ingredient
+      // line and step 1 prose (2 nodes).
+      expect(getAllByText(/2 pounds potatoes or sweet potatoes/)).toHaveLength(2);
+      // Open menu, pick Metric.
+      fireEvent.press(getByLabelText('Change units'));
+      fireEvent.press(getByLabelText(/^Metric$/));
+      // Ingredient list now in g (907.2 = 2 lb × 453.6); but step prose
+      // intentionally retains "2 pounds potatoes…" so the lockstep
+      // servings rescale (Y-1) still anchors correctly.
+      expect(getByText(/907\.2 g potatoes or sweet potatoes/)).toBeTruthy();
+      // Only ONE remaining "2 pounds potatoes…" — the one in step 1 prose.
+      expect(getAllByText(/2 pounds potatoes or sweet potatoes/)).toHaveLength(1);
+      // The previous tablespoons → ml (2 tbsp × 15 = 30).
+      expect(queryByText(/30 ml olive oil/)).toBeTruthy();
+    });
+
+    it('"As written" restores identity; selecting it after Metric reverts', () => {
+      const { getByLabelText, getAllByText } = render(
+        <CookingModeRecipeCard {...PROPS} />,
+      );
+      fireEvent.press(getByLabelText('Change units'));
+      fireEvent.press(getByLabelText(/^Metric$/));
+      // Now reopen + pick As written.
+      fireEvent.press(getByLabelText('Change units'));
+      fireEvent.press(getByLabelText(/^As written$/));
+      // Both ingredient line + step prose back to pounds — 2 nodes again.
+      expect(getAllByText(/2 pounds potatoes or sweet potatoes/)).toHaveLength(2);
+    });
+  });
 });

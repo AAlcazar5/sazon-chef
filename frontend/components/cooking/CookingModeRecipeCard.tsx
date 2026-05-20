@@ -12,9 +12,10 @@
 // Designer rails: food-forward collage, Radius.card, Elevation (no
 // borders), pastel surface, tokens single-source, Haptic + a11y.
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { ServingStepper } from '../ui/ServingStepper';
@@ -24,6 +25,16 @@ import {
   scaleQuantityDisplay,
   type ScalableIngredientLite,
 } from '../../lib/cooking/rescaleStepText';
+import {
+  convertIngredientUnits,
+  type UnitMode,
+} from '../../lib/cooking/convertIngredientUnits';
+
+const UNIT_MODE_LABEL: Record<UnitMode, string> = {
+  'as-written': 'As written',
+  us: 'US',
+  metric: 'Metric',
+};
 
 interface Macros {
   calories?: number;
@@ -73,6 +84,17 @@ export default function CookingModeRecipeCard({
   );
   const factor = servings / (baseServings > 0 ? baseServings : 1);
 
+  // Y-Live-4 — kitchen-mode units menu (As written / US / Metric).
+  // Only affects the displayed ingredient list. Step prose keeps the
+  // original base units so rescaleStepText (Y-1) anchors correctly when
+  // the servings stepper moves.
+  const [unitMode, setUnitMode] = useState<UnitMode>('as-written');
+  const [unitsOpen, setUnitsOpen] = useState(false);
+  const displayIngredients = useMemo(
+    () => convertIngredientUnits(ingredients, unitMode),
+    [ingredients, unitMode],
+  );
+
   const accent = isDark ? Brand.dark.base : Brand.light.base;
   const surface = isDark ? PastelTokens.dark.peach : PastelTokens.light.peach;
   const images = (imageUrls ?? []).slice(0, 3);
@@ -103,19 +125,67 @@ export default function CookingModeRecipeCard({
 
       <View style={styles.controls}>
         <ServingStepper servings={servings} onChangeServings={setServings} />
-        <HapticTouchableOpacity
-          onPress={onGetCooking}
-          accessibilityRole="button"
-          accessibilityLabel="Get cooking"
-          pressedScale={0.97}
-          style={[styles.cook, { backgroundColor: accent }]}
-        >
-          <Text style={styles.cookText}>Get cooking</Text>
-        </HapticTouchableOpacity>
+        <View style={styles.controlsRight}>
+          <HapticTouchableOpacity
+            onPress={() => setUnitsOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityLabel="Change units"
+            pressedScale={0.97}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="swap-horizontal-outline" size={20} color={accent} />
+          </HapticTouchableOpacity>
+          <HapticTouchableOpacity
+            onPress={onGetCooking}
+            accessibilityRole="button"
+            accessibilityLabel="Get cooking"
+            pressedScale={0.97}
+            style={[styles.cook, { backgroundColor: accent }]}
+          >
+            <Text style={styles.cookText}>Get cooking</Text>
+          </HapticTouchableOpacity>
+        </View>
       </View>
 
+      {unitsOpen ? (
+        <View
+          style={[
+            styles.unitsMenu,
+            { backgroundColor: isDark ? 'rgba(0,0,0,0.45)' : '#FFFFFF' },
+          ]}
+        >
+          {(['as-written', 'us', 'metric'] as const).map((m) => {
+            const label = UNIT_MODE_LABEL[m];
+            const isActive = m === unitMode;
+            return (
+              <HapticTouchableOpacity
+                key={m}
+                onPress={() => {
+                  setUnitMode(m);
+                  setUnitsOpen(false);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                pressedScale={0.97}
+                style={styles.unitOption}
+              >
+                <Text
+                  style={[
+                    styles.unitOptionText,
+                    isDark && styles.dark,
+                    isActive && { color: accent },
+                  ]}
+                >
+                  {label}
+                </Text>
+              </HapticTouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
+
       <Text style={[styles.eyebrow, { color: accent }]}>INGREDIENTS</Text>
-      {ingredients.map((ing, i) => (
+      {displayIngredients.map((ing, i) => (
         <Text
           key={`${ing.name}-${i}`}
           style={[styles.line, isDark && styles.dark]}
@@ -172,6 +242,31 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     gap: 12,
   },
+  controlsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unitsMenu: {
+    alignSelf: 'flex-end',
+    borderRadius: Radius.card,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    gap: 4,
+    marginTop: -4,
+    ...Elevation.sm,
+  },
+  unitOption: {
+    paddingVertical: 8,
+  },
+  unitOptionText: { ...Type.body, color: '#1F2937' },
   cook: {
     paddingHorizontal: 20,
     paddingVertical: 14,
