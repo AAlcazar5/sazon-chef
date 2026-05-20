@@ -14,6 +14,10 @@
 
 import { recipeApi } from '../api/recipe';
 import type { ScalableIngredientLite } from '../cooking/rescaleStepText';
+import {
+  rankRecipeAskCandidates,
+  type RankerSignals,
+} from './rankRecipeAskCandidates';
 
 export interface RecipeCardPayload {
   /**
@@ -26,6 +30,10 @@ export interface RecipeCardPayload {
   recipeId?: string;
   title: string;
   description: string;
+  /** Optional cuisine label — fuels the N=1 ranker's cuisine bonus and
+   *  Picked-because rationale. Missing for AI-gen recipes when the model
+   *  doesn't tag one. */
+  cuisine?: string;
   baseServings: number;
   ingredients: ScalableIngredientLite[];
   steps: string[];
@@ -95,6 +103,7 @@ interface CatalogRecipe {
   id?: string;
   title?: string;
   description?: string;
+  cuisine?: string | null;
   servings?: number;
   ingredients?: Array<CatalogIngredient | string>;
   instructions?: Array<CatalogInstruction | string>;
@@ -152,6 +161,7 @@ function mapCatalogRecipe(r: CatalogRecipe): RecipeCardPayload | null {
     recipeId: r.id,
     title: r.title,
     description: r.description ?? '',
+    cuisine: typeof r.cuisine === 'string' && r.cuisine.length > 0 ? r.cuisine : undefined,
     baseServings: r.servings && r.servings > 0 ? r.servings : 4,
     ingredients,
     steps,
@@ -173,18 +183,14 @@ function mapCatalogRecipe(r: CatalogRecipe): RecipeCardPayload | null {
   };
 }
 
-interface CatalogMatchResult {
-  /** Above CATALOG_MATCH_THRESHOLD — confident hit, prefer over AI gen. */
-  hit: RecipeCardPayload | null;
-  /** Best-scoring structured candidate at any positive score — used as a
-   *  last-resort fallback when AI gen also fails so the wedge can still
-   *  render a card (founder rule: recipe ask → card, never paragraph). */
-  best: RecipeCardPayload | null;
-}
-
-async function tryCatalogMatch(query: string): Promise<CatalogMatchResult> {
+/** All structured catalog candidates for a query, no scoring applied.
+ *  Ranking is delegated to `rankRecipeAskCandidates` so the same logic
+ *  can be reused for swap-chip alternates. */
+async function fetchCatalogCandidates(
+  query: string,
+): Promise<RecipeCardPayload[]> {
   const term = firstSignificantToken(query);
-  if (!term) return { hit: null, best: null };
+  if (!term) return [];
   const res = (await recipeApi.getAllRecipes({
     search: term,
     limit: CATALOG_SEARCH_LIMIT,
@@ -192,20 +198,9 @@ async function tryCatalogMatch(query: string): Promise<CatalogMatchResult> {
   const recipes = Array.isArray(res?.data)
     ? res.data
     : res?.data?.recipes ?? [];
-  let best: { payload: RecipeCardPayload; score: number } | null = null;
-  for (const r of recipes) {
-    const payload = mapCatalogRecipe(r);
-    if (!payload) continue;
-    const score = dice(payload.title, query);
-    if (!best || score > best.score) {
-      best = { payload, score };
-    }
-  }
-  if (!best) return { hit: null, best: null };
-  return {
-    hit: best.score >= CATALOG_MATCH_THRESHOLD ? best.payload : null,
-    best: best.payload,
-  };
+  return recipes
+    .map(mapCatalogRecipe)
+    .filter((r): r is RecipeCardPayload => r !== null);
 }
 
 // ── AI generation fallback (existing path) ────────────────────────────────
@@ -274,30 +269,67 @@ async function generateViaAi(query: string): Promise<RecipeCardPayload> {
 
 // ── Public ────────────────────────────────────────────────────────────────
 
+export interface RecipeAskResult {
+  /** The picked recipe — ranker's top candidate, or the AI-gen result. */
+  primary: RecipeCardPayload;
+  /** Next-best catalog candidates in ranked order. Powers the "Show me
+   *  another →" swap chip on the card. Empty for AI-gen-only results. */
+  alternates: RecipeCardPayload[];
+  /** One-liner explaining the pick (pantry / cuisine). Undefined when
+   *  there's nothing N=1 to surface (cold-start). */
+  rationale?: string;
+}
+
+const EMPTY_SIGNALS: RankerSignals = {
+  pantryNames: [],
+  lastCookCuisine: null,
+  topAdjacentCuisine: null,
+};
+
 export async function findOrGenerateRecipe(
   query: string,
-): Promise<RecipeCardPayload> {
-  // 1. Curated catalog first — token search + Dice similarity. Tolerant
-  //    of typos and prefers the human-edited corpus. A catalog hiccup
-  //    must never block the wedge: any throw → fall through to gen.
-  let catalogFallback: RecipeCardPayload | null = null;
+  signals: RankerSignals = EMPTY_SIGNALS,
+): Promise<RecipeAskResult> {
+  // 1. Curated catalog first — token search + N=1 ranker (Dice + pantry
+  //    overlap + cuisine bonus). A catalog hiccup must never block the
+  //    wedge: any throw → fall through to gen.
+  let catalogCandidates: RecipeCardPayload[] = [];
   try {
-    const { hit, best } = await tryCatalogMatch(query);
-    if (hit) return hit;
-    catalogFallback = best;
+    catalogCandidates = await fetchCatalogCandidates(query);
   } catch {
     // intentional swallow — gen below is the safety net
   }
-  // 2. AI gen — original behavior. Has world knowledge so a typo'd query
-  //    still tends to produce a sensible recipe. On failure (quota, 500,
-  //    network), fall back to the best below-threshold catalog candidate
-  //    so the wedge still renders a card. The founder rule: recipe asks
-  //    must NEVER pivot to LLM paragraphs ("inane questions, rambling on")
-  //    — a directionally-close catalog match is the right floor.
+  if (catalogCandidates.length > 0) {
+    const ranked = rankRecipeAskCandidates(query, catalogCandidates, signals);
+    const top = ranked[0];
+    // Only commit to a catalog answer when Dice clears the confidence
+    // threshold — otherwise prefer AI gen, which has world knowledge and
+    // often produces a more on-target recipe for ambiguous asks. The
+    // ranker still gets the final say within the catalog pool above.
+    if (top.diceScore >= CATALOG_MATCH_THRESHOLD) {
+      return {
+        primary: top.recipe,
+        alternates: ranked.slice(1).map((r) => r.recipe),
+        rationale: top.rationale,
+      };
+    }
+  }
+  // 2. AI gen — handles ambiguous / typo / novel queries. On failure
+  //    (quota, 500, network), fall back to the best catalog candidate
+  //    even at below-threshold Dice so the wedge still renders a card.
+  //    Founder rule: recipe ask → card, never paragraph.
   try {
-    return await generateViaAi(query);
+    const generated = await generateViaAi(query);
+    return { primary: generated, alternates: [] };
   } catch (genErr) {
-    if (catalogFallback) return catalogFallback;
+    if (catalogCandidates.length > 0) {
+      const ranked = rankRecipeAskCandidates(query, catalogCandidates, signals);
+      return {
+        primary: ranked[0].recipe,
+        alternates: ranked.slice(1).map((r) => r.recipe),
+        rationale: ranked[0].rationale,
+      };
+    }
     throw genErr;
   }
 }

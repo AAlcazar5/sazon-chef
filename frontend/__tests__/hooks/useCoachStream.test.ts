@@ -407,9 +407,107 @@ describe('useCoachStream', () => {
     expect(last?.kind).toBe('recipe-error');
     expect(last?.query).toBe('pizza margarita');
     expect(last?.content).toBe('');
-    expect(mockedFindOrGenerate).toHaveBeenCalledWith('pizza margarita');
+    expect(mockedFindOrGenerate).toHaveBeenCalledWith('pizza margarita', undefined);
     // Critical: SSE must not be invoked for a recipe ask, even on wedge fail.
     expect(mockedCoachApi.streamMessage).not.toHaveBeenCalled();
     expect(mockedCoachApi.createConversation).not.toHaveBeenCalled();
+  });
+
+  // Founder ask 2026-05-19: ambiguous asks like "grilled chicken" land
+  // on ONE N=1-picked recipe; the swap chip cycles the visible recipe
+  // through `recipePool` in ranker order.
+  it('recipe-card success carries pool + index + rationale; swapToNextAlternate cycles', async () => {
+    mockedDetect.mockReturnValue({ query: 'grilled chicken' });
+    const primary = {
+      title: 'Grilled Chicken Italian',
+      description: '',
+      baseServings: 4,
+      ingredients: [{ name: 'chicken', amount: 1, unit: 'lb' }],
+      steps: ['Grill.'],
+    };
+    const alt1 = { ...primary, title: 'Grilled Chicken Japanese' };
+    const alt2 = { ...primary, title: 'Grilled Chicken Mexican' };
+    mockedFindOrGenerate.mockResolvedValueOnce({
+      primary,
+      alternates: [alt1, alt2],
+      rationale: "Picked because you've got paprika on hand.",
+    });
+
+    const { result } = renderHook(() => useCoachStream());
+
+    await act(async () => {
+      await result.current.sendMessage('grilled chicken');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    const card = result.current.messages.at(-1);
+    expect(card?.kind).toBe('recipe-card');
+    expect(card?.recipe?.title).toBe('Grilled Chicken Italian');
+    expect(card?.recipePool?.map((r) => r.title)).toEqual([
+      'Grilled Chicken Italian',
+      'Grilled Chicken Japanese',
+      'Grilled Chicken Mexican',
+    ]);
+    expect(card?.recipeIndex).toBe(0);
+    expect(card?.recipeRationale).toMatch(/paprika/i);
+
+    // Swap once → Japanese
+    act(() => {
+      result.current.swapToNextAlternate(card!.id);
+    });
+    const after1 = result.current.messages.at(-1);
+    expect(after1?.recipe?.title).toBe('Grilled Chicken Japanese');
+    expect(after1?.recipeIndex).toBe(1);
+
+    // Swap twice more → Mexican, then wraps to Italian
+    act(() => {
+      result.current.swapToNextAlternate(card!.id);
+    });
+    expect(result.current.messages.at(-1)?.recipe?.title).toBe(
+      'Grilled Chicken Mexican',
+    );
+    act(() => {
+      result.current.swapToNextAlternate(card!.id);
+    });
+    expect(result.current.messages.at(-1)?.recipe?.title).toBe(
+      'Grilled Chicken Italian',
+    );
+    expect(result.current.messages.at(-1)?.recipeIndex).toBe(0);
+  });
+
+  it('swapToNextAlternate is a no-op for length-1 pools (AI-gen-only result)', async () => {
+    mockedDetect.mockReturnValue({ query: 'pizza margarita' });
+    mockedFindOrGenerate.mockResolvedValueOnce({
+      primary: {
+        title: 'Pizza Margherita',
+        description: '',
+        baseServings: 2,
+        ingredients: [{ name: 'flour', amount: 1, unit: 'cup' }],
+        steps: ['Mix.'],
+      },
+      alternates: [],
+    });
+
+    const { result } = renderHook(() => useCoachStream());
+
+    await act(async () => {
+      await result.current.sendMessage('pizza margarita');
+    });
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    const card = result.current.messages.at(-1);
+    expect(card?.recipePool?.length).toBe(1);
+
+    act(() => {
+      result.current.swapToNextAlternate(card!.id);
+    });
+    // Index stays at 0; recipe unchanged.
+    expect(result.current.messages.at(-1)?.recipeIndex).toBe(0);
+    expect(result.current.messages.at(-1)?.recipe?.title).toBe('Pizza Margherita');
   });
 });

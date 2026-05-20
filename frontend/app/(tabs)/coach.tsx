@@ -129,7 +129,23 @@ export default function CoachScreen({
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [voicePermDenied, setVoicePermDenied] = useState(false);
 
-  const stream = useCoachStream();
+  // P2 retention — proactive Sazon greeting signal. Also feeds the
+  // wedge's N=1 ranker (last-cook cuisine bonus for recipe asks).
+  const { cuisine: lastCookCuisine } = useLastCookCuisine();
+  // Founder ask 2026-05-19 — surface N=1 signals to the wedge so
+  // ambiguous asks ("grilled chicken") pick ONE recipe ranked by pantry
+  // overlap + recent cuisine + adjacency. Assembling here keeps the
+  // wedge testable in isolation (no React-Query plumbing in
+  // useCoachStream).
+  const rankerSignals = useMemo(
+    () => ({
+      pantryNames: chipContext.pantryExpiringSoon,
+      lastCookCuisine: lastCookCuisine || null,
+      topAdjacentCuisine: chipContext.topAdjacentCuisine,
+    }),
+    [chipContext.pantryExpiringSoon, chipContext.topAdjacentCuisine, lastCookCuisine],
+  );
+  const stream = useCoachStream({ rankerSignals });
   const attachments = useCoachAttachments();
   const memoryCount = useCoachMemoryCount();
 
@@ -141,8 +157,6 @@ export default function CoachScreen({
   );
 
   const chips = useMemo(() => chipsFromCoachContext(chipContext), [chipContext]);
-  // P2 retention — proactive Sazon greeting signal.
-  const { cuisine: lastCookCuisine } = useLastCookCuisine();
 
   const paywallReason: CoachPaywallReason | null =
     manualPaywallReason ?? stream.paywallReason ?? (stream.paywall ? 'cap' : null);
@@ -510,6 +524,7 @@ export default function CoachScreen({
             // never paragraph prose.
             if (m.kind === 'recipe-card' && m.recipe) {
               const recipe = m.recipe;
+              const poolSize = m.recipePool?.length ?? 1;
               return (
                 <CookingModeRecipeCard
                   key={m.id}
@@ -523,6 +538,12 @@ export default function CoachScreen({
                   notes={recipe.notes}
                   // Y-Live-1: "Get cooking" → launch/preview modal → player.
                   onGetCooking={() => setLaunchRecipe(recipe)}
+                  // N=1 ranker (founder 2026-05-19) — visible reasoning +
+                  // "Show me another" cycle through ranked alternates.
+                  rationale={m.recipeRationale}
+                  onSwap={poolSize > 1 ? () => stream.swapToNextAlternate(m.id) : undefined}
+                  swapPoolSize={poolSize}
+                  swapIndex={m.recipeIndex ?? 0}
                 />
               );
             }
