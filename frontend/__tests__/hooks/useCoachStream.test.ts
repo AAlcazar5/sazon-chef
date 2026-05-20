@@ -478,6 +478,57 @@ describe('useCoachStream', () => {
     expect(result.current.messages.at(-1)?.recipeIndex).toBe(0);
   });
 
+  // Founder ask 2026-05-20 round 10: alternates peek lets users tap to
+  // pick a specific recipe (not just cycle). setRecipeIndex jumps
+  // directly to a 0-based pool index.
+  it('setRecipeIndex jumps directly to a specific pool index', async () => {
+    mockedDetect.mockReturnValue({ query: 'grilled chicken' });
+    const primary = {
+      title: 'Grilled Chicken A',
+      description: '',
+      baseServings: 2,
+      ingredients: [{ name: 'x', amount: 1, unit: 'lb' }],
+      steps: ['s'],
+    };
+    const alt1 = { ...primary, title: 'Grilled Chicken B' };
+    const alt2 = { ...primary, title: 'Grilled Chicken C' };
+    mockedFindOrGenerate.mockResolvedValueOnce({
+      primary,
+      alternates: [alt1, alt2],
+    });
+    const { result } = renderHook(() => useCoachStream());
+    await act(async () => {
+      await result.current.sendMessage('grilled chicken');
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    const id = result.current.messages.at(-1)!.id;
+
+    // Direct jump to index 2 (alt2).
+    act(() => {
+      result.current.setRecipeIndex(id, 2);
+    });
+    expect(result.current.messages.at(-1)?.recipe?.title).toBe('Grilled Chicken C');
+    expect(result.current.messages.at(-1)?.recipeIndex).toBe(2);
+
+    // Out-of-range index is a no-op.
+    act(() => {
+      result.current.setRecipeIndex(id, 99);
+    });
+    expect(result.current.messages.at(-1)?.recipeIndex).toBe(2);
+
+    // Negative is a no-op too.
+    act(() => {
+      result.current.setRecipeIndex(id, -1);
+    });
+    expect(result.current.messages.at(-1)?.recipeIndex).toBe(2);
+
+    // Setting the same index is a no-op (avoids unnecessary re-renders).
+    act(() => {
+      result.current.setRecipeIndex(id, 2);
+    });
+    expect(result.current.messages.at(-1)?.recipeIndex).toBe(2);
+  });
+
   it('swapToNextAlternate is a no-op for length-1 pools (AI-gen-only result)', async () => {
     mockedDetect.mockReturnValue({ query: 'pizza margarita' });
     mockedFindOrGenerate.mockResolvedValueOnce({

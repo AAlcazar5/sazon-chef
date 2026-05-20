@@ -50,6 +50,7 @@ import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill'
 import SazonHeader from '../../components/coach/SazonHeader';
 import SazonDailyGreetingBanner from '../../components/coach/SazonDailyGreetingBanner';
 import CookingModeRecipeCard from '../../components/cooking/CookingModeRecipeCard';
+import RecipeAlternatesPeek from '../../components/cooking/RecipeAlternatesPeek';
 import CookLaunchModal from '../../components/cooking/CookLaunchModal';
 import type { RecipeCardPayload } from '../../lib/coach/findOrGenerateRecipe';
 import { setAdhocRecipe, makeAdhocRecipeId } from '../../lib/coach/adhocRecipeStash';
@@ -558,28 +559,48 @@ export default function CoachScreen({
             // never paragraph prose.
             if (m.kind === 'recipe-card' && m.recipe) {
               const recipe = m.recipe;
-              const poolSize = m.recipePool?.length ?? 1;
+              const pool = m.recipePool ?? [];
+              const poolSize = pool.length;
+              const currentIndex = m.recipeIndex ?? 0;
+              // Founder ask 2026-05-20 round 10: alternates peek in the
+              // 1/3 of viewport below the 2/3-height main card. Shows
+              // the OTHER recipes in the pool with thumb + title + tap
+              // to swap. Visible scroll affordance + N=1 transparency.
+              const peekAlternates = pool
+                .map((r, i) => ({ recipe: r, originalIndex: i }))
+                .filter((x) => x.originalIndex !== currentIndex)
+                .slice(0, 3);
               return (
-                <CookingModeRecipeCard
-                  key={m.id}
-                  title={recipe.title}
-                  description={recipe.description}
-                  imageUrls={recipe.imageUrls}
-                  cuisine={recipe.cuisine}
-                  baseServings={recipe.baseServings}
-                  ingredients={recipe.ingredients}
-                  steps={recipe.steps}
-                  macros={recipe.macros}
-                  notes={recipe.notes}
-                  // Y-Live-1: "Get cooking" → launch/preview modal → player.
-                  onGetCooking={() => setLaunchRecipe(recipe)}
-                  // N=1 ranker (founder 2026-05-19) — visible reasoning +
-                  // "Show me another" cycle through ranked alternates.
-                  rationale={m.recipeRationale}
-                  onSwap={poolSize > 1 ? () => stream.swapToNextAlternate(m.id) : undefined}
-                  swapPoolSize={poolSize}
-                  swapIndex={m.recipeIndex ?? 0}
-                />
+                <React.Fragment key={m.id}>
+                  <CookingModeRecipeCard
+                    title={recipe.title}
+                    description={recipe.description}
+                    imageUrls={recipe.imageUrls}
+                    cuisine={recipe.cuisine}
+                    baseServings={recipe.baseServings}
+                    ingredients={recipe.ingredients}
+                    steps={recipe.steps}
+                    macros={recipe.macros}
+                    notes={recipe.notes}
+                    // Y-Live-1: "Get cooking" → launch/preview modal → player.
+                    onGetCooking={() => setLaunchRecipe(recipe)}
+                    // N=1 ranker (founder 2026-05-19) — visible reasoning +
+                    // "Show me another" cycle through ranked alternates.
+                    rationale={m.recipeRationale}
+                    onSwap={poolSize > 1 ? () => stream.swapToNextAlternate(m.id) : undefined}
+                    swapPoolSize={poolSize}
+                    swapIndex={currentIndex}
+                  />
+                  {peekAlternates.length > 0 ? (
+                    <RecipeAlternatesPeek
+                      alternates={peekAlternates.map((x) => x.recipe)}
+                      onPickAlternate={(peekIndex) => {
+                        const originalIndex = peekAlternates[peekIndex].originalIndex;
+                        stream.setRecipeIndex(m.id, originalIndex);
+                      }}
+                    />
+                  ) : null}
+                </React.Fragment>
               );
             }
             // Card-shaped retry — recipe asks must never become paragraphs

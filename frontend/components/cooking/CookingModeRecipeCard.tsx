@@ -163,9 +163,11 @@ export default function CookingModeRecipeCard({
   // (RN's behavior, not a bug). An explicit `height` value is a hard
   // bound that the ScrollView child must overflow.
   //
-  // Use 60% of viewport (was 70%) to leave generous room for header +
-  // composer + tab bar regardless of device height.
-  const cardHeight = Math.round(Dimensions.get('window').height * 0.6);
+  // Founder bug 2026-05-20 (round 10): 2/3 of viewport (~67%) leaves
+  // the remaining 1/3 for an "Other ideas" peek below — a visible
+  // scroll affordance so the user can see there's more content to
+  // scroll into.
+  const cardHeight = Math.round((Dimensions.get('window').height * 2) / 3);
 
   return (
     <View
