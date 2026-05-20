@@ -7,13 +7,18 @@
 jest.mock('../../../lib/api/recipe', () => ({
   recipeApi: {
     generateFromDescription: jest.fn(),
+    getAllRecipes: jest.fn(),
   },
 }));
 
 import { recipeApi } from '../../../lib/api/recipe';
-import { findOrGenerateRecipe } from '../../../lib/coach/findOrGenerateRecipe';
+import { findOrGenerateRecipe, dice } from '../../../lib/coach/findOrGenerateRecipe';
 
 const mockGen = recipeApi.generateFromDescription as jest.Mock;
+const mockGetAll = recipeApi.getAllRecipes as jest.Mock;
+// Default the catalog search to empty so existing tests fall through
+// to AI gen (their original behavior pre-Y-Live-7).
+const emptyCatalog = () => Promise.resolve({ data: { recipes: [] } });
 
 const FIXTURE = {
   data: {
@@ -41,7 +46,11 @@ const FIXTURE = {
   },
 };
 
-beforeEach(() => mockGen.mockReset());
+beforeEach(() => {
+  mockGen.mockReset();
+  mockGetAll.mockReset();
+  mockGetAll.mockImplementation(emptyCatalog);
+});
 
 describe('findOrGenerateRecipe', () => {
   it('maps backend gen → RecipeCardPayload (preserves structured ingredients)', async () => {
@@ -89,5 +98,106 @@ describe('findOrGenerateRecipe', () => {
     mockGen.mockResolvedValue(FIXTURE);
     await findOrGenerateRecipe('Pizza margarita');
     expect(mockGen).toHaveBeenCalledWith('Pizza margarita');
+  });
+});
+
+// Y-Live-7 — fuzzy DB lookup before AI gen. Founder bug 2026-05-19:
+// "Pizza Margarita" should find the curated "Pizza Margherita" in the
+// catalog (typo tolerance) before falling through to AI gen.
+describe('dice (bigram similarity)', () => {
+  it('handles single-char diff inside a token (Margarita ↔ Margherita)', () => {
+    expect(dice('pizza margarita', 'Pizza Margherita')).toBeGreaterThan(0.7);
+  });
+  it('identical lowercase strings → 1.0', () => {
+    expect(dice('carbonara', 'Carbonara')).toBeCloseTo(1.0, 2);
+  });
+  it('unrelated strings → very low', () => {
+    expect(dice('pizza margarita', 'Salsa Macha (Mexican Chili Oil)')).toBeLessThan(
+      0.3,
+    );
+  });
+  it('empty / too-short → 0', () => {
+    expect(dice('', 'anything')).toBe(0);
+    expect(dice('a', 'a')).toBe(0); // <2 char strings have no bigrams
+  });
+});
+
+describe('findOrGenerateRecipe — Y-Live-7 catalog-first lookup', () => {
+  const CATALOG_HIT = {
+    title: 'Pizza Margherita',
+    description: 'Classic Neapolitan-style pizza.',
+    servings: 2,
+    ingredients: [
+      { name: 'flour', amount: 1, unit: 'cup', text: '1 cup flour' },
+      { name: 'mozzarella', amount: 4, unit: 'oz', text: '4 oz mozzarella' },
+    ],
+    instructions: [
+      { text: 'Mix dough.', step: 1 },
+      { text: 'Top + bake.', step: 2 },
+    ],
+    calories: 600,
+    protein: 22,
+    carbs: 80,
+    fat: 18,
+    fiber: 4,
+    imageUrl: 'https://example.com/p.jpg',
+  };
+
+  it('typo "Pizza Margarita" finds catalog "Pizza Margherita" (no gen call)', async () => {
+    mockGetAll.mockResolvedValue({ data: { recipes: [CATALOG_HIT] } });
+    const payload = await findOrGenerateRecipe('Pizza Margarita');
+    expect(payload.title).toBe('Pizza Margherita');
+    expect(payload.ingredients).toEqual([
+      { name: 'flour', amount: 1, unit: 'cup' },
+      { name: 'mozzarella', amount: 4, unit: 'oz' },
+    ]);
+    expect(payload.steps).toEqual(['Mix dough.', 'Top + bake.']);
+    expect(payload.imageUrls).toEqual(['https://example.com/p.jpg']);
+    expect(mockGen).not.toHaveBeenCalled(); // catalog hit short-circuits gen
+  });
+
+  it('catalog has only unrelated recipes → falls through to AI gen', async () => {
+    mockGetAll.mockResolvedValue({
+      data: { recipes: [{ ...CATALOG_HIT, title: 'Banana Bread' }] },
+    });
+    mockGen.mockResolvedValue(FIXTURE);
+    const payload = await findOrGenerateRecipe('Pizza Margarita');
+    expect(payload.title).toBe('Pizza Margherita'); // from gen FIXTURE
+    expect(mockGen).toHaveBeenCalledWith('Pizza Margarita');
+  });
+
+  it('catalog recipes lacking structured ingredients (legacy rows) → fall through to gen', async () => {
+    mockGetAll.mockResolvedValue({
+      data: {
+        recipes: [
+          {
+            ...CATALOG_HIT,
+            ingredients: [
+              { text: '1 cup flour' }, // no name/amount/unit — legacy
+              { text: '4 oz mozzarella' },
+            ],
+          },
+        ],
+      },
+    });
+    mockGen.mockResolvedValue(FIXTURE);
+    const payload = await findOrGenerateRecipe('Pizza Margarita');
+    expect(payload.title).toBe('Pizza Margherita'); // from gen, not the legacy catalog row
+    expect(mockGen).toHaveBeenCalled();
+  });
+
+  it('empty catalog → falls through to gen', async () => {
+    mockGetAll.mockResolvedValue({ data: { recipes: [] } });
+    mockGen.mockResolvedValue(FIXTURE);
+    await findOrGenerateRecipe('Pizza Margarita');
+    expect(mockGen).toHaveBeenCalled();
+  });
+
+  it('catalog search throws → falls through to gen (resilient)', async () => {
+    mockGetAll.mockRejectedValue(new Error('network'));
+    mockGen.mockResolvedValue(FIXTURE);
+    const payload = await findOrGenerateRecipe('Pizza Margarita');
+    expect(payload.title).toBe('Pizza Margherita');
+    expect(mockGen).toHaveBeenCalled();
   });
 });
