@@ -13,7 +13,14 @@
 // borders), pastel surface, tokens single-source, Haptic + a11y.
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+// Founder bug 2026-05-20 (round 5): iOS still couldn't scroll the
+// card with RN's native <ScrollView> because the parent ScrollView in
+// coach.tsx kept intercepting the gesture. react-native-gesture-handler's
+// ScrollView uses the gesture system instead of UIScrollView — it
+// composes cleanly with the parent ScrollView (the inner one wins on
+// touches that start within its bounds, the outer one wins outside).
+import { ScrollView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -156,12 +163,6 @@ export default function CookingModeRecipeCard({
         contentContainerStyle={styles.content}
         nestedScrollEnabled
         showsVerticalScrollIndicator
-        // iOS sometimes needs an explicit scroll-events directive when
-        // nested inside another scrollable. `scrollEventThrottle` keeps
-        // the events flowing; `bounces` adds the rubber-band feedback
-        // that signals scrollability.
-        scrollEventThrottle={16}
-        bounces
       >
       {images.length > 0 ? (
         // Founder bug 2026-05-20 (round 4): the image was rendering at
