@@ -110,6 +110,9 @@ export interface GeneratedRecipe {
   }>;
   tips?: string[];
   tags?: string[];
+  /** Optional representative photo URL — populated post-validation by
+   *  Spoonacular lookup for recipe-ask flows (founder 2026-05-20). */
+  imageUrl?: string;
 }
 
 export class AIRecipeService {
@@ -344,10 +347,39 @@ Return JSON only.`;
         model: route.model,
         providerOrder: route.providerOrder,
       });
-      const validated = this.validateAndNormalizeRecipe(recipe);
+      const rawValidated = this.validateAndNormalizeRecipe(recipe);
+      // Tier Y wedge photos (founder 2026-05-20): AI-gen recipes have
+      // no image. Look one up on Spoonacular by the validated title
+      // (more specific than the original query: "Grilled chicken" →
+      // model picks "Simple Grilled Chicken Breast" → that exact title
+      // lands a sharper match in Spoonacular). Cached 24h by title.
+      // Skipped on non-recipe-ask modes (recipe creation has its own
+      // image flow + we don't want to spend Spoonacular points there).
+      //
+      // Clone before mutating to keep validateAndNormalizeRecipe's
+      // return reference immutable (the caller may share that object
+      // across retries or cache layers).
+      let validated: GeneratedRecipe = rawValidated;
+      if (options?.mode === 'recipe-ask' && !rawValidated.imageUrl) {
+        try {
+          const imageUrl = await this.lookupImageForRecipe(rawValidated.title);
+          if (imageUrl) {
+            validated = { ...rawValidated, imageUrl };
+          }
+        } catch (lookupErr: any) {
+          // Image lookup must NEVER fail the gen — degrade silently to
+          // the frontend's catalog-borrow + cuisine-gradient fallbacks.
+          logger.warn(
+            { data: lookupErr?.message ?? lookupErr },
+            '⚠️  [generateFromDescription] image lookup failed',
+          );
+        }
+      }
       // Tier Y Track B: cache only succeeded + validated recipe-ask
       // generations. Failed validations stay un-cached so a transient
-      // bad response doesn't poison the cache.
+      // bad response doesn't poison the cache. Cached AFTER the image
+      // lookup so the cache entry includes the photo (next ask is a
+      // pure cache hit with zero Spoonacular point spend).
       if (options?.mode === 'recipe-ask') {
         const { aiGenRecipeCache, recipeAskCacheKey } = await import('./aiGenRecipeCache');
         aiGenRecipeCache.set(recipeAskCacheKey(trimmed), validated);
@@ -569,6 +601,43 @@ Return JSON only.`;
   /**
    * Build the recipe generation prompt
    */
+
+  /**
+   * Tier Y wedge photos (founder 2026-05-20): consult the recipe-image
+   * cache first; on miss, call Spoonacular's `complexSearch` and cache
+   * the result. Returns the image URL or null when neither path has one.
+   *
+   * Always-resolves (never throws) — the caller wraps in try/catch
+   * defensively, but the contract is: degrade to null on any failure so
+   * the gen path can't be broken by an image-service hiccup.
+   */
+  private async lookupImageForRecipe(title: string): Promise<string | null> {
+    const trimmed = (title || '').trim();
+    if (!trimmed) return null;
+    const { recipeImageCache, recipeImageCacheKey } = await import('./recipeImageCache');
+    const cacheKey = recipeImageCacheKey(trimmed);
+    const cached = recipeImageCache.get<string>(cacheKey);
+    if (cached) {
+      logger.info({ data: cacheKey }, '⚡ [lookupImageForRecipe] cache HIT');
+      return cached;
+    }
+    try {
+      const { spoonacularService } = await import('./spoonacularService');
+      if (!spoonacularService.isConfigured()) return null;
+      const imageUrl = await spoonacularService.findRecipeImage(trimmed);
+      if (imageUrl) {
+        recipeImageCache.set(cacheKey, imageUrl);
+        return imageUrl;
+      }
+    } catch (err: any) {
+      logger.warn(
+        { data: err?.message ?? err },
+        '⚠️  [lookupImageForRecipe] spoonacular error',
+      );
+    }
+    return null;
+  }
+
   /**
    * Positive diversity steer, shared by both prompt builders so the wording
    * can't drift between Path A and Path B. Empty when not applicable

@@ -162,6 +162,23 @@ class SpoonacularService {
   }
 
   /**
+   * Tier Y wedge photos (founder 2026-05-20): given a recipe title /
+   * description, return ONE representative photo URL. Cheaper than
+   * findRecipeByTitle (which makes a second /information call) — the
+   * `complexSearch` results already include the image URL.
+   *
+   * Used by aiRecipeService to attach a real food photo to AI-gen
+   * recipe-ask results so the in-chat card never falls back to the
+   * cuisine-emoji placeholder for queries that lack a catalog match.
+   */
+  async findRecipeImage(query: string): Promise<string | null> {
+    if (!this.isConfigured()) return null;
+    const results = await this.searchRecipes(query, { number: 1 });
+    const image = results?.results?.[0]?.image;
+    return typeof image === 'string' && image.length > 0 ? image : null;
+  }
+
+  /**
    * Search for a recipe by title to find potential match
    * Returns the best match based on title similarity
    */
