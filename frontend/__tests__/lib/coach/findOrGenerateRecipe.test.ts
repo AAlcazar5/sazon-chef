@@ -209,3 +209,47 @@ describe('findOrGenerateRecipe — Y-Live-7 catalog-first lookup', () => {
     expect(mockGen).toHaveBeenCalled();
   });
 });
+
+// Founder rule 2026-05-19: a recipe ask must never escape to LLM
+// paragraphs. When AI gen errors out (quota, 500, network), fall back to
+// the best below-threshold catalog candidate so the wedge still renders
+// a card. Only when BOTH paths fail does findOrGenerate throw.
+describe('findOrGenerateRecipe — catalog fallback when AI gen fails', () => {
+  // Title "Grilled Salmon Bowl" vs query "Grilled chicken" scores ~0.41
+  // (Dice on bigrams) — below the 0.55 primary threshold, so not the
+  // first hit. When AI gen throws, this becomes the fallback so the
+  // wedge can still hand back a card.
+  const BELOW_THRESHOLD_CATALOG = {
+    data: {
+      recipes: [
+        {
+          id: 'rcp_grilled_salmon_bowl',
+          title: 'Grilled Salmon Bowl',
+          description: 'Smoky salmon over rice.',
+          servings: 4,
+          ingredients: [
+            { name: 'salmon', amount: 1, unit: 'lb' },
+            { name: 'rice', amount: 1, unit: 'cup' },
+          ],
+          instructions: [{ text: 'Grill salmon.' }, { text: 'Serve.' }],
+          calories: 500,
+        },
+      ],
+    },
+  };
+
+  it('AI gen throws + below-threshold catalog → returns catalog fallback (no throw)', async () => {
+    mockGetAll.mockResolvedValue(BELOW_THRESHOLD_CATALOG);
+    mockGen.mockRejectedValue(new Error('AI quota exceeded'));
+    const payload = await findOrGenerateRecipe('Grilled chicken');
+    expect(payload.title).toBe('Grilled Salmon Bowl');
+    expect(payload.recipeId).toBe('rcp_grilled_salmon_bowl');
+    expect(mockGen).toHaveBeenCalled();
+  });
+
+  it('AI gen throws + no catalog candidates → propagates the gen error', async () => {
+    mockGetAll.mockResolvedValue({ data: { recipes: [] } });
+    mockGen.mockRejectedValue(new Error('AI down'));
+    await expect(findOrGenerateRecipe('Grilled chicken')).rejects.toThrow(/AI down/);
+  });
+});

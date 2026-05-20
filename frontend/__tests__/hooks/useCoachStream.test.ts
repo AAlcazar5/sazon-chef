@@ -10,17 +10,24 @@ jest.mock('../../lib/api', () => ({
   },
 }));
 
-// detectRecipeAsk gates the wedge; only recipe-ask strings hit
-// findOrGenerateRecipe. Existing tests send non-recipe strings ("Hi coach"
-// etc.) so this mock is dormant for them.
+// detectRecipeAsk gates the wedge; only recipe-ask strings should hit
+// findOrGenerateRecipe. The bare-food fallback matches some short non-
+// recipe phrases ("photo me", "log my meal", "try again") used by older
+// tests — mock the detector to a no-op by default and let recipe-card /
+// recipe-error tests opt in explicitly.
+jest.mock('../../lib/coach/detectRecipeAsk', () => ({
+  detectRecipeAsk: jest.fn(),
+}));
 jest.mock('../../lib/coach/findOrGenerateRecipe', () => ({
   findOrGenerateRecipe: jest.fn(),
 }));
 
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { coachApi } from '../../lib/api';
+import { detectRecipeAsk } from '../../lib/coach/detectRecipeAsk';
 import { findOrGenerateRecipe } from '../../lib/coach/findOrGenerateRecipe';
 
+const mockedDetect = detectRecipeAsk as jest.MockedFunction<typeof detectRecipeAsk>;
 const mockedFindOrGenerate = findOrGenerateRecipe as jest.MockedFunction<
   typeof findOrGenerateRecipe
 >;
@@ -42,10 +49,9 @@ async function* mkRichStream(events: any[]): AsyncIterableIterator<any> {
 describe('useCoachStream', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default the wedge to fail so the catch falls through to SSE — that
-    // matches every pre-recipe-wedge test's expected behavior. Tests that
-    // exercise the recipe-card success path override with
-    // mockResolvedValueOnce.
+    // Default: not a recipe ask → SSE path runs. Recipe-card tests
+    // override detectRecipeAsk per case.
+    mockedDetect.mockReturnValue(null);
     mockedFindOrGenerate.mockRejectedValue(new Error('default: no wedge'));
   });
 
@@ -361,12 +367,17 @@ describe('useCoachStream', () => {
     expect(result.current.isStreaming).toBe(false);
   });
 
-  // Founder report 2026-05-19: "Pizza Margarita" produced a misleading
-  // "try a tweak?" placeholder when the wedge failed; the user's "Sure"
-  // then hit the SSE with zero context → generic greeting. Regression
-  // guard: on wedge failure, fall through to the LLM SSE (auto-corrects
-  // typos, keeps conversation context) — never show the misleading copy.
-  it('wedge failure falls through to LLM SSE (no misleading "try a tweak?")', async () => {
+  // Founder report 2026-05-19 (round 2): "Grilled chicken" still produced
+  // a chatty LLM paragraph ("How about the Mediterranean Chicken Salad
+  // Bowl... which way are you leaning?") when the wedge failed because
+  // the previous regression locked the OPPOSITE behavior (SSE fall-
+  // through). Founder rule, hard: a matched recipe ask MUST render the
+  // card (or a card-shaped retry) — NEVER pivot to LLM SSE which produces
+  // permission-asking paragraphs. findOrGenerateRecipe already falls back
+  // to a catalog candidate; only when BOTH paths fail do we surface
+  // recipe-error here.
+  it('wedge failure renders recipe-error card (NEVER falls through to LLM SSE)', async () => {
+    mockedDetect.mockReturnValue({ query: 'pizza margarita' });
     mockedFindOrGenerate.mockRejectedValueOnce(new Error('gen failed'));
     mockedCoachApi.createConversation.mockResolvedValue({
       id: 'c1',
@@ -375,6 +386,8 @@ describe('useCoachStream', () => {
       createdAt: 'now',
       lastMessageAt: 'now',
     });
+    // Wire SSE so the test would observe a regression if SSE accidentally
+    // ran — assertion below pins streamMessage to NOT have been called.
     mockedCoachApi.streamMessage.mockReturnValue(
       mkStream(['Pizza ', 'Margherita ', 'sounds great.']),
     );
@@ -382,7 +395,6 @@ describe('useCoachStream', () => {
     const { result } = renderHook(() => useCoachStream());
 
     await act(async () => {
-      // Real recipe-ask string the detector matches. Wedge throws → SSE fires.
       await result.current.sendMessage('pizza margarita');
     });
 
@@ -392,11 +404,12 @@ describe('useCoachStream', () => {
 
     const last = result.current.messages.at(-1);
     expect(last?.role).toBe('assistant');
-    // Streamed from the LLM, NOT the misleading dead-end copy.
-    expect(last?.content).toBe('Pizza Margherita sounds great.');
-    expect(last?.content).not.toMatch(/try a tweak/i);
-    expect(last?.kind).not.toBe('recipe-card');
-    expect(mockedCoachApi.streamMessage).toHaveBeenCalled();
-    expect(mockedFindOrGenerate).toHaveBeenCalled();
+    expect(last?.kind).toBe('recipe-error');
+    expect(last?.query).toBe('pizza margarita');
+    expect(last?.content).toBe('');
+    expect(mockedFindOrGenerate).toHaveBeenCalledWith('pizza margarita');
+    // Critical: SSE must not be invoked for a recipe ask, even on wedge fail.
+    expect(mockedCoachApi.streamMessage).not.toHaveBeenCalled();
+    expect(mockedCoachApi.createConversation).not.toHaveBeenCalled();
   });
 });

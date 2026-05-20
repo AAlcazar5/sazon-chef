@@ -67,9 +67,14 @@ export interface CoachUiMessage {
   toolUses?: CoachToolUse[];
   /** Tier Y live-wiring — when set, renderer shows CookingModeRecipeCard
    *  instead of MessageBubble (the founder wants recipe asks rendered as
-   *  the rich card, never as paragraph prose). */
-  kind?: 'recipe-card';
+   *  the rich card, never as paragraph prose). `recipe-error` is the rare
+   *  card-shaped retry state when BOTH catalog and AI gen fail; never an
+   *  LLM-paragraph pivot. */
+  kind?: 'recipe-card' | 'recipe-error';
   recipe?: RecipeCardPayload;
+  /** Original query, kept on recipe-error messages so the renderer can
+   *  show "Couldn't pull up *{query}*" + retry CTA. */
+  query?: string;
 }
 
 export interface CoachMedicalDeflectionState {
@@ -197,18 +202,25 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
               : m,
           ),
         );
-        setIsStreaming(false);
-        return;
       } catch {
-        // Wedge failed (typo, network, AI gen). Fall through to the LLM
-        // SSE with the original message — the LLM has world knowledge
-        // (auto-corrects typos like "Margarita" → "Margherita") and stays
-        // in conversation context for follow-ups. The previous behavior
-        // showed "couldn't pull up that recipe — try a tweak?" which
-        // sounded like an offer but was a dead-end error; the user's
-        // "Sure" then hit the SSE with zero context → generic greeting.
-        // The empty assistant placeholder stays put; SSE streams into it.
+        // Founder rule (2026-05-19): a recipe ask MUST render the card,
+        // never an LLM paragraph. The earlier SSE fall-through produced
+        // chatty "How about the Mediterranean Chicken Salad Bowl... which
+        // way are you leaning?" responses for asks like "Grilled chicken"
+        // when AI gen hiccupped. findOrGenerateRecipe now falls back to a
+        // close-enough catalog match itself; if it STILL throws (no
+        // catalog rows + no AI gen), surface a card-shaped retry — never
+        // pivot to LLM SSE on a matched recipe ask.
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === assistantId
+              ? { ...m, kind: 'recipe-error', query: ask.query, content: '' }
+              : m,
+          ),
+        );
       }
+      setIsStreaming(false);
+      return;
     }
 
     let convoId = conversationId;

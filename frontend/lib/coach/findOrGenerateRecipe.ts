@@ -173,9 +173,18 @@ function mapCatalogRecipe(r: CatalogRecipe): RecipeCardPayload | null {
   };
 }
 
-async function tryCatalogMatch(query: string): Promise<RecipeCardPayload | null> {
+interface CatalogMatchResult {
+  /** Above CATALOG_MATCH_THRESHOLD — confident hit, prefer over AI gen. */
+  hit: RecipeCardPayload | null;
+  /** Best-scoring structured candidate at any positive score — used as a
+   *  last-resort fallback when AI gen also fails so the wedge can still
+   *  render a card (founder rule: recipe ask → card, never paragraph). */
+  best: RecipeCardPayload | null;
+}
+
+async function tryCatalogMatch(query: string): Promise<CatalogMatchResult> {
   const term = firstSignificantToken(query);
-  if (!term) return null;
+  if (!term) return { hit: null, best: null };
   const res = (await recipeApi.getAllRecipes({
     search: term,
     limit: CATALOG_SEARCH_LIMIT,
@@ -192,7 +201,11 @@ async function tryCatalogMatch(query: string): Promise<RecipeCardPayload | null>
       best = { payload, score };
     }
   }
-  return best && best.score >= CATALOG_MATCH_THRESHOLD ? best.payload : null;
+  if (!best) return { hit: null, best: null };
+  return {
+    hit: best.score >= CATALOG_MATCH_THRESHOLD ? best.payload : null,
+    best: best.payload,
+  };
 }
 
 // ── AI generation fallback (existing path) ────────────────────────────────
@@ -267,13 +280,24 @@ export async function findOrGenerateRecipe(
   // 1. Curated catalog first — token search + Dice similarity. Tolerant
   //    of typos and prefers the human-edited corpus. A catalog hiccup
   //    must never block the wedge: any throw → fall through to gen.
+  let catalogFallback: RecipeCardPayload | null = null;
   try {
-    const hit = await tryCatalogMatch(query);
+    const { hit, best } = await tryCatalogMatch(query);
     if (hit) return hit;
+    catalogFallback = best;
   } catch {
     // intentional swallow — gen below is the safety net
   }
   // 2. AI gen — original behavior. Has world knowledge so a typo'd query
-  //    still tends to produce a sensible recipe.
-  return generateViaAi(query);
+  //    still tends to produce a sensible recipe. On failure (quota, 500,
+  //    network), fall back to the best below-threshold catalog candidate
+  //    so the wedge still renders a card. The founder rule: recipe asks
+  //    must NEVER pivot to LLM paragraphs ("inane questions, rambling on")
+  //    — a directionally-close catalog match is the right floor.
+  try {
+    return await generateViaAi(query);
+  } catch (genErr) {
+    if (catalogFallback) return catalogFallback;
+    throw genErr;
+  }
 }
