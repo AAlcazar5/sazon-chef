@@ -274,6 +274,9 @@ interface GeneratedRecipeShape {
   fiber?: number;
   tips?: string[];
   imageUrl?: string;
+  /** Kitchen-mode parity (founder 2026-05-20): backend returns up to
+   *  3 Spoonacular-looked-up photos ranked by title-Dice similarity. */
+  imageUrls?: string[];
 }
 
 interface GeneratedResponse {
@@ -328,7 +331,14 @@ async function generateViaAi(query: string): Promise<RecipeCardPayload> {
       fat: recipe.fat,
       fiber: recipe.fiber,
     },
-    imageUrls: recipe.imageUrl ? [recipe.imageUrl] : undefined,
+    // Prefer the multi-image array (kitchen-mode collage); fall back
+    // to the single imageUrl for older backends / legacy callers.
+    imageUrls:
+      recipe.imageUrls && recipe.imageUrls.length > 0
+        ? recipe.imageUrls
+        : recipe.imageUrl
+        ? [recipe.imageUrl]
+        : undefined,
     notes: (recipe.tips ?? []).join(' '),
   };
 }

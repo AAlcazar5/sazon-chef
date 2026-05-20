@@ -5,6 +5,33 @@ import axios from 'axios';
 const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
 const SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
 
+/** Dice/Sørensen bigram similarity on lowercased alnum chars. Same
+ *  algorithm the frontend wedge uses to rank catalog candidates —
+ *  applied here to filter Spoonacular's fuzzy results down to titles
+ *  that actually resemble what the user asked for. Returns [0, 1]. */
+function titleDice(a: string, b: string): number {
+  const norm = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const bigrams = (s: string): string[] => {
+    const out: string[] = [];
+    for (let i = 0; i < s.length - 1; i += 1) out.push(s.slice(i, i + 2));
+    return out;
+  };
+  const A = bigrams(norm(a));
+  const B = bigrams(norm(b));
+  if (A.length === 0 || B.length === 0) return 0;
+  const counts = new Map<string, number>();
+  for (const g of B) counts.set(g, (counts.get(g) ?? 0) + 1);
+  let matches = 0;
+  for (const g of A) {
+    const c = counts.get(g) ?? 0;
+    if (c > 0) {
+      matches += 1;
+      counts.set(g, c - 1);
+    }
+  }
+  return (2 * matches) / (A.length + B.length);
+}
+
 export interface SpoonacularRecipeInfo {
   id: number;
   title: string;
@@ -163,19 +190,51 @@ class SpoonacularService {
 
   /**
    * Tier Y wedge photos (founder 2026-05-20): given a recipe title /
-   * description, return ONE representative photo URL. Cheaper than
-   * findRecipeByTitle (which makes a second /information call) — the
-   * `complexSearch` results already include the image URL.
+   * description, return UP TO `count` representative photo URLs ranked
+   * by title-similarity to the query. Used to populate the in-chat
+   * card's 3-photo collage (kitchen-mode parity).
    *
-   * Used by aiRecipeService to attach a real food photo to AI-gen
-   * recipe-ask results so the in-chat card never falls back to the
-   * cuisine-emoji placeholder for queries that lack a catalog match.
+   * Why we rank locally instead of trusting Spoonacular's order:
+   * complexSearch is fuzzy — "Grilled Chicken" matches "Chicken Gyro"
+   * (returns tacos!) because both share tokens. Pulling 10 candidates
+   * and ranking by Dice on the title against the original query gives
+   * us much sharper results than `number: 1` ever could.
+   *
+   * Optional `cuisine` further narrows the search server-side (e.g.
+   * "American" for "Grilled Chicken Breast" — excludes Mediterranean
+   * gyro variants entirely).
    */
+  async findRecipeImages(
+    query: string,
+    count: number = 3,
+    cuisine?: string,
+  ): Promise<string[]> {
+    if (!this.isConfigured()) return [];
+    // Pull more than `count` so the title-Dice ranker has options to
+    // pick from. 10 covers most queries; cheap on Spoonacular's points.
+    const POOL_SIZE = 10;
+    const results = await this.searchRecipes(query, {
+      number: POOL_SIZE,
+      ...(cuisine ? { cuisine } : {}),
+    });
+    const items = results?.results ?? [];
+    type Scored = { image: string; score: number };
+    const scored: Scored[] = [];
+    for (const r of items) {
+      if (typeof r.image !== 'string' || r.image.length === 0) continue;
+      if (typeof r.title !== 'string' || r.title.length === 0) continue;
+      const score = titleDice(r.title, query);
+      scored.push({ image: r.image, score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, count).map((s) => s.image);
+  }
+
+  /** @deprecated kept for the single-image legacy path; new callers
+   *  should use findRecipeImages. */
   async findRecipeImage(query: string): Promise<string | null> {
-    if (!this.isConfigured()) return null;
-    const results = await this.searchRecipes(query, { number: 1 });
-    const image = results?.results?.[0]?.image;
-    return typeof image === 'string' && image.length > 0 ? image : null;
+    const images = await this.findRecipeImages(query, 1);
+    return images[0] ?? null;
   }
 
   /**

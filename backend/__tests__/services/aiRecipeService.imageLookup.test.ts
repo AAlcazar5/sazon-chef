@@ -11,6 +11,7 @@ process.env.SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY || 'test-spoon
 const mockedRoute = jest.fn();
 const mockedGen = jest.fn();
 const mockedFindImage = jest.fn();
+const mockedFindImages = jest.fn();
 const mockedIsConfigured = jest.fn();
 
 jest.mock('../../src/services/aiProviders/AIProviderManager', () => ({
@@ -25,6 +26,8 @@ jest.mock('../../src/services/spoonacularService', () => ({
   spoonacularService: {
     isConfigured: () => mockedIsConfigured(),
     findRecipeImage: (q: string) => mockedFindImage(q),
+    findRecipeImages: (q: string, n: number, cuisine?: string) =>
+      mockedFindImages(q, n, cuisine),
   },
 }));
 
@@ -80,75 +83,84 @@ beforeEach(() => {
 });
 
 describe('aiRecipeService — Spoonacular image lookup (recipe-ask only)', () => {
-  it('attaches imageUrl from Spoonacular when AI gen has none', async () => {
-    mockedFindImage.mockResolvedValueOnce('https://spoonacular.test/grilled.jpg');
+  it('attaches 3-photo imageUrls + primary imageUrl from Spoonacular', async () => {
+    mockedFindImages.mockResolvedValueOnce([
+      'https://spoonacular.test/grilled-1.jpg',
+      'https://spoonacular.test/grilled-2.jpg',
+      'https://spoonacular.test/grilled-3.jpg',
+    ]);
     const out = await aiRecipeService.generateFromDescription('Grilled chicken', 'free', {
       mode: 'recipe-ask',
     });
-    expect(out.imageUrl).toBe('https://spoonacular.test/grilled.jpg');
-    // Looked up by the validated title, not the original query.
-    expect(mockedFindImage).toHaveBeenCalledWith('Grilled Chicken');
+    expect(out.imageUrls).toEqual([
+      'https://spoonacular.test/grilled-1.jpg',
+      'https://spoonacular.test/grilled-2.jpg',
+      'https://spoonacular.test/grilled-3.jpg',
+    ]);
+    expect(out.imageUrl).toBe('https://spoonacular.test/grilled-1.jpg'); // legacy field = primary
+    // Looked up by the validated title + cuisine, count=3.
+    expect(mockedFindImages).toHaveBeenCalledWith('Grilled Chicken', 3, 'American');
   });
 
   it('does NOT look up an image for recipe-CREATION mode (no flag → no lookup)', async () => {
     await aiRecipeService.generateFromDescription('Grandma fesenjan', 'free');
-    expect(mockedFindImage).not.toHaveBeenCalled();
+    expect(mockedFindImages).not.toHaveBeenCalled();
   });
 
   it('cache HIT on second ask: no second Spoonacular call', async () => {
-    mockedFindImage.mockResolvedValueOnce('https://spoonacular.test/grilled.jpg');
+    mockedFindImages.mockResolvedValueOnce([
+      'https://spoonacular.test/grilled-1.jpg',
+      'https://spoonacular.test/grilled-2.jpg',
+    ]);
     await aiRecipeService.generateFromDescription('Grilled chicken', 'free', {
       mode: 'recipe-ask',
     });
-    // Clear AI gen cache to force a re-gen but image cache stays warm.
-    aiGenRecipeCache.clear();
-    mockedFindImage.mockClear();
+    aiGenRecipeCache.clear(); // force re-gen; image cache stays warm
+    mockedFindImages.mockClear();
 
     const out = await aiRecipeService.generateFromDescription('Grilled chicken', 'free', {
       mode: 'recipe-ask',
     });
-    expect(out.imageUrl).toBe('https://spoonacular.test/grilled.jpg');
-    expect(mockedFindImage).not.toHaveBeenCalled();
+    expect(out.imageUrls?.length).toBe(2);
+    expect(mockedFindImages).not.toHaveBeenCalled();
   });
 
-  it('cache key uses the title, not the query — different queries that yield the same title share a cache hit', async () => {
-    mockedFindImage.mockResolvedValueOnce('https://spoonacular.test/grilled.jpg');
+  it('cache key uses TITLE + cuisine + count — cross-query dedup when those match', async () => {
+    mockedFindImages.mockResolvedValueOnce(['https://spoonacular.test/grilled.jpg']);
     await aiRecipeService.generateFromDescription('Grilled chicken', 'free', {
       mode: 'recipe-ask',
     });
-    // Manually seed: a SECOND query yields the same validated title.
-    // (mocked gen always returns "Grilled Chicken")
     aiGenRecipeCache.clear();
-    mockedFindImage.mockClear();
+    mockedFindImages.mockClear();
     await aiRecipeService.generateFromDescription('chicken on the grill', 'free', {
       mode: 'recipe-ask',
     });
-    expect(mockedFindImage).not.toHaveBeenCalled();
+    expect(mockedFindImages).not.toHaveBeenCalled();
   });
 
-  it('Spoonacular not configured → recipe still returns, imageUrl undefined', async () => {
+  it('Spoonacular not configured → recipe still returns, imageUrls undefined', async () => {
     mockedIsConfigured.mockReturnValueOnce(false);
     const out = await aiRecipeService.generateFromDescription('Grilled chicken', 'free', {
       mode: 'recipe-ask',
     });
-    expect(out.imageUrl).toBeUndefined();
-    expect(mockedFindImage).not.toHaveBeenCalled();
+    expect(out.imageUrls).toBeUndefined();
+    expect(mockedFindImages).not.toHaveBeenCalled();
   });
 
-  it('Spoonacular throws → recipe still returns, imageUrl undefined (lookup must never fail the gen)', async () => {
-    mockedFindImage.mockRejectedValueOnce(new Error('spoonacular 500'));
+  it('Spoonacular throws → recipe still returns, imageUrls undefined', async () => {
+    mockedFindImages.mockRejectedValueOnce(new Error('spoonacular 500'));
     const out = await aiRecipeService.generateFromDescription('Grilled chicken', 'free', {
       mode: 'recipe-ask',
     });
-    expect(out.imageUrl).toBeUndefined();
+    expect(out.imageUrls).toBeUndefined();
   });
 
-  it('Spoonacular returns null (no match found) → recipe returns without imageUrl', async () => {
-    mockedFindImage.mockResolvedValueOnce(null);
+  it('Spoonacular returns empty array → recipe returns without imageUrls', async () => {
+    mockedFindImages.mockResolvedValueOnce([]);
     const out = await aiRecipeService.generateFromDescription('Grilled chicken', 'free', {
       mode: 'recipe-ask',
     });
-    expect(out.imageUrl).toBeUndefined();
+    expect(out.imageUrls).toBeUndefined();
   });
 });
 

@@ -111,8 +111,13 @@ export interface GeneratedRecipe {
   tips?: string[];
   tags?: string[];
   /** Optional representative photo URL — populated post-validation by
-   *  Spoonacular lookup for recipe-ask flows (founder 2026-05-20). */
+   *  Spoonacular lookup for recipe-ask flows (founder 2026-05-20).
+   *  Kept for legacy callers; the wedge uses imageUrls (3-photo
+   *  collage). */
   imageUrl?: string;
+  /** Up to 3 representative photo URLs ranked by title-similarity.
+   *  Kitchen-mode parity: the in-chat card renders these as a collage. */
+  imageUrls?: string[];
 }
 
 export class AIRecipeService {
@@ -362,9 +367,21 @@ Return JSON only.`;
       let validated: GeneratedRecipe = rawValidated;
       if (options?.mode === 'recipe-ask' && !rawValidated.imageUrl) {
         try {
-          const imageUrl = await this.lookupImageForRecipe(rawValidated.title);
-          if (imageUrl) {
-            validated = { ...rawValidated, imageUrl };
+          // Kitchen-mode parity (founder 2026-05-20): pull 3 photos so
+          // the card renders a collage, not a single hero. Title-Dice
+          // ranking inside findRecipeImages filters out fuzzy matches
+          // ("Grilled Chicken" → "Chicken Gyro" tacos).
+          const imageUrls = await this.lookupImagesForRecipe(
+            rawValidated.title,
+            3,
+            rawValidated.cuisine,
+          );
+          if (imageUrls.length > 0) {
+            validated = {
+              ...rawValidated,
+              imageUrl: imageUrls[0], // primary for legacy callers
+              imageUrls,
+            };
           }
         } catch (lookupErr: any) {
           // Image lookup must NEVER fail the gen — degrade silently to
@@ -605,37 +622,50 @@ Return JSON only.`;
   /**
    * Tier Y wedge photos (founder 2026-05-20): consult the recipe-image
    * cache first; on miss, call Spoonacular's `complexSearch` and cache
-   * the result. Returns the image URL or null when neither path has one.
+   * the result. Returns up to `count` image URLs ranked by title-Dice
+   * similarity (the local rank prevents fuzzy Spoonacular matches like
+   * "Grilled Chicken" → tacos).
    *
    * Always-resolves (never throws) — the caller wraps in try/catch
-   * defensively, but the contract is: degrade to null on any failure so
+   * defensively, but the contract is: degrade to [] on any failure so
    * the gen path can't be broken by an image-service hiccup.
    */
-  private async lookupImageForRecipe(title: string): Promise<string | null> {
+  private async lookupImagesForRecipe(
+    title: string,
+    count: number = 3,
+    cuisine?: string,
+  ): Promise<string[]> {
     const trimmed = (title || '').trim();
-    if (!trimmed) return null;
+    if (!trimmed) return [];
     const { recipeImageCache, recipeImageCacheKey } = await import('./recipeImageCache');
-    const cacheKey = recipeImageCacheKey(trimmed);
-    const cached = recipeImageCache.get<string>(cacheKey);
+    // Cache key includes cuisine — different cuisines warrant different
+    // photo pools even for the same title (e.g., a Mediterranean
+    // "Chicken Bowl" vs. an Indian "Chicken Bowl").
+    const cacheKey = recipeImageCacheKey(`${trimmed}::${cuisine ?? ''}::n${count}`);
+    const cached = recipeImageCache.get<string[]>(cacheKey);
     if (cached) {
-      logger.info({ data: cacheKey }, '⚡ [lookupImageForRecipe] cache HIT');
+      logger.info({ data: cacheKey }, '⚡ [lookupImagesForRecipe] cache HIT');
       return cached;
     }
     try {
       const { spoonacularService } = await import('./spoonacularService');
-      if (!spoonacularService.isConfigured()) return null;
-      const imageUrl = await spoonacularService.findRecipeImage(trimmed);
-      if (imageUrl) {
-        recipeImageCache.set(cacheKey, imageUrl);
-        return imageUrl;
+      if (!spoonacularService.isConfigured()) return [];
+      const imageUrls = await spoonacularService.findRecipeImages(
+        trimmed,
+        count,
+        cuisine,
+      );
+      if (imageUrls.length > 0) {
+        recipeImageCache.set(cacheKey, imageUrls);
+        return imageUrls;
       }
     } catch (err: any) {
       logger.warn(
         { data: err?.message ?? err },
-        '⚠️  [lookupImageForRecipe] spoonacular error',
+        '⚠️  [lookupImagesForRecipe] spoonacular error',
       );
     }
-    return null;
+    return [];
   }
 
   /**

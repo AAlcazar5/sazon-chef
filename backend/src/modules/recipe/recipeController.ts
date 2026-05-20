@@ -4948,9 +4948,11 @@ export const recipeController = {
             tips: generated.tips || [],
             tags: generated.tags || [],
             // Tier Y wedge photos (founder 2026-05-20): forward the
-            // Spoonacular-looked-up image when present so the in-chat
-            // card has a real food photo on every recipe ask.
+            // Spoonacular-looked-up images so the in-chat card has a
+            // real-food collage. `imageUrls` is the 3-photo array
+            // (kitchen-mode parity); `imageUrl` stays for legacy.
             imageUrl: generated.imageUrl,
+            imageUrls: generated.imageUrls,
           },
         },
       });
