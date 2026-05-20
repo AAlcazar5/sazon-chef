@@ -291,6 +291,22 @@ export class AIRecipeService {
       throw new Error('Description is too long (max 500 characters)');
     }
 
+    // Tier Y wedge perf (founder Telegram 2026-05-20 Track B): cache
+    // recipe-ask generations by normalized description. The wedge is
+    // stateless w.r.t. user PII in recipe-ask mode (the 80-char cap +
+    // detectRecipeAsk filter ensure that), so a "Grilled chicken"
+    // result can be served to any user asking the same query. Cuts
+    // DeepSeek calls + 4s latency for repeat asks.
+    if (options?.mode === 'recipe-ask') {
+      const { aiGenRecipeCache, recipeAskCacheKey } = await import('./aiGenRecipeCache');
+      const cacheKey = recipeAskCacheKey(trimmed);
+      const cached = aiGenRecipeCache.get<GeneratedRecipe>(cacheKey);
+      if (cached) {
+        logger.info({ data: cacheKey }, '⚡ [generateFromDescription] cache HIT (recipe-ask)');
+        return cached;
+      }
+    }
+
     const systemPrompt = this.getSystemPrompt();
     const prompt = `The user described a recipe they made or want to make:
 
@@ -328,7 +344,15 @@ Return JSON only.`;
         model: route.model,
         providerOrder: route.providerOrder,
       });
-      return this.validateAndNormalizeRecipe(recipe);
+      const validated = this.validateAndNormalizeRecipe(recipe);
+      // Tier Y Track B: cache only succeeded + validated recipe-ask
+      // generations. Failed validations stay un-cached so a transient
+      // bad response doesn't poison the cache.
+      if (options?.mode === 'recipe-ask') {
+        const { aiGenRecipeCache, recipeAskCacheKey } = await import('./aiGenRecipeCache');
+        aiGenRecipeCache.set(recipeAskCacheKey(trimmed), validated);
+      }
+      return validated;
     } catch (error: any) {
       if (error?.isQuotaError || error?.status === 429) {
         const quotaError: any = new Error(`Failed to generate recipe: ${error.message}`);
