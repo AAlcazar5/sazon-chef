@@ -16,6 +16,12 @@ export interface RecipeAsk {
 const CHAT_EXCLUSIONS =
   /\b(why|how come|can you|tell me|explain|do you|will it|is it|should i|what (does|is|should|can|to)|i'?m|i am|i think|i feel|i don'?t|plan|schedule|suggest|recommend|help me)\b/i;
 
+// Y-Live-8: multi-word greetings/openers were slipping past
+// CHAT_EXCLUSIONS into the bare-food fallback ("Hi coach" → wedge).
+// Single-word greetings are already filtered by the wordCount>=2 rule.
+const GREETING_EXCLUSIONS =
+  /\b(hi|hello|hey|yo|sup|howdy|thanks|thank\s+you|bye|good\s+(morning|afternoon|evening|night))\b/i;
+
 // Refuse trivial single-word "queries" that aren't actually a food name —
 // these would yield empty recipe searches.
 const TRIVIAL_QUERIES = new Set([
@@ -77,6 +83,7 @@ export function detectRecipeAsk(text: unknown): RecipeAsk | null {
   // explicit phrasing (e.g., "carbonara recipe", "find me carbonara").
   if (text.includes('?')) return null;
   if (CHAT_EXCLUSIONS.test(t)) return null;
+  if (GREETING_EXCLUSIONS.test(t)) return null;
   const wordCount = t.split(/\s+/).length;
   if (wordCount < 2 || wordCount > 5) return null;
   const q = sanitize(t);
