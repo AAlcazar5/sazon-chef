@@ -23,6 +23,7 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Gradients from '../../constants/Gradients';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Print from 'expo-print';
@@ -449,6 +450,26 @@ export default function CookingModeRecipeCard({
         {description}
       </Text>
 
+      {/* Founder ask 2026-05-20 round 15: Get Cooking button sits
+          between description and the icon/stepper row, uses the brand
+          gradient (primaryCTA), and capitalizes "Cooking". */}
+      <HapticTouchableOpacity
+        onPress={onGetCooking}
+        accessibilityRole="button"
+        accessibilityLabel="Get Cooking"
+        pressedScale={0.97}
+        style={styles.cookWrap}
+      >
+        <LinearGradient
+          colors={[...Gradients.primaryCTA]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cook}
+        >
+          <Text style={styles.cookText}>Get Cooking</Text>
+        </LinearGradient>
+      </HapticTouchableOpacity>
+
       {swapPoolSize && swapPoolSize > 1 && onSwap ? (
         <View style={styles.swapRow}>
           <HapticTouchableOpacity
@@ -552,16 +573,6 @@ export default function CookingModeRecipeCard({
         </View>
       ) : null}
       </View>
-
-      <HapticTouchableOpacity
-        onPress={onGetCooking}
-        accessibilityRole="button"
-        accessibilityLabel="Get cooking"
-        pressedScale={0.97}
-        style={[styles.cook, { backgroundColor: accent }]}
-      >
-        <Text style={styles.cookText}>Get cooking</Text>
-      </HapticTouchableOpacity>
 
       <Text style={[styles.eyebrow, { color: accent }]}>INGREDIENTS</Text>
       {displayIngredients.map((ing, i) => (
@@ -693,12 +704,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   unitOptionText: { ...Type.body, color: '#1F2937' },
+  // The outer touchable owns spacing + the pill clip; the inner
+  // LinearGradient renders the brand gradient and the centered label.
+  cookWrap: {
+    marginTop: 10,
+    borderRadius: Radius.pill,
+    overflow: 'hidden', // keeps the gradient inside the pill shape
+  },
   cook: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderRadius: Radius.pill,
     alignItems: 'center',
-    marginTop: 10,
   },
   cookText: { ...Type.label, color: '#FFFFFF' },
   eyebrow: { ...Type.eyebrow, marginTop: 10 },
