@@ -20,28 +20,29 @@ const mockGetAll = recipeApi.getAllRecipes as jest.Mock;
 // to AI gen (their original behavior pre-Y-Live-7).
 const emptyCatalog = () => Promise.resolve({ data: { recipes: [] } });
 
+// The axios response interceptor (lib/api/core.ts) unwraps the backend's
+// {success, data} envelope, so by the time recipeApi.generateFromDescription
+// resolves, the response is shaped {data: {recipe: {...}}} — NOT
+// {data: {success, data: {recipe}}}. Fixture mirrors post-interceptor reality.
 const FIXTURE = {
   data: {
-    success: true,
-    data: {
-      recipe: {
-        title: 'Pizza Margherita',
-        description: 'Classic Neapolitan-style pizza.',
-        servings: 2,
-        ingredients: ['1 cup flour', '0.5 tsp salt'],
-        ingredientsStructured: [
-          { name: 'flour', amount: 1, unit: 'cup' },
-          { name: 'salt', amount: 0.5, unit: 'tsp' },
-          { name: 'salt to taste', amount: 0, unit: '' }, // junk row
-        ],
-        instructions: ['Mix dough.', 'Bake at 500°F for 10 minutes.'],
-        calories: 600,
-        protein: 22,
-        carbs: 80,
-        fat: 18,
-        fiber: 4,
-        tips: ['Use 00 flour for chewier crust.'],
-      },
+    recipe: {
+      title: 'Pizza Margherita',
+      description: 'Classic Neapolitan-style pizza.',
+      servings: 2,
+      ingredients: ['1 cup flour', '0.5 tsp salt'],
+      ingredientsStructured: [
+        { name: 'flour', amount: 1, unit: 'cup' },
+        { name: 'salt', amount: 0.5, unit: 'tsp' },
+        { name: 'salt to taste', amount: 0, unit: '' }, // junk row
+      ],
+      instructions: ['Mix dough.', 'Bake at 500°F for 10 minutes.'],
+      calories: 600,
+      protein: 22,
+      carbs: 80,
+      fat: 18,
+      fiber: 4,
+      tips: ['Use 00 flour for chewier crust.'],
     },
   },
 };
@@ -80,7 +81,7 @@ describe('findOrGenerateRecipe', () => {
 
   it('handles missing optional fields gracefully', async () => {
     mockGen.mockResolvedValue({
-      data: { success: true, data: { recipe: { title: 'X' } } },
+      data: { recipe: { title: 'X' } },
     });
     const { primary: payload } = await findOrGenerateRecipe('x');
     expect(payload.title).toBe('X');

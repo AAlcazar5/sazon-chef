@@ -205,26 +205,26 @@ async function fetchCatalogCandidates(
 
 // ── AI generation fallback (existing path) ────────────────────────────────
 
+interface GeneratedRecipeShape {
+  title?: string;
+  description?: string;
+  servings?: number;
+  ingredientsStructured?: Array<{ name: string; amount: number; unit: string }>;
+  instructions?: string[];
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  fiber?: number;
+  tips?: string[];
+  imageUrl?: string;
+}
+
 interface GeneratedResponse {
-  data?: {
-    success?: boolean;
-    data?: {
-      recipe?: {
-        title?: string;
-        description?: string;
-        servings?: number;
-        ingredientsStructured?: Array<{ name: string; amount: number; unit: string }>;
-        instructions?: string[];
-        calories?: number;
-        protein?: number;
-        carbs?: number;
-        fat?: number;
-        fiber?: number;
-        tips?: string[];
-        imageUrl?: string;
-      };
-    };
-  };
+  // The core axios response interceptor (lib/api/core.ts) unwraps
+  // `{success, data}` envelopes one level, so `.data` is already the
+  // payload `{recipe: {...}}` here — NOT another nested `{success, data}`.
+  data?: { recipe?: GeneratedRecipeShape };
 }
 
 async function generateViaAi(query: string): Promise<RecipeCardPayload> {
@@ -234,7 +234,7 @@ async function generateViaAi(query: string): Promise<RecipeCardPayload> {
   const res = (await recipeApi.generateFromDescription(query, {
     mode: 'recipe-ask',
   })) as GeneratedResponse;
-  const recipe = res?.data?.data?.recipe;
+  const recipe = res?.data?.recipe;
   if (!recipe) {
     throw new Error('Recipe generation returned no recipe');
   }
