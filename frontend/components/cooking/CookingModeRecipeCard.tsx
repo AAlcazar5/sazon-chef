@@ -145,14 +145,25 @@ export default function CookingModeRecipeCard({
   const CARD_HORIZONTAL_MARGIN = 16;
   const CONTENT_PADDING = 20;
   // When widthOverride is set, the card frame is narrower (parent
-  // carousel controls layout). The photo strip needs to match so each
-  // photo page = current card content width.
+  // carousel controls layout). Otherwise full card width.
   const cardOuterWidth = widthOverride ?? screenWidth - CARD_HORIZONTAL_MARGIN * 2;
-  const carouselWidth = cardOuterWidth;
-  const carouselHeight = 260; // bigger than the prior 200
+  // Founder ask 2026-05-20 round 13: photo carousel uses 2/3 + 1/3
+  // PEEK pattern (not full-width paging). Photo 1 takes 2/3 of card
+  // content width, photo 2 peeks the right 1/3 — sneak preview of the
+  // next photo as visible swipe affordance. snapToInterval = photoWidth
+  // so each swipe lands the next photo at the 2/3 position with the
+  // following one peeking.
+  const carouselHeight = 260;
+  const photoWidth = Math.round(cardOuterWidth * (2 / 3));
+  const photoGap = 8;
   const [activeImage, setActiveImage] = useState(0);
   const onCarouselScroll = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / carouselWidth);
+    // Snap interval is photoWidth + gap — round the scroll offset
+    // against that to figure out which photo is currently at the
+    // 2/3 anchor position.
+    const idx = Math.round(
+      e.nativeEvent.contentOffset.x / (photoWidth + photoGap),
+    );
     if (idx !== activeImage) setActiveImage(idx);
   };
 
@@ -208,12 +219,13 @@ export default function CookingModeRecipeCard({
         showsVerticalScrollIndicator={false}
       >
       {images.length > 0 ? (
-        // Founder bug 2026-05-20 (round 9): bigger photos + swipeable.
-        // - 1 image: hero treatment (full card width, 260px tall).
-        // - 2-3 images: horizontal paged ScrollView at 260px tall, each
-        //   page = full card width. Negative margin against the content
-        //   padding so photos go edge-to-edge of the card.
-        // - Page dots below the carousel indicate which photo is active.
+        // Founder ask 2026-05-20 round 13: photo strip uses a 2/3 + 1/3
+        // PEEK pattern. Photo 1 is ~2/3 of card content width; photo 2
+        // peeks the remaining 1/3 (sneak preview). snapToInterval =
+        // photoWidth + gap, so each swipe lands the next photo at the
+        // 2/3 position with the following one peeking.
+        //
+        // Single image → hero treatment (no peek, full card width).
         images.length === 1 ? (
           <View style={styles.heroWrap}>
             <Image
@@ -227,18 +239,30 @@ export default function CookingModeRecipeCard({
           <View style={{ marginHorizontal: -CONTENT_PADDING, marginBottom: 8 }}>
             <ScrollView
               horizontal
-              pagingEnabled
+              decelerationRate="fast"
+              snapToInterval={photoWidth + photoGap}
+              snapToAlignment="start"
               showsHorizontalScrollIndicator={false}
               onScroll={onCarouselScroll}
               scrollEventThrottle={16}
               nestedScrollEnabled
-              accessibilityLabel={`${title} photos — swipe to browse`}
+              // contentInset gives the first photo a small left inset
+              // so it doesn't slam against the screen edge.
+              contentContainerStyle={{
+                paddingHorizontal: CONTENT_PADDING,
+                gap: photoGap,
+              }}
+              accessibilityLabel={`${title} photos — swipe for next`}
             >
               {images.map((uri) => (
                 <Image
                   key={uri}
                   source={{ uri }}
-                  style={{ width: carouselWidth, height: carouselHeight }}
+                  style={{
+                    width: photoWidth,
+                    height: carouselHeight,
+                    borderRadius: Radius.card,
+                  }}
                   contentFit="cover"
                   cachePolicy="memory-disk"
                 />
