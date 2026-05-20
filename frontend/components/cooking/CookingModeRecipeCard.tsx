@@ -132,31 +132,28 @@ export default function CookingModeRecipeCard({
   const placeholderBg = isDark ? cuisineColor.bgDark : cuisineColor.bg;
   const placeholderAccent = isDark ? cuisineColor.textDark : cuisineColor.text;
 
-  // Founder bug 2026-05-20 (round 2): scroll still broken after PR #60.
-  // The "let the parent ScrollView handle scroll" approach didn't work
-  // (probably because the parent is also a keyboard-avoiding flex
-  // container with its own scroll quirks). Going back to internal
-  // scroll on the card — but this time:
-  //   • the card has a bounded maxHeight (70% of screen) so it always
-  //     has more content than viewport → there's something to scroll;
-  //   • nestedScrollEnabled lets it coexist with the parent ScrollView
-  //     on Android (iOS handles nested same-axis natively).
-  // This matches the Claude Kitchen reference, which also uses an
-  // internal-scrolling card with a "↓ more" indicator.
+  // Founder bug 2026-05-20 (round 3): iOS still didn't scroll after
+  // PR #61 — `maxHeight` on a <ScrollView>'s outer style isn't
+  // reliably respected on iOS (the ScrollView sizes to its
+  // contentContainer's natural height when free to do so). Wrapping in
+  // an explicit <View> with the height bound forces the ScrollView's
+  // frame to be smaller than its content → overflow becomes scrollable.
   const cardMaxHeight = Math.round(Dimensions.get('window').height * 0.7);
 
   return (
-    <ScrollView
-      accessibilityLabel={`${title} recipe`}
+    <View
       style={[
         styles.card,
         { backgroundColor: surface, maxHeight: cardMaxHeight },
         Elevation.md,
       ]}
-      contentContainerStyle={styles.content}
-      nestedScrollEnabled
-      showsVerticalScrollIndicator
     >
+      <ScrollView
+        accessibilityLabel={`${title} recipe`}
+        contentContainerStyle={styles.content}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+      >
       {images.length > 0 ? (
         <View style={styles.collage}>
           {images.map((uri) => (
@@ -317,7 +314,8 @@ export default function CookingModeRecipeCard({
           ) : null}
         </View>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

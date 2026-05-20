@@ -196,14 +196,25 @@ function mapCatalogRecipe(r: CatalogRecipe): RecipeCardPayload | null {
   };
 }
 
-/** All structured catalog candidates for a query, no scoring applied.
- *  Ranking is delegated to `rankRecipeAskCandidates` so the same logic
- *  can be reused for swap-chip alternates. */
-async function fetchCatalogCandidates(
-  query: string,
-): Promise<RecipeCardPayload[]> {
+interface CatalogFetchResult {
+  /** Structured candidates — passed name + amount + unit on every
+   *  ingredient row. Used by the N=1 ranker (it needs structured
+   *  ingredients to rescale prose). Many legacy seeded recipes fail
+   *  this filter, so this list can be much shorter than the raw set. */
+  structuredCandidates: RecipeCardPayload[];
+  /** All raw catalog rows from the search, mapped only enough to
+   *  surface `title` + `imageUrl`. Used for image-borrow on AI-gen
+   *  results: we don't care about ingredient structure when we're
+   *  just stealing a photo, and many legacy rows DO have an imageUrl
+   *  even when their ingredients aren't structured. */
+  imageSources: Array<{ title: string; imageUrl: string }>;
+}
+
+/** Fetch and split the catalog response into the two sets the wedge
+ *  needs: structured-for-ranking + raw-for-images. */
+async function fetchCatalogCandidates(query: string): Promise<CatalogFetchResult> {
   const term = firstSignificantToken(query);
-  if (!term) return [];
+  if (!term) return { structuredCandidates: [], imageSources: [] };
   const res = (await recipeApi.getAllRecipes({
     search: term,
     limit: CATALOG_SEARCH_LIMIT,
@@ -211,9 +222,39 @@ async function fetchCatalogCandidates(
   const recipes = Array.isArray(res?.data)
     ? res.data
     : res?.data?.recipes ?? [];
-  return recipes
+  const structuredCandidates = recipes
     .map(mapCatalogRecipe)
     .filter((r): r is RecipeCardPayload => r !== null);
+  const imageSources: Array<{ title: string; imageUrl: string }> = [];
+  for (const r of recipes) {
+    if (
+      typeof r.title === 'string' &&
+      r.title.length > 0 &&
+      typeof r.imageUrl === 'string' &&
+      r.imageUrl.length > 0
+    ) {
+      imageSources.push({ title: r.title, imageUrl: r.imageUrl });
+    }
+  }
+  return { structuredCandidates, imageSources };
+}
+
+/** Pure helper — find the catalog row with the highest title-Dice
+ *  against `query` and return its imageUrl, or undefined if no rows
+ *  have one. Exported for unit testing. */
+export function pickBestCatalogImage(
+  query: string,
+  sources: Array<{ title: string; imageUrl: string }>,
+): string | undefined {
+  if (sources.length === 0) return undefined;
+  let best: { url: string; score: number } | null = null;
+  for (const s of sources) {
+    const score = dice(s.title, query);
+    if (!best || score > best.score) {
+      best = { url: s.imageUrl, score };
+    }
+  }
+  return best?.url;
 }
 
 // ── AI generation fallback (existing path) ────────────────────────────────
@@ -318,14 +359,17 @@ export async function findOrGenerateRecipe(
   // 1. Curated catalog first — token search + N=1 ranker (Dice + pantry
   //    overlap + cuisine bonus). A catalog hiccup must never block the
   //    wedge: any throw → fall through to gen.
-  let catalogCandidates: RecipeCardPayload[] = [];
+  let structuredCandidates: RecipeCardPayload[] = [];
+  let imageSources: Array<{ title: string; imageUrl: string }> = [];
   try {
-    catalogCandidates = await fetchCatalogCandidates(query);
+    const fetched = await fetchCatalogCandidates(query);
+    structuredCandidates = fetched.structuredCandidates;
+    imageSources = fetched.imageSources;
   } catch {
     // intentional swallow — gen below is the safety net
   }
-  if (catalogCandidates.length > 0) {
-    const ranked = rankRecipeAskCandidates(query, catalogCandidates, signals);
+  if (structuredCandidates.length > 0) {
+    const ranked = rankRecipeAskCandidates(query, structuredCandidates, signals);
     const top = ranked[0];
     // Only commit to a catalog answer when Dice clears the confidence
     // threshold — otherwise prefer AI gen, which has world knowledge and
@@ -345,26 +389,22 @@ export async function findOrGenerateRecipe(
   //    Founder rule: recipe ask → card, never paragraph.
   try {
     const generated = await generateViaAi(query);
-    // Founder bug 2026-05-20 (round 2): AI-gen recipes have no photo,
-    // and the cuisine-emoji placeholder shipped in PR #60 looked like
-    // a label, not a real food photo. Borrow imageUrls from the
-    // highest-Dice catalog candidate that has any — same-cuisine /
-    // similar-dish photos are representative even when they're not
-    // literally this recipe. Matches the Claude Kitchen pattern
-    // (mollyshomeguide etc.) of pulling representative web photos.
-    if (!generated.imageUrls?.length && catalogCandidates.length > 0) {
-      const ranked = rankRecipeAskCandidates(query, catalogCandidates, signals);
-      const withImage = ranked.find(
-        (c) => c.recipe.imageUrls && c.recipe.imageUrls.length > 0,
-      );
-      if (withImage) {
-        generated.imageUrls = withImage.recipe.imageUrls;
+    // Founder bug 2026-05-20 (round 3): AI-gen recipes still lack
+    // photos because the structured-ingredient filter dropped most
+    // legacy catalog rows, leaving the image-borrow path empty.
+    // Use imageSources (raw rows, no ingredient filter) instead —
+    // legacy rows often have a perfectly good imageUrl even when
+    // their ingredients aren't structured for the ranker.
+    if (!generated.imageUrls?.length) {
+      const borrowed = pickBestCatalogImage(query, imageSources);
+      if (borrowed) {
+        generated.imageUrls = [borrowed];
       }
     }
     return { primary: generated, alternates: [] };
   } catch (genErr) {
-    if (catalogCandidates.length > 0) {
-      const ranked = rankRecipeAskCandidates(query, catalogCandidates, signals);
+    if (structuredCandidates.length > 0) {
+      const ranked = rankRecipeAskCandidates(query, structuredCandidates, signals);
       return {
         primary: ranked[0].recipe,
         alternates: ranked.slice(1).map((r) => r.recipe),
