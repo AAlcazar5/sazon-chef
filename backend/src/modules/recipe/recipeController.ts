@@ -4894,13 +4894,21 @@ export const recipeController = {
    */
   async generateFromDescription(req: Request, res: Response) {
     try {
-      const { description } = req.body || {};
+      const { description, mode } = req.body || {};
       if (!description || typeof description !== 'string') {
         return res.status(400).json({ error: 'Description is required' });
       }
+      // Founder 2026-05-19 — `mode: 'recipe-ask'` opts a constrained
+      // wedge query out of the Claude-only PII guard (free tier → DeepSeek).
+      const askMode = mode === 'recipe-ask' ? ('recipe-ask' as const) : undefined;
 
       const { aiRecipeService } = await import('@/services/aiRecipeService');
-      const generated = await aiRecipeService.generateFromDescription(description);
+      const tier = (req as any).user?.tier ?? 'free';
+      const generated = await aiRecipeService.generateFromDescription(
+        description,
+        tier,
+        askMode ? { mode: askMode } : undefined,
+      );
 
       // Flatten ingredients to plain text for easy form pre-fill
       const ingredients = (generated.ingredients || []).map((ing) => {

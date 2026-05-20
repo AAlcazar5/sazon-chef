@@ -241,9 +241,21 @@ export const recipeApi = {
     return apiClient.post('/recipes/import-url', { url });
   },
 
-  // AI-assisted recipe creation from free-text description
-  generateFromDescription: (description: string) => {
-    return apiClient.post('/recipes/generate-from-description', { description });
+  // AI-assisted recipe creation from free-text description.
+  //
+  // `mode: 'recipe-ask'` (founder 2026-05-19) — opts the call out of the
+  // backend's free-text PII guard so wedge queries ("Grilled chicken")
+  // route to DeepSeek instead of Claude (avoids the Anthropic free-tier
+  // quota wall). Only safe when the input is already constrained by
+  // detectRecipeAsk; the backend enforces an 80-char cap on this mode.
+  generateFromDescription: (
+    description: string,
+    options?: { mode?: 'recipe-ask' },
+  ) => {
+    return apiClient.post('/recipes/generate-from-description', {
+      description,
+      ...(options?.mode ? { mode: options.mode } : {}),
+    });
   },
 
   // Fork a recipe into a user-owned copy with optional substitutions applied

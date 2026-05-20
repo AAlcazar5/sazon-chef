@@ -266,10 +266,26 @@ export class AIRecipeService {
   async generateFromDescription(
     description: string,
     tier: import('./aiProviders/AIProvider').UserTier = 'free',
+    options?: {
+      /** Founder ask 2026-05-19 — wedge calls ("Grilled chicken") arrive
+       *  pre-filtered by detectRecipeAsk (2-5 word food names, no chat
+       *  markers, no greetings). The PII argument that forces every
+       *  free-text caller onto Claude doesn't apply here: there's no
+       *  PII to protect in a constrained food-name query. Setting this
+       *  preserves the tier's normal route (free → DeepSeek), at the
+       *  cost of a hard 80-char length cap so the bypass can't be
+       *  exploited by a long description. */
+      mode?: 'recipe-ask';
+    },
   ): Promise<GeneratedRecipe> {
     const trimmed = (description || '').trim();
     if (trimmed.length < 3) {
       throw new Error('Description is too short to generate a recipe');
+    }
+    if (options?.mode === 'recipe-ask' && trimmed.length > 80) {
+      throw new Error(
+        'Description too long for recipe-ask mode (PII bypass requires a constrained query)',
+      );
     }
     if (trimmed.length > 500) {
       throw new Error('Description is too long (max 500 characters)');
@@ -293,10 +309,16 @@ Return JSON only.`;
       // Path B guard: free-text descriptions can contain arbitrary user
       // PII (e.g., "my grandma's recipe for my diabetic dad"). The
       // sanitization layer only knows how to strip structured fields,
-      // not free-text content. So `generateFromDescription` always stays
-      // on Claude even for free-tier users — better to pay Haiku than
-      // leak free-text PII to a third party.
-      const safeTier = tier === 'free' ? 'premium' : tier;
+      // not free-text content. So `generateFromDescription` defaults to
+      // bumping free-tier callers to Claude (premium route) — better to
+      // pay Haiku than leak free-text PII to a third party.
+      //
+      // Founder 2026-05-19: the chat wedge bypasses this. detectRecipeAsk
+      // already filters to 2-5 word food-name queries (no PII shape) and
+      // we enforce an additional 80-char cap above. In that mode the
+      // tier's natural route applies (free → DeepSeek).
+      const safeTier =
+        options?.mode === 'recipe-ask' || tier !== 'free' ? tier : 'premium';
       const route = this.providerManager.routeToModel('recipe_generation', safeTier);
       const recipe = await this.providerManager.generateRecipe({
         prompt,

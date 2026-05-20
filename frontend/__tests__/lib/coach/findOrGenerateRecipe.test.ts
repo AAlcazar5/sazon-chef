@@ -97,7 +97,7 @@ describe('findOrGenerateRecipe', () => {
   it('passes the query through to recipeApi.generateFromDescription', async () => {
     mockGen.mockResolvedValue(FIXTURE);
     await findOrGenerateRecipe('Pizza margarita');
-    expect(mockGen).toHaveBeenCalledWith('Pizza margarita');
+    expect(mockGen).toHaveBeenCalledWith('Pizza margarita', { mode: 'recipe-ask' });
   });
 });
 
@@ -171,7 +171,7 @@ describe('findOrGenerateRecipe — Y-Live-7 catalog-first lookup', () => {
     mockGen.mockResolvedValue(FIXTURE);
     const { primary: payload } = await findOrGenerateRecipe('Pizza Margarita');
     expect(payload.title).toBe('Pizza Margherita'); // from gen FIXTURE
-    expect(mockGen).toHaveBeenCalledWith('Pizza Margarita');
+    expect(mockGen).toHaveBeenCalledWith('Pizza Margarita', { mode: 'recipe-ask' });
   });
 
   it('catalog recipes lacking structured ingredients (legacy rows) → fall through to gen', async () => {

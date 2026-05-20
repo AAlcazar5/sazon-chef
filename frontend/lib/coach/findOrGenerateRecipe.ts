@@ -228,7 +228,12 @@ interface GeneratedResponse {
 }
 
 async function generateViaAi(query: string): Promise<RecipeCardPayload> {
-  const res = (await recipeApi.generateFromDescription(query)) as GeneratedResponse;
+  // Founder 2026-05-19 — pass mode: 'recipe-ask' so the backend skips its
+  // free-text PII guard and routes through DeepSeek for free-tier users
+  // (Anthropic quota was the dominant failure mode hitting the wedge).
+  const res = (await recipeApi.generateFromDescription(query, {
+    mode: 'recipe-ask',
+  })) as GeneratedResponse;
   const recipe = res?.data?.data?.recipe;
   if (!recipe) {
     throw new Error('Recipe generation returned no recipe');
