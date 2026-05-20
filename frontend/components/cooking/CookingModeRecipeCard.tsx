@@ -79,6 +79,11 @@ interface CookingModeRecipeCardProps {
   swapPoolSize?: number;
   /** 0-based index into the pool — drives the "N of M" label. */
   swapIndex?: number;
+  /** Founder ask 2026-05-20 round 11: when the card is rendered inside
+   *  a horizontal carousel of multiple cards, the parent controls the
+   *  per-card width so the next card peeks from the side. Setting this
+   *  overrides the default full-width-minus-margin layout. */
+  widthOverride?: number;
 }
 
 function macrosLine(m: Macros): string {
@@ -106,6 +111,7 @@ export default function CookingModeRecipeCard({
   onSwap,
   swapPoolSize,
   swapIndex,
+  widthOverride,
 }: CookingModeRecipeCardProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -138,7 +144,11 @@ export default function CookingModeRecipeCard({
   const screenWidth = Dimensions.get('window').width;
   const CARD_HORIZONTAL_MARGIN = 16;
   const CONTENT_PADDING = 20;
-  const carouselWidth = screenWidth - CARD_HORIZONTAL_MARGIN * 2; // full card width
+  // When widthOverride is set, the card frame is narrower (parent
+  // carousel controls layout). The photo strip needs to match so each
+  // photo page = current card content width.
+  const cardOuterWidth = widthOverride ?? screenWidth - CARD_HORIZONTAL_MARGIN * 2;
+  const carouselWidth = cardOuterWidth;
   const carouselHeight = 260; // bigger than the prior 200
   const [activeImage, setActiveImage] = useState(0);
   const onCarouselScroll = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
@@ -169,12 +179,21 @@ export default function CookingModeRecipeCard({
   // scroll into.
   const cardHeight = Math.round((Dimensions.get('window').height * 2) / 3);
 
+  // Founder ask 2026-05-20 round 11: when widthOverride is set, the
+  // parent (a horizontal carousel) controls layout. Remove the default
+  // horizontal margins so the carousel's spacing wins; cap width to
+  // the override.
+  const outerStyle = widthOverride
+    ? { width: widthOverride, marginHorizontal: 0 }
+    : null;
+
   return (
     <View
       style={[
         styles.card,
         { backgroundColor: surface, height: cardHeight },
         Elevation.md,
+        outerStyle,
       ]}
     >
       <ScrollView
