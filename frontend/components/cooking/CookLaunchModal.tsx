@@ -15,10 +15,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Brand, Type, Radius } from '../../constants/tokens';
+import * as Gradients from '../../constants/Gradients';
 
 interface CookLaunchModalProps {
   visible: boolean;
@@ -83,14 +85,24 @@ export default function CookLaunchModal({
           <Text style={styles.desc}>{description}</Text>
           <Text style={styles.steps}>{stepLabel}</Text>
 
+          {/* Founder ask 2026-05-20 round 16: match the Get Cooking
+              button on the recipe card — same brand gradient, same
+              size + pill shape, capitalized "Cooking". */}
           <HapticTouchableOpacity
             onPress={onStartCooking}
             accessibilityRole="button"
-            accessibilityLabel="Start cooking"
+            accessibilityLabel="Start Cooking"
             pressedScale={0.97}
-            style={[styles.start, { backgroundColor: accent }]}
+            style={styles.startWrap}
           >
-            <Text style={styles.startText}>Start cooking</Text>
+            <LinearGradient
+              colors={[...Gradients.primaryCTA]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.start}
+            >
+              <Text style={styles.startText}>Start Cooking</Text>
+            </LinearGradient>
           </HapticTouchableOpacity>
         </ScrollView>
       </View>
@@ -107,12 +119,17 @@ const styles = StyleSheet.create({
   title: { ...Type.headingLg, color: '#FFFFFF' },
   desc: { ...Type.bodyLg, color: '#D1D5DB' },
   steps: { ...Type.label, color: '#9CA3AF', marginTop: 4 },
-  start: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 28,
-    paddingVertical: 16,
-    borderRadius: Radius.pill,
+  // Match Get Cooking on the recipe card — pill clip on the outer
+  // touchable, gradient inner with the same paddingHorizontal/Vertical.
+  startWrap: {
     marginTop: 18,
+    borderRadius: Radius.pill,
+    overflow: 'hidden',
+  },
+  start: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    alignItems: 'center',
   },
   startText: { ...Type.label, color: '#FFFFFF' },
 });

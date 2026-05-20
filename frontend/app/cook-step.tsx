@@ -11,7 +11,7 @@
 // (Y-Live-1) navigates here; the old /cooking route stays for paths
 // like build-a-plate / tonight that depend on its richer surface.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,6 +71,39 @@ export default function CookStepScreen() {
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [complete, setComplete] = useState(false);
+
+  // Founder bug 2026-05-20 round 16: hooks were called AFTER early
+  // returns below, violating React's rules-of-hooks. The hook count
+  // changed between the loading render and the loaded render, which
+  // surfaced as the "Can't perform a React state update on a
+  // component that hasn't mounted yet" error chain via ErrorBoundary
+  // → SplashScreen → errorLogger. ALL hooks must be at the top — the
+  // voice hooks are unconditional now; refs carry the latest recipe
+  // state into the (stable) onIntent callback.
+  const { speak } = useVoicePlayback();
+  const stateRef = useRef<{
+    recipe: PlayerRecipe | null;
+    currentStep: number;
+  }>({ recipe: null, currentStep: 0 });
+  stateRef.current = { recipe, currentStep };
+  const voice = useVoiceInput({
+    continuous: false,
+    onIntent: (parsed) => {
+      const { recipe: r, currentStep: cs } = stateRef.current;
+      if (!r) return;
+      const stepText = r.steps[cs] ?? '';
+      const total = r.steps.length;
+      handleVoiceCookCommand(parsed.rawText, {
+        onNext: () => {
+          if (cs >= total - 1) setComplete(true);
+          else setCurrentStep((c) => c + 1);
+        },
+        onPrev: cs > 0 ? () => setCurrentStep((c) => c - 1) : undefined,
+        speak,
+        currentStepText: stepText,
+      });
+    },
+  });
 
   useEffect(() => {
     // Ad-hoc path (AI-gen recipes): the launch modal stashed the full
@@ -166,22 +199,6 @@ export default function CookStepScreen() {
   };
   const onPrev = currentStep > 0 ? () => setCurrentStep((c) => c - 1) : undefined;
 
-  // Y-Live-5 — voice hands-free nav. resolveVoiceCookCommand (W-C1) is
-  // pure; handleVoiceCookCommand routes 'next'/'back'/'repeat' to the
-  // player's handlers. Scale/freeform are no-ops here (no ingredient
-  // context, no LLM channel — those live on the card / chat).
-  const { speak } = useVoicePlayback();
-  const voice = useVoiceInput({
-    continuous: false,
-    onIntent: (parsed) => {
-      handleVoiceCookCommand(parsed.rawText, {
-        onNext,
-        onPrev,
-        speak,
-        currentStepText: stepText,
-      });
-    },
-  });
   const onVoicePress = () => {
     if (voice.isListening) {
       voice.stopListening();

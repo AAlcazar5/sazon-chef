@@ -128,6 +128,11 @@ export default function CoachScreen({
   const [conversations, setConversations] = useState<CoachConversation[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [composerText, setComposerText] = useState('');
+  // Founder ask 2026-05-20 round 16: defensive focus — taps on the
+  // input box weren't reliably popping the keyboard. Holding a ref
+  // lets the composer surface programmatically focus when the user
+  // taps the input area (or its surrounding chrome).
+  const composerInputRef = useRef<TextInput | null>(null);
   const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [pantryConfirm, setPantryConfirm] = useState<CoachIdentifiedIngredient[] | null>(null);
   // Y-Live-1: which recipe is being launched via CookLaunchModal. Set on
@@ -667,6 +672,7 @@ export default function CoachScreen({
               )}
             </HapticTouchableOpacity>
             <TextInput
+              ref={composerInputRef}
               value={composerText}
               onChangeText={setComposerText}
               placeholder={voice.isListening ? 'Listening…' : t('sazon.composer.placeholder')}
@@ -675,6 +681,11 @@ export default function CoachScreen({
               accessibilityLabel="Coach message composer"
               style={[styles.composer, { color: text }]}
               editable={!stream.isStreaming && !voice.isListening}
+              // Founder bug 2026-05-20 round 16: explicit focus call on
+              // press — defensive against any sibling gesture handler
+              // that might intercept the initial tap before the native
+              // TextInput's auto-focus runs.
+              onPressIn={() => composerInputRef.current?.focus()}
             />
             <HapticTouchableOpacity
               onPressIn={onMicPressIn}
