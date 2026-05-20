@@ -96,4 +96,21 @@ describe('<CookStepScreen />', () => {
     const { getByText } = render(<CookStepScreen />);
     expect(getByText(/no recipe/i)).toBeTruthy();
   });
+
+  // Y-Live-3 — durations in step prose become tappable inline timer
+  // chips (StepWithTimers, PR #25). Temps / sizes (°F, "1-inch") stay
+  // plain by construction.
+  it('renders an inline timer chip when the step prose contains a duration', async () => {
+    mockGetRecipe.mockResolvedValue({
+      data: {
+        title: 'Roast',
+        instructions: ['Roast at 400°F for 30 minutes.'],
+      },
+    });
+    const { findByLabelText, queryByText } = render(<CookStepScreen />);
+    // Chip label from StepWithTimers — "<minutes> minute <action> timer".
+    expect(await findByLabelText(/30 minute .*timer/i)).toBeTruthy();
+    // "400°F" is not a duration → no second chip
+    expect(queryByText(/400 minute/i)).toBeNull();
+  });
 });
