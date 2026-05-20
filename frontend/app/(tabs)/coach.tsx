@@ -676,7 +676,10 @@ export default function CoachScreen({
             const id = launchRecipe?.recipeId;
             setLaunchRecipe(null);
             if (id) {
-              router.push(`/cooking?recipeId=${encodeURIComponent(id)}` as never);
+              // Y-Live-2 kitchen-mode minimal player route. The legacy
+              // /cooking screen stays for build-a-plate / tonight which
+              // depend on its richer surface.
+              router.push(`/cook-step?recipeId=${encodeURIComponent(id)}` as never);
             }
           }}
         />
