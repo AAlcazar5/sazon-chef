@@ -322,6 +322,7 @@ backend/data/recommender/
 !backend/docs/*.md
 !.github/pull_request_template.md
 plans/
+kitchen-mode
 
 # Security documentation
 Security.md
