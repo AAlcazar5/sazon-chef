@@ -339,4 +339,80 @@ describe('findOrGenerateRecipe — N=1 ranker + alternates', () => {
     expect(result.primary.title).toBe('Pizza Margherita');
     expect(result.alternates).toEqual([]);
   });
+
+  // Founder bug 2026-05-20 (round 2): AI-gen recipes lacked photos. The
+  // wedge now borrows imageUrls from the highest-Dice catalog candidate
+  // that has any — same-cuisine / similar-dish photos are representative
+  // even when they're not literally this recipe (mirror of Claude
+  // Kitchen pulling representative web photos).
+  it('AI-gen result inherits imageUrls from the closest catalog candidate when missing', async () => {
+    mockGetAll.mockResolvedValue({
+      data: {
+        recipes: [
+          {
+            id: 'rcp_other',
+            title: 'Grilled Salmon Bowl', // similar enough to score on Dice
+            cuisine: 'American',
+            servings: 4,
+            ingredients: [{ name: 'salmon', amount: 1, unit: 'lb' }],
+            instructions: [{ text: 'Grill.' }],
+            imageUrl: 'https://images.example.com/grilled-salmon-bowl.jpg',
+          },
+        ],
+      },
+    });
+    mockGen.mockResolvedValue(FIXTURE); // no imageUrl in fixture
+    const result = await findOrGenerateRecipe('Grilled chicken');
+    expect(result.primary.imageUrls).toEqual([
+      'https://images.example.com/grilled-salmon-bowl.jpg',
+    ]);
+  });
+
+  it('does NOT overwrite imageUrls when AI gen already provided them', async () => {
+    mockGetAll.mockResolvedValue({
+      data: {
+        recipes: [
+          {
+            id: 'rcp_other',
+            title: 'Grilled Salmon Bowl',
+            servings: 4,
+            ingredients: [{ name: 'salmon', amount: 1, unit: 'lb' }],
+            instructions: [{ text: 'Grill.' }],
+            imageUrl: 'https://catalog.example.com/should-not-win.jpg',
+          },
+        ],
+      },
+    });
+    mockGen.mockResolvedValue({
+      data: {
+        recipe: {
+          ...FIXTURE.data.recipe,
+          imageUrl: 'https://gen.example.com/from-ai.jpg',
+        },
+      },
+    });
+    const result = await findOrGenerateRecipe('Grilled chicken');
+    expect(result.primary.imageUrls).toEqual(['https://gen.example.com/from-ai.jpg']);
+  });
+
+  it('does not crash when no catalog candidates have an image', async () => {
+    mockGetAll.mockResolvedValue({
+      data: {
+        recipes: [
+          {
+            id: 'rcp_noimg',
+            title: 'Grilled Salmon Bowl',
+            servings: 4,
+            ingredients: [{ name: 'salmon', amount: 1, unit: 'lb' }],
+            instructions: [{ text: 'Grill.' }],
+            // no imageUrl
+          },
+        ],
+      },
+    });
+    mockGen.mockResolvedValue(FIXTURE);
+    const result = await findOrGenerateRecipe('Grilled chicken');
+    // No image borrowed → primary.imageUrls stays undefined.
+    expect(result.primary.imageUrls).toBeUndefined();
+  });
 });
