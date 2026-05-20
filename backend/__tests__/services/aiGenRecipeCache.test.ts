@@ -6,8 +6,13 @@
 import { recipeAskCacheKey, aiGenRecipeCache } from '../../src/services/aiGenRecipeCache';
 
 describe('recipeAskCacheKey', () => {
-  it('produces a stable key for the canonical lowercase form', () => {
-    expect(recipeAskCacheKey('grilled chicken')).toBe('recipe-ask:grilled chicken');
+  it('produces a stable key for the canonical lowercase form (versioned prefix)', () => {
+    // `:v2` suffix bumps when the cached value shape changes — bumping
+    // it on a shape change is intentional, so this test pins the
+    // current version. If you change the prefix here, write a follow-
+    // up migration plan (old entries expire on TTL, new entries take
+    // the bumped prefix, no in-flight breakage).
+    expect(recipeAskCacheKey('grilled chicken')).toBe('recipe-ask:v2:grilled chicken');
   });
 
   it('case-folds so "Grilled chicken" and "GRILLED CHICKEN" share a cache entry', () => {
