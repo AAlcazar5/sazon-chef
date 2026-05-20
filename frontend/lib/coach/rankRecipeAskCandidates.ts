@@ -34,6 +34,11 @@ export interface RankerSignals {
    *  Dice is tied. No penalty for over-skill recipes (joy obsession >
    *  gating — chef can still see easy recipes if they ask for them). */
   userSkillTier?: 'beginner' | 'cook' | 'chef' | null;
+  /** Recipe IDs the user recently cooked (useRecentCookRecipeIds). The
+   *  ranker applies a multiplicative damper when a wedge candidate's
+   *  recipeId is in this list — same recipe twice in a row reads as
+   *  staleness, not personalization. Variety > repetition. */
+  recentlyCookedRecipeIds?: string[];
 }
 
 export interface RankedCandidate {
@@ -61,6 +66,12 @@ const W_DICE = 0.6;
 const W_PANTRY = 0.3;
 const W_CUISINE = 0.1;
 const W_SKILL = 0.05;
+
+// Multiplicative damper applied AFTER the additive score is computed:
+// if recipe.recipeId ∈ recentlyCookedRecipeIds, totalScore is scaled by
+// this factor. 0.85 is enough to flip the primary pick when scores are
+// close but doesn't bury a recipe that's genuinely the best match.
+const RECENT_COOK_DAMPER = 0.85;
 
 function pantryOverlapScore(
   recipeIngredients: RecipeCardPayload['ingredients'],
@@ -224,11 +235,15 @@ export function rankRecipeAskCandidates(
       signals.userSkillTier,
     );
 
-    const totalScore =
+    const additive =
       W_DICE * diceScore +
       W_PANTRY * pantryOverlap +
       W_CUISINE * cuisineBonus +
       W_SKILL * skillFit;
+    const recentlyCooked =
+      !!recipe.recipeId &&
+      (signals.recentlyCookedRecipeIds ?? []).includes(recipe.recipeId);
+    const totalScore = recentlyCooked ? additive * RECENT_COOK_DAMPER : additive;
     const rationale = buildRationale(matchedPantry, cuisineHit, skillRationale);
 
     return {
