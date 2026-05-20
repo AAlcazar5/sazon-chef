@@ -33,6 +33,31 @@ jest.mock('../../lib/api/recipe', () => ({
   recipeApi: { getRecipe: jest.fn() },
 }));
 
+// Y-Live-5 — keep tests off the real expo-speech / native SpeechModule.
+// Hook integration is exercised by handleVoiceCookCommand's unit tests
+// + manual verification; the screen test just needs stable stubs.
+jest.mock('../../hooks/useVoiceInput', () => ({
+  useVoiceInput: () => ({
+    isListening: false,
+    transcript: '',
+    interimTranscript: '',
+    error: null,
+    hasPermission: true,
+    isAvailable: true,
+    startListening: jest.fn(),
+    stopListening: jest.fn(),
+    clearTranscript: jest.fn(),
+  }),
+}));
+jest.mock('../../hooks/useVoicePlayback', () => ({
+  useVoicePlayback: () => ({
+    isPlaying: false,
+    speak: jest.fn(),
+    pause: jest.fn(),
+    stop: jest.fn(),
+  }),
+}));
+
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import CookStepScreen from '../../app/cook-step';
