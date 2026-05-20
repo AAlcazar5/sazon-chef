@@ -526,6 +526,39 @@ export default function CoachScreen({
                 />
               );
             }
+            // Card-shaped retry — recipe asks must never become paragraphs
+            // (founder rule 2026-05-19). Both catalog and AI gen failed;
+            // surface a tiny card with the query echoed back + retry CTA.
+            if (m.kind === 'recipe-error' && m.query) {
+              const q = m.query;
+              return (
+                <View
+                  key={m.id}
+                  style={styles.recipeErrorCard}
+                  accessibilityRole="text"
+                  accessibilityLabel={`Couldn't pull up ${q}. Tap retry to try again.`}
+                >
+                  <Text style={styles.recipeErrorTitle} numberOfLines={2}>
+                    Couldn't pull up {q}.
+                  </Text>
+                  <Text style={styles.recipeErrorBody}>
+                    The kitchen's catching its breath. Tap retry.
+                  </Text>
+                  <HapticTouchableOpacity
+                    onPress={() => void stream.sendMessage(q)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Retry recipe ${q}`}
+                    pressedScale={0.97}
+                    style={[
+                      styles.recipeErrorBtn,
+                      { backgroundColor: isDark ? DarkColors.primary : Colors.primary },
+                    ]}
+                  >
+                    <Text style={styles.recipeErrorBtnText}>Retry</Text>
+                  </HapticTouchableOpacity>
+                </View>
+              );
+            }
             return <MessageBubble key={m.id} role={m.role} content={m.content} />;
           })}
 
@@ -926,5 +959,36 @@ const styles = StyleSheet.create({
   },
   threadSub: {
     fontSize: 12,
+  },
+  recipeErrorCard: {
+    marginHorizontal: 16,
+    marginVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: '#FFF1EC',
+    gap: 6,
+  },
+  recipeErrorTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#7A2E20',
+  },
+  recipeErrorBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#7A2E20',
+  },
+  recipeErrorBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+  },
+  recipeErrorBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
