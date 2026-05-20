@@ -580,24 +580,12 @@ export default function CoachScreen({
                 pool.length > 0
                   ? [pool[currentIndex], ...pool.filter((_, i) => i !== currentIndex)]
                   : [recipe];
-              if (orderedPool.length === 1) {
-                return (
-                  <CookingModeRecipeCard
-                    key={m.id}
-                    title={recipe.title}
-                    description={recipe.description}
-                    imageUrls={recipe.imageUrls}
-                    cuisine={recipe.cuisine}
-                    baseServings={recipe.baseServings}
-                    ingredients={recipe.ingredients}
-                    steps={recipe.steps}
-                    macros={recipe.macros}
-                    notes={recipe.notes}
-                    onGetCooking={() => setLaunchRecipe(recipe)}
-                    rationale={m.recipeRationale}
-                  />
-                );
-              }
+              // Founder ask 2026-05-20 round 12: the card should ALWAYS
+              // be 2/3 width, even when there's only one entry in the
+              // pool (AI-gen-only results). The remaining 1/3 of
+              // viewport stays as background — it's the visible
+              // scroll-affordance space whether there's a peek card to
+              // fill it or not.
               return (
                 <ScrollView
                   key={m.id}
