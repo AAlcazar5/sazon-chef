@@ -132,19 +132,22 @@ export default function CookingModeRecipeCard({
   const placeholderBg = isDark ? cuisineColor.bgDark : cuisineColor.bg;
   const placeholderAccent = isDark ? cuisineColor.textDark : cuisineColor.text;
 
-  // Founder bug 2026-05-20 (round 3): iOS still didn't scroll after
-  // PR #61 — `maxHeight` on a <ScrollView>'s outer style isn't
-  // reliably respected on iOS (the ScrollView sizes to its
-  // contentContainer's natural height when free to do so). Wrapping in
-  // an explicit <View> with the height bound forces the ScrollView's
-  // frame to be smaller than its content → overflow becomes scrollable.
-  const cardMaxHeight = Math.round(Dimensions.get('window').height * 0.7);
+  // Founder bug 2026-05-20 (round 4): iOS STILL didn't scroll after
+  // PR #62's maxHeight-on-wrapper approach. The card kept growing to
+  // its content's natural height. Reason: `maxHeight` is a soft upper
+  // bound that yields when a parent flex layout asks the View to grow
+  // (RN's behavior, not a bug). An explicit `height` value is a hard
+  // bound that the ScrollView child must overflow.
+  //
+  // Use 60% of viewport (was 70%) to leave generous room for header +
+  // composer + tab bar regardless of device height.
+  const cardHeight = Math.round(Dimensions.get('window').height * 0.6);
 
   return (
     <View
       style={[
         styles.card,
-        { backgroundColor: surface, maxHeight: cardMaxHeight },
+        { backgroundColor: surface, height: cardHeight },
         Elevation.md,
       ]}
     >
@@ -153,14 +156,26 @@ export default function CookingModeRecipeCard({
         contentContainerStyle={styles.content}
         nestedScrollEnabled
         showsVerticalScrollIndicator
+        // iOS sometimes needs an explicit scroll-events directive when
+        // nested inside another scrollable. `scrollEventThrottle` keeps
+        // the events flowing; `bounces` adds the rubber-band feedback
+        // that signals scrollability.
+        scrollEventThrottle={16}
+        bounces
       >
       {images.length > 0 ? (
-        <View style={styles.collage}>
+        // Founder bug 2026-05-20 (round 4): the image was rendering at
+        // 96px tall — postage-stamp-sized vs. the kitchen-mode reference
+        // (hero-sized, ~200px). Single image → hero treatment (full
+        // width, 200px, contentFit cover). Multiple images → collage
+        // row, each 200px tall and flex-1 wide.
+        <View style={images.length === 1 ? styles.heroWrap : styles.collage}>
           {images.map((uri) => (
             <Image
               key={uri}
               source={{ uri }}
-              style={styles.thumb}
+              style={images.length === 1 ? styles.hero : styles.thumb}
+              contentFit="cover"
               cachePolicy="memory-disk"
             />
           ))}
@@ -323,7 +338,9 @@ const styles = StyleSheet.create({
   card: { borderRadius: Radius.card, marginHorizontal: 16, marginVertical: 12 },
   content: { padding: 20, gap: 10 },
   collage: { flexDirection: 'row', gap: 8, marginBottom: 6 },
-  thumb: { flex: 1, height: 96, borderRadius: Radius.card },
+  thumb: { flex: 1, height: 200, borderRadius: Radius.card },
+  heroWrap: { marginBottom: 6 },
+  hero: { width: '100%', height: 200, borderRadius: Radius.card },
   title: { ...Type.heading, color: '#1F2937' },
   dark: { color: '#F9FAFB' },
   desc: { ...Type.body, color: '#4B5563' },
