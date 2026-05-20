@@ -116,10 +116,39 @@ describe('<CookStepScreen />', () => {
     expect(await findByText(/couldn.?t load/i)).toBeTruthy();
   });
 
-  it('shows a graceful message when recipeId is missing', () => {
+  it('shows a graceful message when recipeId AND adhocId are both missing', () => {
     mockUseLocalSearchParams.mockReturnValue({});
     const { getByText } = render(<CookStepScreen />);
     expect(getByText(/no recipe/i)).toBeTruthy();
+  });
+
+  // Founder bug 2026-05-20: AI-gen recipes have no catalog id, so the
+  // launch modal's "Start cooking" now stashes the full payload and
+  // navigates with ?adhocId. /cook-step hydrates from the stash —
+  // NO network call. Previously this path was inert ("Start cooking
+  // does nothing").
+  it('adhocId path: hydrates from the in-process stash with no network call', async () => {
+    const { setAdhocRecipe } = require('../../lib/coach/adhocRecipeStash');
+    setAdhocRecipe('adhoc_test_1', {
+      title: 'Grilled Chicken (adhoc)',
+      description: 'AI gen.',
+      baseServings: 2,
+      ingredients: [{ name: 'chicken', amount: 1, unit: 'lb' }],
+      steps: ['Pat chicken dry.', 'Grill for 8 minutes per side.'],
+    });
+    mockUseLocalSearchParams.mockReturnValue({ adhocId: 'adhoc_test_1' });
+
+    const { findByText } = render(<CookStepScreen />);
+    expect(await findByText('Pat chicken dry.')).toBeTruthy();
+    // No backend call should have fired.
+    expect(mockGetRecipe).not.toHaveBeenCalled();
+  });
+
+  it('adhocId path: gracefully errors when the stash has no entry for the id', async () => {
+    mockUseLocalSearchParams.mockReturnValue({ adhocId: 'adhoc_missing' });
+    const { findByText } = render(<CookStepScreen />);
+    expect(await findByText(/couldn.?t load/i)).toBeTruthy();
+    expect(mockGetRecipe).not.toHaveBeenCalled();
   });
 
   // Y-Live-3 — durations in step prose become tappable inline timer

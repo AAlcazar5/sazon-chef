@@ -17,6 +17,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { recipeApi } from '../lib/api/recipe';
+import { getAdhocRecipe } from '../lib/coach/adhocRecipeStash';
 import CookStepCard from '../components/cooking/CookStepCard';
 import StepWithTimers from '../components/cooking/StepWithTimers';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
@@ -61,7 +62,10 @@ function mapResponse(res: unknown): PlayerRecipe | null {
 export default function CookStepScreen() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const { recipeId } = useLocalSearchParams<{ recipeId?: string }>();
+  const { recipeId, adhocId } = useLocalSearchParams<{
+    recipeId?: string;
+    adhocId?: string;
+  }>();
 
   const [recipe, setRecipe] = useState<PlayerRecipe | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +73,21 @@ export default function CookStepScreen() {
   const [complete, setComplete] = useState(false);
 
   useEffect(() => {
+    // Ad-hoc path (AI-gen recipes): the launch modal stashed the full
+    // payload before navigating. No network call needed.
+    if (adhocId) {
+      const stashed = getAdhocRecipe(adhocId);
+      if (stashed) {
+        setRecipe({
+          title: stashed.title,
+          imageUrl: stashed.imageUrls?.[0],
+          steps: stashed.steps,
+        });
+      } else {
+        setError("Couldn't load the recipe — try again.");
+      }
+      return;
+    }
     if (!recipeId) return;
     let cancelled = false;
     recipeApi
@@ -86,11 +105,11 @@ export default function CookStepScreen() {
     return () => {
       cancelled = true;
     };
-  }, [recipeId]);
+  }, [recipeId, adhocId]);
 
   const onClose = () => router.back();
 
-  if (!recipeId) {
+  if (!recipeId && !adhocId) {
     return (
       <View style={[styles.screen, isDark ? styles.bgDark : styles.bgLight]}>
         <Text style={[styles.fallbackText, isDark && styles.textDark]}>
