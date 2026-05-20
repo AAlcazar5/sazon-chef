@@ -13,13 +13,15 @@
 // borders), pastel surface, tokens single-source, Haptic + a11y.
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { ServingStepper } from '../ui/ServingStepper';
 import { Brand, PastelTokens, Type, Radius, Elevation } from '../../constants/tokens';
+import { CATEGORY_COLORS } from '../../constants/CategoryColors';
 import {
   rescaleStepText,
   scaleQuantityDisplay,
@@ -48,6 +50,10 @@ interface CookingModeRecipeCardProps {
   title: string;
   description: string;
   imageUrls?: string[];
+  /** Cuisine label — drives the gradient placeholder + emoji when no
+   *  imageUrls are available (AI-gen recipes typically have neither
+   *  cuisine-tagged photos nor any photo at all). */
+  cuisine?: string;
   baseServings: number;
   ingredients: ScalableIngredientLite[];
   steps: string[];
@@ -82,6 +88,7 @@ export default function CookingModeRecipeCard({
   title,
   description,
   imageUrls,
+  cuisine,
   baseServings,
   ingredients,
   steps,
@@ -115,12 +122,27 @@ export default function CookingModeRecipeCard({
   const surface = isDark ? PastelTokens.dark.peach : PastelTokens.light.peach;
   const images = (imageUrls ?? []).slice(0, 3);
 
+  // Founder bug 2026-05-20: AI-gen recipes had no photo. Backend's
+  // generateFromDescription doesn't return imageUrl. When images are
+  // missing, fall back to a cuisine-tinted gradient + emoji so the
+  // photo slot still anchors the card visually (food is the hero —
+  // even when the hero is a vibe, not a literal photo).
+  const cuisineKey = cuisine && CATEGORY_COLORS[cuisine] ? cuisine : 'American';
+  const cuisineColor = CATEGORY_COLORS[cuisineKey];
+  const placeholderBg = isDark ? cuisineColor.bgDark : cuisineColor.bg;
+  const placeholderAccent = isDark ? cuisineColor.textDark : cuisineColor.text;
+
   return (
-    <ScrollView
+    // Founder bug 2026-05-20: this used to be a <ScrollView>, but the
+    // parent in coach.tsx is also a ScrollView. Nested same-axis
+    // ScrollViews collide — the inner one never receives scroll events
+    // and content below the viewport is unreachable. The parent
+    // already handles scroll; the card lays out content full-height.
+    <View
       accessibilityLabel={`${title} recipe`}
       style={[styles.card, { backgroundColor: surface }, Elevation.md]}
-      contentContainerStyle={styles.content}
     >
+      <View style={styles.content}>
       {images.length > 0 ? (
         <View style={styles.collage}>
           {images.map((uri) => (
@@ -132,7 +154,20 @@ export default function CookingModeRecipeCard({
             />
           ))}
         </View>
-      ) : null}
+      ) : (
+        <LinearGradient
+          colors={[placeholderBg, placeholderBg + 'CC']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroPlaceholder}
+          accessibilityLabel={`${cuisineKey} recipe placeholder`}
+        >
+          <Text style={styles.heroEmoji}>{cuisineColor.emoji}</Text>
+          <Text style={[styles.heroLabel, { color: placeholderAccent }]}>
+            {cuisineKey}
+          </Text>
+        </LinearGradient>
+      )}
 
       <Text style={[styles.title, isDark && styles.dark]}>{title}</Text>
       {rationale ? (
@@ -166,29 +201,32 @@ export default function CookingModeRecipeCard({
         </View>
       ) : null}
 
+      {/* Founder bug 2026-05-20: the "Get cooking" button was clipping
+          on narrow widths when stacked inline with the stepper + units.
+          Split into two rows: stepper + units up top, full-width cook
+          button below. Cook button can't overflow when it owns its
+          own row. */}
       <View style={styles.controls}>
         <ServingStepper servings={servings} onChangeServings={setServings} />
-        <View style={styles.controlsRight}>
-          <HapticTouchableOpacity
-            onPress={() => setUnitsOpen((o) => !o)}
-            accessibilityRole="button"
-            accessibilityLabel="Change units"
-            pressedScale={0.97}
-            style={styles.iconBtn}
-          >
-            <Ionicons name="swap-horizontal-outline" size={20} color={accent} />
-          </HapticTouchableOpacity>
-          <HapticTouchableOpacity
-            onPress={onGetCooking}
-            accessibilityRole="button"
-            accessibilityLabel="Get cooking"
-            pressedScale={0.97}
-            style={[styles.cook, { backgroundColor: accent }]}
-          >
-            <Text style={styles.cookText}>Get cooking</Text>
-          </HapticTouchableOpacity>
-        </View>
+        <HapticTouchableOpacity
+          onPress={() => setUnitsOpen((o) => !o)}
+          accessibilityRole="button"
+          accessibilityLabel="Change units"
+          pressedScale={0.97}
+          style={styles.iconBtn}
+        >
+          <Ionicons name="swap-horizontal-outline" size={20} color={accent} />
+        </HapticTouchableOpacity>
       </View>
+      <HapticTouchableOpacity
+        onPress={onGetCooking}
+        accessibilityRole="button"
+        accessibilityLabel="Get cooking"
+        pressedScale={0.97}
+        style={[styles.cook, { backgroundColor: accent }]}
+      >
+        <Text style={styles.cookText}>Get cooking</Text>
+      </HapticTouchableOpacity>
 
       {unitsOpen ? (
         <View
@@ -265,7 +303,8 @@ export default function CookingModeRecipeCard({
           ) : null}
         </View>
       ) : null}
-    </ScrollView>
+      </View>
+    </View>
   );
 }
 
@@ -295,13 +334,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginVertical: 8,
+    marginTop: 8,
     gap: 12,
-  },
-  controlsRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
   },
   iconBtn: {
     width: 40,
@@ -310,6 +344,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  heroPlaceholder: {
+    height: 140,
+    borderRadius: Radius.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    gap: 6,
+  },
+  heroEmoji: { fontSize: 56 },
+  heroLabel: { ...Type.eyebrow, opacity: 0.85 },
   unitsMenu: {
     alignSelf: 'flex-end',
     borderRadius: Radius.card,
@@ -327,6 +371,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: Radius.pill,
+    alignItems: 'center',
+    marginTop: 10,
   },
   cookText: { ...Type.label, color: '#FFFFFF' },
   eyebrow: { ...Type.eyebrow, marginTop: 10 },

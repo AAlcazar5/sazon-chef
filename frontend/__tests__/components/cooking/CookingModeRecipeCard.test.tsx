@@ -208,4 +208,52 @@ describe('<CookingModeRecipeCard />', () => {
       expect(queryByText(/Show me another/)).toBeNull();
     });
   });
+
+  // Founder bug 2026-05-20 (screenshot): AI-gen recipes arrived with no
+  // imageUrls and the photo slot disappeared entirely, leaving the card
+  // visually flat. The card now renders a cuisine-tinted gradient
+  // placeholder + emoji + cuisine label so the photo slot anchors the
+  // card whether or not a real photo is available.
+  describe('photo placeholder (founder bug 2026-05-20)', () => {
+    it('shows a cuisine-tinted placeholder with emoji + label when no images', () => {
+      const { getByText } = render(
+        <CookingModeRecipeCard {...PROPS} imageUrls={undefined} cuisine="Italian" />,
+      );
+      // Italian's emoji is 🍝 per CATEGORY_COLORS, label = "Italian".
+      expect(getByText('🍝')).toBeTruthy();
+      expect(getByText('Italian')).toBeTruthy();
+    });
+
+    it('falls back to "American" cuisine when the recipe cuisine is missing', () => {
+      const { getByText } = render(
+        <CookingModeRecipeCard {...PROPS} imageUrls={undefined} />,
+      );
+      expect(getByText('🍔')).toBeTruthy(); // American emoji
+      expect(getByText('American')).toBeTruthy();
+    });
+
+    it('falls back to "American" when cuisine is unknown to CATEGORY_COLORS', () => {
+      const { getByText } = render(
+        <CookingModeRecipeCard
+          {...PROPS}
+          imageUrls={undefined}
+          cuisine="Martian"
+        />,
+      );
+      expect(getByText('🍔')).toBeTruthy();
+      expect(getByText('American')).toBeTruthy();
+    });
+
+    it('does NOT show the placeholder when real images are provided', () => {
+      const { queryByText } = render(
+        <CookingModeRecipeCard
+          {...PROPS}
+          imageUrls={['https://example.com/p.jpg']}
+          cuisine="Italian"
+        />,
+      );
+      // Italian emoji + label only render in the placeholder branch.
+      expect(queryByText('🍝')).toBeNull();
+    });
+  });
 });

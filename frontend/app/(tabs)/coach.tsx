@@ -46,6 +46,7 @@ import SazonDailyGreetingBanner from '../../components/coach/SazonDailyGreetingB
 import CookingModeRecipeCard from '../../components/cooking/CookingModeRecipeCard';
 import CookLaunchModal from '../../components/cooking/CookLaunchModal';
 import type { RecipeCardPayload } from '../../lib/coach/findOrGenerateRecipe';
+import { setAdhocRecipe, makeAdhocRecipeId } from '../../lib/coach/adhocRecipeStash';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
 import { useSavedRecipeCuisines } from '../../hooks/useSavedRecipeCuisines';
@@ -558,6 +559,7 @@ export default function CoachScreen({
                   title={recipe.title}
                   description={recipe.description}
                   imageUrls={recipe.imageUrls}
+                  cuisine={recipe.cuisine}
                   baseServings={recipe.baseServings}
                   ingredients={recipe.ingredients}
                   steps={recipe.steps}
@@ -741,11 +743,11 @@ export default function CoachScreen({
         />
 
         {/* Y-Live-1: launch/preview modal between the recipe card and
-            the step player. AI-generated recipes have no recipeId yet
-            (player route needs an id), so Start cooking only navigates
-            when the catalog id is present; otherwise it dismisses (the
-            user still saw the launch preview). Full player-by-payload
-            handoff is Y-Live-2. */}
+            the step player. Catalog recipes navigate by id; AI-gen
+            recipes (no backend id) stash the full payload and navigate
+            with ?adhocId — /cook-step hydrates from the stash. Founder
+            bug 2026-05-20: previously Start cooking was inert for
+            AI-gen recipes; now both paths reach the player. */}
         <CookLaunchModal
           visible={launchRecipe !== null}
           title={launchRecipe?.title ?? ''}
@@ -754,13 +756,17 @@ export default function CoachScreen({
           stepCount={launchRecipe?.steps.length ?? 0}
           onClose={() => setLaunchRecipe(null)}
           onStartCooking={() => {
-            const id = launchRecipe?.recipeId;
+            const r = launchRecipe;
             setLaunchRecipe(null);
-            if (id) {
-              // Y-Live-2 kitchen-mode minimal player route. The legacy
-              // /cooking screen stays for build-a-plate / tonight which
-              // depend on its richer surface.
-              router.push(`/cook-step?recipeId=${encodeURIComponent(id)}` as never);
+            if (!r) return;
+            if (r.recipeId) {
+              // Catalog path — backend lookup by id.
+              router.push(`/cook-step?recipeId=${encodeURIComponent(r.recipeId)}` as never);
+            } else {
+              // AI-gen path — payload handoff via in-process stash.
+              const id = makeAdhocRecipeId();
+              setAdhocRecipe(id, r);
+              router.push(`/cook-step?adhocId=${encodeURIComponent(id)}` as never);
             }
           }}
         />
