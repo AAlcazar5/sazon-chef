@@ -294,35 +294,44 @@ api.interceptors.response.use(
           }
         }
 
-        // Automatically logout on authentication errors (but NOT on auth
-        // endpoints, NOT on the bootstrap verify call). Reached only when
-        // the silent refresh above declined or failed.
-        if (logoutCallback && !isAuthEndpoint && !skipAuthAutoLogout && !isTelemetryEndpoint) {
-          // Log which URL forced the auto-logout — invaluable for debugging
-          // "session expired despite logging back in" loops.
-          console.warn(
-            `⚠️  Auto-logout triggered by ${statusCode} on ${error.config?.method?.toUpperCase()} ${error.config?.url}`
-          );
-          // Dedupe the alert — concurrent 401s otherwise stack alerts.
-          if (!sessionExpiredAlertActive) {
-            sessionExpiredAlertActive = true;
-            const doLogout = logoutCallback;
-            Alert.alert(
-              'Session Expired',
-              'Your session has expired. Please log in again.',
-              [{
-                text: 'OK',
-                onPress: () => {
-                  sessionExpiredAlertActive = false;
-                  doLogout().catch(() => {
-                    // Logout errors are non-fatal — navigation will still redirect to login
-                  });
-                },
-              }],
-              { cancelable: false, onDismiss: () => { sessionExpiredAlertActive = false; } }
-            );
-          }
-        }
+        // ────────────────────────────────────────────────────────────────
+        // DEV-DISABLED 2026-05-20 (founder ask, Telegram msg 365):
+        // Auto-logout on 401/403 was kicking the founder out mid-test
+        // session repeatedly. Token-lifetime band-aids (extending to 1y,
+        // etc.) kept regressing. Disabled entirely until launch — the
+        // 401 still propagates as an error to the caller, but the user
+        // is not bounced to the login screen.
+        //
+        // RESTORE BEFORE LAUNCH: uncomment the block below. Tracked in
+        // ROADMAP_TO_LAUNCH.md under Tier 🔒 Gated — "Re-enable 401
+        // auto-logout".
+        // ────────────────────────────────────────────────────────────────
+        // if (logoutCallback && !isAuthEndpoint && !skipAuthAutoLogout && !isTelemetryEndpoint) {
+        //   // Log which URL forced the auto-logout — invaluable for debugging
+        //   // "session expired despite logging back in" loops.
+        //   console.warn(
+        //     `⚠️  Auto-logout triggered by ${statusCode} on ${error.config?.method?.toUpperCase()} ${error.config?.url}`
+        //   );
+        //   // Dedupe the alert — concurrent 401s otherwise stack alerts.
+        //   if (!sessionExpiredAlertActive) {
+        //     sessionExpiredAlertActive = true;
+        //     const doLogout = logoutCallback;
+        //     Alert.alert(
+        //       'Session Expired',
+        //       'Your session has expired. Please log in again.',
+        //       [{
+        //         text: 'OK',
+        //         onPress: () => {
+        //           sessionExpiredAlertActive = false;
+        //           doLogout().catch(() => {
+        //             // Logout errors are non-fatal — navigation will still redirect to login
+        //           });
+        //         },
+        //       }],
+        //       { cancelable: false, onDismiss: () => { sessionExpiredAlertActive = false; } }
+        //     );
+        //   }
+        // }
       }
 
       // Special-case: recipe already saved (some backends return 400 with message only)
