@@ -164,18 +164,30 @@ export class AIProviderManager {
       ollama: new OllamaProvider(),
     };
 
-    // Add providers in configured order, only if they're available.
-    // Also populate the by-key map so Path B per-request providerOrder
-    // overrides can resolve to instances at call time.
+    // Add providers in configured order, only if they're available. This
+    // shapes the DEFAULT fallback chain (`this.providers`) for callers
+    // that don't specify a per-request providerOrder (Path A).
     for (const providerKey of this.providerOrder) {
       const key = providerKey.toLowerCase();
       const provider = allProviders[key];
       if (provider && provider.isAvailable()) {
         this.providers.push(provider);
-        this.providersByKey.set(key, provider);
-        logger.info(`✅ [ProviderManager] ${provider.getName()} initialized and available`);
+        logger.info(`✅ [ProviderManager] ${provider.getName()} initialized and available (default chain)`);
       } else {
         logger.info(`⚠️  [ProviderManager] ${providerKey} is not configured or unavailable`);
+      }
+    }
+
+    // Founder bug 2026-05-20: every recipe-ask hit Claude because
+    // `providersByKey` only held the default-chain providers. Path B
+    // per-request `providerOrder: ['deepseek', 'claude']` resolved
+    // `deepseek` to nothing (silently skipped) and the chain collapsed
+    // to Claude only. The by-key map must hold EVERY available provider
+    // so per-request overrides can resolve regardless of AI_PROVIDER_ORDER.
+    for (const [key, provider] of Object.entries(allProviders)) {
+      if (provider.isAvailable() && !this.providersByKey.has(key)) {
+        this.providersByKey.set(key, provider);
+        logger.info(`✅ [ProviderManager] ${provider.getName()} registered for per-request overrides`);
       }
     }
 
