@@ -13,7 +13,7 @@
 // borders), pastel surface, tokens single-source, Haptic + a11y.
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -132,17 +132,31 @@ export default function CookingModeRecipeCard({
   const placeholderBg = isDark ? cuisineColor.bgDark : cuisineColor.bg;
   const placeholderAccent = isDark ? cuisineColor.textDark : cuisineColor.text;
 
+  // Founder bug 2026-05-20 (round 2): scroll still broken after PR #60.
+  // The "let the parent ScrollView handle scroll" approach didn't work
+  // (probably because the parent is also a keyboard-avoiding flex
+  // container with its own scroll quirks). Going back to internal
+  // scroll on the card — but this time:
+  //   • the card has a bounded maxHeight (70% of screen) so it always
+  //     has more content than viewport → there's something to scroll;
+  //   • nestedScrollEnabled lets it coexist with the parent ScrollView
+  //     on Android (iOS handles nested same-axis natively).
+  // This matches the Claude Kitchen reference, which also uses an
+  // internal-scrolling card with a "↓ more" indicator.
+  const cardMaxHeight = Math.round(Dimensions.get('window').height * 0.7);
+
   return (
-    // Founder bug 2026-05-20: this used to be a <ScrollView>, but the
-    // parent in coach.tsx is also a ScrollView. Nested same-axis
-    // ScrollViews collide — the inner one never receives scroll events
-    // and content below the viewport is unreachable. The parent
-    // already handles scroll; the card lays out content full-height.
-    <View
+    <ScrollView
       accessibilityLabel={`${title} recipe`}
-      style={[styles.card, { backgroundColor: surface }, Elevation.md]}
+      style={[
+        styles.card,
+        { backgroundColor: surface, maxHeight: cardMaxHeight },
+        Elevation.md,
+      ]}
+      contentContainerStyle={styles.content}
+      nestedScrollEnabled
+      showsVerticalScrollIndicator
     >
-      <View style={styles.content}>
       {images.length > 0 ? (
         <View style={styles.collage}>
           {images.map((uri) => (
@@ -303,8 +317,7 @@ export default function CookingModeRecipeCard({
           ) : null}
         </View>
       ) : null}
-      </View>
-    </View>
+    </ScrollView>
   );
 }
 

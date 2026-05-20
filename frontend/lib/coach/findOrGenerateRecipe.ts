@@ -345,6 +345,22 @@ export async function findOrGenerateRecipe(
   //    Founder rule: recipe ask → card, never paragraph.
   try {
     const generated = await generateViaAi(query);
+    // Founder bug 2026-05-20 (round 2): AI-gen recipes have no photo,
+    // and the cuisine-emoji placeholder shipped in PR #60 looked like
+    // a label, not a real food photo. Borrow imageUrls from the
+    // highest-Dice catalog candidate that has any — same-cuisine /
+    // similar-dish photos are representative even when they're not
+    // literally this recipe. Matches the Claude Kitchen pattern
+    // (mollyshomeguide etc.) of pulling representative web photos.
+    if (!generated.imageUrls?.length && catalogCandidates.length > 0) {
+      const ranked = rankRecipeAskCandidates(query, catalogCandidates, signals);
+      const withImage = ranked.find(
+        (c) => c.recipe.imageUrls && c.recipe.imageUrls.length > 0,
+      );
+      if (withImage) {
+        generated.imageUrls = withImage.recipe.imageUrls;
+      }
+    }
     return { primary: generated, alternates: [] };
   } catch (genErr) {
     if (catalogCandidates.length > 0) {
