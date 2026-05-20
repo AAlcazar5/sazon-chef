@@ -68,10 +68,54 @@ describe('spoonacularService.findRecipeImages', () => {
   });
 
   it('passes the cuisine filter through to Spoonacular when provided', async () => {
-    mockedAxiosGet.mockResolvedValueOnce({ data: { results: [] } });
+    // Cuisine-filtered call → returns 3 → no fallback search.
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: {
+        results: [
+          { id: 1, title: 'Grilled Chicken A', image: 'https://a/1.jpg' },
+          { id: 2, title: 'Grilled Chicken B', image: 'https://a/2.jpg' },
+          { id: 3, title: 'Grilled Chicken C', image: 'https://a/3.jpg' },
+        ],
+      },
+    });
     await spoonacularService.findRecipeImages('Grilled Chicken', 3, 'American');
     const call = mockedAxiosGet.mock.calls[0];
     expect(call[1].params.cuisine).toBe('American');
+  });
+
+  // Founder report 2026-05-20 round 8: cuisine filter often returned
+  // only 1 candidate, collapsing the carousel. Fall back to unfiltered
+  // search to fill the pool.
+  it('falls back to unfiltered search when cuisine pool is thin', async () => {
+    mockedAxiosGet
+      .mockResolvedValueOnce({
+        // Cuisine-filtered: only 1 result.
+        data: {
+          results: [
+            { id: 1, title: 'Grilled Chicken American', image: 'https://a/am.jpg' },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        // Unfiltered fallback: many results.
+        data: {
+          results: [
+            { id: 1, title: 'Grilled Chicken American', image: 'https://a/am.jpg' },
+            { id: 2, title: 'Grilled Chicken Bowl', image: 'https://a/bowl.jpg' },
+            { id: 3, title: 'Grilled Chicken Salad', image: 'https://a/salad.jpg' },
+            { id: 4, title: 'Grilled Chicken Tacos', image: 'https://a/tacos.jpg' },
+          ],
+        },
+      });
+
+    const out = await spoonacularService.findRecipeImages('Grilled Chicken', 3, 'American');
+    expect(out).toHaveLength(3);
+    // Cuisine-filtered result is preferred (lands first); fallback
+    // fills the rest. URLs deduplicated.
+    expect(out[0]).toBe('https://a/am.jpg');
+    expect(new Set(out).size).toBe(3); // no dupes
+    // Two Spoonacular calls — cuisine + fallback.
+    expect(mockedAxiosGet).toHaveBeenCalledTimes(2);
   });
 
   it('skips results with missing / empty image fields', async () => {

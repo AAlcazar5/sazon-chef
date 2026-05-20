@@ -211,23 +211,55 @@ class SpoonacularService {
   ): Promise<string[]> {
     if (!this.isConfigured()) return [];
     // Pull more than `count` so the title-Dice ranker has options to
-    // pick from. 10 covers most queries; cheap on Spoonacular's points.
-    const POOL_SIZE = 10;
-    const results = await this.searchRecipes(query, {
-      number: POOL_SIZE,
-      ...(cuisine ? { cuisine } : {}),
-    });
-    const items = results?.results ?? [];
-    type Scored = { image: string; score: number };
-    const scored: Scored[] = [];
-    for (const r of items) {
-      if (typeof r.image !== 'string' || r.image.length === 0) continue;
-      if (typeof r.title !== 'string' || r.title.length === 0) continue;
-      const score = titleDice(r.title, query);
-      scored.push({ image: r.image, score });
+    // pick from. 20 covers most queries; cheap on Spoonacular's points
+    // (each complexSearch costs 1 point regardless of `number` up to ~100).
+    const POOL_SIZE = 20;
+
+    // Founder report 2026-05-20 round 8: cuisine filter ('American'
+    // etc.) overly restricts Spoonacular's result pool — many queries
+    // returned only 1 candidate, so the carousel collapsed to a single
+    // image. Title-Dice on a larger pool gives better relevance than
+    // cuisine + Dice on a tiny pool. Try cuisine-filtered first only
+    // if explicitly requested; fall back to unfiltered when the pool
+    // is thin.
+    const tryRank = (items: SpoonacularSearchResult['results']) => {
+      type Scored = { image: string; score: number };
+      const scored: Scored[] = [];
+      for (const r of items) {
+        if (typeof r.image !== 'string' || r.image.length === 0) continue;
+        if (typeof r.title !== 'string' || r.title.length === 0) continue;
+        scored.push({ image: r.image, score: titleDice(r.title, query) });
+      }
+      scored.sort((a, b) => b.score - a.score);
+      return scored.slice(0, count).map((s) => s.image);
+    };
+
+    let images: string[] = [];
+    if (cuisine) {
+      const filtered = await this.searchRecipes(query, {
+        number: POOL_SIZE,
+        cuisine,
+      });
+      images = tryRank(filtered?.results ?? []);
     }
-    scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, count).map((s) => s.image);
+    // Cuisine filter returned too few — re-search without the filter
+    // and rank from the larger pool. Title-Dice still ensures
+    // relevance.
+    if (images.length < count) {
+      const unfiltered = await this.searchRecipes(query, { number: POOL_SIZE });
+      const fromUnfiltered = tryRank(unfiltered?.results ?? []);
+      // Merge: prefer cuisine-filtered (more relevant cuisine-wise),
+      // backfill with unfiltered top picks. Dedup by URL.
+      const seen = new Set(images);
+      for (const url of fromUnfiltered) {
+        if (images.length >= count) break;
+        if (!seen.has(url)) {
+          images.push(url);
+          seen.add(url);
+        }
+      }
+    }
+    return images;
   }
 
   /** @deprecated kept for the single-image legacy path; new callers
