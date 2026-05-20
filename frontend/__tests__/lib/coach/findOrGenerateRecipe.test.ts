@@ -12,7 +12,11 @@ jest.mock('../../../lib/api/recipe', () => ({
 }));
 
 import { recipeApi } from '../../../lib/api/recipe';
-import { findOrGenerateRecipe, dice } from '../../../lib/coach/findOrGenerateRecipe';
+import {
+  findOrGenerateRecipe,
+  dice,
+  pickBestCatalogImage,
+} from '../../../lib/coach/findOrGenerateRecipe';
 
 const mockGen = recipeApi.generateFromDescription as jest.Mock;
 const mockGetAll = recipeApi.getAllRecipes as jest.Mock;
@@ -105,6 +109,28 @@ describe('findOrGenerateRecipe', () => {
 // Y-Live-7 — fuzzy DB lookup before AI gen. Founder bug 2026-05-19:
 // "Pizza Margarita" should find the curated "Pizza Margherita" in the
 // catalog (typo tolerance) before falling through to AI gen.
+describe('pickBestCatalogImage (pure)', () => {
+  it('returns undefined when sources is empty', () => {
+    expect(pickBestCatalogImage('grilled chicken', [])).toBeUndefined();
+  });
+
+  it('picks the highest-Dice title with an imageUrl', () => {
+    const out = pickBestCatalogImage('grilled chicken', [
+      { title: 'Banana Bread', imageUrl: 'https://a/banana.jpg' },
+      { title: 'Grilled Chicken Tandoori', imageUrl: 'https://a/tandoori.jpg' },
+      { title: 'Mushroom Risotto', imageUrl: 'https://a/risotto.jpg' },
+    ]);
+    expect(out).toBe('https://a/tandoori.jpg');
+  });
+
+  it('returns the only source when there is one entry', () => {
+    const out = pickBestCatalogImage('grilled chicken', [
+      { title: 'Pasta', imageUrl: 'https://a/pasta.jpg' },
+    ]);
+    expect(out).toBe('https://a/pasta.jpg');
+  });
+});
+
 describe('dice (bigram similarity)', () => {
   it('handles single-char diff inside a token (Margarita ↔ Margherita)', () => {
     expect(dice('pizza margarita', 'Pizza Margherita')).toBeGreaterThan(0.7);
@@ -340,18 +366,41 @@ describe('findOrGenerateRecipe — N=1 ranker + alternates', () => {
     expect(result.alternates).toEqual([]);
   });
 
-  // Founder bug 2026-05-20 (round 2): AI-gen recipes lacked photos. The
-  // wedge now borrows imageUrls from the highest-Dice catalog candidate
-  // that has any — same-cuisine / similar-dish photos are representative
-  // even when they're not literally this recipe (mirror of Claude
-  // Kitchen pulling representative web photos).
-  it('AI-gen result inherits imageUrls from the closest catalog candidate when missing', async () => {
+  // Founder bug 2026-05-20 (round 3): legacy catalog rows are dropped
+  // by the structured-ingredient filter, so the image-borrow path
+  // couldn't find anything to inherit from even when imageUrls were
+  // available. The wedge now uses a SEPARATE raw-rows-with-imageUrl
+  // list for borrow lookups — legacy rows with photos still contribute.
+  it('AI-gen inherits imageUrls from LEGACY catalog rows (no structured ingredients required)', async () => {
+    mockGetAll.mockResolvedValue({
+      data: {
+        recipes: [
+          {
+            id: 'rcp_legacy',
+            title: 'Grilled Chicken Tandoori',
+            // No structured ingredients — only legacy `text` fields.
+            // The ranker drops this row; the image-borrow path keeps it.
+            ingredients: [{ text: '1 lb chicken' }, { text: '2 tbsp yogurt' }],
+            instructions: [{ text: 'Grill.' }],
+            imageUrl: 'https://images.example.com/tandoori-real-photo.jpg',
+          },
+        ],
+      },
+    });
+    mockGen.mockResolvedValue(FIXTURE); // no imageUrl in fixture
+    const result = await findOrGenerateRecipe('Grilled chicken');
+    expect(result.primary.imageUrls).toEqual([
+      'https://images.example.com/tandoori-real-photo.jpg',
+    ]);
+  });
+
+  it('AI-gen result inherits imageUrls from a structured catalog candidate too', async () => {
     mockGetAll.mockResolvedValue({
       data: {
         recipes: [
           {
             id: 'rcp_other',
-            title: 'Grilled Salmon Bowl', // similar enough to score on Dice
+            title: 'Grilled Salmon Bowl',
             cuisine: 'American',
             servings: 4,
             ingredients: [{ name: 'salmon', amount: 1, unit: 'lb' }],
@@ -361,7 +410,7 @@ describe('findOrGenerateRecipe — N=1 ranker + alternates', () => {
         ],
       },
     });
-    mockGen.mockResolvedValue(FIXTURE); // no imageUrl in fixture
+    mockGen.mockResolvedValue(FIXTURE);
     const result = await findOrGenerateRecipe('Grilled chicken');
     expect(result.primary.imageUrls).toEqual([
       'https://images.example.com/grilled-salmon-bowl.jpg',
