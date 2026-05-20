@@ -124,6 +124,7 @@ describe('dice (bigram similarity)', () => {
 
 describe('findOrGenerateRecipe — Y-Live-7 catalog-first lookup', () => {
   const CATALOG_HIT = {
+    id: 'rcp_pizza_margherita',
     title: 'Pizza Margherita',
     description: 'Classic Neapolitan-style pizza.',
     servings: 2,
@@ -153,6 +154,9 @@ describe('findOrGenerateRecipe — Y-Live-7 catalog-first lookup', () => {
     ]);
     expect(payload.steps).toEqual(['Mix dough.', 'Top + bake.']);
     expect(payload.imageUrls).toEqual(['https://example.com/p.jpg']);
+    // Y-Live-1: recipeId carried through so CookLaunchModal "Start cooking"
+    // can navigate to /cooking?recipeId=…
+    expect(payload.recipeId).toBe('rcp_pizza_margherita');
     expect(mockGen).not.toHaveBeenCalled(); // catalog hit short-circuits gen
   });
 
