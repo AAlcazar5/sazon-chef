@@ -24,6 +24,8 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import * as Print from 'expo-print';
 import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { ServingStepper } from '../ui/ServingStepper';
@@ -86,6 +88,67 @@ interface CookingModeRecipeCardProps {
   widthOverride?: number;
 }
 
+/** HTML escape — keeps user-pasted recipe content safe in the print
+ *  preview (titles can include `<` etc.) */
+function esc(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/** Founder ask 2026-05-20 round 14: format a clean printable recipe.
+ *  Light theme regardless of app theme (printers don't want a dark
+ *  background). Reflects current servings + unit mode. */
+function recipeAsHtml(
+  title: string,
+  description: string,
+  servings: number,
+  displayIngredients: ScalableIngredientLite[],
+  rawIngredients: ScalableIngredientLite[],
+  steps: string[],
+  factor: number,
+  macros: Macros | undefined,
+  notes: string | undefined,
+): string {
+  const ingHtml = displayIngredients
+    .map(
+      (ing) =>
+        `<li>${esc(scaleQuantityDisplay(ing.amount * factor))} ${esc(ing.unit)} ${esc(ing.name)}</li>`,
+    )
+    .join('');
+  const stepHtml = steps
+    .map((s) => `<li>${esc(rescaleStepText(s, rawIngredients, factor))}</li>`)
+    .join('');
+  const macrosHtml =
+    macros && macrosLine(macros)
+      ? `<p class="macros">Per serving: ${esc(macrosLine(macros))}</p>`
+      : '';
+  const notesHtml = notes ? `<p class="notes">Notes: ${esc(notes)}</p>` : '';
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  body { font: 14px/1.5 -apple-system, sans-serif; color: #1F2937; padding: 24px; }
+  h1 { font-size: 24px; margin: 0 0 8px; }
+  .desc { color: #4B5563; margin: 0 0 16px; }
+  .servings { color: #6B7280; margin: 0 0 16px; }
+  h2 { font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; color: #FA7E12; margin: 16px 0 8px; }
+  ul, ol { padding-left: 22px; margin: 0 0 8px; }
+  li { margin: 4px 0; }
+  .macros, .notes { color: #4B5563; margin: 12px 0 0; }
+</style></head>
+<body>
+  <h1>${esc(title)}</h1>
+  ${description ? `<p class="desc">${esc(description)}</p>` : ''}
+  <p class="servings">Servings: ${servings}</p>
+  <h2>Ingredients</h2>
+  <ul>${ingHtml}</ul>
+  <h2>Steps</h2>
+  <ol>${stepHtml}</ol>
+  ${macrosHtml}
+  ${notesHtml}
+</body></html>`;
+}
+
 function macrosLine(m: Macros): string {
   const parts: string[] = [];
   if (m.calories != null) parts.push(`${m.calories} cal`);
@@ -126,6 +189,10 @@ export default function CookingModeRecipeCard({
   // the servings stepper moves.
   const [unitMode, setUnitMode] = useState<UnitMode>('as-written');
   const [unitsOpen, setUnitsOpen] = useState(false);
+  // Founder ask 2026-05-20 round 14: print + copy icons next to units.
+  // copyState 'idle' → 'done' (after a successful clipboard write) →
+  // back to 'idle' after 1.5s. The checkmark gives a clear confirmation.
+  const [copyState, setCopyState] = useState<'idle' | 'done'>('idle');
   const displayIngredients = useMemo(
     () => convertIngredientUnits(ingredients, unitMode),
     [ingredients, unitMode],
@@ -197,6 +264,72 @@ export default function CookingModeRecipeCard({
   const outerStyle = widthOverride
     ? { width: widthOverride, marginHorizontal: 0 }
     : null;
+
+  // Founder ask 2026-05-20 round 14: format the recipe as plain text
+  // for clipboard / share. Reflects current servings + unit mode so the
+  // copy matches what's on screen.
+  const recipeAsPlainText = (): string => {
+    const lines: string[] = [];
+    lines.push(title.toUpperCase());
+    lines.push('');
+    if (description) {
+      lines.push(description);
+      lines.push('');
+    }
+    lines.push(`Servings: ${servings}`);
+    lines.push('');
+    lines.push('INGREDIENTS');
+    for (const ing of displayIngredients) {
+      lines.push(
+        `• ${scaleQuantityDisplay(ing.amount * factor)} ${ing.unit} ${ing.name}`,
+      );
+    }
+    lines.push('');
+    lines.push('STEPS');
+    steps.forEach((s, i) => {
+      lines.push(`${i + 1}. ${rescaleStepText(s, ingredients, factor)}`);
+    });
+    if (macros && macrosLine(macros).length > 0) {
+      lines.push('');
+      lines.push(`Per serving: ${macrosLine(macros)}`);
+    }
+    if (notes) {
+      lines.push('');
+      lines.push(`Notes: ${notes}`);
+    }
+    return lines.join('\n');
+  };
+
+  const handleCopy = async () => {
+    try {
+      await Clipboard.setStringAsync(recipeAsPlainText());
+      setCopyState('done');
+      setTimeout(() => setCopyState('idle'), 1500);
+    } catch {
+      // Clipboard rejection is rare on iOS/Android — silently
+      // degrade rather than alerting the user.
+    }
+  };
+
+  const handlePrint = async () => {
+    try {
+      const html = recipeAsHtml(
+        title,
+        description,
+        servings,
+        displayIngredients,
+        ingredients,
+        steps,
+        factor,
+        macros,
+        notes,
+      );
+      await Print.printAsync({ html });
+    } catch {
+      // Print rejection (user cancelled, no printer, etc.) is silent —
+      // the iOS share sheet handles user-cancel UX itself.
+    }
+  };
 
   return (
     <View
@@ -335,38 +468,58 @@ export default function CookingModeRecipeCard({
         </View>
       ) : null}
 
-      {/* Founder bug 2026-05-20: the "Get cooking" button was clipping
-          on narrow widths when stacked inline with the stepper + units.
-          Split into two rows: stepper + units up top, full-width cook
-          button below. Cook button can't overflow when it owns its
-          own row. */}
+      {/* Founder ask 2026-05-20 round 14: kitchen-mode icon row —
+          [stepper] [units] [print] [copy]. Units dropdown anchors
+          ABOVE the cook button via absolute positioning so it never
+          competes with Get cooking for screen real estate. The outer
+          relative container is the absolute popover's anchor. */}
+      <View style={styles.controlsAnchor}>
       <View style={styles.controls}>
         <ServingStepper servings={servings} onChangeServings={setServings} />
-        <HapticTouchableOpacity
-          onPress={() => setUnitsOpen((o) => !o)}
-          accessibilityRole="button"
-          accessibilityLabel="Change units"
-          pressedScale={0.97}
-          style={styles.iconBtn}
-        >
-          <Ionicons name="swap-horizontal-outline" size={20} color={accent} />
-        </HapticTouchableOpacity>
+        <View style={styles.iconRow}>
+          <HapticTouchableOpacity
+            onPress={() => setUnitsOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityLabel="Change units"
+            pressedScale={0.97}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="swap-horizontal-outline" size={20} color={accent} />
+          </HapticTouchableOpacity>
+          <HapticTouchableOpacity
+            onPress={() => handlePrint()}
+            accessibilityRole="button"
+            accessibilityLabel="Print recipe"
+            pressedScale={0.97}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="print-outline" size={20} color={accent} />
+          </HapticTouchableOpacity>
+          <HapticTouchableOpacity
+            onPress={() => handleCopy()}
+            accessibilityRole="button"
+            accessibilityLabel={copyState === 'done' ? 'Copied' : 'Copy recipe'}
+            pressedScale={0.97}
+            style={styles.iconBtn}
+          >
+            <Ionicons
+              name={copyState === 'done' ? 'checkmark-outline' : 'copy-outline'}
+              size={20}
+              color={accent}
+            />
+          </HapticTouchableOpacity>
+        </View>
       </View>
-      <HapticTouchableOpacity
-        onPress={onGetCooking}
-        accessibilityRole="button"
-        accessibilityLabel="Get cooking"
-        pressedScale={0.97}
-        style={[styles.cook, { backgroundColor: accent }]}
-      >
-        <Text style={styles.cookText}>Get cooking</Text>
-      </HapticTouchableOpacity>
 
+      {/* Units dropdown — absolutely positioned popover anchored to the
+          icon row above. Does NOT take flow space (cook button below
+          doesn't shift). Click any option closes the menu. */}
       {unitsOpen ? (
         <View
           style={[
             styles.unitsMenu,
-            { backgroundColor: isDark ? 'rgba(0,0,0,0.45)' : '#FFFFFF' },
+            { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' },
+            Elevation.md,
           ]}
         >
           {(['as-written', 'us', 'metric'] as const).map((m) => {
@@ -398,6 +551,17 @@ export default function CookingModeRecipeCard({
           })}
         </View>
       ) : null}
+      </View>
+
+      <HapticTouchableOpacity
+        onPress={onGetCooking}
+        accessibilityRole="button"
+        accessibilityLabel="Get cooking"
+        pressedScale={0.97}
+        style={[styles.cook, { backgroundColor: accent }]}
+      >
+        <Text style={styles.cookText}>Get cooking</Text>
+      </HapticTouchableOpacity>
 
       <Text style={[styles.eyebrow, { color: accent }]}>INGREDIENTS</Text>
       {displayIngredients.map((ing, i) => (
@@ -475,12 +639,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   swapChipText: { fontSize: 13, fontWeight: '600' },
+  // Anchor for the absolute-positioned unitsMenu popover. position
+  // 'relative' (the default for View in RN) lets the popover's `top`
+  // / `right` resolve to this container's bounds, not the screen.
+  controlsAnchor: {
+    position: 'relative',
+  },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 8,
     gap: 12,
+  },
+  iconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   iconBtn: {
     width: 40,
@@ -499,14 +674,20 @@ const styles = StyleSheet.create({
   },
   heroEmoji: { fontSize: 56 },
   heroLabel: { ...Type.eyebrow, opacity: 0.85 },
+  // Founder ask 2026-05-20 round 14: absolute-positioned dropdown
+  // anchored under the icon row. Doesn't take flow space → the cook
+  // button below stays put when the menu opens/closes. Right-edge
+  // alignment with a small inset matches the units icon's column.
   unitsMenu: {
-    alignSelf: 'flex-end',
+    position: 'absolute',
+    top: 56, // height of icon row + small offset
+    right: 8,
+    minWidth: 140,
     borderRadius: Radius.card,
     paddingVertical: 6,
     paddingHorizontal: 14,
     gap: 4,
-    marginTop: -4,
-    ...Elevation.sm,
+    zIndex: 10,
   },
   unitOption: {
     paddingVertical: 8,

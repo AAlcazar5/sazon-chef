@@ -21,6 +21,15 @@ jest.mock('../../../contexts/ThemeContext', () => ({
   }),
 }));
 
+// Founder ask 2026-05-20 round 14: stub the print + clipboard native
+// modules so tests don't try to invoke them.
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('expo-print', () => ({
+  printAsync: jest.fn().mockResolvedValue(undefined),
+}));
+
 import React from 'react';
 import { render, fireEvent, within } from '@testing-library/react-native';
 import CookingModeRecipeCard from '../../../components/cooking/CookingModeRecipeCard';
@@ -275,6 +284,45 @@ describe('<CookingModeRecipeCard />', () => {
       // Founder ask 2026-05-20 round 13: photo strip uses 2/3 + 1/3
       // peek (was full-width paging). Label updated to "swipe for next".
       expect(getByLabelText(/photos — swipe for next/i)).toBeTruthy();
+    });
+
+    // Founder ask 2026-05-20 round 14: print + copy icons next to the
+    // units icon. Each is keyboard/screen-reader labelled.
+    it('renders Print + Copy icon buttons alongside the units button', () => {
+      const { getByLabelText } = render(
+        <CookingModeRecipeCard {...PROPS} imageUrls={['https://example.com/a.jpg']} />,
+      );
+      expect(getByLabelText('Change units')).toBeTruthy();
+      expect(getByLabelText('Print recipe')).toBeTruthy();
+      expect(getByLabelText('Copy recipe')).toBeTruthy();
+    });
+
+    it('tapping Copy writes the formatted recipe to the clipboard', async () => {
+      const Clipboard = require('expo-clipboard');
+      Clipboard.setStringAsync.mockClear();
+      const { getByLabelText } = render(<CookingModeRecipeCard {...PROPS} />);
+      fireEvent.press(getByLabelText('Copy recipe'));
+      // setStringAsync is awaited inside the handler; let the
+      // microtask queue drain.
+      await new Promise((r) => setTimeout(r, 0));
+      expect(Clipboard.setStringAsync).toHaveBeenCalledTimes(1);
+      const arg = Clipboard.setStringAsync.mock.calls[0][0] as string;
+      // The plain-text dump should include the title, ingredients, and steps.
+      expect(arg).toMatch(/ROASTED POTATOES/);
+      expect(arg).toMatch(/INGREDIENTS/);
+      expect(arg).toMatch(/STEPS/);
+    });
+
+    it('tapping Print invokes expo-print with HTML', async () => {
+      const PrintMod = require('expo-print');
+      PrintMod.printAsync.mockClear();
+      const { getByLabelText } = render(<CookingModeRecipeCard {...PROPS} />);
+      fireEvent.press(getByLabelText('Print recipe'));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(PrintMod.printAsync).toHaveBeenCalledTimes(1);
+      const arg = PrintMod.printAsync.mock.calls[0][0];
+      expect(arg.html).toMatch(/<h1>Roasted Potatoes<\/h1>/);
+      expect(arg.html).toMatch(/Ingredients/i);
     });
 
     it('single-image path stays hero (no photo-strip ScrollView)', () => {
