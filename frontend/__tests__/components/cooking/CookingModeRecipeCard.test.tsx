@@ -261,7 +261,7 @@ describe('<CookingModeRecipeCard />', () => {
   // carousel. Multi-image path renders a paged horizontal ScrollView
   // with page-indicator dots; single-image path stays as hero.
   describe('horizontal carousel (multi-image path)', () => {
-    it('renders a swipe-to-browse ScrollView when 2+ images provided', () => {
+    it('renders a peek-style photo strip ScrollView when 2+ images provided', () => {
       const { getByLabelText } = render(
         <CookingModeRecipeCard
           {...PROPS}
@@ -272,18 +272,19 @@ describe('<CookingModeRecipeCard />', () => {
           ]}
         />,
       );
-      // The carousel ScrollView is labelled for accessibility.
-      expect(getByLabelText(/photos — swipe to browse/i)).toBeTruthy();
+      // Founder ask 2026-05-20 round 13: photo strip uses 2/3 + 1/3
+      // peek (was full-width paging). Label updated to "swipe for next".
+      expect(getByLabelText(/photos — swipe for next/i)).toBeTruthy();
     });
 
-    it('single-image path stays hero (no carousel ScrollView)', () => {
+    it('single-image path stays hero (no photo-strip ScrollView)', () => {
       const { queryByLabelText } = render(
         <CookingModeRecipeCard
           {...PROPS}
           imageUrls={['https://example.com/a.jpg']}
         />,
       );
-      expect(queryByLabelText(/photos — swipe to browse/i)).toBeNull();
+      expect(queryByLabelText(/photos — swipe for next/i)).toBeNull();
     });
   });
 });
