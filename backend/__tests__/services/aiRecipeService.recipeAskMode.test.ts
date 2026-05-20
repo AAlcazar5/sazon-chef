@@ -24,9 +24,14 @@ jest.mock('../../src/services/aiProviders/AIProviderManager', () => {
 });
 
 import { aiRecipeService } from '../../src/services/aiRecipeService';
+import { aiGenRecipeCache } from '../../src/services/aiGenRecipeCache';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // The recipe-ask cache singleton persists across suites. Clear it so
+  // tests that share input strings ("Grilled chicken") don't shortcut
+  // the provider-call assertions via a hit from a prior suite.
+  aiGenRecipeCache.clear();
   // Default route: pretend the real router returned a sensible shape.
   mockedRoute.mockReturnValue({
     model: 'deepseek-chat',
