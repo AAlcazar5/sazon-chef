@@ -349,6 +349,75 @@ describe('rankRecipeAskCandidates — userSkillTier signal', () => {
   });
 });
 
+// Founder Telegram 2026-05-20 PR-3: recently-cooked demotion. Same
+// recipe twice in a row reads as staleness, not personalization. The
+// damper is multiplicative and small (×0.85) — enough to flip the
+// primary pick when scores are close, not enough to bury a genuinely
+// best match.
+describe('rankRecipeAskCandidates — recentlyCookedRecipeIds damper', () => {
+  function recWithId(
+    id: string,
+    title: string,
+    overrides: Partial<typeof rec extends (...args: any) => infer R ? R : never> = {} as any,
+  ) {
+    return rec(title, { ...overrides, recipeId: id } as any);
+  }
+
+  it('demotes the recipe whose id is in recentlyCookedRecipeIds when scores otherwise tie', () => {
+    const stale = recWithId('rcp_stale', 'Grilled Chicken Plain');
+    const fresh = recWithId('rcp_fresh', 'Grilled Chicken Plain');
+    const out = rankRecipeAskCandidates('grilled chicken', [stale, fresh], {
+      ...EMPTY_SIGNALS,
+      recentlyCookedRecipeIds: ['rcp_stale'],
+    });
+    expect(out[0].recipe.recipeId).toBe('rcp_fresh');
+    expect(out[1].recipe.recipeId).toBe('rcp_stale');
+    // Damper applied to stale's totalScore but not fresh.
+    expect(out[1].totalScore).toBeLessThan(out[0].totalScore);
+  });
+
+  it('damper is multiplicative not additive — stale recipe still scores above 0', () => {
+    const stale = recWithId('rcp_stale', 'Grilled Chicken Plain');
+    const [top] = rankRecipeAskCandidates('grilled chicken', [stale], {
+      ...EMPTY_SIGNALS,
+      recentlyCookedRecipeIds: ['rcp_stale'],
+    });
+    expect(top.totalScore).toBeGreaterThan(0);
+  });
+
+  it('damper cannot bury a genuinely best match — strong Dice still wins', () => {
+    // stale recipe has perfect title match; fresh has a much worse title.
+    const stale = recWithId('rcp_stale', 'Grilled Chicken');
+    const fresh = recWithId('rcp_fresh', 'Roasted Tomato Soup with Basil');
+    const out = rankRecipeAskCandidates('grilled chicken', [fresh, stale], {
+      ...EMPTY_SIGNALS,
+      recentlyCookedRecipeIds: ['rcp_stale'],
+    });
+    expect(out[0].recipe.recipeId).toBe('rcp_stale');
+  });
+
+  it('recipes without a recipeId are unaffected (AI-gen path)', () => {
+    const aiGen = rec('Grilled Chicken Plain'); // no recipeId
+    const catalog = recWithId('rcp_a', 'Grilled Chicken Plain');
+    const out = rankRecipeAskCandidates('grilled chicken', [catalog, aiGen], {
+      ...EMPTY_SIGNALS,
+      recentlyCookedRecipeIds: ['rcp_a'],
+    });
+    // AI-gen pulls ahead because catalog candidate was just cooked.
+    expect(out[0].recipe.recipeId).toBeUndefined();
+  });
+
+  it('empty recentlyCookedRecipeIds (or missing signal) is harmless', () => {
+    const a = recWithId('rcp_a', 'Grilled Chicken Plain');
+    const out1 = rankRecipeAskCandidates('grilled chicken', [a], EMPTY_SIGNALS);
+    const out2 = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      recentlyCookedRecipeIds: [],
+    });
+    expect(out1[0].totalScore).toBe(out2[0].totalScore);
+  });
+});
+
 describe('rankRecipeAskCandidates — determinism (same inputs → same order)', () => {
   it('returns identical ranking for identical signals', () => {
     const candidates = [

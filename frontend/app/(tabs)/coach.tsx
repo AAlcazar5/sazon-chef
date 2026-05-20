@@ -50,6 +50,7 @@ import { useCoachStream } from '../../hooks/useCoachStream';
 import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
 import { useSavedRecipeCuisines } from '../../hooks/useSavedRecipeCuisines';
 import useSkillTier from '../../hooks/useSkillTier';
+import { useRecentCookRecipeIds } from '../../hooks/useRecentCookRecipeIds';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
 import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
 import { useCoachQuickChipContext } from '../../hooks/useCoachQuickChipContext';
@@ -143,11 +144,16 @@ export default function CoachScreen({
   // too-hard ones on tied Dice. Bonus-only — no penalty for harder
   // recipes (the user can still explicitly ask for "Tandoori chicken").
   const { tier: userSkillTier } = useSkillTier();
+  // Founder Telegram 2026-05-20 PR-3 — recently-cooked-recipe damper.
+  // Same recipe twice in a row reads as staleness, not personalization;
+  // a small multiplicative downrank surfaces variety while still
+  // letting the recipe re-emerge if it's a genuinely best match.
+  const { ids: recentlyCookedRecipeIds } = useRecentCookRecipeIds();
   // Founder ask 2026-05-19 — surface N=1 signals to the wedge so
   // ambiguous asks ("grilled chicken") pick ONE recipe ranked by pantry
-  // overlap + recent cuisine + saved-cuisine + adjacency + skill tier.
-  // Assembling here keeps the wedge testable in isolation (no
-  // React-Query plumbing in useCoachStream).
+  // overlap + recent cuisine + saved-cuisine + adjacency + skill tier
+  // + recent-cook variety damper. Assembling here keeps the wedge
+  // testable in isolation (no React-Query plumbing in useCoachStream).
   const rankerSignals = useMemo(
     () => ({
       pantryNames: chipContext.pantryExpiringSoon,
@@ -155,6 +161,7 @@ export default function CoachScreen({
       topAdjacentCuisine: chipContext.topAdjacentCuisine,
       savedCollectionCuisines,
       userSkillTier,
+      recentlyCookedRecipeIds,
     }),
     [
       chipContext.pantryExpiringSoon,
@@ -162,6 +169,7 @@ export default function CoachScreen({
       lastCookCuisine,
       savedCollectionCuisines,
       userSkillTier,
+      recentlyCookedRecipeIds,
     ],
   );
   const stream = useCoachStream({ rankerSignals });
