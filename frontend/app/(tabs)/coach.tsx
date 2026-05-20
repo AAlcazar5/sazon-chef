@@ -48,6 +48,7 @@ import CookLaunchModal from '../../components/cooking/CookLaunchModal';
 import type { RecipeCardPayload } from '../../lib/coach/findOrGenerateRecipe';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
+import { useSavedRecipeCuisines } from '../../hooks/useSavedRecipeCuisines';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
 import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
 import { useCoachQuickChipContext } from '../../hooks/useCoachQuickChipContext';
@@ -132,18 +133,28 @@ export default function CoachScreen({
   // P2 retention — proactive Sazon greeting signal. Also feeds the
   // wedge's N=1 ranker (last-cook cuisine bonus for recipe asks).
   const { cuisine: lastCookCuisine } = useLastCookCuisine();
+  // Founder Telegram 2026-05-20 — N=1 ranker depth. Explicit user saves
+  // are the strongest cuisine signal; surfaced into the wedge so
+  // ambiguous asks resolve toward the user's own corpus.
+  const { cuisines: savedCollectionCuisines } = useSavedRecipeCuisines();
   // Founder ask 2026-05-19 — surface N=1 signals to the wedge so
   // ambiguous asks ("grilled chicken") pick ONE recipe ranked by pantry
-  // overlap + recent cuisine + adjacency. Assembling here keeps the
-  // wedge testable in isolation (no React-Query plumbing in
-  // useCoachStream).
+  // overlap + recent cuisine + saved-cuisine + adjacency. Assembling
+  // here keeps the wedge testable in isolation (no React-Query plumbing
+  // in useCoachStream).
   const rankerSignals = useMemo(
     () => ({
       pantryNames: chipContext.pantryExpiringSoon,
       lastCookCuisine: lastCookCuisine || null,
       topAdjacentCuisine: chipContext.topAdjacentCuisine,
+      savedCollectionCuisines,
     }),
-    [chipContext.pantryExpiringSoon, chipContext.topAdjacentCuisine, lastCookCuisine],
+    [
+      chipContext.pantryExpiringSoon,
+      chipContext.topAdjacentCuisine,
+      lastCookCuisine,
+      savedCollectionCuisines,
+    ],
   );
   const stream = useCoachStream({ rankerSignals });
   const attachments = useCoachAttachments();

@@ -22,6 +22,11 @@ export interface RankerSignals {
   lastCookCuisine: string | null;
   /** Server-computed adjacency target — secondary cuisine signal. */
   topAdjacentCuisine: string | null;
+  /** Cuisines the user has explicitly saved, ordered by frequency
+   *  (top-saved first). Sourced from useSavedRecipeCuisines. Stronger
+   *  signal than adjacency (explicit user action vs server inference).
+   *  Optional + defaults to [] for backward compat with existing tests. */
+  savedCollectionCuisines?: string[];
 }
 
 export interface RankedCandidate {
@@ -73,19 +78,66 @@ function cuisineMatches(
   return recipeCuisine.toLowerCase() === target.toLowerCase();
 }
 
+type CuisineSource = 'last' | 'saved-top' | 'saved' | 'adjacent';
+interface CuisineHit {
+  cuisine: string;
+  source: CuisineSource;
+  /** Weight in [0, 1]. The highest-weight matching source wins; this
+   *  becomes `cuisineBonus` (scaled by W_CUISINE in totalScore). */
+  weight: number;
+}
+
+/** Highest-weight cuisine match across all available signals. Lets a
+ *  strong signal (explicit user save, recent cook) outrank a weaker one
+ *  (server-inferred adjacency) when both fire on different candidates. */
+function resolveCuisineHit(
+  recipeCuisine: string | undefined,
+  signals: RankerSignals,
+): CuisineHit | null {
+  if (!recipeCuisine) return null;
+  let best: CuisineHit | null = null;
+  const consider = (hit: CuisineHit) => {
+    if (!best || hit.weight > best.weight) best = hit;
+  };
+  if (cuisineMatches(recipeCuisine, signals.lastCookCuisine)) {
+    consider({ cuisine: signals.lastCookCuisine as string, source: 'last', weight: 1.0 });
+  }
+  const saved = signals.savedCollectionCuisines ?? [];
+  if (saved.length > 0) {
+    const idx = saved.findIndex(
+      (c) => c.toLowerCase() === recipeCuisine.toLowerCase(),
+    );
+    if (idx === 0) {
+      consider({ cuisine: saved[0], source: 'saved-top', weight: 0.8 });
+    } else if (idx > 0) {
+      consider({ cuisine: saved[idx], source: 'saved', weight: 0.6 });
+    }
+  }
+  if (cuisineMatches(recipeCuisine, signals.topAdjacentCuisine)) {
+    consider({ cuisine: signals.topAdjacentCuisine as string, source: 'adjacent', weight: 0.5 });
+  }
+  return best;
+}
+
 function buildRationale(
   matchedPantry: string[],
-  cuisineHit: { cuisine: string; source: 'last' | 'adjacent' } | null,
+  cuisineHit: CuisineHit | null,
 ): string | undefined {
   if (matchedPantry.length > 0) {
     const names = matchedPantry.slice(0, 2).join(' + ');
     return `Picked because you've got ${names} on hand.`;
   }
   if (cuisineHit) {
-    const verb = cuisineHit.source === 'last' ? 'your recent' : 'on your radar';
-    return cuisineHit.source === 'last'
-      ? `Picked because ${cuisineHit.cuisine} is ${verb} cuisine.`
-      : `Picked because ${cuisineHit.cuisine} is ${verb}.`;
+    switch (cuisineHit.source) {
+      case 'last':
+        return `Picked because ${cuisineHit.cuisine} is your recent cuisine.`;
+      case 'saved-top':
+        return `Picked because you save a lot of ${cuisineHit.cuisine}.`;
+      case 'saved':
+        return `Picked because you've saved ${cuisineHit.cuisine} recipes before.`;
+      case 'adjacent':
+        return `Picked because ${cuisineHit.cuisine} is on your radar.`;
+    }
   }
   return undefined;
 }
@@ -104,19 +156,8 @@ export function rankRecipeAskCandidates(
       signals.pantryNames,
     );
 
-    let cuisineHit: { cuisine: string; source: 'last' | 'adjacent' } | null = null;
-    if (cuisineMatches(recipe.cuisine, signals.lastCookCuisine)) {
-      cuisineHit = {
-        cuisine: signals.lastCookCuisine as string,
-        source: 'last',
-      };
-    } else if (cuisineMatches(recipe.cuisine, signals.topAdjacentCuisine)) {
-      cuisineHit = {
-        cuisine: signals.topAdjacentCuisine as string,
-        source: 'adjacent',
-      };
-    }
-    const cuisineBonus = cuisineHit ? 1 : 0;
+    const cuisineHit = resolveCuisineHit(recipe.cuisine, signals);
+    const cuisineBonus = cuisineHit ? cuisineHit.weight : 0;
 
     const totalScore =
       W_DICE * diceScore + W_PANTRY * pantryOverlap + W_CUISINE * cuisineBonus;
