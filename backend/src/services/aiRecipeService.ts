@@ -376,6 +376,21 @@ Return JSON only.`;
             3,
             rawValidated.cuisine,
           );
+          // Diagnostic for the recurring "still only one image" reports:
+          // logs exactly how many photos came back + the title used for
+          // lookup. If the count is < 3, Spoonacular returned an
+          // under-populated pool; if it's 0, the lookup short-circuited
+          // (not-configured, threw, or empty results).
+          logger.info(
+            {
+              data: {
+                title: rawValidated.title,
+                cuisine: rawValidated.cuisine,
+                imageCount: imageUrls.length,
+              },
+            },
+            '🖼️  [generateFromDescription] image lookup result',
+          );
           if (imageUrls.length > 0) {
             validated = {
               ...rawValidated,
