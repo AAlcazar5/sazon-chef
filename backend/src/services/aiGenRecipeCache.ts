@@ -31,7 +31,13 @@ export const aiGenRecipeCache = new CacheService({
  *  food-name strings, but case + surrounding whitespace can still vary
  *  ("Grilled chicken" vs " grilled chicken " vs "GRILLED CHICKEN").
  *  Collapsing them onto one key maximizes cache hit rate without
- *  losing semantic distinction. */
+ *  losing semantic distinction.
+ *
+ *  Version suffix `:v2` (founder 2026-05-20 round 6): cache entries
+ *  written before PR #65 stored a recipe with only `imageUrl` (single
+ *  string). New entries include `imageUrls: string[]` for the 3-photo
+ *  collage. Bump the version when the cached value shape changes so
+ *  stale entries can't shortcut around the new logic. */
 export function recipeAskCacheKey(description: string): string {
-  return `recipe-ask:${description.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+  return `recipe-ask:v2:${description.trim().toLowerCase().replace(/\s+/g, ' ')}`;
 }

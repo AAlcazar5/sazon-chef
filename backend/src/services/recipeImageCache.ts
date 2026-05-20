@@ -21,8 +21,14 @@ export const recipeImageCache = new CacheService({
 
 /** Same normalization as recipeAskCacheKey — lowercase, trimmed,
  *  whitespace-collapsed. Different prefix so the two caches stay
- *  cleanly separated under one Map<> implementation if a shared one
- *  is ever introduced later. */
+ *  cleanly separated.
+ *
+ *  Version suffix `:v2` (founder 2026-05-20 round 6): cache entries
+ *  written before PR #65 stored a single image URL. Entries written
+ *  after store `string[]` (3-photo collage). Reusing the same key
+ *  prefix would deserialize old entries into the new shape and the
+ *  carousel would silently fall back to single-image rendering. Bump
+ *  the version whenever the cached value shape changes. */
 export function recipeImageCacheKey(query: string): string {
-  return `recipe-image:${query.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+  return `recipe-image:v2:${query.trim().toLowerCase().replace(/\s+/g, ' ')}`;
 }

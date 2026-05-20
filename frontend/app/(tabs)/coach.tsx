@@ -15,7 +15,6 @@ import {
   View,
   Text,
   TextInput,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -23,6 +22,13 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+// Founder bug 2026-05-20 (round 6): iOS scroll on the recipe card was
+// being intercepted by this screen's outer ScrollView. RN's native
+// ScrollView and gesture-handler's ScrollView don't compose cleanly —
+// RN's gesture system fires first and steals the touch from the inner
+// GH-ScrollView inside the card. Switching the outer to GH-ScrollView
+// too lets the inner-wins-on-touches-within-bounds rule apply.
+import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import AsyncStorage from '@react-native-async-storage/async-storage';
