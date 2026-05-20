@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { recipeApi } from '../lib/api/recipe';
 import CookStepCard from '../components/cooking/CookStepCard';
+import StepWithTimers from '../components/cooking/StepWithTimers';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import { useTheme } from '../contexts/ThemeContext';
 import { Radius, Type } from '../constants/tokens';
@@ -185,6 +186,9 @@ export default function CookStepScreen() {
           onVoicePress={() => undefined}
           onNext={onNext}
           onPrev={onPrev}
+          // Y-Live-3 — durations in step prose become tappable inline
+          // timer chips; temps/sizes stay plain by construction.
+          renderStep={(t) => <StepWithTimers text={t} />}
         />
       </View>
     </View>

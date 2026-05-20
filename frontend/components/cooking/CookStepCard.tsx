@@ -26,6 +26,13 @@ interface CookStepCardProps {
   onVoicePress: () => void;
   onNext: () => void;
   onPrev?: () => void;
+  /**
+   * Y-Live-3 — optional custom renderer for the step body. Lets the
+   * step player swap plain text for `StepWithTimers` (inline tappable
+   * timer chips). Default is the W-B2 plain `<Text>` so existing tests
+   * and consumers are unaffected.
+   */
+  renderStep?: (text: string) => React.ReactNode;
 }
 
 export default function CookStepCard({
@@ -38,6 +45,7 @@ export default function CookStepCard({
   onVoicePress,
   onNext,
   onPrev,
+  renderStep,
 }: CookStepCardProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -61,7 +69,11 @@ export default function CookStepCard({
       style={[styles.card, { backgroundColor: surface }, Elevation.md]}
     >
       <Text style={[styles.eyebrow, { color: accent }]}>STEP {stepNumber}</Text>
-      <Text style={[styles.step, isDark && styles.stepDark]}>{text}</Text>
+      {renderStep ? (
+        renderStep(text)
+      ) : (
+        <Text style={[styles.step, isDark && styles.stepDark]}>{text}</Text>
+      )}
 
       <View style={styles.controls}>
         <HapticTouchableOpacity
