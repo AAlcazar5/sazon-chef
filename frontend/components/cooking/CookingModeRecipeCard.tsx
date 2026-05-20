@@ -129,6 +129,23 @@ export default function CookingModeRecipeCard({
   const surface = isDark ? PastelTokens.dark.peach : PastelTokens.light.peach;
   const images = (imageUrls ?? []).slice(0, 3);
 
+  // Founder bug 2026-05-20 (round 9): user wants BIGGER images + the
+  // ability to swipe between them. Carousel layout: each photo is the
+  // full card width, stack horizontally, paged-scroll, dots below.
+  // styles.card has marginHorizontal:16; styles.content padding:20.
+  // We negate the content padding for the carousel so photos go
+  // edge-to-edge of the card.
+  const screenWidth = Dimensions.get('window').width;
+  const CARD_HORIZONTAL_MARGIN = 16;
+  const CONTENT_PADDING = 20;
+  const carouselWidth = screenWidth - CARD_HORIZONTAL_MARGIN * 2; // full card width
+  const carouselHeight = 260; // bigger than the prior 200
+  const [activeImage, setActiveImage] = useState(0);
+  const onCarouselScroll = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / carouselWidth);
+    if (idx !== activeImage) setActiveImage(idx);
+  };
+
   // Founder bug 2026-05-20: AI-gen recipes had no photo. Backend's
   // generateFromDescription doesn't return imageUrl. When images are
   // missing, fall back to a cuisine-tinted gradient + emoji so the
@@ -170,22 +187,62 @@ export default function CookingModeRecipeCard({
         showsVerticalScrollIndicator={false}
       >
       {images.length > 0 ? (
-        // Founder bug 2026-05-20 (round 4): the image was rendering at
-        // 96px tall — postage-stamp-sized vs. the kitchen-mode reference
-        // (hero-sized, ~200px). Single image → hero treatment (full
-        // width, 200px, contentFit cover). Multiple images → collage
-        // row, each 200px tall and flex-1 wide.
-        <View style={images.length === 1 ? styles.heroWrap : styles.collage}>
-          {images.map((uri) => (
+        // Founder bug 2026-05-20 (round 9): bigger photos + swipeable.
+        // - 1 image: hero treatment (full card width, 260px tall).
+        // - 2-3 images: horizontal paged ScrollView at 260px tall, each
+        //   page = full card width. Negative margin against the content
+        //   padding so photos go edge-to-edge of the card.
+        // - Page dots below the carousel indicate which photo is active.
+        images.length === 1 ? (
+          <View style={styles.heroWrap}>
             <Image
-              key={uri}
-              source={{ uri }}
-              style={images.length === 1 ? styles.hero : styles.thumb}
+              source={{ uri: images[0] }}
+              style={[styles.hero, { height: carouselHeight }]}
               contentFit="cover"
               cachePolicy="memory-disk"
             />
-          ))}
-        </View>
+          </View>
+        ) : (
+          <View style={{ marginHorizontal: -CONTENT_PADDING, marginBottom: 8 }}>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={onCarouselScroll}
+              scrollEventThrottle={16}
+              nestedScrollEnabled
+              accessibilityLabel={`${title} photos — swipe to browse`}
+            >
+              {images.map((uri) => (
+                <Image
+                  key={uri}
+                  source={{ uri }}
+                  style={{ width: carouselWidth, height: carouselHeight }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              ))}
+            </ScrollView>
+            <View style={styles.dotRow}>
+              {images.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor:
+                        i === activeImage
+                          ? accent
+                          : isDark
+                          ? 'rgba(255,255,255,0.25)'
+                          : 'rgba(0,0,0,0.18)',
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        )
       ) : (
         <LinearGradient
           colors={[placeholderBg, placeholderBg + 'CC']}
@@ -343,10 +400,19 @@ export default function CookingModeRecipeCard({
 const styles = StyleSheet.create({
   card: { borderRadius: Radius.card, marginHorizontal: 16, marginVertical: 12 },
   content: { padding: 20, gap: 10 },
+  // Legacy collage/thumb kept for any caller still using them; the
+  // active path is the horizontal carousel above.
   collage: { flexDirection: 'row', gap: 8, marginBottom: 6 },
-  thumb: { flex: 1, height: 200, borderRadius: Radius.card },
+  thumb: { flex: 1, height: 260, borderRadius: Radius.card },
   heroWrap: { marginBottom: 6 },
-  hero: { width: '100%', height: 200, borderRadius: Radius.card },
+  hero: { width: '100%', height: 260, borderRadius: Radius.card },
+  dotRow: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  dot: { width: 6, height: 6, borderRadius: 3 },
   title: { ...Type.heading, color: '#1F2937' },
   dark: { color: '#F9FAFB' },
   desc: { ...Type.body, color: '#4B5563' },

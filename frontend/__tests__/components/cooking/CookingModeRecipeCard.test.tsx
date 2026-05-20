@@ -256,4 +256,34 @@ describe('<CookingModeRecipeCard />', () => {
       expect(queryByText('🍝')).toBeNull();
     });
   });
+
+  // Founder bug 2026-05-20 (round 9): bigger photos + horizontal
+  // carousel. Multi-image path renders a paged horizontal ScrollView
+  // with page-indicator dots; single-image path stays as hero.
+  describe('horizontal carousel (multi-image path)', () => {
+    it('renders a swipe-to-browse ScrollView when 2+ images provided', () => {
+      const { getByLabelText } = render(
+        <CookingModeRecipeCard
+          {...PROPS}
+          imageUrls={[
+            'https://example.com/a.jpg',
+            'https://example.com/b.jpg',
+            'https://example.com/c.jpg',
+          ]}
+        />,
+      );
+      // The carousel ScrollView is labelled for accessibility.
+      expect(getByLabelText(/photos — swipe to browse/i)).toBeTruthy();
+    });
+
+    it('single-image path stays hero (no carousel ScrollView)', () => {
+      const { queryByLabelText } = render(
+        <CookingModeRecipeCard
+          {...PROPS}
+          imageUrls={['https://example.com/a.jpg']}
+        />,
+      );
+      expect(queryByLabelText(/photos — swipe to browse/i)).toBeNull();
+    });
+  });
 });
