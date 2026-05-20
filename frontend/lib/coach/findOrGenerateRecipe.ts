@@ -16,6 +16,14 @@ import { recipeApi } from '../api/recipe';
 import type { ScalableIngredientLite } from '../cooking/rescaleStepText';
 
 export interface RecipeCardPayload {
+  /**
+   * Catalog id when the recipe came from the curated DB (Y-Live-7). Used
+   * by CookLaunchModal → /cooking?recipeId=… to launch the step player
+   * (Y-Live-1). AI-generated recipes have no id and only deliver the
+   * card + launch preview until the player learns to take a direct
+   * payload (future Y-Live-2).
+   */
+  recipeId?: string;
   title: string;
   description: string;
   baseServings: number;
@@ -84,6 +92,7 @@ interface CatalogInstruction {
 }
 
 interface CatalogRecipe {
+  id?: string;
   title?: string;
   description?: string;
   servings?: number;
@@ -139,6 +148,7 @@ function mapCatalogRecipe(r: CatalogRecipe): RecipeCardPayload | null {
     .map(mapStep)
     .filter((x): x is string => x !== null);
   return {
+    recipeId: r.id,
     title: r.title,
     description: r.description ?? '',
     baseServings: r.servings && r.servings > 0 ? r.servings : 4,

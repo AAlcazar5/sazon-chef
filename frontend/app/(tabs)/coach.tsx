@@ -44,6 +44,8 @@ import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill'
 import SazonHeader from '../../components/coach/SazonHeader';
 import SazonDailyGreetingBanner from '../../components/coach/SazonDailyGreetingBanner';
 import CookingModeRecipeCard from '../../components/cooking/CookingModeRecipeCard';
+import CookLaunchModal from '../../components/cooking/CookLaunchModal';
+import type { RecipeCardPayload } from '../../lib/coach/findOrGenerateRecipe';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
@@ -118,6 +120,9 @@ export default function CoachScreen({
   const [composerText, setComposerText] = useState('');
   const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [pantryConfirm, setPantryConfirm] = useState<CoachIdentifiedIngredient[] | null>(null);
+  // Y-Live-1: which recipe is being launched via CookLaunchModal. Set on
+  // "Get cooking" tap on the recipe card; cleared on close / Start cooking.
+  const [launchRecipe, setLaunchRecipe] = useState<RecipeCardPayload | null>(null);
   const [activeTitle, setActiveTitle] = useState<string>('Sazon');
   const [pendingSeed, setPendingSeed] = useState<string | null>(null);
   const [lastSentText, setLastSentText] = useState<string>('');
@@ -504,17 +509,20 @@ export default function CoachScreen({
             // Tier Y live-wiring — recipe asks render the rich card,
             // never paragraph prose.
             if (m.kind === 'recipe-card' && m.recipe) {
+              const recipe = m.recipe;
               return (
                 <CookingModeRecipeCard
                   key={m.id}
-                  title={m.recipe.title}
-                  description={m.recipe.description}
-                  imageUrls={m.recipe.imageUrls}
-                  baseServings={m.recipe.baseServings}
-                  ingredients={m.recipe.ingredients}
-                  steps={m.recipe.steps}
-                  macros={m.recipe.macros}
-                  notes={m.recipe.notes}
+                  title={recipe.title}
+                  description={recipe.description}
+                  imageUrls={recipe.imageUrls}
+                  baseServings={recipe.baseServings}
+                  ingredients={recipe.ingredients}
+                  steps={recipe.steps}
+                  macros={recipe.macros}
+                  notes={recipe.notes}
+                  // Y-Live-1: "Get cooking" → launch/preview modal → player.
+                  onGetCooking={() => setLaunchRecipe(recipe)}
                 />
               );
             }
@@ -649,6 +657,28 @@ export default function CoachScreen({
           visible={pantryConfirm !== null}
           ingredients={pantryConfirm ?? []}
           onClose={() => setPantryConfirm(null)}
+        />
+
+        {/* Y-Live-1: launch/preview modal between the recipe card and
+            the step player. AI-generated recipes have no recipeId yet
+            (player route needs an id), so Start cooking only navigates
+            when the catalog id is present; otherwise it dismisses (the
+            user still saw the launch preview). Full player-by-payload
+            handoff is Y-Live-2. */}
+        <CookLaunchModal
+          visible={launchRecipe !== null}
+          title={launchRecipe?.title ?? ''}
+          description={launchRecipe?.description ?? ''}
+          imageUrls={launchRecipe?.imageUrls}
+          stepCount={launchRecipe?.steps.length ?? 0}
+          onClose={() => setLaunchRecipe(null)}
+          onStartCooking={() => {
+            const id = launchRecipe?.recipeId;
+            setLaunchRecipe(null);
+            if (id) {
+              router.push(`/cooking?recipeId=${encodeURIComponent(id)}` as never);
+            }
+          }}
         />
       </KeyboardAvoidingView>
     );
