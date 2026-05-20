@@ -27,6 +27,13 @@ export interface RankerSignals {
    *  signal than adjacency (explicit user action vs server inference).
    *  Optional + defaults to [] for backward compat with existing tests. */
   savedCollectionCuisines?: string[];
+  /** User's onboarding-set cooking skill tier (useSkillTier). When set,
+   *  recipes whose difficulty is at-or-below the user's tier get a small
+   *  bonus — a beginner asking "Grilled chicken" should land on Simple
+   *  Grilled Chicken (easy) over Grilled Chicken Tandoori (hard) when
+   *  Dice is tied. No penalty for over-skill recipes (joy obsession >
+   *  gating — chef can still see easy recipes if they ask for them). */
+  userSkillTier?: 'beginner' | 'cook' | 'chef' | null;
 }
 
 export interface RankedCandidate {
@@ -34,17 +41,26 @@ export interface RankedCandidate {
   diceScore: number;
   pantryOverlap: number;
   cuisineBonus: number;
+  /** 1 when the recipe's difficulty is at-or-below the user's skill tier
+   *  (including unknown-difficulty as a neutral "treat as easy"); 0 when
+   *  the recipe is harder than the tier. Always 0 when no userSkillTier
+   *  signal is available. */
+  skillFit: number;
   totalScore: number;
   /** One-liner shown under the title. Names the dominant signal that
    *  picked this recipe. Undefined when there's nothing to explain
-   *  (cold-start: no pantry + no cuisine match). */
+   *  (cold-start: no pantry + no cuisine + no informative skill match). */
   rationale?: string;
 }
 
-// Weights sum to 1.0; tunable as the corpus + N=1 signals mature.
+// Weights tune the relative contribution of each signal. W_DICE + W_PANTRY +
+// W_CUISINE + W_SKILL sum to 1.05 (skill is a small additive nudge — it
+// only matters when stronger signals tie, e.g., two equally-relevant
+// candidates differ only in difficulty).
 const W_DICE = 0.6;
 const W_PANTRY = 0.3;
 const W_CUISINE = 0.1;
+const W_SKILL = 0.05;
 
 function pantryOverlapScore(
   recipeIngredients: RecipeCardPayload['ingredients'],
@@ -119,9 +135,50 @@ function resolveCuisineHit(
   return best;
 }
 
+/** Difficulty rank — lower = easier; matches the natural ordering used
+ *  by both the catalog `difficulty` column and AI-gen output. */
+const DIFFICULTY_RANK: Record<'easy' | 'medium' | 'hard', number> = {
+  easy: 0,
+  medium: 1,
+  hard: 2,
+};
+const TIER_MAX_RANK: Record<'beginner' | 'cook' | 'chef', number> = {
+  beginner: 0, // easy only
+  cook: 1, // easy or medium
+  chef: 2, // any
+};
+
+/** Returns 1 when the recipe's difficulty is at-or-below the user's
+ *  skill tier (or no signal available — treated as neutral "fits"). 0
+ *  only when the recipe is strictly harder than the tier allows. */
+function skillFitScore(
+  difficulty: 'easy' | 'medium' | 'hard' | undefined,
+  tier: 'beginner' | 'cook' | 'chef' | null | undefined,
+): number {
+  if (!tier) return 0; // no signal → no bonus, no penalty
+  if (!difficulty) return 1; // unknown-difficulty → treat as fits
+  return DIFFICULTY_RANK[difficulty] <= TIER_MAX_RANK[tier] ? 1 : 0;
+}
+
+/** True only when the skill-fit hit is *informative* — naming it in the
+ *  rationale should reflect a real "matched to your kitchen" pick, not
+ *  the trivial case (chef can do anything). */
+function skillRationaleFor(
+  difficulty: 'easy' | 'medium' | 'hard' | undefined,
+  tier: 'beginner' | 'cook' | 'chef' | null | undefined,
+): string | undefined {
+  if (!tier || tier === 'chef') return undefined; // chef matches all → uninformative
+  if (!difficulty) return undefined;
+  if (DIFFICULTY_RANK[difficulty] > TIER_MAX_RANK[tier]) return undefined;
+  return tier === 'beginner'
+    ? 'Beginner-friendly — gentle for your kitchen.'
+    : 'Comfortable for your kitchen.';
+}
+
 function buildRationale(
   matchedPantry: string[],
   cuisineHit: CuisineHit | null,
+  skillRationale: string | undefined,
 ): string | undefined {
   if (matchedPantry.length > 0) {
     const names = matchedPantry.slice(0, 2).join(' + ');
@@ -139,7 +196,9 @@ function buildRationale(
         return `Picked because ${cuisineHit.cuisine} is on your radar.`;
     }
   }
-  return undefined;
+  // Skill is the lowest-priority rationale — only fires when there's
+  // nothing more interesting to say.
+  return skillRationale;
 }
 
 export function rankRecipeAskCandidates(
@@ -159,15 +218,25 @@ export function rankRecipeAskCandidates(
     const cuisineHit = resolveCuisineHit(recipe.cuisine, signals);
     const cuisineBonus = cuisineHit ? cuisineHit.weight : 0;
 
+    const skillFit = skillFitScore(recipe.difficulty, signals.userSkillTier);
+    const skillRationale = skillRationaleFor(
+      recipe.difficulty,
+      signals.userSkillTier,
+    );
+
     const totalScore =
-      W_DICE * diceScore + W_PANTRY * pantryOverlap + W_CUISINE * cuisineBonus;
-    const rationale = buildRationale(matchedPantry, cuisineHit);
+      W_DICE * diceScore +
+      W_PANTRY * pantryOverlap +
+      W_CUISINE * cuisineBonus +
+      W_SKILL * skillFit;
+    const rationale = buildRationale(matchedPantry, cuisineHit, skillRationale);
 
     return {
       recipe,
       diceScore,
       pantryOverlap,
       cuisineBonus,
+      skillFit,
       totalScore,
       rationale,
       _idx: idx,

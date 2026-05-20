@@ -49,6 +49,7 @@ import type { RecipeCardPayload } from '../../lib/coach/findOrGenerateRecipe';
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
 import { useSavedRecipeCuisines } from '../../hooks/useSavedRecipeCuisines';
+import useSkillTier from '../../hooks/useSkillTier';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
 import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
 import { useCoachQuickChipContext } from '../../hooks/useCoachQuickChipContext';
@@ -137,23 +138,30 @@ export default function CoachScreen({
   // are the strongest cuisine signal; surfaced into the wedge so
   // ambiguous asks resolve toward the user's own corpus.
   const { cuisines: savedCollectionCuisines } = useSavedRecipeCuisines();
+  // Founder Telegram 2026-05-20 PR-2 — skill-tier signal. Onboarding-set
+  // tier ('beginner' | 'cook' | 'chef') nudges in-skill candidates over
+  // too-hard ones on tied Dice. Bonus-only — no penalty for harder
+  // recipes (the user can still explicitly ask for "Tandoori chicken").
+  const { tier: userSkillTier } = useSkillTier();
   // Founder ask 2026-05-19 — surface N=1 signals to the wedge so
   // ambiguous asks ("grilled chicken") pick ONE recipe ranked by pantry
-  // overlap + recent cuisine + saved-cuisine + adjacency. Assembling
-  // here keeps the wedge testable in isolation (no React-Query plumbing
-  // in useCoachStream).
+  // overlap + recent cuisine + saved-cuisine + adjacency + skill tier.
+  // Assembling here keeps the wedge testable in isolation (no
+  // React-Query plumbing in useCoachStream).
   const rankerSignals = useMemo(
     () => ({
       pantryNames: chipContext.pantryExpiringSoon,
       lastCookCuisine: lastCookCuisine || null,
       topAdjacentCuisine: chipContext.topAdjacentCuisine,
       savedCollectionCuisines,
+      userSkillTier,
     }),
     [
       chipContext.pantryExpiringSoon,
       chipContext.topAdjacentCuisine,
       lastCookCuisine,
       savedCollectionCuisines,
+      userSkillTier,
     ],
   );
   const stream = useCoachStream({ rankerSignals });

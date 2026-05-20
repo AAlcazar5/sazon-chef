@@ -232,6 +232,123 @@ describe('rankRecipeAskCandidates — savedCollectionCuisines signal', () => {
   });
 });
 
+// Founder Telegram 2026-05-20 PR-2: skill-tier match nudges in-skill
+// candidates over too-hard ones. Bonus-only (never penalty) — joy
+// obsession > gating; the user can still see harder recipes if they
+// ask explicitly. Skill is the lowest-priority rationale (only fires
+// when pantry + cuisine signals are silent AND naming it is informative
+// — chef-tier matches everything so the rationale stays mute).
+describe('rankRecipeAskCandidates — userSkillTier signal', () => {
+  it('beginner prefers easy over hard on tied Dice', () => {
+    const easy = rec('Grilled Chicken Plain', { difficulty: 'easy' });
+    const hard = rec('Grilled Chicken Plain', { difficulty: 'hard' });
+    // Identical titles → identical Dice. Skill-fit breaks the tie.
+    const out = rankRecipeAskCandidates(
+      'grilled chicken',
+      [hard, easy],
+      { ...EMPTY_SIGNALS, userSkillTier: 'beginner' },
+    );
+    expect(out[0].recipe.difficulty).toBe('easy');
+    expect(out[0].skillFit).toBe(1);
+    expect(out[1].skillFit).toBe(0);
+  });
+
+  it('cook tier matches easy and medium', () => {
+    const e = rec('A', { difficulty: 'easy' });
+    const m = rec('B', { difficulty: 'medium' });
+    const h = rec('C', { difficulty: 'hard' });
+    const out = rankRecipeAskCandidates('grilled chicken', [e, m, h], {
+      ...EMPTY_SIGNALS,
+      userSkillTier: 'cook',
+    });
+    const fitByTitle = Object.fromEntries(
+      out.map((o) => [o.recipe.title, o.skillFit]),
+    );
+    expect(fitByTitle.A).toBe(1);
+    expect(fitByTitle.B).toBe(1);
+    expect(fitByTitle.C).toBe(0);
+  });
+
+  it('chef tier matches every difficulty', () => {
+    const e = rec('A', { difficulty: 'easy' });
+    const h = rec('C', { difficulty: 'hard' });
+    const out = rankRecipeAskCandidates('grilled chicken', [e, h], {
+      ...EMPTY_SIGNALS,
+      userSkillTier: 'chef',
+    });
+    expect(out.every((o) => o.skillFit === 1)).toBe(true);
+  });
+
+  it('unknown-difficulty is neutral (treated as a fit, never penalized)', () => {
+    const known = rec('A', { difficulty: 'hard' });
+    const unknown = rec('B');
+    const out = rankRecipeAskCandidates('grilled chicken', [known, unknown], {
+      ...EMPTY_SIGNALS,
+      userSkillTier: 'beginner',
+    });
+    // Unknown fits; known-hard does not.
+    const fitByTitle = Object.fromEntries(
+      out.map((o) => [o.recipe.title, o.skillFit]),
+    );
+    expect(fitByTitle.A).toBe(0);
+    expect(fitByTitle.B).toBe(1);
+  });
+
+  it('no userSkillTier signal → skillFit is 0 for everyone (neutral)', () => {
+    const e = rec('A', { difficulty: 'easy' });
+    const h = rec('B', { difficulty: 'hard' });
+    const out = rankRecipeAskCandidates('grilled chicken', [e, h], EMPTY_SIGNALS);
+    expect(out.every((o) => o.skillFit === 0)).toBe(true);
+  });
+
+  it('beginner rationale fires when no stronger signal speaks', () => {
+    const easy = rec('Grilled Chicken Plain', { difficulty: 'easy' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [easy], {
+      ...EMPTY_SIGNALS,
+      userSkillTier: 'beginner',
+    });
+    expect(top.rationale).toMatch(/beginner-friendly/i);
+  });
+
+  it('chef-tier match never produces a rationale (uninformative — chef fits everything)', () => {
+    const hard = rec('Grilled Chicken Plain', { difficulty: 'hard' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [hard], {
+      ...EMPTY_SIGNALS,
+      userSkillTier: 'chef',
+    });
+    expect(top.rationale).toBeUndefined();
+  });
+
+  it('skill rationale is suppressed when a cuisine signal already explains the pick', () => {
+    const easy = rec('Grilled Chicken Italian', {
+      difficulty: 'easy',
+      cuisine: 'Italian',
+    });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [easy], {
+      ...EMPTY_SIGNALS,
+      userSkillTier: 'beginner',
+      lastCookCuisine: 'Italian',
+    });
+    expect(top.rationale).toMatch(/italian/i);
+    expect(top.rationale).not.toMatch(/beginner-friendly/i);
+  });
+
+  it('skill match cannot overwhelm a Dice gap (small bonus only)', () => {
+    // Tandoori title is longer (less Dice) and easy; Plain is shorter
+    // (higher Dice) and hard. Dice gap > skill bonus → Plain wins.
+    const easyButLessRelevant = rec('Grilled Chicken Tandoori Style', {
+      difficulty: 'easy',
+    });
+    const hardButMoreRelevant = rec('Grilled Chicken', { difficulty: 'hard' });
+    const out = rankRecipeAskCandidates(
+      'grilled chicken',
+      [easyButLessRelevant, hardButMoreRelevant],
+      { ...EMPTY_SIGNALS, userSkillTier: 'beginner' },
+    );
+    expect(out[0].recipe.title).toBe('Grilled Chicken');
+  });
+});
+
 describe('rankRecipeAskCandidates — determinism (same inputs → same order)', () => {
   it('returns identical ranking for identical signals', () => {
     const candidates = [
