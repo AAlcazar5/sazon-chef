@@ -21,6 +21,7 @@ import {
   ActionSheetIOS,
   Alert,
   Linking,
+  Dimensions,
 } from 'react-native';
 // Founder bug 2026-05-20 (round 6): iOS scroll on the recipe card was
 // being intercepted by this screen's outer ScrollView. RN's native
@@ -50,7 +51,6 @@ import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill'
 import SazonHeader from '../../components/coach/SazonHeader';
 import SazonDailyGreetingBanner from '../../components/coach/SazonDailyGreetingBanner';
 import CookingModeRecipeCard from '../../components/cooking/CookingModeRecipeCard';
-import RecipeAlternatesPeek from '../../components/cooking/RecipeAlternatesPeek';
 import CookLaunchModal from '../../components/cooking/CookLaunchModal';
 import type { RecipeCardPayload } from '../../lib/coach/findOrGenerateRecipe';
 import { setAdhocRecipe, makeAdhocRecipeId } from '../../lib/coach/adhocRecipeStash';
@@ -110,6 +110,10 @@ export default function CoachScreen({
 }: CoachScreenProps = {}) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  // Founder ask 2026-05-20 round 11: recipe cards in the horizontal
+  // carousel use 2/3 of viewport WIDTH so the next card peeks from
+  // the right edge.
+  const viewportWidth = Dimensions.get('window').width;
   const { subscription } = useSubscription();
   const chipContext = useCoachQuickChipContext();
   const routeParams = useLocalSearchParams<{ conversationId?: string; seedMessage?: string }>();
@@ -562,17 +566,24 @@ export default function CoachScreen({
               const pool = m.recipePool ?? [];
               const poolSize = pool.length;
               const currentIndex = m.recipeIndex ?? 0;
-              // Founder ask 2026-05-20 round 10: alternates peek in the
-              // 1/3 of viewport below the 2/3-height main card. Shows
-              // the OTHER recipes in the pool with thumb + title + tap
-              // to swap. Visible scroll affordance + N=1 transparency.
-              const peekAlternates = pool
-                .map((r, i) => ({ recipe: r, originalIndex: i }))
-                .filter((x) => x.originalIndex !== currentIndex)
-                .slice(0, 3);
-              return (
-                <React.Fragment key={m.id}>
+              // Founder ask 2026-05-20 round 11: card occupies 2/3 of
+              // viewport WIDTH (not height). When the wedge produces
+              // alternates, render each as its own card laid out
+              // horizontally — the next card peeks from the right edge
+              // (the remaining 1/3 of viewport width), giving the user
+              // a visible "swipe for more" affordance.
+              const cardWidth = Math.round(viewportWidth * 0.66);
+              // Render the current pick first, then the other pool
+              // entries (preserves the ranker's order). With one entry,
+              // no carousel layout — single card centers.
+              const orderedPool: RecipeCardPayload[] =
+                pool.length > 0
+                  ? [pool[currentIndex], ...pool.filter((_, i) => i !== currentIndex)]
+                  : [recipe];
+              if (orderedPool.length === 1) {
+                return (
                   <CookingModeRecipeCard
+                    key={m.id}
                     title={recipe.title}
                     description={recipe.description}
                     imageUrls={recipe.imageUrls}
@@ -582,25 +593,43 @@ export default function CoachScreen({
                     steps={recipe.steps}
                     macros={recipe.macros}
                     notes={recipe.notes}
-                    // Y-Live-1: "Get cooking" → launch/preview modal → player.
                     onGetCooking={() => setLaunchRecipe(recipe)}
-                    // N=1 ranker (founder 2026-05-19) — visible reasoning +
-                    // "Show me another" cycle through ranked alternates.
                     rationale={m.recipeRationale}
-                    onSwap={poolSize > 1 ? () => stream.swapToNextAlternate(m.id) : undefined}
-                    swapPoolSize={poolSize}
-                    swapIndex={currentIndex}
                   />
-                  {peekAlternates.length > 0 ? (
-                    <RecipeAlternatesPeek
-                      alternates={peekAlternates.map((x) => x.recipe)}
-                      onPickAlternate={(peekIndex) => {
-                        const originalIndex = peekAlternates[peekIndex].originalIndex;
-                        stream.setRecipeIndex(m.id, originalIndex);
-                      }}
-                    />
-                  ) : null}
-                </React.Fragment>
+                );
+              }
+              return (
+                <ScrollView
+                  key={m.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.cardCarousel}
+                  accessibilityLabel="Recipe options — swipe to browse"
+                >
+                  {orderedPool.map((r, i) => {
+                    // First card in orderedPool is the current primary.
+                    // Find this recipe's original index in the pool so
+                    // tapping/swapping works correctly.
+                    const originalIndex = pool.indexOf(r);
+                    return (
+                      <CookingModeRecipeCard
+                        key={`${m.id}-${originalIndex}`}
+                        title={r.title}
+                        description={r.description}
+                        imageUrls={r.imageUrls}
+                        cuisine={r.cuisine}
+                        baseServings={r.baseServings}
+                        ingredients={r.ingredients}
+                        steps={r.steps}
+                        macros={r.macros}
+                        notes={r.notes}
+                        onGetCooking={() => setLaunchRecipe(r)}
+                        rationale={i === 0 ? m.recipeRationale : undefined}
+                        widthOverride={cardWidth}
+                      />
+                    );
+                  })}
+                </ScrollView>
               );
             }
             // Card-shaped retry — recipe asks must never become paragraphs
@@ -927,6 +956,14 @@ const styles = StyleSheet.create({
   bubbles: {
     paddingVertical: 12,
     paddingBottom: 24,
+  },
+  // Founder ask 2026-05-20 round 11: horizontal card carousel — left
+  // padding gives breathing room from the screen edge, gap between
+  // cards comes from each card's own marginVertical / wrapper spacing.
+  cardCarousel: {
+    paddingLeft: 16,
+    paddingRight: 16,
+    gap: 12,
   },
   intro: {
     paddingHorizontal: 16,
