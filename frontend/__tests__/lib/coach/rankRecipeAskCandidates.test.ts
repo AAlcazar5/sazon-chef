@@ -146,6 +146,92 @@ describe('rankRecipeAskCandidates — cuisine bonus', () => {
   });
 });
 
+// Founder Telegram 2026-05-20: deepen N=1 ranker with explicit-save
+// signal. Saves are the strongest cuisine signal (intentional user
+// action) — top-saved cuisine beats adjacency; non-top saved still
+// outranks adjacency.
+describe('rankRecipeAskCandidates — savedCollectionCuisines signal', () => {
+  it('boosts the candidate matching the user\'s top-saved cuisine', () => {
+    const a = rec('Grilled Chicken Italian', { cuisine: 'Italian' });
+    const b = rec('Grilled Chicken Japanese', { cuisine: 'Japanese' });
+    const out = rankRecipeAskCandidates('grilled chicken', [a, b], {
+      ...EMPTY_SIGNALS,
+      savedCollectionCuisines: ['Japanese', 'Italian'],
+    });
+    expect(out[0].recipe.title).toBe('Grilled Chicken Japanese');
+    expect(out[0].cuisineBonus).toBeGreaterThan(out[1].cuisineBonus);
+  });
+
+  it('top-saved cuisine outranks adjacency on the same candidate', () => {
+    // Cuisines chosen with identical letter-count so Dice scores tie
+    // (both titles same length): the cuisine bonus is what breaks the
+    // tie. Italian = top-saved (0.8) > Mexican = adjacent (0.5).
+    const italian = rec('Grilled Chicken Italian', { cuisine: 'Italian' });
+    const mexican = rec('Grilled Chicken Mexican', { cuisine: 'Mexican' });
+    const out = rankRecipeAskCandidates('grilled chicken', [mexican, italian], {
+      ...EMPTY_SIGNALS,
+      savedCollectionCuisines: ['Italian'],
+      topAdjacentCuisine: 'Mexican',
+    });
+    expect(out[0].recipe.title).toBe('Grilled Chicken Italian');
+  });
+
+  it('non-top saved cuisine still beats adjacency', () => {
+    // Persian = saved[2] (weight 0.6); Spanish = adjacent (weight 0.5).
+    // Same-length cuisines → Dice ties, cuisine bonus decides.
+    const persian = rec('Grilled Chicken Persian', { cuisine: 'Persian' });
+    const spanish = rec('Grilled Chicken Spanish', { cuisine: 'Spanish' });
+    const out = rankRecipeAskCandidates('grilled chicken', [spanish, persian], {
+      ...EMPTY_SIGNALS,
+      savedCollectionCuisines: ['Italian', 'Mexican', 'Persian'],
+      topAdjacentCuisine: 'Spanish',
+    });
+    expect(out[0].recipe.title).toBe('Grilled Chicken Persian');
+  });
+
+  it('last-cook cuisine still wins over top-saved (recency beats frequency)', () => {
+    const italian = rec('Grilled Chicken Italian', { cuisine: 'Italian' });
+    const thai = rec('Grilled Chicken Thai', { cuisine: 'Thai' });
+    // Thai = last (weight 1.0); Italian = top-saved (weight 0.8).
+    const out = rankRecipeAskCandidates('grilled chicken', [italian, thai], {
+      ...EMPTY_SIGNALS,
+      lastCookCuisine: 'Thai',
+      savedCollectionCuisines: ['Italian'],
+    });
+    expect(out[0].recipe.title).toBe('Grilled Chicken Thai');
+  });
+
+  it('rationale names the saved cuisine when saved-top dominates', () => {
+    const a = rec('Grilled Chicken Italian', { cuisine: 'Italian' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      savedCollectionCuisines: ['Italian'],
+    });
+    expect(top.rationale).toMatch(/save a lot of italian/i);
+  });
+
+  it('rationale differs for top-saved vs non-top-saved', () => {
+    const a = rec('Grilled Chicken Persian', { cuisine: 'Persian' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      savedCollectionCuisines: ['Italian', 'Japanese', 'Persian'],
+    });
+    expect(top.rationale).toMatch(/saved persian recipes before/i);
+    expect(top.rationale).not.toMatch(/save a lot of/i);
+  });
+
+  it('empty savedCollectionCuisines is harmless (no bonus, no rationale change)', () => {
+    const a = rec('Grilled Chicken', { cuisine: 'Italian' });
+    const out1 = rankRecipeAskCandidates('grilled chicken', [a], EMPTY_SIGNALS);
+    const out2 = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      savedCollectionCuisines: [],
+    });
+    expect(out1[0].cuisineBonus).toBe(out2[0].cuisineBonus);
+    expect(out1[0].rationale).toBe(out2[0].rationale);
+  });
+});
+
 describe('rankRecipeAskCandidates — determinism (same inputs → same order)', () => {
   it('returns identical ranking for identical signals', () => {
     const candidates = [
