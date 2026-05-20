@@ -123,7 +123,18 @@ export default function CoachPaywallSheet({
           accessibilityRole="button"
           style={styles.maybeLater}
         >
-          <Text style={[styles.maybeLaterText, { color: subtle }]}>Maybe later</Text>
+          {/* Founder ask 2026-05-20 round 16: use the primary text
+              color + underline so the dismiss link reads as a real
+              tappable target. The previous "subtle" gray was washing
+              out against the chat composer peeking from behind. */}
+          <Text
+            style={[
+              styles.maybeLaterText,
+              { color: isDark ? '#FFFFFF' : '#1F2937' },
+            ]}
+          >
+            Maybe later
+          </Text>
         </HapticTouchableOpacity>
       </View>
     </Modal>
@@ -133,7 +144,10 @@ export default function CoachPaywallSheet({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    // Founder ask 2026-05-20 round 16: darker backdrop so the
+    // chat composer behind the sheet doesn't bleed through and
+    // compete with the dismiss link's visibility.
+    backgroundColor: 'rgba(0,0,0,0.65)',
   },
   sheet: {
     position: 'absolute',
@@ -198,5 +212,6 @@ const styles = StyleSheet.create({
   maybeLaterText: {
     fontFamily: Platform.select({ ios: 'PlusJakartaSans_600SemiBold', default: 'PlusJakartaSans_600SemiBold' }),
     fontSize: 14,
+    textDecorationLine: 'underline',
   },
 });
