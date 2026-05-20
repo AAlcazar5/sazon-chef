@@ -22,6 +22,9 @@ import StepWithTimers from '../components/cooking/StepWithTimers';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
 import { useTheme } from '../contexts/ThemeContext';
 import { Radius, Type } from '../constants/tokens';
+import { useVoiceInput } from '../hooks/useVoiceInput';
+import { useVoicePlayback } from '../hooks/useVoicePlayback';
+import { handleVoiceCookCommand } from '../lib/coach/handleVoiceCookCommand';
 
 interface PlayerRecipe {
   title: string;
@@ -144,6 +147,30 @@ export default function CookStepScreen() {
   };
   const onPrev = currentStep > 0 ? () => setCurrentStep((c) => c - 1) : undefined;
 
+  // Y-Live-5 — voice hands-free nav. resolveVoiceCookCommand (W-C1) is
+  // pure; handleVoiceCookCommand routes 'next'/'back'/'repeat' to the
+  // player's handlers. Scale/freeform are no-ops here (no ingredient
+  // context, no LLM channel — those live on the card / chat).
+  const { speak } = useVoicePlayback();
+  const voice = useVoiceInput({
+    continuous: false,
+    onIntent: (parsed) => {
+      handleVoiceCookCommand(parsed.rawText, {
+        onNext,
+        onPrev,
+        speak,
+        currentStepText: stepText,
+      });
+    },
+  });
+  const onVoicePress = () => {
+    if (voice.isListening) {
+      voice.stopListening();
+    } else {
+      void voice.startListening();
+    }
+  };
+
   return (
     <View style={[styles.screen, isDark ? styles.bgDark : styles.bgLight]}>
       <View style={styles.header}>
@@ -181,9 +208,8 @@ export default function CookStepScreen() {
           text={stepText}
           recipeTitle={recipe.title}
           complete={complete}
-          // Y-Live-5 will wire useVoiceInput / useVoicePlayback in.
-          isListening={false}
-          onVoicePress={() => undefined}
+          isListening={voice.isListening}
+          onVoicePress={onVoicePress}
           onNext={onNext}
           onPrev={onPrev}
           // Y-Live-3 — durations in step prose become tappable inline
