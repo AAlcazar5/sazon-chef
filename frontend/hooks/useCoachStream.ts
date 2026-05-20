@@ -108,6 +108,10 @@ export interface UseCoachStreamResult {
    *  alternate (founder ask 2026-05-19 — "Show me another →"). No-op
    *  when alternates is empty (AI-gen-only result). */
   swapToNextAlternate: (messageId: string) => void;
+  /** Jump directly to a specific recipe in the pool by 0-based index.
+   *  Used by the alternates-peek tap targets (founder ask 2026-05-20
+   *  round 10). No-op for invalid indices or non-card messages. */
+  setRecipeIndex: (messageId: string, index: number) => void;
   setConversationId: (id: string | null) => void;
   setMessages: (messages: CoachUiMessage[]) => void;
   reset: () => void;
@@ -206,6 +210,18 @@ export function useCoachStream(initial?: UseCoachStreamOptions): UseCoachStreamR
         if (pool.length <= 1) return m;
         const nextIndex = ((m.recipeIndex ?? 0) + 1) % pool.length;
         return { ...m, recipe: pool[nextIndex], recipeIndex: nextIndex };
+      }),
+    );
+  }, []);
+
+  const setRecipeIndex = useCallback((messageId: string, index: number) => {
+    setMessages(prev =>
+      prev.map(m => {
+        if (m.id !== messageId || m.kind !== 'recipe-card') return m;
+        const pool = m.recipePool ?? [];
+        if (index < 0 || index >= pool.length) return m;
+        if (index === m.recipeIndex) return m;
+        return { ...m, recipe: pool[index], recipeIndex: index };
       }),
     );
   }, []);
@@ -379,6 +395,7 @@ export function useCoachStream(initial?: UseCoachStreamOptions): UseCoachStreamR
     medicalDeflection,
     sendMessage,
     swapToNextAlternate,
+    setRecipeIndex,
     setConversationId,
     setMessages,
     reset,
