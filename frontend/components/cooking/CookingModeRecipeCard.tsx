@@ -162,7 +162,12 @@ export default function CookingModeRecipeCard({
         accessibilityLabel={`${title} recipe`}
         contentContainerStyle={styles.content}
         nestedScrollEnabled
-        showsVerticalScrollIndicator
+        // Founder bug 2026-05-20 (round 7): the inner scroll indicator
+        // and the outer ScrollView's indicator both rendered on the
+        // same right edge — visual double-track. The card still
+        // scrolls (gesture-handler doesn't need the indicator to
+        // function), the indicator is just no longer drawn.
+        showsVerticalScrollIndicator={false}
       >
       {images.length > 0 ? (
         // Founder bug 2026-05-20 (round 4): the image was rendering at
