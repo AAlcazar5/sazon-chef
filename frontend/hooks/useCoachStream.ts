@@ -16,6 +16,7 @@ import {
   findOrGenerateRecipe,
   type RecipeCardPayload,
 } from '../lib/coach/findOrGenerateRecipe';
+import type { RankerSignals } from '../lib/coach/rankRecipeAskCandidates';
 
 export type CoachPaywallReason =
   | 'cap'
@@ -71,7 +72,18 @@ export interface CoachUiMessage {
    *  card-shaped retry state when BOTH catalog and AI gen fail; never an
    *  LLM-paragraph pivot. */
   kind?: 'recipe-card' | 'recipe-error';
+  /** Currently-displayed recipe (= alternates[recipeIndex] when alternates
+   *  is non-empty). Founder ask 2026-05-19: ambiguous asks pick ONE recipe
+   *  using N=1 signals; the swap chip cycles through alternates. */
   recipe?: RecipeCardPayload;
+  /** Immutable full ranked pool — primary at index 0, alternates after.
+   *  `recipe` is always `recipePool[recipeIndex]`. Length-1 pool means
+   *  the swap chip is disabled (AI-gen-only result). */
+  recipePool?: RecipeCardPayload[];
+  recipeIndex?: number;
+  /** One-liner under the title — "Picked because you've got onion + garlic
+   *  on hand." Surfaces N=1 reasoning so the personalization is visible. */
+  recipeRationale?: string;
   /** Original query, kept on recipe-error messages so the renderer can
    *  show "Couldn't pull up *{query}*" + retry CTA. */
   query?: string;
@@ -92,6 +104,10 @@ export interface UseCoachStreamResult {
   costNotice: string | null;
   medicalDeflection: CoachMedicalDeflectionState | null;
   sendMessage: (text: string, attachments?: CoachAttachment[]) => Promise<void>;
+  /** Cycle the visible recipe for a `recipe-card` message to the next
+   *  alternate (founder ask 2026-05-19 — "Show me another →"). No-op
+   *  when alternates is empty (AI-gen-only result). */
+  swapToNextAlternate: (messageId: string) => void;
   setConversationId: (id: string | null) => void;
   setMessages: (messages: CoachUiMessage[]) => void;
   reset: () => void;
@@ -113,7 +129,17 @@ function hydrateToolUses(raw: CoachMessage): CoachToolUse[] | undefined {
   }
 }
 
-export function useCoachStream(initial?: { conversationId?: string; messages?: CoachMessage[] }): UseCoachStreamResult {
+export interface UseCoachStreamOptions {
+  conversationId?: string;
+  messages?: CoachMessage[];
+  /** N=1 ranker signals passed into the recipe-ask wedge. Sourced by
+   *  coach.tsx from useCoachQuickChipContext + useLastCookCuisine. The
+   *  hook treats them as inert read-only inputs so the wedge stays
+   *  testable without React-Query mocking. */
+  rankerSignals?: RankerSignals;
+}
+
+export function useCoachStream(initial?: UseCoachStreamOptions): UseCoachStreamResult {
   const [messages, setMessages] = useState<CoachUiMessage[]>(
     (initial?.messages ?? []).map(m => ({
       id: m.id,
@@ -130,6 +156,10 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
   const [costNotice, setCostNotice] = useState<string | null>(null);
   const [medicalDeflection, setMedicalDeflection] = useState<CoachMedicalDeflectionState | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(initial?.conversationId ?? null);
+  // Keep the latest signals in a ref so sendMessage stays stable but
+  // always reads fresh N=1 state (pantry/cuisine changes between asks).
+  const signalsRef = useRef<RankerSignals | undefined>(initial?.rankerSignals);
+  signalsRef.current = initial?.rankerSignals;
   const abortRef = useRef<AbortController | null>(null);
   // Phase 7: only auto-surface the Pro paywall sheet ONCE per conversation
   // when a write-tool tool_result returns PRO_FEATURE. The assistant text
@@ -168,6 +198,18 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     setMedicalDeflection(null);
   }, []);
 
+  const swapToNextAlternate = useCallback((messageId: string) => {
+    setMessages(prev =>
+      prev.map(m => {
+        if (m.id !== messageId || m.kind !== 'recipe-card') return m;
+        const pool = m.recipePool ?? [];
+        if (pool.length <= 1) return m;
+        const nextIndex = ((m.recipeIndex ?? 0) + 1) % pool.length;
+        return { ...m, recipe: pool[nextIndex], recipeIndex: nextIndex };
+      }),
+    );
+  }, []);
+
   const sendMessage = useCallback(async (text: string, attachments?: CoachAttachment[]) => {
     const trimmed = text.trim();
     if (!trimmed || isStreaming) return;
@@ -194,11 +236,20 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     const ask = detectRecipeAsk(trimmed);
     if (ask) {
       try {
-        const recipe = await findOrGenerateRecipe(ask.query);
+        const result = await findOrGenerateRecipe(ask.query, signalsRef.current);
+        const pool = [result.primary, ...result.alternates];
         setMessages(prev =>
           prev.map(m =>
             m.id === assistantId
-              ? { ...m, kind: 'recipe-card', recipe, content: '' }
+              ? {
+                  ...m,
+                  kind: 'recipe-card',
+                  recipe: result.primary,
+                  recipePool: pool,
+                  recipeIndex: 0,
+                  recipeRationale: result.rationale,
+                  content: '',
+                }
               : m,
           ),
         );
@@ -327,6 +378,7 @@ export function useCoachStream(initial?: { conversationId?: string; messages?: C
     costNotice,
     medicalDeflection,
     sendMessage,
+    swapToNextAlternate,
     setConversationId,
     setMessages,
     reset,

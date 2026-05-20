@@ -54,6 +54,18 @@ interface CookingModeRecipeCardProps {
   macros?: Macros;
   notes?: string;
   onGetCooking?: () => void;
+  /** Founder ask 2026-05-19 — N=1 explainer rendered under the title.
+   *  "Picked because you've got onion + garlic on hand." Makes the
+   *  personalization visible (Kitchen / Journey principle). */
+  rationale?: string;
+  /** Swap to the next ranker-ordered alternate. Disabled when no
+   *  alternates exist (AI-gen-only result). */
+  onSwap?: () => void;
+  /** Total recipes in the swap pool (including current). Used to render
+   *  "2 of 5" alongside the chip; chip hides when ≤ 1. */
+  swapPoolSize?: number;
+  /** 0-based index into the pool — drives the "N of M" label. */
+  swapIndex?: number;
 }
 
 function macrosLine(m: Macros): string {
@@ -76,6 +88,10 @@ export default function CookingModeRecipeCard({
   macros,
   notes,
   onGetCooking,
+  rationale,
+  onSwap,
+  swapPoolSize,
+  swapIndex,
 }: CookingModeRecipeCardProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -119,9 +135,36 @@ export default function CookingModeRecipeCard({
       ) : null}
 
       <Text style={[styles.title, isDark && styles.dark]}>{title}</Text>
+      {rationale ? (
+        <Text
+          style={[styles.rationale, isDark && styles.rationaleDark]}
+          accessibilityLabel={rationale}
+        >
+          {rationale}
+        </Text>
+      ) : null}
       <Text style={[styles.desc, isDark && styles.descDark]}>
         {description}
       </Text>
+
+      {swapPoolSize && swapPoolSize > 1 && onSwap ? (
+        <View style={styles.swapRow}>
+          <HapticTouchableOpacity
+            onPress={onSwap}
+            accessibilityRole="button"
+            accessibilityLabel={`Show me another recipe — currently ${
+              (swapIndex ?? 0) + 1
+            } of ${swapPoolSize}`}
+            pressedScale={0.97}
+            style={[styles.swapChip, { borderColor: accent }]}
+          >
+            <Ionicons name="shuffle-outline" size={16} color={accent} />
+            <Text style={[styles.swapChipText, { color: accent }]}>
+              Show me another · {(swapIndex ?? 0) + 1}/{swapPoolSize}
+            </Text>
+          </HapticTouchableOpacity>
+        </View>
+      ) : null}
 
       <View style={styles.controls}>
         <ServingStepper servings={servings} onChangeServings={setServings} />
@@ -235,6 +278,19 @@ const styles = StyleSheet.create({
   dark: { color: '#F9FAFB' },
   desc: { ...Type.body, color: '#4B5563' },
   descDark: { color: '#D1D5DB' },
+  rationale: { ...Type.caption, color: '#6B5B47', fontStyle: 'italic' },
+  rationaleDark: { color: '#D6C8B0' },
+  swapRow: { flexDirection: 'row', marginTop: 4 },
+  swapChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  swapChipText: { fontSize: 13, fontWeight: '600' },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',

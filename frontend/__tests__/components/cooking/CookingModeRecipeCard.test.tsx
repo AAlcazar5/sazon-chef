@@ -157,4 +157,55 @@ describe('<CookingModeRecipeCard />', () => {
       expect(getAllByText(/2 pounds potatoes or sweet potatoes/)).toHaveLength(2);
     });
   });
+
+  // Founder ask 2026-05-19 — N=1 ranker surfaces rationale + swap chip
+  // for ambiguous recipe asks. Cold-start (no rationale, pool size ≤ 1)
+  // must hide both elements so the card doesn't look incomplete.
+  describe('N=1 personalization affordances', () => {
+    it('renders rationale subtitle under the title when provided', () => {
+      const { getByText, queryByText } = render(
+        <CookingModeRecipeCard
+          {...PROPS}
+          rationale="Picked because you've got onion + garlic on hand."
+        />,
+      );
+      expect(getByText(/Picked because you've got onion \+ garlic/)).toBeTruthy();
+      // No rationale prop → no element (verified in the next test).
+      expect(queryByText(/Picked because/)).toBeTruthy();
+    });
+
+    it('omits rationale when prop is undefined (cold-start)', () => {
+      const { queryByText } = render(<CookingModeRecipeCard {...PROPS} />);
+      expect(queryByText(/Picked because/)).toBeNull();
+    });
+
+    it('renders "Show me another · N/M" chip when swap pool > 1; fires onSwap', () => {
+      const onSwap = jest.fn();
+      const { getByLabelText, getByText } = render(
+        <CookingModeRecipeCard
+          {...PROPS}
+          onSwap={onSwap}
+          swapPoolSize={3}
+          swapIndex={0}
+        />,
+      );
+      expect(getByText(/Show me another · 1\/3/)).toBeTruthy();
+      fireEvent.press(getByLabelText(/Show me another recipe/i));
+      expect(onSwap).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides swap chip when pool size ≤ 1 (AI-gen-only result)', () => {
+      const { queryByText } = render(
+        <CookingModeRecipeCard {...PROPS} swapPoolSize={1} swapIndex={0} />,
+      );
+      expect(queryByText(/Show me another/)).toBeNull();
+    });
+
+    it('hides swap chip when onSwap not provided', () => {
+      const { queryByText } = render(
+        <CookingModeRecipeCard {...PROPS} swapPoolSize={3} swapIndex={0} />,
+      );
+      expect(queryByText(/Show me another/)).toBeNull();
+    });
+  });
 });
