@@ -10,8 +10,20 @@ jest.mock('../../lib/api', () => ({
   },
 }));
 
+// detectRecipeAsk gates the wedge; only recipe-ask strings hit
+// findOrGenerateRecipe. Existing tests send non-recipe strings ("Hi coach"
+// etc.) so this mock is dormant for them.
+jest.mock('../../lib/coach/findOrGenerateRecipe', () => ({
+  findOrGenerateRecipe: jest.fn(),
+}));
+
 import { useCoachStream } from '../../hooks/useCoachStream';
 import { coachApi } from '../../lib/api';
+import { findOrGenerateRecipe } from '../../lib/coach/findOrGenerateRecipe';
+
+const mockedFindOrGenerate = findOrGenerateRecipe as jest.MockedFunction<
+  typeof findOrGenerateRecipe
+>;
 
 const mockedCoachApi = coachApi as jest.Mocked<typeof coachApi>;
 
@@ -30,6 +42,11 @@ async function* mkRichStream(events: any[]): AsyncIterableIterator<any> {
 describe('useCoachStream', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default the wedge to fail so the catch falls through to SSE — that
+    // matches every pre-recipe-wedge test's expected behavior. Tests that
+    // exercise the recipe-card success path override with
+    // mockResolvedValueOnce.
+    mockedFindOrGenerate.mockRejectedValue(new Error('default: no wedge'));
   });
 
   it('creates a conversation when none exists, then streams chunks into messages', async () => {
@@ -342,5 +359,44 @@ describe('useCoachStream', () => {
     expect(result.current.paywall?.headline).toBe('Daily limit');
     expect(result.current.paywall?.cta).toBe('Upgrade');
     expect(result.current.isStreaming).toBe(false);
+  });
+
+  // Founder report 2026-05-19: "Pizza Margarita" produced a misleading
+  // "try a tweak?" placeholder when the wedge failed; the user's "Sure"
+  // then hit the SSE with zero context → generic greeting. Regression
+  // guard: on wedge failure, fall through to the LLM SSE (auto-corrects
+  // typos, keeps conversation context) — never show the misleading copy.
+  it('wedge failure falls through to LLM SSE (no misleading "try a tweak?")', async () => {
+    mockedFindOrGenerate.mockRejectedValueOnce(new Error('gen failed'));
+    mockedCoachApi.createConversation.mockResolvedValue({
+      id: 'c1',
+      title: 'Hi',
+      tier: 'free',
+      createdAt: 'now',
+      lastMessageAt: 'now',
+    });
+    mockedCoachApi.streamMessage.mockReturnValue(
+      mkStream(['Pizza ', 'Margherita ', 'sounds great.']),
+    );
+
+    const { result } = renderHook(() => useCoachStream());
+
+    await act(async () => {
+      // Real recipe-ask string the detector matches. Wedge throws → SSE fires.
+      await result.current.sendMessage('pizza margarita');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    const last = result.current.messages.at(-1);
+    expect(last?.role).toBe('assistant');
+    // Streamed from the LLM, NOT the misleading dead-end copy.
+    expect(last?.content).toBe('Pizza Margherita sounds great.');
+    expect(last?.content).not.toMatch(/try a tweak/i);
+    expect(last?.kind).not.toBe('recipe-card');
+    expect(mockedCoachApi.streamMessage).toHaveBeenCalled();
+    expect(mockedFindOrGenerate).toHaveBeenCalled();
   });
 });
