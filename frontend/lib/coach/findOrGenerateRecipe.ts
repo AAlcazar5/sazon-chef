@@ -104,6 +104,7 @@ interface CatalogRecipe {
   fat?: number;
   fiber?: number;
   imageUrl?: string;
+  storageInstructions?: string | null;
 }
 
 interface GetAllRecipesResponse {
@@ -162,6 +163,13 @@ function mapCatalogRecipe(r: CatalogRecipe): RecipeCardPayload | null {
       fiber: r.fiber,
     },
     imageUrls: r.imageUrl ? [r.imageUrl] : undefined,
+    // Y-Live-6 — storageInstructions surfaces in the card's NOTES block
+    // (kitchen-mode parity). Null/missing is dropped to undefined so
+    // the NOTES block doesn't render an empty author-tips line.
+    notes:
+      typeof r.storageInstructions === 'string' && r.storageInstructions.length > 0
+        ? r.storageInstructions
+        : undefined,
   };
 }
 

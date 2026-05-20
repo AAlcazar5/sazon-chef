@@ -142,6 +142,7 @@ describe('findOrGenerateRecipe — Y-Live-7 catalog-first lookup', () => {
     fat: 18,
     fiber: 4,
     imageUrl: 'https://example.com/p.jpg',
+    storageInstructions: 'Refrigerate leftovers up to 2 days.',
   };
 
   it('typo "Pizza Margarita" finds catalog "Pizza Margherita" (no gen call)', async () => {
@@ -157,6 +158,9 @@ describe('findOrGenerateRecipe — Y-Live-7 catalog-first lookup', () => {
     // Y-Live-1: recipeId carried through so CookLaunchModal "Start cooking"
     // can navigate to /cooking?recipeId=…
     expect(payload.recipeId).toBe('rcp_pizza_margherita');
+    // Y-Live-6: storageInstructions → notes so the NOTES block renders
+    // (kitchen-mode parity — macros + author tips below the steps).
+    expect(payload.notes).toBe('Refrigerate leftovers up to 2 days.');
     expect(mockGen).not.toHaveBeenCalled(); // catalog hit short-circuits gen
   });
 
