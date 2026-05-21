@@ -110,15 +110,32 @@ export default function CookStepScreen() {
     // payload before navigating. No network call needed.
     if (adhocId) {
       const stashed = getAdhocRecipe(adhocId);
-      if (stashed) {
-        setRecipe({
-          title: stashed.title,
-          imageUrl: stashed.imageUrls?.[0],
-          steps: stashed.steps,
-        });
-      } else {
+      // Founder bug 2026-05-20 round 18: surface diagnostic when the
+      // stash is missing OR the recipe arrived without steps — the
+      // user reported "only header shows" which happens when steps[]
+      // is empty (CookStepCard renders STEP 1 with nothing in it).
+      if (!stashed) {
+        // eslint-disable-next-line no-console
+        console.warn(`[cook-step] adhocId=${adhocId} not found in stash`);
         setError("Couldn't load the recipe — try again.");
+        return;
       }
+      if (!stashed.steps || stashed.steps.length === 0) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[cook-step] adhocId=${adhocId} loaded but steps[] is empty`,
+          { title: stashed.title, hasSteps: !!stashed.steps },
+        );
+        setError(
+          'This recipe came back without step-by-step instructions — try generating it again.',
+        );
+        return;
+      }
+      setRecipe({
+        title: stashed.title,
+        imageUrl: stashed.imageUrls?.[0],
+        steps: stashed.steps,
+      });
       return;
     }
     if (!recipeId) return;
@@ -128,11 +145,26 @@ export default function CookStepScreen() {
       .then((res) => {
         if (cancelled) return;
         const mapped = mapResponse(res);
-        if (mapped) setRecipe(mapped);
-        else setError("Couldn't load the recipe — try again.");
+        if (!mapped) {
+          // eslint-disable-next-line no-console
+          console.warn(`[cook-step] recipeId=${recipeId} mapResponse returned null`);
+          setError("Couldn't load the recipe — try again.");
+          return;
+        }
+        if (mapped.steps.length === 0) {
+          // eslint-disable-next-line no-console
+          console.warn(`[cook-step] recipeId=${recipeId} backend returned no steps`);
+          setError(
+            'This recipe has no step-by-step instructions yet — try a different one.',
+          );
+          return;
+        }
+        setRecipe(mapped);
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
+        // eslint-disable-next-line no-console
+        console.warn(`[cook-step] recipeId=${recipeId} fetch threw`, err);
         setError("Couldn't load the recipe — try again.");
       });
     return () => {
