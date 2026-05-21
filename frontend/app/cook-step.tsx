@@ -12,7 +12,7 @@
 // like build-a-plate / tonight that depend on its richer surface.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -290,7 +290,16 @@ export default function CookStepScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
+  // Founder bug 2026-05-20 round 20: `flex: 1` alone was collapsing
+  // the screen to its content height (only the header showed; the
+  // coach behind was visible through the gap below). The Stack
+  // screen container apparently isn't propagating definite bounds
+  // to its children here. Explicit window-height + width forces the
+  // screen to own the full viewport regardless of parent sizing.
+  screen: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
   bgLight: { backgroundColor: '#FFFFFF' },
   bgDark: { backgroundColor: '#1A1A1A' },
   header: {
