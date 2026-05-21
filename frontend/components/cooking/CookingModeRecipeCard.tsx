@@ -437,6 +437,14 @@ export default function CookingModeRecipeCard({
         </LinearGradient>
       )}
 
+      {/* Y-Visible-5 (founder 2026-05-21): "Sazon's pick" attribution
+          byline above the title — the card is only rendered from the
+          wedge surface, so every card here IS a Sazon pick. The
+          chef-hat emoji doubles as a tiny mascot stand-in. */}
+      <View style={styles.byline}>
+        <Text style={styles.bylineEmoji}>👩🏽‍🍳</Text>
+        <Text style={[styles.bylineText, { color: accent }]}>Sazon's pick</Text>
+      </View>
       <Text style={[styles.title, isDark && styles.dark]}>{title}</Text>
       {rationale ? (
         <Text
@@ -633,6 +641,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   dot: { width: 6, height: 6, borderRadius: 3 },
+  byline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  bylineEmoji: { fontSize: 14 },
+  bylineText: { ...Type.eyebrow, letterSpacing: 1 },
   title: { ...Type.heading, color: '#1F2937' },
   dark: { color: '#F9FAFB' },
   desc: { ...Type.body, color: '#4B5563' },
