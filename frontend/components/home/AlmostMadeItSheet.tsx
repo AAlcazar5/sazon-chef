@@ -9,7 +9,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, Pressable, ScrollView } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
+import LoadingState from '../ui/LoadingState';
 import { Colors, DarkColors } from '../../constants/Colors';
+import { GenericLoadingStates } from '../../constants/LoadingStates';
 import { recipeApi } from '../../lib/api';
 import { logHomeSurfaceEvent } from '../../lib/homeSurfaceEvents';
 
@@ -133,9 +135,7 @@ export default function AlmostMadeItSheet({
 
             <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
               {loading && rows.length === 0 ? (
-                <Text style={{ color: subtle, textAlign: 'center', paddingVertical: 24 }}>
-                  Loading…
-                </Text>
+                <LoadingState config={GenericLoadingStates.scanningCookbook} />
               ) : rows.length === 0 ? (
                 <Text style={{ color: subtle, textAlign: 'center', paddingVertical: 24 }}>
                   Nothing else queued today — check back tomorrow.

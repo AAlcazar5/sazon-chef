@@ -294,6 +294,24 @@ export const GenericLoadingStates = {
     animationType: 'pulse' as const,
   },
 
+  /** Tier Y-Voice-1 (founder 2026-05-21): step player startup —
+   *  cook-step screen while the recipe payload hydrates. */
+  pullingUpRecipe: {
+    message: 'Pulling up the recipe…',
+    mascotExpression: 'thinking' as LogoMascotExpression,
+    mascotSize: 'medium' as const,
+    animationType: 'pulse' as const,
+  },
+
+  /** Tier Y-Voice-1: "almost made it" near-match sheet — while we're
+   *  scanning the cookbook for close matches. */
+  scanningCookbook: {
+    message: 'Scanning your cookbook…',
+    mascotExpression: 'thinking' as LogoMascotExpression,
+    mascotSize: 'small' as const,
+    animationType: 'pulse' as const,
+  },
+
   /** Saving/submitting */
   saving: {
     message: 'Saving...',
