@@ -822,12 +822,17 @@ export default function OnboardingScreen() {
         </View>
       </SafeAreaView>
 
+      {/* Y-Visible-4 (founder 2026-05-21): final welcome is now in
+          Sazon's first-person voice — drops the "we'll use this
+          information" customer-success copy. The mascot already
+          renders here (expression="excited") so the voice + face
+          land together. */}
       <SuccessModal
         visible={showSuccessModal}
-        title="Welcome to Sazon Chef!"
-        message="Your preferences have been saved. We'll use this information to give you personalized recipe recommendations."
+        title="You're in."
+        message="I've got your pantry, taste, and goals — let's cook."
         expression="excited"
-        actionLabel="Get Started"
+        actionLabel="Let's go"
         onAction={() => {
           setShowSuccessModal(false);
           router.replace('/(tabs)');
