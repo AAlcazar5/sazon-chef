@@ -88,26 +88,28 @@ describe('HomeEmptyState', () => {
     expect(queryByText(/^Sazon Chef$/)).toBeNull();
   });
 
-  it('renders "No recipes available" when no filters or search', () => {
+  // Y-Voice-5 (PR #89, 2026-05-21) — fallback titles rewritten in
+  // Sazon voice. These assertions pin the current copy.
+  it("renders \"Kitchen's empty for now\" when no filters or search", () => {
     const { getByText } = render(<HomeEmptyState {...defaultProps} />);
-    expect(getByText('No recipes available')).toBeTruthy();
+    expect(getByText("Kitchen's empty for now")).toBeTruthy();
   });
 
   it('renders contextual title when searchQuery is set', () => {
     const { getByText } = render(
       <HomeEmptyState {...defaultProps} searchQuery="pasta" />
     );
-    expect(getByText('No recipes found for "pasta"')).toBeTruthy();
+    expect(getByText('Couldn\'t find anything for "pasta"')).toBeTruthy();
   });
 
-  it('renders "No meal prep recipes found" in mealPrepMode', () => {
+  it('renders "No meal prep matches yet" in mealPrepMode', () => {
     const { getByText } = render(
       <HomeEmptyState {...defaultProps} mealPrepMode={true} />
     );
-    expect(getByText('No meal prep recipes found')).toBeTruthy();
+    expect(getByText('No meal prep matches yet')).toBeTruthy();
   });
 
-  it('renders "No recipes match your filters" when active filters are set', () => {
+  it('renders "Nothing fits those filters" when active filters are set', () => {
     const { getByText } = render(
       <HomeEmptyState
         {...defaultProps}
@@ -115,7 +117,7 @@ describe('HomeEmptyState', () => {
         filters={{ ...emptyFilters, difficulty: ['Easy'] }}
       />
     );
-    expect(getByText('No recipes match your filters')).toBeTruthy();
+    expect(getByText('Nothing fits those filters')).toBeTruthy();
   });
 
   it('shows "Refresh Recipes" button when no filters or search', () => {

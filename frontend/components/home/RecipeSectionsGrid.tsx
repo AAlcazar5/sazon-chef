@@ -150,9 +150,19 @@ function RecipeSectionsGrid({
 
         return (
           <View key={section.key} className="mb-6">
-            {/* Section Header — editorial styling */}
+            {/* Section Header — editorial styling. Y-Visible-1
+                (founder 2026-05-21): only the "Recipes for You"
+                section gets a Sazon-attribution subtitle so the user
+                can see this is Sazon's curation, not a generic feed.
+                Other sections (quick meals, meal prep, etc.) are
+                category lists and don't carry the same N=1 signal. */}
             <EditorialSectionHeader
               title={section.title}
+              subtitle={
+                isRecipesForYou
+                  ? 'Sazon picked these — your pantry, last cooks, taste.'
+                  : undefined
+              }
               emoji={section.emoji}
               count={section.recipes.length}
               isDark={isDark}
