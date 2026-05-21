@@ -6,7 +6,7 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import BrandButton from '../ui/BrandButton';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 import { Pastel, PastelDark, Accent } from '../../constants/Colors';
@@ -43,8 +43,7 @@ interface PantryPlateHeroCardProps {
 }
 
 export default function PantryPlateHeroCard({ plate }: PantryPlateHeroCardProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const router = useRouter();
 
   const totalCal = plate.components.reduce(

@@ -7,7 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, Pressable, ScrollView } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import LoadingState from '../ui/LoadingState';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -41,8 +41,7 @@ export default function AlmostMadeItSheet({
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<AlmostMadeItRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   useEffect(() => {
     if (!open) return;

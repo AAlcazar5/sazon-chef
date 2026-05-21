@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, Modal, Pressable } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { logHomeSurfaceEvent } from '../../lib/homeSurfaceEvents';
@@ -35,8 +35,7 @@ export default function HeroRationaleRibbon({
   onPeekDismiss,
 }: HeroRationaleRibbonProps) {
   const [expanded, setExpanded] = useState(false);
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   if (!rationale || !rationale.primaryReason) return null;
 

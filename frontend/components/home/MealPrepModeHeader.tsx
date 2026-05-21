@@ -2,7 +2,7 @@
 // Header banner displayed when meal prep mode is active
 
 import { View, Text } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Colors, DarkColors } from '../../constants/Colors';
 
 /**
@@ -10,8 +10,7 @@ import { Colors, DarkColors } from '../../constants/Colors';
  * Shows a prominent indicator that meal prep recipes are being shown
  */
 export default function MealPrepModeHeader() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   return (
     <View className="px-4 pt-4 pb-2">

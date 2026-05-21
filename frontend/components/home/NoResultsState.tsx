@@ -3,7 +3,7 @@
 // Shows: fuzzy title matches, relax-filters suggestions, and a "Generate a recipe" CTA.
 
 import { View, Text } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
@@ -33,8 +33,7 @@ export default function NoResultsState({
   onClearFilters,
   onClearSearch,
 }: NoResultsStateProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const primary = isDark ? DarkColors.primary : Colors.primary;
 
   const handleGenerateRecipe = () => {

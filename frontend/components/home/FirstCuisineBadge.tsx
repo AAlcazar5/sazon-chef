@@ -11,7 +11,7 @@ import { Text } from 'react-native';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { firstCookStatsApi } from '../../lib/api';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { logHomeSurfaceEvent } from '../../lib/homeSurfaceEvents';
 
 export interface FirstCuisineBadgeProps {
@@ -21,8 +21,7 @@ export interface FirstCuisineBadgeProps {
 
 export default function FirstCuisineBadge({ cuisine, onTap }: FirstCuisineBadgeProps) {
   const [isFirst, setIsFirst] = useState<boolean>(false);
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   useEffect(() => {
     if (!cuisine || !cuisine.trim()) {

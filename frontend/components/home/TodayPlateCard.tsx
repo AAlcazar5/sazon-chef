@@ -12,7 +12,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import {
   EditorialFontFamily,
@@ -157,8 +157,7 @@ export function ctaLabelFor(variant: TodayPlateVariant): string {
 }
 
 export default function TodayPlateCard({ context }: TodayPlateCardProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   const body = bodyFor(context);
 

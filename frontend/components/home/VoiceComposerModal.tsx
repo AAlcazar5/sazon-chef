@@ -15,7 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import BrandButton from '../ui/BrandButton';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Sazon, { expressionToSazon } from '../mascot/Sazon';
@@ -36,8 +36,7 @@ export default function VoiceComposerModal({
   onClose,
 }: VoiceComposerModalProps) {
   const router = useRouter();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

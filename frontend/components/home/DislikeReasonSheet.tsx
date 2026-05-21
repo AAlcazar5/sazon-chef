@@ -4,7 +4,7 @@
 
 import { View, Text, Modal, Pressable, Animated } from 'react-native';
 import { useRef, useEffect } from 'react';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -62,8 +62,7 @@ export default function DislikeReasonSheet({
   onSkip,
   onDismiss,
 }: DislikeReasonSheetProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const slideAnim = useRef(new Animated.Value(300)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 

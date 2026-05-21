@@ -3,7 +3,7 @@
 
 import { View, Text, TextInput, ScrollView } from 'react-native';
 import { useState, useRef, useCallback } from 'react';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import SearchBar from '../ui/SearchBar';
 import Icon from '../ui/Icon';
@@ -75,8 +75,7 @@ export default function RecipeSearchBar({
   placeholder = 'Search recipes, ingredients, tags...',
   initialPopularSearches,
 }: RecipeSearchBarProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   const [isFocused, setIsFocused] = useState(false);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

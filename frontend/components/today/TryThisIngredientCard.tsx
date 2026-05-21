@@ -14,7 +14,7 @@ import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import CapabilityReveal from '../ui/CapabilityReveal';
 import { registerCapability } from '../../services/capabilityRegistry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import {
   ingredientDiscoveryApi,
@@ -60,8 +60,7 @@ export default function TryThisIngredientCard({
   const [suggestion, setSuggestion] = useState<DiscoverySuggestion | null>(null);
   const [hidden, setHidden] = useState(false);
   const referenceTime = now ?? new Date();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const bg = isDark ? PastelDark.peach : Pastel.peach;
   const accent = Accent.peach;
   const text = isDark ? DarkColors.text.primary : Colors.text.primary;
