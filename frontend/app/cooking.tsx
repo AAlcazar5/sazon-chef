@@ -533,7 +533,8 @@ export default function CookingScreen() {
       <View className="flex-1 bg-gray-950 items-center justify-center px-8">
         <Text className="text-6xl mb-4">😕</Text>
         <Text className="text-white text-xl font-bold mb-2">Recipe not found</Text>
-        <Text className="text-gray-400 text-center mb-6">{error || 'Could not load recipe'}</Text>
+        {/* Y-Voice-3: Sazon-direct fallback when recipe lookup misses. */}
+        <Text className="text-gray-400 text-center mb-6">{error || "Couldn't pull that recipe up — try once more?"}</Text>
         <BrandButton
           label="Go Back"
           onPress={() => router.back()}

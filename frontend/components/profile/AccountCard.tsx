@@ -49,7 +49,9 @@ export default function AccountCard({ user, onLogout, onProceedWithDeletion, onC
       HapticPatterns.success();
     } catch (error: any) {
       console.error('Export cookbook error:', error);
-      Alert.alert('Export Failed', 'Could not export your cookbook. Please try again.');
+      // Y-Voice-3 (founder 2026-05-21): drop the "X Failed" boilerplate
+      // title; lead with a single Sazon line.
+      Alert.alert('Hmm…', "That didn't export — try once more?");
       HapticPatterns.error();
     } finally {
       setExportingCookbook(false);
