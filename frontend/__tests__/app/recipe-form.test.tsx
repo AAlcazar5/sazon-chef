@@ -71,7 +71,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter a recipe title');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'What do you call it?');
     });
   });
 
@@ -82,7 +82,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter a description');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Add a quick description.');
     });
   });
 
@@ -94,7 +94,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter a valid cook time');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Need a real cook time.');
     });
   });
 
@@ -107,7 +107,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter a cuisine type');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', "What cuisine is it?");
     });
   });
 
@@ -121,7 +121,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please enter valid calorie amount');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Need a calorie count.');
     });
   });
 
@@ -140,7 +140,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please add at least one ingredient');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Add at least one ingredient.');
     });
   });
 
@@ -160,7 +160,7 @@ describe('RecipeFormScreen', () => {
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please add at least one instruction');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Add at least one step.');
     });
   });
 
