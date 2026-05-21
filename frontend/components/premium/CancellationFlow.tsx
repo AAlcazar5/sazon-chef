@@ -228,8 +228,11 @@ function OfferStep({
           <Text className="text-xl font-bold text-gray-900 dark:text-white text-center mt-4 mb-2">
             What's missing?
           </Text>
+          {/* Y-Voice-6 (founder 2026-05-21): tighten to Sazon-direct
+              first-person. The team-receives note moves out of the
+              ask — the user just needs to know we're listening. */}
           <Text className="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">
-            Tell us what would make Sazon work better for you. Every response goes directly to the team.
+            Tell me — I'm listening, and the team sees every word.
           </Text>
           <TextInput
             testID="feedback-input"
