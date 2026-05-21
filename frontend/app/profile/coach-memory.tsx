@@ -115,10 +115,8 @@ export default function CoachMemoryScreen() {
       );
       setEditing(null);
     } catch {
-      Alert.alert(
-        'Could not save',
-        "Sazon couldn't update that note. Try again in a moment.",
-      );
+      // Y-Voice-3 (founder 2026-05-21): drop "Could not X" boilerplate.
+      Alert.alert('Hmm…', "Couldn't pin that note — try again in a sec?");
     } finally {
       setSaving(false);
     }
