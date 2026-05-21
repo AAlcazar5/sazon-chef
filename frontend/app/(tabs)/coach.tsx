@@ -51,7 +51,6 @@ import CoachMemoryHeaderPill from '../../components/coach/CoachMemoryHeaderPill'
 import SazonHeader from '../../components/coach/SazonHeader';
 import SazonDailyGreetingBanner from '../../components/coach/SazonDailyGreetingBanner';
 import CookingModeRecipeCard from '../../components/cooking/CookingModeRecipeCard';
-import CookLaunchModal from '../../components/cooking/CookLaunchModal';
 import type { RecipeCardPayload } from '../../lib/coach/findOrGenerateRecipe';
 import { setAdhocRecipe, makeAdhocRecipeId } from '../../lib/coach/adhocRecipeStash';
 import { useCoachStream } from '../../hooks/useCoachStream';
@@ -136,9 +135,20 @@ export default function CoachScreen({
   const composerInputRef = useRef<TextInput | null>(null);
   const [manualPaywallReason, setManualPaywallReason] = useState<CoachPaywallReason | null>(null);
   const [pantryConfirm, setPantryConfirm] = useState<CoachIdentifiedIngredient[] | null>(null);
-  // Y-Live-1: which recipe is being launched via CookLaunchModal. Set on
-  // "Get cooking" tap on the recipe card; cleared on close / Start cooking.
-  const [launchRecipe, setLaunchRecipe] = useState<RecipeCardPayload | null>(null);
+  // Founder ask 2026-05-21 round 21: the intermediate CookLaunchModal
+  // (Start Cooking screen) was removed. Tapping "Get Cooking" on the
+  // recipe card now navigates directly to /cook-step.
+  const startCooking = useCallback((r: RecipeCardPayload) => {
+    if (r.recipeId) {
+      // Catalog path — backend lookup by id.
+      router.push(`/cook-step?recipeId=${encodeURIComponent(r.recipeId)}` as never);
+    } else {
+      // AI-gen path — payload handoff via in-process stash.
+      const id = makeAdhocRecipeId();
+      setAdhocRecipe(id, r);
+      router.push(`/cook-step?adhocId=${encodeURIComponent(id)}` as never);
+    }
+  }, []);
   const [activeTitle, setActiveTitle] = useState<string>('Sazon');
   const [pendingSeed, setPendingSeed] = useState<string | null>(null);
   const [lastSentText, setLastSentText] = useState<string>('');
@@ -577,7 +587,7 @@ export default function CoachScreen({
                   steps={recipe.steps}
                   macros={recipe.macros}
                   notes={recipe.notes}
-                  onGetCooking={() => setLaunchRecipe(recipe)}
+                  onGetCooking={() => startCooking(recipe)}
                   rationale={m.recipeRationale}
                   onSwap={poolSize > 1 ? () => stream.swapToNextAlternate(m.id) : undefined}
                   swapPoolSize={poolSize}
@@ -758,34 +768,6 @@ export default function CoachScreen({
           onClose={() => setPantryConfirm(null)}
         />
 
-        {/* Y-Live-1: launch/preview modal between the recipe card and
-            the step player. Catalog recipes navigate by id; AI-gen
-            recipes (no backend id) stash the full payload and navigate
-            with ?adhocId — /cook-step hydrates from the stash. Founder
-            bug 2026-05-20: previously Start cooking was inert for
-            AI-gen recipes; now both paths reach the player. */}
-        <CookLaunchModal
-          visible={launchRecipe !== null}
-          title={launchRecipe?.title ?? ''}
-          description={launchRecipe?.description ?? ''}
-          imageUrls={launchRecipe?.imageUrls}
-          stepCount={launchRecipe?.steps.length ?? 0}
-          onClose={() => setLaunchRecipe(null)}
-          onStartCooking={() => {
-            const r = launchRecipe;
-            setLaunchRecipe(null);
-            if (!r) return;
-            if (r.recipeId) {
-              // Catalog path — backend lookup by id.
-              router.push(`/cook-step?recipeId=${encodeURIComponent(r.recipeId)}` as never);
-            } else {
-              // AI-gen path — payload handoff via in-process stash.
-              const id = makeAdhocRecipeId();
-              setAdhocRecipe(id, r);
-              router.push(`/cook-step?adhocId=${encodeURIComponent(id)}` as never);
-            }
-          }}
-        />
       </KeyboardAvoidingView>
     );
   }
