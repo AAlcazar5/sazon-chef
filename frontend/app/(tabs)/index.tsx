@@ -115,6 +115,7 @@ import { useDarkFeed } from '../../hooks/useDarkFeed';
 import { useDailyNutrition } from '../../hooks/useDailyNutrition';
 import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
 import SazonDailyGreetingBanner from '../../components/coach/SazonDailyGreetingBanner';
+import IngredientSpotlightCard from '../../components/home/IngredientSpotlightCard';
 import { useWeeklyRecap } from '../../hooks/useWeeklyRecap';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubscription } from '../../hooks/useSubscription';
@@ -1181,6 +1182,13 @@ export default function HomeScreen() {
           )
         }
       />
+
+      {/* Y-Dead-2b (founder 2026-05-21): IngredientSpotlightCard
+          reintegrated from the orphan audit. Weekly rotating ingredient
+          ("this week's spotlight: sumac") tapping it pre-fills the
+          recipe search with that ingredient. Strong fit for the
+          "discovery, not optimization" north star. */}
+      <IngredientSpotlightCard onSearch={(query) => handleSearchChange(query)} />
 
       {/* ROADMAP 4.0 FX1.1 — body-only state branches; chrome above stays visible */}
       {bodyState === 'loading' && <HomeLoadingState viewMode={viewMode} />}
