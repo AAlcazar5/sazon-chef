@@ -28,11 +28,11 @@ import { FEATURE_FLAGS } from '../../constants/featureFlags';
 // ROADMAP 4.0 BAP0.1 reverted: the featured recipe-of-the-day hero is the
 // right top-of-Today surface. The QuickActionRow's "Build a plate" chip
 // already sits directly above it, so the BAP affordance is reachable
-// without sacrificing the recipe hero. <TodayPlateHero> remains in the
-// barrel for future use but is not mounted here.
-// BAP1.1 still applies: the 3 legacy sub-cards (StretchHomeCard,
-// PlateOfWeekCard, PantryPlateHeroCard) stay removed from this screen —
-// their variant logic is the merged TodayPlateCard's responsibility.
+// without sacrificing the recipe hero. BAP1.1 still applies: the legacy
+// sub-cards (StretchHomeCard, PlateOfWeekCard) are gone (Y-Dead-2a,
+// 2026-05-21); PantryPlateHeroCard still ships inside EditorialHomeLayout.
+// TodayPlateHero was the BAP0.1-era hero replacement (reverted 2026-05-11);
+// the orphaned component file was removed in Y-Dead-2c.
 import type { DislikeReason } from '../../components/home';
 import { type SearchScope } from '../../components/home/SearchScopeSelector';
 import HomeLoadingState from '../../components/home/HomeLoadingState';
@@ -1360,7 +1360,7 @@ export default function HomeScreen() {
         {/* ROADMAP 4.0 — Daily check-in moved to Kitchen (above Recently Saved). */}
         {/* BAP1.1: StretchHomeCard + PlateOfWeekCard removed — their
             framings are now picked by useTodayPlateContext and rendered
-            INSIDE TodayPlateHero above (variant resolution). */}
+            INSIDE EditorialHomeLayout above. */}
 
         {/* W-D P2/D-4 — catalog browse de-emphasized behind an opt-in
             affordance when the memory-mirror reframe is on (flag-gated,
