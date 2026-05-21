@@ -126,7 +126,7 @@ describe('LoginScreen', () => {
     fireEvent.changeText(getByPlaceholderText('Enter your password'), 'password123');
     fireEvent.press(getByText('Sign In'));
     await waitFor(() =>
-      expect(getByText('Please enter a valid email address')).toBeTruthy()
+      expect(getByText("That doesn't look like an email.")).toBeTruthy()
     );
   });
 

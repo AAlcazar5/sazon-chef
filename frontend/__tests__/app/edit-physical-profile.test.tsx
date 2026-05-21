@@ -75,7 +75,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Please fill in all required fields');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Fill in everything above.');
     });
   });
 
@@ -88,7 +88,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Age must be between 13 and 120');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Age should be between 13 and 120.');
     });
   });
 
@@ -101,7 +101,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Age must be between 13 and 120');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Age should be between 13 and 120.');
     });
   });
 
@@ -115,7 +115,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', "Height looks off — should be between 3'3\" and 8'2\".");
     });
   });
 
@@ -129,7 +129,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', "Height looks off — should be between 3'3\" and 8'2\".");
     });
   });
 
@@ -144,7 +144,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Weight looks off — should be between 66 and 661 lbs.');
     });
   });
 
@@ -159,7 +159,7 @@ describe('EditPhysicalProfileScreen', () => {
     fireEvent.press(screen.getByText('Save Profile'));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
+      expect(mockAlert).toHaveBeenCalledWith('Hmm…', 'Weight looks off — should be between 66 and 661 lbs.');
     });
   });
 

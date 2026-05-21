@@ -14,7 +14,6 @@ export { default as SearchScopeSelector } from './SearchScopeSelector';
 export type { SearchScope } from './SearchScopeSelector';
 export { default as SurpriseMeModal } from './SurpriseMeModal';
 export type { SurpriseFilters } from './SurpriseMeModal';
-export { default as SurpriseMeFAB } from './SurpriseMeFAB';
 export { default as ParallaxHeroSection } from './ParallaxHeroSection';
 export { default as DislikeReasonSheet } from './DislikeReasonSheet';
 export type { DislikeReason } from './DislikeReasonSheet';

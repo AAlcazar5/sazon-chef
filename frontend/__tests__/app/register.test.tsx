@@ -103,7 +103,7 @@ describe('RegisterScreen', () => {
     fireEvent.changeText(getByPlaceholderText('Confirm your password'), 'password123');
     fireEvent.press(getByLabelText('Create Account'));
     await waitFor(() =>
-      expect(getByText('Please enter a valid email address')).toBeTruthy()
+      expect(getByText("That doesn't look like an email.")).toBeTruthy()
     );
   });
 
