@@ -6,7 +6,7 @@ import HapticTouchableOpacity from '../../components/ui/HapticTouchableOpacity';
 import SazonRefreshControl from '../../components/ui/SazonRefreshControl';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { FilterState } from '../../lib/filterStorage';
@@ -116,8 +116,11 @@ import PremiumUpsellCard from '../../components/premium/PremiumUpsellCard';
 import { searchApi, recipeApi } from '../../lib/api';
 
 export default function HomeScreen() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  // ThemeContext is the canonical source of truth (drives _layout.tsx + tab
+  // bar). nativewind's useColorScheme can desync when the user picks a
+  // manual app theme that differs from OS — keep this hook aligned to fix
+  // the split-render bug where the body renders light while chrome is dark.
+  const { isDark } = useTheme();
 
   // First-run warm gradient fade (sessions 1-3 get progressively subtler warm tint)
   const { subscription } = useSubscription();
