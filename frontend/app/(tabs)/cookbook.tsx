@@ -785,7 +785,7 @@ export default function CookbookScreen() {
   const handleCreateCollection = async () => {
     const name = newCollectionName.trim();
     if (!name) {
-      Alert.alert('Name required', 'Please enter a collection name.');
+      Alert.alert('Hmm…', 'What do you call it?');
       return;
     }
     try {

@@ -142,23 +142,24 @@ export default function EditPhysicalProfileScreen() {
 
     if (!gender || !age || !activityLevel || !fitnessGoal) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Hold On', 'Please fill in all required fields');
+      // Y-Voice-4 (founder 2026-05-21): Sazon-direct validation copy.
+      Alert.alert('Hmm…', 'Fill in everything above.');
       return;
     }
     const ageNum = parseInt(age);
     if (!age || isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Hold On', 'Age must be between 13 and 120');
+      Alert.alert('Hmm…', 'Age should be between 13 and 120.');
       return;
     }
     if (finalHeightCm < 100 || finalHeightCm > 250) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Hold On', 'Height must be between 3\'3" and 8\'2" (100cm - 250cm)');
+      Alert.alert('Hmm…', "Height looks off — should be between 3'3\" and 8'2\".");
       return;
     }
     if (finalWeightKg < 30 || finalWeightKg > 300) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Hold On', 'Weight must be between 66 lbs and 661 lbs (30kg - 300kg)');
+      Alert.alert('Hmm…', 'Weight looks off — should be between 66 and 661 lbs.');
       return;
     }
 

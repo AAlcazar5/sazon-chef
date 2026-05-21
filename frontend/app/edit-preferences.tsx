@@ -199,13 +199,13 @@ export default function EditPreferencesScreen() {
   const handleSave = async () => {
     if (!cookTimePreference || isNaN(Number(cookTimePreference))) {
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter a valid cook time');
+      Alert.alert('Hmm…', 'Need a real cook time.');
       return;
     }
     const cookTime = parseInt(cookTimePreference);
     if (cookTime < 5 || cookTime > 300) {
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Cook time must be between 5 and 300 minutes');
+      Alert.alert('Hmm…', 'Cook time should be between 5 and 300 minutes.');
       return;
     }
 

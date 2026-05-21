@@ -227,12 +227,12 @@ export default function EditMacroGoalsScreen() {
     if (showCustomize) {
       if (!calories || !protein || !carbs || !fat) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Hold On', 'Please fill in all fields');
+        Alert.alert('Hmm…', 'Fill in everything above.');
         return;
       }
       if (m.calories < 500 || m.calories > 10000) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Hold On', 'Calories must be between 500 and 10,000');
+        Alert.alert('Hmm…', 'Calories should be between 500 and 10,000.');
         return;
       }
     }

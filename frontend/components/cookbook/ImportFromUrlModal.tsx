@@ -99,11 +99,11 @@ export default function ImportFromUrlModal({
   async function handleImport() {
     const trimmed = url.trim();
     if (!trimmed) {
-      setErrorMsg('Please enter a recipe URL');
+      setErrorMsg('Need a URL to import from.');
       return;
     }
     if (!isValidUrl(trimmed)) {
-      setErrorMsg('Please enter a valid URL (starting with http:// or https://)');
+      setErrorMsg("That doesn't look right — should start with http:// or https://.");
       return;
     }
 
