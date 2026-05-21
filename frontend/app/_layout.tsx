@@ -265,6 +265,20 @@ function RootLayoutNav() {
           <Stack.Screen name="recipe-form" />
           <Stack.Screen name="scanner-results" />
           <Stack.Screen name="cooking" />
+          {/* Founder bug 2026-05-20 round 19: cook-step was only
+              rendering its header band on iOS because the route had
+              no Stack.Screen entry — expo-router was treating it as a
+              partial-overlay rather than a full-screen card push.
+              Explicit card presentation + hidden header guarantees
+              the screen owns the entire viewport. */}
+          <Stack.Screen
+            name="cook-step"
+            options={{
+              presentation: 'card',
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
           <Stack.Screen name="pantry-matches" />
           <Stack.Screen name="edit-budget" />
           <Stack.Screen name="onboarding" />
