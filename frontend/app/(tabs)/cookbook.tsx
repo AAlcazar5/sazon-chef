@@ -1306,8 +1306,11 @@ export default function CookbookScreen() {
         }}
         onDeleteCollection={(collectionId, collectionName) => {
           Alert.alert(
-            'Delete Collection',
-            `Are you sure you want to delete "${collectionName}"? Recipes will remain in your cookbook.`,
+            // Y-Voice-2 (founder 2026-05-21): drop the boilerplate
+            // "Are you sure you want to delete X?" — Sazon-direct
+            // confirm copy.
+            'Toss this collection?',
+            `"${collectionName}" — gone. Recipes stay in your cookbook.`,
             [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Delete', style: 'destructive', onPress: async () => {
