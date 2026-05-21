@@ -30,6 +30,8 @@ import {
 // GH-ScrollView inside the card. Switching the outer to GH-ScrollView
 // too lets the inner-wins-on-touches-within-bounds rule apply.
 import { ScrollView } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Gradients from '../../constants/Gradients';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -730,24 +732,42 @@ export default function CoachScreen({
                 </View>
               )}
             </HapticTouchableOpacity>
+            {/* Founder ask 2026-05-21 round 22: submit arrow uses the
+                brand gradient (primaryCTA), matching Get Cooking +
+                Start Cooking. Disabled state keeps the muted bg tint. */}
             <HapticTouchableOpacity
               onPress={onSend}
               disabled={!composerText.trim() || stream.isStreaming}
               accessibilityLabel="Send message to coach"
               accessibilityRole="button"
-              style={[
-                styles.sendBtn,
-                {
-                  backgroundColor: composerText.trim() && !stream.isStreaming
-                    ? (isDark ? DarkColors.primary : Colors.primary)
-                    : (isDark ? DarkColors.surfaceTint : '#EFE9E2'),
-                },
-              ]}
+              style={styles.sendBtn}
             >
-              {stream.isStreaming ? (
-                <AnimatedActivityIndicator size="small" color="#FFFFFF" />
+              {composerText.trim() && !stream.isStreaming ? (
+                <LinearGradient
+                  colors={[...Gradients.primaryCTA]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.sendBtnFill}
+                >
+                  <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+                </LinearGradient>
               ) : (
-                <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+                <View
+                  style={[
+                    styles.sendBtnFill,
+                    {
+                      backgroundColor: isDark
+                        ? DarkColors.surfaceTint
+                        : '#EFE9E2',
+                    },
+                  ]}
+                >
+                  {stream.isStreaming ? (
+                    <AnimatedActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+                  )}
+                </View>
               )}
             </HapticTouchableOpacity>
           </Pressable>
@@ -949,6 +969,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 100,
+    overflow: 'hidden',
+  },
+  sendBtnFill: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
