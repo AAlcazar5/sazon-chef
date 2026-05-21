@@ -34,8 +34,8 @@ const GRANDFATHERED: ReadonlySet<string> = new Set([
   'components/home/ParallaxHeroSection.tsx',
   'components/home/QuickFiltersBar.tsx',
   'components/home/RandomRecipeModal.tsx',
-  'components/home/RecipeCarouselSection.tsx',
-  'components/home/RecipeOfTheDayCard.tsx',
+  // Y-Dead-2a (2026-05-21): RecipeCarouselSection + RecipeOfTheDayCard
+  // deleted as legacy orphans superseded by RecipeSectionsGrid.
   'components/home/RecipeSectionsGrid.tsx',
   'components/home/SearchScopeSelector.tsx',
   'components/home/SurpriseRouletteOverlay.tsx',
