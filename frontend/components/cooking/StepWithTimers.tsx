@@ -80,11 +80,18 @@ function InlineTimerChip({ minutes, label, accent }: InlineTimerChipProps) {
 
 export default function StepWithTimers({ text }: { text: string }) {
   const { theme } = useTheme();
-  const accent = theme === 'dark' ? Brand.dark.base : Brand.light.base;
+  const isDark = theme === 'dark';
+  const accent = isDark ? Brand.dark.base : Brand.light.base;
+  // Founder bug 2026-05-20 round 17: body text used a hardcoded
+  // `#1F2937` dark gray, invisible on the cook-step screen's dark
+  // background. Pick the right body color per theme so step copy
+  // is readable in both light and dark modes.
+  const bodyColor = isDark ? '#F9FAFB' : '#1F2937';
+  const bodyStyle = [styles.body, { color: bodyColor }];
   const spans = extractTimerSpans(text);
 
   if (spans.length === 0) {
-    return <Text style={styles.body}>{text}</Text>;
+    return <Text style={bodyStyle}>{text}</Text>;
   }
 
   const parts: React.ReactNode[] = [];
@@ -105,10 +112,11 @@ export default function StepWithTimers({ text }: { text: string }) {
   });
   if (cursor < text.length) parts.push(text.slice(cursor));
 
-  return <Text style={styles.body}>{parts}</Text>;
+  return <Text style={bodyStyle}>{parts}</Text>;
 }
 
 const styles = StyleSheet.create({
-  body: { fontSize: 15, lineHeight: 15 * 1.5, color: '#1F2937' },
+  // Color now applied dynamically per theme — see component body.
+  body: { fontSize: 15, lineHeight: 15 * 1.5 },
   chip: { fontWeight: '700' },
 });

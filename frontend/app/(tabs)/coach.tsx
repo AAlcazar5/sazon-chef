@@ -17,6 +17,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   ActionSheetIOS,
   Alert,
@@ -643,7 +644,13 @@ export default function CoachScreen({
             attachments={attachments.attachments}
             onRemove={attachments.remove}
           />
-          <View
+          {/* Founder bug 2026-05-20 round 17: wrap in Pressable so a
+              tap ANYWHERE in the composer area focuses the input. Some
+              gesture handlers were intercepting the TextInput's own
+              focus signal — explicit ref.focus() is the bulletproof
+              fallback. */}
+          <Pressable
+            onPress={() => composerInputRef.current?.focus()}
             style={[
               styles.composerInner,
               Shadows.SM as any,
@@ -681,11 +688,6 @@ export default function CoachScreen({
               accessibilityLabel="Coach message composer"
               style={[styles.composer, { color: text }]}
               editable={!stream.isStreaming && !voice.isListening}
-              // Founder bug 2026-05-20 round 16: explicit focus call on
-              // press — defensive against any sibling gesture handler
-              // that might intercept the initial tap before the native
-              // TextInput's auto-focus runs.
-              onPressIn={() => composerInputRef.current?.focus()}
             />
             <HapticTouchableOpacity
               onPressIn={onMicPressIn}
@@ -738,7 +740,7 @@ export default function CoachScreen({
                 <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
               )}
             </HapticTouchableOpacity>
-          </View>
+          </Pressable>
         </View>
 
         <CoachPaywallSheet
