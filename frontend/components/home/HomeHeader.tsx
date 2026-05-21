@@ -4,7 +4,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import FrostedHeader from '../ui/FrostedHeader';
 import ProfileAvatarButton from '../profile/ProfileAvatarButton';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
@@ -25,8 +25,7 @@ export default function HomeHeader({
   onMascotPress,
   onSurpriseMe,
 }: HomeHeaderProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   // DS7.3 — `Ink.dark.warm` is the warm ivory that pairs with `Canvas.warmDark`;
   // light mode keeps the legacy gray-900 ink for AA contrast on warm cream.
   const titleColor = isDark ? Ink.dark.warm : Ink.light.primary;

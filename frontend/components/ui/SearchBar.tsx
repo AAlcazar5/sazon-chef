@@ -3,7 +3,7 @@
 
 import React, { forwardRef } from 'react';
 import { View, TextInput, TextInputProps, StyleSheet } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from './HapticTouchableOpacity';
 import Icon from './Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -55,8 +55,7 @@ const SearchBar = forwardRef<TextInput, SearchBarProps>(({
   style,
   testID,
 }, ref) => {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   const handleClear = () => {
     onChangeText('');

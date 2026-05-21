@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 
 import { View, Text, ScrollView } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { HapticPatterns } from '../../constants/Haptics';
@@ -147,8 +147,7 @@ function QuickFiltersBar({
   darkFeed = false,
   onToggleDarkFeed,
 }: QuickFiltersBarProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   return (
     <View className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

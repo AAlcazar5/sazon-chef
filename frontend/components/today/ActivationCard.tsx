@@ -15,7 +15,7 @@ import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import CapabilityReveal from '../ui/CapabilityReveal';
 import { registerCapability } from '../../services/capabilityRegistry';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { todayApi, type ActivationSurface } from '../../lib/api';
 
@@ -36,8 +36,7 @@ export interface ActivationCardProps {
 
 export default function ActivationCard({ enabled = true }: ActivationCardProps) {
   const [surface, setSurface] = useState<ActivationSurface | null>(null);
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   useEffect(() => {
     if (!enabled) {

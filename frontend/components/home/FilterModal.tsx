@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import FilterSheet from '../ui/FilterSheet';
 import FilterSection from '../ui/FilterSection';
@@ -71,8 +71,7 @@ export default function FilterModal({
   onCravingSearch,
   activeCravingQuery,
 }: FilterModalProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   const totalFilters =
     filters.cuisines.length +

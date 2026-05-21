@@ -7,7 +7,7 @@
 // render as before (A/B-safe rollback).
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Brand } from '../../constants/tokens';
 
@@ -20,8 +20,7 @@ export default function BrowseAllSection({
   enabled,
   children,
 }: BrowseAllSectionProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const [open, setOpen] = useState(false);
 
   // Flag off → unchanged behaviour (grid renders inline as before).

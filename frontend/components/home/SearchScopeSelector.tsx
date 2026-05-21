@@ -3,7 +3,7 @@ import React from 'react';
 // Chip-style scope filter for search results: All | Saved | Liked
 
 import { View, Text } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons } from '../../constants/Icons';
@@ -29,8 +29,7 @@ function SearchScopeSelector({
   activeScope,
   onScopeChange,
 }: SearchScopeSelectorProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const primary = isDark ? DarkColors.primary : Colors.primary;
 
   return (

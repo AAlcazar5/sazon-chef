@@ -16,7 +16,7 @@ import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import CapabilityReveal from '../ui/CapabilityReveal';
 import { registerCapability } from '../../services/capabilityRegistry';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
 import { pantryApi } from '../../lib/api';
 
@@ -60,8 +60,7 @@ export default function UseItUpStrip({
   onPress,
 }: UseItUpStripProps) {
   const [items, setItems] = useState<ExpiringItem[]>([]);
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const bg = isDark ? PastelDark.sage : Pastel.sage;
   const accent = Accent.sage;
   const text = isDark ? DarkColors.text.primary : Colors.text.primary;

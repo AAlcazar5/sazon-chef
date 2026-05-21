@@ -6,7 +6,7 @@ import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Colors, DarkColors } from '../../constants/Colors';
 
 interface FrostedHeaderProps {
@@ -22,8 +22,7 @@ export default function FrostedHeader({
   paddingBottom = 12,
   withTopInset = true,
 }: FrostedHeaderProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const topPad = withTopInset ? insets.top : 0;

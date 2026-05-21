@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { router } from 'expo-router';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useFoodIntelUserState } from '../../hooks/useFoodIntelUserState';
@@ -25,8 +25,7 @@ interface DidYouKnowCardProps {
 }
 
 export default function DidYouKnowCard({ testID, onDismiss }: DidYouKnowCardProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const userState = useFoodIntelUserState();
 
   const [tip, setTip] = useState<FoodIntelTip | null>(null);

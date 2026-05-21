@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Pastel, PastelsJewelDark, DarkColors } from '../../constants/Colors';
 import { EditorialFontFamily, EditorialTypography } from '../../constants/Typography';
 
@@ -42,8 +42,7 @@ export function EditorialMacroWidgets({
   fat,
   fiber,
 }: EditorialMacroWidgetsProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const widgets: MacroWidgetData[] = [
     {
       label: 'CALORIES',

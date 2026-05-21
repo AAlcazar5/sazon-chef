@@ -6,7 +6,7 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import useKitchenIQProgress from '../../hooks/useKitchenIQProgress';
 import { KITCHEN_IQ_CARDS, type KitchenIQCard } from '../../lib/kitchenIQ/cards';
@@ -53,8 +53,7 @@ function findCard(id: string): KitchenIQCard | undefined {
 }
 
 export default function KitchenIQPromoCard({ testID }: KitchenIQPromoCardProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const { newUnlocks, acknowledgeNewUnlock, loading } = useKitchenIQProgress();
 
   const [timestamps, setTimestamps] = useState<TimestampMap | null>(null);

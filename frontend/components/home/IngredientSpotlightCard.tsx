@@ -3,7 +3,7 @@
 // One card per week, deterministically keyed to ISO week number.
 
 import { View, Text } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import Icon from '../ui/Icon';
 import { Icons, IconSizes } from '../../constants/Icons';
@@ -17,8 +17,7 @@ interface IngredientSpotlightCardProps {
 }
 
 export default function IngredientSpotlightCard({ onSearch }: IngredientSpotlightCardProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const spotlight = getWeeklySpotlight();
 
   return (

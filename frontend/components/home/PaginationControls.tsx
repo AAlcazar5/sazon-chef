@@ -3,7 +3,7 @@ import React from 'react';
 // Editorial-styled pagination controls for recipe lists
 
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import AnimatedActivityIndicator from '../ui/AnimatedActivityIndicator';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,8 +36,7 @@ function PaginationControls({
   onPrevPage,
   onNextPage,
 }: PaginationControlsProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
 
   if (totalItems === 0 || !paginationInfo.hasMultiplePages) {
     return null;

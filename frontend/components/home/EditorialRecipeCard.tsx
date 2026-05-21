@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 
 import { EditorialFontFamily } from '../../constants/Typography';
 import { EditorialShadows } from '../../constants/Shadows';
@@ -47,8 +47,7 @@ function EditorialRecipeCardComponent({
 }: EditorialRecipeCardProps) {
   const shadowStyle =
     Platform.OS === 'ios' ? EditorialShadows.cardRaised.ios : EditorialShadows.cardRaised.android;
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   // Translucent strip + action buttons over jewel-dark cards use ivory-on-cocoa instead of white-on-pastel
   const macroRowBg = isDark ? 'rgba(245,239,230,0.08)' : 'rgba(255,255,255,0.55)';
   const actionBtnBg = isDark ? 'rgba(245,239,230,0.22)' : 'rgba(255,255,255,0.7)';
