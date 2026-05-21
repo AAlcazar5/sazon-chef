@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { recipeApi } from '../lib/api/recipe';
 import { getAdhocRecipe } from '../lib/coach/adhocRecipeStash';
+import LoadingState from '../components/ui/LoadingState';
+import { GenericLoadingStates } from '../constants/LoadingStates';
 import CookStepCard from '../components/cooking/CookStepCard';
 import StepWithTimers from '../components/cooking/StepWithTimers';
 import HapticTouchableOpacity from '../components/ui/HapticTouchableOpacity';
@@ -212,9 +214,7 @@ export default function CookStepScreen() {
   if (!recipe) {
     return (
       <View style={[styles.screen, isDark ? styles.bgDark : styles.bgLight]}>
-        <Text style={[styles.fallbackText, isDark && styles.textDark]}>
-          Loading…
-        </Text>
+        <LoadingState config={GenericLoadingStates.pullingUpRecipe} fullScreen />
       </View>
     );
   }
