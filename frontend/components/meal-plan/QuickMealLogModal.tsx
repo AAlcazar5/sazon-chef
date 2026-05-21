@@ -62,12 +62,12 @@ export default function QuickMealLogModal({
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      setError('Please enter a meal name');
+      setError('What do you call it?');
       return;
     }
     const cal = parseFloat(calories);
     if (!calories || isNaN(cal) || cal < 0) {
-      setError('Please enter valid calories');
+      setError('Need a calorie count.');
       return;
     }
 

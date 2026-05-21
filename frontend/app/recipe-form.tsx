@@ -441,60 +441,62 @@ export default function RecipeFormScreen() {
   const validateForm = (): boolean => {
     if (!title.trim()) {
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter a recipe title');
+      // Y-Voice-4 (founder 2026-05-21): drop "Hold On" + "Please
+      // enter" — Sazon-direct copy on each validation miss.
+      Alert.alert('Hmm…', 'What do you call it?');
       return false;
     }
     if (!description.trim()) {
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter a description');
+      Alert.alert('Hmm…', 'Add a quick description.');
       return false;
     }
     if (!cookTime || isNaN(parseInt(cookTime))) {
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter a valid cook time');
+      Alert.alert('Hmm…', 'Need a real cook time.');
       return false;
     }
     if (!cuisine.trim()) {
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter a cuisine type');
+      Alert.alert('Hmm…', "What cuisine is it?");
       return false;
     }
     if (!calories || isNaN(parseInt(calories))) {
       setShowNutrition(true);
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter valid calorie amount');
+      Alert.alert('Hmm…', 'Need a calorie count.');
       return false;
     }
     if (!protein || isNaN(parseInt(protein))) {
       setShowNutrition(true);
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter valid protein amount');
+      Alert.alert('Hmm…', 'Need a protein number.');
       return false;
     }
     if (!carbs || isNaN(parseInt(carbs))) {
       setShowNutrition(true);
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter valid carbs amount');
+      Alert.alert('Hmm…', 'Need a carbs number.');
       return false;
     }
     if (!fat || isNaN(parseInt(fat))) {
       setShowNutrition(true);
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please enter valid fat amount');
+      Alert.alert('Hmm…', 'Need a fat number.');
       return false;
     }
 
     const validIngredients = ingredients.filter(ing => ing.trim());
     if (validIngredients.length === 0) {
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please add at least one ingredient');
+      Alert.alert('Hmm…', 'Add at least one ingredient.');
       return false;
     }
 
     const validInstructions = instructions.filter(inst => inst.trim());
     if (validInstructions.length === 0) {
       HapticPatterns.error();
-      Alert.alert('Hold On', 'Please add at least one instruction');
+      Alert.alert('Hmm…', 'Add at least one step.');
       return false;
     }
 

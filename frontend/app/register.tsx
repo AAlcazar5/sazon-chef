@@ -68,7 +68,7 @@ export default function RegisterScreen() {
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        newErrors.email = 'Please enter a valid email address';
+        newErrors.email = "That doesn't look like an email.";
         isValid = false;
       }
     }

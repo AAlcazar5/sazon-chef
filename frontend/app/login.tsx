@@ -65,7 +65,7 @@ export default function LoginScreen() {
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        newErrors.email = 'Please enter a valid email address';
+        newErrors.email = "That doesn't look like an email.";
         setShakeEmail(true);
         setTimeout(() => setShakeEmail(false), 500);
         isValid = false;

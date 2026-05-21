@@ -75,7 +75,7 @@ export default function ForgotPasswordScreen() {
     if (!emailRegex.test(email)) {
       setShakeEmail(true);
       setTimeout(() => setShakeEmail(false), 500);
-      setErrors({ email: 'Please enter a valid email address' });
+      setErrors({ email: "That doesn't look like an email." });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
