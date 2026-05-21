@@ -62,16 +62,17 @@ function HomeEmptyState({
   const hasDifficultyFilter = filters.difficulty.length > 0;
   const hasSearchQuery = searchQuery && searchQuery.trim().length > 0;
 
-  // Generate contextual title
-  let emptyStateTitle = "No recipes found";
+  // Y-Voice-5 (founder 2026-05-21): Sazon-direct fallback titles —
+  // drop the dry "No recipes found" boilerplate.
+  let emptyStateTitle = "Nothing here yet";
   if (hasSearchQuery) {
-    emptyStateTitle = `No recipes found for "${searchQuery}"`;
+    emptyStateTitle = `Couldn't find anything for "${searchQuery}"`;
   } else if (mealPrepMode) {
-    emptyStateTitle = "No meal prep recipes found";
+    emptyStateTitle = "No meal prep matches yet";
   } else if (hasActiveFilters) {
-    emptyStateTitle = "No recipes match your filters";
+    emptyStateTitle = "Nothing fits those filters";
   } else {
-    emptyStateTitle = "No recipes available";
+    emptyStateTitle = "Kitchen's empty for now";
   }
 
   // Generate contextual description with suggestions
