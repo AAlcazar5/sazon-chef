@@ -65,13 +65,19 @@ describe('BAP1.1 + BAP1.2: HomeScreen plate dedup guard', () => {
     expect((editorialMatches as RegExpMatchArray).length).toBe(1);
   });
 
-  it('TodayPlateHero remains exported from the home barrel for future use', () => {
+  // Y-Dead-2c (2026-05-21): TodayPlateHero was kept "for future use"
+  // after the BAP0.1 revert, but accumulated zero consumers in the
+  // 10 days since. Deleted per the no-speculative-abstractions rule.
+  // TodayPlateCard + PlateRationaleRibbon stay (consumed by
+  // EditorialHomeLayout's variant logic).
+  it('TodayPlateCard + PlateRationaleRibbon stay exported from the barrel', () => {
     const barrelSrc = readFileSync(
       path.resolve(__dirname, '../../components/home/index.ts'),
       'utf8',
     );
-    expect(barrelSrc).toMatch(/TodayPlateHero/);
     expect(barrelSrc).toMatch(/TodayPlateCard/);
     expect(barrelSrc).toMatch(/PlateRationaleRibbon/);
+    // TodayPlateHero is no longer exported — its source was deleted.
+    expect(barrelSrc).not.toMatch(/from '\.\/TodayPlateHero/);
   });
 });

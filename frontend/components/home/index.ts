@@ -28,13 +28,12 @@ export type { FamilyEntry, BrowseByFamilyResponse } from './BrowseByFamilySectio
 export { EditorialMacroWidgets } from './EditorialMacroWidgets';
 export { EditorialHomeLayout } from './EditorialHomeLayout';
 export { default as PantryPlateHeroCard } from './PantryPlateHeroCard';
-// ROADMAP 4.0 BAP0.1 + BAP1.1 — Today plate hero. Y-Dead-2a (2026-05-21)
-// dropped the dead legacy sub-cards (RecipeOfTheDayCard,
+// ROADMAP 4.0 BAP1.1 — Today plate variants. Y-Dead-2a + 2c (2026-05-21)
+// dropped the legacy sub-cards (RecipeOfTheDayCard,
 // FeaturedRecipeCarousel, SeasonalPicksSection, StretchHomeCard,
 // PlateOfWeekCard, EditorialGreeting, EditorialQuickPicks, SurpriseFAB,
-// HeroRerollPill, RecipeCarouselSection) — all had zero consumers and
-// were explicitly marked "removed" in index.tsx's lead comments.
-export { default as TodayPlateHero } from './TodayPlateHero';
+// HeroRerollPill, RecipeCarouselSection) AND the BAP0.1-revert orphan
+// TodayPlateHero — all had zero consumers.
 export { default as TodayPlateCard } from './TodayPlateCard';
 export { default as PlateRationaleRibbon } from './PlateRationaleRibbon';
 export { default as VoiceComposerModal } from './VoiceComposerModal';
