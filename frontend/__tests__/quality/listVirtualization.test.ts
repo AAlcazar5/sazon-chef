@@ -21,15 +21,15 @@ interface ListContract {
 
 const MIGRATED_FILES: ListContract[] = [
   { file: 'components/cookbook/RecentlySavedSection.tsx', dataset: 'recipes' },
-  { file: 'components/home/SeasonalPicksSection.tsx', dataset: 'seasonal' },
   { file: 'components/cookbook/CollectionCarousel.tsx', dataset: 'recipes' },
   { file: 'components/cookbook/CollectionFilterRow.tsx', dataset: 'collections' },
   { file: 'components/cookbook/CollectionChips.tsx', dataset: 'collections' },
   { file: 'components/today/DiscoveryStrip.tsx', dataset: 'visible' },
   { file: 'components/today/NutritionStrip.tsx', dataset: 'pills' },
   { file: 'components/today/QuickActionRow.tsx', dataset: 'sortedActions' },
-  { file: 'components/home/RecipeCarouselSection.tsx', dataset: 'recipes' },
   { file: 'components/home/RecipeSectionsGrid.tsx', dataset: 'recipes' },
+  // Y-Dead-2a (2026-05-21): SeasonalPicksSection + RecipeCarouselSection
+  // deleted — both had zero consumers (superseded by RecipeSectionsGrid).
 ];
 
 describe('P4: list virtualization', () => {
