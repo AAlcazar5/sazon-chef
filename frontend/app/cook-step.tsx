@@ -19,6 +19,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { recipeApi } from '../lib/api/recipe';
 import { getAdhocRecipe } from '../lib/coach/adhocRecipeStash';
 import LoadingState from '../components/ui/LoadingState';
+import SazonFAB from '../components/sazon/SazonFAB';
 import { GenericLoadingStates } from '../constants/LoadingStates';
 import CookStepCard from '../components/cooking/CookStepCard';
 import StepWithTimers from '../components/cooking/StepWithTimers';
@@ -255,6 +256,18 @@ export default function CookStepScreen() {
         >
           {recipe.title}
         </Text>
+        {/* Y-Visible-2 (founder 2026-05-21): mid-cook Sazon presence.
+            Tap → opens Sazon for general chat. Long-press → seeds with
+            the current step text so the user can ask "what does
+            'fold gently' actually mean?" without losing context. */}
+        <SazonFAB
+          accessibilityLabel="Talk to Sazon about this step"
+          getContextSeed={() =>
+            stepText
+              ? `I'm on this step: "${stepText}". `
+              : null
+          }
+        />
         <HapticTouchableOpacity
           onPress={onClose}
           accessibilityRole="button"
