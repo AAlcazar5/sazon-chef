@@ -13,6 +13,7 @@ import {
 } from '../lib/api';
 import { detectRecipeAsk } from '../lib/coach/detectRecipeAsk';
 import { enforceCoachVoice } from '../lib/coach/enforceCoachVoice';
+import { donateRecipeAsk } from '../lib/voice/donateSiriShortcut';
 import {
   findOrGenerateRecipe,
   type RecipeCardPayload,
@@ -270,6 +271,11 @@ export function useCoachStream(initial?: UseCoachStreamOptions): UseCoachStreamR
               : m,
           ),
         );
+        // Y-Siri-2 (founder Telegram 2026-05-22): donate the successful
+        // recipe ask so iOS surfaces "Ask Sazon for X" as a Siri
+        // suggestion next time. Best-effort, fire-and-forget, no-op on
+        // Android and when the native bridge isn't wired yet.
+        void donateRecipeAsk({ query: ask.query });
       } catch {
         // Founder rule (2026-05-19): a recipe ask MUST render the card,
         // never an LLM paragraph. The earlier SSE fall-through produced
