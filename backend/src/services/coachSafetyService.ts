@@ -410,3 +410,145 @@ export function buildAllergenRefusal(
   const named = violatingTokens.slice(0, 3).join(', ');
   return `Your allergy is non-negotiable for me — that one had ${named} in it. Let me find something without.`;
 }
+
+// ─── System-prompt leak detection (Y-PI-3) ───────────────────────────────
+//
+// Founder Telegram 2026-05-22 — defense against the LLM accidentally
+// revealing its system prompt verbatim or paraphrased. The constitution
+// already includes a "never reveal" rule, but LLMs drift. This output-
+// side check looks for:
+//
+//   (a) Known leak-marker phrases like "my system prompt is", "I was
+//       instructed to", "according to my instructions" — strong signal
+//       even on their own.
+//   (b) ≥3 consecutive normalized sentences that also appear in the
+//       persona text. Catches paraphrase-resilient verbatim leaks.
+//
+// Wire-up to actually substitute the refusal copy lands in Y-PI-6.
+
+const LEAK_MARKER_PATTERNS: ReadonlyArray<RegExp> = [
+  /\bmy\s+system\s+prompt\s+(?:is|says|reads|contains|states)/i,
+  /\bmy\s+(?:instructions|constitution|rules)\s+(?:are|say|read|state)/i,
+  /\bi\s+was\s+(?:instructed|told|asked|programmed)\s+to/i,
+  /\baccording\s+to\s+my\s+(?:instructions|system|prompt|rules|constitution)/i,
+  /\bmy\s+prompt\s+says/i,
+  /\bas\s+(?:an\s+ai|a\s+language\s+model|a\s+chatbot)\b/i,
+  /\bhere\s+(?:is|are)\s+my\s+(?:instructions|system\s+prompt|rules|constitution)/i,
+  /\bthe\s+(?:above|following)\s+is\s+my\s+(?:system\s+prompt|instructions|constitution)/i,
+];
+
+function normalizeSentence(s: string): string {
+  return s
+    .toLowerCase()
+    // Strip XML-like tags so persona sentences that abut <constitution>
+    // / </constitution> blocks normalize the same as their reply twin.
+    .replace(/<\/?[a-z0-9_]+\s*>/g, '')
+    // Strip markdown bullet/list prefixes ("- " / "* " at line start).
+    .replace(/^[-*]\s+/gm, '')
+    // Drop markdown emphasis chars.
+    .replace(/[*_`~]+/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[.!?…]+\s*$/, '')
+    .trim();
+}
+
+function splitIntoSentences(text: string): string[] {
+  const out: string[] = [];
+  // Same regex shape as the frontend enforceCoachVoice splitter so
+  // detection stays consistent across both layers.
+  const re = /[^.!?…]+[.!?…]+(?:\s+|$)|[^.!?…]+$/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const piece = m[0].trim();
+    if (piece.length > 0) out.push(piece);
+  }
+  return out;
+}
+
+export type LeakReason = 'marker_phrase' | 'consecutive_persona_sentences';
+
+export interface SystemPromptLeakResult {
+  /** True iff at least one leak signal fired. */
+  leaked: boolean;
+  /** Distinct reasons that fired (sorted, deduped). */
+  reasons: ReadonlyArray<LeakReason>;
+  /** First offending fragment (one sentence's worth, for analytics). */
+  fragment: string | null;
+}
+
+/**
+ * Y-PI-3 — scan a coach reply for system-prompt leakage. `persona` is
+ * the canonical system prompt the LLM was given; we look for ≥3
+ * consecutive normalized sentences that appear in both. Independent
+ * of leak-marker patterns which fire on shorter signals.
+ *
+ * Pure function. Returns metadata; the wire-up in Y-PI-6 substitutes
+ * the refusal copy + Y-PI-7 logs the incident.
+ */
+export function detectSystemPromptLeak(
+  reply: string,
+  persona: string,
+): SystemPromptLeakResult {
+  if (!reply || reply.length === 0) {
+    return { leaked: false, reasons: [], fragment: null };
+  }
+  const reasons = new Set<LeakReason>();
+  let fragment: string | null = null;
+
+  // (a) Leak-marker phrases — single match is enough.
+  for (const pattern of LEAK_MARKER_PATTERNS) {
+    const m = reply.match(pattern);
+    if (m) {
+      reasons.add('marker_phrase');
+      if (!fragment) fragment = m[0];
+      break;
+    }
+  }
+
+  // (b) Consecutive-persona-sentence check. We need the persona text
+  //     for this; if the caller passed an empty string, skip.
+  if (persona && persona.length > 0) {
+    const personaSentences = splitIntoSentences(persona).map(normalizeSentence);
+    const personaSet = new Set(personaSentences.filter((s) => s.length >= 24));
+    const replySentences = splitIntoSentences(reply);
+    let run = 0;
+    let runStart: string | null = null;
+    for (const raw of replySentences) {
+      const norm = normalizeSentence(raw);
+      if (norm.length < 24) {
+        run = 0;
+        runStart = null;
+        continue;
+      }
+      if (personaSet.has(norm)) {
+        if (run === 0) runStart = raw;
+        run += 1;
+        if (run >= 3) {
+          reasons.add('consecutive_persona_sentences');
+          if (!fragment) fragment = runStart;
+          break;
+        }
+      } else {
+        run = 0;
+        runStart = null;
+      }
+    }
+  }
+
+  const sorted = Array.from(reasons).sort() as LeakReason[];
+  return {
+    leaked: sorted.length > 0,
+    reasons: sorted,
+    fragment,
+  };
+}
+
+/**
+ * Y-PI-3 + Y-PI-6 — Sazon-voice refusal copy when a leak is detected.
+ * Same voice rules as buildAllergenRefusal: warm, redirecting, never
+ * robotic. Doesn't echo what was leaked (defense-in-depth on the
+ * disclosure side).
+ */
+export function buildLeakRefusal(): string {
+  return "That part of how I work stays under the hood. But — what can I make easier for you tonight?";
+}
