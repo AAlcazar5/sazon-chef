@@ -84,7 +84,9 @@ describe('Sazon system prompt — lifestyle voice (C11)', () => {
   });
 
   it('encodes brevity rule (short replies)', () => {
-    expect(prompt).toMatch(/keep it short/i);
+    // Y-Voice-7 (PR #116) tightened the brevity rule from "keep it short"
+    // to a hard "3 sentences max" cap. Match the actual current wording.
+    expect(prompt).toMatch(/3 sentences max/i);
   });
 
   it('encodes friend voice ("eats well around the world")', () => {
