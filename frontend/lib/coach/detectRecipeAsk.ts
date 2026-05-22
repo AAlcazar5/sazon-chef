@@ -129,6 +129,24 @@ const TRIVIAL_QUERIES = new Set([
   'bro',
   'man',
   'bot',
+  // Y-Live-14: more chat-shaped captures from the new wanna/could/dying
+  // patterns. Travel/fun/walk/etc. are plausible captures from
+  // "wanna have fun" / "could go for a walk" / "dying for attention".
+  'travel',
+  'fun',
+  'attention',
+  'walk',
+  'run',
+  'ride',
+  'drive',
+  'vacation',
+  'holiday',
+  'break',
+  'rest',
+  'nap',
+  'space',
+  'love',
+  'change',
 ]);
 
 function cleanEnd(s: string): string {
@@ -151,7 +169,10 @@ function sanitize(q: string | undefined | null): string | null {
   // "what about your weekend" / "let's do this" / "I'm thinking about
   // my life" collapse to the noun, which then trips TRIVIAL_QUERIES.
   const stripped = cleanEnd(q)
-    .replace(/^(?:my|your|his|her|our|their|its|this|that|these|those)\s+/i, '')
+    // Y-Live-14: also strip leading "to " so non-food infinitives
+    // ("to travel" / "to rest" / "to sleep") collapse to the verb,
+    // which is then caught by TRIVIAL_QUERIES.
+    .replace(/^(?:my|your|his|her|our|their|its|this|that|these|those|to)\s+/i, '')
     .trim();
   if (stripped.length < 2) return null;
   if (TRIVIAL_QUERIES.has(stripped.toLowerCase())) return null;
@@ -207,6 +228,28 @@ const EXPLICIT_PATTERNS: RegExp[] = [
   /^is\s+there\s+(?:a\s+|an\s+)?(.+?)\s+recipe$/i,
   // Y-Live-11: "whip [me] [up] X" / "throw together X" / "fix me X"
   /^(?:whip|throw)\s+(?:me\s+)?(?:up\s+|together\s+)?(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: "wanna (have|eat|cook|make|try) X"
+  /^wanna\s+(?:have|eat|cook|make|try)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: "could go for X" / "could use some X" / "I could go for X"
+  /^(?:i\s+)?could\s+(?:go|use)\s+(?:for|some)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: "down for X" / "I'm down for X"
+  /^(?:i'?m\s+)?down\s+for\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: "got a craving for X"
+  /^got\s+a\s+craving\s+for\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: "hit me with X" / "hit me up with X"
+  /^hit\s+me\s+(?:up\s+with|with)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: "gotta have X" / "gotta get X" / "gotta eat X" / "gotta try X"
+  /^(?:i'?ve\s+)?gotta\s+(?:have|get|eat|try|make|cook)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: "would love to (eat|cook|make|have|try) X" — explicit
+  // food-verb infinitive form. Must come BEFORE the bare-form pattern
+  // below so "I'd love to make pizza" captures "pizza" not "to make pizza".
+  /^(?:(?:i\s+)?would|i'?d)\s+love\s+to\s+(?:eat|cook|make|have|try)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: bare "would love X" / "I'd love X". Non-food infinitive
+  // captures ("to travel", "to rest") get stripped + caught by TRIVIAL
+  // via the sanitize "to" leading-strip.
+  /^(?:(?:i\s+)?would|i'?d)\s+love\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-14: "dying for X" / "I'm dying for X"
+  /^(?:i'?m\s+)?dying\s+for\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
   // Y-Live-11: catch-all "X recipe" — moved to the END so the more specific
   // verb-led patterns above ("looking for a sushi recipe", "any X recipes",
   // etc.) get first crack and don't trip the greedy capture here.

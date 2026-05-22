@@ -356,3 +356,327 @@ describe('detectRecipeAsk corpus — non-string + empty → null', () => {
     },
   );
 });
+
+// ─── EXPANDED POSITIVE corpus (Y-Live-14, to 500+) ─────────────────────
+
+describe('detectRecipeAsk corpus — cuisines (single-word) → route', () => {
+  // Cuisine names alone should auto-route. The downstream wedge handles
+  // the breadth ("Italian" → Spoonacular returns popular Italian dishes,
+  // Dice + ranker pick one, card renders).
+  it.each<[string, string]>([
+    ['Italian', 'Italian'],
+    ['Mexican', 'Mexican'],
+    ['Thai', 'Thai'], // 4 chars — passes single-word min
+    ['Japanese', 'Japanese'],
+    ['Korean', 'Korean'],
+    ['Vietnamese', 'Vietnamese'],
+    ['Indian', 'Indian'],
+    ['Pakistani', 'Pakistani'],
+    ['Lebanese', 'Lebanese'],
+    ['Moroccan', 'Moroccan'],
+    ['Ethiopian', 'Ethiopian'],
+    ['Peruvian', 'Peruvian'],
+    ['Brazilian', 'Brazilian'],
+    ['Cuban', 'Cuban'],
+    ['Greek', 'Greek'],
+    ['Turkish', 'Turkish'],
+    ['Persian', 'Persian'],
+    ['Filipino', 'Filipino'],
+    ['Malaysian', 'Malaysian'],
+    ['Indonesian', 'Indonesian'],
+    ['Spanish', 'Spanish'],
+    ['French', 'French'],
+    ['German', 'German'],
+    ['Russian', 'Russian'],
+    ['Polish', 'Polish'],
+    ['Hungarian', 'Hungarian'],
+    ['Argentinean', 'Argentinean'],
+    ['Caribbean', 'Caribbean'],
+    ['Cajun', 'Cajun'],
+    ['Creole', 'Creole'],
+  ])('"%s" → %s', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — additional misspellings (pass-through)', () => {
+  // Detector contract: don't BLOCK typos. Downstream wedge handles
+  // correction (Spoonacular fuzzy + Dice + AI gen LLM-tolerance).
+  it.each<[string, string]>([
+    ['susi', 'susi'],
+    ['sushie', 'sushie'],
+    ['shusi', 'shusi'],
+    ['pizzaa', 'pizzaa'],
+    ['peeza', 'peeza'],
+    ['pissa', 'pissa'],
+    ['carbonarra', 'carbonarra'],
+    ['karbonara', 'karbonara'],
+    ['lasagne', 'lasagne'],
+    ['lazania', 'lazania'],
+    ['spagetti', 'spagetti'],
+    ['spaghett', 'spaghett'],
+    ['chiken', 'chiken'],
+    ['chikken', 'chikken'],
+    ['nooodel', 'nooodel'],
+    ['nodle', 'nodle'],
+    ['parmegan', 'parmegan'],
+    ['mozarela', 'mozarela'],
+    ['mozzarela', 'mozzarela'],
+    ['biriani', 'biriani'],
+    ['biryanee', 'biryanee'],
+    ['curi', 'curi'],
+    ['ramne', 'ramne'],
+    ['raman', 'raman'],
+    ['fajitass', 'fajitass'],
+  ])('"%s" → %s (pass-through)', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — cooking method + food', () => {
+  it.each<[string, string]>([
+    ['grilled chicken', 'grilled chicken'],
+    ['roasted veggies', 'roasted veggies'],
+    ['smoked brisket', 'smoked brisket'],
+    ['fried rice', 'fried rice'],
+    ['steamed dumplings', 'steamed dumplings'],
+    ['broiled fish', 'broiled fish'],
+    ['poached eggs', 'poached eggs'],
+    ['seared scallops', 'seared scallops'],
+    ['braised short ribs', 'braised short ribs'],
+    ['sauteed mushrooms', 'sauteed mushrooms'],
+    ['baked salmon', 'baked salmon'],
+    ['slow cooked stew', 'slow cooked stew'],
+    ['pan fried tofu', 'pan fried tofu'],
+    ['oven roasted potatoes', 'oven roasted potatoes'],
+    ['stir fried noodles', 'stir fried noodles'],
+  ])('"%s" → %s', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — diet hint + food', () => {
+  it.each<[string, string]>([
+    ['vegan pasta', 'vegan pasta'],
+    ['gluten-free pizza', 'gluten-free pizza'],
+    ['keto pancakes', 'keto pancakes'],
+    ['low-carb bread', 'low-carb bread'],
+    ['plant-based chili', 'plant-based chili'],
+    ['paleo meatballs', 'paleo meatballs'],
+    ['dairy-free smoothie', 'dairy-free smoothie'],
+    ['high-protein bowl', 'high-protein bowl'],
+    ['low-fat lasagna', 'low-fat lasagna'],
+    ['vegetarian curry', 'vegetarian curry'],
+    ['whole30 chicken', 'whole30 chicken'],
+    ['flexitarian bowl', 'flexitarian bowl'],
+  ])('"%s" → %s', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — regional / branded dishes', () => {
+  it.each<[string, string]>([
+    ['Korean BBQ', 'Korean BBQ'],
+    ['Nashville hot chicken', 'Nashville hot chicken'],
+    ['Cajun gumbo', 'Cajun gumbo'],
+    ['Tex-Mex tacos', 'Tex-Mex tacos'],
+    ['Buffalo wings', 'Buffalo wings'],
+    ['Chicago pizza', 'Chicago pizza'],
+    ['Philly cheesesteak', 'Philly cheesesteak'],
+    ['Southern fried chicken', 'Southern fried chicken'],
+    ['Hawaiian poke', 'Hawaiian poke'],
+    ['California rolls', 'California rolls'],
+    ['Thai green curry', 'Thai green curry'],
+    ['Indian dal', 'Indian dal'],
+    ['Vietnamese pho', 'Vietnamese pho'],
+    ['Japanese ramen', 'Japanese ramen'],
+    ['Spanish paella', 'Spanish paella'],
+    ['Greek moussaka', 'Greek moussaka'],
+    ['Italian risotto', 'Italian risotto'],
+  ])('"%s" → %s', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — Y-Live-14 new natural phrasings', () => {
+  it.each<[string, string]>([
+    // wanna
+    ['wanna have pizza', 'pizza'],
+    ['wanna eat sushi', 'sushi'],
+    ['wanna cook ramen', 'ramen'],
+    ['wanna make pasta', 'pasta'],
+    ['wanna try ceviche', 'ceviche'],
+    ['wanna have some tacos', 'tacos'],
+    // could go for / could use
+    ['could go for sushi', 'sushi'],
+    ['I could go for pizza', 'pizza'],
+    ['could use some pasta', 'pasta'],
+    ['could go for a burger', 'burger'],
+    // down for
+    ['down for ramen', 'ramen'],
+    ["I'm down for tacos", 'tacos'],
+    ['down for some sushi', 'sushi'],
+    // got a craving for
+    ['got a craving for pizza', 'pizza'],
+    ['got a craving for sushi', 'sushi'],
+    ['got a craving for some pasta', 'pasta'],
+    // hit me with
+    ['hit me with sushi', 'sushi'],
+    ['hit me up with pizza', 'pizza'],
+    ['hit me with a burrito', 'burrito'],
+    // gotta have
+    ['gotta have pizza', 'pizza'],
+    ['gotta get ramen', 'ramen'],
+    ['gotta eat sushi', 'sushi'],
+    ['gotta try ceviche', 'ceviche'],
+    // would love / I'd love
+    ['I would love sushi', 'sushi'],
+    ["I'd love ramen", 'ramen'],
+    ['would love to eat pizza', 'pizza'],
+    ["I'd love to cook pad thai", 'pad thai'],
+    // dying for
+    ['dying for tacos', 'tacos'],
+    ["I'm dying for sushi", 'sushi'],
+    ['dying for some pasta', 'pasta'],
+  ])('"%s" → %s', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — Y-Live-14 negative guards for new patterns', () => {
+  // The new phrasing patterns capture broadly; sanitize + TRIVIAL_QUERIES
+  // catch the most obvious false positives so the wedge doesn't fire on
+  // clearly-chat inputs.
+  it.each<string>([
+    'wanna have fun',
+    'could go for a walk',
+    "I'm down for anything",
+    'gotta get some sleep',
+    'I would love to travel',
+    'dying for attention',
+    "I'd love to rest",
+  ])('"%s" → null', (input) => {
+    expect(detectRecipeAsk(input)).toBeNull();
+  });
+});
+
+describe('detectRecipeAsk corpus — international dishes (single-word)', () => {
+  it.each<[string, string]>([
+    ['bolognese', 'bolognese'],
+    ['tartare', 'tartare'],
+    ['schnitzel', 'schnitzel'],
+    ['bratwurst', 'bratwurst'],
+    ['borscht', 'borscht'],
+    ['pelmeni', 'pelmeni'],
+    ['blini', 'blini'],
+    ['pierogi', 'pierogi'],
+    ['goulash', 'goulash'],
+    ['bagel', 'bagel'],
+    ['challah', 'challah'],
+    ['mansaf', 'mansaf'],
+    ['tabouli', 'tabouli'],
+    ['mujadara', 'mujadara'],
+    ['kofta', 'kofta'],
+    ['dolma', 'dolma'],
+    ['harissa', 'harissa'],
+    ['harira', 'harira'],
+    ['jollof', 'jollof'],
+    ['fufu', 'fufu'],
+    ['injera', 'injera'],
+    ['tibs', 'tibs'],
+    ['bobotie', 'bobotie'],
+    ['spanakopita', 'spanakopita'],
+    ['moussaka', 'moussaka'],
+    ['souvlaki', 'souvlaki'],
+    ['tzatziki', 'tzatziki'],
+    ['gyros', 'gyros'],
+    ['dosa', 'dosa'],
+    ['idli', 'idli'],
+    ['vada', 'vada'],
+    ['sambar', 'sambar'],
+    ['vindaloo', 'vindaloo'],
+    ['paneer', 'paneer'],
+    ['samosa', 'samosa'],
+    ['pakora', 'pakora'],
+    ['halwa', 'halwa'],
+    ['kheer', 'kheer'],
+    ['rasgulla', 'rasgulla'],
+    ['kulfi', 'kulfi'],
+  ])('"%s" → %s', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — desserts + baked goods', () => {
+  it.each<[string, string]>([
+    ['tiramisu', 'tiramisu'],
+    ['cheesecake', 'cheesecake'],
+    ['brownie', 'brownie'],
+    ['brownies', 'brownies'],
+    ['cookies', 'cookies'],
+    ['cookie', 'cookie'],
+    ['cupcakes', 'cupcakes'],
+    ['cinnamon rolls', 'cinnamon rolls'],
+    ['croissants', 'croissants'],
+    ['scones', 'scones'],
+    ['banana bread', 'banana bread'],
+    ['pumpkin pie', 'pumpkin pie'],
+    ['apple pie', 'apple pie'],
+    ['key lime pie', 'key lime pie'],
+    ['carrot cake', 'carrot cake'],
+    ['chocolate cake', 'chocolate cake'],
+    ['birthday cake', 'birthday cake'],
+    ['ice cream', 'ice cream'],
+    ['gelato', 'gelato'],
+    ['flan', 'flan'],
+    ['churros', 'churros'],
+    ['tres leches', 'tres leches'],
+  ])('"%s" → %s', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — drinks + small-plate snacks', () => {
+  it.each<[string, string]>([
+    ['margarita', 'margarita'],
+    ['mojito', 'mojito'],
+    ['horchata', 'horchata'],
+    ['matcha latte', 'matcha latte'],
+    ['boba tea', 'boba tea'],
+    ['smoothie', 'smoothie'],
+    ['protein shake', 'protein shake'],
+    ['energy balls', 'energy balls'],
+    ['trail mix', 'trail mix'],
+    ['granola', 'granola'],
+    ['overnight oats', 'overnight oats'],
+    ['hummus dip', 'hummus dip'],
+    ['guacamole', 'guacamole'],
+    ['salsa', 'salsa'],
+    ['queso', 'queso'],
+    ['edamame', 'edamame'],
+  ])('"%s" → %s', (input, expected) => {
+    expect(detectRecipeAsk(input)).toEqual({ query: expected });
+  });
+});
+
+describe('detectRecipeAsk corpus — additional question-shape negatives', () => {
+  // Many of these test the explicit chat exclusions or just lack
+  // recipe-ask shape.
+  it.each<string>([
+    'is dough hard to make?',
+    'are tomatoes a fruit?',
+    'when should I add salt?',
+    'where is my apron?',
+    'why is my cake flat?',
+    'should I use oil or butter?',
+    'do you cook?',
+    'can I substitute butter?',
+    "what's the best knife?",
+    'tell me a joke',
+    'explain sourdough',
+    'help me decide',
+    'recommend something light',
+  ])('"%s" → null', (input) => {
+    expect(detectRecipeAsk(input)).toBeNull();
+  });
+});
