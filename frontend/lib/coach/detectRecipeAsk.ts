@@ -13,14 +13,26 @@ export interface RecipeAsk {
 
 // Chat-question markers — if present, this is conversation, not a recipe
 // ask. Lower-cased; the regex uses /i so it matches the original input.
+//
+// Y-Live-15: added i'?d and i'?ll as blanket-blocked roots; specific
+// recipe-ask phrases ("I'd love X", "I'll have X") are caught by explicit
+// patterns BEFORE this exclusion runs (bare-food fallback only).
 const CHAT_EXCLUSIONS =
-  /\b(why|how come|can you|tell me|explain|do you|will it|is it|should i|what (does|is|should|can|to)|i'?m|i am|i think|i feel|i don'?t|plan|schedule|suggest|recommend|help me)\b/i;
+  /\b(why|how come|can you|tell me|explain|do you|will it|is it|should i|what (does|is|should|can|to)|i'?m|i'?d|i'?ll|i am|i think|i feel|i don'?t|plan|schedule|suggest|recommend|help me)\b/i;
+
+// Y-Live-15: multi-word chat closers + acknowledgments that aren't recipe
+// asks. These would otherwise slip through the bare-food fallback because
+// each individual word isn't trivial on its own.
+const CHAT_PHRASE_EXCLUSIONS =
+  /\b(?:see\s+(?:you|ya)|catch\s+you|good\s+(?:talk|night|morning|evening|afternoon|day|times?|times)|love\s+(?:it|ya|you)|hate\s+(?:it|ya|you)|sweet\s+dreams|pleasure\s+to\s+meet|sounds\s+good|works\s+for\s+me|fine\s+by\s+me|go\s+for\s+it|no\s+worries|all\s+good|take\s+care|thanks\s+a\s+lot|no\s+thank\s+you)\b/i;
 
 // Y-Live-8: multi-word greetings/openers were slipping past
 // CHAT_EXCLUSIONS into the bare-food fallback ("Hi coach" → wedge).
 // Single-word greetings are already filtered by the wordCount>=2 rule.
+//
+// Y-Live-15: added goodbye + good talk/day variants.
 const GREETING_EXCLUSIONS =
-  /\b(hi|hello|hey|yo|sup|howdy|thanks|thank\s+you|bye|good\s+(morning|afternoon|evening|night))\b/i;
+  /\b(hi|hello|hey|yo|sup|howdy|thanks|thank\s+you|bye|goodbye|good\s+(morning|afternoon|evening|night|talk|day))\b/i;
 
 // Refuse trivial single-word "queries" that aren't actually a food name —
 // these would yield empty recipe searches.
@@ -147,6 +159,13 @@ const TRIVIAL_QUERIES = new Set([
   'space',
   'love',
   'change',
+  // Y-Live-15: chat closers + day periods that surface as single-word
+  // inputs alongside the multi-word phrases in CHAT_PHRASE_EXCLUSIONS.
+  'morning',
+  'evening',
+  'afternoon',
+  'noon',
+  'goodbye',
 ]);
 
 function cleanEnd(s: string): string {
@@ -156,8 +175,12 @@ function cleanEnd(s: string): string {
 // Y-Live-11: strip leading greeting + optional comma so "hey, give me sushi"
 // behaves the same as "give me sushi". Conservative — only strips the
 // known greeting set so we don't drop meaningful prefix words.
+//
+// Y-Live-15: also handle "greeting + addressee + optional comma" forms
+// like "hey friend, give me sushi" / "hi sazon, what about pad thai".
+// The optional `[,!]?` lets bare "hi give me sushi" (no comma) work too.
 const LEADING_GREETING =
-  /^(?:hey|hi|hello|yo|yeah|ok|okay|so|alright)[,!\s]+/i;
+  /^(?:hey|hi|hello|yo|yeah|ok|okay|so|alright|sup|howdy)(?:\s+(?:there|coach|sazon|friend|buddy|dude|bro|man|guys?))?[,!]?\s+/i;
 
 function stripLeadingGreeting(s: string): string {
   return s.replace(LEADING_GREETING, '').trim();
@@ -186,6 +209,10 @@ function sanitize(q: string | undefined | null): string | null {
 // about / let's). These short-circuit before CHAT_EXCLUSIONS so the
 // blanket `i'?m` chat-exclusion can't bite "I'm craving sushi".
 const EXPLICIT_PATTERNS: RegExp[] = [
+  // Y-Live-15: "show me how to (make|cook|prepare|bake) X" — runs BEFORE
+  // the generic "show me X" pattern so we capture the food, not the
+  // whole "how to make X" phrase.
+  /^(?:show|tell)\s+me\s+how\s+to\s+(?:make|cook|prepare|bake)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
   // give / get / find / show me [a] [recipe for] X [recipe]
   /^(?:give|get|find|show)\s+(?:me\s+)?(?:a\s+|an\s+|some\s+)?(?:recipe\s+for\s+)?(.+?)(?:\s+recipe)?$/i,
   // recipe for X
@@ -250,6 +277,21 @@ const EXPLICIT_PATTERNS: RegExp[] = [
   /^(?:(?:i\s+)?would|i'?d)\s+love\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
   // Y-Live-14: "dying for X" / "I'm dying for X"
   /^(?:i'?m\s+)?dying\s+for\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-15: "teach me [how to (make|cook|prepare|bake)] X"
+  /^teach\s+me\s+(?:how\s+to\s+(?:make|cook|prepare|bake)\s+)?(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-15: "walk me through X" / "walk me through making X"
+  /^walk\s+me\s+through\s+(?:making\s+|cooking\s+|baking\s+|preparing\s+)?(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-15: "I'll (have|eat|cook|make|try|grab) X" — paired with
+  // adding `i'?ll` to CHAT_EXCLUSIONS so bare "I'll think about it" /
+  // "I'll see you later" still bottom out at null.
+  /^i'?ll\s+(?:have|eat|cook|make|try|grab)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-15: "going to (make|cook|...) X" / "gonna make X" /
+  // "I'm gonna make X" / "I'm going to make X".
+  /^(?:i'?m\s+)?(?:going\s+to|gonna)\s+(?:make|cook|bake|prepare|eat|have|try|grab)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-15: "treat me to X"
+  /^treat\s+me\s+to\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-15: "surprise me with X" / "surprise me — X"
+  /^surprise\s+me\s+(?:with\s+)?(?:a\s+|an\s+|some\s+)?(.+?)$/i,
   // Y-Live-11: catch-all "X recipe" — moved to the END so the more specific
   // verb-led patterns above ("looking for a sushi recipe", "any X recipes",
   // etc.) get first crack and don't trip the greedy capture here.
@@ -292,6 +334,7 @@ export function detectRecipeAsk(text: unknown): RecipeAsk | null {
   // floor used to block.
   if (text.includes('?')) return null;
   if (CHAT_EXCLUSIONS.test(original)) return null;
+  if (CHAT_PHRASE_EXCLUSIONS.test(original)) return null;
   if (GREETING_EXCLUSIONS.test(original)) return null;
   const wordCount = original.split(/\s+/).length;
   if (wordCount > 5) return null;
