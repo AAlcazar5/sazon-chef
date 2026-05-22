@@ -16,6 +16,7 @@ import {
   findOrGenerateRecipe,
   dice,
   pickBestCatalogImage,
+  extractSearchTerms,
 } from '../../../lib/coach/findOrGenerateRecipe';
 
 const mockGen = recipeApi.generateFromDescription as jest.Mock;
@@ -463,5 +464,126 @@ describe('findOrGenerateRecipe — N=1 ranker + alternates', () => {
     const result = await findOrGenerateRecipe('Grilled chicken');
     // No image borrowed → primary.imageUrls stays undefined.
     expect(result.primary.imageUrls).toBeUndefined();
+  });
+});
+
+// Y-Live-12 (founder Telegram 2026-05-22, "dig into it now"): the
+// catalog search step used to send only the FIRST ≥3-char token. A typo
+// on that one token ("chickn noodle soup") killed the catalog path
+// even when later tokens would have matched cleanly. extractSearchTerms
+// now returns all significant tokens in order, and fetchCatalogCandidates
+// retries down the list until something returns rows.
+describe('extractSearchTerms (Y-Live-12)', () => {
+  it('returns every ≥3-char token in original order', () => {
+    expect(extractSearchTerms('chicken noodle soup')).toEqual([
+      'chicken',
+      'noodle',
+      'soup',
+    ]);
+  });
+
+  it('drops sub-3-char tokens but preserves order of the rest', () => {
+    expect(extractSearchTerms('a la king pasta')).toEqual(['king', 'pasta']);
+  });
+
+  it('falls back to the first raw token when nothing clears 3 chars', () => {
+    expect(extractSearchTerms('a b c')).toEqual(['a']);
+  });
+
+  it('returns an empty list for empty / whitespace input', () => {
+    expect(extractSearchTerms('')).toEqual([]);
+    expect(extractSearchTerms('   ')).toEqual([]);
+  });
+
+  it('typo on first token still yields later usable tokens', () => {
+    expect(extractSearchTerms('chickn noodle soup')).toEqual([
+      'chickn',
+      'noodle',
+      'soup',
+    ]);
+  });
+});
+
+describe('fetchCatalogCandidates — multi-token retry (Y-Live-12)', () => {
+  it('retries with later token when first search returns 0 hits', async () => {
+    // First call (search="chickn") returns nothing — that token was typo'd.
+    // Second call (search="noodle") returns a structured catalog row.
+    mockGetAll
+      .mockResolvedValueOnce({ data: { recipes: [] } })
+      .mockResolvedValueOnce({
+        data: {
+          recipes: [
+            {
+              id: 'rcp_noodle',
+              title: 'Chicken Noodle Soup',
+              cuisine: 'American',
+              servings: 4,
+              ingredients: [
+                { name: 'chicken', amount: 1, unit: 'lb' },
+                { name: 'egg noodles', amount: 8, unit: 'oz' },
+              ],
+              instructions: [{ text: 'Simmer.' }],
+              imageUrl: 'https://example.com/cns.jpg',
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ data: { recipes: [] } });
+    mockGen.mockResolvedValue(FIXTURE);
+
+    const result = await findOrGenerateRecipe('chickn noodle soup');
+
+    // Catalog search fired exactly twice: first hit on the 2nd term.
+    expect(mockGetAll).toHaveBeenCalledTimes(2);
+    expect(mockGetAll).toHaveBeenNthCalledWith(1, {
+      search: 'chickn',
+      limit: expect.any(Number),
+    });
+    expect(mockGetAll).toHaveBeenNthCalledWith(2, {
+      search: 'noodle',
+      limit: expect.any(Number),
+    });
+    // Catalog match clears the Dice threshold against the full original
+    // query ("chickn noodle soup" vs "Chicken Noodle Soup") so we return
+    // the catalog row WITHOUT firing AI gen.
+    expect(result.primary.recipeId).toBe('rcp_noodle');
+    expect(mockGen).not.toHaveBeenCalled();
+  });
+
+  it('falls through to AI gen when EVERY token misses the catalog', async () => {
+    mockGetAll
+      .mockResolvedValueOnce({ data: { recipes: [] } })
+      .mockResolvedValueOnce({ data: { recipes: [] } })
+      .mockResolvedValueOnce({ data: { recipes: [] } });
+    mockGen.mockResolvedValue(FIXTURE);
+
+    const result = await findOrGenerateRecipe('asdfgh qwerty zxcvbn');
+
+    // Tried all 3 tokens, found nothing, AI gen took over.
+    expect(mockGetAll).toHaveBeenCalledTimes(3);
+    expect(mockGen).toHaveBeenCalledTimes(1);
+    expect(result.primary.title).toBe('Pizza Margherita');
+  });
+
+  it('does NOT retry when first token finds catalog hits', async () => {
+    mockGetAll.mockResolvedValueOnce({
+      data: {
+        recipes: [
+          {
+            id: 'rcp_first',
+            title: 'Chicken Tinga Tacos',
+            servings: 4,
+            ingredients: [{ name: 'chicken', amount: 1, unit: 'lb' }],
+            instructions: [{ text: 'Shred.' }],
+          },
+        ],
+      },
+    });
+    mockGen.mockResolvedValue(FIXTURE);
+
+    await findOrGenerateRecipe('chicken noodle soup');
+
+    // Happy path: 1 catalog request, no retry.
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
 });
