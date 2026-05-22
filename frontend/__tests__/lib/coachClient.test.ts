@@ -5,10 +5,14 @@
 import { deriveCoachFlags, FREE_DAILY_MESSAGE_CAP } from '../../lib/coachClient';
 
 describe('deriveCoachFlags', () => {
-  it('free user gets capped, no photos, no memory, no weekly check-in, Haiku 4.5', () => {
+  it('free user gets capped, no memory, no weekly check-in, Haiku 4.5', () => {
     const flags = deriveCoachFlags({ tier: 'free', isPremium: false });
     expect(flags.tier).toBe('free');
-    expect(flags.canAttachPhotos).toBe(false);
+    // Founder ask 2026-05-22: photo attach temporarily unblocked for free
+    // tier to enable manual camera-to-pantry testing pre-launch. Roadmap
+    // Tier Y "Restore photo-attach paywall" tracks the revert; flip both
+    // this expectation + lib/coachClient.ts canAttachPhotos back to false then.
+    expect(flags.canAttachPhotos).toBe(true);
     expect(flags.dailyMessageCap).toBe(FREE_DAILY_MESSAGE_CAP);
     expect(flags.dailyMessageCap).toBe(10);
     expect(flags.hasMemory).toBe(false);
