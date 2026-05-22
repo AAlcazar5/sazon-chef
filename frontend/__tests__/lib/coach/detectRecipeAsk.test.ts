@@ -22,6 +22,24 @@ describe('detectRecipeAsk — explicit recipe phrases', () => {
     ["i'd like pho", 'pho'],
     ['make me a salad', 'salad'],
     ['cook me beef tacos', 'beef tacos'],
+    // Y-Live-10 (founder Telegram 2026-05-22): regression pin for
+    // multi-word "give me a recipe for X" — already worked before, but
+    // pinning so the existing coverage can't silently drift.
+    ['give me a recipe for chicken noodle soup', 'chicken noodle soup'],
+    // Y-Live-10: natural recipe-ask phrasings.
+    ['craving sushi', 'sushi'],
+    ["I'm craving sushi", 'sushi'],
+    ['craving a burrito', 'burrito'],
+    ['in the mood for tacos', 'tacos'],
+    ["I'm in the mood for ramen", 'ramen'],
+    ['feeling like pho', 'pho'],
+    ["I'm feeling like pad thai", 'pad thai'],
+    ['how about ramen', 'ramen'],
+    ['what about pad thai', 'pad thai'],
+    ["let's do tacos", 'tacos'],
+    ["let's make pizza", 'pizza'],
+    ['lets cook biryani', 'biryani'],
+    ["let's eat sushi", 'sushi'],
   ])('"%s" → query "%s"', (input, expectedQuery) => {
     expect(detectRecipeAsk(input)).toEqual({ query: expectedQuery });
   });

@@ -83,6 +83,11 @@ function sanitize(q: string | undefined | null): string | null {
 }
 
 // Order matters — more specific patterns first.
+//
+// Y-Live-10 (founder Telegram 2026-05-22): added natural recipe-ask
+// phrasings (craving / in the mood / feeling like / how about / what
+// about / let's). These short-circuit before CHAT_EXCLUSIONS so the
+// blanket `i'?m` chat-exclusion can't bite "I'm craving sushi".
 const EXPLICIT_PATTERNS: RegExp[] = [
   // give / get / find / show me [a] [recipe for] X [recipe]
   /^(?:give|get|find|show)\s+(?:me\s+)?(?:a\s+|an\s+|some\s+)?(?:recipe\s+for\s+)?(.+?)(?:\s+recipe)?$/i,
@@ -96,6 +101,17 @@ const EXPLICIT_PATTERNS: RegExp[] = [
   /^(?:i\s+want|i'?d\s+like)(?:\s+to\s+(?:make|cook|eat))?\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
   // make / cook me [a/an/some] X
   /^(?:make|cook)\s+me\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-10: "craving X" / "I'm craving X"
+  /^(?:i'?m\s+)?craving\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-10: "in the mood for X" / "I'm in the mood for X"
+  /^(?:i'?m\s+)?in\s+the\s+mood\s+for\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-10: "feeling like X" / "I'm feeling like X"
+  /^(?:i'?m\s+)?feeling\s+like\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-10: "how about X" / "what about X" — questions ("how about
+  // it?") are caught earlier by the literal `?` check.
+  /^(?:how|what)\s+about\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-10: "let's (do|make|have|try|cook|eat) X"
+  /^let'?s\s+(?:do|make|have|try|cook|eat)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
 ];
 
 export function detectRecipeAsk(text: unknown): RecipeAsk | null {
