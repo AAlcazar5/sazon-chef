@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'nativewind';
+import { useTheme } from '../../contexts/ThemeContext';
 import { EditorialFontFamily } from '../../constants/Typography';
 import { triggerHaptic, ImpactStyle } from '../../constants/Haptics';
 import { Colors, DarkColors } from '../../constants/Colors';
@@ -12,8 +12,7 @@ interface ServingStepperProps {
 }
 
 export function ServingStepper({ servings, onChangeServings }: ServingStepperProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useTheme();
   const containerBg = isDark ? DarkColors.card : '#FFFFFF';
   const containerBorder = isDark ? DarkColors.border.light : '#F0EAE2';
   const buttonBg = isDark ? DarkColors.surfaceTint : '#F5F0EB';
