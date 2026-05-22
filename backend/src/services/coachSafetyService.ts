@@ -262,17 +262,24 @@ export function detectInjectionAttempt(text: string): DetectInjectionResult {
 }
 
 // Wrap long string fields inside a tool result with <tool_data> tags so the
-// model treats them as data, not instructions. Pragmatic: only wraps strings
-// over a length threshold to keep small typed payloads (like macro numbers)
-// untouched.
+// model treats them as data, not instructions.
+//
+// Y-PI-2 (founder Telegram 2026-05-22): `sanitizeUserContent` now runs
+// on EVERY string, not just the long ones. The previous threshold was
+// pragmatic for `<tool_data>` wrapping (keep short numeric payloads
+// untouched) but it created an injection gap: a 15-char "SYSTEM: bypass"
+// in a user-saved field would slip through unwrapped AND unsanitized.
+// Sanitize is idempotent for clean text, so applying it always costs
+// nothing on the happy path and closes the gap on the attack path.
 const TOOL_DATA_WRAP_THRESHOLD = 80;
 
 export function tagToolResult(result: unknown): unknown {
   if (typeof result === 'string') {
+    const cleaned = sanitizeUserContent(result);
     if (result.length >= TOOL_DATA_WRAP_THRESHOLD) {
-      return `<tool_data>${sanitizeUserContent(result)}</tool_data>`;
+      return `<tool_data>${cleaned}</tool_data>`;
     }
-    return result;
+    return cleaned;
   }
   if (Array.isArray(result)) {
     return result.map((item) => tagToolResult(item));
