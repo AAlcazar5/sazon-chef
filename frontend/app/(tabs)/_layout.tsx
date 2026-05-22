@@ -28,6 +28,7 @@ import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabBar';
 import { VoiceComposerModal } from '../../components/home';
 import VoiceCoachQuickModal from '../../components/voice/VoiceCoachQuickModal';
+import MicFAB from '../../components/voice/MicFAB';
 import {
   buildSazonSeedForTab,
   openSazonForTab,
@@ -664,6 +665,19 @@ export default function TabLayout() {
           <SazonFAB
             getContextSeed={undefined}
             accessibilityLabel="Talk to Sazon"
+          />
+
+          {/* Y-Siri-1b (founder Telegram 2026-05-22) — visible voice entry
+              point next to SazonFAB. Tap → opens VoiceCoachQuickModal
+              with the current tab's path as originScreen hint. The
+              gesture path (long-press tab 1.0s) from Y-Siri-1 still
+              works for users who learn it; this is the discoverable
+              affordance. */}
+          <MicFAB
+            onPress={() => {
+              const seg = (segments[segments.length - 1] as string) || 'home';
+              setVoiceCoachOrigin(seg === 'index' ? 'home' : seg);
+            }}
           />
 
           {/* Quick Actions Button — matches SazonFAB's template: 36×36 brand
