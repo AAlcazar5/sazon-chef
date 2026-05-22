@@ -54,12 +54,24 @@ export interface CoachMedicalDeflectionEvent {
   reason: string;
 }
 
+// Y-PI-6 (founder Telegram 2026-05-22): server-side reply enforcement
+// fired — the streamed text was substituted with Sazon-voice refusal copy
+// because either a system-prompt leak or an allergen violation was detected
+// in the LLM's reply. Client overwrites the assistant message content
+// with `text` and treats the previously-streamed deltas as discarded.
+export interface CoachRefusalEvent {
+  type: 'refusal';
+  text: string;
+  reasons: ReadonlyArray<'system_prompt_leak' | 'allergen_violation'>;
+}
+
 export type CoachStreamEvent =
   | CoachTextEvent
   | CoachToolUseEvent
   | CoachToolResultEvent
   | CoachCostNoticeEvent
   | CoachMedicalDeflectionEvent
+  | CoachRefusalEvent
   | CoachDoneEvent;
 
 export type CoachAttachmentMediaType =
@@ -252,6 +264,23 @@ async function* streamCoachMessage(params: {
           try {
             const payload = JSON.parse(parsed.data) as { reason?: string };
             yield { type: 'medical_deflection', reason: payload.reason ?? 'medical_claim' };
+          } catch {
+            // ignore malformed event
+          }
+        } else if (parsed.event === 'refusal') {
+          // Y-PI-6: server-side enforcement substituted the reply. Forward
+          // both the new text and the trigger reasons so the hook can
+          // overwrite its message + (later) log analytics.
+          try {
+            const payload = JSON.parse(parsed.data) as {
+              text: string;
+              reasons?: ReadonlyArray<'system_prompt_leak' | 'allergen_violation'>;
+            };
+            yield {
+              type: 'refusal',
+              text: payload.text ?? '',
+              reasons: payload.reasons ?? [],
+            };
           } catch {
             // ignore malformed event
           }

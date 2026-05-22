@@ -559,3 +559,89 @@ export function detectSystemPromptLeak(
 export function buildLeakRefusal(): string {
   return "That part of how I work stays under the hood. But — what can I make easier for you tonight?";
 }
+
+// ─── Reply-voice enforcement (Y-PI-6) ────────────────────────────────────
+//
+// Single entry point that runs every output-side check + substitutes the
+// reply text with refusal copy when any check fires. Used by coachRoutes
+// AFTER the stream completes + BEFORE the message is persisted, so the
+// canonical stored message is the cleaned version.
+//
+// Order of checks (first-firing wins for the substituted copy):
+//   1. System-prompt leak (Y-PI-3) — substitute buildLeakRefusal()
+//   2. Allergen violation (Y-PI-4) — substitute buildAllergenRefusal()
+// The streaming deltas the client received are ephemeral; on next
+// load + re-render, the persisted refusal copy is what shows.
+
+export type ReplyEnforcementReason =
+  | 'system_prompt_leak'
+  | 'allergen_violation';
+
+export interface EnforceReplyOptions {
+  /** User's allergen profile (canonical strings — peanut / dairy / etc). */
+  allergens: ReadonlyArray<string>;
+  /** Persona text the LLM was given. Pass an empty string to skip the
+   *  consecutive-sentence layer of leak detection. */
+  persona: string;
+}
+
+export interface EnforceReplyResult {
+  /** Final reply text — original if no check fired, refusal copy if one did. */
+  text: string;
+  /** True iff a check fired and substituted. */
+  substituted: boolean;
+  /** Reasons each check fired (in firing order). */
+  reasons: ReadonlyArray<ReplyEnforcementReason>;
+  /** Detail payload for analytics (Y-PI-7). */
+  detail: {
+    leakReasons?: ReadonlyArray<LeakReason>;
+    leakFragment?: string | null;
+    allergenTokens?: ReadonlyArray<string>;
+  };
+}
+
+export function enforceReplyVoice(
+  reply: string,
+  options: EnforceReplyOptions,
+): EnforceReplyResult {
+  if (!reply || reply.length === 0) {
+    return {
+      text: reply ?? '',
+      substituted: false,
+      reasons: [],
+      detail: {},
+    };
+  }
+
+  const reasons: ReplyEnforcementReason[] = [];
+  const detail: EnforceReplyResult['detail'] = {};
+
+  // 1. Leak detection (highest priority — never reveal the prompt).
+  const leak = detectSystemPromptLeak(reply, options.persona);
+  if (leak.leaked) {
+    reasons.push('system_prompt_leak');
+    detail.leakReasons = leak.reasons;
+    detail.leakFragment = leak.fragment;
+    return {
+      text: buildLeakRefusal(),
+      substituted: true,
+      reasons,
+      detail,
+    };
+  }
+
+  // 2. Allergen violation (high priority — anaphylaxis risk).
+  const allergen = detectAllergenViolation(reply, options.allergens);
+  if (allergen.containsAllergen) {
+    reasons.push('allergen_violation');
+    detail.allergenTokens = allergen.violatingTokens;
+    return {
+      text: buildAllergenRefusal(allergen.violatingTokens),
+      substituted: true,
+      reasons,
+      detail,
+    };
+  }
+
+  return { text: reply, substituted: false, reasons: [], detail: {} };
+}
