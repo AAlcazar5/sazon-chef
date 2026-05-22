@@ -86,9 +86,23 @@ export function dice(a: string, b: string): number {
 const CATALOG_MATCH_THRESHOLD = 0.55;
 const CATALOG_SEARCH_LIMIT = 20;
 
-function firstSignificantToken(query: string): string {
-  const tokens = query.trim().split(/\s+/);
-  return tokens.find((t) => t.length >= 3) ?? tokens[0] ?? '';
+/**
+ * Y-Live-12: ordered list of search terms to retry against the catalog
+ * when the first one returns nothing. Catches typos that wipe out the
+ * first significant token: "chickn noodle soup" tries "chickn" → 0 hits
+ * → retries with "noodle" → finds "Chicken Noodle Soup" → Dice ranks
+ * against the full original query so the typo'd token's noise doesn't
+ * dominate the score.
+ *
+ * Returns ALL ≥3-char tokens in their original order, falling back to
+ * just the first token (any length) when no token clears 3 chars.
+ * Exported for unit testing.
+ */
+export function extractSearchTerms(query: string): string[] {
+  const tokens = query.trim().split(/\s+/).filter((t) => t.length > 0);
+  const significant = tokens.filter((t) => t.length >= 3);
+  if (significant.length > 0) return significant;
+  return tokens[0] ? [tokens[0]] : [];
 }
 
 interface CatalogIngredient {
@@ -211,32 +225,40 @@ interface CatalogFetchResult {
 }
 
 /** Fetch and split the catalog response into the two sets the wedge
- *  needs: structured-for-ranking + raw-for-images. */
+ *  needs: structured-for-ranking + raw-for-images.
+ *
+ *  Y-Live-12: retries with later tokens if the first one returns 0 rows
+ *  (handles typos that wipe out the first significant token). Stops at
+ *  the first term that returns ≥1 row. */
 async function fetchCatalogCandidates(query: string): Promise<CatalogFetchResult> {
-  const term = firstSignificantToken(query);
-  if (!term) return { structuredCandidates: [], imageSources: [] };
-  const res = (await recipeApi.getAllRecipes({
-    search: term,
-    limit: CATALOG_SEARCH_LIMIT,
-  })) as GetAllRecipesResponse;
-  const recipes = Array.isArray(res?.data)
-    ? res.data
-    : res?.data?.recipes ?? [];
-  const structuredCandidates = recipes
-    .map(mapCatalogRecipe)
-    .filter((r): r is RecipeCardPayload => r !== null);
-  const imageSources: Array<{ title: string; imageUrl: string }> = [];
-  for (const r of recipes) {
-    if (
-      typeof r.title === 'string' &&
-      r.title.length > 0 &&
-      typeof r.imageUrl === 'string' &&
-      r.imageUrl.length > 0
-    ) {
-      imageSources.push({ title: r.title, imageUrl: r.imageUrl });
+  const terms = extractSearchTerms(query);
+  if (terms.length === 0) return { structuredCandidates: [], imageSources: [] };
+  for (const term of terms) {
+    const res = (await recipeApi.getAllRecipes({
+      search: term,
+      limit: CATALOG_SEARCH_LIMIT,
+    })) as GetAllRecipesResponse;
+    const recipes = Array.isArray(res?.data)
+      ? res.data
+      : res?.data?.recipes ?? [];
+    if (recipes.length === 0) continue;
+    const structuredCandidates = recipes
+      .map(mapCatalogRecipe)
+      .filter((r): r is RecipeCardPayload => r !== null);
+    const imageSources: Array<{ title: string; imageUrl: string }> = [];
+    for (const r of recipes) {
+      if (
+        typeof r.title === 'string' &&
+        r.title.length > 0 &&
+        typeof r.imageUrl === 'string' &&
+        r.imageUrl.length > 0
+      ) {
+        imageSources.push({ title: r.title, imageUrl: r.imageUrl });
+      }
     }
+    return { structuredCandidates, imageSources };
   }
-  return { structuredCandidates, imageSources };
+  return { structuredCandidates: [], imageSources: [] };
 }
 
 /** Pure helper — find the catalog row with the highest title-Dice
