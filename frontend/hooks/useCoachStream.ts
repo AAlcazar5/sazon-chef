@@ -12,6 +12,7 @@ import {
   type CoachPaywallInfo,
 } from '../lib/api';
 import { detectRecipeAsk } from '../lib/coach/detectRecipeAsk';
+import { enforceCoachVoice } from '../lib/coach/enforceCoachVoice';
 import {
   findOrGenerateRecipe,
   type RecipeCardPayload,
@@ -355,6 +356,20 @@ export function useCoachStream(initial?: UseCoachStreamOptions): UseCoachStreamR
             setPaywallReason('generic');
           }
         } else if (event.type === 'done') {
+          // Y-Voice-7 (founder Telegram 2026-05-22): post-stream cap. The
+          // server persona says "3 sentences max" + "no preamble" + "no
+          // question stacks" but the LLM drifts. Re-apply the rules here
+          // so the stored + re-rendered message honors them even when
+          // the live stream temporarily showed more.
+          if (acc.length > 0) {
+            const enforced = enforceCoachVoice(acc);
+            if (enforced.text !== acc) {
+              acc = enforced.text;
+              setMessages(prev =>
+                prev.map(m => (m.id === assistantId ? { ...m, content: acc } : m)),
+              );
+            }
+          }
           break;
         }
       }
