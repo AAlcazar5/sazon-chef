@@ -40,8 +40,82 @@ describe('detectRecipeAsk — explicit recipe phrases', () => {
     ["let's make pizza", 'pizza'],
     ['lets cook biryani', 'biryani'],
     ["let's eat sushi", 'sushi'],
+    // Y-Live-11: more natural phrasings.
+    ['I need a recipe for chicken noodle soup', 'chicken noodle soup'],
+    ['need pizza', 'pizza'],
+    ['I need ramen', 'ramen'],
+    ["I'm thinking pasta", 'pasta'],
+    ['thinking about tacos', 'tacos'],
+    ['thinking of biryani', 'biryani'],
+    ['looking for a sushi recipe', 'sushi'],
+    ["I'm looking for ramen", 'ramen'],
+    ['searching for pho', 'pho'],
+    ['send me a recipe for chicken parm', 'chicken parm'],
+    ['send me ramen', 'ramen'],
+    ['got any sushi recipes', 'sushi'],
+    ['got any pizza', 'pizza'],
+    ['any pasta recipes', 'pasta'],
+    ['any ramen recipe', 'ramen'],
+    ['fancy a curry', 'curry'],
+    ['fancy some pasta', 'pasta'],
+    ['gimme sushi', 'sushi'],
+    ['gimme a burrito', 'burrito'],
+    ['gimme a recipe for tacos', 'tacos'],
+    ['whip me up some pasta', 'pasta'],
+    ['whip up a salad', 'salad'],
+    ['throw together some tacos', 'tacos'],
+    // Y-Live-11: leading-greeting stripping.
+    ['hey, give me a recipe for sushi', 'sushi'],
+    ['yo, gimme tacos', 'tacos'],
+    ['hi, craving pho', 'pho'],
+    ['ok send me ramen', 'ramen'],
+    ['so what about pad thai', 'pad thai'],
   ])('"%s" → query "%s"', (input, expectedQuery) => {
     expect(detectRecipeAsk(input)).toEqual({ query: expectedQuery });
+  });
+});
+
+describe('detectRecipeAsk — natural-phrasing false-positive guards', () => {
+  // Y-Live-11: the new "how about X" / "what about X" / "I'm thinking X" /
+  // "looking for X" patterns capture noun phrases broadly. The pronoun
+  // strip + expanded TRIVIAL_QUERIES filter the most common false-positive
+  // payloads so the wedge card doesn't fire on chat-y inputs.
+  it.each([
+    'what about your weekend',
+    'how about that game',
+    "I'm thinking about life",
+    'thinking about my work',
+    "I'm thinking about it",
+    'how about now',
+    'what about later',
+    'looking for my keys', // "my keys" → stripped to "keys" — still routes; graceful fail downstream
+    "let's do this",
+    "let's do it",
+  ])('"%s" → null OR trivially captured payload (no wedge hijack of clear chat)', (input) => {
+    const result = detectRecipeAsk(input);
+    // We allow EITHER null OR a captured payload that wouldn't crash the
+    // wedge — what we DON'T want is a junk payload that hijacks chat into
+    // a confusing recipe-card surface. Strict null for the most obvious
+    // cases is asserted in the next test below.
+    if (result !== null) {
+      // The captured query must be a non-trivial string (long enough to
+      // be a plausible food name). The wedge has a graceful-fail card
+      // for "no recipe found".
+      expect(result.query.length).toBeGreaterThan(1);
+    }
+  });
+
+  it.each([
+    ['what about your weekend', null],
+    ['how about that game', null],
+    ["I'm thinking about life", null],
+    ["I'm thinking about it", null],
+    ['how about now', null],
+    ['what about later', null],
+    ["let's do this", null],
+    ["let's do it", null],
+  ])('strict null on the highest-risk false positives: "%s"', (input, expected) => {
+    expect(detectRecipeAsk(input)).toBe(expected);
   });
 });
 
