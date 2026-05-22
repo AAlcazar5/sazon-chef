@@ -297,8 +297,13 @@ export default function CoachScreen({
     if (seededRef.current) return;
     const convId = typeof params.conversationId === 'string' ? params.conversationId : undefined;
     const seed = typeof params.seedMessage === 'string' ? params.seedMessage : undefined;
-    if (!convId || !seed || seed.trim().length === 0) return;
-    if (stream.conversationId !== convId) return;
+    if (!seed || seed.trim().length === 0) return;
+    // Y-Siri-1 (founder Telegram 2026-05-22): allow seedMessage WITHOUT a
+    // conversationId. VoiceCoachQuickModal routes here from any tab with
+    // a fresh utterance; we want it sent immediately (the underlying
+    // useCoachStream.sendMessage auto-creates a conversation when none
+    // exists, so no extra plumbing is needed here).
+    if (convId && stream.conversationId !== convId) return;
     seededRef.current = true;
     setLastSentText(seed);
     void stream.sendMessage(seed);

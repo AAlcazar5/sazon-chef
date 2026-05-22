@@ -27,6 +27,7 @@ import { GradientPresets } from '../../constants/Gradients';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { AnimatedTabIcon } from '../../components/ui/AnimatedTabBar';
 import { VoiceComposerModal } from '../../components/home';
+import VoiceCoachQuickModal from '../../components/voice/VoiceCoachQuickModal';
 import {
   buildSazonSeedForTab,
   openSazonForTab,
@@ -49,6 +50,10 @@ export default function TabLayout() {
   const [showQuickTimer, setShowQuickTimer] = useState(false);
   // 10X Phase 7 — long-press home tab opens the voice composer.
   const [showVoiceComposer, setShowVoiceComposer] = useState(false);
+  // Y-Siri-1 (founder Telegram 2026-05-22) — long-press 1.0s on any non-
+  // home tab opens the voice-to-coach quick modal. originScreen is the
+  // hidden context hint forwarded to coach.
+  const [voiceCoachOrigin, setVoiceCoachOrigin] = useState<string | null>(null);
   const [shoppingBadge, setShoppingBadge] = useState<number | undefined>(undefined);
   const [mealPlanHasUncooked, setMealPlanHasUncooked] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
@@ -393,19 +398,40 @@ export default function TabLayout() {
             <AnimatedTabIcon name="book-outline" color={color} size={size} focused={focused} />
           ),
           // ROADMAP 4.0 A4-d — long-press opens Sazon with affinity-seeded prompt.
+          // Y-Siri-1 (founder 2026-05-22): dual-threshold — 1.0s → voice-to-
+          // coach modal (originScreen='kitchen'), 1.8s → Sazon-with-seed.
           tabBarButton: (btnProps) => {
             const { onPress, accessibilityState, children, style } = btnProps;
             const focused = accessibilityState?.selected ?? false;
+            const pressStartRef = { current: 0 };
+            const firedRef = { current: false };
             return (
               <HapticTouchableOpacity
+                onPressIn={() => {
+                  pressStartRef.current = Date.now();
+                  firedRef.current = false;
+                }}
+                onPressOut={() => {
+                  const elapsed = Date.now() - pressStartRef.current;
+                  pressStartRef.current = 0;
+                  if (firedRef.current) return;
+                  if (elapsed >= LONG_PRESS_SAZON_MS) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                    firedRef.current = true;
+                    openSazonForTab('kitchen');
+                  }
+                }}
                 onPress={(e: any) => onPress?.(e)}
                 onLongPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  openSazonForTab('kitchen');
+                  const elapsed = Date.now() - pressStartRef.current;
+                  if (elapsed >= LONG_PRESS_VOICE_MS && elapsed < LONG_PRESS_SAZON_MS) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setVoiceCoachOrigin('kitchen');
+                  }
                 }}
-                delayLongPress={LONG_PRESS_SAZON_MS}
+                delayLongPress={LONG_PRESS_VOICE_MS}
                 accessibilityLabel={focused ? 'Kitchen tab, selected' : 'Kitchen tab'}
-                accessibilityHint="Long press to ask Sazon for something you'd love"
+                accessibilityHint="Long press for voice to Sazon; hold longer to ask about your saved recipes"
                 accessibilityRole="button"
                 style={style as any}
               >
@@ -423,19 +449,39 @@ export default function TabLayout() {
             <AnimatedTabIcon name="calendar-outline" color={color} size={size} focused={focused} badgeDot={mealPlanHasUncooked} badgeColor={colors.primary} />
           ),
           // ROADMAP 4.0 A4-c — long-press opens Sazon with this-week context.
+          // Y-Siri-1: dual-threshold (voice at 1.0s, sazon-seed at 1.8s).
           tabBarButton: (btnProps) => {
             const { onPress, accessibilityState, children, style } = btnProps;
             const focused = accessibilityState?.selected ?? false;
+            const pressStartRef = { current: 0 };
+            const firedRef = { current: false };
             return (
               <HapticTouchableOpacity
+                onPressIn={() => {
+                  pressStartRef.current = Date.now();
+                  firedRef.current = false;
+                }}
+                onPressOut={() => {
+                  const elapsed = Date.now() - pressStartRef.current;
+                  pressStartRef.current = 0;
+                  if (firedRef.current) return;
+                  if (elapsed >= LONG_PRESS_SAZON_MS) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                    firedRef.current = true;
+                    openSazonForTab('week');
+                  }
+                }}
                 onPress={(e: any) => onPress?.(e)}
                 onLongPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  openSazonForTab('week');
+                  const elapsed = Date.now() - pressStartRef.current;
+                  if (elapsed >= LONG_PRESS_VOICE_MS && elapsed < LONG_PRESS_SAZON_MS) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setVoiceCoachOrigin('week');
+                  }
                 }}
-                delayLongPress={LONG_PRESS_SAZON_MS}
+                delayLongPress={LONG_PRESS_VOICE_MS}
                 accessibilityLabel={focused ? 'Week tab, selected' : 'Week tab'}
-                accessibilityHint="Long press to ask Sazon why this plan"
+                accessibilityHint="Long press for voice to Sazon; hold longer to ask about this plan"
                 accessibilityRole="button"
                 style={style as any}
               >
@@ -472,6 +518,29 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon name="person-outline" color={color} size={size} focused={focused} />
           ),
+          // Y-Siri-1: voice-to-Sazon on long-press from Profile too. No
+          // 1.8s sazon-seed branch yet (no tab seed defined for profile in
+          // sazonTabShortcut); voice alone is the gesture for this tab.
+          tabBarButton: (btnProps) => {
+            const { onPress, accessibilityState, children, style } = btnProps;
+            const focused = accessibilityState?.selected ?? false;
+            return (
+              <HapticTouchableOpacity
+                onPress={(e: any) => onPress?.(e)}
+                onLongPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setVoiceCoachOrigin('profile');
+                }}
+                delayLongPress={LONG_PRESS_VOICE_MS}
+                accessibilityLabel={focused ? 'Profile tab, selected' : 'Profile tab'}
+                accessibilityHint="Long press to talk to Sazon"
+                accessibilityRole="button"
+                style={style as any}
+              >
+                {children}
+              </HapticTouchableOpacity>
+            );
+          },
         }}
       />
     </Tabs>
@@ -684,6 +753,16 @@ export default function TabLayout() {
       <VoiceComposerModal
         visible={showVoiceComposer}
         onClose={() => setShowVoiceComposer(false)}
+      />
+
+      {/* Y-Siri-1 (founder Telegram 2026-05-22) — Voice-to-Coach modal
+          opened by long-press on Kitchen / Week / Profile tabs. Routes
+          the spoken text into the coach as `seedMessage`; the wedge
+          fires for recipe asks, otherwise the LLM responds. */}
+      <VoiceCoachQuickModal
+        visible={voiceCoachOrigin !== null}
+        onClose={() => setVoiceCoachOrigin(null)}
+        originScreen={voiceCoachOrigin ?? undefined}
       />
     </View>
   );
