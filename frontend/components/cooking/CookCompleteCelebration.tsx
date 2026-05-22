@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import HapticTouchableOpacity from '../ui/HapticTouchableOpacity';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Pastel, PastelDark, Accent, Colors, DarkColors } from '../../constants/Colors';
+import { Pastel, PastelDark, Accent, Colors, DarkColors, EditorialColors } from '../../constants/Colors';
 import { EditorialFontFamily } from '../../constants/Typography';
 
 export type CookCompleteIntensity = 'big' | 'medium' | 'quiet';
@@ -132,7 +132,13 @@ export default function CookCompleteCelebration({
 
   // big
   const bg = isDark ? PastelDark.golden : Pastel.golden;
-  const accent = Accent.golden;
+  // Founder ask 2026-05-21: bright Accent.golden (#FFD54F) on Pastel.golden
+  // (#FFF8E1) failed contrast — eyebrow + share-prompt text was barely
+  // readable. Switch to EditorialColors.pastelTitle.golden (#8a6200, WCAG
+  // AA on the pale-yellow surface) in light mode; dark mode keeps the
+  // bright accent because the surface is near-dark (12% golden over screen
+  // bg) where a dark accent would itself fail contrast.
+  const accent = isDark ? Accent.golden : EditorialColors.pastelTitle.golden;
   const text = isDark ? DarkColors.text.primary : Colors.text.primary;
   const sub = isDark ? DarkColors.text.secondary : Colors.text.secondary;
   return (
