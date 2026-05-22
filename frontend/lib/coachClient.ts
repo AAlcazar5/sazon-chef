@@ -46,7 +46,13 @@ export function deriveCoachFlags(
   }
   return {
     tier: 'free',
-    canAttachPhotos: false,
+    // Founder ask 2026-05-22: temporarily unblock photo attach for free
+    // tier so we can manually test the camera-to-pantry pipeline pre-launch.
+    // Restore to `false` before public launch — roadmap Tier Y "Restore
+    // photo-attach paywall" item tracks the revert. Same pattern as the
+    // 401 auto-logout comment-out: comment the gate, ship a roadmap TODO,
+    // do not invent a long-lived bypass flag.
+    canAttachPhotos: true, // RESTORE TO false PRE-LAUNCH
     dailyMessageCap: FREE_DAILY_MESSAGE_CAP,
     hasMemory: false,
     hasWeeklyCheckin: false,
