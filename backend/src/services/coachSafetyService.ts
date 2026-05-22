@@ -286,3 +286,127 @@ export function tagToolResult(result: unknown): unknown {
   }
   return result;
 }
+
+// ─── Allergen-override resistance (Y-PI-4) ───────────────────────────────
+//
+// Founder Telegram 2026-05-22 — even if a user / sanitization bypass /
+// LLM hallucination produces a reply that mentions a user-allergen
+// ingredient, the deterministic post-check below catches it BEFORE
+// delivery. The reply text is checked word-by-word against the user's
+// allergen profile + a small variant map ("milk" → also flag "dairy",
+// "egg" → also flag "eggs", "peanut" → also flag "peanuts").
+//
+// False-positive policy: STRICT preference for catching. If the reply
+// mentions "peanut-free", we still flag — better to refuse + offer an
+// alternative than to risk anaphylaxis. The refusal copy is friendly
+// (Sazon voice) so the false-positive UX is acceptable.
+
+/**
+ * Common variants for each allergen token. Lowercase. Each entry's
+ * key is the canonical allergen (matches what the user profile stores);
+ * the values are additional tokens to scan for in replies.
+ */
+const ALLERGEN_VARIANTS: Readonly<Record<string, ReadonlyArray<string>>> = {
+  peanut: ['peanut', 'peanuts', 'goober'],
+  tree_nut: ['almond', 'almonds', 'cashew', 'cashews', 'walnut', 'walnuts', 'pecan', 'pecans', 'pistachio', 'pistachios', 'hazelnut', 'hazelnuts', 'macadamia', 'pine nut', 'brazil nut'],
+  dairy: ['milk', 'dairy', 'cheese', 'cream', 'butter', 'yogurt', 'whey', 'casein', 'lactose', 'parmesan', 'mozzarella', 'feta', 'ricotta', 'mascarpone'],
+  egg: ['egg', 'eggs', 'mayonnaise', 'mayo', 'meringue'],
+  wheat: ['wheat', 'flour', 'bread', 'pasta', 'noodle', 'noodles', 'couscous', 'bulgur', 'farro', 'semolina'],
+  gluten: ['wheat', 'flour', 'bread', 'pasta', 'noodle', 'noodles', 'barley', 'rye', 'farro', 'spelt', 'semolina', 'malt'],
+  soy: ['soy', 'soybean', 'soybeans', 'tofu', 'tempeh', 'edamame', 'miso', 'tamari'],
+  shellfish: ['shrimp', 'prawn', 'prawns', 'lobster', 'crab', 'crayfish', 'crawfish', 'clam', 'clams', 'oyster', 'oysters', 'mussel', 'mussels', 'scallop', 'scallops'],
+  fish: ['fish', 'salmon', 'tuna', 'cod', 'tilapia', 'halibut', 'mackerel', 'sardine', 'sardines', 'anchovy', 'anchovies', 'snapper', 'sea bass'],
+  sesame: ['sesame', 'tahini'],
+  mustard: ['mustard'],
+  sulfite: ['sulfite', 'sulphite', 'wine', 'sulfur dioxide'],
+  pork: ['pork', 'bacon', 'ham', 'prosciutto', 'pancetta', 'guanciale', 'chorizo', 'salami', 'pepperoni'],
+  beef: ['beef', 'steak', 'brisket', 'veal'],
+  alcohol: ['alcohol', 'wine', 'beer', 'rum', 'vodka', 'gin', 'whisky', 'whiskey', 'bourbon', 'sake'],
+};
+
+/**
+ * Build the watchlist of tokens to scan for, given a user's allergen
+ * profile. Each profile token is mapped through ALLERGEN_VARIANTS;
+ * unknown tokens fall back to themselves so the function still works
+ * for novel allergens not in the variant map.
+ *
+ * Exported for tests + analytics.
+ */
+export function expandAllergenWatchlist(
+  allergens: ReadonlyArray<string>,
+): ReadonlyArray<string> {
+  const out = new Set<string>();
+  for (const raw of allergens) {
+    const key = raw.trim().toLowerCase().replace(/\s+/g, '_');
+    if (key.length === 0) continue;
+    const variants = ALLERGEN_VARIANTS[key];
+    if (variants) {
+      for (const v of variants) out.add(v.toLowerCase());
+    } else {
+      // Unknown allergen — scan for the raw token itself + its plural.
+      const norm = raw.trim().toLowerCase();
+      out.add(norm);
+      if (!norm.endsWith('s')) out.add(`${norm}s`);
+    }
+  }
+  return Array.from(out).sort();
+}
+
+export interface AllergenCheckResult {
+  /** True iff at least one violating token was found in the reply. */
+  containsAllergen: boolean;
+  /** Distinct violating tokens (lowercase, sorted) — for analytics + the
+   *  refusal copy ("I noticed your peanut allergy — let me find something
+   *  without that"). */
+  violatingTokens: ReadonlyArray<string>;
+}
+
+/**
+ * Word-boundary scan for allergen tokens in a coach reply. Multi-word
+ * tokens (e.g., "pine nut", "sea bass") are matched as phrases. The
+ * scan is case-insensitive.
+ */
+export function detectAllergenViolation(
+  replyText: string,
+  userAllergens: ReadonlyArray<string>,
+): AllergenCheckResult {
+  if (!replyText || userAllergens.length === 0) {
+    return { containsAllergen: false, violatingTokens: [] };
+  }
+  const watchlist = expandAllergenWatchlist(userAllergens);
+  if (watchlist.length === 0) {
+    return { containsAllergen: false, violatingTokens: [] };
+  }
+  const text = replyText.toLowerCase();
+  const found = new Set<string>();
+  for (const token of watchlist) {
+    // Escape token for use in a regex. Multi-word tokens need their
+    // internal spaces preserved as `\s+` to handle line breaks.
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    const re = new RegExp(`\\b${escaped}\\b`, 'i');
+    if (re.test(text)) {
+      found.add(token);
+    }
+  }
+  const violatingTokens = Array.from(found).sort();
+  return {
+    containsAllergen: violatingTokens.length > 0,
+    violatingTokens,
+  };
+}
+
+/**
+ * Build a Sazon-voice refusal string when an allergen violation is
+ * detected. Lifestyle voice: friendly redirection, never a robotic
+ * "I cannot comply with this request." Lists the violating tokens so
+ * the user knows why we paused.
+ */
+export function buildAllergenRefusal(
+  violatingTokens: ReadonlyArray<string>,
+): string {
+  if (violatingTokens.length === 0) {
+    return "Let me find something that actually works for you.";
+  }
+  const named = violatingTokens.slice(0, 3).join(', ');
+  return `Your allergy is non-negotiable for me — that one had ${named} in it. Let me find something without.`;
+}
