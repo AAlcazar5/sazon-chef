@@ -33,16 +33,30 @@ describe('detectRecipeAsk — bare food name (2-5 words, no chat verbs)', () => 
     ['Roasted Edamame & Chickpeas', 'Roasted Edamame & Chickpeas'],
     ['salmon bites', 'salmon bites'],
     ['pad thai', 'pad thai'],
+    // Y-Live-9 (founder Telegram 2026-05-22, "Sushi" miss): single-word
+    // food names auto-route too. Greetings + ack filler still bounce.
+    ['Sushi', 'Sushi'],
+    ['carbonara', 'carbonara'],
+    ['ramen', 'ramen'],
+    ['pizza', 'pizza'],
   ])('"%s" → query "%s"', (input, expectedQuery) => {
     expect(detectRecipeAsk(input)).toEqual({ query: expectedQuery });
   });
 
-  it('single-word greetings DO NOT auto-route to recipe (too noisy)', () => {
-    // Use explicit phrasing ("carbonara recipe") for 1-word foods.
+  it('single-word greetings + ack filler DO NOT auto-route to recipe', () => {
+    // Greetings caught by GREETING_EXCLUSIONS.
     expect(detectRecipeAsk('hello')).toBeNull();
     expect(detectRecipeAsk('hey')).toBeNull();
     expect(detectRecipeAsk('thanks')).toBeNull();
-    expect(detectRecipeAsk('carbonara')).toBeNull();
+    // Ack filler caught by TRIVIAL_QUERIES.
+    expect(detectRecipeAsk('yes')).toBeNull();
+    expect(detectRecipeAsk('no')).toBeNull();
+    expect(detectRecipeAsk('ok')).toBeNull();
+    expect(detectRecipeAsk('sure')).toBeNull();
+    expect(detectRecipeAsk('cool')).toBeNull();
+    expect(detectRecipeAsk('done')).toBeNull();
+    expect(detectRecipeAsk('what')).toBeNull();
+    expect(detectRecipeAsk('hmm')).toBeNull();
   });
 });
 
