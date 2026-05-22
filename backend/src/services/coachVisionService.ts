@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import type Anthropic from '@anthropic-ai/sdk';
 import { COACH_MODELS, getAnthropicClient } from './coachService';
+import { detectInjectionAttempt } from './coachSafetyService';
 
 export type VisionMediaType =
   | 'image/jpeg'
@@ -135,5 +136,14 @@ export async function identifyPantryFromImage(
     );
   }
 
-  return result.data;
+  // Y-PI-5 (founder Telegram 2026-05-22) — drop any ingredient name that
+  // matches an injection pattern. The vision model returns
+  // attacker-controlled text when a photo contains a sticky-note saying
+  // "ignore previous instructions" or similar. Without this filter that
+  // text would flow into the user's pantry + back into coach context on
+  // the next turn. Pattern detection from Y-PI-1.
+  const cleaned = result.data.ingredients.filter(
+    (ing) => !detectInjectionAttempt(ing.name).flagged,
+  );
+  return { ingredients: cleaned };
 }
