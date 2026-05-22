@@ -24,6 +24,11 @@ const GREETING_EXCLUSIONS =
 
 // Refuse trivial single-word "queries" that aren't actually a food name —
 // these would yield empty recipe searches.
+//
+// Y-Live-9 (founder Telegram 2026-05-22, "Sushi" miss): expanded to cover
+// common single-word non-foods that show up in chat follow-ups (yes / ok /
+// cool / done / etc). Without this, dropping the wordCount>=2 floor would
+// hijack acknowledgments into recipe asks.
 const TRIVIAL_QUERIES = new Set([
   'recipe',
   'food',
@@ -34,6 +39,35 @@ const TRIVIAL_QUERIES = new Set([
   'breakfast',
   'snack',
   'meal',
+  // Y-Live-9: follow-up acknowledgments + filler that pass the new
+  // single-word path.
+  'yes',
+  'yep',
+  'yeah',
+  'no',
+  'nope',
+  'nah',
+  'ok',
+  'okay',
+  'sure',
+  'maybe',
+  'cool',
+  'nice',
+  'good',
+  'great',
+  'perfect',
+  'awesome',
+  'done',
+  'ready',
+  'wait',
+  'stop',
+  'pause',
+  'next',
+  'back',
+  'what',
+  'huh',
+  'hmm',
+  'idk',
 ]);
 
 function cleanEnd(s: string): string {
@@ -77,15 +111,22 @@ export function detectRecipeAsk(text: unknown): RecipeAsk | null {
     }
   }
 
-  // Bare-food fallback: 2-5 words, no chat-question markers, no "?".
-  // Single-word inputs ("hello", "carbonara") are too noisy — they catch
-  // greetings as recipe asks. Users typing one food word can use
-  // explicit phrasing (e.g., "carbonara recipe", "find me carbonara").
+  // Bare-food fallback: 1-5 words, no chat-question markers, no "?".
+  //
+  // Y-Live-9 (founder Telegram 2026-05-22, "Sushi" miss): single-word
+  // food names ("Sushi", "carbonara", "ramen") now auto-route to a
+  // recipe card. The original >=2-word floor was protecting against
+  // greetings + acknowledgments leaking through — that role is now
+  // covered by GREETING_EXCLUSIONS + the expanded TRIVIAL_QUERIES set
+  // + a 3-character min-length floor that drops "ok" / "no" / etc.
   if (text.includes('?')) return null;
   if (CHAT_EXCLUSIONS.test(t)) return null;
   if (GREETING_EXCLUSIONS.test(t)) return null;
   const wordCount = t.split(/\s+/).length;
-  if (wordCount < 2 || wordCount > 5) return null;
+  if (wordCount > 5) return null;
+  // Single-word inputs need a min length to reject 2-char filler ("ok"
+  // would be in TRIVIAL too, but defensive: any 1-2 char input is noise).
+  if (wordCount === 1 && t.length < 3) return null;
   const q = sanitize(t);
   return q ? { query: q } : null;
 }
