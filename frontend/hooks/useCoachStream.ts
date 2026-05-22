@@ -319,6 +319,18 @@ export function useCoachStream(initial?: UseCoachStreamOptions): UseCoachStreamR
           setCostNotice(event.message);
         } else if (event.type === 'medical_deflection') {
           setMedicalDeflection({ reason: event.reason });
+        } else if (event.type === 'refusal') {
+          // Y-PI-6 (founder Telegram 2026-05-22): server-side enforcement
+          // substituted the reply (system-prompt leak OR allergen
+          // violation). Overwrite the accumulator + the assistant
+          // message so the user sees the Sazon-voice refusal, not the
+          // half-streamed original content.
+          acc = event.text;
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === assistantId ? { ...m, content: acc } : m,
+            ),
+          );
         } else if (event.type === 'tool_use') {
           toolUses.push({
             name: event.name,

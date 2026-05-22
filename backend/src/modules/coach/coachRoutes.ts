@@ -20,6 +20,7 @@ import {
 } from '@/services/coachService';
 import { classifyCoachIntent } from '@/services/coachIntentClassifier';
 import {
+  enforceReplyVoice,
   getMedicalDeflectionText,
   sanitizeUserContent,
   shouldDeflectMedicalClaim,
@@ -836,6 +837,34 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
         role: 'user',
         content: toolResultBlocks,
       });
+    }
+
+    // Y-PI-6 (founder Telegram 2026-05-22) — output-side enforcement.
+    // Runs leak detection + allergen check against the assembled reply;
+    // if either fires, substitute the persisted content with Sazon-voice
+    // refusal copy so the stored canonical message is clean. The live
+    // SSE deltas the client already received are ephemeral; on re-render
+    // (next chat-load, message list refresh) the user sees the refusal.
+    const enforced = enforceReplyVoice(assistantText, {
+      allergens: snapshot.allergens,
+      persona: systemBlocks.stable,
+    });
+    if (enforced.substituted) {
+      assistantText = enforced.text;
+      // Tell the client to swap the streamed text with the refusal — same
+      // SSE channel the rest of the stream used. Best-effort; if the
+      // socket has already closed the persisted message still carries
+      // the refusal.
+      try {
+        res.write(
+          `event: refusal\ndata: ${JSON.stringify({
+            text: enforced.text,
+            reasons: enforced.reasons,
+          })}\n\n`,
+        );
+      } catch {
+        /* socket closed — persistence is the canonical record */
+      }
     }
 
     await prisma.coachMessage.create({
