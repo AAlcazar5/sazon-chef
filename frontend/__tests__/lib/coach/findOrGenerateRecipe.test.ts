@@ -586,4 +586,89 @@ describe('fetchCatalogCandidates — multi-token retry (Y-Live-12)', () => {
     // Happy path: 1 catalog request, no retry.
     expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
+
+  it('typo on token 1 AND token 2 still recovers via token 3', async () => {
+    mockGetAll
+      .mockResolvedValueOnce({ data: { recipes: [] } })
+      .mockResolvedValueOnce({ data: { recipes: [] } })
+      .mockResolvedValueOnce({
+        data: {
+          recipes: [
+            {
+              id: 'rcp_soup',
+              title: 'Chicken Noodle Soup',
+              servings: 4,
+              ingredients: [{ name: 'chicken stock', amount: 4, unit: 'cup' }],
+              instructions: [{ text: 'Simmer.' }],
+              imageUrl: 'https://example.com/soup.jpg',
+            },
+          ],
+        },
+      });
+    mockGen.mockResolvedValue(FIXTURE);
+
+    const result = await findOrGenerateRecipe('chickn nooodel soup');
+
+    expect(mockGetAll).toHaveBeenCalledTimes(3);
+    expect(mockGetAll).toHaveBeenNthCalledWith(3, {
+      search: 'soup',
+      limit: expect.any(Number),
+    });
+    expect(result.primary.recipeId).toBe('rcp_soup');
+    expect(mockGen).not.toHaveBeenCalled();
+  });
+
+  it('skips sub-3-char tokens when looking for a search term', async () => {
+    // "a la king" → tokens ["a","la","king"]. Only "king" is ≥3 chars.
+    // We expect ONE catalog request with search="king".
+    mockGetAll.mockResolvedValueOnce({
+      data: {
+        recipes: [
+          {
+            id: 'rcp_king',
+            title: 'Chicken a la King',
+            servings: 4,
+            ingredients: [{ name: 'chicken', amount: 1, unit: 'lb' }],
+            instructions: [{ text: 'Cook.' }],
+          },
+        ],
+      },
+    });
+    mockGen.mockResolvedValue(FIXTURE);
+
+    await findOrGenerateRecipe('chicken a la king');
+
+    // First call uses "chicken". Should NOT iterate to "a" or "la".
+    expect(mockGetAll).toHaveBeenCalledWith({
+      search: 'chicken',
+      limit: expect.any(Number),
+    });
+  });
+
+  it('all-sub-3-char query falls back to the first raw token', async () => {
+    mockGetAll.mockResolvedValueOnce({ data: { recipes: [] } });
+    mockGen.mockResolvedValue(FIXTURE);
+
+    await findOrGenerateRecipe('a b c');
+
+    // extractSearchTerms("a b c") → ["a"] (fallback to first raw token).
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
+    expect(mockGetAll).toHaveBeenCalledWith({
+      search: 'a',
+      limit: expect.any(Number),
+    });
+  });
+
+  it('catalog throwing on first attempt does not abort the wedge — falls to AI gen', async () => {
+    // The outer try/catch swallows catalog errors so the wedge never
+    // hangs on a flaky GET. (Was already true pre-Y-Live-12 but easy to
+    // accidentally regress when adding the retry loop.)
+    mockGetAll.mockRejectedValueOnce(new Error('catalog 500'));
+    mockGen.mockResolvedValue(FIXTURE);
+
+    const result = await findOrGenerateRecipe('chicken noodle soup');
+
+    expect(mockGen).toHaveBeenCalledTimes(1);
+    expect(result.primary.title).toBe('Pizza Margherita');
+  });
 });
