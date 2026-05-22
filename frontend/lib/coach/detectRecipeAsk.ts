@@ -184,8 +184,9 @@ const EXPLICIT_PATTERNS: RegExp[] = [
   // Y-Live-10: "how about X" / "what about X" — questions ("how about
   // it?") are caught earlier by the literal `?` check.
   /^(?:how|what)\s+about\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
-  // Y-Live-10: "let's (do|make|have|try|cook|eat) X"
-  /^let'?s\s+(?:do|make|have|try|cook|eat)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
+  // Y-Live-10: "let's (do|make|have|try|cook|eat|grab) X"
+  // Y-Live-13: added "grab" — common phrasing ("let's grab some pizza").
+  /^let'?s\s+(?:do|make|have|try|cook|eat|grab)\s+(?:a\s+|an\s+|some\s+)?(.+?)$/i,
   // Y-Live-11: "I need [a recipe for] X" / "need X"
   /^(?:i\s+)?need\s+(?:a\s+|an\s+|some\s+)?(?:recipe\s+for\s+)?(.+?)(?:\s+recipe)?$/i,
   // Y-Live-11: "I'm thinking X" / "thinking X" / "thinking about|of X"
