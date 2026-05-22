@@ -20,12 +20,14 @@ import {
 } from '@/services/coachService';
 import { classifyCoachIntent } from '@/services/coachIntentClassifier';
 import {
+  detectInjectionAttempt,
   enforceReplyVoice,
   getMedicalDeflectionText,
   sanitizeUserContent,
   shouldDeflectMedicalClaim,
   tagToolResult,
 } from '@/services/coachSafetyService';
+import { summarizePayload } from '@/services/coachAnalytics';
 import {
   COST_CEILING_NOTICE_TEXT,
   selectModelWithBudget,
@@ -357,6 +359,21 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
   // the medical-claim regex below — sanitization can mask obfuscated
   // claims and weaken that detector.
   const sanitizedMessage = sanitizeUserContent(message);
+
+  // Y-PI-7 (founder Telegram 2026-05-22): emit telemetry if the user's
+  // message matched any injection pattern. The summary keeps raw attack
+  // text out of plaintext logs while preserving enough fingerprint to
+  // group novel attempts in a dashboard.
+  const inputScan = detectInjectionAttempt(message);
+  if (inputScan.flagged) {
+    emitAnalytics('prompt_injection_input', {
+      userId,
+      conversationId,
+      reasons: inputScan.reasons,
+      payload: summarizePayload(message),
+      outcome: 'sanitized',
+    });
+  }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const tier = resolveCoachTier(user);
@@ -850,6 +867,17 @@ coachRoutes.post('/message', coachMessageLimiter, ensureSingleCoachStream, async
       persona: systemBlocks.stable,
     });
     if (enforced.substituted) {
+      // Y-PI-7: telemetry for output-side substitutions. Summary
+      // captures the original (pre-substitution) reply so the dashboard
+      // can spot what the model was trying to say.
+      emitAnalytics('prompt_injection_reply_substituted', {
+        userId,
+        conversationId,
+        reasons: enforced.reasons,
+        payload: summarizePayload(assistantText),
+        outcome: 'refused',
+        detail: enforced.detail,
+      });
       assistantText = enforced.text;
       // Tell the client to swap the streamed text with the refusal — same
       // SSE channel the rest of the stream used. Best-effort; if the

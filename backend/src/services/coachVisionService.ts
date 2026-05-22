@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type Anthropic from '@anthropic-ai/sdk';
 import { COACH_MODELS, getAnthropicClient } from './coachService';
 import { detectInjectionAttempt } from './coachSafetyService';
+import { emit as emitAnalytics, summarizePayload } from './coachAnalytics';
 
 export type VisionMediaType =
   | 'image/jpeg'
@@ -142,8 +143,28 @@ export async function identifyPantryFromImage(
   // "ignore previous instructions" or similar. Without this filter that
   // text would flow into the user's pantry + back into coach context on
   // the next turn. Pattern detection from Y-PI-1.
-  const cleaned = result.data.ingredients.filter(
-    (ing) => !detectInjectionAttempt(ing.name).flagged,
-  );
+  const cleaned: IdentifiedIngredient[] = [];
+  // Y-PI-7: capture dropped attempts so the dashboard can surface
+  // photo-side attack patterns. The vision service doesn't have userId
+  // in scope; the event still groups by hashPrefix.
+  const droppedSamples: ReturnType<typeof summarizePayload>[] = [];
+  const droppedReasons = new Set<string>();
+  for (const ing of result.data.ingredients) {
+    const det = detectInjectionAttempt(ing.name);
+    if (det.flagged) {
+      droppedSamples.push(summarizePayload(ing.name));
+      for (const r of det.reasons) droppedReasons.add(r);
+      continue;
+    }
+    cleaned.push(ing);
+  }
+  if (droppedSamples.length > 0) {
+    emitAnalytics('prompt_injection_vision_dropped', {
+      droppedCount: droppedSamples.length,
+      reasons: Array.from(droppedReasons).sort(),
+      samples: droppedSamples.slice(0, 3),
+      outcome: 'dropped',
+    });
+  }
   return { ingredients: cleaned };
 }
