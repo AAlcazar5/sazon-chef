@@ -39,6 +39,13 @@ export interface RankerSignals {
    *  recipeId is in this list — same recipe twice in a row reads as
    *  staleness, not personalization. Variety > repetition. */
   recentlyCookedRecipeIds?: string[];
+  /** Recipe IDs the user has explicitly liked (useLikedRecipeIds).
+   *  Y-Rank-5: small additive bonus when a candidate is in this list.
+   *  Weaker than the recent-cook damper's signal-of-staleness — a recipe
+   *  the user COOKED is a stronger signal than one they only LIKED, and
+   *  if a recipe is both recently-cooked AND liked, the damper still
+   *  wins (variety > repetition). */
+  likedRecipeIds?: string[];
 }
 
 export interface RankedCandidate {
@@ -72,6 +79,15 @@ const W_SKILL = 0.05;
 // this factor. 0.85 is enough to flip the primary pick when scores are
 // close but doesn't bury a recipe that's genuinely the best match.
 const RECENT_COOK_DAMPER = 0.85;
+
+// Y-Rank-5: additive bonus when a candidate's recipeId is in the user's
+// liked-recipes list. Smaller than W_SKILL because skill-fit affects
+// MANY recipes (every entry in a difficulty bucket) while a like is a
+// per-recipe signal — so the per-instance weight is calibrated to nudge
+// the tie-breaker without overwhelming Dice/pantry/cuisine. The
+// recent-cook damper (×0.85) still wins on a recipe that's BOTH liked
+// AND recently cooked (variety > repetition).
+const W_LIKED = 0.04;
 
 function pantryOverlapScore(
   recipeIngredients: RecipeCardPayload['ingredients'],
@@ -190,6 +206,7 @@ function buildRationale(
   matchedPantry: string[],
   cuisineHit: CuisineHit | null,
   skillRationale: string | undefined,
+  likedRationale?: string | undefined,
 ): string | undefined {
   if (matchedPantry.length > 0) {
     const names = matchedPantry.slice(0, 2).join(' + ');
@@ -207,6 +224,10 @@ function buildRationale(
         return `Picked because ${cuisineHit.cuisine} is on your radar.`;
     }
   }
+  // Y-Rank-5: liked-rationale sits between cuisine and skill — fires
+  // when there's nothing more interesting (pantry/cuisine) to say but
+  // the user has explicitly liked this recipe.
+  if (likedRationale) return likedRationale;
   // Skill is the lowest-priority rationale — only fires when there's
   // nothing more interesting to say.
   return skillRationale;
@@ -235,16 +256,29 @@ export function rankRecipeAskCandidates(
       signals.userSkillTier,
     );
 
+    // Y-Rank-5: liked-recipes bonus.
+    const liked =
+      !!recipe.recipeId &&
+      (signals.likedRecipeIds ?? []).includes(recipe.recipeId);
+    const likedBonus = liked ? 1 : 0;
+
     const additive =
       W_DICE * diceScore +
       W_PANTRY * pantryOverlap +
       W_CUISINE * cuisineBonus +
-      W_SKILL * skillFit;
+      W_SKILL * skillFit +
+      W_LIKED * likedBonus;
     const recentlyCooked =
       !!recipe.recipeId &&
       (signals.recentlyCookedRecipeIds ?? []).includes(recipe.recipeId);
     const totalScore = recentlyCooked ? additive * RECENT_COOK_DAMPER : additive;
-    const rationale = buildRationale(matchedPantry, cuisineHit, skillRationale);
+    const likedRationale = liked ? "You've liked this one before." : undefined;
+    const rationale = buildRationale(
+      matchedPantry,
+      cuisineHit,
+      skillRationale,
+      likedRationale,
+    );
 
     return {
       recipe,

@@ -443,3 +443,85 @@ describe('rankRecipeAskCandidates — determinism (same inputs → same order)',
     expect(out[0].recipe.title).toBe('Grilled Chicken A');
   });
 });
+
+// Y-Rank-5 (founder roadmap Telegram 2026-05-20): liked-recipes signal.
+// Explicit like is a distinct N=1 signal from save (like = "I'd cook
+// this again", save = "I want to come back to this"). Small additive
+// bonus on the candidate when its recipeId is in the user's liked list;
+// weaker than the recent-cook damper (variety > liked-ness on a recipe
+// the user just cooked).
+describe('rankRecipeAskCandidates — likedRecipeIds bonus', () => {
+  function recWithId(
+    id: string,
+    title: string,
+    overrides: Partial<RecipeCardPayload> = {},
+  ): RecipeCardPayload {
+    return rec(title, { ...overrides, recipeId: id });
+  }
+
+  it('liked recipe outranks non-liked on tied Dice', () => {
+    const liked = recWithId('rcp_liked', 'Grilled Chicken Bowl');
+    const plain = recWithId('rcp_plain', 'Grilled Chicken Bowl');
+    const out = rankRecipeAskCandidates('grilled chicken bowl', [plain, liked], {
+      ...EMPTY_SIGNALS,
+      likedRecipeIds: ['rcp_liked'],
+    });
+    expect(out[0].recipe.recipeId).toBe('rcp_liked');
+  });
+
+  it('liked-bonus is smaller than recent-cook damper (variety > liked-ness)', () => {
+    // Same recipe is BOTH liked AND recently cooked — damper wins.
+    const stale = recWithId('rcp_stale', 'Grilled Chicken Bowl');
+    const fresh = recWithId('rcp_fresh', 'Grilled Chicken Bowl');
+    const out = rankRecipeAskCandidates('grilled chicken bowl', [stale, fresh], {
+      ...EMPTY_SIGNALS,
+      likedRecipeIds: ['rcp_stale'], // user liked it
+      recentlyCookedRecipeIds: ['rcp_stale'], // and cooked it recently
+    });
+    expect(out[0].recipe.recipeId).toBe('rcp_fresh');
+  });
+
+  it('empty likedRecipeIds (or missing signal) is harmless', () => {
+    const a = recWithId('rcp_a', 'Grilled Chicken Plain');
+    const out1 = rankRecipeAskCandidates('grilled chicken', [a], EMPTY_SIGNALS);
+    const out2 = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      likedRecipeIds: [],
+    });
+    expect(out1[0].totalScore).toBe(out2[0].totalScore);
+  });
+
+  it('liked rationale fires when nothing more interesting to say (no pantry/cuisine)', () => {
+    const liked = recWithId('rcp_x', 'Grilled Chicken Bowl');
+    const out = rankRecipeAskCandidates('grilled chicken', [liked], {
+      ...EMPTY_SIGNALS,
+      likedRecipeIds: ['rcp_x'],
+    });
+    expect(out[0].rationale).toMatch(/liked/i);
+  });
+
+  it('pantry rationale beats liked rationale (priority order)', () => {
+    const liked = recWithId('rcp_x', 'Grilled Chicken Bowl', {
+      ingredients: [{ name: 'paprika', amount: 1, unit: 'tsp' }],
+    });
+    const out = rankRecipeAskCandidates('grilled chicken', [liked], {
+      ...EMPTY_SIGNALS,
+      pantryNames: ['paprika'],
+      likedRecipeIds: ['rcp_x'],
+    });
+    expect(out[0].rationale).toMatch(/paprika/);
+    expect(out[0].rationale).not.toMatch(/liked/);
+  });
+
+  it('AI-gen recipes (no recipeId) are unaffected by likedRecipeIds', () => {
+    const aiGen = rec('Grilled Chicken Plain'); // no recipeId
+    const liked = recWithId('rcp_liked', 'Grilled Chicken Plain');
+    const out = rankRecipeAskCandidates('grilled chicken', [aiGen, liked], {
+      ...EMPTY_SIGNALS,
+      likedRecipeIds: ['rcp_liked'],
+    });
+    // Liked catalog candidate pulls ahead because AI-gen has no
+    // recipeId to match in the liked list.
+    expect(out[0].recipe.recipeId).toBe('rcp_liked');
+  });
+});
