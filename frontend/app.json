@@ -32,6 +32,7 @@
     "plugins": [
       "expo-router",
       "./plugins/withSazonAppIntents",
+      "./plugins/withSazonAppActions",
       [
         "expo-splash-screen",
         {
