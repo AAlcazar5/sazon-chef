@@ -60,6 +60,7 @@ import { useLastCookCuisine } from '../../hooks/useLastCookCuisine';
 import { useSavedRecipeCuisines } from '../../hooks/useSavedRecipeCuisines';
 import useSkillTier from '../../hooks/useSkillTier';
 import { useRecentCookRecipeIds } from '../../hooks/useRecentCookRecipeIds';
+import { useLikedRecipeIds } from '../../hooks/useLikedRecipeIds';
 import { useCoachAttachments } from '../../hooks/useCoachAttachments';
 import { useCoachMemoryCount } from '../../hooks/useCoachMemoryCount';
 import { useCoachQuickChipContext } from '../../hooks/useCoachQuickChipContext';
@@ -174,6 +175,11 @@ export default function CoachScreen({
   // a small multiplicative downrank surfaces variety while still
   // letting the recipe re-emerge if it's a genuinely best match.
   const { ids: recentlyCookedRecipeIds } = useRecentCookRecipeIds();
+  // Y-Rank-5 (founder roadmap) — liked-recipes signal. Explicit like
+  // adds a small additive bonus so a tied-Dice candidate that the user
+  // has liked before wins the tie. Weaker than the recent-cook damper
+  // (cooked = stronger signal than liked).
+  const { ids: likedRecipeIds } = useLikedRecipeIds();
   // Founder ask 2026-05-19 — surface N=1 signals to the wedge so
   // ambiguous asks ("grilled chicken") pick ONE recipe ranked by pantry
   // overlap + recent cuisine + saved-cuisine + adjacency + skill tier
@@ -187,6 +193,7 @@ export default function CoachScreen({
       savedCollectionCuisines,
       userSkillTier,
       recentlyCookedRecipeIds,
+      likedRecipeIds,
     }),
     [
       chipContext.pantryExpiringSoon,
@@ -195,6 +202,7 @@ export default function CoachScreen({
       savedCollectionCuisines,
       userSkillTier,
       recentlyCookedRecipeIds,
+      likedRecipeIds,
     ],
   );
   const stream = useCoachStream({ rankerSignals });
