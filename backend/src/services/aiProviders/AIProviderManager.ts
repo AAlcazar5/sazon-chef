@@ -8,6 +8,7 @@ import { OpenAICompatProvider } from './OpenAICompatProvider';
 import { OllamaProvider } from './OllamaProvider';
 import type { GeneratedRecipe } from '../aiRecipeService';
 import { captureException } from '@/utils/sentryCapture';
+import { recordProviderCall } from './providerMetrics';
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 const SONNET_MODEL = 'claude-sonnet-4-6';
@@ -207,6 +208,17 @@ export class AIProviderManager {
     const errors: Array<{ provider: string; error: AIProviderError }> = [];
     let lastError: AIProviderError | null = null;
 
+    // V2-5 (founder roadmap Tier V): "Only use Anthropic AI" opt-out.
+    // When set, IGNORE providerOrder and route through Claude only.
+    // Engineering hook for the preference layer; UI + persistence land
+    // in a follow-up alongside the user-settings sheet.
+    if (request.forceAnthropic) {
+      const claude = this.providersByKey.get('claude');
+      if (claude) {
+        request = { ...request, providerOrder: ['claude'] };
+      }
+    }
+
     // Path B — per-request provider chain. When `request.providerOrder` is
     // set, resolve those keys to instances and try them in that order.
     // Unknown / unavailable keys are silently skipped (logged) so a stale
@@ -235,13 +247,33 @@ export class AIProviderManager {
     })();
 
     for (const provider of chain) {
+      // V2-6 (founder roadmap Tier V) — per-provider latency timer.
+      // Captured around the provider call only; downstream Sazon-side
+      // processing isn't part of the budget the V2 spec names.
+      const startedAt = Date.now();
       try {
         logger.info(`🔄 [ProviderManager] Attempting generation with ${provider.getName()}...`);
         const recipe = await provider.generateRecipe(request);
         this.lastUsedProvider = provider.getName();
         logger.info(`✅ [ProviderManager] Successfully generated recipe using ${provider.getName()}`);
+        // V2-6 telemetry — success path. recipe is the parsed JSON; if
+        // we got here it parsed cleanly.
+        recordProviderCall({
+          provider: provider.getName(),
+          latencyMs: Date.now() - startedAt,
+          succeeded: true,
+          jsonParsed: !!recipe,
+        });
         return recipe;
       } catch (error: any) {
+        // V2-6 telemetry — failure path. Latency still recorded so we
+        // can see whether a slow-then-throw is poisoning the chain.
+        recordProviderCall({
+          provider: provider.getName(),
+          latencyMs: Date.now() - startedAt,
+          succeeded: false,
+          jsonParsed: false,
+        });
         captureException(error, {
           tag: 'ai.provider.generateRecipe.fallback',
           extra: { provider: provider.getName() },
