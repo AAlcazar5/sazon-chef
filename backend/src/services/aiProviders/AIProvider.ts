@@ -77,6 +77,15 @@ export interface RecipeGenerationRequest {
    * through `['gemini', 'claude']` while premium stays on `['claude']`.
    */
   providerOrder?: RouteProvider[];
+  /**
+   * V2-5 (founder roadmap Tier V — Path C opt-out): when true,
+   * AIProviderManager IGNORES `providerOrder` and routes to Claude
+   * only. Used to honor a "Only use Anthropic AI" user preference
+   * (when the UI ships). Engineering hook is here today so the
+   * preference layer can pass-through once the schema column +
+   * settings UI land.
+   */
+  forceAnthropic?: boolean;
 }
 
 export interface AIProviderError extends Error {
