@@ -38,4 +38,37 @@ export const cookApi = {
     const res = await apiClient.post('/cook/event', body);
     return res.data as { id: string };
   },
+
+  // X-B1 (founder roadmap Tier X — Moat Hardening): cook context export.
+  // The frontend "Copy cooking context" affordance (X-B2) consumes this.
+  // Returns the v1 payload as-is — the consumer copies it to clipboard
+  // without re-shaping (the schema IS the contract handed to external
+  // kitchens).
+  getContextExport: async (): Promise<CookContextV1Payload> => {
+    const res = await apiClient.get('/cook/context-export');
+    return res.data as CookContextV1Payload;
+  },
 };
+
+export interface CookContextV1Payload {
+  version: 'v1';
+  taste: {
+    likedCuisines: string[];
+    spiceLevel: string | null;
+  };
+  restrictions: {
+    allergens: string[];
+    dietary: string[];
+    bannedIngredients: string[];
+  };
+  pantrySummary: {
+    itemCount: number;
+    topCategories: string[];
+  };
+  recentCooks: Array<{
+    recipeName: string;
+    cuisine: string | null;
+    cookedAt: string;
+  }>;
+  skillTier: 'beginner' | 'home_cook' | 'confident' | 'chef' | null;
+}
