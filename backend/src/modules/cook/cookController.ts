@@ -13,6 +13,9 @@ import {
   recordCookEvent,
   type CookEventType,
 } from '@/services/cookEventService';
+import { buildCookContextExport } from '@/services/cookContextExportService';
+import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -77,5 +80,24 @@ export const cookController = {
       payload,
     });
     return res.json({ id: created.id });
+  },
+
+  // X-B1 (founder roadmap Tier X — Moat Hardening): structured cook
+  // context export. Versioned, PII-aware, deterministic. User-scoped
+  // by the auth middleware (NO query/body userId — IDOR-safe).
+  async getCookContextExport(req: Request, res: Response): Promise<Response> {
+    const userId = getUserId(req);
+    try {
+      const payload = await buildCookContextExport({ prisma, userId });
+      return res.json(payload);
+    } catch (error) {
+      logger.error(
+        { err: error, userId },
+        'cook.context-export.failed',
+      );
+      return res
+        .status(500)
+        .json({ error: 'Failed to build cook context export.' });
+    }
   },
 };

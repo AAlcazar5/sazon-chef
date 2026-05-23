@@ -8,5 +8,9 @@ const router = Router();
 
 router.get('/log', cookController.getCookLog);
 router.post('/event', cookController.logCookEvent); // D-6 — log a Claude-assisted cook
+// X-B1 (founder roadmap 2026-05-23) — versioned, PII-aware, deterministic
+// cook-context export. Mounted under /api/cook in app.ts → full path
+// is GET /api/cook/context-export.
+router.get('/context-export', cookController.getCookContextExport);
 
 export { router as cookRoutes };

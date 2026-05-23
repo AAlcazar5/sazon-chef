@@ -148,6 +148,9 @@ const createPrismaMock = () => ({
     },
     cookingLog: {
       count: jest.fn(),
+      // X-B1 (founder roadmap 2026-05-23) — cookContextExportService
+      // pulls the user's recent cooks via findMany with a recipe include.
+      findMany: jest.fn(),
     },
     stripeWebhookEvent: {
       findUnique: jest.fn(),
