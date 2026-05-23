@@ -12,10 +12,27 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCookLog } from '../../hooks/useCookLog';
+import { useCookMemoryInsight } from '../../hooks/useCookMemoryInsight';
 import { Brand, PastelTokens } from '../../constants/tokens';
+import type { CookMemoryInsightPayload } from '../../lib/api/cook';
 
 // Qualitative only — never a count. Order = strongest signal first.
-function deriveFact(types: Set<string>): string | null {
+//
+// X-C2 (founder roadmap Tier X — Moat Hardening) — the substitution-
+// fingerprint fact is the new top-priority slot. When the backend's
+// composed insight reports ≥1 swap pair, the fingerprint wins because
+// it's the most concrete "Sazon knows me" signal. All other facts
+// fall through to the existing CookLog-type list.
+export function deriveFact(
+  types: Set<string>,
+  insight: CookMemoryInsightPayload | null,
+): string | null {
+  if (insight && insight.substitutions.length > 0) {
+    const [top] = insight.substitutions;
+    // No counts — W-D1 invariant. We name the from/to pair, not how
+    // often the user swapped it.
+    return `Your ${top.from} → ${top.to} swap is a fingerprint Sazon's borrowing tonight.`;
+  }
   if (types.has('scale')) {
     return 'You batch-cook — Sazon’s biasing prep-friendly tonight.';
   }
@@ -35,11 +52,15 @@ function MemoryMirrorLeadInner() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { entries, loading } = useCookLog();
+  // X-C2 — composed cook-memory insight. Returns null on cold-start
+  // and on backend honest-empty; the fingerprint slot in deriveFact()
+  // is the only place it surfaces.
+  const { insight } = useCookMemoryInsight();
 
   // No fabricated memory: nothing to mirror yet → render nothing.
   if (loading || !Array.isArray(entries) || entries.length === 0) return null;
 
-  const fact = deriveFact(new Set(entries.map((e) => e.type)));
+  const fact = deriveFact(new Set(entries.map((e) => e.type)), insight);
   if (!fact) return null;
 
   const bg = isDark ? PastelTokens.dark.sage : PastelTokens.light.sage;

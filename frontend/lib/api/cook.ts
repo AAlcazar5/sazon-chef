@@ -48,7 +48,37 @@ export const cookApi = {
     const res = await apiClient.get('/cook/context-export');
     return res.data as CookContextV1Payload;
   },
+
+  // X-C2 (founder roadmap Tier X — Moat Hardening): composed
+  // cook-memory insight for the MemoryMirrorLead fact slot. Returns
+  // `null` for honest-empty (no signal yet) — the consumer renders
+  // nothing in that case.
+  getMemoryInsight: async (): Promise<CookMemoryInsightPayload | null> => {
+    const res = await apiClient.get('/cook/memory-insight');
+    return (res.data ?? null) as CookMemoryInsightPayload | null;
+  },
 };
+
+// X-C2 (founder roadmap Tier X — Moat Hardening): derived cook-memory
+// insight payload (returned by GET /api/cook/memory-insight). Mirrors
+// the backend `CookMemoryInsight` shape. Backend returns `null` when
+// the user has no signal — the consumer renders NOTHING.
+export interface SubstitutionFingerprint {
+  from: string;
+  to: string;
+  count: number;
+}
+
+export interface CookMemoryInsightPayload {
+  cadence: {
+    dominantDay: number | null;
+    dominantDayName: string | null;
+    totalCooks: number;
+  };
+  cuisineCadence: string | null;
+  substitutions: SubstitutionFingerprint[];
+  flopsRecent: number;
+}
 
 export interface CookContextV1Payload {
   version: 'v1';

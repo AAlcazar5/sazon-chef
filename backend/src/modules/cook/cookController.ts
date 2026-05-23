@@ -14,6 +14,7 @@ import {
   type CookEventType,
 } from '@/services/cookEventService';
 import { buildCookContextExport } from '@/services/cookContextExportService';
+import { computeCookMemoryInsight } from '@/services/cookMemoryInsightsService';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 
@@ -98,6 +99,28 @@ export const cookController = {
       return res
         .status(500)
         .json({ error: 'Failed to build cook context export.' });
+    }
+  },
+
+  // X-C2 (founder roadmap Tier X — Moat Hardening): derived cook-memory
+  // insight surfaced as ONE new MemoryMirrorLead fact slot. Returns
+  // `null` for the honest-empty case so the consumer renders nothing.
+  // User-scoped by the auth middleware (IDOR-safe).
+  async getCookMemoryInsight(req: Request, res: Response): Promise<Response> {
+    const userId = getUserId(req);
+    try {
+      const payload = await computeCookMemoryInsight({ userId });
+      // Express `res.json` serializes `null` correctly — the client
+      // checks the result and renders nothing on null.
+      return res.json(payload);
+    } catch (error) {
+      logger.error(
+        { err: error, userId },
+        'cook.memory-insight.failed',
+      );
+      // Fail-closed (HTTP 200 + null) — this is an optional surface;
+      // a 500 would force MemoryMirrorLead to error-boundary out.
+      return res.json(null);
     }
   },
 };
