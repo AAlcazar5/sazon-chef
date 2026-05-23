@@ -63,7 +63,27 @@ export interface RankedCandidate {
    *  picked this recipe. Undefined when there's nothing to explain
    *  (cold-start: no pantry + no cuisine + no informative skill match). */
   rationale?: string;
+  /** Y-Rank-6 (founder roadmap Telegram 2026-05-20): identifies which
+   *  signal contributed the most to this candidate's score. Used by
+   *  surface-events telemetry to measure post-launch whether saved
+   *  beats adjacency in practice, whether skill rationale flips picks,
+   *  etc. Pure observation — no UI change. */
+  primarySource: PrimarySource;
 }
+
+/** Dominant non-Dice signal source for analytics. 'dice' is the
+ *  fall-through when no N=1 signal contributes; the others sort by
+ *  WEIGHTED contribution (signal_value × weight), so a small-weight
+ *  signal can win if a stronger one didn't fire. */
+export type PrimarySource =
+  | 'dice'
+  | 'pantry'
+  | 'cuisine-last'
+  | 'cuisine-saved-top'
+  | 'cuisine-saved'
+  | 'cuisine-adjacent'
+  | 'skill'
+  | 'liked';
 
 // Weights tune the relative contribution of each signal. W_DICE + W_PANTRY +
 // W_CUISINE + W_SKILL sum to 1.05 (skill is a small additive nudge — it
@@ -202,6 +222,51 @@ function skillRationaleFor(
     : 'Comfortable for your kitchen.';
 }
 
+interface PrimarySourceInput {
+  /** Weighted contribution of pantry overlap. */
+  pantry: number;
+  /** Weighted contribution of cuisine bonus (any source). */
+  cuisine: number;
+  /** Which cuisine-resolver source fired (last/saved-top/saved/adjacent). */
+  cuisineSource?: 'last' | 'saved-top' | 'saved' | 'adjacent';
+  /** Weighted contribution of skill-fit. */
+  skill: number;
+  /** Weighted contribution of liked bonus. */
+  liked: number;
+  /** True when skill matched in an INFORMATIVE way (not chef-treats-all).
+   *  When false the skill bonus exists but doesn't deserve attribution. */
+  hadInformativeSkillRationale: boolean;
+}
+
+/**
+ * Y-Rank-6: resolve the dominant non-Dice signal source for telemetry.
+ * Returns 'dice' when no N=1 signal contributed. Cuisine maps to one of
+ * four sources (cuisine-last / cuisine-saved-top / cuisine-saved /
+ * cuisine-adjacent) based on which resolver branch fired.
+ *
+ * Tie-break order (when contributions are equal): pantry > cuisine >
+ * liked > skill — same order as the rationale's narrative priority.
+ */
+function resolvePrimarySource(input: PrimarySourceInput): PrimarySource {
+  // Skill only "attributes" when it would have been an informative
+  // rationale (e.g., beginner saw an easy recipe).
+  const skill = input.hadInformativeSkillRationale ? input.skill : 0;
+  const entries: Array<[PrimarySource, number]> = [
+    ['pantry', input.pantry],
+    ['cuisine-last', input.cuisineSource === 'last' ? input.cuisine : 0],
+    ['cuisine-saved-top', input.cuisineSource === 'saved-top' ? input.cuisine : 0],
+    ['cuisine-saved', input.cuisineSource === 'saved' ? input.cuisine : 0],
+    ['cuisine-adjacent', input.cuisineSource === 'adjacent' ? input.cuisine : 0],
+    ['liked', input.liked],
+    ['skill', skill],
+  ];
+  const best = entries.reduce<{ src: PrimarySource; val: number }>(
+    (acc, [src, val]) => (val > acc.val ? { src, val } : acc),
+    { src: 'dice', val: 0 },
+  );
+  return best.val > 0 ? best.src : 'dice';
+}
+
 function buildRationale(
   matchedPantry: string[],
   cuisineHit: CuisineHit | null,
@@ -280,6 +345,19 @@ export function rankRecipeAskCandidates(
       likedRationale,
     );
 
+    // Y-Rank-6: which signal (other than Dice) contributed the most to
+    // this candidate's score? Used downstream for telemetry. Sort by
+    // weighted contribution so a small-weight signal can win when no
+    // stronger signal fired.
+    const primarySource = resolvePrimarySource({
+      pantry: W_PANTRY * pantryOverlap,
+      cuisine: cuisineHit ? W_CUISINE * cuisineBonus : 0,
+      cuisineSource: cuisineHit?.source,
+      skill: W_SKILL * skillFit,
+      liked: W_LIKED * likedBonus,
+      hadInformativeSkillRationale: !!skillRationale,
+    });
+
     return {
       recipe,
       diceScore,
@@ -288,6 +366,7 @@ export function rankRecipeAskCandidates(
       skillFit,
       totalScore,
       rationale,
+      primarySource,
       _idx: idx,
     };
   });

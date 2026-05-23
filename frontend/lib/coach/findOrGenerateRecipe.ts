@@ -16,6 +16,7 @@ import { recipeApi } from '../api/recipe';
 import type { ScalableIngredientLite } from '../cooking/rescaleStepText';
 import {
   rankRecipeAskCandidates,
+  type PrimarySource,
   type RankerSignals,
 } from './rankRecipeAskCandidates';
 
@@ -376,6 +377,10 @@ export interface RecipeAskResult {
   /** One-liner explaining the pick (pantry / cuisine). Undefined when
    *  there's nothing N=1 to surface (cold-start). */
   rationale?: string;
+  /** Y-Rank-6: which ranker signal won this pick. 'ai-gen' marks
+   *  AI-generated results that didn't go through the ranker.
+   *  Forwarded into surface-events telemetry. */
+  primarySource?: PrimarySource | 'ai-gen';
 }
 
 const EMPTY_SIGNALS: RankerSignals = {
@@ -412,6 +417,7 @@ export async function findOrGenerateRecipe(
         primary: top.recipe,
         alternates: ranked.slice(1).map((r) => r.recipe),
         rationale: top.rationale,
+        primarySource: top.primarySource,
       };
     }
   }
@@ -433,7 +439,7 @@ export async function findOrGenerateRecipe(
         generated.imageUrls = [borrowed];
       }
     }
-    return { primary: generated, alternates: [] };
+    return { primary: generated, alternates: [], primarySource: 'ai-gen' };
   } catch (genErr) {
     if (structuredCandidates.length > 0) {
       const ranked = rankRecipeAskCandidates(query, structuredCandidates, signals);
@@ -441,6 +447,7 @@ export async function findOrGenerateRecipe(
         primary: ranked[0].recipe,
         alternates: ranked.slice(1).map((r) => r.recipe),
         rationale: ranked[0].rationale,
+        primarySource: ranked[0].primarySource,
       };
     }
     throw genErr;
