@@ -12,5 +12,8 @@ router.post('/event', cookController.logCookEvent); // D-6 — log a Claude-assi
 // cook-context export. Mounted under /api/cook in app.ts → full path
 // is GET /api/cook/context-export.
 router.get('/context-export', cookController.getCookContextExport);
+// X-C2 (founder roadmap 2026-05-23) — composed cook-memory insight for
+// the MemoryMirrorLead fact slot. Returns null for honest-empty.
+router.get('/memory-insight', cookController.getCookMemoryInsight);
 
 export { router as cookRoutes };
