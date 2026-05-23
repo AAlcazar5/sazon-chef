@@ -525,3 +525,90 @@ describe('rankRecipeAskCandidates — likedRecipeIds bonus', () => {
     expect(out[0].recipe.recipeId).toBe('rcp_liked');
   });
 });
+
+// Y-Rank-6 (founder roadmap Telegram 2026-05-20): primarySource
+// attribution for surface-events telemetry. Each ranked candidate now
+// carries the dominant non-Dice signal that pushed it up; 'dice' is
+// the fall-through when no N=1 signal contributed.
+describe('rankRecipeAskCandidates — primarySource attribution', () => {
+  function recWithId(
+    id: string,
+    title: string,
+    overrides: Partial<RecipeCardPayload> = {},
+  ): RecipeCardPayload {
+    return rec(title, { ...overrides, recipeId: id });
+  }
+
+  it("cold-start pick → primarySource='dice'", () => {
+    const a = rec('Grilled Chicken Bowl');
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], EMPTY_SIGNALS);
+    expect(top.primarySource).toBe('dice');
+  });
+
+  it("pantry hit → primarySource='pantry'", () => {
+    const a = rec('Grilled Chicken Bowl', {
+      ingredients: [{ name: 'paprika', amount: 1, unit: 'tsp' }],
+    });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      pantryNames: ['paprika'],
+    });
+    expect(top.primarySource).toBe('pantry');
+  });
+
+  it("last-cook cuisine match → primarySource='cuisine-last'", () => {
+    const a = rec('Grilled Chicken Bowl', { cuisine: 'Italian' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      lastCookCuisine: 'Italian',
+    });
+    expect(top.primarySource).toBe('cuisine-last');
+  });
+
+  it("top-saved cuisine match → primarySource='cuisine-saved-top'", () => {
+    const a = rec('Grilled Chicken Bowl', { cuisine: 'Mexican' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      savedCollectionCuisines: ['Mexican', 'Thai'],
+    });
+    expect(top.primarySource).toBe('cuisine-saved-top');
+  });
+
+  it("adjacent cuisine match → primarySource='cuisine-adjacent'", () => {
+    const a = rec('Grilled Chicken Bowl', { cuisine: 'Thai' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      topAdjacentCuisine: 'Thai',
+    });
+    expect(top.primarySource).toBe('cuisine-adjacent');
+  });
+
+  it("liked recipe (no other signals) → primarySource='liked'", () => {
+    const a = recWithId('rcp_liked', 'Grilled Chicken Bowl');
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      likedRecipeIds: ['rcp_liked'],
+    });
+    expect(top.primarySource).toBe('liked');
+  });
+
+  it("informative skill match (beginner + easy) → primarySource='skill'", () => {
+    const a = rec('Grilled Chicken Bowl', { difficulty: 'easy' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      userSkillTier: 'beginner',
+    });
+    expect(top.primarySource).toBe('skill');
+  });
+
+  it("chef tier (uninformative skill) does NOT attribute to skill", () => {
+    // chef matches everything → skillRationale is undefined → not
+    // attributable in telemetry either.
+    const a = rec('Grilled Chicken Bowl', { difficulty: 'easy' });
+    const [top] = rankRecipeAskCandidates('grilled chicken', [a], {
+      ...EMPTY_SIGNALS,
+      userSkillTier: 'chef',
+    });
+    expect(top.primarySource).toBe('dice');
+  });
+});

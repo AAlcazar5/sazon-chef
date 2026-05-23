@@ -14,6 +14,7 @@ import {
 import { detectRecipeAsk } from '../lib/coach/detectRecipeAsk';
 import { enforceCoachVoice } from '../lib/coach/enforceCoachVoice';
 import { donateRecipeAsk } from '../lib/voice/donateSiriShortcut';
+import { logWedgeRankerEvent } from '../lib/coach/wedgeRankerEvents';
 import {
   findOrGenerateRecipe,
   type RecipeCardPayload,
@@ -276,6 +277,14 @@ export function useCoachStream(initial?: UseCoachStreamOptions): UseCoachStreamR
         // suggestion next time. Best-effort, fire-and-forget, no-op on
         // Android and when the native bridge isn't wired yet.
         void donateRecipeAsk({ query: ask.query });
+        // Y-Rank-6 (founder roadmap 2026-05-20): surface-events
+        // telemetry for the ranker pick. Pure observation — measures
+        // post-launch whether saved beats adjacency in practice etc.
+        logWedgeRankerEvent({
+          recipeId: result.primary.recipeId ?? null,
+          primarySource: result.primarySource ?? 'dice',
+          altsPoolSize: result.alternates.length,
+        });
       } catch {
         // Founder rule (2026-05-19): a recipe ask MUST render the card,
         // never an LLM paragraph. The earlier SSE fall-through produced
