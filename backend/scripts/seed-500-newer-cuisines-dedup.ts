@@ -127,6 +127,13 @@ const AVOID_CAP = numEnv('AVOID_CAP', 16);
 const TARGET_SAVED = numEnv('TARGET_SAVED', 0);
 const MAX_ATTEMPTS = numEnv('MAX_ATTEMPTS', 0);
 const ATTEMPT_MULTIPLIER = numEnv('ATTEMPT_MULTIPLIER', 5);
+// Bounded fan-out. Default 1 = original strictly-sequential behavior. The
+// dedup guard stays correct at >1 because the title key is reserved into
+// `seenTitleKeys` synchronously (before the save await) and rolled back on
+// failure — see the worker loop. Tradeoff at high concurrency: the per-cuisine
+// avoid-context is marginally staler (in-flight saves aren't visible yet), so
+// expect slightly more dup-retries. Start ~5.
+const SEED_CONCURRENCY = Math.max(1, numEnv('SEED_CONCURRENCY', 1));
 
 // Progress reporting. This run is frequently piped to a background-task
 // output file rather than an interactive terminal, so a naive `\r` redraw
@@ -380,6 +387,7 @@ async function main(): Promise<void> {
 
   console.log(`  Provider (primary):     ${SEED_PROVIDER}`);
   console.log(`  Provider order:         ${process.env.AI_PROVIDER_ORDER}`);
+  console.log(`  Concurrency:            ${SEED_CONCURRENCY}`);
   if (runBudget.targetSaved != null) {
     // Target-saved mode: stop at N actual saves; dups/fails don't count.
     const expected = (runBudget.targetSaved * COST_PER_RECIPE_USD).toFixed(2);
@@ -444,95 +452,124 @@ async function main(): Promise<void> {
   const startedAt = Date.now();
   let stopReason: 'target_reached' | 'max_attempts' | 'plan_exhausted' = 'plan_exhausted';
 
-  for (let i = 0; i < plan.length; i += 1) {
-    // Stop the moment the save goal is met (dups/fails never counted) or the
-    // spend cap is hit — checked before spending another API call.
-    const decision = evaluateStop({
-      succeeded,
-      targetSaved: runBudget.targetSaved,
-      attempts: i,
-      maxAttempts: runBudget.maxAttempts,
-      planExhausted: false,
-    });
-    if (decision.stop) {
-      stopReason = decision.reason ?? 'max_attempts';
-      break;
-    }
+  // Shared cursor across the worker pool. With SEED_CONCURRENCY=1 the drain
+  // runs exactly like the original sequential for-loop.
+  let cursor = 0;
+  let stopped = false;
 
-    const job = plan[i];
-    const label = `${job.cuisine} ${job.mealType}`;
-
-    const jobIndex = cuisineJobIndex.get(job.cuisine) ?? 0;
-    cuisineJobIndex.set(job.cuisine, jobIndex + 1);
-    const known = knownTitlesByCuisine.get(job.cuisine) ?? [];
-    let avoid = buildAvoidContext(known, { windowSize: AVOID_WINDOW, jobIndex });
-
-    let slotDone = false;
-    for (let attempt = 0; attempt <= DUP_RETRIES && !slotDone; attempt += 1) {
-      try {
-        apiCalls += 1;
-        // Positive steer rotates per attempt too — a retry that shifts the
-        // dish archetype escapes a collision far better than re-rolling the
-        // same one with only the avoid-list grown.
-        const styleHint = pickDiversityAxis(job.mealType, jobIndex + attempt);
-        const recipe = await aiRecipeService.generateRecipe({
-          userId: null,
-          cuisineOverride: job.cuisine,
-          mealType: job.mealType,
-          styleHint,
-          previousMeals: avoid.length > 0 ? avoid : undefined,
-        });
-
-        // ── Dedup guard ────────────────────────────────────────────────
-        // Generation already cost the API call, but skipping the DB write
-        // (and its image fetch) is what actually prevents the duplicate row.
-        const titleKey = normalizeRecipeTitleKey(recipe.title);
-        if (titleKey && seenTitleKeys.has(titleKey)) {
-          if (attempt < DUP_RETRIES) {
-            retriesUsed += 1;
-            avoid = appendAvoid(avoid, recipe.title, AVOID_CAP);
-            continue; // retry this slot with the collision fed back
-          }
-          skippedDuplicate += 1;
-          logEvent(`⊘ dup "${recipe.title.slice(0, 48)}" (${label}, after ${attempt} retries)`);
-          slotDone = true;
-          break;
-        }
-
-        await aiRecipeService.saveGeneratedRecipe(recipe, null);
-        if (titleKey) {
-          seenTitleKeys.add(titleKey);
-          // Immutable: replace the cuisine's list, never mutate the array
-          // already held by the Map (project rule + matches appendAvoid).
-          knownTitlesByCuisine.set(job.cuisine, [...known, recipe.title]);
-        }
-        succeeded += 1;
-        if (attempt > 0) recoveredByRetry += 1;
-        slotDone = true;
-      } catch (err) {
-        // generateRecipe already retries its own internal failures; a throw
-        // here is terminal for the slot — don't burn dup-retries on it.
-        failed += 1;
-        const msg = err instanceof Error ? err.message : String(err);
-        logEvent(`✗ ${label}: ${msg.slice(0, 80)}`);
-        slotDone = true;
+  async function drain(): Promise<void> {
+    while (!stopped) {
+      // Stop the moment the save goal is met (dups/fails never counted) or the
+      // spend cap is hit — checked before spending another API call. With
+      // concurrency, in-flight workers may overshoot the target by up to
+      // (SEED_CONCURRENCY − 1); acceptable for a seed run.
+      const decision = evaluateStop({
+        succeeded,
+        targetSaved: runBudget.targetSaved,
+        attempts: cursor,
+        maxAttempts: runBudget.maxAttempts,
+        planExhausted: false,
+      });
+      if (decision.stop) {
+        stopped = true;
+        stopReason = decision.reason ?? 'max_attempts';
+        break;
       }
-    }
+      if (cursor >= plan.length) break;
 
-    // Target-saved mode tracks progress toward the SAVE goal (succeeded /
-    // target) so the bar + ETA reflect real recipes, not burned attempts.
-    // Legacy mode tracks attempts (i+1 / plan length) as before.
-    const done = runBudget.targetSaved != null ? succeeded : i + 1;
-    const total = runBudget.targetSaved != null ? runBudget.targetSaved : plan.length;
-    renderProgress(
-      done,
-      total,
-      { saved: succeeded, dup: skippedDuplicate, fail: failed },
-      label,
-      startedAt,
-      { final: done >= total },
-    );
+      const i = cursor;
+      cursor += 1;
+      const job = plan[i];
+      const label = `${job.cuisine} ${job.mealType}`;
+
+      const jobIndex = cuisineJobIndex.get(job.cuisine) ?? 0;
+      cuisineJobIndex.set(job.cuisine, jobIndex + 1);
+      const known = knownTitlesByCuisine.get(job.cuisine) ?? [];
+      let avoid = buildAvoidContext(known, { windowSize: AVOID_WINDOW, jobIndex });
+
+      let slotDone = false;
+      for (let attempt = 0; attempt <= DUP_RETRIES && !slotDone; attempt += 1) {
+        try {
+          apiCalls += 1;
+          // Positive steer rotates per attempt too — a retry that shifts the
+          // dish archetype escapes a collision far better than re-rolling the
+          // same one with only the avoid-list grown.
+          const styleHint = pickDiversityAxis(job.mealType, jobIndex + attempt);
+          const recipe = await aiRecipeService.generateRecipe({
+            userId: null,
+            cuisineOverride: job.cuisine,
+            mealType: job.mealType,
+            styleHint,
+            previousMeals: avoid.length > 0 ? avoid : undefined,
+          });
+
+          // ── Dedup guard ────────────────────────────────────────────────
+          // Generation already cost the API call, but skipping the DB write
+          // (and its image fetch) is what actually prevents the duplicate row.
+          const titleKey = normalizeRecipeTitleKey(recipe.title);
+          if (titleKey && seenTitleKeys.has(titleKey)) {
+            if (attempt < DUP_RETRIES) {
+              retriesUsed += 1;
+              avoid = appendAvoid(avoid, recipe.title, AVOID_CAP);
+              continue; // retry this slot with the collision fed back
+            }
+            skippedDuplicate += 1;
+            logEvent(`⊘ dup "${recipe.title.slice(0, 48)}" (${label}, after ${attempt} retries)`);
+            slotDone = true;
+            break;
+          }
+
+          // Reserve the title key SYNCHRONOUSLY before the save await. In
+          // single-threaded JS no other worker can interleave between this
+          // has()-check above and this add(), so two concurrent jobs can't
+          // both pass the guard for the same title. Rolled back if save fails.
+          if (titleKey) seenTitleKeys.add(titleKey);
+          try {
+            await aiRecipeService.saveGeneratedRecipe(recipe, null);
+          } catch (saveErr) {
+            if (titleKey) seenTitleKeys.delete(titleKey);
+            throw saveErr;
+          }
+          if (titleKey) {
+            // Immutable: replace the cuisine's list, never mutate the array
+            // already held by the Map (project rule + matches appendAvoid).
+            // Re-read under concurrency so a peer worker's append isn't lost.
+            const cur = knownTitlesByCuisine.get(job.cuisine) ?? [];
+            knownTitlesByCuisine.set(job.cuisine, [...cur, recipe.title]);
+          }
+          succeeded += 1;
+          if (attempt > 0) recoveredByRetry += 1;
+          slotDone = true;
+        } catch (err) {
+          // generateRecipe already retries its own internal failures; a throw
+          // here is terminal for the slot — don't burn dup-retries on it.
+          failed += 1;
+          const msg = err instanceof Error ? err.message : String(err);
+          logEvent(`✗ ${label}: ${msg.slice(0, 80)}`);
+          slotDone = true;
+        }
+      }
+
+      // Target-saved mode tracks progress toward the SAVE goal (succeeded /
+      // target) so the bar + ETA reflect real recipes, not burned attempts.
+      // Legacy mode tracks attempts (apiCalls / plan length) — robust to the
+      // out-of-order completion a worker pool produces.
+      const done = runBudget.targetSaved != null ? succeeded : Math.min(apiCalls, plan.length);
+      const total = runBudget.targetSaved != null ? runBudget.targetSaved : plan.length;
+      renderProgress(
+        done,
+        total,
+        { saved: succeeded, dup: skippedDuplicate, fail: failed },
+        label,
+        startedAt,
+        { final: done >= total },
+      );
+    }
   }
+
+  await Promise.all(
+    Array.from({ length: Math.min(SEED_CONCURRENCY, plan.length) }, drain),
+  );
 
   // Closing frame so the bar lands at its true final state even when the run
   // stopped early (target met or attempt cap) rather than exhausting the plan.

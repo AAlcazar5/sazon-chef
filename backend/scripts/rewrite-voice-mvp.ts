@@ -15,10 +15,20 @@
 // Usage:
 //   DRY_RUN=1 LIMIT=20 npx ts-node scripts/rewrite-voice-mvp.ts   # smoke
 //   DRY_RUN=0 npx ts-node scripts/rewrite-voice-mvp.ts            # full
+//   DRY_RUN=0 npx ts-node scripts/rewrite-voice-mvp.ts --batch    # Sonnet ceiling
 //
 // Env: DRY_RUN (default 1 — set 0 to persist rewrites + apply discards),
 //      LIMIT (0=all rewrite candidates), CONCURRENCY (default 6),
 //      MAX_ATTEMPTS (rewrite tries per recipe, default 2).
+//
+// --batch (or BATCH=1) — one-time "quality ceiling" mode. Instead of the
+// per-item Haiku/DeepSeek sync loop, submit ALL rewrite candidates to the
+// Anthropic Message Batches API against Sonnet at the −50% batch rate, poll
+// to completion (up to 24h), then re-score + persist through the SAME
+// rewriteCopy regression guard (a rewrite that doesn't strictly beat the
+// original is still refused). Model override: VOICE_BATCH_MODEL. Poll
+// cadence: BATCH_POLL_MS (default 30000). DRY_RUN reports the submission
+// plan + projected cost without spending.
 
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
@@ -45,8 +55,28 @@ import {
   formatRewriteReport,
   type RewriteAttempt,
 } from './voiceRewrite';
+import { getAnthropicClient } from '../src/services/coachService';
+import {
+  buildBatchRequests,
+  parseBatchResults,
+  VOICE_BATCH_MODEL,
+} from '../src/services/voiceBatchRewrite';
+import type { MessageBatchIndividualResponse } from '@anthropic-ai/sdk/resources/messages/batches';
 
 const prisma = new PrismaClient();
+
+// One-time Sonnet ceiling pass via the async Batches API.
+const USE_BATCH = process.argv.includes('--batch') || process.env.BATCH === '1';
+const BATCH_POLL_MS = Math.max(
+  5_000,
+  Number.isFinite(Number(process.env.BATCH_POLL_MS))
+    ? Number(process.env.BATCH_POLL_MS)
+    : 30_000,
+);
+// Sonnet batch rate ballpark (input+output blended) for the projection line.
+const BATCH_COST_PER_RECIPE_USD = Number(
+  process.env.BATCH_COST_PER_RECIPE_USD ?? 0.004,
+);
 
 const DRY_RUN = process.env.DRY_RUN !== '0';
 const LIMIT = Number.isFinite(Number(process.env.LIMIT))
@@ -212,13 +242,148 @@ function buildDeps(recipe: Recipe): RewriteCopyDeps {
   };
 }
 
+// Batch-path deps: identical to buildDeps EXCEPT `rewrite` returns the
+// description the Batches API already produced (scored once here) instead of
+// making a live per-item LLM call. rewriteCopy's regression guard is reused
+// unchanged — a batch rewrite that doesn't strictly beat the original is
+// still refused.
+function buildBatchDeps(recipe: Recipe, batchDescription: string): RewriteCopyDeps {
+  return {
+    fetchRecipe: async () => ({
+      title: recipe.title,
+      description: recipe.description,
+      ingredients: [],
+      instructions: [],
+      cookTimeMin: 0,
+      prepTimeMin: 0,
+    }),
+    scoreVoice: ({ title, description }) => scoreOf(title, description),
+    rewrite: async (beforeSnap) => {
+      const voiceScore = await scoreOf(beforeSnap.title, batchDescription);
+      return { title: beforeSnap.title, description: batchDescription, voiceScore };
+    },
+    updateCopy: async (id, next) => {
+      await prisma.recipe.update({
+        where: { id },
+        data: { description: next.description },
+      });
+    },
+  };
+}
+
+interface RewriteCounters {
+  updated: number;
+  skippedRegression: number;
+  failed: number;
+  failReasons: Map<string, number>;
+}
+
+// Submit every rewrite candidate to the Message Batches API, poll to
+// completion, then re-score + persist through the shared regression guard.
+async function runBatchRewrites(jobs: Recipe[]): Promise<RewriteCounters> {
+  const counters: RewriteCounters = {
+    updated: 0,
+    skippedRegression: 0,
+    failed: 0,
+    failReasons: new Map(),
+  };
+  const noteFail = (reason: string): void => {
+    const key = reason.slice(0, 120);
+    counters.failReasons.set(key, (counters.failReasons.get(key) ?? 0) + 1);
+  };
+
+  const requests = buildBatchRequests(
+    jobs.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      cuisine: r.cuisine,
+    })),
+  );
+
+  const projected = (jobs.length * BATCH_COST_PER_RECIPE_USD).toFixed(2);
+  console.log(`  Batch mode: ${jobs.length} requests · model ${VOICE_BATCH_MODEL}`);
+  console.log(`  Projected batch cost: ~$${projected} (−50% async rate)`);
+
+  if (DRY_RUN) {
+    console.log('  DRY RUN — not submitting. Re-run with DRY_RUN=0 to spend.');
+    return counters;
+  }
+
+  const client = getAnthropicClient();
+  const batch = await client.messages.batches.create({ requests });
+  console.log(`  Submitted batch ${batch.id} — polling every ${BATCH_POLL_MS / 1000}s…`);
+
+  // Poll to completion. Offline job — a coarse cadence is fine.
+  let status = batch.processing_status;
+  while (status !== 'ended') {
+    await new Promise((r) => setTimeout(r, BATCH_POLL_MS));
+    const cur = await client.messages.batches.retrieve(batch.id);
+    status = cur.processing_status;
+    const c = cur.request_counts;
+    console.log(
+      `    [${status}] ✓${c.succeeded} ✗${c.errored} ↻${c.processing} ⊘${c.canceled} ⌛${c.expired}`,
+    );
+  }
+
+  // Drain the JSONL result stream, then map back through the pure parser.
+  const responses: MessageBatchIndividualResponse[] = [];
+  for await (const entry of await client.messages.batches.results(batch.id)) {
+    responses.push(entry);
+  }
+  const parsed = parseBatchResults(responses);
+  const jobById = new Map(jobs.map((r) => [r.id, r]));
+
+  for (const pr of parsed) {
+    if (pr.error || !pr.description) {
+      noteFail(pr.error ?? 'no description returned');
+      counters.failed += 1;
+      continue;
+    }
+    const recipe = jobById.get(pr.id);
+    if (!recipe) {
+      noteFail(`unknown custom_id ${pr.id}`);
+      counters.failed += 1;
+      continue;
+    }
+    let res;
+    try {
+      res = await rewriteCopy(recipe.id, buildBatchDeps(recipe, pr.description));
+    } catch (e) {
+      noteFail(`threw: ${(e as Error).message}`);
+      counters.failed += 1;
+      continue;
+    }
+    if (res.outcome === 'updated') {
+      counters.updated += 1;
+      if (res.newScore !== null) {
+        try {
+          await scoreRecipe({ recipeId: recipe.id, axes: { voice: res.newScore } });
+        } catch (e) {
+          console.error(`  ✗ re-persist score failed for ${recipe.id}:`, e);
+        }
+      }
+    } else if (res.outcome === 'skipped') {
+      counters.skippedRegression += 1;
+    } else {
+      noteFail(res.reason ?? 'unknown');
+      counters.failed += 1;
+    }
+  }
+
+  return counters;
+}
+
 async function main(): Promise<void> {
   console.log('▶ Tier U voice rewrite pass — MVP-20 (<4 → rewrite/discard)');
   console.log(`  Mode: ${DRY_RUN ? 'DRY RUN (no writes)' : 'LIVE (persist + discard)'}`);
   console.log(`  Provider: ${PROVIDER} · cuisines: ${CUISINE_MODE}`);
   console.log(
-    `  Concurrency: ${CONCURRENCY} · attempts ${MAX_ATTEMPTS}` +
-      (LIMIT ? ` · LIMIT ${LIMIT}` : ''),
+    USE_BATCH
+      ? `  Batches API: Sonnet ceiling pass (model ${VOICE_BATCH_MODEL})` +
+          (LIMIT ? ` · LIMIT ${LIMIT}` : '')
+      : `  Concurrency: ${CONCURRENCY} · attempts ${MAX_ATTEMPTS}` +
+          (LIMIT ? ` · LIMIT ${LIMIT}` : ''),
   );
   console.log('');
 
@@ -303,7 +468,13 @@ async function main(): Promise<void> {
     failReasons.set(key, (failReasons.get(key) ?? 0) + 1);
   };
 
-  if (rewriteJobs.length > 0) {
+  if (rewriteJobs.length > 0 && USE_BATCH) {
+    const r = await runBatchRewrites(rewriteJobs);
+    updated = r.updated;
+    skippedRegression = r.skippedRegression;
+    failed = r.failed;
+    for (const [k, v] of r.failReasons) failReasons.set(k, v);
+  } else if (rewriteJobs.length > 0) {
     await runPool(rewriteJobs, async (recipe) => {
       let res;
       try {

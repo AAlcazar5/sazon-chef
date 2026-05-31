@@ -115,6 +115,12 @@ const DUP_RETRIES = Number(process.env.DUP_RETRIES ?? 3);
 // fed into every first attempt; AVOID_CAP bounds the list as retries grow it.
 const AVOID_WINDOW = Number(process.env.AVOID_WINDOW ?? 12);
 const AVOID_CAP = Number(process.env.AVOID_CAP ?? 16);
+// Bounded fan-out. Default 1 = original strictly-sequential behavior. The
+// dedup guard stays correct at >1 because the title key is reserved into
+// `seenTitleKeys` synchronously (before the save await) and rolled back on
+// failure. Tradeoff at high concurrency: staler avoid-context → slightly more
+// dup-retries. Start ~5.
+const SEED_CONCURRENCY = Math.max(1, Number(process.env.SEED_CONCURRENCY ?? 1));
 
 // Progress reporting. This run is frequently piped to a background-task
 // output file rather than an interactive terminal, so a naive `\r` redraw
@@ -352,6 +358,7 @@ async function main(): Promise<void> {
 
   console.log(`  Provider (primary):     ${SEED_PROVIDER}`);
   console.log(`  Provider order:         ${process.env.AI_PROVIDER_ORDER}`);
+  console.log(`  Concurrency:            ${SEED_CONCURRENCY}`);
   console.log(`  Planned recipes:        ${plan.length}`);
   console.log(`  Recipe budget cap:      ${RECIPE_BUDGET}`);
   console.log(`  Per-recipe cost (est):  $${COST_PER_RECIPE_USD.toFixed(4)}`);
@@ -402,69 +409,91 @@ async function main(): Promise<void> {
   const cuisineJobIndex = new Map<string, number>();
   const startedAt = Date.now();
 
-  for (let i = 0; i < plan.length; i += 1) {
-    const job = plan[i];
-    const label = `${job.cuisine} ${job.mealType}`;
+  // Shared cursor across the worker pool. With SEED_CONCURRENCY=1 the drain
+  // runs exactly like the original sequential for-loop.
+  let cursor = 0;
 
-    const jobIndex = cuisineJobIndex.get(job.cuisine) ?? 0;
-    cuisineJobIndex.set(job.cuisine, jobIndex + 1);
-    const known = knownTitlesByCuisine.get(job.cuisine) ?? [];
-    let avoid = buildAvoidContext(known, { windowSize: AVOID_WINDOW, jobIndex });
+  async function drain(): Promise<void> {
+    while (cursor < plan.length) {
+      const i = cursor;
+      cursor += 1;
+      const job = plan[i];
+      const label = `${job.cuisine} ${job.mealType}`;
 
-    let slotDone = false;
-    for (let attempt = 0; attempt <= DUP_RETRIES && !slotDone; attempt += 1) {
-      try {
-        apiCalls += 1;
-        const recipe = await aiRecipeService.generateRecipe({
-          userId: null,
-          cuisineOverride: job.cuisine,
-          mealType: job.mealType,
-          previousMeals: avoid.length > 0 ? avoid : undefined,
-        });
+      const jobIndex = cuisineJobIndex.get(job.cuisine) ?? 0;
+      cuisineJobIndex.set(job.cuisine, jobIndex + 1);
+      const known = knownTitlesByCuisine.get(job.cuisine) ?? [];
+      let avoid = buildAvoidContext(known, { windowSize: AVOID_WINDOW, jobIndex });
 
-        // ── Dedup guard ────────────────────────────────────────────────
-        // Generation already cost the API call, but skipping the DB write
-        // (and its image fetch) is what actually prevents the duplicate row.
-        const titleKey = normalizeRecipeTitleKey(recipe.title);
-        if (titleKey && seenTitleKeys.has(titleKey)) {
-          if (attempt < DUP_RETRIES) {
-            retriesUsed += 1;
-            avoid = appendAvoid(avoid, recipe.title, AVOID_CAP);
-            continue; // retry this slot with the collision fed back
+      let slotDone = false;
+      for (let attempt = 0; attempt <= DUP_RETRIES && !slotDone; attempt += 1) {
+        try {
+          apiCalls += 1;
+          const recipe = await aiRecipeService.generateRecipe({
+            userId: null,
+            cuisineOverride: job.cuisine,
+            mealType: job.mealType,
+            previousMeals: avoid.length > 0 ? avoid : undefined,
+          });
+
+          // ── Dedup guard ────────────────────────────────────────────────
+          // Generation already cost the API call, but skipping the DB write
+          // (and its image fetch) is what actually prevents the duplicate row.
+          const titleKey = normalizeRecipeTitleKey(recipe.title);
+          if (titleKey && seenTitleKeys.has(titleKey)) {
+            if (attempt < DUP_RETRIES) {
+              retriesUsed += 1;
+              avoid = appendAvoid(avoid, recipe.title, AVOID_CAP);
+              continue; // retry this slot with the collision fed back
+            }
+            skippedDuplicate += 1;
+            logEvent(`⊘ dup "${recipe.title.slice(0, 48)}" (${label}, after ${attempt} retries)`);
+            slotDone = true;
+            break;
           }
-          skippedDuplicate += 1;
-          logEvent(`⊘ dup "${recipe.title.slice(0, 48)}" (${label}, after ${attempt} retries)`);
+
+          // Reserve the title key SYNCHRONOUSLY before the save await so a
+          // concurrent worker can't pass the has()-check for the same title
+          // mid-save. Rolled back if the save throws.
+          if (titleKey) seenTitleKeys.add(titleKey);
+          try {
+            await aiRecipeService.saveGeneratedRecipe(recipe, null);
+          } catch (saveErr) {
+            if (titleKey) seenTitleKeys.delete(titleKey);
+            throw saveErr;
+          }
+          if (titleKey) {
+            // Immutable re-read so a peer worker's append isn't clobbered.
+            const cur = knownTitlesByCuisine.get(job.cuisine) ?? [];
+            knownTitlesByCuisine.set(job.cuisine, [...cur, recipe.title]);
+          }
+          succeeded += 1;
+          if (attempt > 0) recoveredByRetry += 1;
           slotDone = true;
-          break;
+        } catch (err) {
+          // generateRecipe already retries its own internal failures; a throw
+          // here is terminal for the slot — don't burn dup-retries on it.
+          failed += 1;
+          const msg = err instanceof Error ? err.message : String(err);
+          logEvent(`✗ ${label}: ${msg.slice(0, 80)}`);
+          slotDone = true;
         }
-
-        await aiRecipeService.saveGeneratedRecipe(recipe, null);
-        if (titleKey) {
-          seenTitleKeys.add(titleKey);
-          known.push(recipe.title);
-          knownTitlesByCuisine.set(job.cuisine, known);
-        }
-        succeeded += 1;
-        if (attempt > 0) recoveredByRetry += 1;
-        slotDone = true;
-      } catch (err) {
-        // generateRecipe already retries its own internal failures; a throw
-        // here is terminal for the slot — don't burn dup-retries on it.
-        failed += 1;
-        const msg = err instanceof Error ? err.message : String(err);
-        logEvent(`✗ ${label}: ${msg.slice(0, 80)}`);
-        slotDone = true;
       }
-    }
 
-    renderProgress(
-      i + 1,
-      plan.length,
-      { saved: succeeded, dup: skippedDuplicate, fail: failed },
-      label,
-      { final: i + 1 === plan.length },
-    );
+      // apiCalls (not i) drives the bar — robust to out-of-order completion.
+      renderProgress(
+        Math.min(apiCalls, plan.length),
+        plan.length,
+        { saved: succeeded, dup: skippedDuplicate, fail: failed },
+        label,
+        { final: apiCalls >= plan.length },
+      );
+    }
   }
+
+  await Promise.all(
+    Array.from({ length: Math.min(SEED_CONCURRENCY, plan.length) }, drain),
+  );
 
   const elapsedMin = ((Date.now() - startedAt) / 60_000).toFixed(1);
   if (IS_TTY) process.stdout.write('\n');

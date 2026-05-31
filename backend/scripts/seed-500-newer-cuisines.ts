@@ -38,6 +38,7 @@
 //   SEED_PROVIDER=deepseek DEEPSEEK_API_KEY=... DRY_RUN=0 npx ts-node ...
 //   SEED_PROVIDER=ollama OLLAMA_MODEL=llama3.1:70b DRY_RUN=0 npx ts-node ...
 //   RECIPE_BUDGET=50 ... (smoke-test slice)
+//   SEED_CONCURRENCY=5 ... (bounded fan-out; default 1 = sequential)
 //   AI_PROVIDER_ORDER=groq,deepseek,claude DRY_RUN=0 npx ts-node ... (opt-in
 //     to Claude as last-resort fallback for the FOSS chain)
 
@@ -90,6 +91,11 @@ if (SEED_PROVIDER === 'ollama' && !process.env.OLLAMA_ENABLED) {
 
 const DRY_RUN = process.env.DRY_RUN !== '0'; // default DRY — explicit opt-in to spend
 const RECIPE_BUDGET = Number(process.env.RECIPE_BUDGET ?? 500);
+// Bounded fan-out. Each recipe is an independent single-shot LLM call, so a
+// worker pool cuts wall-clock ~linearly with no provider change. Defaults to
+// 1 to preserve the original strictly-sequential behavior; bump for speed
+// (DeepSeek/Groq tolerate modest concurrency — start ~5, back off on 429s).
+const SEED_CONCURRENCY = Math.max(1, Number(process.env.SEED_CONCURRENCY ?? 1));
 const COST_PER_RECIPE_USD = Number(
   process.env.COST_PER_RECIPE_USD ?? DEFAULT_COST_BY_PROVIDER[SEED_PROVIDER] ?? 0.12,
 );
@@ -330,32 +336,48 @@ async function main(): Promise<void> {
 
   let succeeded = 0;
   let failed = 0;
+  let attempted = 0;
   const startedAt = Date.now();
 
-  for (let i = 0; i < plan.length; i += 1) {
-    const job = plan[i];
-    const label = `${job.cuisine} ${job.mealType}`;
-    try {
-      const recipe = await aiRecipeService.generateRecipe({
-        userId: null,
-        cuisineOverride: job.cuisine,
-        mealType: job.mealType,
-      });
-      await aiRecipeService.saveGeneratedRecipe(recipe, null);
-      succeeded += 1;
-    } catch (err) {
-      failed += 1;
-      const msg = err instanceof Error ? err.message : String(err);
-      logEvent(`✗ ${label}: ${msg.slice(0, 80)}`);
+  console.log(`  Concurrency:            ${SEED_CONCURRENCY}`);
+  console.log('');
+
+  // Worker pool: N drains share a cursor over the deterministic plan. With
+  // SEED_CONCURRENCY=1 this is identical to the original sequential loop.
+  // Counters are mutated synchronously after each await, so single-threaded
+  // JS keeps them race-free without locking.
+  let cursor = 0;
+  async function drain(): Promise<void> {
+    while (cursor < plan.length) {
+      const job = plan[cursor];
+      cursor += 1;
+      const label = `${job.cuisine} ${job.mealType}`;
+      try {
+        const recipe = await aiRecipeService.generateRecipe({
+          userId: null,
+          cuisineOverride: job.cuisine,
+          mealType: job.mealType,
+        });
+        await aiRecipeService.saveGeneratedRecipe(recipe, null);
+        succeeded += 1;
+      } catch (err) {
+        failed += 1;
+        const msg = err instanceof Error ? err.message : String(err);
+        logEvent(`✗ ${label}: ${msg.slice(0, 80)}`);
+      }
+      attempted += 1;
+      renderProgress(
+        attempted,
+        plan.length,
+        { saved: succeeded, fail: failed },
+        label,
+        { final: attempted === plan.length },
+      );
     }
-    renderProgress(
-      i + 1,
-      plan.length,
-      { saved: succeeded, fail: failed },
-      label,
-      { final: i + 1 === plan.length },
-    );
   }
+  await Promise.all(
+    Array.from({ length: Math.min(SEED_CONCURRENCY, plan.length) }, drain),
+  );
 
   const elapsedMin = ((Date.now() - startedAt) / 60_000).toFixed(1);
   if (IS_TTY) process.stdout.write('\n');
