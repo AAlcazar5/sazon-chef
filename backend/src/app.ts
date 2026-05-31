@@ -66,6 +66,7 @@ import { followsRoutes } from '@modules/follows/followsRoutes';
 import { cuisineDessertRoutes } from '@modules/cuisineDessert/cuisineDessertRoutes';
 import { waitlistRoutes } from '@modules/waitlist/waitlistRoutes';
 import { minVersionRoutes } from '@modules/minVersion/minVersionRoutes';
+import { feedbackRoutes } from '@modules/feedback/feedbackRoutes';
 import { apiLimiter } from './middleware/rateLimiter';
 import { isStripeWebhookPath } from './utils/stripeWebhookPath';
 import { prisma } from '@/lib/prisma';
@@ -314,6 +315,9 @@ app.use('/api/cuisine-desserts', cuisineDessertRoutes);
 app.use('/api/waitlist', waitlistRoutes);
 // ROADMAP 4.0 U3 — force-upgrade gate (public, no auth: must work if DB is down)
 app.use('/api/app', minVersionRoutes);
+
+// Tier Q — Beta feedback intake (public: testers may not be signed in)
+app.use('/api/feedback', feedbackRoutes);
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 

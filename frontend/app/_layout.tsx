@@ -28,6 +28,8 @@ import { useWidgetSync } from '../hooks/useWidgetSync';
 import { useBiometricLock } from '../hooks/useBiometricLock';
 import { useForceUpgrade } from '../hooks/useForceUpgrade';
 import ForceUpgradeScreen from '../components/ui/ForceUpgradeScreen';
+import { BetaBadge } from '../components/beta/BetaBadge';
+import { FeedbackSheet } from '../components/beta/FeedbackSheet';
 import { createLogger } from '../lib/logger';
 
 const log = createLogger('Layout');
@@ -57,6 +59,7 @@ const queryPersistOptions = {
 function RootLayoutNav() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [showFeedbackSheet, setShowFeedbackSheet] = useState(false);
   const [fontsLoaded] = useFonts(EDITORIAL_FONTS);
   const router = useRouter();
   const segments = useSegments();
@@ -309,6 +312,12 @@ function RootLayoutNav() {
             }}
           />
         </Stack>
+        <BetaBadge onPress={() => setShowFeedbackSheet(true)} />
+        <FeedbackSheet
+          visible={showFeedbackSheet}
+          onClose={() => setShowFeedbackSheet(false)}
+          screen={`/${segments.join('/')}`}
+        />
       </View>
     </ErrorBoundary>
   );

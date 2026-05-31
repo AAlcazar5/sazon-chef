@@ -13,3 +13,4 @@ export * from './api/today';
 export * from './api/food';
 export * from './api/plate';
 export * from './api/coach';
+export * from './api/feedback';

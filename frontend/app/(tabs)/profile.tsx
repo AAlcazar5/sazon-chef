@@ -13,6 +13,8 @@ import { Icons, IconSizes } from '../../constants/Icons';
 import { Colors, DarkColors } from '../../constants/Colors';
 import { useSubscription } from '../../hooks/useSubscription';
 import { CancellationFlow } from '../../components/premium/CancellationFlow';
+import { FeedbackSheet } from '../../components/beta/FeedbackSheet';
+import { APP_VERSION, BUILD_NUMBER, BUILD_CHANNEL } from '../../constants/build';
 import { Spacing, ComponentSpacing } from '../../constants/Spacing';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -45,6 +47,7 @@ export default function ProfileScreen() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [showCancellationFlow, setShowCancellationFlow] = useState(false);
+  const [showFeedbackSheet, setShowFeedbackSheet] = useState(false);
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
@@ -296,6 +299,16 @@ export default function ProfileScreen() {
                   </View>
                 }
                 onPress={() => Linking.openURL(COFFEE_URL)}
+              />
+              <SettingsRow
+                label="Send feedback to Sazon"
+                sublabel="What's working, what's annoying, what's missing"
+                icon={
+                  <View className="w-10 h-10 rounded-full items-center justify-center bg-rose-50 dark:bg-rose-900/30">
+                    <Text style={{ fontSize: 20 }}>💌</Text>
+                  </View>
+                }
+                onPress={() => setShowFeedbackSheet(true)}
                 showBorder={false}
               />
             </View>
@@ -336,6 +349,19 @@ export default function ProfileScreen() {
           onProceedWithDeletion={proceedWithDeletion}
           onChangePassword={changePassword}
         />
+
+        <HapticTouchableOpacity
+          onLongPress={() => setShowFeedbackSheet(true)}
+          delayLongPress={500}
+          hapticStyle="light"
+          accessibilityLabel={`Sazon version ${APP_VERSION}, build ${BUILD_NUMBER}. Long-press to send feedback.`}
+          style={{ paddingVertical: 16, alignItems: 'center' }}
+          testID="version-footer"
+        >
+          <Text className="text-xs text-gray-400 dark:text-gray-500">
+            Sazon {APP_VERSION} ({BUILD_NUMBER}) · {BUILD_CHANNEL}
+          </Text>
+        </HapticTouchableOpacity>
       </Animated.ScrollView>
 
       <CancellationFlow
@@ -345,6 +371,12 @@ export default function ProfileScreen() {
           setShowCancellationFlow(false);
           refreshSubscription();
         }}
+      />
+
+      <FeedbackSheet
+        visible={showFeedbackSheet}
+        onClose={() => setShowFeedbackSheet(false)}
+        screen="/profile"
       />
     </View></ScreenGradient>
   );

@@ -2355,3 +2355,23 @@ model IngredientRecommenderDaily {
   @@index([userId, date])
   @@map("ingredient_recommender_daily")
 }
+
+// Tier Q — beta feedback intake. Public route (testers may be signed out),
+// so userId is nullable. message is the only required field; context fields
+// are best-effort attached by the client.
+model BetaFeedback {
+  id          String   @id @default(cuid())
+  userId      String?
+  message     String
+  screen      String?
+  platform    String? // 'ios' | 'android' | 'web'
+  appVersion  String?
+  buildNumber String?
+  device      String?
+  nps         Int?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("beta_feedback")
+}

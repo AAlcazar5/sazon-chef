@@ -17,6 +17,8 @@ interface SettingsRowProps {
   sublabel?: string;
   icon?: React.ReactNode;
   onPress?: () => void;
+  /** Long-press handler (e.g., Tier Q quick-feedback shortcut on version row) */
+  onLongPress?: () => void;
   /** Render a custom right-side element instead of the chevron */
   rightElement?: React.ReactNode;
   /** Show bottom border (default true) */
@@ -32,6 +34,7 @@ export default function SettingsRow({
   sublabel,
   icon,
   onPress,
+  onLongPress,
   rightElement,
   showBorder = true,
   labelStyle,
@@ -56,6 +59,7 @@ export default function SettingsRow({
   return (
     <HapticTouchableOpacity
       onPress={onPress}
+      onLongPress={onLongPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
